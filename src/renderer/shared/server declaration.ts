@@ -1,13 +1,17 @@
-export type ServerStatus = 'online' | 'offline' | 'starting' | 'stopping';
-
-export type AppView = 'console' | 'properties' | 'proxy' | 'files' | 'backups' | 'general-settings' | 'sftp' | 'users';
+// ★修正: 'restarting' を追加
+export type ServerStatus = 'online' | 'offline' | 'starting' | 'stopping' | 'restarting';
 
 export interface MinecraftServer {
-    id: string;
-    name: string;
-    version: string;
-    path: string;
-    port: number;
-    status: ServerStatus;
-    memory: number;
+  id: string;
+  name: string;
+  version: string;
+  software: string; // 'Paper', 'Fabric' etc.
+  port: number;
+  memory: number;
+  path: string;
+  status: ServerStatus;
+  javaPath?: string; // オプショナル
+  createdDate?: string;
 }
+
+export type AppView = 'dashboard' | 'console' | 'properties' | 'files' | 'plugins' | 'backups' | 'general-settings' | 'proxy' | 'sftp' | 'users';

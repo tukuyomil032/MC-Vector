@@ -13,38 +13,45 @@
   flex-direction: column;
   border-right: 1px solid var(--border-color);
   flex-shrink: 0;
+  z-index: 20;
 }
 
 .sidebar-header {
   padding: 20px;
   font-size: 1.2rem;
-  font-weight: bold;
+  font-weight: 800;
+  /* グラデーションテキスト */
+  background: var(--accent-gradient);
+  -webkit-text-fill-color: transparent;
+  /* ★修正: 確実に色が出るようにフォールバック色と影を追加 */
   color: var(--accent);
+  text-shadow: 0 0 1px rgba(255,255,255,0.1);
+  letter-spacing: 1px;
   /* ドラッグ領域 */
-  -webkit-app-region: drag; 
+  -webkit-app-region: drag;
 }
 
-/* ★追加: サイドバー内のメインメニュー領域（タブ） */
+/* サイドバー内のメインメニュー領域 */
 .sidebar-nav {
-  flex: 1; /* 空きスペースを上に詰めて確保 */
+  flex: 1;
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   overflow-y: auto;
 }
 
-/* ★変更: サーバーリストを下に寄せるためのエリア */
+/* サーバーリストを下に寄せるためのエリア */
 .sidebar-footer-list {
-  max-height: 40%; /* 画面の4割くらいの高さに制限 */
+  max-height: 40%;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--border-color);
-  background-color: rgba(0, 0, 0, 0.15); /* 少し暗くして区別 */
+  background-color: rgba(0, 0, 0, 0.2); /* 少し暗く */
 }
 
 .server-list-container {
-  overflow-y: auto; /* サーバーが増えたらここだけスクロール */
+  overflow-y: auto;
   flex: 1;
   padding: 10px;
 }
@@ -56,6 +63,7 @@
   flex-direction: column;
   background-color: var(--bg-primary);
   overflow: hidden;
+  position: relative;
 }
 
 .top-bar {
@@ -65,13 +73,32 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
+  /* すりガラス効果 */
+  background-color: rgba(18, 18, 20, 0.8);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.top-bar h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ボタンエリアをフレックスボックスで横並び・右寄せに */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto; /* 右に寄せる */
 }
 
 .content-area {
   flex: 1;
-  padding: 0; /* コンソールなどを全画面にするためパディング削除 */
-  overflow: hidden; /* 中身に合わせてスクロール制御 */
+  padding: 0;
+  overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;

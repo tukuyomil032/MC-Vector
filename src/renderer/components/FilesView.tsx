@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { type MinecraftServer } from '../shared/server declaration';
+import { type MinecraftServer } from '../components/../shared/server declaration';
 import '../../main.css';
 
 interface Props {
@@ -17,8 +17,6 @@ export default function FilesView({ server }: Props) {
   // --- State ---
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
-  
-  // システム上の「servers」フォルダの絶対パス (例: C:\Users\...\mc-vector\servers)
   const [serversRootAbsPath, setServersRootAbsPath] = useState('');
 
   // 選択系
@@ -32,30 +30,35 @@ export default function FilesView({ server }: Props) {
 
   // UI系
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileEntry | null } | null>(null);
-  const [showMoveModal, setShowMoveModal] = useState(false);
-  const [moveDestPath, setMoveDestPath] = useState('');
-  const [moveTargetName, setMoveTargetName] = useState('');
-  
+
+  // モーダル系
+  const [modalType, setModalType] = useState<'move-item' | 'navigate' | 'create' | null>(null);
+  const [modalInput, setModalInput] = useState('');
+  const [modalTargetName, setModalTargetName] = useState('');
+  const [createType, setCreateType] = useState<'file' | 'folder'>('folder');
+
   // オートコンプリート系
   const [pathSuggestions, setPathSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // OSごとのパス区切り文字判定
+  // D&D状態管理
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [internalDragFile, setInternalDragFile] = useState<string | null>(null);
+
   const sep = server.path.includes('\\') ? '\\' : '/';
 
-  // 初期ロード & ルートパス特定
+  // --- 初期化 ---
+  useEffect(() => {
+    // serversルートの特定
+    const parts = server.path.split(sep);
+    const rootParts = parts.slice(0, parts.length - 1);
+    setServersRootAbsPath(rootParts.join(sep));
+  }, [server.path, sep]);
+
   useEffect(() => {
     loadFiles(currentPath);
     setSelectedFiles([]);
-
-    // サーバーのパスは ".../servers/server-id" となっているはずなので、
-    // その親ディレクトリを servers のルートとする
-    const parts = server.path.split(sep);
-    // 末尾のサーバーフォルダ名を除去
-    const rootParts = parts.slice(0, parts.length - 1);
-    setServersRootAbsPath(rootParts.join(sep));
-
-  }, [currentPath, server.path, sep]);
+  }, [currentPath]);
 
   const loadFiles = async (path: string) => {
     try {
@@ -67,43 +70,27 @@ export default function FilesView({ server }: Props) {
   };
 
   // --- パス変換ロジック ---
-
-  // 絶対パス -> 表示用パス (servers/...)
   const toDisplayPath = (absPath: string) => {
     if (!serversRootAbsPath) return absPath;
     if (absPath.startsWith(serversRootAbsPath)) {
-      // 先頭の絶対パス部分を除去し、"servers" を付与
       const relative = absPath.substring(serversRootAbsPath.length);
-      // 先頭のセパレータを調整
       const cleanRelative = relative.startsWith(sep) ? relative.substring(1) : relative;
       return `servers${sep}${cleanRelative}`;
     }
     return absPath;
   };
 
-  // 表示用パス (servers/...) -> 絶対パス
   const toAbsolutePath = (displayPath: string) => {
     if (!serversRootAbsPath) return displayPath;
-    // "servers" で始まっていれば置換
     if (displayPath.startsWith('servers')) {
-      // "servers" (7文字) + セパレータ分を除去して結合
-      // 入力が "servers" そのものの場合はルートを返す
-      if (displayPath === 'servers' || displayPath === 'servers/') return serversRootAbsPath;
-      
-      const relative = displayPath.replace(/^servers[/\\]?/, '');
+      let relative = displayPath.replace(/^servers/, '');
+      if (relative.startsWith('/') || relative.startsWith('\\')) {
+        relative = relative.substring(1);
+      }
+      if (!relative) return serversRootAbsPath;
       return `${serversRootAbsPath}${sep}${relative}`;
     }
     return displayPath;
-  };
-
-  // --- パンくずリスト ---
-  const handleBreadcrumbClick = (index: number) => {
-    const displayPath = toDisplayPath(currentPath);
-    const parts = displayPath.split(sep);
-    // クリックされた階層までのパス (例: servers/test)
-    const targetDisplayPath = parts.slice(0, index + 1).join(sep);
-    const newAbsPath = toAbsolutePath(targetDisplayPath);
-    setCurrentPath(newAbsPath);
   };
 
   // --- アクション ---
@@ -113,16 +100,21 @@ export default function FilesView({ server }: Props) {
   };
 
   const handleGoUp = () => {
-    // serversルートより上には行かせない
     if (currentPath === serversRootAbsPath) return;
-    
     const parentPath = currentPath.substring(0, currentPath.lastIndexOf(sep));
-    // 安全策: ルートより短くならないように
     if (parentPath.length < serversRootAbsPath.length) {
       setCurrentPath(serversRootAbsPath);
     } else {
       setCurrentPath(parentPath);
     }
+  };
+
+  const handleBreadcrumbClick = (index: number) => {
+    const displayPath = toDisplayPath(currentPath);
+    const parts = displayPath.split(sep);
+    const targetDisplayPath = parts.slice(0, index + 1).join(sep);
+    const newAbsPath = toAbsolutePath(targetDisplayPath);
+    setCurrentPath(newAbsPath);
   };
 
   const handleFileClick = async (fileName: string) => {
@@ -133,7 +125,7 @@ export default function FilesView({ server }: Props) {
         setFileContent(content);
         setIsEditorOpen(true);
     } catch {
-        alert("ファイルを開けません（バイナリ等の可能性）");
+        alert("ファイルを開けません");
     }
   };
 
@@ -146,19 +138,63 @@ export default function FilesView({ server }: Props) {
     alert('保存しました！');
   };
 
-  const handleCloseEditor = () => {
-    setIsEditorOpen(false);
-    setEditingFile(null);
+  const openMoveItemModal = () => {
+    setModalType('move-item');
+    setModalTargetName(selectedFiles.join(', '));
+    setModalInput(toDisplayPath(currentPath));
+    setPathSuggestions([]);
   };
 
-  // チェックボックス
-  const toggleSelect = (fileName: string) => {
-    setSelectedFiles(prev => 
-      prev.includes(fileName) ? prev.filter(f => f !== fileName) : [...prev, fileName]
-    );
+  const openNavigateModal = () => {
+    setModalType('navigate');
+    setModalTargetName('カレントディレクトリ');
+    setModalInput(toDisplayPath(currentPath));
+    setPathSuggestions([]);
   };
 
-  // 右クリック
+  const openCreateModal = () => {
+    setModalType('create');
+    setModalInput('');
+    setCreateType('folder');
+  };
+
+  const executeModalAction = async () => {
+    if (modalType === 'navigate') {
+      const targetAbs = toAbsolutePath(modalInput);
+      try {
+        const check = await window.electronAPI.listFiles(targetAbs);
+        if (check) {
+          setCurrentPath(targetAbs);
+          setModalType(null);
+        }
+      } catch {
+        alert('ディレクトリが見つかりません');
+      }
+    }
+    else if (modalType === 'move-item') {
+      const targetDirAbs = toAbsolutePath(modalInput);
+      for (const name of selectedFiles) {
+          const src = `${currentPath}${sep}${name}`;
+          const dest = `${targetDirAbs}${sep}${name}`;
+          await window.electronAPI.movePath(src, dest);
+      }
+      loadFiles(currentPath);
+      setModalType(null);
+      setSelectedFiles([]);
+    }
+    else if (modalType === 'create') {
+      if (!modalInput) return;
+      const targetPath = `${currentPath}${sep}${modalInput}`;
+      if (createType === 'folder') {
+        await window.electronAPI.createDirectory(targetPath);
+      } else {
+        await window.electronAPI.saveFile(targetPath, '');
+      }
+      loadFiles(currentPath);
+      setModalType(null);
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent, file: FileEntry) => {
     e.preventDefault();
     e.stopPropagation();
@@ -168,9 +204,8 @@ export default function FilesView({ server }: Props) {
     setContextMenu({ x: e.pageX, y: e.pageY, file });
   };
 
-  // --- メニューアクション ---
   const handleDelete = async () => {
-    if (!window.confirm(`選択した ${selectedFiles.length} 項目を削除しますか？`)) return;
+    if (!window.confirm(`${selectedFiles.length} 項目を削除しますか？`)) return;
     for (const name of selectedFiles) {
         await window.electronAPI.deletePath(`${currentPath}${sep}${name}`);
     }
@@ -181,7 +216,7 @@ export default function FilesView({ server }: Props) {
 
   const handleCompress = async () => {
     const paths = selectedFiles.map(name => `${currentPath}${sep}${name}`);
-    const dest = `${currentPath}${sep}${selectedFiles[0]}.zip`; 
+    const dest = `${currentPath}${sep}${selectedFiles[0]}.zip`;
     await window.electronAPI.compressFiles(paths, dest);
     loadFiles(currentPath);
     setContextMenu(null);
@@ -196,32 +231,82 @@ export default function FilesView({ server }: Props) {
     setContextMenu(null);
   };
 
-  // --- 移動関連 & オートコンプリート ---
+  // --- D&D処理 ---
 
-  const handleMovePrompt = () => {
-    setMoveTargetName(selectedFiles.join(', '));
-    // 初期値として現在の表示パスを入れる
-    setMoveDestPath(toDisplayPath(currentPath)); 
-    setShowMoveModal(true);
-    setContextMenu(null);
-    setPathSuggestions([]);
+  const handleContainerDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingOver) setIsDraggingOver(true);
   };
 
-  // 入力欄の変更時処理 (候補検索)
-  const handleMoveInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setMoveDestPath(val);
+  const handleContainerDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        setIsDraggingOver(false);
+    }
+  };
 
+  // ★修正: targetFileの宣言を削除
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    // 外部ファイル
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const paths = Array.from(e.dataTransfer.files).map((f: any) => f.path);
+        if (paths.some(p => !p)) {
+          alert('パス取得エラー');
+          return;
+        }
+        await window.electronAPI.uploadFiles(paths, currentPath);
+        loadFiles(currentPath);
+        return;
+    }
+
+    // 内部移動 (カレントディレクトリへのドロップは何もしない)
+    setInternalDragFile(null);
+  };
+
+  const handleDragStart = (e: React.DragEvent, fileName: string) => {
+    setInternalDragFile(fileName);
+    e.dataTransfer.setData('text/plain', fileName);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDropOnFolder = async (e: React.DragEvent, folderName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const draggedFile = e.dataTransfer.getData('text/plain') || internalDragFile;
+    if (!draggedFile) return;
+    if (draggedFile === folderName) return;
+
+    const src = `${currentPath}${sep}${draggedFile}`;
+    const dest = `${currentPath}${sep}${folderName}${sep}${draggedFile}`;
+
+    if (window.confirm(`"${draggedFile}" を "${folderName}" に移動しますか？`)) {
+        await window.electronAPI.movePath(src, dest);
+        loadFiles(currentPath);
+    }
+    setInternalDragFile(null);
+  };
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setModalInput(val);
+
+    if (modalType !== 'navigate' && modalType !== 'move-item') return;
     if (!val || val.length < 2) {
       setPathSuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
-    // 入力されたパスの親ディレクトリを探す
-    // 例: "servers/te" -> "servers/" を検索して "test" を見つける
     const lastSepIdx = val.lastIndexOf(sep) !== -1 ? val.lastIndexOf(sep) : val.lastIndexOf('/');
-    
     let searchDirDisplay = '';
     let searchPrefix = '';
 
@@ -229,20 +314,24 @@ export default function FilesView({ server }: Props) {
       searchDirDisplay = val.substring(0, lastSepIdx);
       searchPrefix = val.substring(lastSepIdx + 1);
     } else {
-      // セパレータがない場合 (例: "ser") -> 何もしないか、ルート直下とみなすか
-      // ここではservers/からの入力を前提とするので、servers直下を探すなら "servers/" と打ってもらう
-      return; 
+      if (val.startsWith('servers')) {
+         searchDirDisplay = 'servers';
+         searchPrefix = val.replace(/^servers[/\\]?/, '');
+      } else {
+         return;
+      }
     }
 
     const searchDirAbs = toAbsolutePath(searchDirDisplay);
-    
+
     try {
       const entries = await window.electronAPI.listFiles(searchDirAbs);
-      // ディレクトリのみ、かつ入力と前方一致するものを抽出
       const matched = entries
         .filter(f => f.isDirectory && f.name.toLowerCase().startsWith(searchPrefix.toLowerCase()))
-        .map(f => `${searchDirDisplay}${sep}${f.name}`);
-      
+        .map(f => {
+            const base = searchDirDisplay.endsWith(sep) ? searchDirDisplay : searchDirDisplay + sep;
+            return `${base}${f.name}`;
+        });
       setPathSuggestions(matched);
       setShowSuggestions(matched.length > 0);
     } catch {
@@ -251,128 +340,136 @@ export default function FilesView({ server }: Props) {
     }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setMoveDestPath(suggestion);
-    setShowSuggestions(false);
-  };
-
-  const executeMove = async () => {
-    const targetDirAbs = toAbsolutePath(moveDestPath);
-
-    for (const name of selectedFiles) {
-        const src = `${currentPath}${sep}${name}`;
-        const dest = `${targetDirAbs}${sep}${name}`;
-        
-        await window.electronAPI.movePath(src, dest);
-    }
-    
-    loadFiles(currentPath);
-    setShowMoveModal(false);
-    setSelectedFiles([]);
-  };
-
-  // --- D&D ---
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const paths = Array.from(e.dataTransfer.files).map((f: any) => f.path);
-        await window.electronAPI.uploadFiles(paths, currentPath);
-        loadFiles(currentPath);
-    }
-  };
-
-  // 表示用パスパーツ
-  const displayPathString = toDisplayPath(currentPath);
-  const displayPathParts = displayPathString.split(sep).filter(p => p);
-
   const getLanguage = (fileName: string) => {
     if (fileName.endsWith('.json')) return 'json';
-    if (fileName.endsWith('.yml') || fileName.endsWith('.yaml')) return 'yaml';
-    if (fileName.endsWith('.properties') || fileName.endsWith('.txt')) return 'ini';
+    if (fileName.endsWith('.yml')) return 'yaml';
+    if (fileName.endsWith('.properties')) return 'ini';
     if (fileName.endsWith('.js')) return 'javascript';
     return 'plaintext';
   };
 
+  const handleCloseEditor = () => {
+    setIsEditorOpen(false);
+    setEditingFile(null);
+  };
+
+  const toggleSelect = (fileName: string) => {
+    setSelectedFiles(prev =>
+      prev.includes(fileName) ? prev.filter(f => f !== fileName) : [...prev, fileName]
+    );
+  };
+
+  const displayPathString = toDisplayPath(currentPath);
+  const displayPathParts = displayPathString.split(sep).filter(p => p);
+
   return (
-    <div 
-        style={{ display: 'flex', height: '100%', overflow: 'hidden' }}
+    <div
+        style={{ display: 'flex', height: '100%', overflow: 'hidden', position: 'relative' }}
         onClick={() => { setContextMenu(null); setShowSuggestions(false); }}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={handleContainerDragOver}
+        onDragLeave={handleContainerDragLeave}
         onDrop={handleDrop}
     >
-      {/* 移動先指定モーダル */}
-      {showMoveModal && (
+      {isDraggingOver && (
+        <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(88, 101, 242, 0.3)',
+            border: '4px dashed #5865F2', zIndex: 50,
+            display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none'
+        }}>
+            <h2 style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.5)'}}>ファイルをアップロード</h2>
+        </div>
+      )}
+
+      {modalType && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div 
+            <div
               style={{ background: '#2c2c2c', padding: '20px', borderRadius: '8px', width: '500px', color: '#fff', border: '1px solid #444', position: 'relative' }}
-              onClick={e => e.stopPropagation()} // モーダル内のクリックで閉じないように
+              onClick={e => e.stopPropagation()}
             >
-                <h3 style={{marginTop: 0}}>指定ディレクトリに移動</h3>
-                <p style={{fontSize: '0.8rem', color: '#aaa', marginBottom: '10px'}}>移動するアイテム: {moveTargetName}</p>
-                
-                <div style={{ position: 'relative' }}>
-                  <input 
-                      type="text" 
-                      value={moveDestPath} 
-                      onChange={handleMoveInputChange}
-                      onFocus={() => { if(pathSuggestions.length > 0) setShowSuggestions(true); }}
-                      placeholder="例: servers/test/plugins"
-                      style={{ width: '100%', padding: '10px', marginBottom: '15px', background: '#111', border: '1px solid #444', color: '#fff', fontSize: '1rem' }}
-                  />
-                  {/* オートコンプリート候補リスト */}
-                  {showSuggestions && (
-                    <ul style={{
-                      position: 'absolute', top: '38px', left: 0, right: 0,
-                      background: '#1e1e1e', border: '1px solid #444', borderRadius: '4px',
-                      listStyle: 'none', padding: 0, margin: 0, maxHeight: '150px', overflowY: 'auto', zIndex: 1000
-                    }}>
-                      {pathSuggestions.map(s => (
-                        <li 
-                          key={s} 
-                          onClick={() => handleSuggestionClick(s)}
-                          style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #333' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#007acc'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                <h3 style={{marginTop: 0}}>
+                  {modalType === 'navigate' ? '指定ディレクトリに移動' :
+                   modalType === 'move-item' ? 'アイテムを移動' : '新規作成'}
+                </h3>
+
+                {modalType !== 'create' ? (
+                  <>
+                    <p style={{fontSize: '0.8rem', color: '#aaa', marginBottom: '10px'}}>
+                      {modalType === 'move-item' ? `対象: ${modalTargetName}` : 'パスを入力してください'}
+                    </p>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                          type="text"
+                          value={modalInput}
+                          onChange={handleInputChange}
+                          onFocus={() => { if(pathSuggestions.length > 0) setShowSuggestions(true); }}
+                          placeholder="例: servers/test/plugins"
+                          style={{ width: '100%', padding: '10px', marginBottom: '15px', background: '#111', border: '1px solid #444', color: '#fff', fontSize: '1rem' }}
+                      />
+                      {showSuggestions && (
+                        <ul style={{
+                          position: 'absolute', top: '38px', left: 0, right: 0,
+                          background: '#1e1e1e', border: '1px solid #444', borderRadius: '4px',
+                          listStyle: 'none', padding: 0, margin: 0, maxHeight: '150px', overflowY: 'auto', zIndex: 1000
+                        }}>
+                          {pathSuggestions.map(s => (
+                            <li
+                              key={s}
+                              onClick={() => { setModalInput(s); setShowSuggestions(false); }}
+                              style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #333' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#007acc'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="radio" checked={createType === 'folder'} onChange={() => setCreateType('folder')} style={{marginRight: '5px'}}/> フォルダ
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="radio" checked={createType === 'file'} onChange={() => setCreateType('file')} style={{marginRight: '5px'}}/> ファイル
+                      </label>
+                    </div>
+                    <input
+                        type="text"
+                        value={modalInput}
+                        onChange={e => setModalInput(e.target.value)}
+                        placeholder={createType === 'folder' ? 'NewFolder' : 'config.yml'}
+                        style={{ width: '100%', padding: '10px', marginBottom: '15px', background: '#111', border: '1px solid #444', color: '#fff', fontSize: '1rem' }}
+                    />
+                  </>
+                )}
 
                 <div style={{ textAlign: 'right', marginTop: '10px' }}>
-                    <button onClick={() => setShowMoveModal(false)} style={{ marginRight: '10px', padding: '8px 16px', background: 'transparent', color: '#ccc', border: '1px solid #666', cursor: 'pointer' }}>キャンセル</button>
-                    <button onClick={executeMove} style={{ padding: '8px 20px', background: '#5865F2', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>移動</button>
+                    <button onClick={() => setModalType(null)} style={{ marginRight: '10px', padding: '8px 16px', background: 'transparent', color: '#ccc', border: '1px solid #666', cursor: 'pointer' }}>キャンセル</button>
+                    <button onClick={executeModalAction} style={{ padding: '8px 20px', background: '#5865F2', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                      {modalType === 'create' ? '作成' : '移動'}
+                    </button>
                 </div>
             </div>
         </div>
       )}
 
-      {/* コンテキストメニュー */}
       {contextMenu && (
         <div style={{
             position: 'fixed', top: contextMenu.y, left: contextMenu.x,
             background: '#252526', border: '1px solid #444', borderRadius: '4px', zIndex: 10000,
             boxShadow: '0 4px 12px rgba(0,0,0,0.5)', minWidth: '160px', padding: '5px 0'
         }}>
-            <div onClick={handleMovePrompt} style={{ padding: '8px 15px', cursor: 'pointer', color: '#ecf0f1', fontSize: '14px' }} onMouseEnter={e => e.currentTarget.style.background = '#3a3a3a'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-               ➡ このアイテムを移動...
-            </div>
-            <div onClick={handleCompress} style={{ padding: '8px 15px', cursor: 'pointer', color: '#ecf0f1', fontSize: '14px' }} onMouseEnter={e => e.currentTarget.style.background = '#3a3a3a'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-               📦 圧縮 (Zip)
-            </div>
+            <div className="ctx-item" onClick={openMoveItemModal}>➡ 移動...</div>
+            <div className="ctx-item" onClick={handleCompress}>📦 圧縮 (Zip)</div>
             {contextMenu.file?.name.endsWith('.zip') && (
-                <div onClick={handleExtract} style={{ padding: '8px 15px', cursor: 'pointer', color: '#ecf0f1', fontSize: '14px' }} onMouseEnter={e => e.currentTarget.style.background = '#3a3a3a'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                   📂 解凍
-                </div>
+                <div className="ctx-item" onClick={handleExtract}>📂 解凍</div>
             )}
             <div style={{ borderTop: '1px solid #444', margin: '5px 0' }}></div>
-            <div onClick={handleDelete} style={{ padding: '8px 15px', cursor: 'pointer', color: '#ff6b6b', fontSize: '14px' }} onMouseEnter={e => e.currentTarget.style.background = '#3a3a3a'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-               🗑 削除
-            </div>
+            <div className="ctx-item delete" onClick={handleDelete}>🗑 削除</div>
         </div>
       )}
 
@@ -383,7 +480,7 @@ export default function FilesView({ server }: Props) {
               <button className="btn-secondary" onClick={handleCloseEditor}>← 戻る</button>
               <span style={{ fontWeight: 'bold' }}>{editingFile}</span>
             </div>
-            <button className="btn-primary" onClick={handleSave} disabled={isSaving}>{isSaving ? '保存中...' : '保存 (Ctrl+S)'}</button>
+            <button className="btn-primary" onClick={handleSave} disabled={isSaving}>保存 (Ctrl+S)</button>
           </div>
           <div style={{ flex: 1 }}>
             <Editor height="100%" defaultLanguage={editingFile ? getLanguage(editingFile) : 'plaintext'} value={fileContent} onChange={(v) => setFileContent(v || '')} theme="vs-dark" />
@@ -391,14 +488,14 @@ export default function FilesView({ server }: Props) {
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px' }}>
-          {/* ナビゲーションバー */}
           <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button className="btn-secondary" onClick={handleGoUp} disabled={currentPath === serversRootAbsPath}>↑</button>
-            <button className="btn-secondary" onClick={() => { setMoveTargetName('カレントディレクトリ'); setMoveDestPath(toDisplayPath(currentPath)); setShowMoveModal(true); }}>移動</button>
+            <button className="btn-secondary" onClick={openNavigateModal}>移動</button>
+            <button className="btn-secondary" onClick={openCreateModal} title="新規作成">＋</button>
 
-            <div style={{ 
-              backgroundColor: 'var(--bg-tertiary)', padding: '8px 12px', borderRadius: '4px', flex: 1, 
-              fontFamily: 'monospace', border: '1px solid var(--border-color)', display: 'flex', flexWrap: 'wrap', gap: '5px' 
+            <div style={{
+              backgroundColor: 'var(--bg-tertiary)', padding: '8px 12px', borderRadius: '4px', flex: 1,
+              fontFamily: 'monospace', border: '1px solid var(--border-color)', display: 'flex', flexWrap: 'wrap', gap: '5px'
             }}>
                 <span style={{color: '#888', cursor: 'default'}}>/</span>
                 {displayPathParts.map((part, i) => (
@@ -410,22 +507,24 @@ export default function FilesView({ server }: Props) {
             </div>
           </div>
 
-          {/* ファイルリスト */}
           <div style={{ flex: 1, backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', overflowY: 'auto' }}>
             {files.map((file) => (
-              <div 
+              <div
                 key={file.name}
                 onContextMenu={(e) => handleContextMenu(e, file)}
-                className="file-row"
+                className={`file-row ${selectedFiles.includes(file.name) ? 'selected' : ''}`}
                 style={{
                     padding: '10px 15px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '10px',
-                    backgroundColor: selectedFiles.includes(file.name) ? 'rgba(88, 101, 242, 0.2)' : 'transparent',
                     cursor: 'pointer'
                 }}
                 onClick={() => file.isDirectory ? handleFolderClick(file.name) : handleFileClick(file.name)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, file.name)}
+                onDragOver={(e) => { if(file.isDirectory) { e.preventDefault(); e.stopPropagation(); } }}
+                onDrop={(e) => { if(file.isDirectory) handleDropOnFolder(e, file.name); }}
               >
-                <input 
-                    type="checkbox" 
+                <input
+                    type="checkbox"
                     checked={selectedFiles.includes(file.name)}
                     onChange={() => toggleSelect(file.name)}
                     onClick={(e) => e.stopPropagation()}

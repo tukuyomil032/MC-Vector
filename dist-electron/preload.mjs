@@ -20,6 +20,20 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
     };
   },
   onDownloadProgress: (callback) => electron.ipcRenderer.on("download-progress", callback),
+  onServerStats: (callback) => {
+    const subscription = (_event, data) => callback(_event, data);
+    electron.ipcRenderer.on("server-stats", subscription);
+    return () => {
+      electron.ipcRenderer.removeListener("server-stats", subscription);
+    };
+  },
+  onServerStatusUpdate: (callback) => {
+    const subscription = (_event, data) => callback(_event, data);
+    electron.ipcRenderer.on("server-status-update", subscription);
+    return () => {
+      electron.ipcRenderer.removeListener("server-status-update", subscription);
+    };
+  },
   openSettingsWindow: (currentSettings) => electron.ipcRenderer.send("open-settings-window", currentSettings),
   settingsWindowReady: () => electron.ipcRenderer.send("settings-window-ready"),
   onSettingsData: (callback) => {
@@ -37,7 +51,6 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   listFiles: (dirPath) => electron.ipcRenderer.invoke("list-files", dirPath),
   readFile: (filePath) => electron.ipcRenderer.invoke("read-file", filePath),
   saveFile: (filePath, content) => electron.ipcRenderer.invoke("save-file", filePath, content),
-  // ★新規API
   createDirectory: (path) => electron.ipcRenderer.invoke("create-directory", path),
   deletePath: (path) => electron.ipcRenderer.invoke("delete-path", path),
   movePath: (src, dest) => electron.ipcRenderer.invoke("move-path", src, dest),
@@ -49,5 +62,13 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   restoreBackup: (serverPath, backupName) => electron.ipcRenderer.invoke("restore-backup", serverPath, backupName),
   deleteBackup: (serverPath, backupName) => electron.ipcRenderer.invoke("delete-backup", serverPath, backupName),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setupProxy: (config) => electron.ipcRenderer.invoke("setup-proxy", config)
+  setupProxy: (config) => electron.ipcRenderer.invoke("setup-proxy", config),
+  searchModrinth: (query, type, version, offset) => electron.ipcRenderer.invoke("search-modrinth", query, type, version, offset),
+  installModrinthProject: (projectId, versionId, fileName, downloadUrl, serverPath, type) => electron.ipcRenderer.invoke("install-modrinth-project", projectId, versionId, fileName, downloadUrl, serverPath, type),
+  searchHangar: (query, version, offset) => electron.ipcRenderer.invoke("search-hangar", query, version, offset),
+  installHangarProject: (downloadUrl, fileName, serverPath) => electron.ipcRenderer.invoke("install-hangar-project", downloadUrl, fileName, serverPath),
+  // ★追加
+  getJavaVersions: () => electron.ipcRenderer.invoke("get-java-versions"),
+  downloadJava: (version) => electron.ipcRenderer.invoke("download-java", version),
+  deleteJava: (version) => electron.ipcRenderer.invoke("delete-java", version)
 });

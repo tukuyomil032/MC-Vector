@@ -1,29 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import './main.css';
 import { type MinecraftServer, type AppView } from './renderer/shared/server declaration';
+import DashboardView from './renderer/components/DashboardView';
 import ConsoleView from './renderer/components/ConsoleView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
 import PropertiesView from './renderer/components/properties/PropertiesView';
 import FilesView from './renderer/components/FilesView';
+import PluginBrowser from './renderer/components/PluginBrowser';
 import BackupsView from './renderer/components/BackupsView';
 import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/ProxySetupView';
 import AddServerModal from './renderer/components/AddServerModal';
+import Toast from './renderer/components/Toast';
 
 function App() {
   const [servers, setServers] = useState<MinecraftServer[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>('');
-  const [currentView, setCurrentView] = useState<AppView>('console');
+  const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [showAddServerModal, setShowAddServerModal] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, serverId: string } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
+  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
 
-  // ログを一元管理するState
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ msg, type });
+  };
+
   const [serverLogs, setServerLogs] = useState<Record<string, string[]>>({});
-
-  // ★重要: イベントリスナー内で最新の selectedServerId を参照するための Ref
   const selectedServerIdRef = useRef(selectedServerId);
 
-  // selectedServerId が変わるたびに Ref を更新
   useEffect(() => {
     selectedServerIdRef.current = selectedServerId;
   }, [selectedServerId]);
@@ -37,59 +41,75 @@ function App() {
           setSelectedServerId(loadedServers[0].id);
         }
       } catch (e) {
-        console.error("Failed to load servers", e);
+        showToast("サーバーリスト読み込みエラー", 'error');
       }
     };
     loadServers();
 
-    // ★ログ受信リスナー (App全体で1回だけ登録)
-    // 戻り値の型修正により、この removeLogListener は正しく関数として認識されます
-    const removeLogListener = window.electronAPI.onServerLog((_event, log) => {
-      const formattedLog = log.replace(/\n/g, '\r\n');
-      
-      // 現在選択されているサーバーIDを取得
-      const currentId = selectedServerIdRef.current;
-
-      if (currentId) {
-        setServerLogs(prev => {
-          const currentLogs = prev[currentId] || [];
-          // ログを追加 (最大2000行)
-          const newLogs = [...currentLogs, formattedLog];
-          if (newLogs.length > 2000) newLogs.shift();
-          
-          return {
-            ...prev,
-            [currentId]: newLogs
-          };
-        });
-      }
+    // ログリスナー
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removeLogListener = window.electronAPI.onServerLog((_event: any, data: any) => {
+      if (!data || !data.serverId) return;
+      const formattedLog = data.log.replace(/\n/g, '\r\n');
+      setServerLogs(prev => {
+        const currentLogs = prev[data.serverId] || [];
+        const newLogs = [...currentLogs, formattedLog];
+        if (newLogs.length > 2000) newLogs.shift();
+        return { ...prev, [data.serverId]: newLogs };
+      });
     });
 
-    // ダウンロード進捗
-    window.electronAPI.onDownloadProgress((_event, data) => {
+    // DL進捗リスナー
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    window.electronAPI.onDownloadProgress((_event: any, data: any) => {
       if (data.progress === 100) {
         setDownloadStatus(null);
-        alert(`ダウンロード完了: サーバー ${data.serverId} の準備ができました！`);
+        showToast(`ダウンロード完了: ${data.status}`, 'success');
       } else {
         setDownloadStatus({ id: data.serverId, progress: data.progress, msg: data.status });
       }
     });
 
+    // ★追加: ステータス更新リスナー
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removeStatusListener = window.electronAPI.onServerStatusUpdate((_event: any, data: any) => {
+      setServers(prev => prev.map(s =>
+        s.id === data.serverId ? { ...s, status: data.status } : s
+      ));
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return () => {
-      // クリーンアップ (ここでのエラーは global.d.ts の修正で消えます)
-      if (removeLogListener) removeLogListener();
+      if (typeof removeLogListener === 'function') (removeLogListener as any)();
+      if (typeof removeStatusListener === 'function') (removeStatusListener as any)();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
   const activeServer = servers.find(s => s.id === selectedServerId);
 
   const handleStart = () => { if (selectedServerId) window.electronAPI.startServer(selectedServerId); };
   const handleStop = () => { if (selectedServerId) window.electronAPI.stopServer(selectedServerId); };
-  
+
+  // ★修正: 再起動処理 (手動でステータス変更)
+  const handleRestart = async () => {
+    if (!selectedServerId) return;
+
+    // UIをRestarting...にする
+    setServers(prev => prev.map(s => s.id === selectedServerId ? { ...s, status: 'restarting' } : s));
+
+    await window.electronAPI.stopServer(selectedServerId);
+
+    // 停止処理待ち (簡易的に3秒)
+    setTimeout(() => {
+      window.electronAPI.startServer(selectedServerId);
+    }, 3000);
+  };
+
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
     setServers(prev => prev.map(s => s.id === updatedServer.id ? updatedServer : s));
     await window.electronAPI.updateServer(updatedServer);
+    showToast('設定を保存しました', 'success');
   };
 
   const handleAddServer = async (serverData: any) => {
@@ -98,15 +118,14 @@ function App() {
       setServers(prev => [...prev, newServer]);
       setSelectedServerId(newServer.id);
       setShowAddServerModal(false);
-      
+      showToast('サーバーを作成しました', 'success');
+
       if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Velocity', 'Waterfall'].includes(serverData.software)) {
          setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
          await window.electronAPI.downloadServerJar(newServer.id);
-      } else {
-         alert(`${serverData.software} の自動ダウンロードは現在サポートされていません。`);
       }
     } catch (e) {
-      alert('サーバー作成に失敗しました');
+      showToast('サーバー作成に失敗しました', 'error');
     }
   };
 
@@ -114,9 +133,9 @@ function App() {
     if (!window.confirm(`構成を開始しますか？`)) return;
     try {
       const result = await window.electronAPI.setupProxy(config);
-      alert(result.message);
+      showToast(result.message, result.success ? 'success' : 'error');
     } catch (error) {
-      alert('エラーが発生しました。');
+      showToast('エラーが発生しました', 'error');
     }
   };
 
@@ -135,15 +154,11 @@ function App() {
       if (success) {
         const newServers = servers.filter(s => s.id !== serverId);
         setServers(newServers);
-        // ログデータも削除（メモリ節約）
-        setServerLogs(prev => {
-          const newLogs = { ...prev };
-          delete newLogs[serverId];
-          return newLogs;
-        });
+        setServerLogs(prev => { const n = {...prev}; delete n[serverId]; return n; });
         if (selectedServerId === serverId) setSelectedServerId(newServers.length > 0 ? newServers[0].id : '');
-      }
-    } catch (e) { alert('削除エラー'); }
+        showToast('サーバーを削除しました', 'success');
+      } else { showToast('削除に失敗しました', 'error'); }
+    } catch (e) { showToast('削除エラー', 'error'); }
     setContextMenu(null);
   };
 
@@ -151,15 +166,19 @@ function App() {
 
   const renderContent = () => {
     if (currentView === 'proxy') return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
-    if (!activeServer) return <div style={{padding: 20}}>サーバーを選択してください</div>;
+    if (!activeServer) return <div style={{padding: 40, textAlign: 'center', color: '#666', fontSize: '1.2rem'}}>サーバーを選択するか、作成してください</div>;
+
+    const contentKey = `${activeServer.id}-${currentView}`;
 
     switch (currentView) {
-      case 'console': 
-        return <ConsoleView server={activeServer} logs={serverLogs[activeServer.id] || []} />;
-      case 'properties': return <PropertiesView server={activeServer} />;
-      case 'files': return <FilesView server={activeServer} />;
-      case 'backups': return <BackupsView server={activeServer} />;
-      case 'general-settings': return <ServerSettings server={activeServer} onSave={handleUpdateServer} />;
+      case 'dashboard': return <DashboardView key={contentKey} server={activeServer} />;
+      case 'console': return <ConsoleView key={contentKey} server={activeServer} logs={serverLogs[activeServer.id] || []} />;
+      case 'properties': return <PropertiesView key={contentKey} server={activeServer} />;
+      case 'files': return <FilesView key={contentKey} server={activeServer} />;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      case 'plugins' as any: return <PluginBrowser key={contentKey} server={activeServer} />;
+      case 'backups': return <BackupsView key={contentKey} server={activeServer} />;
+      case 'general-settings': return <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />;
       case 'sftp': return <div style={{padding: 40, textAlign: 'center', color: '#666'}}>SFTP機能は実装検討中...</div>;
       case 'users': return <div style={{padding: 40, textAlign: 'center', color: '#666'}}>サブユーザー機能は実装検討中...</div>;
       default: return <div>Unknown View</div>;
@@ -168,49 +187,49 @@ function App() {
 
   return (
     <div className="app-container" onClick={handleClickOutside}>
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
       <aside className="sidebar">
         <div className="sidebar-header">MC-Vector</div>
         <div className="sidebar-nav">
+          <NavItem label="Dashboard" view="dashboard" current={currentView} set={setCurrentView} icon="📊" />
           <NavItem label="Console" view="console" current={currentView} set={setCurrentView} icon="💻" />
           <NavItem label="Properties" view="properties" current={currentView} set={setCurrentView} icon="⚙️" />
           <NavItem label="Files" view="files" current={currentView} set={setCurrentView} icon="📁" />
+          <NavItem label="Plugins / Mods" view="plugins" current={currentView} set={setCurrentView} icon="🧩" />
           <NavItem label="Backups" view="backups" current={currentView} set={setCurrentView} icon="📦" />
           <NavItem label="General Settings" view="general-settings" current={currentView} set={setCurrentView} icon="🔧" />
-          <hr style={{width: '100%', borderColor: 'var(--border-color)', margin: '5px 0', opacity: 0.3}} />
+          <hr style={{width: '90%', borderColor: 'rgba(255,255,255,0.1)', margin: '10px auto'}} />
           <NavItem label="Proxy Network" view="proxy" current={currentView} set={setCurrentView} icon="🔗" />
           <NavItem label="SFTP" view="sftp" current={currentView} set={setCurrentView} icon="🌐" />
           <NavItem label="Users" view="users" current={currentView} set={setCurrentView} icon="👥" />
         </div>
         <div className="sidebar-footer-list">
-          <div style={{ padding: '5px 10px', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>SERVERS</div>
+          <div style={{ padding: '5px 10px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '1px' }}>SERVERS</div>
           <div className="server-list-container">
             {servers.map((server) => (
-              <div 
-                key={server.id} 
-                className={`server-item ${server.id === selectedServerId ? 'active' : ''}`}
-                onClick={() => setSelectedServerId(server.id)}
-                onContextMenu={(e) => handleContextMenu(e, server.id)}
-              >
+              <div key={server.id} className={`server-item ${server.id === selectedServerId ? 'active' : ''}`} onClick={() => setSelectedServerId(server.id)} onContextMenu={(e) => handleContextMenu(e, server.id)}>
                 <div className={`status-indicator ${server.status}`}></div>
                 <div className="server-info"><div className="server-name">{server.name}</div></div>
               </div>
             ))}
           </div>
-          <button className="add-server-btn" onClick={() => setShowAddServerModal(true)}>+ サーバー追加</button>
+          <button className="add-server-btn" onClick={() => setShowAddServerModal(true)}>+ Add Server</button>
         </div>
       </aside>
 
       <main className="main-content">
         <header className="top-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2>{currentView === 'proxy' ? 'Network Configuration' : activeServer?.name}</h2>
-            <span style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}> / {currentView}</span>
+            <h2 style={{fontSize: '1.2rem', fontWeight: '700', color: '#fff'}}>{currentView === 'proxy' ? 'Network' : activeServer?.name}</h2>
+            <span style={{color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.7}}> / {currentView}</span>
           </div>
           <div className="actions">
             {currentView !== 'proxy' && (
               <>
-                <button className="btn-start" onClick={handleStart}>起動</button>
-                <button className="btn-stop" onClick={handleStop}>停止</button>
+                <button className="btn-start" onClick={handleStart} title="Start Server">▶ Start</button>
+                <button className="btn-restart btn-secondary" onClick={handleRestart} title="Restart Server">↻ Restart</button>
+                <button className="btn-stop" onClick={handleStop} title="Stop Server">■ Stop</button>
               </>
             )}
           </div>
@@ -218,34 +237,10 @@ function App() {
         <div className="content-area">{renderContent()}</div>
       </main>
 
-      {downloadStatus && (
-        <div style={{
-          position: 'fixed', bottom: 20, right: 20, 
-          background: '#2c3e50', padding: '15px', borderRadius: '8px', 
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 10000, color: '#fff', minWidth: '250px'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Downloading...</div>
-          <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>{downloadStatus.msg}</div>
-          <div style={{ width: '100%', height: '6px', background: '#555', borderRadius: '3px' }}>
-            <div style={{ width: `${downloadStatus.progress}%`, height: '100%', background: '#27ae60', borderRadius: '3px' }}></div>
-          </div>
-        </div>
-      )}
-
+      {/* 以下モーダル等は前回と同じ */}
+      {downloadStatus && ( <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#2c2c30', padding: '15px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)', zIndex: 10000, color: '#fff', minWidth: '280px', border: '1px solid var(--border-color)' }}> <div style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}> <span>Downloading...</span> <span style={{color: 'var(--accent-color)'}}>{downloadStatus.progress}%</span> </div> <div style={{ fontSize: '0.85rem', marginBottom: '8px', color: '#ccc' }}>{downloadStatus.msg}</div> <div style={{ width: '100%', height: '4px', background: '#444', borderRadius: '2px', overflow: 'hidden' }}> <div style={{ width: `${downloadStatus.progress}%`, height: '100%', background: 'var(--accent-color)', borderRadius: '2px', transition: 'width 0.2s' }}></div> </div> </div> )}
       {showAddServerModal && <AddServerModal onClose={() => setShowAddServerModal(false)} onAdd={handleAddServer} />}
-      
-      {contextMenu && (
-        <div style={{
-          position: 'fixed', top: contextMenu.y, left: contextMenu.x,
-          background: '#2c2c2c', border: '1px solid #444', borderRadius: '4px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.5)', zIndex: 9999, padding: '5px 0', minWidth: '120px'
-        }}>
-          <div onClick={(e) => { e.stopPropagation(); handleDeleteServer(); }}
-            style={{ padding: '8px 15px', cursor: 'pointer', color: '#ff6b6b', fontSize: '14px' }}>
-            🗑️ サーバーを削除
-          </div>
-        </div>
-      )}
+      {contextMenu && ( <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, background: '#252526', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', zIndex: 9999, padding: '4px', minWidth: '140px' }}> <div onClick={(e) => { e.stopPropagation(); handleDeleteServer(); }} style={{ padding: '8px 12px', cursor: 'pointer', color: '#ff6b6b', fontSize: '14px', borderRadius: '4px', transition: 'background 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}> 🗑️ 削除 </div> </div> )}
     </div>
   );
 }

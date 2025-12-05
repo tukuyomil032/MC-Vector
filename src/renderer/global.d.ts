@@ -3,12 +3,12 @@ import { ProxyNetworkConfig } from './renderer/components/ProxySetupView';
 export interface IElectronAPI {
   // --- システム情報 ---
   getPlatform: () => Promise<string>;
-  
+
   // --- サーバー操作 ---
   startServer: (id: string) => Promise<void>;
   stopServer: (id: string) => Promise<void>;
   sendCommand: (id: string, command: string) => Promise<void>;
-  
+
   // --- サーバー管理 ---
   getServers: () => Promise<any[]>;
   addServer: (serverData: any) => Promise<any>;
@@ -22,11 +22,11 @@ export interface IElectronAPI {
   getServerRoot: () => Promise<string>;
   selectRootFolder: () => Promise<string | null>;
 
-  // --- ログ・進捗 ---
-  // ★修正: 戻り値を (() => void) に変更 (解除関数を受け取るため)
+  // --- ログ・進捗・統計 ---
   onServerLog: (callback: (event: unknown, log: string) => void) => (() => void);
-  
   onDownloadProgress: (callback: (event: unknown, data: { serverId: string, progress: number, status: string }) => void) => void;
+  onServerStats: (callback: (event: unknown, data: { serverId: string, cpu: number, memory: number }) => void) => (() => void);
+  onServerStatusUpdate: (callback: (event: unknown, data: { serverId: string, status: string }) => void) => (() => void);
 
   // --- 設定ウィンドウ ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,18 +43,13 @@ export interface IElectronAPI {
   listFiles: (dirPath: string) => Promise<{ name: string; isDirectory: boolean; size?: number }[]>;
   readFile: (filePath: string) => Promise<string>;
   saveFile: (filePath: string, content: string) => Promise<boolean>;
-  
-  // ファイル操作
+
   createDirectory: (path: string) => Promise<boolean>;
   deletePath: (path: string) => Promise<boolean>;
   movePath: (srcPath: string, destPath: string) => Promise<boolean>;
-  copyPath: (srcPath: string, destPath: string) => Promise<boolean>; // 将来用
-  compressFiles: (paths: string[], destPath: string) => Promise<boolean>; // tar.gz作成
-  extractArchive: (archivePath: string, destPath: string) => Promise<boolean>; // 解凍
-  
-  // ファイルアップロード用（メインプロセス側でダイアログを開くのではなく、パスを受け取ってコピーする）
   uploadFiles: (filePaths: string[], destDir: string) => Promise<boolean>;
-
+  compressFiles: (paths: string[], destPath: string) => Promise<boolean>;
+  extractArchive: (archivePath: string, destPath: string) => Promise<boolean>;
 
   // --- バックアップ ---
   createBackup: (serverId: string, serverPath: string) => Promise<boolean>;
@@ -64,6 +59,19 @@ export interface IElectronAPI {
 
   // --- プロキシ ---
   setupProxy: (config: ProxyNetworkConfig) => Promise<{ success: boolean; message: string }>;
+
+  // --- Mod/Pluginブラウザ ---
+  searchModrinth: (query: string, type: 'mod' | 'plugin', version: string, offset: number) => Promise<any[]>;
+  installModrinthProject: (projectId: string, versionId: string, fileName: string, downloadUrl: string, serverPath: string, type: 'mod' | 'plugin') => Promise<boolean>;
+
+  // Hangar API
+  searchHangar: (query: string, version: string, offset: number) => Promise<any[]>;
+  installHangarProject: (downloadUrl: string, fileName: string, serverPath: string) => Promise<boolean>;
+
+  // ★追加: Java Manager API
+  getJavaVersions: () => Promise<{ name: string, path: string, version: number }[]>;
+  downloadJava: (version: number) => Promise<boolean>;
+  deleteJava: (version: number) => Promise<boolean>;
 }
 
 declare global {

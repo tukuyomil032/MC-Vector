@@ -1,22 +1,25 @@
-/* サーバーリストのアイテム */
+/* --- サイドバー関連 --- */
+
 .server-item {
-  padding: 12px;
+  padding: 10px 12px;
   margin-bottom: 5px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: background-color 0.2s;
+  transition: var(--transition-ease);
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .server-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
 }
 
 .server-item.active {
-  background-color: var(--bg-tertiary);
-  border-left: 3px solid var(--accent);
+  background-color: rgba(88, 101, 242, 0.15);
+  border-color: rgba(88, 101, 242, 0.3);
 }
 
 .server-info {
@@ -25,94 +28,142 @@
 }
 
 .server-name {
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
-.server-meta {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-/* ステータスランプ */
-.status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--bg-tertiary);
-}
-
-.status-indicator.online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
-.status-indicator.offline { background-color: var(--danger); }
-.status-indicator.starting { background-color: var(--warning); animation: pulse 1s infinite; }
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
-
-/* ボタン類 */
-.add-server-btn {
-  margin: 10px;
-  padding: 10px;
-  background-color: transparent;
-  border: 1px dashed var(--text-secondary);
-  color: var(--text-secondary);
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.add-server-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.btn-start, .btn-stop {
-  padding: 8px 24px;
-  border-radius: 4px;
-  font-weight: bold;
-  color: #1e1e2e;
-}
-
-.btn-start { background-color: var(--success); }
-.btn-stop { background-color: var(--danger); color: white; }
-
-.btn-start:hover { filter: brightness(1.1); }
-.btn-stop:hover { filter: brightness(1.1); }
-
-/* --- ここから下が新規追加・設定画面用 --- */
-
-/* サイドバーのナビゲーションボタン（タブ） */
 .nav-item {
   padding: 10px 15px;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-ease);
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
+  transform: translateX(4px);
 }
 
 .nav-item.active {
-  background-color: var(--bg-tertiary);
+  background: rgba(88, 101, 242, 0.1);
   color: var(--accent);
-  font-weight: bold;
-  border-left: 3px solid var(--accent); /* アクティブ時の装飾 */
+  border-left: 3px solid var(--accent);
 }
 
-/* コンソール画面のダッシュボード（Stats Bar） */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.status-indicator.online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-indicator.offline { background-color: var(--danger); }
+.status-indicator.starting { background-color: var(--warning); animation: pulse 1.5s infinite; }
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* --- ボタン類 --- */
+button {
+  transition: var(--transition-bounce);
+}
+button:active {
+  transform: scale(0.96);
+}
+
+.add-server-btn {
+  margin-top: 5px;
+  width: 100%;
+  padding: 10px;
+  background-color: rgba(255,255,255,0.03);
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.add-server-btn:hover {
+  background-color: rgba(255,255,255,0.08);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  border-style: solid;
+}
+
+/* Start/Stop/Restart ボタン */
+.btn-start, .btn-stop, .btn-restart {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+.btn-stop {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+/* ★追加: Restartボタン */
+.btn-restart {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.btn-start:hover, .btn-stop:hover, .btn-restart:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.btn-secondary:hover {
+  background-color: rgba(255,255,255,0.1);
+  color: var(--text-primary);
+}
+
+/* --- コンソール画面 --- */
 .console-dashboard {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* 自動折り返し */
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
   padding: 15px 20px;
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
@@ -120,33 +171,38 @@
 
 .stat-card {
   background-color: var(--bg-tertiary);
-  padding: 10px;
-  border-radius: 6px;
+  padding: 12px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.stat-card:hover {
+  border-color: var(--border-color);
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 600;
 }
 
 .stat-value {
-  font-size: 0.95rem;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* コンソール入力エリア */
 .console-input-area {
   padding: 10px 20px;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -156,31 +212,62 @@
 .console-input {
   flex: 1;
   padding: 10px;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
-  background-color: var(--bg-tertiary);
+  background-color: #121214;
   color: var(--text-primary);
   font-family: 'Menlo', 'Monaco', monospace;
   font-size: 0.9rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .console-input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
 }
 
-/* 設定モーダル */
+/* --- ファイルマネージャー用 --- */
+.file-row {
+  transition: background-color 0.15s;
+  border-radius: 4px;
+}
+.file-row:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+.file-row.selected {
+  background-color: rgba(88, 101, 242, 0.15) !important;
+}
+
+.ctx-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: background 0.15s;
+  border-radius: 4px;
+  margin: 2px;
+}
+.ctx-item:hover {
+  background: var(--accent);
+  color: white;
+}
+.ctx-item.delete:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* --- 設定モーダル類 --- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
@@ -189,120 +276,52 @@
   border-radius: 12px;
   width: 500px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  animation: scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.form-row {
-  display: flex;
-  gap: 16px;
+  gap: 8px;
 }
 
 label {
   font-size: 0.9rem;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 input, select {
-  padding: 8px 12px;
-  background-color: var(--bg-tertiary);
+  padding: 10px 12px;
+  background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input:focus {
+input:focus, select:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
   margin-top: 24px;
 }
 
-.btn-primary {
-  background-color: var(--accent);
-  color: #1e1e2e;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-weight: bold;
-}
-
-.btn-secondary {
-  background-color: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.btn-secondary:hover {
-  background-color: rgba(255,255,255,0.05);
-  color: var(--text-primary);
-}
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--bg-tertiary);
-  transition: .4s;
-  border-radius: 24px;
-  border: 1px solid var(--border-color);
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 16px;
-  width: 16px;
-  left: 3px;
-  bottom: 3px;
-  background-color: var(--text-secondary);
-  transition: .4s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: var(--accent);
-  border-color: var(--accent);
-}
-
-input:checked + .slider:before {
-  transform: translateX(20px);
-  background-color: #1e1e2e;
-}
-
-/* プロパティ画面のレイアウト用 */
+/* --- ★追加: PropertiesView (サーバー設定画面) 用 --- */
 .properties-container {
-  padding: 30px;
+  padding: 40px;
   max-width: 800px;
   margin: 0 auto;
 }
@@ -317,7 +336,7 @@ input:checked + .slider:before {
 
 .section-title {
   font-size: 1.1rem;
-  font-weight: bold;
+  font-weight: 700;
   margin-bottom: 15px;
   color: var(--accent);
   padding-bottom: 10px;
@@ -347,6 +366,51 @@ input:checked + .slider:before {
   margin-top: 2px;
 }
 
-.file-row:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+/* トグルスイッチ */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-tertiary);
+  transition: .3s;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: #fff;
 }
