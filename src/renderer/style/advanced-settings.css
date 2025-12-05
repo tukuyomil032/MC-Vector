@@ -1,0 +1,175 @@
+/* 詳細設定ウィンドウ全体 */
+.advanced-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ヘッダー */
+.advanced-header {
+  padding: 10px 20px;
+  height: 60px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.advanced-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* メインコンテンツ（2カラム: タブ + 設定リスト） */
+.advanced-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 左側：カテゴリタブ */
+.category-sidebar {
+  width: 180px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.category-tab {
+  padding: 12px 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.category-tab:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.category-tab.active {
+  background-color: var(--bg-tertiary);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: bold;
+}
+
+/* 右側：設定リスト */
+.settings-list-container {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+/* 個別の設定カード */
+.setting-card {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.setting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.setting-key {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  /* ツールチップのためのカーソル */
+  cursor: help;
+  text-decoration: underline dotted var(--text-secondary);
+  position: relative;
+}
+
+/* --- ツールチップ（浮かび上がる説明） --- */
+.tooltip-box {
+  visibility: hidden;
+  width: 240px;
+  background-color: #222;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 12px;
+  position: absolute;
+  z-index: 100;
+  bottom: 125%; /* 上に表示 */
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 0.8rem;
+  font-weight: normal;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  pointer-events: none;
+  line-height: 1.5;
+  border: 1px solid var(--accent);
+  white-space: normal;
+}
+
+.tooltip-box::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--accent) transparent transparent transparent;
+}
+
+/* ホバー時に表示 */
+.setting-key:hover .tooltip-box {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* 入力フォーム類 */
+.setting-input {
+  width: 100%;
+  padding: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+}
+
+.setting-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.help-icon {
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-left: 5px;
+}

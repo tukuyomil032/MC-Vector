@@ -1,0 +1,352 @@
+/* サーバーリストのアイテム */
+.server-item {
+  padding: 12px;
+  margin-bottom: 5px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.server-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.server-item.active {
+  background-color: var(--bg-tertiary);
+  border-left: 3px solid var(--accent);
+}
+
+.server-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.server-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.server-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ステータスランプ */
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary);
+}
+
+.status-indicator.online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-indicator.offline { background-color: var(--danger); }
+.status-indicator.starting { background-color: var(--warning); animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* ボタン類 */
+.add-server-btn {
+  margin: 10px;
+  padding: 10px;
+  background-color: transparent;
+  border: 1px dashed var(--text-secondary);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.add-server-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-start, .btn-stop {
+  padding: 8px 24px;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #1e1e2e;
+}
+
+.btn-start { background-color: var(--success); }
+.btn-stop { background-color: var(--danger); color: white; }
+
+.btn-start:hover { filter: brightness(1.1); }
+.btn-stop:hover { filter: brightness(1.1); }
+
+/* --- ここから下が新規追加・設定画面用 --- */
+
+/* サイドバーのナビゲーションボタン（タブ） */
+.nav-item {
+  padding: 10px 15px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background-color: var(--bg-tertiary);
+  color: var(--accent);
+  font-weight: bold;
+  border-left: 3px solid var(--accent); /* アクティブ時の装飾 */
+}
+
+/* コンソール画面のダッシュボード（Stats Bar） */
+.console-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* 自動折り返し */
+  gap: 10px;
+  padding: 15px 20px;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stat-card {
+  background-color: var(--bg-tertiary);
+  padding: 10px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* コンソール入力エリア */
+.console-input-area {
+  padding: 10px 20px;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.console-input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 0.9rem;
+}
+
+.console-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* 設定モーダル */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--bg-secondary);
+  padding: 24px;
+  border-radius: 12px;
+  width: 500px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.form-group {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+input, select {
+  padding: 8px 12px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn-primary {
+  background-color: var(--accent);
+  color: #1e1e2e;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-tertiary);
+  transition: .4s;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: #1e1e2e;
+}
+
+/* プロパティ画面のレイアウト用 */
+.properties-container {
+  padding: 30px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.property-section {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: var(--accent);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.property-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.property-item:last-child {
+  border-bottom: none;
+}
+
+.property-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.property-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.file-row:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}

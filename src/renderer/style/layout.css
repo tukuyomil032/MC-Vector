@@ -1,0 +1,78 @@
+/* 全体を左右に分割 */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* 左サイドバー */
+.sidebar {
+  width: 260px;
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 20px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--accent);
+  /* ドラッグ領域 */
+  -webkit-app-region: drag; 
+}
+
+/* ★追加: サイドバー内のメインメニュー領域（タブ） */
+.sidebar-nav {
+  flex: 1; /* 空きスペースを上に詰めて確保 */
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+/* ★変更: サーバーリストを下に寄せるためのエリア */
+.sidebar-footer-list {
+  max-height: 40%; /* 画面の4割くらいの高さに制限 */
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-color);
+  background-color: rgba(0, 0, 0, 0.15); /* 少し暗くして区別 */
+}
+
+.server-list-container {
+  overflow-y: auto; /* サーバーが増えたらここだけスクロール */
+  flex: 1;
+  padding: 10px;
+}
+
+/* 右メインエリア */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  overflow: hidden;
+}
+
+.top-bar {
+  height: 60px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+}
+
+.content-area {
+  flex: 1;
+  padding: 0; /* コンソールなどを全画面にするためパディング削除 */
+  overflow: hidden; /* 中身に合わせてスクロール制御 */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
