@@ -1,138 +1,127 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import '../../main.css';
 
-export interface ProxyNetworkConfig {
-  proxySoftware: 'Velocity' | 'Waterfall' | 'BungeeCord';
-  proxyPort: number;
-  backendServerIds: string[];
-}
-
-interface ProxySetupProps {
+interface ProxySetupViewProps {
   servers: MinecraftServer[];
   onBuildNetwork: (config: ProxyNetworkConfig) => void;
 }
 
-const ProxySetupView: React.FC<ProxySetupProps> = ({ servers, onBuildNetwork }) => {
-  const [proxySoftware, setProxySoftware] = useState<'Velocity' | 'Waterfall' | 'BungeeCord'>('Velocity');
-  const [proxyPort, setProxyPort] = useState(25565);
-  const [selectedServerIds, setSelectedServerIds] = useState<string[]>([]);
+export interface ProxyNetworkConfig {
+  proxySoftware: string;
+  proxyPort: number;
+  backendServerIds: string[];
+}
 
-  // サーバー選択の切り替え
-  const toggleServer = (id: string) => {
-    setSelectedServerIds(prev => 
-      prev.includes(id) ? prev.filter(sId => sId !== id) : [...prev, id]
+export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupViewProps) {
+  const [proxySoftware, setProxySoftware] = useState('Velocity');
+  const [proxyPort, setProxyPort] = useState(25577);
+  const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
+
+  const handleCheckboxChange = (serverId: string) => {
+    setSelectedBackendIds(prev =>
+      prev.includes(serverId)
+        ? prev.filter(id => id !== serverId)
+        : [...prev, serverId]
     );
   };
 
-  // 構築ボタンクリック時
   const handleBuild = () => {
-    if (selectedServerIds.length < 2) {
-      alert("最低2つのサーバーを選択してください！");
+    if (selectedBackendIds.length === 0) {
+      alert("接続するサーバーを少なくとも1つ選択してください");
       return;
     }
     onBuildNetwork({
       proxySoftware,
       proxyPort,
-      backendServerIds: selectedServerIds
+      backendServerIds: selectedBackendIds
     });
   };
 
+  const openHelp = () => {
+    window.electronAPI.openProxyHelpWindow();
+  };
+
   return (
-    <div style={{ padding: '30px', color: '#ecf0f1', maxWidth: '800px' }}>
-      <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px' }}>
+    <div style={{ height: '100%', padding: '40px', overflowY: 'auto', color: '#fff' }}>
+      <h2 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
         Proxy Network Setup
       </h2>
-      
-      <p style={{ color: '#aaa', marginBottom: '20px' }}>
-        複数のサーバーを接続してネットワークを構築します。プロキシサーバーを自動生成し、各サーバーの設定（ポート、転送設定）を自動で書き換えます。
+
+      {/* ★修正: 説明文を変更 */}
+      <p style={{ color: '#aaa', marginBottom: '30px' }}>
+        複数のサーバーを接続してネットワークを構築します。各サーバーの設定(ポート、転送設定)を自動で書き換えます。
       </p>
 
-      {/* 1. プロキシ設定エリア */}
-      <div style={{ background: '#2c3e50', padding: '20px', borderRadius: '8px', marginBottom: '30px' }}>
-        <h4 style={{ marginTop: 0, marginBottom: '15px' }}>1. プロキシサーバーの設定</h4>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>ソフトウェア</label>
-            <select 
-              value={proxySoftware}
-              onChange={(e) => setProxySoftware(e.target.value as any)}
-              className="input-field" // main.cssのクラス
-              style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid #444', color: '#fff', borderRadius: '4px' }}
-            >
-              <option value="Velocity">Velocity (推奨 / 最新)</option>
-              <option value="Waterfall">Waterfall (安定 / 旧Paper系)</option>
-              <option value="BungeeCord">BungeeCord (標準)</option>
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>公開ポート</label>
-            <input 
-              type="number" 
-              value={proxyPort}
-              onChange={(e) => setProxyPort(Number(e.target.value))}
-              className="input-field"
-              style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid #444', color: '#fff', borderRadius: '4px' }}
-            />
+      <div className="setting-card" style={{ padding: '30px', maxWidth: '800px', background: '#252526' }}>
+
+        <div className="form-group" style={{ marginBottom: '25px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Proxy Software</label>
+          <select
+            className="input-field"
+            value={proxySoftware}
+            onChange={(e) => setProxySoftware(e.target.value)}
+          >
+            <option value="Velocity">Velocity (Recommended)</option>
+            <option value="Waterfall">Waterfall</option>
+            <option value="BungeeCord">BungeeCord</option>
+          </select>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: '25px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Proxy Port</label>
+          <input
+            type="number"
+            className="input-field"
+            value={proxyPort}
+            onChange={(e) => setProxyPort(Number(e.target.value))}
+          />
+          <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
+            プレイヤーが最初に接続するポートです (デフォルト: 25577)
           </div>
         </div>
-      </div>
 
-      {/* 2. 接続先サーバー選択エリア */}
-      <div style={{ marginBottom: '30px' }}>
-        <h4 style={{ marginBottom: '15px' }}>2. 接続するサーバーを選択 (最低2つ)</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
-          {servers.map(server => (
-            <div 
-              key={server.id} 
-              onClick={() => toggleServer(server.id)}
-              style={{ 
-                padding: '15px', 
-                background: selectedServerIds.includes(server.id) ? 'rgba(52, 152, 219, 0.2)' : '#222', 
-                border: selectedServerIds.includes(server.id) ? '2px solid #3498db' : '2px solid #444',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <input 
-                type="checkbox" 
-                checked={selectedServerIds.includes(server.id)}
-                onChange={() => {}} // 親divのonClickで処理するため空
-                style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-              />
-              <div>
-                <div style={{ fontWeight: 'bold' }}>{server.name}</div>
-                <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{server.version} / Port: {server.port}</div>
+        <div className="form-group" style={{ marginBottom: '30px' }}>
+          <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Backend Servers</label>
+          <div style={{ background: '#1e1e1e', padding: '10px', borderRadius: '4px', border: '1px solid #444', maxHeight: '200px', overflowY: 'auto' }}>
+            {servers.length === 0 && <div style={{color: '#666', padding: '10px'}}>サーバーがありません</div>}
+            {servers.map(server => (
+              <div key={server.id} style={{ display: 'flex', alignItems: 'center', padding: '8px', borderBottom: '1px solid #333' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedBackendIds.includes(server.id)}
+                  onChange={() => handleCheckboxChange(server.id)}
+                  style={{ marginRight: '10px', cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 'bold' }}>{server.name}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{server.software} {server.version} (Port: {server.port})</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* 実行ボタン */}
-      <div style={{ borderTop: '1px solid #444', paddingTop: '20px', textAlign: 'right' }}>
-        <button 
-          onClick={handleBuild}
-          className="btn-start" // main.cssのクラス
-          style={{ 
-            padding: '12px 30px', 
-            fontSize: '1rem', 
-            background: selectedServerIds.length < 2 ? '#555' : '#27ae60', 
-            cursor: selectedServerIds.length < 2 ? 'not-allowed' : 'pointer',
-            border: 'none',
-            color: '#fff',
-            borderRadius: '4px'
-          }}
-          disabled={selectedServerIds.length < 2}
-        >
-          ネットワーク構築を実行
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button
+            className="btn-start"
+            onClick={handleBuild}
+            style={{ padding: '12px 24px', fontSize: '1rem' }}
+          >
+            ネットワーク構築を実行
+          </button>
+
+          {/* ★追加: ヘルプボタン */}
+          <button
+            className="btn-secondary"
+            onClick={openHelp}
+            style={{ padding: '12px 20px', fontSize: '0.9rem' }}
+          >
+            設定方法の詳細を見る
+          </button>
+        </div>
+
       </div>
     </div>
   );
-};
-
-export default ProxySetupView;
+}

@@ -14,4 +14,4 @@ export interface MinecraftServer {
   createdDate?: string;
 }
 
-export type AppView = 'dashboard' | 'console' | 'properties' | 'files' | 'plugins' | 'backups' | 'general-settings' | 'proxy' | 'sftp' | 'users';
+export type AppView = 'dashboard' | 'console' | 'properties' | 'files' | 'plugins' | 'backups' | 'general-settings' | 'proxy' | 'users';

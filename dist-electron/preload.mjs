@@ -63,12 +63,16 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   deleteBackup: (serverPath, backupName) => electron.ipcRenderer.invoke("delete-backup", serverPath, backupName),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setupProxy: (config) => electron.ipcRenderer.invoke("setup-proxy", config),
+  openProxyHelpWindow: () => electron.ipcRenderer.send("open-proxy-help-window"),
+  // ★追加
   searchModrinth: (query, type, version, offset) => electron.ipcRenderer.invoke("search-modrinth", query, type, version, offset),
   installModrinthProject: (projectId, versionId, fileName, downloadUrl, serverPath, type) => electron.ipcRenderer.invoke("install-modrinth-project", projectId, versionId, fileName, downloadUrl, serverPath, type),
   searchHangar: (query, version, offset) => electron.ipcRenderer.invoke("search-hangar", query, version, offset),
   installHangarProject: (downloadUrl, fileName, serverPath) => electron.ipcRenderer.invoke("install-hangar-project", downloadUrl, fileName, serverPath),
-  // ★追加
   getJavaVersions: () => electron.ipcRenderer.invoke("get-java-versions"),
   downloadJava: (version) => electron.ipcRenderer.invoke("download-java", version),
-  deleteJava: (version) => electron.ipcRenderer.invoke("delete-java", version)
+  deleteJava: (version) => electron.ipcRenderer.invoke("delete-java", version),
+  // Users
+  readJsonFile: (filePath) => electron.ipcRenderer.invoke("read-json-file", filePath),
+  writeJsonFile: (filePath, data) => electron.ipcRenderer.invoke("write-json-file", filePath, data)
 });

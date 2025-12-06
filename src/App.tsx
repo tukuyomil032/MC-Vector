@@ -8,7 +8,9 @@ import PropertiesView from './renderer/components/properties/PropertiesView';
 import FilesView from './renderer/components/FilesView';
 import PluginBrowser from './renderer/components/PluginBrowser';
 import BackupsView from './renderer/components/BackupsView';
+import UsersView from './renderer/components/UsersView';
 import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/ProxySetupView';
+import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
 import Toast from './renderer/components/Toast';
 
@@ -20,6 +22,23 @@ function App() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, serverId: string } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
+
+  // サイドバー開閉状態
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // ヘルプウィンドウ表示用ハッシュルーター
+  const [currentHash, setCurrentHash] = useState(window.location.hash);
+
+  useEffect(() => {
+    const handleHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // プロキシヘルプ画面の場合はそれだけを表示して終了
+  if (currentHash === '#proxy-help') {
+    return <ProxyHelpView />;
+  }
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ msg, type });
@@ -46,7 +65,6 @@ function App() {
     };
     loadServers();
 
-    // ログリスナー
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeLogListener = window.electronAPI.onServerLog((_event: any, data: any) => {
       if (!data || !data.serverId) return;
@@ -59,7 +77,6 @@ function App() {
       });
     });
 
-    // DL進捗リスナー
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.electronAPI.onDownloadProgress((_event: any, data: any) => {
       if (data.progress === 100) {
@@ -70,7 +87,6 @@ function App() {
       }
     });
 
-    // ★追加: ステータス更新リスナー
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeStatusListener = window.electronAPI.onServerStatusUpdate((_event: any, data: any) => {
       setServers(prev => prev.map(s =>
@@ -91,16 +107,10 @@ function App() {
   const handleStart = () => { if (selectedServerId) window.electronAPI.startServer(selectedServerId); };
   const handleStop = () => { if (selectedServerId) window.electronAPI.stopServer(selectedServerId); };
 
-  // ★修正: 再起動処理 (手動でステータス変更)
   const handleRestart = async () => {
     if (!selectedServerId) return;
-
-    // UIをRestarting...にする
     setServers(prev => prev.map(s => s.id === selectedServerId ? { ...s, status: 'restarting' } : s));
-
     await window.electronAPI.stopServer(selectedServerId);
-
-    // 停止処理待ち (簡易的に3秒)
     setTimeout(() => {
       window.electronAPI.startServer(selectedServerId);
     }, 3000);
@@ -120,7 +130,8 @@ function App() {
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
 
-      if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Velocity', 'Waterfall'].includes(serverData.software)) {
+      // ★修正: Velocity を自動ダウンロード対象から除外
+      if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)) {
          setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
          await window.electronAPI.downloadServerJar(newServer.id);
       }
@@ -134,6 +145,11 @@ function App() {
     try {
       const result = await window.electronAPI.setupProxy(config);
       showToast(result.message, result.success ? 'success' : 'error');
+
+      // サーバーリスト再読み込み
+      const loadedServers = await window.electronAPI.getServers();
+      setServers(loadedServers);
+
     } catch (error) {
       showToast('エラーが発生しました', 'error');
     }
@@ -179,8 +195,7 @@ function App() {
       case 'plugins' as any: return <PluginBrowser key={contentKey} server={activeServer} />;
       case 'backups': return <BackupsView key={contentKey} server={activeServer} />;
       case 'general-settings': return <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />;
-      case 'sftp': return <div style={{padding: 40, textAlign: 'center', color: '#666'}}>SFTP機能は実装検討中...</div>;
-      case 'users': return <div style={{padding: 40, textAlign: 'center', color: '#666'}}>サブユーザー機能は実装検討中...</div>;
+      case 'users': return <UsersView key={contentKey} server={activeServer} />;
       default: return <div>Unknown View</div>;
     }
   };
@@ -189,33 +204,46 @@ function App() {
     <div className="app-container" onClick={handleClickOutside}>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      <aside className="sidebar">
-        <div className="sidebar-header">MC-Vector</div>
+      <aside className="sidebar" style={{ width: isSidebarOpen ? '260px' : '60px', transition: 'width 0.2s' }}>
+        <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isSidebarOpen ? '20px' : '20px 10px' }}>
+          {isSidebarOpen && <span>MC-Vector</span>}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '1.2rem' }}
+          >
+            {isSidebarOpen ? '«' : '»'}
+          </button>
+        </div>
+
         <div className="sidebar-nav">
-          <NavItem label="Dashboard" view="dashboard" current={currentView} set={setCurrentView} icon="📊" />
-          <NavItem label="Console" view="console" current={currentView} set={setCurrentView} icon="💻" />
-          <NavItem label="Properties" view="properties" current={currentView} set={setCurrentView} icon="⚙️" />
-          <NavItem label="Files" view="files" current={currentView} set={setCurrentView} icon="📁" />
-          <NavItem label="Plugins / Mods" view="plugins" current={currentView} set={setCurrentView} icon="🧩" />
-          <NavItem label="Backups" view="backups" current={currentView} set={setCurrentView} icon="📦" />
-          <NavItem label="General Settings" view="general-settings" current={currentView} set={setCurrentView} icon="🔧" />
+          <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} icon="📊" />
+          <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} icon="💻" />
+          <NavItem label={isSidebarOpen ? "Users" : ""} view="users" current={currentView} set={setCurrentView} icon="👥" />
+          <NavItem label={isSidebarOpen ? "Files" : ""} view="files" current={currentView} set={setCurrentView} icon="📁" />
+          <NavItem label={isSidebarOpen ? "Plugins / Mods" : ""} view="plugins" current={currentView} set={setCurrentView} icon="🧩" />
+          <NavItem label={isSidebarOpen ? "Backups" : ""} view="backups" current={currentView} set={setCurrentView} icon="📦" />
+          <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} icon="⚙️" />
+          <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} icon="🔧" />
+
           <hr style={{width: '90%', borderColor: 'rgba(255,255,255,0.1)', margin: '10px auto'}} />
-          <NavItem label="Proxy Network" view="proxy" current={currentView} set={setCurrentView} icon="🔗" />
-          <NavItem label="SFTP" view="sftp" current={currentView} set={setCurrentView} icon="🌐" />
-          <NavItem label="Users" view="users" current={currentView} set={setCurrentView} icon="👥" />
+
+          <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} icon="🔗" />
         </div>
-        <div className="sidebar-footer-list">
-          <div style={{ padding: '5px 10px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '1px' }}>SERVERS</div>
-          <div className="server-list-container">
-            {servers.map((server) => (
-              <div key={server.id} className={`server-item ${server.id === selectedServerId ? 'active' : ''}`} onClick={() => setSelectedServerId(server.id)} onContextMenu={(e) => handleContextMenu(e, server.id)}>
-                <div className={`status-indicator ${server.status}`}></div>
-                <div className="server-info"><div className="server-name">{server.name}</div></div>
-              </div>
-            ))}
+
+        {isSidebarOpen && (
+          <div className="sidebar-footer-list">
+            <div style={{ padding: '5px 10px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '1px' }}>SERVERS</div>
+            <div className="server-list-container">
+              {servers.map((server) => (
+                <div key={server.id} className={`server-item ${server.id === selectedServerId ? 'active' : ''}`} onClick={() => setSelectedServerId(server.id)} onContextMenu={(e) => handleContextMenu(e, server.id)}>
+                  <div className={`status-indicator ${server.status}`}></div>
+                  <div className="server-info"><div className="server-name">{server.name}</div></div>
+                </div>
+              ))}
+            </div>
+            <button className="add-server-btn" onClick={() => setShowAddServerModal(true)}>+ Add Server</button>
           </div>
-          <button className="add-server-btn" onClick={() => setShowAddServerModal(true)}>+ Add Server</button>
-        </div>
+        )}
       </aside>
 
       <main className="main-content">
@@ -237,7 +265,6 @@ function App() {
         <div className="content-area">{renderContent()}</div>
       </main>
 
-      {/* 以下モーダル等は前回と同じ */}
       {downloadStatus && ( <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#2c2c30', padding: '15px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)', zIndex: 10000, color: '#fff', minWidth: '280px', border: '1px solid var(--border-color)' }}> <div style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}> <span>Downloading...</span> <span style={{color: 'var(--accent-color)'}}>{downloadStatus.progress}%</span> </div> <div style={{ fontSize: '0.85rem', marginBottom: '8px', color: '#ccc' }}>{downloadStatus.msg}</div> <div style={{ width: '100%', height: '4px', background: '#444', borderRadius: '2px', overflow: 'hidden' }}> <div style={{ width: `${downloadStatus.progress}%`, height: '100%', background: 'var(--accent-color)', borderRadius: '2px', transition: 'width 0.2s' }}></div> </div> </div> )}
       {showAddServerModal && <AddServerModal onClose={() => setShowAddServerModal(false)} onAdd={handleAddServer} />}
       {contextMenu && ( <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, background: '#252526', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', zIndex: 9999, padding: '4px', minWidth: '140px' }}> <div onClick={(e) => { e.stopPropagation(); handleDeleteServer(); }} style={{ padding: '8px 12px', cursor: 'pointer', color: '#ff6b6b', fontSize: '14px', borderRadius: '4px', transition: 'background 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}> 🗑️ 削除 </div> </div> )}
@@ -248,8 +275,8 @@ function App() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function NavItem({ label, view, current, set, icon }: any) {
   return (
-    <div className={`nav-item ${current === view ? 'active' : ''}`} onClick={() => set(view)}>
-      <span style={{ fontSize: '1.2em' }}>{icon}</span> {label}
+    <div className={`nav-item ${current === view ? 'active' : ''}`} onClick={() => set(view)} title={label ? '' : view}>
+      <span style={{ fontSize: '1.2em', marginRight: label ? '10px' : '0' }}>{icon}</span> {label}
     </div>
   );
 }

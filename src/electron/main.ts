@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import https from 'https';
 import AdmZip from 'adm-zip';
-import * as tar from 'tar'; // ★追加: Mac/Linux用
+import * as tar from 'tar';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { spawn, ChildProcess } from 'child_process';
@@ -139,6 +139,7 @@ if (!gotTheLock) {
 
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
+let proxyHelpWindow: BrowserWindow | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let tempSettingsData: any = null;
 
@@ -170,6 +171,7 @@ function createWindow() {
       if (process && process.pid) {
         try {
           const stats = await pidusage(process.pid);
+          // フロントエンドへ送信 (CPU %, Memory bytes)
           mainWindow?.webContents.send('server-stats', {
             serverId,
             cpu: stats.cpu,
@@ -329,10 +331,16 @@ app.whenReady().then(() => {
     try {
       sendProgress(0, 'URLを取得中...');
       let downloadUrl = '';
-      const fileName = 'server.jar';
+      const fileName = 'server.jar'; // デフォルトは server.jar
 
-      if (['Paper', 'Waterfall', 'Velocity', 'LeafMC'].includes(server.software)) {
-        const projectMap: {[key: string]: string} = { 'Paper': 'paper', 'Waterfall': 'waterfall', 'Velocity': 'velocity', 'LeafMC': 'leaf' };
+      // ★修正: Velocityの自動ダウンロードは廃止。手動ダウンロードを促すメッセージのみ送信。
+      if (server.software === 'Velocity') {
+        sendProgress(0, 'Paperの公式サイトから手動でVelocityのJarをダウンロードし、/Proxy-Serverの中に"server.jar"として配置してください。DLリンク:https://papermc.io/downloads/velocity');
+        return false;
+      }
+      // 以下、既存のロジック
+      else if (['Paper', 'Waterfall', 'LeafMC'].includes(server.software)) {
+        const projectMap: {[key: string]: string} = { 'Paper': 'paper', 'Waterfall': 'waterfall', 'LeafMC': 'leaf' };
         const projectId = projectMap[server.software] || 'paper';
         const buildListUrl = `https://api.papermc.io/v2/projects/${projectId}/versions/${server.version}`;
         try {
@@ -384,8 +392,8 @@ app.whenReady().then(() => {
       const proxyPath = path.join(rootDir, 'Proxy-Server');
       if (!fs.existsSync(proxyPath)) fs.mkdirSync(proxyPath, { recursive: true });
 
-      let velocityServersConfig = '[servers]\n';
-      let tryOrder = 'try = [';
+      let velocityServersConfig = '';
+      let tryOrderList: string[] = [];
       const allServers = loadServersList();
 
       for (const serverId of backendServerIds) {
@@ -398,19 +406,114 @@ app.whenReady().then(() => {
                 writeServerProperties(propFile, props);
             }
             const cleanName = targetServer.name.replace(/[^a-zA-Z0-9]/g, '');
-            velocityServersConfig += `${cleanName} = "127.0.0.1:${targetServer.port}"\n`;
-            tryOrder += `"${cleanName}", `;
+            velocityServersConfig += `\t${cleanName} = "127.0.0.1:${targetServer.port}"\n`;
+            tryOrderList.push(`"${cleanName}"`);
         }
       }
-      tryOrder = tryOrder.replace(/, $/, '') + ']';
+
+      const tryOrderStr = `try = [${tryOrderList.join(', ')}]`;
 
       if (proxySoftware === 'Velocity') {
-        const velocityToml = `bind = "0.0.0.0:${proxyPort}"\nshow-max-players = 500\nonline-mode = true\nforce-key-authentication = true\nplayer-info-forwarding-mode = "modern"\nforwarding-secret-file = "forwarding.secret"\nannoun-forwarding-secret = true\n\n${velocityServersConfig}\n\n${tryOrder}`;
+        // ★修正: 指定されたテンプレートを使用して velocity.toml を生成
+        const velocityToml = `
+// ]-----------------------------------------------[
+//                編集可能な設定一覧
+// ]-----------------------------------------------[
+
+// bindのポート部分は、Proxy Networkタブで設定したポートと合わせてください。
+bind = "0.0.0.0:${proxyPort}"
+
+// Proxyに参加できる最大接続人数です。好きな値で構いません。
+show-max-players = 500
+
+
+// motdはMinecraftのサーバーリストに表示する説明テキストの設定です。
+// テキストをmotd用のコードに変換してくれるサイトがあるので、カスタマイズしたい方はそちらをご利用ください。
+// motd変換サイト→ https://mctools.org/motd-creator
+motd = "A Velocity Server / template"
+
+
+
+// ]-----------------------------------------------[
+//               基本いじらない設定一覧
+// ]-----------------------------------------------[
+
+// Velocityの認証システムです。
+// Paper側のonline-modeをfalseにしているのでその代わりにこちらを必ず"true"にしておく必要があります。
+online-mode = true
+
+// Velocityの鍵認証システムを強制するかどうか。
+force-key-authentication = true
+
+// Velocity(プロキシー)から接続先のサーバーへ情報を渡す方式。
+// 他にも複数の方式が存在する。が、Velocity公式が"modern"を推奨している。
+// 他の項目："none" / "legacy" / "bungeeguard" の3つ
+player-info-forwarding-mode = "modern"
+
+// forwarding.secretというファイル内のランダムな文字列を鍵として扱うかどうか。
+forwarding-secret-file = "forwarding.secret"
+
+// "forward-secret"を使用しているかどうかをコンソールに表示するかどうかの設定。
+announ-forwarding-secret = true
+
+// この設定ファイルのバージョン。
+// 基本いじらない設定群の中でも特に触る必要が0の設定。
+config-version = "2.7"
+
+
+
+// ]-----------------------------------------------[
+//              Server Configuration
+// ]-----------------------------------------------[
+
+// 接続先サーバーの情報を記載する重要な部分。
+[servers]
+        // 書き方：
+　　// <サーバーの名前> = <接続アドレス>
+${velocityServersConfig}
+
+        // 記載したサーバーの中で、接続の優先順位を設定する部分。
+        // try = ["server", "server2", "server3"]というようなイメージ。
+        // 手前にあるサーバーほど優先的に接続される。↑の例だと一番最初に接続されるのは"server"で、ここに何らかの問題が生じて接続できなかった場合、"server2"に接続しようとする。
+	${tryOrderStr}
+
+// ドメインごとに接続先のサーバーを設定する部分。書き方は：
+// "your_server_domain" = ["your_server_name"]
+// 例えばロビー用サーバー、プレイ用サーバー1、2があるとすると以下のようになる。
+
+// "lobby.server.com" = ["lobby"]
+// "play.server.com" = ["play1"]
+// "play.server2.com" = ["play2"]
+
+[forced-hosts]
+
+[advanced]
+	accepts-transfers = false
+`;
         fs.writeFileSync(path.join(proxyPath, 'velocity.toml'), velocityToml);
       } else {
         const configYml = `listeners:\n- query_port: ${proxyPort}\n  host: 0.0.0.0:${proxyPort}\n  max_players: 1\nonline_mode: true\nip_forward: true\nservers:\n  # Auto-generated`;
         fs.writeFileSync(path.join(proxyPath, 'config.yml'), configYml);
       }
+
+      // Proxy-Server を servers.json に登録
+      const existingProxy = allServers.find((s: any) => s.name === 'Proxy-Server');
+      if (!existingProxy) {
+        const proxyServer = {
+          id: crypto.randomUUID(),
+          name: 'Proxy-Server',
+          version: 'Latest',
+          software: proxySoftware,
+          port: parseInt(proxyPort),
+          memory: 1,
+          path: proxyPath,
+          status: 'offline',
+          createdDate: new Date().toISOString()
+        };
+        allServers.push(proxyServer);
+        saveServersList(allServers);
+      }
+
       return { success: true, message: `プロキシ設定を作成しました。\n場所: ${proxyPath}` };
     } catch (err: any) {
       return { success: false, message: `エラー: ${err.message}` };
@@ -424,20 +527,36 @@ app.whenReady().then(() => {
     if (!server || !server.path) return;
 
     const sender = event.sender;
-    const jarPath = path.join(server.path, 'server.jar');
+
+    // ★修正: Jarファイルの自動探索 (Velocity手動配置対応)
+    let jarName = 'server.jar';
+    let jarPath = path.join(server.path, jarName);
 
     if (!fs.existsSync(jarPath)) {
-      sendLog(sender, serverId, `[ERROR] server.jarが見つかりません。ダウンロードしてください。`);
-      return;
+        // server.jarがない場合、フォルダ内の他の.jarを探す (velocity-x.x.x.jar 等)
+        try {
+            const files = fs.readdirSync(server.path);
+            const foundJar = files.find(f => f.endsWith('.jar'));
+            if (foundJar) {
+                jarName = foundJar;
+                jarPath = path.join(server.path, jarName);
+                sendLog(sender, serverId, `[INFO] server.jarが見つかりませんが、${jarName} を検出しました。これを使用して起動します。`);
+            } else {
+                sendLog(sender, serverId, `[ERROR] Jarファイルが見つかりません。手動で配置してください。`);
+                return;
+            }
+        } catch (e) {
+            sendLog(sender, serverId, `[ERROR] Jarファイルの検索に失敗しました。`);
+            return;
+        }
     }
 
     sendLog(sender, serverId, `[INFO] Starting Server: ${server.name} (${server.version})...`);
     sendStatus(serverId, 'online');
 
-    const minMem = '1G';
-    const maxMem = `${server.memory || 4}G`;
+    const minMem = '512M';
+    const maxMem = `${server.memory || 1}G`;
 
-    // Javaパスの決定 (Mac対応も考慮)
     let javaCommand = server.javaPath ? server.javaPath : 'java';
 
     if (server.javaPath && !fs.existsSync(server.javaPath) && server.javaPath !== 'java') {
@@ -445,7 +564,12 @@ app.whenReady().then(() => {
         javaCommand = 'java';
     }
 
-    const javaProcess = spawn(javaCommand, [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', 'server.jar', 'nogui'], {
+    const args = [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', jarName];
+    if (server.software !== 'Velocity' && server.software !== 'Waterfall') {
+      args.push('nogui');
+    }
+
+    const javaProcess = spawn(javaCommand, args, {
       cwd: server.path
     });
 
@@ -471,7 +595,8 @@ app.whenReady().then(() => {
     const process = activeServers.get(serverId);
     if (process) {
       sendLog(event.sender, serverId, '[INFO] Sending stop command...');
-      process.stdin?.write('stop\n');
+      process.stdin?.write('end\n'); // Velocity use 'end'
+      process.stdin?.write('stop\n'); // Others use 'stop'
       sendStatus(serverId, 'stopping');
     } else {
       sendLog(event.sender, serverId, '[INFO] Server is not running.');
@@ -786,7 +911,6 @@ app.whenReady().then(() => {
     }
   });
 
-  // ★追加: Javaバージョン取得
   ipcMain.handle('get-java-versions', async () => {
     if (!fs.existsSync(RUNTIMES_PATH)) return [];
     const dirs = await fs.promises.readdir(RUNTIMES_PATH, { withFileTypes: true });
@@ -798,11 +922,7 @@ app.whenReady().then(() => {
     for (const d of dirs) {
       if (d.isDirectory()) {
         const fullPath = path.join(RUNTIMES_PATH, d.name);
-
-        // 1. 標準的な構造: jdk-17/bin/java
         let binPath = path.join(fullPath, 'bin', binName);
-
-        // 2. Macの構造: jdk-17/Contents/Home/bin/java (tar解凍後)
         if (!fs.existsSync(binPath) && process.platform === 'darwin') {
            const macPath = path.join(fullPath, 'Contents', 'Home', 'bin', binName);
            if (fs.existsSync(macPath)) {
@@ -824,7 +944,6 @@ app.whenReady().then(() => {
     return javaList.sort((a, b) => b.version - a.version);
   });
 
-  // ★追加: Javaダウンロード (Mac/Linux対応)
   ipcMain.handle('download-java', async (event, version: number) => {
     const sender = event.sender;
     const sendProgress = (percent: number) => {
@@ -835,7 +954,6 @@ app.whenReady().then(() => {
       const isWin = process.platform === 'win32';
       const isMac = process.platform === 'darwin';
 
-      // OSとアーキテクチャの検出
       let osStr = 'linux';
       if (isWin) osStr = 'windows';
       if (isMac) osStr = 'mac';
@@ -844,36 +962,27 @@ app.whenReady().then(() => {
       if (process.arch === 'arm64') archStr = 'aarch64';
 
       const ext = isWin ? 'zip' : 'tar.gz';
-
-      // Adoptium API URL
       const url = `https://api.adoptium.net/v3/binary/latest/${version}/ga/${osStr}/${archStr}/jdk/hotspot/normal/eclipse?project=jdk`;
 
       if (!fs.existsSync(RUNTIMES_PATH)) await fs.promises.mkdir(RUNTIMES_PATH, { recursive: true });
 
       const downloadPath = path.join(RUNTIMES_PATH, `java-${version}.${ext}`);
-
-      // ダウンロード
       await downloadFile(url, downloadPath, sendProgress);
 
       sendProgress(100);
       sender.send('download-progress', { serverId: 'java-install', progress: 100, status: `Extracting Java ${version}...` });
 
-      // 解凍処理
       if (isWin) {
-        // Windows: ZIP解凍
         const zip = new AdmZip(downloadPath);
         zip.extractAllTo(RUNTIMES_PATH, true);
       } else {
-        // Mac/Linux: tar.gz解凍
         await tar.x({
           file: downloadPath,
           cwd: RUNTIMES_PATH
         });
       }
 
-      // 圧縮ファイルを削除
       await fs.promises.unlink(downloadPath);
-
       return true;
     } catch (e) {
       console.error(e);
@@ -893,6 +1002,61 @@ app.whenReady().then(() => {
     } catch {
       return false;
     }
+  });
+
+  // Users機能用のJSON読み書き処理
+  ipcMain.handle('read-json-file', async (_event, filePath) => {
+    try {
+      if (fs.existsSync(filePath)) {
+        const content = await fs.promises.readFile(filePath, 'utf-8');
+        return JSON.parse(content);
+      }
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  });
+
+  ipcMain.handle('write-json-file', async (_event, filePath, data) => {
+    try {
+      await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  });
+
+  ipcMain.on('open-proxy-help-window', () => {
+    if (proxyHelpWindow) {
+      proxyHelpWindow.focus();
+      return;
+    }
+    proxyHelpWindow = new BrowserWindow({
+      width: 600,
+      height: 700,
+      parent: mainWindow || undefined,
+      autoHideMenuBar: true,
+      title: "Proxy Network ヘルプ",
+      webPreferences: {
+        // 同じpreloadを使用
+        preload: path.join(__dirname, 'preload.mjs'),
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    // #proxy-help のハッシュを付けてロード
+    if (process.env.VITE_DEV_SERVER_URL) {
+      proxyHelpWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#proxy-help`);
+    } else {
+      proxyHelpWindow.loadURL(`file://${path.join(__dirname, '../dist/index.html')}#proxy-help`);
+    }
+
+    proxyHelpWindow.on('closed', () => {
+      proxyHelpWindow = null;
+    });
   });
 });
 

@@ -65,6 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setupProxy: (config: any) => ipcRenderer.invoke('setup-proxy', config),
+  openProxyHelpWindow: () => ipcRenderer.send('open-proxy-help-window'), // ★追加
 
   searchModrinth: (query: string, type: 'mod' | 'plugin', version: string, offset: number) =>
     ipcRenderer.invoke('search-modrinth', query, type, version, offset),
@@ -76,8 +77,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installHangarProject: (downloadUrl: string, fileName: string, serverPath: string) =>
     ipcRenderer.invoke('install-hangar-project', downloadUrl, fileName, serverPath),
 
-  // ★追加
   getJavaVersions: () => ipcRenderer.invoke('get-java-versions'),
   downloadJava: (version: number) => ipcRenderer.invoke('download-java', version),
   deleteJava: (version: number) => ipcRenderer.invoke('delete-java', version),
+
+  // Users
+  readJsonFile: (filePath: string) => ipcRenderer.invoke('read-json-file', filePath),
+  writeJsonFile: (filePath: string, data: any[]) => ipcRenderer.invoke('write-json-file', filePath, data),
 })

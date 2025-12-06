@@ -1,34 +1,34 @@
 import { ProxyNetworkConfig } from './renderer/components/ProxySetupView';
 
 export interface IElectronAPI {
-  // --- システム情報 ---
+  // --- System Info ---
   getPlatform: () => Promise<string>;
 
-  // --- サーバー操作 ---
+  // --- Server Operations ---
   startServer: (id: string) => Promise<void>;
   stopServer: (id: string) => Promise<void>;
   sendCommand: (id: string, command: string) => Promise<void>;
 
-  // --- サーバー管理 ---
+  // --- Server Management ---
   getServers: () => Promise<any[]>;
   addServer: (serverData: any) => Promise<any>;
   updateServer: (server: any) => Promise<boolean>;
   deleteServer: (id: string) => Promise<boolean>;
 
-  // --- ダウンロード ---
+  // --- Download ---
   downloadServerJar: (serverId: string) => Promise<boolean>;
 
-  // --- ルートディレクトリ管理 ---
+  // --- Root Directory Management ---
   getServerRoot: () => Promise<string>;
   selectRootFolder: () => Promise<string | null>;
 
-  // --- ログ・進捗・統計 ---
+  // --- Logs, Progress, Stats ---
   onServerLog: (callback: (event: unknown, log: string) => void) => (() => void);
   onDownloadProgress: (callback: (event: unknown, data: { serverId: string, progress: number, status: string }) => void) => void;
   onServerStats: (callback: (event: unknown, data: { serverId: string, cpu: number, memory: number }) => void) => (() => void);
   onServerStatusUpdate: (callback: (event: unknown, data: { serverId: string, status: string }) => void) => (() => void);
 
-  // --- 設定ウィンドウ ---
+  // --- Settings Window ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   openSettingsWindow: (currentSettings: any) => void;
   settingsWindowReady: () => void;
@@ -39,7 +39,7 @@ export interface IElectronAPI {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSettingsSavedInWindow: (callback: (event: unknown, newSettings: any) => void) => void;
 
-  // --- ファイルマネージャー ---
+  // --- File Manager ---
   listFiles: (dirPath: string) => Promise<{ name: string; isDirectory: boolean; size?: number }[]>;
   readFile: (filePath: string) => Promise<string>;
   saveFile: (filePath: string, content: string) => Promise<boolean>;
@@ -51,16 +51,18 @@ export interface IElectronAPI {
   compressFiles: (paths: string[], destPath: string) => Promise<boolean>;
   extractArchive: (archivePath: string, destPath: string) => Promise<boolean>;
 
-  // --- バックアップ ---
+  // --- Backups ---
   createBackup: (serverId: string, serverPath: string) => Promise<boolean>;
   listBackups: (serverPath: string) => Promise<{ name: string; date: Date; size: number }[]>;
   restoreBackup: (serverPath: string, backupName: string) => Promise<boolean>;
   deleteBackup: (serverPath: string, backupName: string) => Promise<boolean>;
 
-  // --- プロキシ ---
+  // --- Proxy ---
   setupProxy: (config: ProxyNetworkConfig) => Promise<{ success: boolean; message: string }>;
+  // ★追加: ヘルプウィンドウを開く
+  openProxyHelpWindow: () => void;
 
-  // --- Mod/Pluginブラウザ ---
+  // --- Mod/Plugin Browser ---
   searchModrinth: (query: string, type: 'mod' | 'plugin', version: string, offset: number) => Promise<any[]>;
   installModrinthProject: (projectId: string, versionId: string, fileName: string, downloadUrl: string, serverPath: string, type: 'mod' | 'plugin') => Promise<boolean>;
 
@@ -68,10 +70,16 @@ export interface IElectronAPI {
   searchHangar: (query: string, version: string, offset: number) => Promise<any[]>;
   installHangarProject: (downloadUrl: string, fileName: string, serverPath: string) => Promise<boolean>;
 
-  // ★追加: Java Manager API
+  // --- Java Manager ---
   getJavaVersions: () => Promise<{ name: string, path: string, version: number }[]>;
   downloadJava: (version: number) => Promise<boolean>;
   deleteJava: (version: number) => Promise<boolean>;
+
+  // --- Users ---
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readJsonFile: (filePath: string) => Promise<any[]>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  writeJsonFile: (filePath: string, data: any[]) => Promise<boolean>;
 }
 
 declare global {

@@ -9,10 +9,18 @@ export default defineConfig({
     electron({
       main: {
         entry: 'src/electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['pidusage', 'tar'],
+            },
+          },
+        },
       },
       preload: {
         input: 'src/electron/preload.ts',
-      }
-    })
-  ]
+      },
+      renderer: {},
+    }),
+  ],
 })
