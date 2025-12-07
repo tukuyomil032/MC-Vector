@@ -5,10 +5,16 @@
   width: 100vw;
 }
 
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* 左サイドバー */
 .sidebar {
   width: 260px;
-  background-color: var(--bg-secondary);
+  background-color: #202225;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-color);
@@ -16,31 +22,42 @@
   z-index: 20;
 }
 
-.sidebar-header {
-  padding: 20px;
-  font-size: 1.2rem;
-  font-weight: 800;
-  /* グラデーションテキスト */
-  background: var(--accent-gradient);
-  -webkit-text-fill-color: transparent;
-  /* ★修正: 確実に色が出るようにフォールバック色と影を追加 */
-  color: var(--accent);
-  text-shadow: 0 0 1px rgba(255,255,255,0.1);
-  letter-spacing: 1px;
-  /* ドラッグ領域 */
-  -webkit-app-region: drag;
-}
-
 /* サイドバー内のメインメニュー領域 */
 .sidebar-nav {
   flex: 1;
   padding: 10px;
-  display: flex;
   flex-direction: column;
-  gap: 4px;
+  background-color: #2b2d31;
   overflow-y: auto;
+  border-radius: 12px;
 }
 
+.nav-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  border-left: 3px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  margin: 2px 5px;
+  border-radius: 4px;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.nav-item:active {
+  background-color: rgba(88, 101, 242, 0.2);
+  color: #fff;
+  border-left: none;
+  font-weight: 500;
+}
 /* サーバーリストを下に寄せるためのエリア */
 .sidebar-footer-list {
   max-height: 40%;

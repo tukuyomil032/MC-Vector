@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import https from 'https';
@@ -6,12 +6,14 @@ import AdmZip from 'adm-zip';
 import * as tar from 'tar';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execSync } from 'child_process';
 import pidusage from 'pidusage';
+import os from 'os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const RUNTIMES_PATH = path.join(app.getPath('userData'), 'runtimes');
+const NGROK_BIN_DIR = path.join(app.getPath('userData'), 'ngrok-bin');
 
 // --- Helper Functions ---
 
@@ -140,10 +142,12 @@ if (!gotTheLock) {
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let proxyHelpWindow: BrowserWindow | null = null;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let tempSettingsData: any = null;
 
 const activeServers = new Map<string, ChildProcess>();
+const activeNgrokTunnels = new Map<string, ChildProcess>();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -163,7 +167,6 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  // 1秒ごとに稼働中サーバーのCPU/メモリ統計を取得して送信
   setInterval(async () => {
     if (activeServers.size === 0) return;
 
@@ -171,18 +174,67 @@ function createWindow() {
       if (process && process.pid) {
         try {
           const stats = await pidusage(process.pid);
-          // フロントエンドへ送信 (CPU %, Memory bytes)
           mainWindow?.webContents.send('server-stats', {
             serverId,
             cpu: stats.cpu,
             memory: stats.memory
           });
         } catch (e) {
-          // プロセス終了直後などで取得できない場合は無視
+          // ignore
         }
       }
     }
   }, 1000);
+}
+
+async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string> {
+  if (!fs.existsSync(NGROK_BIN_DIR)) {
+    fs.mkdirSync(NGROK_BIN_DIR, { recursive: true });
+  }
+
+  const platform = os.platform();
+  const arch = os.arch();
+  let binaryName = platform === 'win32' ? 'ngrok.exe' : 'ngrok';
+  let binaryPath = path.join(NGROK_BIN_DIR, binaryName);
+
+  if (fs.existsSync(binaryPath)) return binaryPath;
+
+  let url = '';
+  if (platform === 'win32') {
+    url = 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip';
+  } else if (platform === 'darwin') {
+    if (arch === 'arm64') {
+      url = 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-arm64.zip';
+    } else {
+      url = 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-amd64.zip';
+    }
+  } else if (platform === 'linux') {
+    url = 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip';
+  } else {
+    throw new Error('Unsupported platform for ngrok');
+  }
+
+  const zipPath = path.join(NGROK_BIN_DIR, 'ngrok.zip');
+  await downloadFile(url, zipPath, (p) => {
+    if (onProgress) onProgress(p);
+  });
+
+  const zip = new AdmZip(zipPath);
+  zip.extractAllTo(NGROK_BIN_DIR, true);
+  fs.unlinkSync(zipPath);
+
+  if (platform !== 'win32') {
+    fs.chmodSync(binaryPath, '755');
+    if (platform === 'darwin') {
+      try {
+        execSync(`xattr -d com.apple.quarantine "${binaryPath}"`);
+      } catch (e) {
+        // ignore if not present
+      }
+    }
+  }
+
+  return binaryPath;
 }
 
 app.whenReady().then(() => {
@@ -331,14 +383,12 @@ app.whenReady().then(() => {
     try {
       sendProgress(0, 'URLを取得中...');
       let downloadUrl = '';
-      const fileName = 'server.jar'; // デフォルトは server.jar
+      const fileName = 'server.jar';
 
-      // ★修正: Velocityの自動ダウンロードは廃止。手動ダウンロードを促すメッセージのみ送信。
       if (server.software === 'Velocity') {
-        sendProgress(0, 'Paperの公式サイトから手動でVelocityのJarをダウンロードし、/Proxy-Serverの中に"server.jar"として配置してください。DLリンク:https://papermc.io/downloads/velocity');
+        sendProgress(0, 'Paper公式から手動でVelocityのJarをダウンロードしてください。詳細は"Proxy Network"タブをご覧ください。');
         return false;
       }
-      // 以下、既存のロジック
       else if (['Paper', 'Waterfall', 'LeafMC'].includes(server.software)) {
         const projectMap: {[key: string]: string} = { 'Paper': 'paper', 'Waterfall': 'waterfall', 'LeafMC': 'leaf' };
         const projectId = projectMap[server.software] || 'paper';
@@ -414,78 +464,77 @@ app.whenReady().then(() => {
       const tryOrderStr = `try = [${tryOrderList.join(', ')}]`;
 
       if (proxySoftware === 'Velocity') {
-        // ★修正: 指定されたテンプレートを使用して velocity.toml を生成
         const velocityToml = `
-// ]-----------------------------------------------[
-//                編集可能な設定一覧
-// ]-----------------------------------------------[
+# ]-----------------------------------------------[
+#                 編集可能な設定一覧
+# ]-----------------------------------------------[
 
-// bindのポート部分は、Proxy Networkタブで設定したポートと合わせてください。
+# bindのポート部分は、Proxy Networkタブで設定したポートと合わせてください。
 bind = "0.0.0.0:${proxyPort}"
 
-// Proxyに参加できる最大接続人数です。好きな値で構いません。
+# Proxyに参加できる最大接続人数です。好きな値で構いません。
 show-max-players = 500
 
 
-// motdはMinecraftのサーバーリストに表示する説明テキストの設定です。
-// テキストをmotd用のコードに変換してくれるサイトがあるので、カスタマイズしたい方はそちらをご利用ください。
-// motd変換サイト→ https://mctools.org/motd-creator
+# motdはMinecraftのサーバーリストに表示する説明テキストの設定です。
+# テキストをmotd用のコードに変換してくれるサイトがあるので、カスタマイズしたい方はそちらをご利用ください。
+# motd変換サイト→ https://mctools.org/motd-creator
 motd = "A Velocity Server / template"
 
 
 
-// ]-----------------------------------------------[
-//               基本いじらない設定一覧
-// ]-----------------------------------------------[
+# ]-----------------------------------------------[
+#               基本いじらない設定一覧
+# ]-----------------------------------------------[
 
-// Velocityの認証システムです。
-// Paper側のonline-modeをfalseにしているのでその代わりにこちらを必ず"true"にしておく必要があります。
+# Velocityの認証システムです。
+# Paper側のonline-modeをfalseにしているのでその代わりにこちらを必ず"true"にしておく必要があります。
 online-mode = true
 
-// Velocityの鍵認証システムを強制するかどうか。
+# Velocityの鍵認証システムを強制するかどうか。
 force-key-authentication = true
 
-// Velocity(プロキシー)から接続先のサーバーへ情報を渡す方式。
-// 他にも複数の方式が存在する。が、Velocity公式が"modern"を推奨している。
-// 他の項目："none" / "legacy" / "bungeeguard" の3つ
+# Velocity(プロキシー)から接続先のサーバーへ情報を渡す方式。
+# 他にも複数の方式が存在する。が、Velocity公式が"modern"を推奨している。
+# 他の項目："none" / "legacy" / "bungeeguard" の3つ
 player-info-forwarding-mode = "modern"
 
-// forwarding.secretというファイル内のランダムな文字列を鍵として扱うかどうか。
+# forwarding.secretというファイル内のランダムな文字列を鍵として扱うかどうか。
 forwarding-secret-file = "forwarding.secret"
 
-// "forward-secret"を使用しているかどうかをコンソールに表示するかどうかの設定。
+# "forward-secret"を使用しているかどうかをコンソールに表示するかどうかの設定。
 announ-forwarding-secret = true
 
-// この設定ファイルのバージョン。
-// 基本いじらない設定群の中でも特に触る必要が0の設定。
+# この設定ファイルのバージョン。
+# 基本いじらない設定群の中でも特に触る必要が0の設定。
 config-version = "2.7"
 
 
 
-// ]-----------------------------------------------[
-//              Server Configuration
-// ]-----------------------------------------------[
+# ]-----------------------------------------------[
+#              Server Configuration
+# ]-----------------------------------------------[
 
-// 接続先サーバーの情報を記載する重要な部分。
+# 接続先サーバーの情報を記載する重要な部分。(必須)
 [servers]
-        // 書き方：
-　　// <サーバーの名前> = <接続アドレス>
-${velocityServersConfig}
+  # 書き方：
+　# <サーバーの名前> = <接続アドレス>
+  ${velocityServersConfig}
 
-        // 記載したサーバーの中で、接続の優先順位を設定する部分。
-        // try = ["server", "server2", "server3"]というようなイメージ。
-        // 手前にあるサーバーほど優先的に接続される。↑の例だと一番最初に接続されるのは"server"で、ここに何らかの問題が生じて接続できなかった場合、"server2"に接続しようとする。
+  # 記載したサーバーの中で、接続の優先順位を設定する部分。(合ったほうが良い)
+  # try = ["server", "server2", "server3"]というようなイメージ。
+  # 手前にあるサーバーほど優先的に接続される。↑の例だと一番最初に接続されるのは"server"で、ここに何らかの問題が生じて接続できなかった場合、"server2"に接続しようとする。
 	${tryOrderStr}
 
-// ドメインごとに接続先のサーバーを設定する部分。書き方は：
-// "your_server_domain" = ["your_server_name"]
-// 例えばロビー用サーバー、プレイ用サーバー1、2があるとすると以下のようになる。
-
-// "lobby.server.com" = ["lobby"]
-// "play.server.com" = ["play1"]
-// "play.server2.com" = ["play2"]
-
+# ドメインごとに接続先のサーバーを設定する部分。(必須ではない)
 [forced-hosts]
+
+# 書き方は："your_server_domain" = ["your_server_name"]
+# 例えばロビー用サーバー、プレイ用サーバー1、2があるとすると以下のようになる。
+
+# "lobby.server.com" = ["lobby"]
+# "play.server.com" = ["play1"]
+# "play.server2.com" = ["play2"]
 
 [advanced]
 	accepts-transfers = false
@@ -496,7 +545,6 @@ ${velocityServersConfig}
         fs.writeFileSync(path.join(proxyPath, 'config.yml'), configYml);
       }
 
-      // Proxy-Server を servers.json に登録
       const existingProxy = allServers.find((s: any) => s.name === 'Proxy-Server');
       if (!existingProxy) {
         const proxyServer = {
@@ -528,12 +576,10 @@ ${velocityServersConfig}
 
     const sender = event.sender;
 
-    // ★修正: Jarファイルの自動探索 (Velocity手動配置対応)
     let jarName = 'server.jar';
     let jarPath = path.join(server.path, jarName);
 
     if (!fs.existsSync(jarPath)) {
-        // server.jarがない場合、フォルダ内の他の.jarを探す (velocity-x.x.x.jar 等)
         try {
             const files = fs.readdirSync(server.path);
             const foundJar = files.find(f => f.endsWith('.jar'));
@@ -595,8 +641,8 @@ ${velocityServersConfig}
     const process = activeServers.get(serverId);
     if (process) {
       sendLog(event.sender, serverId, '[INFO] Sending stop command...');
-      process.stdin?.write('end\n'); // Velocity use 'end'
-      process.stdin?.write('stop\n'); // Others use 'stop'
+      process.stdin?.write('end\n');
+      process.stdin?.write('stop\n');
       sendStatus(serverId, 'stopping');
     } else {
       sendLog(event.sender, serverId, '[INFO] Server is not running.');
@@ -756,6 +802,14 @@ ${velocityServersConfig}
       return true;
     } catch {
       return false;
+    }
+  });
+
+  ipcMain.handle('open-path-in-explorer', async (_event, targetPath) => {
+    try {
+      await shell.showItemInFolder(targetPath);
+    } catch (e) {
+      console.error(e);
     }
   });
 
@@ -1028,6 +1082,113 @@ ${velocityServersConfig}
     }
   });
 
+  // ★修正: ngrok起動ロジック
+  ipcMain.handle('toggle-ngrok', async (event, serverId, enabled, token) => {
+    const sender = event.sender;
+    const sendInfo = (info: any) => sender.send('ngrok-info', { serverId, ...info });
+
+    try {
+      if (enabled) {
+        // ★追加: 既存のトンネルがある場合は先に強制終了する (ゾンビプロセス対策)
+        if (activeNgrokTunnels.has(serverId)) {
+            const oldProc = activeNgrokTunnels.get(serverId);
+            if (oldProc) oldProc.kill();
+            activeNgrokTunnels.delete(serverId);
+        }
+
+        sendInfo({ status: 'downloading', log: 'Checking ngrok binary...' });
+        const ngrokPath = await getNgrokBinary();
+
+        if (token) {
+          const config = loadConfig();
+          config.ngrokToken = token; // ★追加: trimして保存
+          saveConfig(config);
+        }
+
+        // トークン取得 (引数優先、なければconfig)
+        const savedToken = token || loadConfig().ngrokToken;
+        if (!savedToken) {
+            throw new Error("No authtoken provided");
+        }
+
+        // ★重要: トークンの空白削除
+        const cleanToken = savedToken.trim();
+
+        const servers = loadServersList();
+        const server = servers.find((s: any) => s.id === serverId);
+        if (!server) throw new Error('Server not found');
+
+        // ngrok起動コマンド: ngrok tcp <port> --authtoken <token> --region jp --log=stdout --format=json
+        const args = [
+            'tcp',
+            server.port.toString(),
+            '--authtoken', cleanToken,
+            '--region', 'jp', // ★追加: 日本リージョン指定
+            '--log=stdout',
+            '--format=json'
+        ];
+
+        const process = spawn(ngrokPath, args);
+        activeNgrokTunnels.set(serverId, process);
+
+        sendInfo({ status: 'running', log: 'Starting ngrok tunnel (region: jp)...' });
+
+        process.on('error', (err) => {
+            sendInfo({ status: 'error', log: `Failed to spawn ngrok: ${err.message}` });
+            activeNgrokTunnels.delete(serverId);
+        });
+
+        process.stdout.on('data', (data) => {
+          const text = data.toString();
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const json = JSON.parse(line);
+              if (json.url) {
+                sendInfo({ url: json.url, log: `Tunnel established: ${json.url}` });
+              }
+              if (json.lvl === 'error') {
+                sendInfo({ log: `[Error] ${json.msg || json.err}` });
+              }
+            } catch (e) {
+              sendInfo({ log: line });
+            }
+          }
+        });
+
+        process.stderr.on('data', (data) => {
+          sendInfo({ log: `[Stderr] ${data.toString()}` });
+        });
+
+        process.on('close', (code) => {
+          activeNgrokTunnels.delete(serverId);
+          sendInfo({ status: 'stopped', log: `ngrok stopped (code ${code})` });
+        });
+
+        return { success: true };
+
+      } else {
+        const process = activeNgrokTunnels.get(serverId);
+        if (process) {
+          process.kill();
+          activeNgrokTunnels.delete(serverId);
+          sendInfo({ status: 'stopped', log: 'Stopping tunnel...' });
+        }
+        return { success: true };
+      }
+    } catch (e) {
+      console.error(e);
+      sendInfo({ status: 'error', log: `Error: ${(e as Error).message}` });
+      return { success: false, message: (e as Error).message };
+    }
+  });
+
+  ipcMain.handle('get-ngrok-token', async () => {
+    const config = loadConfig();
+    return config.ngrokToken || '';
+  });
+
   ipcMain.on('open-proxy-help-window', () => {
     if (proxyHelpWindow) {
       proxyHelpWindow.focus();
@@ -1040,14 +1201,12 @@ ${velocityServersConfig}
       autoHideMenuBar: true,
       title: "Proxy Network ヘルプ",
       webPreferences: {
-        // 同じpreloadを使用
         preload: path.join(__dirname, 'preload.mjs'),
         nodeIntegration: false,
         contextIsolation: true
       }
     });
 
-    // #proxy-help のハッシュを付けてロード
     if (process.env.VITE_DEV_SERVER_URL) {
       proxyHelpWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#proxy-help`);
     } else {

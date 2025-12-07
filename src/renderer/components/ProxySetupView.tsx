@@ -18,6 +18,12 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
   const [proxyPort, setProxyPort] = useState(25577);
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
 
+  // ★修正: プロキシサーバー自体をリストから除外するフィルター
+  const backendCandidates = servers.filter(s =>
+    !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) &&
+    !s.name.toLowerCase().includes('proxy')
+  );
+
   const handleCheckboxChange = (serverId: string) => {
     setSelectedBackendIds(prev =>
       prev.includes(serverId)
@@ -27,9 +33,9 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
   };
 
   const handleBuild = () => {
-    if (selectedBackendIds.length === 0) {
-      alert("接続するサーバーを少なくとも1つ選択してください");
-      return;
+    if (selectedBackendIds.length < 2) {
+      // 警告: 最低2つは欲しいが、1つでも技術的には可能なのでアラートのみ
+      if(!window.confirm("接続するサーバーが1つ以下です。ネットワークを構築しますか？")) return;
     }
     onBuildNetwork({
       proxySoftware,
@@ -48,7 +54,6 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
         Proxy Network Setup
       </h2>
 
-      {/* ★修正: 説明文を変更 */}
       <p style={{ color: '#aaa', marginBottom: '30px' }}>
         複数のサーバーを接続してネットワークを構築します。各サーバーの設定(ポート、転送設定)を自動で書き換えます。
       </p>
@@ -82,10 +87,11 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
         </div>
 
         <div className="form-group" style={{ marginBottom: '30px' }}>
-          <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Backend Servers</label>
+          <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Backend Servers (接続先)</label>
           <div style={{ background: '#1e1e1e', padding: '10px', borderRadius: '4px', border: '1px solid #444', maxHeight: '200px', overflowY: 'auto' }}>
-            {servers.length === 0 && <div style={{color: '#666', padding: '10px'}}>サーバーがありません</div>}
-            {servers.map(server => (
+            {backendCandidates.length === 0 && <div style={{color: '#666', padding: '10px'}}>接続可能なサーバーがありません</div>}
+
+            {backendCandidates.map(server => (
               <div key={server.id} style={{ display: 'flex', alignItems: 'center', padding: '8px', borderBottom: '1px solid #333' }}>
                 <input
                   type="checkbox"
@@ -111,7 +117,6 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
             ネットワーク構築を実行
           </button>
 
-          {/* ★追加: ヘルプボタン */}
           <button
             className="btn-secondary"
             onClick={openHelp}

@@ -50,6 +50,7 @@ export interface IElectronAPI {
   uploadFiles: (filePaths: string[], destDir: string) => Promise<boolean>;
   compressFiles: (paths: string[], destPath: string) => Promise<boolean>;
   extractArchive: (archivePath: string, destPath: string) => Promise<boolean>;
+  openPathInExplorer: (path: string) => Promise<void>;
 
   // --- Backups ---
   createBackup: (serverId: string, serverPath: string) => Promise<boolean>;
@@ -59,7 +60,6 @@ export interface IElectronAPI {
 
   // --- Proxy ---
   setupProxy: (config: ProxyNetworkConfig) => Promise<{ success: boolean; message: string }>;
-  // ★追加: ヘルプウィンドウを開く
   openProxyHelpWindow: () => void;
 
   // --- Mod/Plugin Browser ---
@@ -80,6 +80,13 @@ export interface IElectronAPI {
   readJsonFile: (filePath: string) => Promise<any[]>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   writeJsonFile: (filePath: string, data: any[]) => Promise<boolean>;
+
+  // ★追加: ngrok (Public Access) 機能
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  toggleNgrok: (serverId: string, enabled: boolean, token?: string) => Promise<{ success: boolean, message?: string }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onNgrokInfo: (callback: (event: unknown, data: { serverId: string, url?: string, log?: string, status: 'running' | 'stopped' | 'error' | 'downloading' }) => void) => (() => void);
+  getNgrokToken: () => Promise<string>;
 }
 
 declare global {

@@ -3,6 +3,15 @@ import Editor from '@monaco-editor/react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import '../../main.css';
 
+// ★追加: アイコン画像の読み込み
+import iconFolder from '../../assets/icons/folder.svg';
+import iconFile from '../../assets/icons/file.svg';
+import iconOpenLocation from '../../assets/icons/open-folder.svg';
+import iconMove from '../../assets/icons/move.svg';
+import iconZip from '../../assets/icons/zip.svg';
+import iconUnzip from '../../assets/icons/unzip.svg';
+import iconTrash from '../../assets/icons/trash.svg';
+
 interface Props {
   server: MinecraftServer;
 }
@@ -32,9 +41,9 @@ export default function FilesView({ server }: Props) {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileEntry | null } | null>(null);
 
   // モーダル系
-  const [modalType, setModalType] = useState<'move-item' | 'navigate' | 'create' | null>(null);
+  const [modalType, setModalType] = useState<string | null>(null);
   const [modalInput, setModalInput] = useState('');
-  const [modalTargetName, setModalTargetName] = useState('');
+  const [modalMoveTarget, setModalMoveTarget] = useState('');
   const [createType, setCreateType] = useState<'file' | 'folder'>('folder');
 
   // オートコンプリート系
@@ -140,14 +149,14 @@ export default function FilesView({ server }: Props) {
 
   const openMoveItemModal = () => {
     setModalType('move-item');
-    setModalTargetName(selectedFiles.join(', '));
+    setModalMoveTarget(selectedFiles.join(', '));
     setModalInput(toDisplayPath(currentPath));
     setPathSuggestions([]);
   };
 
   const openNavigateModal = () => {
     setModalType('navigate');
-    setModalTargetName('カレントディレクトリ');
+    setModalMoveTarget('カレントディレクトリ');
     setModalInput(toDisplayPath(currentPath));
     setPathSuggestions([]);
   };
@@ -168,7 +177,7 @@ export default function FilesView({ server }: Props) {
           setModalType(null);
         }
       } catch {
-        alert('ディレクトリが見つかりません');
+        alert('指定されたディレクトリは存在しないか、アクセスできません。');
       }
     }
     else if (modalType === 'move-item') {
@@ -205,7 +214,7 @@ export default function FilesView({ server }: Props) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`${selectedFiles.length} 項目を削除しますか？`)) return;
+    if (!window.confirm(`選択した ${selectedFiles.length} 項目を削除しますか？`)) return;
     for (const name of selectedFiles) {
         await window.electronAPI.deletePath(`${currentPath}${sep}${name}`);
     }
@@ -231,6 +240,14 @@ export default function FilesView({ server }: Props) {
     setContextMenu(null);
   };
 
+  const handleOpenLocation = async () => {
+    if (contextMenu?.file) {
+      const targetPath = `${currentPath}${sep}${contextMenu.file.name}`;
+      await window.electronAPI.openPathInExplorer(targetPath);
+    }
+    setContextMenu(null);
+  };
+
   // --- D&D処理 ---
 
   const handleContainerDragOver = (e: React.DragEvent) => {
@@ -247,18 +264,17 @@ export default function FilesView({ server }: Props) {
     }
   };
 
-  // ★修正: targetFileの宣言を削除
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(false);
 
-    // 外部ファイル
+    // 1. 外部からのファイル (File Upload)
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const paths = Array.from(e.dataTransfer.files).map((f: any) => f.path);
         if (paths.some(p => !p)) {
-          alert('パス取得エラー');
+          alert('ファイルのパスを取得できませんでした。');
           return;
         }
         await window.electronAPI.uploadFiles(paths, currentPath);
@@ -266,7 +282,7 @@ export default function FilesView({ server }: Props) {
         return;
     }
 
-    // 内部移動 (カレントディレクトリへのドロップは何もしない)
+    // 2. 内部ファイル移動
     setInternalDragFile(null);
   };
 
@@ -283,6 +299,7 @@ export default function FilesView({ server }: Props) {
 
     const draggedFile = e.dataTransfer.getData('text/plain') || internalDragFile;
     if (!draggedFile) return;
+
     if (draggedFile === folderName) return;
 
     const src = `${currentPath}${sep}${draggedFile}`;
@@ -332,6 +349,7 @@ export default function FilesView({ server }: Props) {
             const base = searchDirDisplay.endsWith(sep) ? searchDirDisplay : searchDirDisplay + sep;
             return `${base}${f.name}`;
         });
+
       setPathSuggestions(matched);
       setShowSuggestions(matched.length > 0);
     } catch {
@@ -342,8 +360,8 @@ export default function FilesView({ server }: Props) {
 
   const getLanguage = (fileName: string) => {
     if (fileName.endsWith('.json')) return 'json';
-    if (fileName.endsWith('.yml')) return 'yaml';
-    if (fileName.endsWith('.properties')) return 'ini';
+    if (fileName.endsWith('.yml') || fileName.endsWith('.yaml')) return 'yaml';
+    if (fileName.endsWith('.properties') || fileName.endsWith('.txt')) return 'ini';
     if (fileName.endsWith('.js')) return 'javascript';
     return 'plaintext';
   };
@@ -374,10 +392,14 @@ export default function FilesView({ server }: Props) {
         <div style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(88, 101, 242, 0.3)',
-            border: '4px dashed #5865F2', zIndex: 50,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none'
+            border: '4px dashed #5865F2',
+            zIndex: 50,
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            pointerEvents: 'none'
         }}>
-            <h2 style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.5)'}}>ファイルをアップロード</h2>
+            <h2 style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.5)'}}>
+                ファイルをドロップしてアップロード
+            </h2>
         </div>
       )}
 
@@ -395,7 +417,7 @@ export default function FilesView({ server }: Props) {
                 {modalType !== 'create' ? (
                   <>
                     <p style={{fontSize: '0.8rem', color: '#aaa', marginBottom: '10px'}}>
-                      {modalType === 'move-item' ? `対象: ${modalTargetName}` : 'パスを入力してください'}
+                      {modalType === 'move-item' ? `対象: ${modalMoveTarget}` : 'パスを入力してください'}
                     </p>
                     <div style={{ position: 'relative' }}>
                       <input
@@ -461,15 +483,32 @@ export default function FilesView({ server }: Props) {
         <div style={{
             position: 'fixed', top: contextMenu.y, left: contextMenu.x,
             background: '#252526', border: '1px solid #444', borderRadius: '4px', zIndex: 10000,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)', minWidth: '160px', padding: '5px 0'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)', minWidth: '180px', padding: '5px 0'
         }}>
-            <div className="ctx-item" onClick={openMoveItemModal}>➡ 移動...</div>
-            <div className="ctx-item" onClick={handleCompress}>📦 圧縮 (Zip)</div>
+            {/* ★修正: メニューアイテムに画像アイコンを追加し、Flexboxで整列 */}
+            <div className="ctx-item" onClick={handleOpenLocation} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <img src={iconOpenLocation} alt="" style={{width: '16px', height: '16px', filter: 'invert(0.8)'}} />
+              場所を開く
+            </div>
+            <div className="ctx-item" onClick={openMoveItemModal} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <img src={iconMove} alt="" style={{width: '16px', height: '16px', filter: 'invert(0.8)'}} />
+              移動...
+            </div>
+            <div className="ctx-item" onClick={handleCompress} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <img src={iconZip} alt="" style={{width: '16px', height: '16px', filter: 'invert(0.8)'}} />
+              圧縮 (Zip)
+            </div>
             {contextMenu.file?.name.endsWith('.zip') && (
-                <div className="ctx-item" onClick={handleExtract}>📂 解凍</div>
+                <div className="ctx-item" onClick={handleExtract} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <img src={iconUnzip} alt="" style={{width: '16px', height: '16px', filter: 'invert(0.8)'}} />
+                  解凍
+                </div>
             )}
             <div style={{ borderTop: '1px solid #444', margin: '5px 0' }}></div>
-            <div className="ctx-item delete" onClick={handleDelete}>🗑 削除</div>
+            <div className="ctx-item delete" onClick={handleDelete} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <img src={iconTrash} alt="" style={{width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(102%) contrast(89%)'}} />
+              削除
+            </div>
         </div>
       )}
 
@@ -488,6 +527,7 @@ export default function FilesView({ server }: Props) {
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px' }}>
+          {/* ナビゲーションバー */}
           <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button className="btn-secondary" onClick={handleGoUp} disabled={currentPath === serversRootAbsPath}>↑</button>
             <button className="btn-secondary" onClick={openNavigateModal}>移動</button>
@@ -507,6 +547,7 @@ export default function FilesView({ server }: Props) {
             </div>
           </div>
 
+          {/* ファイルリスト */}
           <div style={{ flex: 1, backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', overflowY: 'auto' }}>
             {files.map((file) => (
               <div
@@ -530,7 +571,13 @@ export default function FilesView({ server }: Props) {
                     onClick={(e) => e.stopPropagation()}
                     style={{ cursor: 'pointer' }}
                 />
-                <span style={{ fontSize: '1.2rem' }}>{file.isDirectory ? '📁' : '📄'}</span>
+                {/* ★修正: 絵文字を画像アイコンに変更 */}
+                <img
+                  src={file.isDirectory ? iconFolder : iconFile}
+                  alt={file.isDirectory ? 'Folder' : 'File'}
+                  style={{ width: '20px', height: '20px', objectFit: 'contain' }}
+                />
+
                 <span style={{ flex: 1, fontWeight: file.isDirectory ? 'bold' : 'normal', color: file.isDirectory ? 'var(--accent)' : 'var(--text-primary)' }}>{file.name}</span>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{file.isDirectory ? '-' : (file.size ? (file.size / 1024).toFixed(1) + ' KB' : '0 KB')}</span>
               </div>

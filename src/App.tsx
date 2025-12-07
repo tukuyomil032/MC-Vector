@@ -14,6 +14,18 @@ import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
 import Toast from './renderer/components/Toast';
 
+// ★画像アセットの読み込み (パスは実際の配置に合わせて調整してください)
+import iconMenu from './assets/icons/menu.svg';
+import iconDashboard from './assets/icons/dashboard.svg';
+import iconConsole from './assets/icons/console.svg';
+import iconUsers from './assets/icons/users.svg';
+import iconFiles from './assets/icons/files.svg';
+import iconPlugins from './assets/icons/plugins.svg';
+import iconBackups from './assets/icons/backups.svg';
+import iconProperties from './assets/icons/properties.svg';
+import iconSettings from './assets/icons/settings.svg';
+import iconProxy from './assets/icons/proxy.svg';
+
 function App() {
   const [servers, setServers] = useState<MinecraftServer[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>('');
@@ -23,10 +35,7 @@ function App() {
   const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
 
-  // サイドバー開閉状態
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  // ヘルプウィンドウ表示用ハッシュルーター
   const [currentHash, setCurrentHash] = useState(window.location.hash);
 
   useEffect(() => {
@@ -35,7 +44,6 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // プロキシヘルプ画面の場合はそれだけを表示して終了
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
   }
@@ -130,7 +138,6 @@ function App() {
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
 
-      // ★修正: Velocity を自動ダウンロード対象から除外
       if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)) {
          setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
          await window.electronAPI.downloadServerJar(newServer.id);
@@ -146,7 +153,6 @@ function App() {
       const result = await window.electronAPI.setupProxy(config);
       showToast(result.message, result.success ? 'success' : 'error');
 
-      // サーバーリスト再読み込み
       const loadedServers = await window.electronAPI.getServers();
       setServers(loadedServers);
 
@@ -205,29 +211,44 @@ function App() {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       <aside className="sidebar" style={{ width: isSidebarOpen ? '260px' : '60px', transition: 'width 0.2s' }}>
-        <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isSidebarOpen ? '20px' : '20px 10px' }}>
-          {isSidebarOpen && <span>MC-Vector</span>}
+        <div className="sidebar-header" style={{
+          display: 'flex',
+          justifyContent: isSidebarOpen ? 'space-between' : 'center',
+          alignItems: 'center',
+          padding: '20px 15px',
+          // ★修正: ヘッダー背景色と文字色の調整
+          backgroundColor: 'transparent',
+        }}>
+          {/* アプリ名: 文字色を白く、影をつけて視認性アップ */}
+          {isSidebarOpen && <span style={{
+            fontWeight: 'bold',
+            fontSize: '1.2rem',
+            color: '#ffffff',
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>MC-Vector</span>}
+
+          {/* ★修正: 開閉ボタンを画像に変更 */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '1.2rem' }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px' }}
           >
-            {isSidebarOpen ? '«' : '»'}
+            <img src={iconMenu} alt="Menu" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
           </button>
         </div>
 
         <div className="sidebar-nav">
-          <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} icon="📊" />
-          <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} icon="💻" />
-          <NavItem label={isSidebarOpen ? "Users" : ""} view="users" current={currentView} set={setCurrentView} icon="👥" />
-          <NavItem label={isSidebarOpen ? "Files" : ""} view="files" current={currentView} set={setCurrentView} icon="📁" />
-          <NavItem label={isSidebarOpen ? "Plugins / Mods" : ""} view="plugins" current={currentView} set={setCurrentView} icon="🧩" />
-          <NavItem label={isSidebarOpen ? "Backups" : ""} view="backups" current={currentView} set={setCurrentView} icon="📦" />
-          <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} icon="⚙️" />
-          <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} icon="🔧" />
+          <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} iconSrc={iconDashboard} />
+          <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} iconSrc={iconConsole} />
+          <NavItem label={isSidebarOpen ? "Users" : ""} view="users" current={currentView} set={setCurrentView} iconSrc={iconUsers} />
+          <NavItem label={isSidebarOpen ? "Files" : ""} view="files" current={currentView} set={setCurrentView} iconSrc={iconFiles} />
+          <NavItem label={isSidebarOpen ? "Plugins / Mods" : ""} view="plugins" current={currentView} set={setCurrentView} iconSrc={iconPlugins} />
+          <NavItem label={isSidebarOpen ? "Backups" : ""} view="backups" current={currentView} set={setCurrentView} iconSrc={iconBackups} />
+          <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} iconSrc={iconProperties} />
+          <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} iconSrc={iconSettings} />
 
           <hr style={{width: '90%', borderColor: 'rgba(255,255,255,0.1)', margin: '10px auto'}} />
 
-          <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} icon="🔗" />
+          <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} iconSrc={iconProxy} />
         </div>
 
         {isSidebarOpen && (
@@ -273,10 +294,21 @@ function App() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function NavItem({ label, view, current, set, icon }: any) {
+function NavItem({ label, view, current, set, iconSrc }: any) {
   return (
     <div className={`nav-item ${current === view ? 'active' : ''}`} onClick={() => set(view)} title={label ? '' : view}>
-      <span style={{ fontSize: '1.2em', marginRight: label ? '10px' : '0' }}>{icon}</span> {label}
+      {/* 画像アイコンを表示 */}
+      <img
+        src={iconSrc}
+        alt={view}
+        style={{
+          width: '20px',
+          height: '20px',
+          marginRight: label ? '12px' : '0',
+          filter: current === view ? 'invert(1)' : 'invert(0.7)' // 選択時は白く、未選択は少し暗く
+        }}
+      />
+      {label}
     </div>
   );
 }
