@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Ansi from 'ansi-to-react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import '../../main.css';
 
@@ -12,7 +11,7 @@ interface ConsoleViewProps {
 const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
   const [command, setCommand] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
-  
+
   // アドレス切り替え用
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
   // 独自に管理するngrok URL (ポーリングで取得)
@@ -21,6 +20,7 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
   // メモリ統計用
   const [memoryUsage, setMemoryUsage] = useState(0);
 
+  // ログが更新されたら一番下へスクロール
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
@@ -68,9 +68,9 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
 
   const localAddress = `localhost:${server.port}`;
   const publicAddress = internalNgrokUrl ? internalNgrokUrl.replace('tcp://', '') : localAddress;
-  
-  const displayAddress = (!internalNgrokUrl) 
-    ? localAddress 
+
+  const displayAddress = (!internalNgrokUrl)
+    ? localAddress
     : (currentAddressIndex === 0 ? localAddress : publicAddress);
 
   const handleCopyAddress = () => {
@@ -85,12 +85,12 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#1e1e1e' }}>
-      
+
       {/* Top Info Bar */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr 1fr', 
-        backgroundColor: '#252526', 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        backgroundColor: '#252526',
         borderBottom: '1px solid #3e3e42',
         padding: '12px 0',
         flexShrink: 0
@@ -98,13 +98,13 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         {/* ADDRESS */}
         <div style={{ textAlign: 'center', borderRight: '1px solid #3e3e42', overflow: 'hidden' }}>
           <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>ADDRESS</div>
-          <div 
+          <div
             key={currentAddressIndex}
             onClick={handleCopyAddress}
             title="Click to Copy"
-            style={{ 
-                fontWeight: 'bold', 
-                color: (internalNgrokUrl && currentAddressIndex === 1) ? '#5865F2' : '#f0f0f0', 
+            style={{
+                fontWeight: 'bold',
+                color: (internalNgrokUrl && currentAddressIndex === 1) ? '#5865F2' : '#f0f0f0',
                 cursor: 'pointer',
                 animation: 'slideUpFadeIn 0.5s ease-out',
                 fontSize: '0.95rem'
@@ -117,8 +117,8 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         {/* STATUS */}
         <div style={{ textAlign: 'center', borderRight: '1px solid #3e3e42' }}>
           <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>STATUS</div>
-          <div style={{ 
-            fontWeight: 'bold', 
+          <div style={{
+            fontWeight: 'bold',
             color: server.status === 'online' ? '#3ba55c' : server.status === 'offline' ? '#ed4245' : '#faa61a',
             fontSize: '0.95rem'
           }}>
@@ -136,68 +136,71 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
       </div>
 
       {/* Log Area */}
-      <div style={{ 
-        flex: 1, 
-        backgroundColor: '#121214', 
-        padding: '16px', 
-        overflowY: 'auto', 
+      <div style={{
+        flex: 1,
+        backgroundColor: '#121214',
+        padding: '16px',
+        overflowY: 'auto',
         fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
         fontSize: '13px',
-        color: '#d4d4d4', 
+        color: '#d4d4d4',
         whiteSpace: 'pre-wrap',
         lineHeight: '1.5',
       }}>
-        {logs.length === 0 && (
-          <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
-            Server is marked as offline...
-          </div>
-        )}
-        
+        {/* 修正箇所: ここで logs 配列を展開して表示します */}
         {logs.map((log, index) => (
-          <div key={index} style={{ marginBottom: '2px', wordBreak: 'break-all' }}>
-            <Ansi>{log}</Ansi>
+          <div key={index} style={{ wordBreak: 'break-all' }}>
+            {log}
           </div>
         ))}
+
+        {/* 修正箇所: 自動スクロール用のターゲット要素 */}
         <div ref={logEndRef} />
+
+        {logs.length === 0 && (
+          <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
+             Waiting for logs...
+          </div>
+        )}
       </div>
 
       {/* Input Area */}
-      <div style={{ 
-        height: '60px', 
-        backgroundColor: '#252526', 
-        borderTop: '1px solid #3e3e42', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        height: '60px',
+        backgroundColor: '#252526',
+        borderTop: '1px solid #3e3e42',
+        display: 'flex',
+        alignItems: 'center',
         padding: '0 20px',
         flexShrink: 0
       }}>
         <span style={{ marginRight: '12px', color: '#8b9bb4', fontWeight: 'bold' }}>&gt;</span>
-        <input 
-          type="text" 
+        <input
+          type="text"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a command..."
-          style={{ 
-            flex: 1, 
-            backgroundColor: '#18181b', 
+          style={{
+            flex: 1,
+            backgroundColor: '#18181b',
             border: '1px solid #3f3f46',
             borderRadius: '6px',
-            color: '#fff', 
+            color: '#fff',
             fontSize: '0.9rem',
             padding: '10px 12px',
             outline: 'none',
             fontFamily: 'Menlo, Monaco, Consolas, monospace'
           }}
         />
-        <button 
+        <button
           onClick={handleSend}
-          style={{ 
-            backgroundColor: '#5865F2', 
-            color: 'white', 
-            border: 'none', 
-            padding: '10px 20px', 
-            borderRadius: '6px', 
+          style={{
+            backgroundColor: '#5865F2',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '6px',
             cursor: 'pointer',
             marginLeft: '12px',
             fontWeight: 'bold',
