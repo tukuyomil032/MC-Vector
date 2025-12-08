@@ -1,4 +1,3 @@
-/* 詳細設定モーダル全体 */
 .advanced-modal {
   position: fixed;
   top: 0;
@@ -17,7 +16,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ヘッダー */
 .advanced-header {
   padding: 15px 30px;
   background-color: var(--bg-secondary);
@@ -36,14 +34,12 @@
   gap: 10px;
 }
 
-/* メインコンテンツ（2カラム: タブ + 設定リスト） */
 .advanced-body {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* 左側：カテゴリタブ */
 .category-sidebar {
   width: 200px;
   background-color: var(--bg-secondary);
@@ -73,7 +69,6 @@
   font-weight: bold;
 }
 
-/* 右側：設定リスト */
 .settings-list-container {
   flex: 1;
   padding: 30px;
@@ -87,7 +82,6 @@
   gap: 20px;
 }
 
-/* 個別の設定カード */
 .setting-card {
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -109,13 +103,11 @@
   font-size: 0.9rem;
   font-weight: bold;
   color: var(--text-primary);
-  /* ツールチップのためのカーソル */
   cursor: help;
   text-decoration: underline dotted var(--text-secondary);
   position: relative;
 }
 
-/* --- ツールチップ（浮かび上がる説明）の実装 --- */
 .tooltip-box {
   visibility: hidden;
   width: 220px;
@@ -126,7 +118,7 @@
   padding: 10px;
   position: absolute;
   z-index: 10;
-  bottom: 125%; /* 上に表示 */
+  bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
@@ -134,7 +126,7 @@
   font-size: 0.8rem;
   font-weight: normal;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  pointer-events: none; /* マウスイベントを透過 */
+  pointer-events: none;
   line-height: 1.4;
   border: 1px solid var(--accent);
 }
@@ -150,13 +142,11 @@
   border-color: #333 transparent transparent transparent;
 }
 
-/* ホバー時に表示 */
 .setting-key:hover .tooltip-box {
   visibility: visible;
   opacity: 1;
 }
 
-/* 入力フォーム類 */
 .setting-input {
   width: 100%;
   padding: 8px;
@@ -171,7 +161,6 @@
   border-color: var(--accent);
 }
 
-/* ヘルプアイコン */
 .help-icon {
   font-size: 0.8rem;
   color: var(--accent);

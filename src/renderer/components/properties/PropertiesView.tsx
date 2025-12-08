@@ -6,7 +6,6 @@ interface Props {
   server: MinecraftServer;
 }
 
-// 設定値の型定義 (文字列も許容するように緩和)
 interface ServerProperties {
   'server-port': number | string;
   'max-players': number | string;
@@ -18,12 +17,10 @@ interface ServerProperties {
   'allow-flight': boolean | string;
   'white-list': boolean | string;
   'motd': string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
 export default function PropertiesView({ server }: Props) {
-  // 初期値 (読み込み完了まではデフォルト値または空)
   const [props, setProps] = useState<ServerProperties>({
     'server-port': server.port || 25565,
     'max-players': 20,
@@ -39,12 +36,9 @@ export default function PropertiesView({ server }: Props) {
 
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // パス解決
   const sep = server.path.includes('\\') ? '\\' : '/';
   const propFilePath = `${server.path}${sep}server.properties`;
 
-  // ★ファイル読み込み (マウント時 & サーバー変更時)
   useEffect(() => {
     const loadProperties = async () => {
       setLoading(true);
@@ -59,7 +53,6 @@ export default function PropertiesView({ server }: Props) {
             const [key, ...vals] = trimmed.split('=');
             if (key) {
               const value = vals.join('=').trim();
-              // Boolean/Number変換
               if (value === 'true') newProps[key.trim()] = true;
               else if (value === 'false') newProps[key.trim()] = false;
               else if (!isNaN(Number(value)) && value !== '') newProps[key.trim()] = Number(value);
@@ -68,7 +61,6 @@ export default function PropertiesView({ server }: Props) {
           }
         });
 
-        // 読み込んだ値でstateを更新（既存のデフォルト値とマージ）
         setProps(prev => ({ ...prev, ...newProps }));
         setHasChanges(false);
       } catch (e) {
@@ -81,16 +73,13 @@ export default function PropertiesView({ server }: Props) {
     loadProperties();
   }, [propFilePath]);
 
-  // ★別ウィンドウからの保存データを受け取るリスナー
   useEffect(() => {
     if (window.electronAPI) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const removeListener = window.electronAPI.onSettingsSavedInWindow((_event, newSettings: any) => {
         setProps((prev: ServerProperties) => ({ ...prev, ...newSettings }));
         setHasChanges(true);
         alert('詳細設定ウィンドウでの変更を適用しました。\n反映するには右上の「変更を保存」を押してください。');
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return () => (removeListener as any)?.();
     }
   }, []);
@@ -100,7 +89,6 @@ export default function PropertiesView({ server }: Props) {
     setHasChanges(true);
   };
 
-  // ★保存処理 (実際にファイルに書き込む)
   const handleSave = async () => {
     let content = "#Minecraft server properties\n#Edited by MC-Vector\n";
     Object.entries(props).forEach(([key, value]) => {
@@ -129,7 +117,6 @@ export default function PropertiesView({ server }: Props) {
     <div style={{ height: '100%', overflowY: 'auto', position: 'relative' }}>
       <div className="properties-container">
 
-        {/* ヘッダー部分 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3>サーバー設定 (server.properties)</h3>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -151,7 +138,6 @@ export default function PropertiesView({ server }: Props) {
           </div>
         </div>
 
-        {/* 基本設定セクション */}
         <div className="property-section">
           <div className="section-title">基本設定</div>
 
@@ -202,7 +188,6 @@ export default function PropertiesView({ server }: Props) {
           </div>
         </div>
 
-        {/* ゲームプレイルール */}
         <div className="property-section">
           <div className="section-title">ゲームプレイ</div>
           <ToggleItem
@@ -225,7 +210,6 @@ export default function PropertiesView({ server }: Props) {
           />
         </div>
 
-        {/* 接続・ネットワーク */}
         <div className="property-section">
           <div className="section-title">接続・ネットワーク</div>
 
@@ -275,7 +259,6 @@ export default function PropertiesView({ server }: Props) {
   );
 }
 
-// 小部品: トグルスイッチ付きの項目
 function ToggleItem({ label, desc, checked, onChange }: {
   label: string, desc: string, checked: boolean, onChange: (val: boolean) => void
 }) {

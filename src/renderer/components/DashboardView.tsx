@@ -13,7 +13,6 @@ export default function DashboardView({ server }: Props) {
   const [currentMem, setCurrentMem] = useState(0);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeListener = window.electronAPI.onServerStats((_event: any, data: any) => {
       if (data.serverId !== server.id) return;
 
@@ -31,18 +30,16 @@ export default function DashboardView({ server }: Props) {
       });
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return () => (removeListener as any)?.();
   }, [server.id]);
 
-  // ステータスに応じた色
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'online': return '#10b981'; // Green
-      case 'offline': return '#ef4444'; // Red
-      case 'starting': return '#eab308'; // Yellow
-      case 'stopping': return '#f97316'; // Orange
-      case 'restarting': return '#3b82f6'; // Blue
+      case 'online': return '#10b981';
+      case 'offline': return '#ef4444';
+      case 'starting': return '#eab308';
+      case 'stopping': return '#f97316';
+      case 'restarting': return '#3b82f6';
       default: return '#aaa';
     }
   };

@@ -18,7 +18,6 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
   const [proxyPort, setProxyPort] = useState(25577);
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
 
-  // ★修正: プロキシサーバー自体をリストから除外するフィルター
   const backendCandidates = servers.filter(s =>
     !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) &&
     !s.name.toLowerCase().includes('proxy')
@@ -34,7 +33,6 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
 
   const handleBuild = () => {
     if (selectedBackendIds.length < 2) {
-      // 警告: 最低2つは欲しいが、1つでも技術的には可能なのでアラートのみ
       if(!window.confirm("接続するサーバーが1つ以下です。ネットワークを構築しますか？")) return;
     }
     onBuildNetwork({

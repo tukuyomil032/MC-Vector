@@ -134,7 +134,7 @@ const styles = {
   stepCard: {
     backgroundColor: '#252526',
     borderRadius: '8px',
-    padding: '25px 20px 20px 20px', // Top padding slightly increased for badge space
+    padding: '25px 20px 20px 20px',
     marginBottom: '25px',
     border: '1px solid #3e3e42',
     position: 'relative' as const,
@@ -144,7 +144,7 @@ const styles = {
     position: 'absolute' as const,
     top: '-12px',
     left: '20px',
-    backgroundColor: '#5865F2', // Discord Blue/Blurple style
+    backgroundColor: '#5865F2',
     color: '#fff',
     padding: '4px 12px',
     borderRadius: '12px',

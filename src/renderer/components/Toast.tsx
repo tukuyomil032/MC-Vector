@@ -10,13 +10,10 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // マウント時にフェードイン
     requestAnimationFrame(() => setVisible(true));
 
-    // 3秒後に自動消去
     const timer = setTimeout(() => {
       setVisible(false);
-      // アニメーション終了後に削除
       setTimeout(onClose, 300);
     }, 3000);
 

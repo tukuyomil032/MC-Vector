@@ -13,7 +13,6 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
   const [memory, setMemory] = useState(4);
   const [rootPath, setRootPath] = useState<string>('');
 
-  // ルートパスの取得
   useEffect(() => {
     const fetchRoot = async () => {
       try {
@@ -26,10 +25,8 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
     fetchRoot();
   }, []);
 
-  // 作成されるディレクトリのプレビュー
   const previewPath = rootPath ? `${rootPath}/${name || 'server-id'}`.replace(/\\/g, '/') : 'Loading...';
 
-  // Java Edition バージョンリスト (1.21.10 ~ 1.8.9 全網羅)
   const versionOptions = [
     // 1.21.x
     '1.21.10', '1.21.9', '1.21.8', '1.21.7', '1.21.6', '1.21.5', '1.21.4', '1.21.3', '1.21.2', '1.21.1', '1.21',
@@ -57,7 +54,7 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
     '1.10.2', '1.10.1', '1.10',
     // 1.9.x
     '1.9.4', '1.9.3', '1.9.2', '1.9.1', '1.9',
-    // 1.8.x (ユーザー指定の開始地点)
+    // 1.8.x
     '1.8.9'
   ];
 
@@ -78,19 +75,19 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
         boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
       }}>
         <h3 style={{ marginTop: 0, marginBottom: '20px' }}>新しいサーバーを追加</h3>
-        
+
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>サーバー名</label>
-            <input 
+            <input
               type="text" required
               value={name} onChange={e => setName(e.target.value)}
               placeholder="例: Survival Server"
               style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff', fontSize: '1rem' }}
             />
-            <div style={{ 
-              marginTop: '5px', 
-              fontSize: '0.75rem', 
+            <div style={{
+              marginTop: '5px',
+              fontSize: '0.75rem',
               fontFamily: 'Consolas, Monaco, "Courier New", monospace',
               color: '#888',
               background: '#1a1a1a',
@@ -101,11 +98,11 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
               保存先: {previewPath}
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>ソフトウェア</label>
-              <select 
+              <select
                 value={software} onChange={e => setSoftware(e.target.value)}
                 style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
               >
@@ -126,10 +123,10 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
                 </optgroup>
               </select>
             </div>
-            
+
             <div style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>バージョン</label>
-              <select 
+              <select
                 value={version} onChange={e => setVersion(e.target.value)}
                 style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
               >
@@ -143,7 +140,7 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
           <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>ポート</label>
-              <input 
+              <input
                 type="number" required
                 value={port} onChange={e => setPort(Number(e.target.value))}
                 style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
@@ -151,7 +148,7 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>メモリ(GB)</label>
-              <input 
+              <input
                 type="number" required
                 value={memory} onChange={e => setMemory(Number(e.target.value))}
                 style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}

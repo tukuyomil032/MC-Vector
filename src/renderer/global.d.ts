@@ -43,6 +43,7 @@ export interface IElectronAPI {
   listFiles: (dirPath: string) => Promise<{ name: string; isDirectory: boolean; size?: number }[]>;
   readFile: (filePath: string) => Promise<string>;
   saveFile: (filePath: string, content: string) => Promise<boolean>;
+  importFilesDialog: (destDir: string) => Promise<{ success: boolean; message: string }>;
 
   createDirectory: (path: string) => Promise<boolean>;
   deletePath: (path: string) => Promise<boolean>;
@@ -81,7 +82,7 @@ export interface IElectronAPI {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   writeJsonFile: (filePath: string, data: any[]) => Promise<boolean>;
 
-  // ★追加: ngrok (Public Access) 機能
+  // ngrok (Public Access)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   toggleNgrok: (serverId: string, enabled: boolean, token?: string) => Promise<{ success: boolean, message?: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

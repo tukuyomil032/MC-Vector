@@ -10,13 +10,11 @@ interface ServerSettingsProps {
 
 const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   const [name, setName] = useState(server.name);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [software, setSoftware] = useState((server as any).software || 'Paper');
   const [version, setVersion] = useState(server.version);
   const [memory, setMemory] = useState(server.memory);
   const [port, setPort] = useState(server.port);
   const [path, setPath] = useState(server.path);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [javaPath, setJavaPath] = useState((server as any).javaPath || '');
 
   const [showJavaManager, setShowJavaManager] = useState(false);
@@ -37,19 +35,14 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     setMemory(server.memory);
     setPort(server.port);
     setPath(server.path);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((server as any).software) setSoftware((server as any).software);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((server as any).javaPath) setJavaPath((server as any).javaPath);
 
     loadJavaList();
 
-    // ★追加: 画面を開いた時に現在のステータスを確認
     checkNgrokStatus();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server]);
 
-  // ステータス確認関数 (ログ復元含む)
   const checkNgrokStatus = async () => {
     try {
         const status = await window.electronAPI.getNgrokStatus(server.id);
@@ -57,9 +50,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             setIsTunneling(true);
             setTunnelUrl(status.url);
 
-            // ★ログ復元: バックエンドから渡されたログがあればセット
             if (status.logs && status.logs.length > 0) {
-                setTunnelLog(status.logs.slice(-50)); // 最新50件
+                setTunnelLog(status.logs.slice(-50));
             } else if (tunnelLog.length === 0) {
                 setTunnelLog(['Resumed monitoring ngrok session...']);
             }
@@ -73,7 +65,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
       if (data.serverId === server.id) {
         if (data.status === 'running') setIsTunneling(true);
@@ -95,7 +86,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
       }
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return () => { if (typeof removeNgrokListener === 'function') (removeNgrokListener as any)(); };
   }, [server.id]);
 
@@ -133,7 +123,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
       memory,
       port,
       path,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...({ software, javaPath } as any)
     });
   };
@@ -174,7 +163,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   };
 
   const handleOpenGuide = () => {
-    // preload.tsで ipcRenderer.send('open-ngrok-guide') を実装している前提
     if (window.electronAPI.openNgrokGuide) {
       window.electronAPI.openNgrokGuide();
     } else {
@@ -319,10 +307,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           </div>
         </div>
 
-        {/* --- ngrok Settings Section --- */}
         <div className="setting-card" style={{ padding: '25px', backgroundColor: '#252526', borderRadius: '8px', border: isTunneling ? '1px solid #5865F2' : '1px solid #444' }}>
 
-          {/* レイアウト修正箇所: flex-wrapを追加して、ウィンドウ幅が狭いときも崩れにくくしました */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -332,7 +318,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             gap: '15px'
           }}>
 
-            {/* Left Side: Title */}
             <div style={{ minWidth: '200px' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.1rem', color: '#ccc' }}>
                 🌐 Public Access (ngrok)
@@ -343,10 +328,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               </div>
             </div>
 
-            {/* Right Side: Controls (Flexboxで横並び + 重ならないようにgap設定) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
 
-                {/* ★追加: ガイドボタン */}
                 <button
                     className="btn-secondary"
                     onClick={handleOpenGuide}
@@ -356,7 +339,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                     <span>❓</span> 接続ガイド
                 </button>
 
-                {/* Change Token Button */}
                 <button
                     className="btn-secondary"
                     onClick={handleResetToken}
@@ -366,7 +348,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                     Change Token
                 </button>
 
-                {/* Switch */}
                 <label className="switch">
                   <input type="checkbox" checked={isTunneling} onChange={handleToggleTunnel} />
                   <span className="slider round"></span>
@@ -375,10 +356,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
 
           </div>
 
-          {/* ログが復元されたり、起動中であれば表示 */}
           {(isTunneling || tunnelLog.length > 0) && (
             <>
-              {/* URL表示 */}
               {tunnelUrl && (
                 <div style={{ background: '#1e1e1e', padding: '15px', borderRadius: '6px', marginBottom: '15px' }}>
                   <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '5px' }}>公開アドレス (友人にこれを共有):</div>
@@ -391,7 +370,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                 </div>
               )}
 
-              {/* ログ表示 */}
               <div style={{
                 background: '#111', color: '#aaa', padding: '10px', borderRadius: '4px',
                 height: '150px', overflowY: 'auto', fontSize: '0.8rem', fontFamily: 'monospace', border: '1px solid #333'

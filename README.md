@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# MC-Vector
+__Minecraft - Multi-Function Server Management Software__
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Currently, two official plugins are available:
+## Technology Stacks
+- Electron
+- Node.js
+- React 19
+- Vite
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## React Compiler
+## Languages
+- Typescript
+- CSS
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+# Tutorial - How to create a server
+1. Install MC-Vector and launch the application.
+2. Press “+ Add Server” to open the server creation screen.
+3. Set the “Server Name,” “Software,” “Version,” “Port,” and “Memory Usage” respectively.
+4. Press the “Create” button.
+**Completing steps 1 through 4 above will finish creating your server!**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tutorial - How to Configure Server Details
+This application contains the following main configuration items:
+- **Dashboard**
+    - Here you can check the server status, ***software in use, CPU usage, and memory usage*** in real time!
+- **Console**
+    - Here you can check the ***server address, status, and memory usage***!
+    - Additionally, as a key feature of the console, server logs stream here.
+      - Furthermore, **you can execute console commands (with administrator privileges)** by typing a command into the ``Type a command...`` field and pressing the “Send” button!
+- **Users**
+    - Here, you can add or remove four items:
+      - Server whitelist,
+      - Administrator privileges,
+      - User bans (+including checking banned users),
+      - User IP bans.
+- **Files**
+    - Here, you can create, delete, edit, and move files or folders.
+    - In the Files tab, **you can create new folders and files within the current directory** by clicking the + button in the upper-left corner!
+- **Plugins / Mods**
+    - Here, you can install plugins and mods on your server simply by pressing the “Install” button.
+    - ⚠️However, **if you have created multiple servers**, ***only the currently selected server will be installed*** when you press the “Install” button.
+- **Backups**
+    - Here, you can create and delete server backups, as well as restore data from backups.
+    - The backup file you created is saved in the following directory:
+      - For MacOS➡️ ``/Users/<username>/Library/Application Support/MC-Vector/servers/<servername>/backups``
+      - For Windows➡️ ``C:\Users\<username>\AppData\Roaming\MC-Vector\servers\<servername>\backups``
+        - <username> is your operating system's user ID.
+        - <servername> is the name of the server you created the backup for.
+- **Properties**
+    - Here, you can edit **the basic settings** for your Minecraft server.
+    - For example, setting items include:
+      - Difficulty
+      - allow-flight
+      - max-players
+      - whitelist [``On / Off``] etc.
+- **General Settings**
+    - Here, you can change the settings configured when creating the server later!
+    - List of configurable items:
+      - Server name
+      - Software
+      - Version
+      - Memory usage
+      - Port number
+      - Java version
+      - ***Port fowarding elimination feature***
+        - For detailed setup instructions, press the “❓️Connection Guide” button.
+- **Proxy Network**
+    - ***Here, you can easily set up a proxy server!***
+    - For detailed setup instructions, click the “See Detailed Setup Guide” button.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## License
+This project is licensed under the MIT License - see the LICENSE file for details.

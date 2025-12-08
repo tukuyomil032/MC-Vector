@@ -7,12 +7,11 @@ export interface PropertyDefinition {
   description: string;
   type: PropertyType;
   category: PropertyCategory;
-  options?: string[]; // selectタイプ用
+  options?: string[];
   default: string | number | boolean;
 }
 
 export const serverPropertiesList: PropertyDefinition[] = [
-  // --- General (基本) ---
   {
     key: 'motd',
     label: 'MOTD',
@@ -29,8 +28,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     category: 'General',
     default: 20
   },
-
-  // --- Gameplay (ゲームプレイ) ---
   {
     key: 'gamemode',
     label: 'ゲームモード',
@@ -73,8 +70,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     category: 'Gameplay',
     default: false
   },
-
-  // --- World (ワールド生成) ---
   {
     key: 'level-seed',
     label: 'シード値',
@@ -107,8 +102,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     category: 'World',
     default: 16
   },
-
-  // --- Network (通信) ---
   {
     key: 'server-port',
     label: 'サーバーポート',
@@ -125,8 +118,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     category: 'Network',
     default: false
   },
-
-  // --- Security (セキュリティ) ---
   {
     key: 'online-mode',
     label: 'オンラインモード',

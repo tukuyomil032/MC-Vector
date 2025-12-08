@@ -11,32 +11,23 @@ interface ConsoleViewProps {
 const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
   const [command, setCommand] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
-
-  // アドレス切り替え用
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
-  // 独自に管理するngrok URL (ポーリングで取得)
   const [internalNgrokUrl, setInternalNgrokUrl] = useState<string | null>(null);
-
-  // メモリ統計用
   const [memoryUsage, setMemoryUsage] = useState(0);
 
-  // ログが更新されたら一番下へスクロール
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeStatsListener = window.electronAPI.onServerStats((_event: any, data: any) => {
       if (data.serverId === server.id) {
         setMemoryUsage(data.memory);
       }
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return () => { if (typeof removeStatsListener === 'function') (removeStatsListener as any)(); };
   }, [server.id]);
 
-  // ★追加: ngrokステータスのポーリング (3秒ごと)
   useEffect(() => {
     const fetchStatus = async () => {
         try {
@@ -47,10 +38,10 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         }
     };
 
-    fetchStatus(); // 初回
+    fetchStatus();
     const interval = setInterval(() => {
         fetchStatus();
-        setCurrentAddressIndex(prev => (prev === 0 ? 1 : 0)); // ついでにアドレス切り替えもここで行う
+        setCurrentAddressIndex(prev => (prev === 0 ? 1 : 0));
     }, 3000);
 
     return () => clearInterval(interval);
@@ -86,7 +77,6 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#1e1e1e' }}>
 
-      {/* Top Info Bar */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr',
@@ -95,7 +85,6 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         padding: '12px 0',
         flexShrink: 0
       }}>
-        {/* ADDRESS */}
         <div style={{ textAlign: 'center', borderRight: '1px solid #3e3e42', overflow: 'hidden' }}>
           <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>ADDRESS</div>
           <div
@@ -114,7 +103,6 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
           </div>
         </div>
 
-        {/* STATUS */}
         <div style={{ textAlign: 'center', borderRight: '1px solid #3e3e42' }}>
           <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>STATUS</div>
           <div style={{
@@ -126,7 +114,6 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
           </div>
         </div>
 
-        {/* MEMORY */}
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>MEMORY</div>
           <div style={{ fontWeight: 'bold', color: '#f0f0f0', fontSize: '0.95rem' }}>
@@ -135,7 +122,6 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         </div>
       </div>
 
-      {/* Log Area */}
       <div style={{
         flex: 1,
         backgroundColor: '#121214',
@@ -147,14 +133,12 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         whiteSpace: 'pre-wrap',
         lineHeight: '1.5',
       }}>
-        {/* 修正箇所: ここで logs 配列を展開して表示します */}
         {logs.map((log, index) => (
           <div key={index} style={{ wordBreak: 'break-all' }}>
             {log}
           </div>
         ))}
 
-        {/* 修正箇所: 自動スクロール用のターゲット要素 */}
         <div ref={logEndRef} />
 
         {logs.length === 0 && (
@@ -164,7 +148,6 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         )}
       </div>
 
-      {/* Input Area */}
       <div style={{
         height: '60px',
         backgroundColor: '#252526',

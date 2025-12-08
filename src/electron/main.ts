@@ -15,8 +15,6 @@ const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const RUNTIMES_PATH = path.join(app.getPath('userData'), 'runtimes');
 const NGROK_BIN_DIR = path.join(app.getPath('userData'), 'ngrok-bin');
 
-// --- Helper Functions ---
-
 function loadConfig() {
   if (fs.existsSync(CONFIG_PATH)) {
     try {
@@ -142,14 +140,10 @@ if (!gotTheLock) {
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let proxyHelpWindow: BrowserWindow | null = null;
-let ngrokGuideWindow: BrowserWindow | null = null; // ★追加: ngrokガイド用ウィンドウ
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let ngrokGuideWindow: BrowserWindow | null = null;
 let tempSettingsData: any = null;
 
 const activeServers = new Map<string, ChildProcess>();
-
-// ★修正: ログ履歴(logs)も保持するように変更
 const ngrokSessions = new Map<string, { process: ChildProcess, url: string | null, logs: string[] }>();
 
 function createWindow() {
@@ -183,7 +177,6 @@ function createWindow() {
             memory: stats.memory
           });
         } catch (e) {
-          // ignore
         }
       }
     }
@@ -232,7 +225,6 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
       try {
         execSync(`xattr -d com.apple.quarantine "${binaryPath}"`);
       } catch (e) {
-        // ignore
       }
     }
   }
@@ -250,8 +242,6 @@ app.whenReady().then(() => {
   const sendStatus = (serverId: string, status: string) => {
     mainWindow?.webContents.send('server-status-update', { serverId, status });
   };
-
-  // --- IPC Handlers ---
 
   ipcMain.handle('get-server-root', async () => getServersRootDir());
 
@@ -781,6 +771,34 @@ config-version = "2.7"
     }
   });
 
+  ipcMain.handle('import-files-dialog', async (_event, destDir) => {
+    if (!mainWindow) return { success: false, message: 'Window not found' };
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile', 'multiSelections'],
+      title: 'インポートするファイルを選択',
+      buttonLabel: 'インポート'
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, message: 'キャンセルされました' };
+    }
+
+    try {
+      let count = 0;
+      for (const srcPath of result.filePaths) {
+        const fileName = path.basename(srcPath);
+        const destPath = path.join(destDir, fileName);
+        await fs.promises.copyFile(srcPath, destPath);
+        count++;
+      }
+      return { success: true, message: `${count} 個のファイルをインポートしました` };
+    } catch (e: any) {
+      console.error(e);
+      return { success: false, message: `エラー: ${e.message}` };
+    }
+  });
+
   ipcMain.handle('compress-files', async (_event, filePaths, destPath) => {
     try {
       const zip = new AdmZip();
@@ -1062,7 +1080,6 @@ config-version = "2.7"
     }
   });
 
-  // Users機能用のJSON読み書き処理
   ipcMain.handle('read-json-file', async (_event, filePath) => {
     try {
       if (fs.existsSync(filePath)) {
@@ -1086,14 +1103,12 @@ config-version = "2.7"
     }
   });
 
-  // ★修正: ngrok起動ロジック (URLのパース方法変更、logs保存、ゾンビ対策)
   ipcMain.handle('toggle-ngrok', async (event, serverId, enabled, token) => {
     const sender = event.sender;
     const sendInfo = (info: any) => sender.send('ngrok-info', { serverId, ...info });
 
     try {
       if (enabled) {
-        // 既存のセッションがあればKill
         const existingSession = ngrokSessions.get(serverId);
         if (existingSession) {
             existingSession.process.kill();
@@ -1109,7 +1124,6 @@ config-version = "2.7"
           saveConfig(config);
         }
 
-        // トークン取得
         const savedToken = token || loadConfig().ngrokToken;
         if (!savedToken) {
             throw new Error("No authtoken provided");
@@ -1121,17 +1135,15 @@ config-version = "2.7"
         const server = servers.find((s: any) => s.id === serverId);
         if (!server) throw new Error('Server not found');
 
-        // ★修正: JSONフォーマット削除 & plain text解析へ
         const args = [
             'tcp',
             server.port.toString(),
             '--authtoken', cleanToken,
             '--region', 'jp',
-            '--log=stdout' // JSONではなく標準ログ
+            '--log=stdout'
         ];
 
         const process = spawn(ngrokPath, args);
-        // 新しいセッションを作成 (logs配列も初期化)
         ngrokSessions.set(serverId, { process, url: null, logs: [] });
 
         sendInfo({ status: 'running', log: 'Starting ngrok tunnel (region: jp)...' });
@@ -1150,11 +1162,9 @@ config-version = "2.7"
           for (const line of lines) {
             if (!line.trim()) continue;
 
-            // ログ保存
             if (session) session.logs.push(line);
             sendInfo({ log: line });
 
-            // ★修正: 正規表現でURLを探す (例: url=tcp://0.tcp.jp.ngrok.io:12345)
             const urlMatch = line.match(/url=(tcp:\/\/.+)/);
             if (urlMatch) {
                 const url = urlMatch[1];
@@ -1194,7 +1204,6 @@ config-version = "2.7"
     }
   });
 
-  // ★修正: ngrokステータス取得 (ログも返す)
   ipcMain.handle('get-ngrok-status', async (_event, serverId) => {
     const session = ngrokSessions.get(serverId);
     if (session) {
@@ -1237,7 +1246,6 @@ config-version = "2.7"
     });
   });
 
-  // ★追加: ngrok設定ガイドウィンドウを表示するハンドラ
   ipcMain.on('open-ngrok-guide', () => {
     if (ngrokGuideWindow) {
       ngrokGuideWindow.focus();
@@ -1257,10 +1265,8 @@ config-version = "2.7"
     });
 
     if (process.env.VITE_DEV_SERVER_URL) {
-      // 開発環境: ハッシュルーティング #ngrok-guide へ
       ngrokGuideWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#ngrok-guide`);
     } else {
-      // 本番環境
       ngrokGuideWindow.loadURL(`file://${path.join(__dirname, '../dist/index.html')}#ngrok-guide`);
     }
 

@@ -6,7 +6,6 @@ interface Props {
   server: MinecraftServer;
 }
 
-// 統一されたプロジェクト型
 interface ProjectItem {
   id: string;
   title: string;
@@ -16,7 +15,7 @@ interface ProjectItem {
   downloads?: number;
   stars?: number;
   platform: 'Modrinth' | 'Hangar';
-  source_obj: any; // 元データ保持用
+  source_obj: any;
 }
 
 export default function PluginBrowser({ server }: Props) {
@@ -24,26 +23,17 @@ export default function PluginBrowser({ server }: Props) {
   const [results, setResults] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [installingId, setInstallingId] = useState<string | null>(null);
-
-  // ページング
   const [page, setPage] = useState(0);
   const LIMIT = 30;
-
-  // プラットフォーム選択
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<'Modrinth' | 'Hangar' | 'CurseForge' | 'Spigot'>(isModServer ? 'Modrinth' : 'Modrinth');
-
-  // Paper系サーバーならHangarも選択肢に出す
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
 
-  // 初回ロード & 検索実行
   useEffect(() => {
     search();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, platform]); // ページやプラットフォームが変わったら再検索
+  }, [page, platform]);
 
   const search = async () => {
-    // CurseForge/SpigotはAPIがないのでスキップ
     if (platform === 'CurseForge' || platform === 'Spigot') {
         setResults([]);
         return;
@@ -75,7 +65,7 @@ export default function PluginBrowser({ server }: Props) {
         const hits = await window.electronAPI.searchHangar(query, server.version, offset);
 
         items = hits.map((h: any) => ({
-          id: h.name, // Hangarは名前がID代わり
+          id: h.name,
           title: h.name,
           description: h.description,
           author: h.namespace.owner,
@@ -96,12 +86,10 @@ export default function PluginBrowser({ server }: Props) {
     }
   };
 
-  // インストール処理
   const handleInstall = async (item: ProjectItem) => {
     setInstallingId(item.id);
     try {
       if (item.platform === 'Modrinth') {
-        // Modrinthのバージョン解決ロジック
         const loader = server.software.toLowerCase();
         const params = new URLSearchParams();
         params.append('loaders', `["${loader}"]`);
@@ -121,7 +109,6 @@ export default function PluginBrowser({ server }: Props) {
         alert(`インストール完了: ${item.title}`);
 
       } else if (item.platform === 'Hangar') {
-        // Hangarのバージョン解決
         const author = item.source_obj.namespace.owner;
         const slug = item.source_obj.namespace.slug;
         const res = await fetch(`https://hangar.papermc.io/api/v1/projects/${author}/${slug}/versions?limit=1&platform=PAPER&platformVersion=${server.version}`);
@@ -133,7 +120,6 @@ export default function PluginBrowser({ server }: Props) {
         }
 
         const version = data.result[0];
-        // HangarのダウンロードURL取得 (外部URLの場合は注意が必要だが今回は簡易実装)
         const downloadUrl = version.downloads.PAPER.downloadUrl;
         const fileName = `${slug}-${version.name}.jar`;
 
@@ -149,14 +135,12 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   const openExternal = (url: string) => {
-      // 本来は window.electronAPI.openExternal(url) などが必要
       alert(`ブラウザで開いてください: ${url}`);
   };
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
 
-      {/* ヘッダー: タイトル & プラットフォーム選択 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>{isModServer ? 'Mod' : 'Plugin'} Browser</h2>
 
@@ -175,7 +159,6 @@ export default function PluginBrowser({ server }: Props) {
         </div>
       </div>
 
-      {/* 検索バー */}
       {(platform === 'Modrinth' || platform === 'Hangar') ? (
         <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
           <input
@@ -203,7 +186,6 @@ export default function PluginBrowser({ server }: Props) {
         </div>
       )}
 
-      {/* リスト表示 */}
       {(platform === 'Modrinth' || platform === 'Hangar') && (
         <>
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '15px', paddingRight: '5px' }}>
@@ -220,13 +202,12 @@ export default function PluginBrowser({ server }: Props) {
                     <div style={{ fontWeight: 'bold', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '10px' }}>
                       {item.title}
                     </div>
-                    {/* ★修正: インストールボタン (青→アクアのグラデーション) */}
                     <button
                       onClick={() => handleInstall(item)}
                       disabled={installingId === item.id}
                       style={{
                         padding: '6px 14px', fontSize: '0.8rem', height: '30px', border: 'none', borderRadius: '4px',
-                        background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', // Blue to Cyan
+                        background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
                         color: 'white', fontWeight: 'bold', cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)',
                         opacity: installingId === item.id ? 0.7 : 1
@@ -257,7 +238,6 @@ export default function PluginBrowser({ server }: Props) {
             )}
           </div>
 
-          {/* ページネーション */}
           <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '20px', alignItems: 'center' }}>
             <button
               className="btn-secondary"

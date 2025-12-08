@@ -15,7 +15,7 @@ interface Backup {
 export default function BackupsView({ server }: Props) {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(false);
-  const [processing, setProcessing] = useState(false); // 作成・復元中のフラグ
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     loadBackups();
@@ -78,7 +78,6 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  // ファイルサイズを見やすく変換
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -87,19 +86,17 @@ export default function BackupsView({ server }: Props) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // 日付を見やすく変換
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleString();
   };
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
-      
-      {/* ヘッダー */}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>バックアップ管理</h3>
-        <button 
-          className="btn-primary" 
+        <button
+          className="btn-primary"
           onClick={handleCreateBackup}
           disabled={processing}
           style={{ opacity: processing ? 0.7 : 1 }}
@@ -108,27 +105,23 @@ export default function BackupsView({ server }: Props) {
         </button>
       </div>
 
-      {/* リスト表示 */}
-      <div style={{ 
-        flex: 1, 
-        backgroundColor: 'var(--bg-secondary)', 
-        borderRadius: '8px', 
+      <div style={{
+        flex: 1,
+        backgroundColor: 'var(--bg-secondary)',
+        borderRadius: '8px',
         border: '1px solid var(--border-color)',
-        overflowY: 'auto' 
+        overflowY: 'auto'
       }}>
-        {/* ローディング表示 */}
         {loading && <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>}
 
-        {/* データなし表示 */}
         {!loading && backups.length === 0 && (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
             バックアップはまだありません
           </div>
         )}
 
-        {/* 一覧テーブル風レイアウト */}
         {!loading && backups.map((backup) => (
-          <div 
+          <div
             key={backup.name}
             style={{
               padding: '15px 20px',
@@ -139,7 +132,7 @@ export default function BackupsView({ server }: Props) {
             }}
           >
             <div style={{ fontSize: '1.5rem' }}>📦</div>
-            
+
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--text-primary)' }}>
                 {backup.name}
@@ -154,16 +147,16 @@ export default function BackupsView({ server }: Props) {
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                className="btn-secondary" 
+              <button
+                className="btn-secondary"
                 onClick={() => handleRestore(backup.name)}
                 disabled={processing}
                 style={{ fontSize: '0.85rem', padding: '6px 12px' }}
               >
                 復元
               </button>
-              <button 
-                className="btn-stop" 
+              <button
+                className="btn-stop"
                 onClick={() => handleDelete(backup.name)}
                 disabled={processing}
                 style={{ fontSize: '0.85rem', padding: '6px 12px' }}

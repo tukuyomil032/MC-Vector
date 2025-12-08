@@ -6,20 +6,15 @@ const CATEGORIES: PropertyCategory[] = ['General', 'Gameplay', 'World', 'Network
 
 export default function AdvancedSettingsWindow() {
   const [activeTab, setActiveTab] = useState<PropertyCategory>('General');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formData, setFormData] = useState<any>({});
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // ウィンドウが開いた瞬間に、メインウィンドウから送られてきたデータを受け取る
   useEffect(() => {
-    // データ受信待機
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeListener = window.electronAPI.onSettingsData((data: any) => {
       setFormData(data);
       setIsLoaded(true);
     });
 
-    // 準備完了をメインプロセスに伝える
     window.electronAPI.settingsWindowReady();
 
     return () => {
@@ -32,9 +27,8 @@ export default function AdvancedSettingsWindow() {
   };
 
   const handleSave = () => {
-    // メインプロセス経由でメインウィンドウにデータを送り返す
     window.electronAPI.saveSettingsFromWindow(formData);
-    window.close(); // 保存したら閉じる
+    window.close();
   };
 
   const handleCancel = () => {
@@ -47,7 +41,6 @@ export default function AdvancedSettingsWindow() {
 
   return (
     <div className="advanced-modal">
-      {/* ヘッダー */}
       <header className="advanced-header">
         <div className="advanced-title">
           <span>🛠️ 詳細サーバー設定 (server.properties)</span>
@@ -59,10 +52,9 @@ export default function AdvancedSettingsWindow() {
       </header>
 
       <div className="advanced-body">
-        {/* 左サイドバー */}
         <aside className="category-sidebar">
           {CATEGORIES.map(cat => (
-            <div 
+            <div
               key={cat}
               className={`category-tab ${activeTab === cat ? 'active' : ''}`}
               onClick={() => setActiveTab(cat)}
@@ -72,12 +64,11 @@ export default function AdvancedSettingsWindow() {
           ))}
         </aside>
 
-        {/* 右メインエリア */}
         <div className="settings-list-container">
           <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
             {activeTab}
           </h3>
-          
+
           <div className="settings-grid">
             {filteredProps.map((prop) => {
               const currentValue = formData[prop.key] ?? prop.default;
@@ -88,7 +79,6 @@ export default function AdvancedSettingsWindow() {
                     <label className="setting-key">
                       {prop.label}
                       <span className="help-icon">?</span>
-                      {/* ツールチップ */}
                       <div className="tooltip-box">
                         <strong>{prop.key}</strong><br/>
                         {prop.description}
@@ -97,10 +87,10 @@ export default function AdvancedSettingsWindow() {
 
                     {prop.type === 'boolean' && (
                       <label className="toggle-switch">
-                        <input 
-                          type="checkbox" 
-                          checked={Boolean(currentValue)} 
-                          onChange={(e) => handleChange(prop.key, e.target.checked)} 
+                        <input
+                          type="checkbox"
+                          checked={Boolean(currentValue)}
+                          onChange={(e) => handleChange(prop.key, e.target.checked)}
                         />
                         <span className="slider"></span>
                       </label>
@@ -109,23 +99,23 @@ export default function AdvancedSettingsWindow() {
 
                   <div style={{ marginTop: '5px' }}>
                     {prop.type === 'string' && (
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="setting-input"
                         value={String(currentValue)}
                         onChange={(e) => handleChange(prop.key, e.target.value)}
                       />
                     )}
                     {prop.type === 'number' && (
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         className="setting-input"
                         value={Number(currentValue)}
                         onChange={(e) => handleChange(prop.key, Number(e.target.value))}
                       />
                     )}
                     {prop.type === 'select' && prop.options && (
-                      <select 
+                      <select
                         className="setting-input"
                         value={String(currentValue)}
                         onChange={(e) => handleChange(prop.key, e.target.value)}

@@ -1,4 +1,3 @@
-/* 全体を左右に分割 */
 .app-container {
   display: flex;
   height: 100vh;
@@ -11,7 +10,6 @@ input::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* 左サイドバー */
 .sidebar {
   width: 260px;
   background-color: #202225;
@@ -22,7 +20,6 @@ input::-webkit-inner-spin-button {
   z-index: 20;
 }
 
-/* サイドバー内のメインメニュー領域 */
 .sidebar-nav {
   flex: 1;
   padding: 10px;
@@ -58,13 +55,13 @@ input::-webkit-inner-spin-button {
   border-left: none;
   font-weight: 500;
 }
-/* サーバーリストを下に寄せるためのエリア */
+
 .sidebar-footer-list {
   max-height: 40%;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--border-color);
-  background-color: rgba(0, 0, 0, 0.2); /* 少し暗く */
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .server-list-container {
@@ -73,7 +70,6 @@ input::-webkit-inner-spin-button {
   padding: 10px;
 }
 
-/* 右メインエリア */
 .main-content {
   flex: 1;
   display: flex;
@@ -90,7 +86,6 @@ input::-webkit-inner-spin-button {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
-  /* すりガラス効果 */
   background-color: rgba(18, 18, 20, 0.8);
   backdrop-filter: blur(12px);
   z-index: 10;
@@ -104,12 +99,11 @@ input::-webkit-inner-spin-button {
   color: var(--text-primary);
 }
 
-/* ボタンエリアをフレックスボックスで横並び・右寄せに */
 .actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto; /* 右に寄せる */
+  margin-left: auto;
 }
 
 .content-area {

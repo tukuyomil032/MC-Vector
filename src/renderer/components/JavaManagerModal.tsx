@@ -14,8 +14,6 @@ interface Props {
 export default function JavaManagerModal({ onClose }: Props) {
   const [installed, setInstalled] = useState<JavaRuntime[]>([]);
   const [downloading, setDownloading] = useState<number | null>(null);
-
-  // 利用可能なJavaバージョン
   const availableVersions = [8, 17, 21];
 
   useEffect(() => {

@@ -1,17 +1,18 @@
 {
   "name": "mc-vector",
+  "productName": "MC-Vector",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Minecraft Server Management App",
+  "author": "tukuyomi032",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev:vite": "vite --port 5173",
-    "dev:electron": "electron .",
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:electron": "electron-builder --mac --win",
+    "preview": "vite preview",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "dist": "npm run build && electron-builder --mac --win"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -45,5 +46,41 @@
     "vite": "^7.2.4",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "com.tukuyomi032.mcvector",
+    "productName": "MC-Vector",
+    "copyright": "Copyright © 2025 tukuyomi032",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

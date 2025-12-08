@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listFiles: (dirPath: string) => ipcRenderer.invoke('list-files', dirPath),
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   saveFile: (filePath: string, content: string) => ipcRenderer.invoke('save-file', filePath, content),
+  importFilesDialog: (destDir: string) => ipcRenderer.invoke('import-files-dialog', destDir),
 
   createDirectory: (path: string) => ipcRenderer.invoke('create-directory', path),
   deletePath: (path: string) => ipcRenderer.invoke('delete-path', path),
@@ -67,7 +68,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   compressFiles: (files: string[], dest: string) => ipcRenderer.invoke('compress-files', files, dest),
   extractArchive: (archive: string, dest: string) => ipcRenderer.invoke('extract-archive', archive, dest),
 
-  // ★これが必要でした（場所を開く機能）
+  // Reveal in Finder / Explorer
   openPathInExplorer: (path: string) => ipcRenderer.invoke('open-path-in-explorer', path),
 
   // --- Backups ---

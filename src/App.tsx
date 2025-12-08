@@ -13,7 +13,7 @@ import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/P
 import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
 import Toast from './renderer/components/Toast';
-import NgrokGuideView from './renderer/components/NgrokGuideView'; // インポート確認OK
+import NgrokGuideView from './renderer/components/NgrokGuideView';
 
 import iconMenu from './assets/icons/menu.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
@@ -38,7 +38,6 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
 
-  // ★追加: ngrokの情報をグローバルで管理
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
@@ -47,20 +46,15 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // ▼▼▼ ここでハッシュに応じた別ウィンドウ表示を制御します ▼▼▼
 
-  // Proxyヘルプウィンドウの場合
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
   }
 
-  // ★修正: ngrokガイドウィンドウの場合
-  // ここでNgrokGuideViewを返すと、サイドバーなどが表示されず、ガイド画面だけが表示されます
   if (currentHash === '#ngrok-guide') {
     return <NgrokGuideView />;
   }
 
-  // ▲▲▲▲▲▲
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ msg, type });
@@ -228,7 +222,7 @@ function App() {
           key={contentKey}
           server={activeServer}
           logs={serverLogs[activeServer.id] || []}
-          ngrokUrl={ngrokData[activeServer.id] || null} // ★追加: ngrokURLを渡す
+          ngrokUrl={ngrokData[activeServer.id] || null}
         />;
       case 'properties': return <PropertiesView key={contentKey} server={activeServer} />;
       case 'files': return <FilesView key={contentKey} server={activeServer} />;
