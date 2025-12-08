@@ -142,6 +142,7 @@ if (!gotTheLock) {
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let proxyHelpWindow: BrowserWindow | null = null;
+let ngrokGuideWindow: BrowserWindow | null = null; // ★追加: ngrokガイド用ウィンドウ
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let tempSettingsData: any = null;
@@ -385,7 +386,7 @@ app.whenReady().then(() => {
     try {
       sendProgress(0, 'URLを取得中...');
       let downloadUrl = '';
-      const fileName = 'server.jar'; 
+      const fileName = 'server.jar';
 
       if (server.software === 'Velocity') {
         sendProgress(0, 'Velocityサーバーを立ち上げるには、Proxy Network→「設定方法の詳細を見る」を確認して下さい。');
@@ -462,7 +463,7 @@ app.whenReady().then(() => {
             tryOrderList.push(`"${cleanName}"`);
         }
       }
-      
+
       const tryOrderStr = `try = [${tryOrderList.join(', ')}]`;
 
       if (proxySoftware === 'Velocity') {
@@ -552,10 +553,10 @@ config-version = "2.7"
         const proxyServer = {
           id: crypto.randomUUID(),
           name: 'Proxy-Server',
-          version: 'Latest', 
+          version: 'Latest',
           software: proxySoftware,
           port: parseInt(proxyPort),
-          memory: 1, 
+          memory: 1,
           path: proxyPath,
           status: 'offline',
           createdDate: new Date().toISOString()
@@ -577,7 +578,7 @@ config-version = "2.7"
     if (!server || !server.path) return;
 
     const sender = event.sender;
-    
+
     let jarName = 'server.jar';
     let jarPath = path.join(server.path, jarName);
 
@@ -602,7 +603,7 @@ config-version = "2.7"
     sendLog(sender, serverId, `[INFO] Starting Server: ${server.name} (${server.version})...`);
     sendStatus(serverId, 'online');
 
-    const minMem = '512M'; 
+    const minMem = '512M';
     const maxMem = `${server.memory || 1}G`;
 
     let javaCommand = server.javaPath ? server.javaPath : 'java';
@@ -613,7 +614,7 @@ config-version = "2.7"
     }
 
     const args = [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', jarName];
-    
+
     if (server.software !== 'Velocity' && server.software !== 'Waterfall') {
       args.push('nogui');
     }
@@ -644,8 +645,8 @@ config-version = "2.7"
     const process = activeServers.get(serverId);
     if (process) {
       sendLog(event.sender, serverId, '[INFO] Sending stop command...');
-      process.stdin?.write('end\n'); 
-      process.stdin?.write('stop\n'); 
+      process.stdin?.write('end\n');
+      process.stdin?.write('stop\n');
       sendStatus(serverId, 'stopping');
     } else {
       sendLog(event.sender, serverId, '[INFO] Server is not running.');
@@ -1100,7 +1101,7 @@ config-version = "2.7"
         }
 
         sendInfo({ status: 'downloading', log: 'Checking ngrok binary...' });
-        const ngrokPath = await getNgrokBinary(); 
+        const ngrokPath = await getNgrokBinary();
 
         if (token) {
           const config = loadConfig();
@@ -1113,7 +1114,7 @@ config-version = "2.7"
         if (!savedToken) {
             throw new Error("No authtoken provided");
         }
-        
+
         const cleanToken = savedToken.trim();
 
         const servers = loadServersList();
@@ -1122,10 +1123,10 @@ config-version = "2.7"
 
         // ★修正: JSONフォーマット削除 & plain text解析へ
         const args = [
-            'tcp', 
-            server.port.toString(), 
-            '--authtoken', cleanToken, 
-            '--region', 'jp', 
+            'tcp',
+            server.port.toString(),
+            '--authtoken', cleanToken,
+            '--region', 'jp',
             '--log=stdout' // JSONではなく標準ログ
         ];
 
@@ -1143,12 +1144,12 @@ config-version = "2.7"
         process.stdout.on('data', (data) => {
           const text = data.toString();
           const lines = text.split('\n');
-          
+
           const session = ngrokSessions.get(serverId);
-          
+
           for (const line of lines) {
             if (!line.trim()) continue;
-            
+
             // ログ保存
             if (session) session.logs.push(line);
             sendInfo({ log: line });
@@ -1233,6 +1234,38 @@ config-version = "2.7"
 
     proxyHelpWindow.on('closed', () => {
       proxyHelpWindow = null;
+    });
+  });
+
+  // ★追加: ngrok設定ガイドウィンドウを表示するハンドラ
+  ipcMain.on('open-ngrok-guide', () => {
+    if (ngrokGuideWindow) {
+      ngrokGuideWindow.focus();
+      return;
+    }
+    ngrokGuideWindow = new BrowserWindow({
+      width: 600,
+      height: 800,
+      parent: mainWindow || undefined,
+      autoHideMenuBar: true,
+      title: "ngrok 接続ガイド (ポート開放不要)",
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.mjs'),
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    if (process.env.VITE_DEV_SERVER_URL) {
+      // 開発環境: ハッシュルーティング #ngrok-guide へ
+      ngrokGuideWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#ngrok-guide`);
+    } else {
+      // 本番環境
+      ngrokGuideWindow.loadURL(`file://${path.join(__dirname, '../dist/index.html')}#ngrok-guide`);
+    }
+
+    ngrokGuideWindow.on('closed', () => {
+      ngrokGuideWindow = null;
     });
   });
 });

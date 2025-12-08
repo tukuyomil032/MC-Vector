@@ -109,4 +109,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   getNgrokToken: () => ipcRenderer.invoke('get-ngrok-token'),
   getNgrokStatus: (serverId: string) => ipcRenderer.invoke('get-ngrok-status', serverId),
+  openNgrokGuide: () => ipcRenderer.send('open-ngrok-guide'),
 })
