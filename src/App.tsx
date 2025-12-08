@@ -14,7 +14,6 @@ import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
 import Toast from './renderer/components/Toast';
 
-// ★画像アセットの読み込み (パスは実際の配置に合わせて調整してください)
 import iconMenu from './assets/icons/menu.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
 import iconConsole from './assets/icons/console.svg';
@@ -34,9 +33,12 @@ function App() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, serverId: string } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
-
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+
+  // ★追加: ngrokの情報をグローバルで管理
+  const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     const handleHashChange = () => setCurrentHash(window.location.hash);
@@ -73,7 +75,6 @@ function App() {
     };
     loadServers();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeLogListener = window.electronAPI.onServerLog((_event: any, data: any) => {
       if (!data || !data.serverId) return;
       const formattedLog = data.log.replace(/\n/g, '\r\n');
@@ -85,7 +86,6 @@ function App() {
       });
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.electronAPI.onDownloadProgress((_event: any, data: any) => {
       if (data.progress === 100) {
         setDownloadStatus(null);
@@ -95,26 +95,48 @@ function App() {
       }
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removeStatusListener = window.electronAPI.onServerStatusUpdate((_event: any, data: any) => {
-      setServers(prev => prev.map(s =>
+      setServers(prev => prev.map(s => 
         s.id === data.serverId ? { ...s, status: data.status } : s
       ));
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return () => {
+    // ★追加: グローバルでngrok情報をリッスン
+    const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
+      if (data.status === 'stopped' || data.status === 'error') {
+        setNgrokData(prev => ({ ...prev, [data.serverId]: null }));
+      } else if (data.url) {
+        setNgrokData(prev => ({ ...prev, [data.serverId]: data.url }));
+      }
+    });
+
+    return () => { 
       if (typeof removeLogListener === 'function') (removeLogListener as any)();
       if (typeof removeStatusListener === 'function') (removeStatusListener as any)();
+      if (typeof removeNgrokListener === 'function') (removeNgrokListener as any)();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); 
+
+  // サーバー選択変更時にngrok状態を確認
+  useEffect(() => {
+    const checkNgrok = async () => {
+      if (!selectedServerId) return;
+      try {
+        const status = await window.electronAPI.getNgrokStatus(selectedServerId);
+        setNgrokData(prev => ({ ...prev, [selectedServerId]: status.active ? status.url : null }));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    checkNgrok();
+  }, [selectedServerId]);
 
   const activeServer = servers.find(s => s.id === selectedServerId);
 
   const handleStart = () => { if (selectedServerId) window.electronAPI.startServer(selectedServerId); };
   const handleStop = () => { if (selectedServerId) window.electronAPI.stopServer(selectedServerId); };
-
+  
   const handleRestart = async () => {
     if (!selectedServerId) return;
     setServers(prev => prev.map(s => s.id === selectedServerId ? { ...s, status: 'restarting' } : s));
@@ -123,7 +145,7 @@ function App() {
       window.electronAPI.startServer(selectedServerId);
     }, 3000);
   };
-
+  
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
     setServers(prev => prev.map(s => s.id === updatedServer.id ? updatedServer : s));
     await window.electronAPI.updateServer(updatedServer);
@@ -137,7 +159,7 @@ function App() {
       setSelectedServerId(newServer.id);
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
-
+      
       if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)) {
          setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
          await window.electronAPI.downloadServerJar(newServer.id);
@@ -152,10 +174,8 @@ function App() {
     try {
       const result = await window.electronAPI.setupProxy(config);
       showToast(result.message, result.success ? 'success' : 'error');
-
       const loadedServers = await window.electronAPI.getServers();
       setServers(loadedServers);
-
     } catch (error) {
       showToast('エラーが発生しました', 'error');
     }
@@ -194,10 +214,15 @@ function App() {
 
     switch (currentView) {
       case 'dashboard': return <DashboardView key={contentKey} server={activeServer} />;
-      case 'console': return <ConsoleView key={contentKey} server={activeServer} logs={serverLogs[activeServer.id] || []} />;
+      case 'console': 
+        return <ConsoleView 
+          key={contentKey} 
+          server={activeServer} 
+          logs={serverLogs[activeServer.id] || []} 
+          ngrokUrl={ngrokData[activeServer.id] || null} // ★追加: ngrokURLを渡す
+        />;
       case 'properties': return <PropertiesView key={contentKey} server={activeServer} />;
       case 'files': return <FilesView key={contentKey} server={activeServer} />;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       case 'plugins' as any: return <PluginBrowser key={contentKey} server={activeServer} />;
       case 'backups': return <BackupsView key={contentKey} server={activeServer} />;
       case 'general-settings': return <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />;
@@ -211,31 +236,28 @@ function App() {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       <aside className="sidebar" style={{ width: isSidebarOpen ? '260px' : '60px', transition: 'width 0.2s' }}>
-        <div className="sidebar-header" style={{
-          display: 'flex',
-          justifyContent: isSidebarOpen ? 'space-between' : 'center',
-          alignItems: 'center',
+        <div className="sidebar-header" style={{ 
+          display: 'flex', 
+          justifyContent: isSidebarOpen ? 'space-between' : 'center', 
+          alignItems: 'center', 
           padding: '20px 15px',
-          // ★修正: ヘッダー背景色と文字色の調整
-          backgroundColor: 'transparent',
+          backgroundColor: 'transparent', 
         }}>
-          {/* アプリ名: 文字色を白く、影をつけて視認性アップ */}
-          {isSidebarOpen && <span style={{
-            fontWeight: 'bold',
-            fontSize: '1.2rem',
+          {isSidebarOpen && <span style={{ 
+            fontWeight: 'bold', 
+            fontSize: '1.2rem', 
             color: '#ffffff',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)' 
           }}>MC-Vector</span>}
-
-          {/* ★修正: 開閉ボタンを画像に変更 */}
-          <button
+          
+          <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px' }}
           >
             <img src={iconMenu} alt="Menu" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
           </button>
         </div>
-
+        
         <div className="sidebar-nav">
           <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} iconSrc={iconDashboard} />
           <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} iconSrc={iconConsole} />
@@ -245,9 +267,9 @@ function App() {
           <NavItem label={isSidebarOpen ? "Backups" : ""} view="backups" current={currentView} set={setCurrentView} iconSrc={iconBackups} />
           <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} iconSrc={iconProperties} />
           <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} iconSrc={iconSettings} />
-
+          
           <hr style={{width: '90%', borderColor: 'rgba(255,255,255,0.1)', margin: '10px auto'}} />
-
+          
           <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} iconSrc={iconProxy} />
         </div>
 
@@ -297,16 +319,15 @@ function App() {
 function NavItem({ label, view, current, set, iconSrc }: any) {
   return (
     <div className={`nav-item ${current === view ? 'active' : ''}`} onClick={() => set(view)} title={label ? '' : view}>
-      {/* 画像アイコンを表示 */}
-      <img
-        src={iconSrc}
-        alt={view}
-        style={{
-          width: '20px',
-          height: '20px',
+      <img 
+        src={iconSrc} 
+        alt={view} 
+        style={{ 
+          width: '20px', 
+          height: '20px', 
           marginRight: label ? '12px' : '0',
-          filter: current === view ? 'invert(1)' : 'invert(0.7)' // 選択時は白く、未選択は少し暗く
-        }}
+          filter: current === view ? 'invert(1)' : 'invert(0.7)' 
+        }} 
       />
       {label}
     </div>

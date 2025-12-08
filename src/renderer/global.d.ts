@@ -87,6 +87,7 @@ export interface IElectronAPI {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onNgrokInfo: (callback: (event: unknown, data: { serverId: string, url?: string, log?: string, status: 'running' | 'stopped' | 'error' | 'downloading' }) => void) => (() => void);
   getNgrokToken: () => Promise<string>;
+  getNgrokStatus: (serverId: string) => Promise<{ active: boolean, url: string | null, logs?: string[]}>;
 }
 
 declare global {

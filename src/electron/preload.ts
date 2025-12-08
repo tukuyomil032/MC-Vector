@@ -108,4 +108,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => { ipcRenderer.removeListener('ngrok-info', subscription); };
   },
   getNgrokToken: () => ipcRenderer.invoke('get-ngrok-token'),
+  getNgrokStatus: (serverId: string) => ipcRenderer.invoke('get-ngrok-status', serverId),
 })

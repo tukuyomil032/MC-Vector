@@ -1,32 +1,111 @@
 import { useState, useEffect } from 'react';
-import { type MinecraftServer } from '../shared/server declaration';
+import { type MinecraftServer } from '../components/../shared/server declaration';
 import '../../main.css';
 
 interface Props {
   server: MinecraftServer;
 }
 
+// 共通のプレイヤーデータ型
 interface PlayerEntry {
   uuid?: string;
   name: string;
-  level?: number; // OP level
-  bypassesPlayerLimit?: boolean;
+  level?: number;
   created?: string;
   source?: string;
   expires?: string;
   reason?: string;
+  ip?: string; // for banned-ips
 }
 
 type ListType = 'whitelist' | 'ops' | 'banned-players' | 'banned-ips';
 
 export default function UsersView({ server }: Props) {
-  const [currentTab, setCurrentTab] = useState<ListType>('whitelist');
-  const [listData, setListData] = useState<PlayerEntry[]>([]);
-  const [inputName, setInputName] = useState('');
-
   const sep = server.path.includes('\\') ? '\\' : '/';
 
-  // ファイル名の解決
+  // 4つのリストデータを個別に管理
+  const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
+  const [ops, setOps] = useState<PlayerEntry[]>([]);
+  const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
+  const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
+
+  // 初期ロード
+  useEffect(() => {
+    loadAllLists();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [server.path]);
+
+  const loadAllLists = async () => {
+    setWhitelist(await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`) || []);
+    setOps(await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`) || []);
+    setBannedPlayers(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-players.json`) || []);
+    setBannedIps(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`) || []);
+  };
+
+  // 追加処理
+  const handleAdd = async (type: ListType, nameOrIp: string) => {
+    if (!nameOrIp) return;
+    const filePath = `${server.path}${sep}${getFileName(type)}`;
+    let currentList: PlayerEntry[] = [];
+    let newItem: PlayerEntry = { name: nameOrIp };
+
+    switch(type) {
+      case 'whitelist': currentList = [...whitelist]; break;
+      case 'ops': 
+        currentList = [...ops]; 
+        newItem = { ...newItem, level: 4, bypassesPlayerLimit: false } as any; 
+        break;
+      case 'banned-players': 
+        currentList = [...bannedPlayers]; 
+        newItem = { ...newItem, created: new Date().toISOString(), source: 'Console', reason: 'Banned by Admin' }; 
+        break;
+      case 'banned-ips': 
+        currentList = [...bannedIps]; 
+        newItem = { ip: nameOrIp, name: 'unknown', created: new Date().toISOString(), source: 'Console', reason: 'IP Banned' }; 
+        break;
+    }
+
+    // 重複チェック (簡易)
+    if (currentList.some(p => (type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase()))) {
+      alert('Already exists');
+      return;
+    }
+
+    const newData = [...currentList, newItem];
+    await window.electronAPI.writeJsonFile(filePath, newData);
+    
+    // State更新
+    switch(type) {
+        case 'whitelist': setWhitelist(newData); break;
+        case 'ops': setOps(newData); break;
+        case 'banned-players': setBannedPlayers(newData); break;
+        case 'banned-ips': setBannedIps(newData); break;
+    }
+  };
+
+  // 削除処理
+  const handleRemove = async (type: ListType, identifier: string) => {
+    const filePath = `${server.path}${sep}${getFileName(type)}`;
+    let currentList: PlayerEntry[] = [];
+
+    switch(type) {
+        case 'whitelist': currentList = whitelist; break;
+        case 'ops': currentList = ops; break;
+        case 'banned-players': currentList = bannedPlayers; break;
+        case 'banned-ips': currentList = bannedIps; break;
+    }
+
+    const newData = currentList.filter(p => (type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier));
+    await window.electronAPI.writeJsonFile(filePath, newData);
+
+    switch(type) {
+        case 'whitelist': setWhitelist(newData); break;
+        case 'ops': setOps(newData); break;
+        case 'banned-players': setBannedPlayers(newData); break;
+        case 'banned-ips': setBannedIps(newData); break;
+    }
+  };
+
   const getFileName = (type: ListType) => {
     if (type === 'whitelist') return 'whitelist.json';
     if (type === 'ops') return 'ops.json';
@@ -35,107 +114,156 @@ export default function UsersView({ server }: Props) {
     return '';
   };
 
-  useEffect(() => {
-    loadList();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTab, server.path]);
-
-  const loadList = async () => {
-    const fileName = getFileName(currentTab);
-    const filePath = `${server.path}${sep}${fileName}`;
-    const data = await window.electronAPI.readJsonFile(filePath);
-    setListData(Array.isArray(data) ? data : []);
-  };
-
-  const handleAdd = async () => {
-    if (!inputName) return;
-
-    // 簡易追加: UUIDは本来Mojang APIから取得すべきだが、今回は名前のみでエントリ作成
-    // オフラインモードやBungee環境下ではUUIDが変わるため、運用に合わせて調整が必要
-    const newItem: PlayerEntry = {
-      name: inputName,
-      // OPの場合はレベルが必要
-      ...(currentTab === 'ops' ? { level: 4, bypassesPlayerLimit: false } : {}),
-      // BANの場合は作成日など
-      ...(currentTab.includes('banned') ? { created: new Date().toISOString(), source: 'Console', reason: 'Banned by Admin' } : {})
-    };
-
-    // 既存チェック
-    if (listData.some(p => p.name.toLowerCase() === inputName.toLowerCase())) {
-      alert('Already exists');
-      return;
-    }
-
-    const newData = [...listData, newItem];
-    const fileName = getFileName(currentTab);
-    const filePath = `${server.path}${sep}${fileName}`;
-
-    await window.electronAPI.writeJsonFile(filePath, newData);
-    setListData(newData);
-    setInputName('');
-  };
-
-  const handleDelete = async (name: string) => {
-    const newData = listData.filter(p => p.name !== name);
-    const fileName = getFileName(currentTab);
-    const filePath = `${server.path}${sep}${fileName}`;
-
-    await window.electronAPI.writeJsonFile(filePath, newData);
-    setListData(newData);
-  };
-
   return (
     <div style={{ height: '100%', padding: '20px', display: 'flex', flexDirection: 'column' }}>
       <h2 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
         User Management
       </h2>
 
-      {/* タブ切り替え */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button className={`btn-secondary ${currentTab === 'whitelist' ? 'active' : ''}`} onClick={() => setCurrentTab('whitelist')}>Whitelist</button>
-        <button className={`btn-secondary ${currentTab === 'ops' ? 'active' : ''}`} onClick={() => setCurrentTab('ops')}>Operators (OP)</button>
-        <button className={`btn-secondary ${currentTab === 'banned-players' ? 'active' : ''}`} onClick={() => setCurrentTab('banned-players')}>Banned Players</button>
-        <button className={`btn-secondary ${currentTab === 'banned-ips' ? 'active' : ''}`} onClick={() => setCurrentTab('banned-ips')}>Banned IPs</button>
-      </div>
-
-      {/* 追加フォーム */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <input
-          type="text"
-          className="input-field"
-          placeholder={currentTab === 'banned-ips' ? "IP Address" : "Player Name"}
-          value={inputName}
-          onChange={e => setInputName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          style={{ flex: 1 }}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gridTemplateRows: '1fr 1fr', 
+        gap: '20px', 
+        flex: 1,
+        minHeight: 0 // コンテンツがあふれないように
+      }}>
+        <UserListCard 
+            title="Whitelist" 
+            data={whitelist} 
+            type="whitelist" 
+            onAdd={(val) => handleAdd('whitelist', val)} 
+            onRemove={(val) => handleRemove('whitelist', val)} 
         />
-        <button className="btn-primary" onClick={handleAdd}>Add</button>
-      </div>
-
-      {/* リスト表示 */}
-      <div style={{ flex: 1, overflowY: 'auto', background: '#252526', borderRadius: '8px', padding: '10px' }}>
-        {listData.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>No entries found.</div>
-        ) : (
-          listData.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #333' }}>
-              <div>
-                <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                {item.uuid && <div style={{ fontSize: '0.8rem', color: '#666' }}>{item.uuid}</div>}
-                {item.level && <div style={{ fontSize: '0.8rem', color: '#aaa' }}>OP Level: {item.level}</div>}
-                {item.reason && <div style={{ fontSize: '0.8rem', color: '#f55' }}>Reason: {item.reason}</div>}
-              </div>
-              <button
-                className="btn-stop"
-                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                onClick={() => handleDelete(item.name)}
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        )}
+        <UserListCard 
+            title="Operators (OP)" 
+            data={ops} 
+            type="ops" 
+            onAdd={(val) => handleAdd('ops', val)} 
+            onRemove={(val) => handleRemove('ops', val)} 
+        />
+        <UserListCard 
+            title="Banned Players" 
+            data={bannedPlayers} 
+            type="banned-players" 
+            onAdd={(val) => handleAdd('banned-players', val)} 
+            onRemove={(val) => handleRemove('banned-players', val)} 
+        />
+        <UserListCard 
+            title="Banned IPs" 
+            data={bannedIps} 
+            type="banned-ips" 
+            onAdd={(val) => handleAdd('banned-ips', val)} 
+            onRemove={(val) => handleRemove('banned-ips', val)} 
+        />
       </div>
     </div>
   );
+}
+
+// 個別のリストカードコンポーネント
+function UserListCard({ title, data, type, onAdd, onRemove }: { 
+    title: string, 
+    data: PlayerEntry[], 
+    type: ListType,
+    onAdd: (val: string) => void, 
+    onRemove: (val: string) => void 
+}) {
+    const [input, setInput] = useState('');
+
+    const handleAddClick = () => {
+        if(!input) return;
+        onAdd(input);
+        setInput('');
+    };
+
+    return (
+        <div style={{ 
+            backgroundColor: '#252526', 
+            borderRadius: '8px', 
+            border: '1px solid #444', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            overflow: 'hidden' 
+        }}>
+            <div style={{ 
+                padding: '10px 15px', 
+                backgroundColor: '#333', 
+                fontWeight: 'bold', 
+                borderBottom: '1px solid #444',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
+                {title}
+                <span style={{ fontSize: '0.8rem', color: '#aaa', fontWeight: 'normal' }}>{data.length} entries</span>
+            </div>
+            
+            {/* リスト表示エリア */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                {data.length === 0 ? (
+                    <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>Empty</div>
+                ) : (
+                    data.map((item, idx) => (
+                        <div key={idx} style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between', 
+                            padding: '8px', 
+                            marginBottom: '5px',
+                            backgroundColor: '#2b2b2b',
+                            borderRadius: '4px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                {/* ★ Head Image */}
+                                {type !== 'banned-ips' && (
+                                    <img 
+                                        src={`https://minotar.net/avatar/${item.name}/24`} 
+                                        alt="" 
+                                        style={{ borderRadius: '4px', width: '24px', height: '24px' }}
+                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://minotar.net/avatar/MHF_Steve/24' }} 
+                                    />
+                                )}
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                        {type === 'banned-ips' ? item.ip : item.name}
+                                    </div>
+                                    {/* Additional Info */}
+                                    {item.reason && <div style={{ fontSize: '0.7rem', color: '#ed4245' }}>{item.reason}</div>}
+                                    {item.level && <div style={{ fontSize: '0.7rem', color: '#faa61a' }}>Level: {item.level}</div>}
+                                </div>
+                            </div>
+                            <button 
+                                className="btn-stop" 
+                                style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                                onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* 追加フォーム */}
+            <div style={{ padding: '10px', borderTop: '1px solid #444', display: 'flex', gap: '5px' }}>
+                <input 
+                    type="text" 
+                    className="input-field" 
+                    placeholder={type === 'banned-ips' ? "IP Address" : "Player Name"}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
+                    style={{ flex: 1, padding: '6px' }}
+                />
+                <button 
+                    className="btn-primary" 
+                    onClick={handleAddClick}
+                    style={{ padding: '6px 12px' }}
+                >
+                    Add
+                </button>
+            </div>
+        </div>
+    );
 }

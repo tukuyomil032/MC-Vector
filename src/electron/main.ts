@@ -147,7 +147,9 @@ let proxyHelpWindow: BrowserWindow | null = null;
 let tempSettingsData: any = null;
 
 const activeServers = new Map<string, ChildProcess>();
-const activeNgrokTunnels = new Map<string, ChildProcess>();
+
+// ★修正: ログ履歴(logs)も保持するように変更
+const ngrokSessions = new Map<string, { process: ChildProcess, url: string | null, logs: string[] }>();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -229,7 +231,7 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
       try {
         execSync(`xattr -d com.apple.quarantine "${binaryPath}"`);
       } catch (e) {
-        // ignore if not present
+        // ignore
       }
     }
   }
@@ -383,10 +385,10 @@ app.whenReady().then(() => {
     try {
       sendProgress(0, 'URLを取得中...');
       let downloadUrl = '';
-      const fileName = 'server.jar';
+      const fileName = 'server.jar'; 
 
       if (server.software === 'Velocity') {
-        sendProgress(0, 'Paper公式から手動でVelocityのJarをダウンロードしてください。詳細は"Proxy Network"タブをご覧ください。');
+        sendProgress(0, 'Velocityサーバーを立ち上げるには、Proxy Network→「設定方法の詳細を見る」を確認して下さい。');
         return false;
       }
       else if (['Paper', 'Waterfall', 'LeafMC'].includes(server.software)) {
@@ -460,7 +462,7 @@ app.whenReady().then(() => {
             tryOrderList.push(`"${cleanName}"`);
         }
       }
-
+      
       const tryOrderStr = `try = [${tryOrderList.join(', ')}]`;
 
       if (proxySoftware === 'Velocity') {
@@ -518,7 +520,7 @@ config-version = "2.7"
 # 接続先サーバーの情報を記載する重要な部分。(必須)
 [servers]
   # 書き方：
-　# <サーバーの名前> = <接続アドレス>
+  # <サーバーの名前> = <接続アドレス>
   ${velocityServersConfig}
 
   # 記載したサーバーの中で、接続の優先順位を設定する部分。(合ったほうが良い)
@@ -550,10 +552,10 @@ config-version = "2.7"
         const proxyServer = {
           id: crypto.randomUUID(),
           name: 'Proxy-Server',
-          version: 'Latest',
+          version: 'Latest', 
           software: proxySoftware,
           port: parseInt(proxyPort),
-          memory: 1,
+          memory: 1, 
           path: proxyPath,
           status: 'offline',
           createdDate: new Date().toISOString()
@@ -575,7 +577,7 @@ config-version = "2.7"
     if (!server || !server.path) return;
 
     const sender = event.sender;
-
+    
     let jarName = 'server.jar';
     let jarPath = path.join(server.path, jarName);
 
@@ -600,7 +602,7 @@ config-version = "2.7"
     sendLog(sender, serverId, `[INFO] Starting Server: ${server.name} (${server.version})...`);
     sendStatus(serverId, 'online');
 
-    const minMem = '512M';
+    const minMem = '512M'; 
     const maxMem = `${server.memory || 1}G`;
 
     let javaCommand = server.javaPath ? server.javaPath : 'java';
@@ -611,6 +613,7 @@ config-version = "2.7"
     }
 
     const args = [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', jarName];
+    
     if (server.software !== 'Velocity' && server.software !== 'Waterfall') {
       args.push('nogui');
     }
@@ -641,8 +644,8 @@ config-version = "2.7"
     const process = activeServers.get(serverId);
     if (process) {
       sendLog(event.sender, serverId, '[INFO] Sending stop command...');
-      process.stdin?.write('end\n');
-      process.stdin?.write('stop\n');
+      process.stdin?.write('end\n'); 
+      process.stdin?.write('stop\n'); 
       sendStatus(serverId, 'stopping');
     } else {
       sendLog(event.sender, serverId, '[INFO] Server is not running.');
@@ -1082,97 +1085,103 @@ config-version = "2.7"
     }
   });
 
-  // ★修正: ngrok起動ロジック
+  // ★修正: ngrok起動ロジック (URLのパース方法変更、logs保存、ゾンビ対策)
   ipcMain.handle('toggle-ngrok', async (event, serverId, enabled, token) => {
     const sender = event.sender;
     const sendInfo = (info: any) => sender.send('ngrok-info', { serverId, ...info });
 
     try {
       if (enabled) {
-        // ★追加: 既存のトンネルがある場合は先に強制終了する (ゾンビプロセス対策)
-        if (activeNgrokTunnels.has(serverId)) {
-            const oldProc = activeNgrokTunnels.get(serverId);
-            if (oldProc) oldProc.kill();
-            activeNgrokTunnels.delete(serverId);
+        // 既存のセッションがあればKill
+        const existingSession = ngrokSessions.get(serverId);
+        if (existingSession) {
+            existingSession.process.kill();
+            ngrokSessions.delete(serverId);
         }
 
         sendInfo({ status: 'downloading', log: 'Checking ngrok binary...' });
-        const ngrokPath = await getNgrokBinary();
+        const ngrokPath = await getNgrokBinary(); 
 
         if (token) {
           const config = loadConfig();
-          config.ngrokToken = token; // ★追加: trimして保存
+          config.ngrokToken = token;
           saveConfig(config);
         }
 
-        // トークン取得 (引数優先、なければconfig)
+        // トークン取得
         const savedToken = token || loadConfig().ngrokToken;
         if (!savedToken) {
             throw new Error("No authtoken provided");
         }
-
-        // ★重要: トークンの空白削除
+        
         const cleanToken = savedToken.trim();
 
         const servers = loadServersList();
         const server = servers.find((s: any) => s.id === serverId);
         if (!server) throw new Error('Server not found');
 
-        // ngrok起動コマンド: ngrok tcp <port> --authtoken <token> --region jp --log=stdout --format=json
+        // ★修正: JSONフォーマット削除 & plain text解析へ
         const args = [
-            'tcp',
-            server.port.toString(),
-            '--authtoken', cleanToken,
-            '--region', 'jp', // ★追加: 日本リージョン指定
-            '--log=stdout',
-            '--format=json'
+            'tcp', 
+            server.port.toString(), 
+            '--authtoken', cleanToken, 
+            '--region', 'jp', 
+            '--log=stdout' // JSONではなく標準ログ
         ];
 
         const process = spawn(ngrokPath, args);
-        activeNgrokTunnels.set(serverId, process);
+        // 新しいセッションを作成 (logs配列も初期化)
+        ngrokSessions.set(serverId, { process, url: null, logs: [] });
 
         sendInfo({ status: 'running', log: 'Starting ngrok tunnel (region: jp)...' });
 
         process.on('error', (err) => {
             sendInfo({ status: 'error', log: `Failed to spawn ngrok: ${err.message}` });
-            activeNgrokTunnels.delete(serverId);
+            ngrokSessions.delete(serverId);
         });
 
         process.stdout.on('data', (data) => {
           const text = data.toString();
           const lines = text.split('\n');
+          
+          const session = ngrokSessions.get(serverId);
+          
           for (const line of lines) {
             if (!line.trim()) continue;
-            try {
-              const json = JSON.parse(line);
-              if (json.url) {
-                sendInfo({ url: json.url, log: `Tunnel established: ${json.url}` });
-              }
-              if (json.lvl === 'error') {
-                sendInfo({ log: `[Error] ${json.msg || json.err}` });
-              }
-            } catch (e) {
-              sendInfo({ log: line });
+            
+            // ログ保存
+            if (session) session.logs.push(line);
+            sendInfo({ log: line });
+
+            // ★修正: 正規表現でURLを探す (例: url=tcp://0.tcp.jp.ngrok.io:12345)
+            const urlMatch = line.match(/url=(tcp:\/\/.+)/);
+            if (urlMatch) {
+                const url = urlMatch[1];
+                if (session) session.url = url;
+                sendInfo({ url: url });
             }
           }
         });
 
         process.stderr.on('data', (data) => {
-          sendInfo({ log: `[Stderr] ${data.toString()}` });
+          const text = data.toString();
+          const session = ngrokSessions.get(serverId);
+          if (session) session.logs.push(text);
+          sendInfo({ log: `[Stderr] ${text}` });
         });
 
         process.on('close', (code) => {
-          activeNgrokTunnels.delete(serverId);
+          ngrokSessions.delete(serverId);
           sendInfo({ status: 'stopped', log: `ngrok stopped (code ${code})` });
         });
 
         return { success: true };
 
       } else {
-        const process = activeNgrokTunnels.get(serverId);
-        if (process) {
-          process.kill();
-          activeNgrokTunnels.delete(serverId);
+        const session = ngrokSessions.get(serverId);
+        if (session) {
+          session.process.kill();
+          ngrokSessions.delete(serverId);
           sendInfo({ status: 'stopped', log: 'Stopping tunnel...' });
         }
         return { success: true };
@@ -1182,6 +1191,15 @@ config-version = "2.7"
       sendInfo({ status: 'error', log: `Error: ${(e as Error).message}` });
       return { success: false, message: (e as Error).message };
     }
+  });
+
+  // ★修正: ngrokステータス取得 (ログも返す)
+  ipcMain.handle('get-ngrok-status', async (_event, serverId) => {
+    const session = ngrokSessions.get(serverId);
+    if (session) {
+        return { active: true, url: session.url, logs: session.logs };
+    }
+    return { active: false, url: null, logs: [] };
   });
 
   ipcMain.handle('get-ngrok-token', async () => {
