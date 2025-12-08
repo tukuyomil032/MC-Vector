@@ -13,6 +13,7 @@ import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/P
 import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
 import Toast from './renderer/components/Toast';
+import NgrokGuideView from './renderer/components/NgrokGuideView'; // インポート確認OK
 
 import iconMenu from './assets/icons/menu.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
@@ -46,9 +47,20 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // ▼▼▼ ここでハッシュに応じた別ウィンドウ表示を制御します ▼▼▼
+
+  // Proxyヘルプウィンドウの場合
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
   }
+
+  // ★修正: ngrokガイドウィンドウの場合
+  // ここでNgrokGuideViewを返すと、サイドバーなどが表示されず、ガイド画面だけが表示されます
+  if (currentHash === '#ngrok-guide') {
+    return <NgrokGuideView />;
+  }
+
+  // ▲▲▲▲▲▲
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ msg, type });
@@ -101,7 +113,6 @@ function App() {
       ));
     });
 
-    // ★追加: グローバルでngrok情報をリッスン
     const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
       if (data.status === 'stopped' || data.status === 'error') {
         setNgrokData(prev => ({ ...prev, [data.serverId]: null }));
@@ -115,10 +126,8 @@ function App() {
       if (typeof removeStatusListener === 'function') (removeStatusListener as any)();
       if (typeof removeNgrokListener === 'function') (removeNgrokListener as any)();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // サーバー選択変更時にngrok状態を確認
   useEffect(() => {
     const checkNgrok = async () => {
       if (!selectedServerId) return;
@@ -315,10 +324,8 @@ function App() {
   );
 }
 
-// 修正箇所: CSSクラスだけに頼らず、inline-styleで配置を制御
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function NavItem({ label, view, current, set, iconSrc }: any) {
-  // ラベルが存在するか(=サイドバーが開いているか)
   const isOpen = !!label;
 
   return (
@@ -329,9 +336,7 @@ function NavItem({ label, view, current, set, iconSrc }: any) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        // 閉じているときは中央揃え(center)、開いているときは左寄せ(flex-start)
         justifyContent: isOpen ? 'flex-start' : 'center',
-        // 閉じているときは左右paddingを消して幅を確保
         padding: isOpen ? '10px 15px' : '10px 0',
         cursor: 'pointer',
         width: '100%',
@@ -344,7 +349,6 @@ function NavItem({ label, view, current, set, iconSrc }: any) {
         style={{
           width: '20px',
           height: '20px',
-          // 画像が幅不足で潰れないようにする
           flexShrink: 0,
           marginRight: isOpen ? '12px' : '0',
           filter: current === view ? 'invert(1)' : 'invert(0.7)',

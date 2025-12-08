@@ -25,7 +25,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   const [isTunneling, setIsTunneling] = useState(false);
   const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
   const [tunnelLog, setTunnelLog] = useState<string[]>([]);
-  
+
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [inputToken, setInputToken] = useState('');
 
@@ -43,7 +43,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     if ((server as any).javaPath) setJavaPath((server as any).javaPath);
 
     loadJavaList();
-    
+
     // ★追加: 画面を開いた時に現在のステータスを確認
     checkNgrokStatus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,7 +56,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
         if (status.active) {
             setIsTunneling(true);
             setTunnelUrl(status.url);
-            
+
             // ★ログ復元: バックエンドから渡されたログがあればセット
             if (status.logs && status.logs.length > 0) {
                 setTunnelLog(status.logs.slice(-50)); // 最新50件
@@ -77,18 +77,18 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
       if (data.serverId === server.id) {
         if (data.status === 'running') setIsTunneling(true);
-        
+
         if (data.status === 'stopped' || data.status === 'error') {
             setIsTunneling(false);
             setTunnelUrl(null);
         }
-        
+
         if (data.status === 'downloading') {
             setTunnelLog(prev => [...prev, "Downloading ngrok binary..."]);
         }
-        
+
         if (data.url) setTunnelUrl(data.url);
-        
+
         if (data.log) {
             setTunnelLog(prev => [...prev, data.log].slice(-50));
         }
@@ -140,12 +140,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
 
   const handleToggleTunnel = async () => {
     const nextState = !isTunneling;
-    
+
     if (nextState) {
         const token = await window.electronAPI.getNgrokToken();
         if (!token) {
             setShowTokenModal(true);
-            return; 
+            return;
         }
         setTunnelLog(prev => [...prev, '--- Initializing ngrok ---']);
         await window.electronAPI.toggleNgrok(server.id, true, token);
@@ -155,7 +155,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   };
 
   const handleResetToken = () => {
-    setInputToken(''); 
+    setInputToken('');
     setShowTokenModal(true);
   };
 
@@ -173,14 +173,24 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     }
   };
 
+  const handleOpenGuide = () => {
+    // preload.tsで ipcRenderer.send('open-ngrok-guide') を実装している前提
+    if (window.electronAPI.openNgrokGuide) {
+      window.electronAPI.openNgrokGuide();
+    } else {
+      console.error("openNgrokGuide API is not defined.");
+      alert("ガイド機能はまだ実装されていません (preloadを確認してください)");
+    }
+  };
+
   return (
-    <div className="properties-container" style={{ 
-      height: '100%', 
-      overflowY: 'auto', 
-      padding: '40px', 
-      color: '#ecf0f1', 
+    <div className="properties-container" style={{
+      height: '100%',
+      overflowY: 'auto',
+      padding: '40px',
+      color: '#ecf0f1',
       boxSizing: 'border-box',
-      display: 'block' 
+      display: 'block'
     }}>
       <div style={{ maxWidth: '800px', paddingBottom: '50px' }}>
         <h2 style={{ marginTop: 0, marginBottom: '30px', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
@@ -309,9 +319,21 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           </div>
         </div>
 
+        {/* --- ngrok Settings Section --- */}
         <div className="setting-card" style={{ padding: '25px', backgroundColor: '#252526', borderRadius: '8px', border: isTunneling ? '1px solid #5865F2' : '1px solid #444' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <div>
+
+          {/* レイアウト修正箇所: flex-wrapを追加して、ウィンドウ幅が狭いときも崩れにくくしました */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '15px',
+            flexWrap: 'wrap',
+            gap: '15px'
+          }}>
+
+            {/* Left Side: Title */}
+            <div style={{ minWidth: '200px' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.1rem', color: '#ccc' }}>
                 🌐 Public Access (ngrok)
                 {isTunneling && <span style={{ fontSize: '0.8rem', background: '#3ba55c', color: '#fff', padding: '2px 8px', borderRadius: '4px' }}>ONLINE</span>}
@@ -320,25 +342,40 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                 ポート開放なしで外部から接続できるようにします。
               </div>
             </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <button 
-                    className="btn-secondary" 
-                    onClick={handleResetToken} 
+
+            {/* Right Side: Controls (Flexboxで横並び + 重ならないようにgap設定) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+                {/* ★追加: ガイドボタン */}
+                <button
+                    className="btn-secondary"
+                    onClick={handleOpenGuide}
+                    style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    title="接続手順のガイドを開きます"
+                >
+                    <span>❓</span> 接続ガイド
+                </button>
+
+                {/* Change Token Button */}
+                <button
+                    className="btn-secondary"
+                    onClick={handleResetToken}
                     style={{ fontSize: '0.8rem', padding: '6px 12px' }}
                     title="認証トークンを変更・修正します"
                 >
                     Change Token
                 </button>
 
+                {/* Switch */}
                 <label className="switch">
                   <input type="checkbox" checked={isTunneling} onChange={handleToggleTunnel} />
                   <span className="slider round"></span>
                 </label>
             </div>
+
           </div>
 
-          {/* ログが復元されたり、起動中であれば表示する条件を修正 */}
+          {/* ログが復元されたり、起動中であれば表示 */}
           {(isTunneling || tunnelLog.length > 0) && (
             <>
               {/* URL表示 */}
@@ -355,8 +392,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               )}
 
               {/* ログ表示 */}
-              <div style={{ 
-                background: '#111', color: '#aaa', padding: '10px', borderRadius: '4px', 
+              <div style={{
+                background: '#111', color: '#aaa', padding: '10px', borderRadius: '4px',
                 height: '150px', overflowY: 'auto', fontSize: '0.8rem', fontFamily: 'monospace', border: '1px solid #333'
               }}>
                   {tunnelLog.length === 0 && <div>Ready to start...</div>}
@@ -384,10 +421,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             <h3 style={{ marginTop: 0 }}>ngrok AuthToken Required</h3>
             <p style={{ color: '#aaa', fontSize: '0.9rem' }}>
               ngrokを使用するには認証トークンが必要です。<br/>
-              公式サイト (<a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" style={{color: '#5865F2'}}>dashboard.ngrok.com</a>) からトークンを取得して貼り付けてください。
+              公式サイト (<a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" rel="noreferrer" style={{color: '#5865F2'}}>dashboard.ngrok.com</a>) からトークンを取得して貼り付けてください。
             </p>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="input-field"
               placeholder="Ex: 2A..."
               value={inputToken}
@@ -395,14 +432,14 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               style={{ width: '100%', marginBottom: '20px' }}
             />
             <div style={{ textAlign: 'right' }}>
-              <button 
+              <button
                 onClick={() => setShowTokenModal(false)}
                 className="btn-secondary"
                 style={{ marginRight: '10px' }}
               >
                 キャンセル
               </button>
-              <button 
+              <button
                 onClick={handleTokenSubmit}
                 className="btn-primary"
                 disabled={!inputToken}
@@ -415,7 +452,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
       )}
 
       <style>{`
-        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
