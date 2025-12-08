@@ -33,7 +33,7 @@ function App() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, serverId: string } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
 
@@ -96,7 +96,7 @@ function App() {
     });
 
     const removeStatusListener = window.electronAPI.onServerStatusUpdate((_event: any, data: any) => {
-      setServers(prev => prev.map(s => 
+      setServers(prev => prev.map(s =>
         s.id === data.serverId ? { ...s, status: data.status } : s
       ));
     });
@@ -110,13 +110,13 @@ function App() {
       }
     });
 
-    return () => { 
+    return () => {
       if (typeof removeLogListener === 'function') (removeLogListener as any)();
       if (typeof removeStatusListener === 'function') (removeStatusListener as any)();
       if (typeof removeNgrokListener === 'function') (removeNgrokListener as any)();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
   // サーバー選択変更時にngrok状態を確認
   useEffect(() => {
@@ -136,7 +136,7 @@ function App() {
 
   const handleStart = () => { if (selectedServerId) window.electronAPI.startServer(selectedServerId); };
   const handleStop = () => { if (selectedServerId) window.electronAPI.stopServer(selectedServerId); };
-  
+
   const handleRestart = async () => {
     if (!selectedServerId) return;
     setServers(prev => prev.map(s => s.id === selectedServerId ? { ...s, status: 'restarting' } : s));
@@ -145,7 +145,7 @@ function App() {
       window.electronAPI.startServer(selectedServerId);
     }, 3000);
   };
-  
+
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
     setServers(prev => prev.map(s => s.id === updatedServer.id ? updatedServer : s));
     await window.electronAPI.updateServer(updatedServer);
@@ -159,7 +159,7 @@ function App() {
       setSelectedServerId(newServer.id);
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
-      
+
       if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)) {
          setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
          await window.electronAPI.downloadServerJar(newServer.id);
@@ -214,11 +214,11 @@ function App() {
 
     switch (currentView) {
       case 'dashboard': return <DashboardView key={contentKey} server={activeServer} />;
-      case 'console': 
-        return <ConsoleView 
-          key={contentKey} 
-          server={activeServer} 
-          logs={serverLogs[activeServer.id] || []} 
+      case 'console':
+        return <ConsoleView
+          key={contentKey}
+          server={activeServer}
+          logs={serverLogs[activeServer.id] || []}
           ngrokUrl={ngrokData[activeServer.id] || null} // ★追加: ngrokURLを渡す
         />;
       case 'properties': return <PropertiesView key={contentKey} server={activeServer} />;
@@ -236,28 +236,28 @@ function App() {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       <aside className="sidebar" style={{ width: isSidebarOpen ? '260px' : '60px', transition: 'width 0.2s' }}>
-        <div className="sidebar-header" style={{ 
-          display: 'flex', 
-          justifyContent: isSidebarOpen ? 'space-between' : 'center', 
-          alignItems: 'center', 
+        <div className="sidebar-header" style={{
+          display: 'flex',
+          justifyContent: isSidebarOpen ? 'space-between' : 'center',
+          alignItems: 'center',
           padding: '20px 15px',
-          backgroundColor: 'transparent', 
+          backgroundColor: 'transparent',
         }}>
-          {isSidebarOpen && <span style={{ 
-            fontWeight: 'bold', 
-            fontSize: '1.2rem', 
+          {isSidebarOpen && <span style={{
+            fontWeight: 'bold',
+            fontSize: '1.2rem',
             color: '#ffffff',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)' 
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}>MC-Vector</span>}
-          
-          <button 
+
+          <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px' }}
           >
             <img src={iconMenu} alt="Menu" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
           </button>
         </div>
-        
+
         <div className="sidebar-nav">
           <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} iconSrc={iconDashboard} />
           <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} iconSrc={iconConsole} />
@@ -267,9 +267,9 @@ function App() {
           <NavItem label={isSidebarOpen ? "Backups" : ""} view="backups" current={currentView} set={setCurrentView} iconSrc={iconBackups} />
           <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} iconSrc={iconProperties} />
           <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} iconSrc={iconSettings} />
-          
+
           <hr style={{width: '90%', borderColor: 'rgba(255,255,255,0.1)', margin: '10px auto'}} />
-          
+
           <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} iconSrc={iconProxy} />
         </div>
 
@@ -315,21 +315,47 @@ function App() {
   );
 }
 
+// 修正箇所: CSSクラスだけに頼らず、inline-styleで配置を制御
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function NavItem({ label, view, current, set, iconSrc }: any) {
+  // ラベルが存在するか(=サイドバーが開いているか)
+  const isOpen = !!label;
+
   return (
-    <div className={`nav-item ${current === view ? 'active' : ''}`} onClick={() => set(view)} title={label ? '' : view}>
-      <img 
-        src={iconSrc} 
-        alt={view} 
-        style={{ 
-          width: '20px', 
-          height: '20px', 
-          marginRight: label ? '12px' : '0',
-          filter: current === view ? 'invert(1)' : 'invert(0.7)' 
-        }} 
+    <div
+      className={`nav-item ${current === view ? 'active' : ''}`}
+      onClick={() => set(view)}
+      title={isOpen ? '' : view}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        // 閉じているときは中央揃え(center)、開いているときは左寄せ(flex-start)
+        justifyContent: isOpen ? 'flex-start' : 'center',
+        // 閉じているときは左右paddingを消して幅を確保
+        padding: isOpen ? '10px 15px' : '10px 0',
+        cursor: 'pointer',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}
+    >
+      <img
+        src={iconSrc}
+        alt={view}
+        style={{
+          width: '20px',
+          height: '20px',
+          // 画像が幅不足で潰れないようにする
+          flexShrink: 0,
+          marginRight: isOpen ? '12px' : '0',
+          filter: current === view ? 'invert(1)' : 'invert(0.7)',
+          display: 'block'
+        }}
       />
-      {label}
+      {isOpen && (
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {label}
+        </span>
+      )}
     </div>
   );
 }
