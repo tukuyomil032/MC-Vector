@@ -2,7 +2,7 @@
 /dist
 /release
 /dist-electron
-
+.DS_Store
 # Logs
 logs
 *.log
