@@ -46,8 +46,8 @@ This application contains the following main configuration items:
     - The backup file you created is saved in the following directory:
       - For MacOS➡️ ``/Users/<username>/Library/Application Support/MC-Vector/servers/<servername>/backups``
       - For Windows➡️ ``C:\Users\<username>\AppData\Roaming\MC-Vector\servers\<servername>\backups``
-        - <username> is your operating system's user ID.
-        - <servername> is the name of the server you created the backup for.
+        - ``<username>`` is your operating system's user ID.
+        - ``<servername>`` is the name of the server you created the backup for.
 - **Properties**
     - Here, you can edit **the basic settings** for your Minecraft server.
     - For example, setting items include:
