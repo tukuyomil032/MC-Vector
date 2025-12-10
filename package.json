@@ -17,6 +17,7 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "adm-zip": "^0.5.16",
+    "discord-rpc": "^4.0.1",
     "pidusage": "^4.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/adm-zip": "^0.5.7",
+    "@types/discord-rpc": "^4.0.10",
     "@types/node": "^24.10.1",
     "@types/pidusage": "^2.0.5",
     "@types/react": "^19.2.5",

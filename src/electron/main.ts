@@ -9,11 +9,13 @@ import crypto from 'crypto';
 import { spawn, ChildProcess, execSync } from 'child_process';
 import pidusage from 'pidusage';
 import os from 'os';
+import DiscordRPC from 'discord-rpc';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const RUNTIMES_PATH = path.join(app.getPath('userData'), 'runtimes');
 const NGROK_BIN_DIR = path.join(app.getPath('userData'), 'ngrok-bin');
+const DISCORD_CLIENT_ID = '1447931663429537802';
 
 function loadConfig() {
   if (fs.existsSync(CONFIG_PATH)) {
@@ -141,10 +143,43 @@ let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let proxyHelpWindow: BrowserWindow | null = null;
 let ngrokGuideWindow: BrowserWindow | null = null;
+
 let tempSettingsData: any = null;
 
 const activeServers = new Map<string, ChildProcess>();
 const ngrokSessions = new Map<string, { process: ChildProcess, url: string | null, logs: string[] }>();
+
+let rpc: DiscordRPC.Client | null = null;
+
+function initDiscordRPC() {
+  rpc = new DiscordRPC.Client({ transport: 'ipc' });
+
+  rpc.on('ready', () => {
+    console.log('Discord RPC Connected');
+  });
+
+  rpc.login({ clientId: DISCORD_CLIENT_ID }).catch((err) => {
+    console.error('Failed to connect to Discord', err);
+  });
+}
+
+async function setDiscordActivity(details: string, state: string, largeImageKey: string, smallImageKey?: string) {
+  if (!rpc) return;
+  try {
+    await rpc.setActivity({
+      details,
+      state,
+      largeImageKey,
+      largeImageText: state,
+      smallImageKey,
+      smallImageText: 'MC-Vector',
+      instance: false,
+      startTimestamp: Date.now(), 
+    });
+  } catch (e) {
+    console.error('RPC Error:', e);
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -233,6 +268,8 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
 }
 
 app.whenReady().then(() => {
+  initDiscordRPC();
+
   createWindow();
 
   const sendLog = (sender: any, serverId: string, log: string) => {
@@ -242,6 +279,58 @@ app.whenReady().then(() => {
   const sendStatus = (serverId: string, status: string) => {
     mainWindow?.webContents.send('server-status-update', { serverId, status });
   };
+
+
+  ipcMain.on('update-discord-presence', (_event, data) => {
+    const { serverName, viewName } = data;
+    
+    let stateText = 'Idling';
+    let imageKey = 'logo'; 
+
+
+    switch (viewName) {
+      case 'console':
+        stateText = 'Monitoring Console';
+        imageKey = 'console';
+        break;
+      case 'users':
+        stateText = 'Managing Users';
+        imageKey = 'users';
+        break;
+      case 'files':
+        stateText = 'Editing Files';
+        imageKey = 'files';
+        break;
+      case 'plugins':
+        stateText = 'Installing Plugins/Mods';
+        imageKey = 'plugins';
+        break;
+      case 'backups':
+        stateText = 'Managing Backups';
+        imageKey = 'backups';
+        break;
+      case 'properties':
+        stateText = 'Configuring Properties';
+        imageKey = 'properties';
+        break;
+      case 'general-settings':
+        stateText = 'General Settings';
+        imageKey = 'settings';
+        break;
+      case 'proxy':
+        stateText = 'Network Configuration';
+        imageKey = 'proxy';
+        break;
+      default:
+        stateText = 'Idling...';
+        imageKey = 'logo';
+    }
+
+    const detailsText = serverName ? `Server: ${serverName}` : 'Managing Servers';
+
+    setDiscordActivity(detailsText, stateText, imageKey, 'logo');
+  });
+
 
   ipcMain.handle('get-server-root', async () => getServersRootDir());
 

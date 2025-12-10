@@ -13,7 +13,7 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['pidusage', 'tar'],
+              external: ['pidusage', 'tar', 'bufferutil', 'utf-8-validate'],
             },
           },
         },
