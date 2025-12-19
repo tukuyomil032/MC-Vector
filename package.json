@@ -2,7 +2,7 @@
   "name": "mc-vector",
   "productName": "MC-Vector",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
   "type": "module",
