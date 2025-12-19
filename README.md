@@ -3,6 +3,7 @@ __Minecraft - Multi-Function Server Management Software__
 
 
 ## Technology Stacks
+- TailwindCSS
 - Electron
 - Node.js
 - React 19
