@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
-import '../../main.css';
 
 interface Props {
   server: MinecraftServer;
@@ -107,19 +106,12 @@ export default function UsersView({ server }: Props) {
   };
 
   return (
-    <div style={{ height: '100%', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-      <h2 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
+    <div className="h-full p-5 flex flex-col">
+      <h2 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">
         User Management
       </h2>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        gap: '20px',
-        flex: 1,
-        minHeight: 0
-      }}>
+      <div className="grid grid-cols-2 grid-rows-2 gap-5 flex-1 min-h-0">
         <UserListCard
             title="Whitelist"
             data={whitelist}
@@ -169,64 +161,40 @@ function UserListCard({ title, data, type, onAdd, onRemove }: {
     };
 
     return (
-        <div style={{
-            backgroundColor: '#252526',
-            borderRadius: '8px',
-            border: '1px solid #444',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-        }}>
-            <div style={{
-                padding: '10px 15px',
-                backgroundColor: '#333',
-                fontWeight: 'bold',
-                borderBottom: '1px solid #444',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
+        <div className="bg-[#252526] rounded-lg border border-zinc-700 flex flex-col overflow-hidden">
+            <div className="px-4 py-2.5 bg-zinc-800 font-bold border-b border-zinc-700 flex justify-between items-center">
                 {title}
-                <span style={{ fontSize: '0.8rem', color: '#aaa', fontWeight: 'normal' }}>{data.length} entries</span>
+                <span className="text-xs text-zinc-400 font-normal">{data.length} entries</span>
             </div>
 
             {/* リスト表示エリア */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+            <div className="flex-1 overflow-y-auto p-2.5">
                 {data.length === 0 ? (
-                    <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>Empty</div>
+                    <div className="text-zinc-600 text-center mt-5">Empty</div>
                 ) : (
                     data.map((item, idx) => (
-                        <div key={idx} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '8px',
-                            marginBottom: '5px',
-                            backgroundColor: '#2b2b2b',
-                            borderRadius: '4px'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div key={idx} className="flex items-center justify-between p-2 mb-1.5 bg-[#2b2b2b] rounded">
+                            <div className="flex items-center gap-2.5">
                                 {/* ★ Head Image */}
                                 {type !== 'banned-ips' && (
                                     <img
                                         src={`https://minotar.net/avatar/${item.name}/24`}
                                         alt=""
-                                        style={{ borderRadius: '4px', width: '24px', height: '24px' }}
+                                        className="rounded w-6 h-6"
                                         onError={(e) => { (e.target as HTMLImageElement).src = 'https://minotar.net/avatar/MHF_Steve/24' }}
                                     />
                                 )}
                                 <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                    <div className="font-bold text-sm">
                                         {type === 'banned-ips' ? item.ip : item.name}
                                     </div>
                                     {/* Additional Info */}
-                                    {item.reason && <div style={{ fontSize: '0.7rem', color: '#ed4245' }}>{item.reason}</div>}
-                                    {item.level && <div style={{ fontSize: '0.7rem', color: '#faa61a' }}>Level: {item.level}</div>}
+                                    {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
+                                    {item.level && <div className="text-xs text-yellow-500">Level: {item.level}</div>}
                                 </div>
                             </div>
                             <button
-                                className="btn-stop"
-                                style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                                className="btn-stop py-0.5 px-2 text-xs"
                                 onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
                             >
                                 Remove
@@ -237,20 +205,18 @@ function UserListCard({ title, data, type, onAdd, onRemove }: {
             </div>
 
             {/* 追加フォーム */}
-            <div style={{ padding: '10px', borderTop: '1px solid #444', display: 'flex', gap: '5px' }}>
+            <div className="p-2.5 border-t border-zinc-700 flex gap-1.5">
                 <input
                     type="text"
-                    className="input-field"
+                    className="input-field flex-1 py-1.5"
                     placeholder={type === 'banned-ips' ? "IP Address" : "Player Name"}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
-                    style={{ flex: 1, padding: '6px' }}
                 />
                 <button
-                    className="btn-primary"
+                    className="btn-primary py-1.5 px-3"
                     onClick={handleAddClick}
-                    style={{ padding: '6px 12px' }}
                 >
                     Add
                 </button>

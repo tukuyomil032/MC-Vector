@@ -64,47 +64,30 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-    }}>
-      <div style={{
-        background: '#2c2c2c', padding: '20px', borderRadius: '8px',
-        width: '450px', color: '#fff', border: '1px solid #444',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
-      }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px' }}>新しいサーバーを追加</h3>
+    <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-1000">
+      <div className="bg-[#2c2c2c] p-5 rounded-lg w-[450px] text-white border border-zinc-700 shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
+        <h3 className="mt-0 mb-5">新しいサーバーを追加</h3>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>サーバー名</label>
+          <div className="mb-4">
+            <label className="block mb-1.5 text-sm text-zinc-300">サーバー名</label>
             <input
               type="text" required
               value={name} onChange={e => setName(e.target.value)}
               placeholder="例: Survival Server"
-              style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff', fontSize: '1rem' }}
+              className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white text-base"
             />
-            <div style={{
-              marginTop: '5px',
-              fontSize: '0.75rem',
-              fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-              color: '#888',
-              background: '#1a1a1a',
-              padding: '4px 8px',
-              borderRadius: '3px',
-              wordBreak: 'break-all'
-            }}>
+            <div className="mt-1.5 text-xs font-mono text-zinc-500 bg-[#1a1a1a] px-2 py-1 rounded break-all">
               保存先: {previewPath}
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>ソフトウェア</label>
+          <div className="flex gap-4 mb-4">
+            <div className="flex-1">
+              <label className="block mb-1.5 text-sm text-zinc-300">ソフトウェア</label>
               <select
                 value={software} onChange={e => setSoftware(e.target.value)}
-                style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
+                className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               >
                 <optgroup label="Standard">
                   <option value="Vanilla">Vanilla (公式)</option>
@@ -124,11 +107,11 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
               </select>
             </div>
 
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>バージョン</label>
+            <div className="flex-1">
+              <label className="block mb-1.5 text-sm text-zinc-300">バージョン</label>
               <select
                 value={version} onChange={e => setVersion(e.target.value)}
-                style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
+                className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               >
                  {versionOptions.map(v => (
                    <option key={v} value={v}>{v}</option>
@@ -137,28 +120,28 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>ポート</label>
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1">
+              <label className="block mb-1.5 text-sm text-zinc-300">ポート</label>
               <input
                 type="number" required
                 value={port} onChange={e => setPort(Number(e.target.value))}
-                style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
+                className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc' }}>メモリ(GB)</label>
+            <div className="flex-1">
+              <label className="block mb-1.5 text-sm text-zinc-300">メモリ(GB)</label>
               <input
                 type="number" required
                 value={memory} onChange={e => setMemory(Number(e.target.value))}
-                style={{ width: '100%', padding: '10px', background: '#444', border: '1px solid #555', borderRadius: '4px', color: '#fff' }}
+                className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               />
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #444', paddingTop: '15px' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #666', color: '#ccc', borderRadius: '4px', cursor: 'pointer' }}>キャンセル</button>
-            <button type="submit" style={{ padding: '10px 20px', background: '#5865F2', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>作成</button>
+          <div className="flex justify-end gap-2.5 border-t border-zinc-700 pt-4">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 bg-transparent border border-zinc-600 text-zinc-300 rounded cursor-pointer hover:bg-white/5">キャンセル</button>
+            <button type="submit" className="px-5 py-2.5 bg-accent border-none text-white rounded cursor-pointer font-bold hover:bg-accent-hover">作成</button>
           </div>
         </form>
       </div>

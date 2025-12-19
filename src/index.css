@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border select-none;
+  }
+
+  body, html {
+    @apply m-0 p-0 h-full font-sans bg-bg-primary text-text-primary overflow-hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-700 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-600;
+  }
+
+  button {
+    font-family: inherit;
+    @apply cursor-pointer border-none outline-none;
+  }
+
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    @apply m-0;
+  }
+}
+
+@layer components {
+  .input-field {
+    @apply px-3 py-2.5 bg-bg-primary border border-border-color rounded-md text-text-primary text-[0.95rem] transition-all;
+    @apply focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-white px-4 py-2 rounded-md font-bold transition-colors;
+    @apply hover:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply bg-white/5 border border-border-color text-text-secondary px-4 py-2 rounded-md text-sm transition-colors;
+    @apply hover:bg-white/10 hover:text-text-primary;
+  }
+
+  .btn-start {
+    @apply px-5 py-2 rounded-md font-semibold text-white flex items-center justify-center gap-1.5 min-w-[100px];
+    @apply bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25;
+    @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
+  }
+
+  .btn-stop {
+    @apply px-5 py-2 rounded-md font-semibold text-white flex items-center justify-center gap-1.5 min-w-[100px];
+    @apply bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/25;
+    @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
+  }
+
+  .btn-restart {
+    @apply px-5 py-2 rounded-md font-semibold text-white flex items-center justify-center gap-1.5 min-w-[100px];
+    @apply bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25;
+    @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
+  }
+
+  .toggle-switch {
+    @apply relative inline-block w-11 h-6;
+  }
+
+  .toggle-switch input {
+    @apply opacity-0 w-0 h-0;
+  }
+
+  .slider {
+    @apply absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-bg-tertiary transition-all rounded-full border border-border-color;
+  }
+
+  .slider:before {
+    content: "";
+    @apply absolute h-4 w-4 left-0.5 bottom-0.5 bg-text-secondary transition-all rounded-full;
+  }
+
+  .toggle-switch input:checked + .slider {
+    @apply bg-accent border-accent;
+  }
+
+  .toggle-switch input:checked + .slider:before {
+    @apply translate-x-5 bg-white;
+  }
+
+  .status-indicator {
+    @apply w-2 h-2 rounded-full bg-bg-tertiary shrink-0;
+  }
+
+  .status-indicator.online {
+    @apply bg-success shadow-lg shadow-success;
+  }
+
+  .status-indicator.offline {
+    @apply bg-danger;
+  }
+
+  .status-indicator.starting {
+    @apply bg-warning animate-pulse;
+  }
+
+  .status-indicator.stopping {
+    @apply bg-danger;
+  }
+
+  .status-indicator.restarting {
+    @apply bg-info animate-spin;
+  }
+}

@@ -40,15 +40,15 @@ export interface IElectronAPI {
   onSettingsSavedInWindow: (callback: (event: unknown, newSettings: any) => void) => void;
 
   // --- File Manager ---
-  listFiles: (dirPath: string) => Promise<{ name: string; isDirectory: boolean; size?: number }[]>;
-  readFile: (filePath: string) => Promise<string>;
-  saveFile: (filePath: string, content: string) => Promise<boolean>;
+  listFiles: (dirPath: string, serverId?: string) => Promise<{ name: string; isDirectory: boolean; size?: number }[]>;
+  readFile: (filePath: string, serverId?: string) => Promise<string>;
+  saveFile: (filePath: string, content: string, serverId?: string) => Promise<boolean>;
   importFilesDialog: (destDir: string) => Promise<{ success: boolean; message: string }>;
 
-  createDirectory: (path: string) => Promise<boolean>;
-  deletePath: (path: string) => Promise<boolean>;
-  movePath: (srcPath: string, destPath: string) => Promise<boolean>;
-  uploadFiles: (filePaths: string[], destDir: string) => Promise<boolean>;
+  createDirectory: (path: string, serverId?: string) => Promise<boolean>;
+  deletePath: (path: string, serverId?: string) => Promise<boolean>;
+  movePath: (srcPath: string, destPath: string, serverId?: string) => Promise<boolean>;
+  uploadFiles: (filePaths: string[], destDir: string, serverId?: string) => Promise<boolean>;
   compressFiles: (paths: string[], destPath: string) => Promise<boolean>;
   extractArchive: (archivePath: string, destPath: string) => Promise<boolean>;
   openPathInExplorer: (path: string) => Promise<void>;

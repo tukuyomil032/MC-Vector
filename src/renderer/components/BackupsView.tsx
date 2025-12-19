@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../shared/server declaration';
-import '../style/components.css';
 
 interface Props {
   server: MinecraftServer;
@@ -91,31 +90,24 @@ export default function BackupsView({ server }: Props) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
+    <div className="h-full flex flex-col p-5">
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="flex justify-between items-center mb-5">
         <h3>バックアップ管理</h3>
         <button
-          className="btn-primary"
+          className="btn-primary disabled:opacity-70"
           onClick={handleCreateBackup}
           disabled={processing}
-          style={{ opacity: processing ? 0.7 : 1 }}
         >
           {processing ? '処理中...' : '+ バックアップ作成'}
         </button>
       </div>
 
-      <div style={{
-        flex: 1,
-        backgroundColor: 'var(--bg-secondary)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color)',
-        overflowY: 'auto'
-      }}>
-        {loading && <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>}
+      <div className="flex-1 bg-bg-secondary rounded-lg border border-border-color overflow-y-auto">
+        {loading && <div className="p-5 text-center">読み込み中...</div>}
 
         {!loading && backups.length === 0 && (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <div className="p-10 text-center text-text-secondary">
             バックアップはまだありません
           </div>
         )}
@@ -123,43 +115,35 @@ export default function BackupsView({ server }: Props) {
         {!loading && backups.map((backup) => (
           <div
             key={backup.name}
-            style={{
-              padding: '15px 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '20px'
-            }}
+            className="px-5 py-4 border-b border-white/5 flex items-center gap-5"
           >
-            <div style={{ fontSize: '1.5rem' }}>📦</div>
+            <div className="text-2xl">📦</div>
 
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--text-primary)' }}>
+            <div className="flex-1">
+              <div className="font-bold text-base text-text-primary">
                 {backup.name}
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              <div className="text-sm text-text-secondary mt-1">
                 {formatDate(backup.date)}
               </div>
             </div>
 
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', width: '80px', textAlign: 'right' }}>
+            <div className="text-text-secondary text-sm w-20 text-right">
               {formatSize(backup.size)}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="flex gap-2.5">
               <button
-                className="btn-secondary"
+                className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-70"
                 onClick={() => handleRestore(backup.name)}
                 disabled={processing}
-                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
               >
                 復元
               </button>
               <button
-                className="btn-stop"
+                className="btn-stop text-sm px-3 py-1.5 disabled:opacity-70"
                 onClick={() => handleDelete(backup.name)}
                 disabled={processing}
-                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
               >
                 削除
               </button>
@@ -168,8 +152,8 @@ export default function BackupsView({ server }: Props) {
         ))}
       </div>
 
-      <div style={{ marginTop: '15px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-        ※ バックアップは <code>{server.path}/backups</code> に保存されます。
+      <div className="mt-4 text-xs text-text-secondary">
+        ※ バックアップは <code className="font-mono">{server.path}/backups</code> に保存されます。
       </div>
     </div>
   );

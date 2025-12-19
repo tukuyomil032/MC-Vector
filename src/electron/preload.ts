@@ -56,15 +56,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // --- File Manager ---
-  listFiles: (dirPath: string) => ipcRenderer.invoke('list-files', dirPath),
-  readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
-  saveFile: (filePath: string, content: string) => ipcRenderer.invoke('save-file', filePath, content),
+  listFiles: (dirPath: string, serverId?: string) => ipcRenderer.invoke('list-files', dirPath, serverId),
+  readFile: (filePath: string, serverId?: string) => ipcRenderer.invoke('read-file', filePath, serverId),
+  saveFile: (filePath: string, content: string, serverId?: string) => ipcRenderer.invoke('save-file', filePath, content, serverId),
   importFilesDialog: (destDir: string) => ipcRenderer.invoke('import-files-dialog', destDir),
 
-  createDirectory: (path: string) => ipcRenderer.invoke('create-directory', path),
-  deletePath: (path: string) => ipcRenderer.invoke('delete-path', path),
-  movePath: (src: string, dest: string) => ipcRenderer.invoke('move-path', src, dest),
-  uploadFiles: (files: string[], dest: string) => ipcRenderer.invoke('upload-files', files, dest),
+  createDirectory: (path: string, serverId?: string) => ipcRenderer.invoke('create-directory', path, serverId),
+  deletePath: (path: string, serverId?: string) => ipcRenderer.invoke('delete-path', path, serverId),
+  movePath: (src: string, dest: string, serverId?: string) => ipcRenderer.invoke('move-path', src, dest, serverId),
+  uploadFiles: (files: string[], dest: string, serverId?: string) => ipcRenderer.invoke('upload-files', files, dest, serverId),
   compressFiles: (files: string[], dest: string) => ipcRenderer.invoke('compress-files', files, dest),
   extractArchive: (archive: string, dest: string) => ipcRenderer.invoke('extract-archive', archive, dest),
 

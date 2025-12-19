@@ -48,6 +48,24 @@ function getServersJsonPath(): string {
   return path.join(getServersRootDir(), 'servers.json');
 }
 
+// セキュリティ: パストラバーサル攻撃を防ぐため、パスが指定されたベースディレクトリ内にあることを検証
+function isPathSafe(targetPath: string, baseDir: string): boolean {
+  try {
+    const normalizedTarget = path.resolve(targetPath);
+    const normalizedBase = path.resolve(baseDir);
+    return normalizedTarget.startsWith(normalizedBase + path.sep) || normalizedTarget === normalizedBase;
+  } catch {
+    return false;
+  }
+}
+
+// サーバーパスを取得して検証
+function getServerPath(serverId: string): string | null {
+  const servers = loadServersList();
+  const server = servers.find((s: any) => s.id === serverId);
+  return server?.path || null;
+}
+
 function loadServersList() {
   const jsonPath = getServersJsonPath();
   if (!fs.existsSync(jsonPath)) return [];
@@ -781,8 +799,14 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('list-files', async (_event, dirPath) => {
+  ipcMain.handle('list-files', async (_event, dirPath, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath && !isPathSafe(dirPath, serverPath)) {
+        console.error('Path traversal attempt blocked:', dirPath);
+        return [];
+      }
       if (!fs.existsSync(dirPath)) return [];
       const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
       return dirents.map(d => ({
@@ -797,16 +821,28 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('read-file', async (_event, filePath) => {
+  ipcMain.handle('read-file', async (_event, filePath, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath && !isPathSafe(filePath, serverPath)) {
+        console.error('Path traversal attempt blocked:', filePath);
+        return '';
+      }
       return await fs.promises.readFile(filePath, 'utf-8');
     } catch {
       return '';
     }
   });
 
-  ipcMain.handle('save-file', async (_event, filePath, content) => {
+  ipcMain.handle('save-file', async (_event, filePath, content, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath && !isPathSafe(filePath, serverPath)) {
+        console.error('Path traversal attempt blocked:', filePath);
+        return false;
+      }
       await fs.promises.writeFile(filePath, content, 'utf-8');
       return true;
     } catch {
@@ -814,8 +850,14 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('create-directory', async (_event, dirPath) => {
+  ipcMain.handle('create-directory', async (_event, dirPath, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath && !isPathSafe(dirPath, serverPath)) {
+        console.error('Path traversal attempt blocked:', dirPath);
+        return false;
+      }
       await fs.promises.mkdir(dirPath, { recursive: true });
       return true;
     } catch {
@@ -823,8 +865,14 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('delete-path', async (_event, targetPath) => {
+  ipcMain.handle('delete-path', async (_event, targetPath, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath && !isPathSafe(targetPath, serverPath)) {
+        console.error('Path traversal attempt blocked:', targetPath);
+        return false;
+      }
       await fs.promises.rm(targetPath, { recursive: true, force: true });
       return true;
     } catch {
@@ -832,8 +880,16 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('move-path', async (_event, srcPath, destPath) => {
+  ipcMain.handle('move-path', async (_event, srcPath, destPath, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath) {
+        if (!isPathSafe(srcPath, serverPath) || !isPathSafe(destPath, serverPath)) {
+          console.error('Path traversal attempt blocked:', srcPath, destPath);
+          return false;
+        }
+      }
       await fs.promises.rename(srcPath, destPath);
       return true;
     } catch {
@@ -847,11 +903,22 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('upload-files', async (_event, filePaths, destDir) => {
+  ipcMain.handle('upload-files', async (_event, filePaths, destDir, serverId) => {
     try {
+      // セキュリティ: サーバーパス内に制限
+      const serverPath = serverId ? getServerPath(serverId) : null;
+      if (serverPath && !isPathSafe(destDir, serverPath)) {
+        console.error('Path traversal attempt blocked:', destDir);
+        return false;
+      }
       for (const src of filePaths) {
         const fileName = path.basename(src);
         const dest = path.join(destDir, fileName);
+        // さらに、destが安全であることを確認
+        if (serverPath && !isPathSafe(dest, serverPath)) {
+          console.error('Path traversal attempt blocked:', dest);
+          continue;
+        }
         await fs.promises.cp(src, dest, { recursive: true });
       }
       return true;

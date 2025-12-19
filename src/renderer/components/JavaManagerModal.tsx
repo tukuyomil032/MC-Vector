@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import '../../main.css';
 
 interface JavaRuntime {
   name: string;
@@ -45,29 +44,28 @@ export default function JavaManagerModal({ onClose }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '600px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0 }}>Java Runtime Manager</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-1000 animate-fadeIn" onClick={onClose}>
+      <div className="bg-bg-secondary p-6 rounded-xl w-[600px] border border-border-color shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-scaleIn" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="m-0">Java Runtime Manager</h2>
+          <button onClick={onClose} className="bg-transparent border-none text-white text-2xl cursor-pointer hover:opacity-70">×</button>
         </div>
 
-        <div style={{ marginBottom: '30px' }}>
-          <h3 style={{ borderBottom: '1px solid #444', paddingBottom: '5px', marginBottom: '15px' }}>Available Versions (Adoptium)</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+        <div className="mb-8">
+          <h3 className="border-b border-zinc-700 pb-1.5 mb-4">Available Versions (Adoptium)</h3>
+          <div className="grid grid-cols-3 gap-4">
             {availableVersions.map(v => {
               const isInstalled = installed.some(i => i.version === v);
               return (
-                <div key={v} style={{ background: '#252526', padding: '15px', borderRadius: '8px', textAlign: 'center', border: '1px solid #444' }}>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px' }}>Java {v}</div>
+                <div key={v} className="bg-[#252526] p-4 rounded-lg text-center border border-zinc-700">
+                  <div className="text-xl font-bold mb-2.5">Java {v}</div>
                   {isInstalled ? (
-                    <div style={{ color: '#10b981', fontWeight: 'bold' }}>Installed</div>
+                    <div className="text-success font-bold">Installed</div>
                   ) : (
                     <button
-                      className="btn-primary"
+                      className="btn-primary w-full disabled:opacity-50"
                       onClick={() => handleDownload(v)}
                       disabled={downloading !== null}
-                      style={{ width: '100%' }}
                     >
                       {downloading === v ? 'Downloading...' : 'Download'}
                     </button>
@@ -79,21 +77,20 @@ export default function JavaManagerModal({ onClose }: Props) {
         </div>
 
         <div>
-          <h3 style={{ borderBottom: '1px solid #444', paddingBottom: '5px', marginBottom: '15px' }}>Installed Runtimes</h3>
+          <h3 className="border-b border-zinc-700 pb-1.5 mb-4">Installed Runtimes</h3>
           {installed.length === 0 ? (
-            <div style={{ color: '#aaa', fontStyle: 'italic' }}>No runtimes managed by MC-Vector.</div>
+            <div className="text-zinc-400 italic">No runtimes managed by MC-Vector.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="flex flex-col gap-2.5">
               {installed.map(java => (
-                <div key={java.path} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#252526', padding: '10px 15px', borderRadius: '6px' }}>
+                <div key={java.path} className="flex items-center justify-between bg-[#252526] px-4 py-2.5 rounded-md">
                   <div>
-                    <div style={{ fontWeight: 'bold' }}>{java.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#888', wordBreak: 'break-all' }}>{java.path}</div>
+                    <div className="font-bold">{java.name}</div>
+                    <div className="text-xs text-zinc-500 break-all">{java.path}</div>
                   </div>
                   <button
-                    className="btn-stop"
+                    className="btn-stop py-1.5 px-2.5 text-xs min-w-0"
                     onClick={() => handleDelete(java.version)}
-                    style={{ padding: '5px 10px', fontSize: '0.8rem', minWidth: 'auto' }}
                   >
                     Delete
                   </button>

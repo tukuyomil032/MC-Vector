@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
-import '../../main.css';
 
 interface ConsoleViewProps {
   server: MinecraftServer;
@@ -75,66 +74,43 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#1e1e1e' }}>
+    <div className="flex flex-col h-full bg-[#1e1e1e]">
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        backgroundColor: '#252526',
-        borderBottom: '1px solid #3e3e42',
-        padding: '12px 0',
-        flexShrink: 0
-      }}>
-        <div style={{ textAlign: 'center', borderRight: '1px solid #3e3e42', overflow: 'hidden' }}>
-          <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>ADDRESS</div>
+      <div className="grid grid-cols-3 bg-[#252526] border-b border-[#3e3e42] py-3 shrink-0">
+        <div className="text-center border-r border-[#3e3e42] overflow-hidden">
+          <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">ADDRESS</div>
           <div
             key={currentAddressIndex}
             onClick={handleCopyAddress}
             title="Click to Copy"
-            style={{
-                fontWeight: 'bold',
-                color: (internalNgrokUrl && currentAddressIndex === 1) ? '#5865F2' : '#f0f0f0',
-                cursor: 'pointer',
-                animation: 'slideUpFadeIn 0.5s ease-out',
-                fontSize: '0.95rem'
-            }}
+            className={`font-bold cursor-pointer text-sm transition-all ${(internalNgrokUrl && currentAddressIndex === 1) ? 'text-accent' : 'text-[#f0f0f0]'}`}
           >
             {displayAddress}
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', borderRight: '1px solid #3e3e42' }}>
-          <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>STATUS</div>
-          <div style={{
-            fontWeight: 'bold',
-            color: server.status === 'online' ? '#3ba55c' : server.status === 'offline' ? '#ed4245' : '#faa61a',
-            fontSize: '0.95rem'
-          }}>
+        <div className="text-center border-r border-[#3e3e42]">
+          <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">STATUS</div>
+          <div className={`font-bold text-sm ${
+            server.status === 'online' ? 'text-green-500' : 
+            server.status === 'offline' ? 'text-red-500' : 
+            'text-yellow-500'
+          }`}>
             {server.status.toUpperCase()}
           </div>
         </div>
 
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '0.75rem', color: '#8b9bb4', marginBottom: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>MEMORY</div>
-          <div style={{ fontWeight: 'bold', color: '#f0f0f0', fontSize: '0.95rem' }}>
+        <div className="text-center">
+          <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">MEMORY</div>
+          <div className="font-bold text-[#f0f0f0] text-sm">
             {server.status === 'online' ? formatMemoryDetailed(memoryUsage, server.memory) : '- / - MB'}
           </div>
         </div>
       </div>
 
-      <div style={{
-        flex: 1,
-        backgroundColor: '#121214',
-        padding: '16px',
-        overflowY: 'auto',
-        fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
-        fontSize: '13px',
-        color: '#d4d4d4',
-        whiteSpace: 'pre-wrap',
-        lineHeight: '1.5',
-      }}>
+      <div className="flex-1 bg-[#121214] p-4 overflow-y-auto font-mono text-[13px] text-[#d4d4d4] whitespace-pre-wrap leading-relaxed">
         {logs.map((log, index) => (
-          <div key={index} style={{ wordBreak: 'break-all' }}>
+          <div key={index} className="break-all">
             {log}
           </div>
         ))}
@@ -142,56 +118,25 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         <div ref={logEndRef} />
 
         {logs.length === 0 && (
-          <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>
+          <div className="text-zinc-600 italic text-center mt-5">
              Waiting for logs...
           </div>
         )}
       </div>
 
-      <div style={{
-        height: '60px',
-        backgroundColor: '#252526',
-        borderTop: '1px solid #3e3e42',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 20px',
-        flexShrink: 0
-      }}>
-        <span style={{ marginRight: '12px', color: '#8b9bb4', fontWeight: 'bold' }}>&gt;</span>
+      <div className="h-[60px] bg-[#252526] border-t border-[#3e3e42] flex items-center px-5 shrink-0">
+        <span className="mr-3 text-[#8b9bb4] font-bold">&gt;</span>
         <input
           type="text"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a command..."
-          style={{
-            flex: 1,
-            backgroundColor: '#18181b',
-            border: '1px solid #3f3f46',
-            borderRadius: '6px',
-            color: '#fff',
-            fontSize: '0.9rem',
-            padding: '10px 12px',
-            outline: 'none',
-            fontFamily: 'Menlo, Monaco, Consolas, monospace'
-          }}
+          className="flex-1 bg-[#18181b] border border-[#3f3f46] rounded-md text-white text-sm py-2.5 px-3 outline-none font-mono"
         />
         <button
           onClick={handleSend}
-          style={{
-            backgroundColor: '#5865F2',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            marginLeft: '12px',
-            fontWeight: 'bold',
-            fontSize: '0.9rem',
-            transition: 'background 0.2s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4752C4'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5865F2'}
+          className="bg-accent text-white border-none py-2.5 px-5 rounded-md cursor-pointer ml-3 font-bold text-sm transition-colors hover:bg-accent-hover"
         >
           Send
         </button>

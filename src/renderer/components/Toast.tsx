@@ -21,9 +21,9 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   }, [onClose]);
 
   const bgColors = {
-    success: 'linear-gradient(135deg, #10b981, #059669)',
-    error: 'linear-gradient(135deg, #ef4444, #dc2626)',
-    info: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+    success: 'bg-gradient-to-br from-green-500 to-green-600',
+    error: 'bg-gradient-to-br from-red-500 to-red-600',
+    info: 'bg-gradient-to-br from-blue-500 to-blue-600'
   };
 
   const icons = {
@@ -33,40 +33,11 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      minWidth: '300px',
-      padding: '16px 20px',
-      background: bgColors[type],
-      color: '#fff',
-      borderRadius: '8px',
-      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      zIndex: 99999,
-      transform: visible ? 'translateX(0) scale(1)' : 'translateX(100%) scale(0.9)',
-      opacity: visible ? 1 : 0,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      fontFamily: 'var(--font-family)',
-      fontWeight: 500,
-    }}>
-      <div style={{
-        background: 'rgba(255,255,255,0.2)',
-        borderRadius: '50%',
-        width: '24px',
-        height: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 'bold',
-        fontSize: '14px'
-      }}>
+    <div className={`fixed top-5 right-5 min-w-[300px] p-4 ${bgColors[type]} text-white rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] flex items-center gap-3 z-99999 transition-all duration-300 ease-out font-sans font-medium ${visible ? 'translate-x-0 scale-100 opacity-100' : 'translate-x-full scale-90 opacity-0'}`}>
+      <div className="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center font-bold text-sm">
         {icons[type]}
       </div>
-      <div style={{ flex: 1 }}>{message}</div>
+      <div className="flex-1">{message}</div>
     </div>
   );
 };

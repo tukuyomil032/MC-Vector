@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { type MinecraftServer } from '../../components/../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
-import '../../../main.css';
 
 interface ServerSettingsProps {
   server: MinecraftServer;
@@ -172,24 +171,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   };
 
   return (
-    <div className="properties-container" style={{
-      height: '100%',
-      overflowY: 'auto',
-      padding: '40px',
-      color: '#ecf0f1',
-      boxSizing: 'border-box',
-      display: 'block'
-    }}>
-      <div style={{ maxWidth: '800px', paddingBottom: '50px' }}>
-        <h2 style={{ marginTop: 0, marginBottom: '30px', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
+    <div className="h-full overflow-y-auto p-10 text-[#ecf0f1] box-border block">
+      <div className="max-w-4xl pb-12">
+        <h2 className="mt-0 mb-8 border-b border-zinc-700 pb-2.5">
           General Settings
         </h2>
 
-        <div className="setting-card" style={{ marginBottom: '30px', padding: '25px', backgroundColor: '#252526', borderRadius: '8px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#ccc', fontSize: '1.1rem' }}>Basic Configuration</h3>
+        <div className="mb-8 p-6 bg-[#252526] rounded-lg border border-border-color">
+          <h3 className="mt-0 mb-5 text-zinc-300 text-lg">Basic Configuration</h3>
 
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>サーバー名</label>
+          <div className="mb-5 flex flex-col gap-2">
+            <label className="block mb-2 text-zinc-400">サーバー名</label>
             <input
               type="text"
               value={name}
@@ -198,9 +190,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>サーバーソフトウェア</label>
+          <div className="flex gap-5 mb-5">
+            <div className="flex-1">
+              <label className="block mb-2 text-zinc-400">サーバーソフトウェア</label>
               <select
                 value={software}
                 onChange={(e) => setSoftware(e.target.value)}
@@ -224,8 +216,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               </select>
             </div>
 
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>バージョン</label>
+            <div className="flex-1">
+              <label className="block mb-2 text-zinc-400">バージョン</label>
               <select
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
@@ -238,14 +230,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>Java Runtime</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="mb-5 flex flex-col gap-2">
+            <label className="block mb-2 text-zinc-400">Java Runtime</label>
+            <div className="flex gap-2.5">
               <select
                 value={javaPath}
                 onChange={(e) => setJavaPath(e.target.value)}
-                className="input-field"
-                style={{ flex: 1 }}
+                className="input-field flex-1"
               >
                 <option value="">System Default (Path環境変数)</option>
                 {installedJava.map(j => (
@@ -253,18 +244,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                 ))}
               </select>
               <button
-                className="btn-secondary"
+                className="btn-secondary whitespace-nowrap"
                 onClick={() => { setShowJavaManager(true); loadJavaList(); }}
-                style={{ whiteSpace: 'nowrap' }}
               >
                 Manage Java...
               </button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>メモリ (GB)</label>
+          <div className="flex gap-5 mb-8">
+            <div className="flex-1">
+              <label className="block mb-2 text-zinc-400">メモリ (GB)</label>
               <input
                 type="number"
                 value={memory}
@@ -272,8 +262,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                 className="input-field"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>ポート</label>
+            <div className="flex-1">
+              <label className="block mb-2 text-zinc-400">ポート</label>
               <input
                 type="number"
                 value={port}
@@ -283,74 +273,65 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>保存先パス</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="mb-5 flex flex-col gap-2">
+            <label className="block mb-2 text-zinc-400">保存先パス</label>
+            <div className="flex gap-2.5">
               <input
                 type="text"
                 value={path}
                 readOnly
-                className="input-field"
-                style={{ flex: 1, color: '#888', background: '#222' }}
+                className="input-field flex-1 text-zinc-500 bg-[#222]"
               />
             </div>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: '20px' }}>
+          <div className="text-right mt-5">
             <button
               onClick={handleSubmit}
-              className="btn-start"
-              style={{ padding: '10px 24px', fontSize: '14px' }}
+              className="btn-start py-2.5 px-6 text-sm"
             >
               設定を保存
             </button>
           </div>
         </div>
 
-        <div className="setting-card" style={{ padding: '25px', backgroundColor: '#252526', borderRadius: '8px', border: isTunneling ? '1px solid #5865F2' : '1px solid #444' }}>
+        <div className={`p-6 bg-[#252526] rounded-lg border ${isTunneling ? 'border-accent' : 'border-zinc-700'}`}>
 
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '15px',
-            flexWrap: 'wrap',
-            gap: '15px'
-          }}>
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
 
-            <div style={{ minWidth: '200px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.1rem', color: '#ccc' }}>
+            <div className="min-w-[200px]">
+              <h3 className="m-0 flex items-center gap-2.5 text-lg text-zinc-300">
                 🌐 Public Access (ngrok)
-                {isTunneling && <span style={{ fontSize: '0.8rem', background: '#3ba55c', color: '#fff', padding: '2px 8px', borderRadius: '4px' }}>ONLINE</span>}
+                {isTunneling && <span className="text-xs bg-success text-white px-2 py-0.5 rounded">ONLINE</span>}
               </h3>
-              <div style={{ color: '#aaa', fontSize: '0.9rem', marginTop: '5px' }}>
+              <div className="text-zinc-400 text-sm mt-1.5">
                 ポート開放なしで外部から接続できるようにします。
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="flex items-center gap-2.5">
 
                 <button
-                    className="btn-secondary"
+                    className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
                     onClick={handleOpenGuide}
-                    style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     title="接続手順のガイドを開きます"
                 >
                     <span>❓</span> 接続ガイド
                 </button>
 
                 <button
-                    className="btn-secondary"
+                    className="btn-secondary text-xs px-3 py-1.5"
                     onClick={handleResetToken}
-                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
                     title="認証トークンを変更・修正します"
                 >
                     Change Token
                 </button>
 
-                <label className="switch">
-                  <input type="checkbox" checked={isTunneling} onChange={handleToggleTunnel} />
-                  <span className="slider round"></span>
+                <label className="relative inline-block w-12 h-7 shrink-0">
+                  <input type="checkbox" checked={isTunneling} onChange={handleToggleTunnel} className="opacity-0 w-0 h-0" />
+                  <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 transition-all rounded-full ${isTunneling ? 'bg-accent' : 'bg-zinc-700'}`}>
+                    <span className={`absolute h-5 w-5 left-0.5 bottom-0.5 bg-white transition-all rounded-full ${isTunneling ? 'translate-x-6' : ''}`}></span>
+                  </span>
                 </label>
             </div>
 
@@ -359,24 +340,21 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           {(isTunneling || tunnelLog.length > 0) && (
             <>
               {tunnelUrl && (
-                <div style={{ background: '#1e1e1e', padding: '15px', borderRadius: '6px', marginBottom: '15px' }}>
-                  <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '5px' }}>公開アドレス (友人にこれを共有):</div>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <code style={{ fontSize: '1.2rem', color: '#fff', fontFamily: 'monospace', background: '#333', padding: '5px 10px', borderRadius: '4px' }}>
+                <div className="bg-[#1e1e1e] p-4 rounded-md mb-4">
+                  <div className="text-sm text-zinc-500 mb-1.5">公開アドレス (友人にこれを共有):</div>
+                  <div className="flex gap-2.5 items-center">
+                    <code className="text-xl text-white font-mono bg-zinc-800 px-2.5 py-1.5 rounded">
                       {tunnelUrl.replace('tcp://', '')}
                     </code>
-                    <button className="btn-secondary" onClick={handleCopyUrl} style={{ padding: '5px 10px' }}>Copy</button>
+                    <button className="btn-secondary py-1.5 px-2.5" onClick={handleCopyUrl}>Copy</button>
                   </div>
                 </div>
               )}
 
-              <div style={{
-                background: '#111', color: '#aaa', padding: '10px', borderRadius: '4px',
-                height: '150px', overflowY: 'auto', fontSize: '0.8rem', fontFamily: 'monospace', border: '1px solid #333'
-              }}>
-                  {tunnelLog.length === 0 && <div>Ready to start...</div>}
-                  {tunnelLog.map((line, i) => <div key={i} style={{ borderBottom: '1px solid #222', paddingBottom: '2px', marginBottom: '2px' }}>{line}</div>)}
-                  <div ref={logEndRef} />
+              <div className="bg-[#111] text-zinc-400 p-2.5 rounded h-[150px] overflow-y-auto text-xs font-mono border border-zinc-800">
+                {tunnelLog.length === 0 && <div>Ready to start...</div>}
+                {tunnelLog.map((line, i) => <div key={i} className="border-b border-zinc-900 pb-0.5 mb-0.5">{line}</div>)}
+                <div ref={logEndRef} />
               </div>
             </>
           )}
@@ -386,40 +364,30 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
       {showJavaManager && <JavaManagerModal onClose={() => { setShowJavaManager(false); loadJavaList(); }} />}
 
       {showTokenModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 10000,
-          display: 'flex', justifyContent: 'center', alignItems: 'center'
-        }}>
-          <div style={{
-            background: '#2c2c2c', padding: '25px', borderRadius: '8px',
-            width: '450px', border: '1px solid #444', color: '#fff',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.5)'
-          }}>
-            <h3 style={{ marginTop: 0 }}>ngrok AuthToken Required</h3>
-            <p style={{ color: '#aaa', fontSize: '0.9rem' }}>
+        <div className="fixed inset-0 bg-black/70 z-10000 flex justify-center items-center">
+          <div className="bg-[#2c2c2c] p-6 rounded-lg w-[450px] border border-zinc-700 text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+            <h3 className="mt-0">ngrok AuthToken Required</h3>
+            <p className="text-zinc-400 text-sm">
               ngrokを使用するには認証トークンが必要です。<br/>
-              公式サイト (<a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" rel="noreferrer" style={{color: '#5865F2'}}>dashboard.ngrok.com</a>) からトークンを取得して貼り付けてください。
+              公式サイト (<a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" rel="noreferrer" className="text-accent">dashboard.ngrok.com</a>) からトークンを取得して貼り付けてください。
             </p>
             <input
               type="text"
-              className="input-field"
+              className="input-field w-full mb-5"
               placeholder="Ex: 2A..."
               value={inputToken}
               onChange={(e) => setInputToken(e.target.value)}
-              style={{ width: '100%', marginBottom: '20px' }}
             />
-            <div style={{ textAlign: 'right' }}>
+            <div className="text-right">
               <button
                 onClick={() => setShowTokenModal(false)}
-                className="btn-secondary"
-                style={{ marginRight: '10px' }}
+                className="btn-secondary mr-2.5"
               >
                 キャンセル
               </button>
               <button
                 onClick={handleTokenSubmit}
-                className="btn-primary"
+                className="btn-primary disabled:opacity-50"
                 disabled={!inputToken}
               >
                 保存して接続
@@ -428,15 +396,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           </div>
         </div>
       )}
-
-      <style>{`
-        .switch { position: relative; display: inline-block; width: 50px; height: 26px; flex-shrink: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #5865F2; }
-        input:checked + .slider:before { transform: translateX(24px); }
-      `}</style>
     </div>
   );
 };

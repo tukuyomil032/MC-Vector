@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../../shared/server declaration';
-import '../../../main.css';
 
 interface Props {
   server: MinecraftServer;
@@ -110,16 +109,16 @@ export default function PropertiesView({ server }: Props) {
   };
 
   if (loading) {
-    return <div style={{ padding: 20, color: '#aaa' }}>Loading properties...</div>;
+    return <div className="p-5 text-zinc-400">Loading properties...</div>;
   }
 
   return (
-    <div style={{ height: '100%', overflowY: 'auto', position: 'relative' }}>
-      <div className="properties-container">
+    <div className="h-full overflow-y-auto relative">
+      <div className="p-10 max-w-4xl mx-auto">
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div className="flex justify-between items-center mb-5">
           <h3>サーバー設定 (server.properties)</h3>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="flex gap-2.5">
             <button
               className="btn-secondary"
               onClick={openAdvancedWindow}
@@ -128,35 +127,33 @@ export default function PropertiesView({ server }: Props) {
             </button>
 
             <button
-              className="btn-primary"
+              className="btn-primary disabled:opacity-50"
               onClick={handleSave}
               disabled={!hasChanges}
-              style={{ opacity: hasChanges ? 1 : 0.5 }}
             >
               変更を保存
             </button>
           </div>
         </div>
 
-        <div className="property-section">
-          <div className="section-title">基本設定</div>
+        <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
+          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">基本設定</div>
 
-          <div className="property-item">
-            <div className="property-label">
+          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
+            <div className="flex flex-col">
               <span>MOTD</span>
-              <span className="property-desc">サーバーリストに表示される説明文</span>
+              <span className="text-xs text-text-secondary mt-0.5">サーバーリストに表示される説明文</span>
             </div>
             <input
               type="text"
-              className="input-field"
+              className="input-field w-[300px]"
               value={props['motd']}
               onChange={(e) => handleChange('motd', e.target.value)}
-              style={{ width: '300px' }}
             />
           </div>
 
-          <div className="property-item">
-            <div className="property-label">
+          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
+            <div className="flex flex-col">
               <span>ゲームモード</span>
             </div>
             <select
@@ -171,8 +168,8 @@ export default function PropertiesView({ server }: Props) {
             </select>
           </div>
 
-          <div className="property-item">
-            <div className="property-label">
+          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
+            <div className="flex flex-col">
               <span>難易度</span>
             </div>
             <select
@@ -188,8 +185,8 @@ export default function PropertiesView({ server }: Props) {
           </div>
         </div>
 
-        <div className="property-section">
-          <div className="section-title">ゲームプレイ</div>
+        <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
+          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">ゲームプレイ</div>
           <ToggleItem
             label="PvP"
             desc="プレイヤー同士の攻撃を許可"
@@ -210,32 +207,30 @@ export default function PropertiesView({ server }: Props) {
           />
         </div>
 
-        <div className="property-section">
-          <div className="section-title">接続・ネットワーク</div>
+        <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
+          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">接続・ネットワーク</div>
 
-          <div className="property-item">
-            <div className="property-label">
+          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
+            <div className="flex flex-col">
               <span>最大プレイヤー数</span>
             </div>
             <input
               type="number"
-              className="input-field"
+              className="input-field w-[100px]"
               value={props['max-players']}
               onChange={(e) => handleChange('max-players', e.target.value)}
-              style={{ width: '100px' }}
             />
           </div>
 
-          <div className="property-item">
-            <div className="property-label">
+          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
+            <div className="flex flex-col">
               <span>サーバーポート</span>
             </div>
             <input
               type="number"
-              className="input-field"
+              className="input-field w-[120px]"
               value={props['server-port']}
               onChange={(e) => handleChange('server-port', e.target.value)}
-              style={{ width: '120px' }}
             />
           </div>
 
@@ -263,10 +258,10 @@ function ToggleItem({ label, desc, checked, onChange }: {
   label: string, desc: string, checked: boolean, onChange: (val: boolean) => void
 }) {
   return (
-    <div className="property-item">
-      <div className="property-label">
+    <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
+      <div className="flex flex-col">
         <span>{label}</span>
-        <span className="property-desc">{desc}</span>
+        <span className="text-xs text-text-secondary mt-0.5">{desc}</span>
       </div>
       <label className="toggle-switch">
         <input

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
-import '../../main.css';
 
 interface Props {
   server: MinecraftServer;
@@ -139,17 +138,16 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
+    <div className="h-full flex flex-col p-5">
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0 }}>{isModServer ? 'Mod' : 'Plugin'} Browser</h2>
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="m-0">{isModServer ? 'Mod' : 'Plugin'} Browser</h2>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="flex gap-2.5">
           <select
-            className="input-field"
+            className="input-field w-[150px]"
             value={platform}
             onChange={e => { setPlatform(e.target.value as any); setPage(0); }}
-            style={{ width: '150px' }}
           >
             <option value="Modrinth">Modrinth</option>
             {isPaper && <option value="Hangar">Hangar (Paper)</option>}
@@ -160,25 +158,24 @@ export default function PluginBrowser({ server }: Props) {
       </div>
 
       {(platform === 'Modrinth' || platform === 'Hangar') ? (
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+        <div className="mb-5 flex gap-2.5">
           <input
             type="text"
-            className="input-field"
+            className="input-field flex-1"
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={`Search on ${platform}...`}
             onKeyDown={e => e.key === 'Enter' && search()}
-            style={{ flex: 1 }}
           />
-          <button className="btn-primary" onClick={search} disabled={loading}>
+          <button className="btn-primary disabled:opacity-50" onClick={search} disabled={loading}>
             {loading ? '...' : 'Search'}
           </button>
         </div>
       ) : (
-        <div style={{ padding: '40px', textAlign: 'center', background: '#252526', borderRadius: '8px' }}>
+        <div className="p-10 text-center bg-[#252526] rounded-lg">
           <p>このプラットフォームはアプリ内検索に対応していません。</p>
           <button
-            className="btn-primary"
+            className="btn-primary mt-2"
             onClick={() => openExternal(platform === 'CurseForge' ? 'https://www.curseforge.com/minecraft/mc-mods' : 'https://www.spigotmc.org/resources/')}
           >
             ブラウザで {platform} を開く
@@ -188,40 +185,37 @@ export default function PluginBrowser({ server }: Props) {
 
       {(platform === 'Modrinth' || platform === 'Hangar') && (
         <>
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '15px', paddingRight: '5px' }}>
+          <div className="flex-1 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4 pr-1">
             {results.map(item => (
-              <div key={item.id} className="setting-card" style={{ padding: '15px', display: 'flex', gap: '15px', background: '#252526', border: '1px solid #333' }}>
-                <div style={{
-                    width: '64px', height: '64px', borderRadius: '10px',
-                    background: item.icon_url ? `url(${item.icon_url}) center/cover` : '#333',
-                    flexShrink: 0
-                }}></div>
+              <div key={item.id} className="p-4 flex gap-4 bg-[#252526] border border-zinc-800 rounded-lg">
+                <div
+                    className="w-16 h-16 rounded-lg shrink-0 bg-zinc-800"
+                    style={{
+                      backgroundImage: item.icon_url ? `url(${item.icon_url})` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                ></div>
 
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '10px' }}>
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <div className="font-bold text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2.5">
                       {item.title}
                     </div>
                     <button
                       onClick={() => handleInstall(item)}
                       disabled={installingId === item.id}
-                      style={{
-                        padding: '6px 14px', fontSize: '0.8rem', height: '30px', border: 'none', borderRadius: '4px',
-                        background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                        color: 'white', fontWeight: 'bold', cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)',
-                        opacity: installingId === item.id ? 0.7 : 1
-                      }}
+                      className="py-1.5 px-3.5 text-xs h-8 border-none rounded bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold cursor-pointer shadow-[0_2px_8px_rgba(6,182,212,0.3)] disabled:opacity-70"
                     >
                       {installingId === item.id ? '...' : 'Install'}
                     </button>
                   </div>
 
-                  <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: 'auto', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
+                  <div className="text-sm text-zinc-400 mb-auto line-clamp-2 leading-snug">
                     {item.description}
                   </div>
 
-                  <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#666', display: 'flex', justifyContent: 'space-between' }}>
+                  <div className="mt-2.5 text-xs text-zinc-600 flex justify-between">
                     <span>By {item.author}</span>
                     <span>
                       {item.downloads ? `⬇ ${item.downloads.toLocaleString()}` : (item.stars ? `★ ${item.stars}` : '')}
@@ -232,23 +226,23 @@ export default function PluginBrowser({ server }: Props) {
             ))}
 
             {results.length === 0 && !loading && (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#666', padding: '20px' }}>
+              <div className="col-span-full text-center text-zinc-600 p-5">
                 結果がありません。
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '20px', alignItems: 'center' }}>
+          <div className="mt-5 flex justify-center gap-5 items-center">
             <button
-              className="btn-secondary"
+              className="btn-secondary disabled:opacity-50"
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0 || loading}
             >
               ← Prev
             </button>
-            <span style={{ color: '#aaa' }}>Page {page + 1}</span>
+            <span className="text-zinc-400">Page {page + 1}</span>
             <button
-              className="btn-secondary"
+              className="btn-secondary disabled:opacity-50"
               onClick={() => setPage(p => p + 1)}
               disabled={results.length < LIMIT || loading}
             >

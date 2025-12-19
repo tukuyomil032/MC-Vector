@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import './main.css';
+import './index.css';
 import { type MinecraftServer, type AppView } from './renderer/shared/server declaration';
 import DashboardView from './renderer/components/DashboardView';
 import ConsoleView from './renderer/components/ConsoleView';
@@ -211,7 +211,7 @@ function App() {
 
   const renderContent = () => {
     if (currentView === 'proxy') return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
-    if (!activeServer) return <div style={{padding: 40, textAlign: 'center', color: '#666', fontSize: '1.2rem'}}>サーバーを選択するか、作成してください</div>;
+    if (!activeServer) return <div className="p-10 text-center text-zinc-500 text-xl">サーバーを選択するか、作成してください</div>;
 
     const contentKey = `${activeServer.id}-${currentView}`;
 
@@ -235,33 +235,22 @@ function App() {
   };
 
   return (
-    <div className="app-container" onClick={handleClickOutside}>
+    <div className="flex h-screen w-screen" onClick={handleClickOutside}>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      <aside className="sidebar" style={{ width: isSidebarOpen ? '260px' : '60px', transition: 'width 0.2s' }}>
-        <div className="sidebar-header" style={{
-          display: 'flex',
-          justifyContent: isSidebarOpen ? 'space-between' : 'center',
-          alignItems: 'center',
-          padding: '20px 15px',
-          backgroundColor: 'transparent',
-        }}>
-          {isSidebarOpen && <span style={{
-            fontWeight: 'bold',
-            fontSize: '1.2rem',
-            color: '#ffffff',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}>MC-Vector</span>}
+      <aside className={`bg-[#202225] flex flex-col border-r border-border-color shrink-0 z-20 transition-all duration-200 ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}>
+        <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}>
+          {isSidebarOpen && <span className="font-bold text-xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">MC-Vector</span>}
 
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '5px' }}
+            className="bg-transparent border-none cursor-pointer p-1"
           >
-            <img src={iconMenu} alt="Menu" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
+            <img src={iconMenu} alt="Menu" className="w-5 h-5 opacity-80" />
           </button>
         </div>
 
-        <div className="sidebar-nav">
+        <div className="flex-1 p-2.5 flex flex-col bg-[#2b2d31] overflow-y-auto rounded-xl">
           <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} iconSrc={iconDashboard} />
           <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} iconSrc={iconConsole} />
           <NavItem label={isSidebarOpen ? "Users" : ""} view="users" current={currentView} set={setCurrentView} iconSrc={iconUsers} />
@@ -271,34 +260,34 @@ function App() {
           <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} iconSrc={iconProperties} />
           <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} iconSrc={iconSettings} />
 
-          <hr style={{width: '90%', borderColor: 'rgba(255,255,255,0.1)', margin: '10px auto'}} />
+          <hr className="w-[90%] border-white/10 my-2.5 mx-auto" />
 
           <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} iconSrc={iconProxy} />
         </div>
 
         {isSidebarOpen && (
-          <div className="sidebar-footer-list">
-            <div style={{ padding: '5px 10px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '1px' }}>SERVERS</div>
-            <div className="server-list-container">
+          <div className="max-h-[40%] flex flex-col border-t border-border-color bg-black/20">
+            <div className="px-2.5 py-1 text-xs text-text-secondary font-bold tracking-wider">SERVERS</div>
+            <div className="overflow-y-auto flex-1 p-2.5 shrink-0">
               {servers.map((server) => (
-                <div key={server.id} className={`server-item ${server.id === selectedServerId ? 'active' : ''}`} onClick={() => setSelectedServerId(server.id)} onContextMenu={(e) => handleContextMenu(e, server.id)}>
+                <div key={server.id} className={`px-3 py-2.5 mb-1.5 rounded-md flex items-center gap-3 transition-all cursor-pointer border border-transparent hover:bg-white/5 hover:translate-x-0.5 ${server.id === selectedServerId ? 'bg-accent/15 border-accent/30' : ''}`} onClick={() => setSelectedServerId(server.id)} onContextMenu={(e) => handleContextMenu(e, server.id)}>
                   <div className={`status-indicator ${server.status}`}></div>
-                  <div className="server-info"><div className="server-name">{server.name}</div></div>
+                  <div className="flex flex-col"><div className="font-semibold text-sm text-text-primary">{server.name}</div></div>
                 </div>
               ))}
             </div>
-            <button className="add-server-btn" onClick={() => setShowAddServerModal(true)}>+ Add Server</button>
+            <button className="mt-1.5 w-full py-2.5 bg-white/3 border border-dashed border-border-color text-text-secondary rounded-md transition-all text-sm hover:bg-white/8 hover:border-text-primary hover:text-text-primary hover:border-solid" onClick={() => setShowAddServerModal(true)}>+ Add Server</button>
           </div>
         )}
       </aside>
 
-      <main className="main-content">
-        <header className="top-bar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{fontSize: '1.2rem', fontWeight: '700', color: '#fff'}}>{currentView === 'proxy' ? 'Network' : activeServer?.name}</h2>
-            <span style={{color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.7}}> / {currentView}</span>
+      <main className="flex-1 flex flex-col bg-bg-primary overflow-hidden relative">
+        <header className="h-[60px] px-5 flex items-center justify-between border-b border-border-color bg-bg-primary/80 backdrop-blur-xl z-10 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-xl font-bold text-white">{currentView === 'proxy' ? 'Network' : activeServer?.name}</h2>
+            <span className="text-text-secondary text-sm opacity-70"> / {currentView}</span>
           </div>
-          <div className="actions">
+          <div className="flex items-center gap-2.5 ml-auto">
             {currentView !== 'proxy' && (
               <>
                 <button className="btn-start" onClick={handleStart} title="Start Server">▶ Start</button>
@@ -308,12 +297,32 @@ function App() {
             )}
           </div>
         </header>
-        <div className="content-area">{renderContent()}</div>
+        <div className="flex-1 p-0 overflow-hidden relative flex flex-col">{renderContent()}</div>
       </main>
 
-      {downloadStatus && ( <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#2c2c30', padding: '15px', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)', zIndex: 10000, color: '#fff', minWidth: '280px', border: '1px solid var(--border-color)' }}> <div style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}> <span>Downloading...</span> <span style={{color: 'var(--accent-color)'}}>{downloadStatus.progress}%</span> </div> <div style={{ fontSize: '0.85rem', marginBottom: '8px', color: '#ccc' }}>{downloadStatus.msg}</div> <div style={{ width: '100%', height: '4px', background: '#444', borderRadius: '2px', overflow: 'hidden' }}> <div style={{ width: `${downloadStatus.progress}%`, height: '100%', background: 'var(--accent-color)', borderRadius: '2px', transition: 'width 0.2s' }}></div> </div> </div> )}
+      {downloadStatus && (
+        <div className="fixed bottom-5 right-5 bg-[#2c2c30] p-4 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.5)] z-10000 text-white min-w-[280px] border border-border-color">
+          <div className="font-bold mb-2 flex justify-between">
+            <span>Downloading...</span>
+            <span className="text-accent">{downloadStatus.progress}%</span>
+          </div>
+          <div className="text-sm mb-2 text-zinc-300">{downloadStatus.msg}</div>
+          <div className="w-full h-1 bg-zinc-700 rounded-sm overflow-hidden">
+            <div className="h-full bg-accent rounded-sm transition-all duration-200" style={{ width: `${downloadStatus.progress}%` }}></div>
+          </div>
+        </div>
+      )}
       {showAddServerModal && <AddServerModal onClose={() => setShowAddServerModal(false)} onAdd={handleAddServer} />}
-      {contextMenu && ( <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, background: '#252526', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', zIndex: 9999, padding: '4px', minWidth: '140px' }}> <div onClick={(e) => { e.stopPropagation(); handleDeleteServer(); }} style={{ padding: '8px 12px', cursor: 'pointer', color: '#ff6b6b', fontSize: '14px', borderRadius: '4px', transition: 'background 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}> 🗑️ 削除 </div> </div> )}
+      {contextMenu && (
+        <div className="fixed bg-[#252526] border border-border-color rounded-md shadow-[0_4px_20px_rgba(0,0,0,0.4)] z-9999 p-1 min-w-[140px]" style={{ top: contextMenu.y, left: contextMenu.x }}>
+          <div
+            onClick={(e) => { e.stopPropagation(); handleDeleteServer(); }}
+            className="px-3 py-2 cursor-pointer text-red-400 text-sm rounded transition-colors flex items-center gap-2 hover:bg-red-500/10"
+          >
+            🗑️ 削除
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -321,36 +330,21 @@ function App() {
 
 function NavItem({ label, view, current, set, iconSrc }: any) {
   const isOpen = !!label;
+  const isActive = current === view;
 
   return (
     <div
-      className={`nav-item ${current === view ? 'active' : ''}`}
+      className={`flex items-center ${isOpen ? 'justify-start px-4 py-2.5' : 'justify-center py-2.5 px-0'} cursor-pointer w-full box-border transition-all text-sm text-text-secondary rounded-md mx-1 my-0.5 border-l-[3px] ${isActive ? 'bg-accent/10 text-accent border-l-accent' : 'border-l-transparent hover:bg-bg-hover hover:text-text-primary hover:translate-x-1'}`}
       onClick={() => set(view)}
       title={isOpen ? '' : view}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: isOpen ? 'flex-start' : 'center',
-        padding: isOpen ? '10px 15px' : '10px 0',
-        cursor: 'pointer',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}
     >
       <img
         src={iconSrc}
         alt={view}
-        style={{
-          width: '20px',
-          height: '20px',
-          flexShrink: 0,
-          marginRight: isOpen ? '12px' : '0',
-          filter: current === view ? 'invert(1)' : 'invert(0.7)',
-          display: 'block'
-        }}
+        className={`w-5 h-5 shrink-0 block ${isOpen ? 'mr-3' : 'mr-0'} ${isActive ? 'invert' : 'opacity-70'}`}
       />
       {isOpen && (
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
           {label}
         </span>
       )}
