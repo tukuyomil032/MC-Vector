@@ -14,6 +14,7 @@ import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
 import NgrokGuideView from './renderer/components/NgrokGuideView';
 import { useToast } from './renderer/components/ToastProvider';
+import SettingsWindow from './renderer/components/SettingsWindow';
 
 import iconMenu from './assets/icons/menu.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
@@ -40,6 +41,10 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
 
+  const [updatePrompt, setUpdatePrompt] = useState<{ version?: string; releaseNotes?: unknown } | null>(null);
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [updateReady, setUpdateReady] = useState(false);
+
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
@@ -64,6 +69,30 @@ function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [currentView]);
 
+  useEffect(() => {
+    const disposeAvailable = window.electronAPI.onUpdateAvailable((payload) => {
+      setUpdatePrompt({ version: payload?.version, releaseNotes: payload?.releaseNotes });
+      setUpdateReady(false);
+    });
+    const disposeProgress = window.electronAPI.onUpdateDownloadProgress((payload) => {
+      setUpdateProgress(payload?.percent ?? null);
+    });
+    const disposeDownloaded = window.electronAPI.onUpdateDownloaded((payload) => {
+      setUpdateReady(true);
+      setUpdatePrompt({ version: payload?.version, releaseNotes: payload?.releaseNotes });
+    });
+    const disposeError = window.electronAPI.onUpdateError(() => {
+      setUpdateProgress(null);
+    });
+
+    return () => {
+      disposeAvailable();
+      disposeProgress();
+      disposeDownloaded();
+      disposeError();
+    };
+  }, []);
+
 
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
@@ -71,6 +100,10 @@ function App() {
 
   if (currentHash === '#ngrok-guide') {
     return <NgrokGuideView />;
+  }
+
+  if (currentHash === '#settings') {
+    return <SettingsWindow />;
   }
 
 
@@ -198,6 +231,21 @@ function App() {
     }
   };
 
+  const handleUpdateNow = async () => {
+    setUpdateProgress(0);
+    await window.electronAPI.downloadUpdate();
+  };
+
+  const handleInstallUpdate = async () => {
+    await window.electronAPI.installUpdate();
+  };
+
+  const handleDismissUpdate = () => {
+    setUpdatePrompt(null);
+    setUpdateProgress(null);
+    setUpdateReady(false);
+  };
+
   const handleContextMenu = (e: React.MouseEvent, serverId: string) => {
     e.preventDefault();
     setContextMenu({ x: e.pageX, y: e.pageY, serverId });
@@ -222,6 +270,33 @@ function App() {
   };
 
   const handleClickOutside = () => { if (contextMenu) setContextMenu(null); };
+
+  const getReleaseNotesText = () => {
+    const notes: unknown = updatePrompt?.releaseNotes;
+    if (!notes) {
+      return '';
+    }
+    if (typeof notes === 'string') {
+      return notes;
+    }
+    if (Array.isArray(notes)) {
+      return notes
+        .map((entry: any) => {
+          if (typeof entry === 'string') return entry;
+          if (entry && typeof entry === 'object' && 'body' in entry && typeof (entry as any).body === 'string') {
+            return (entry as any).body as string;
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+    return '';
+  };
+
+  const handleOpenSettingsWindow = () => {
+    window.electronAPI.openSettingsWindow({});
+  };
 
   const renderContent = () => {
     if (currentView === 'proxy') return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
@@ -260,7 +335,15 @@ function App() {
     <div className="flex h-screen w-screen" onClick={handleClickOutside}>
       <aside className={`bg-[#202225] flex flex-col border-r border-border-color shrink-0 z-20 transition-all duration-200 ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}>
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}>
-          {isSidebarOpen && <span className="font-bold text-xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">MC-Vector</span>}
+          {isSidebarOpen && (
+            <span
+              className="font-bold text-xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] cursor-pointer"
+              onClick={handleOpenSettingsWindow}
+              title="設定ウィンドウを開く"
+            >
+              MC-Vector
+            </span>
+          )}
 
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -340,6 +423,51 @@ function App() {
             className="px-3 py-2 cursor-pointer text-red-400 text-sm rounded transition-colors flex items-center gap-2 hover:bg-red-500/10"
           >
             🗑️ 削除
+          </div>
+        </div>
+      )}
+
+      {updatePrompt && (
+        <div className="fixed inset-0 bg-black/70 z-10000 flex items-center justify-center p-4">
+          <div className="bg-[#252526] border border-zinc-700 rounded-lg shadow-2xl w-full max-w-[520px] p-6 text-white">
+            <h3 className="text-xl font-semibold mt-0 mb-2">アップデートが利用可能です</h3>
+            <p className="text-sm text-zinc-300 mb-4">
+              バージョン: {updatePrompt.version || '不明'}
+            </p>
+
+            {getReleaseNotesText() && (
+              <div className="mb-4">
+                <div className="text-xs text-zinc-400 mb-1">リリースノート:</div>
+                <pre className="bg-[#1b1b1b] border border-zinc-800 rounded p-3 text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {getReleaseNotesText()}
+                </pre>
+              </div>
+            )}
+
+            {updateProgress !== null && !updateReady && (
+              <div className="mb-4">
+                <div className="text-sm text-zinc-300 mb-1">ダウンロード中... {Math.round(updateProgress)}%</div>
+                <div className="h-2 bg-zinc-800 rounded">
+                  <div className="h-2 bg-accent rounded" style={{ width: `${Math.min(100, Math.round(updateProgress))}%` }} />
+                </div>
+              </div>
+            )}
+
+            {updateReady && (
+              <div className="mb-4 text-sm text-green-400">ダウンロードが完了しました。再起動して適用できます。</div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button className="btn-secondary" onClick={handleDismissUpdate}>後で</button>
+              {!updateReady && (
+                <button className="btn-primary" onClick={handleUpdateNow} disabled={updateProgress !== null && !updateReady}>
+                  今すぐアップデート
+                </button>
+              )}
+              {updateReady && (
+                <button className="btn-primary" onClick={handleInstallUpdate}>再起動して適用</button>
+              )}
+            </div>
           </div>
         </div>
       )}

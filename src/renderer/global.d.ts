@@ -90,6 +90,17 @@ export interface IElectronAPI {
   clearNgrokToken: () => Promise<boolean>;
   getNgrokStatus: (serverId: string) => Promise<{ active: boolean, url: string | null, logs?: string[]}>;
   openNgrokGuide: () => void;
+
+  // Updates
+  checkForUpdates: () => Promise<{ available?: boolean; version?: string; releaseNotes?: unknown; error?: string }>;
+  downloadUpdate: () => Promise<boolean>;
+  installUpdate: () => Promise<boolean>;
+  onUpdateAvailable: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => (() => void);
+  onUpdateAvailableSilent: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => (() => void);
+  onUpdateNotAvailable: (callback: () => void) => (() => void);
+  onUpdateDownloadProgress: (callback: (payload: { percent: number }) => void) => (() => void);
+  onUpdateDownloaded: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => (() => void);
+  onUpdateError: (callback: (message: string) => void) => (() => void);
 }
 
 declare global {

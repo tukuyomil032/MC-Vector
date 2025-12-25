@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { autoUpdater, type UpdateCheckResult, type UpdateInfo, type ProgressInfo } from 'electron-updater';
 import path from 'path';
 import fs from 'fs';
 import https from 'https';
@@ -36,6 +37,17 @@ function loadConfig() {
 
 function saveConfig(config: any) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+function getConfigValue<T>(key: string, defaultValue: T): T {
+  const config = loadConfig();
+  return key in config ? config[key] : defaultValue;
+}
+
+function setConfigValue<T>(key: string, value: T) {
+  const config = loadConfig();
+  config[key] = value;
+  saveConfig(config);
 }
 
 function getServersRootDir(): string {
@@ -166,6 +178,8 @@ let settingsWindow: BrowserWindow | null = null;
 let proxyHelpWindow: BrowserWindow | null = null;
 let ngrokGuideWindow: BrowserWindow | null = null;
 
+let lastUpdateCheck: UpdateCheckResult | null = null;
+
 let tempSettingsData: any = null;
 
 const activeServers = new Map<string, ChildProcess>();
@@ -205,6 +219,59 @@ async function setDiscordActivity(details: string, state: string, largeImageKey:
   } catch (e) {
     console.error('RPC Error:', e);
   }
+}
+
+function broadcastToRenderers(channel: string, payload?: any) {
+  if (mainWindow) mainWindow.webContents.send(channel, payload);
+  if (settingsWindow) settingsWindow.webContents.send(channel, payload);
+}
+
+function initAutoUpdate() {
+  autoUpdater.autoDownload = false;
+
+  autoUpdater.on('update-available', (info: UpdateInfo) => {
+    lastUpdateCheck = { updateInfo: info } as UpdateCheckResult;
+    const lastNotified = getConfigValue<string>('lastNotifiedUpdateVersion', '');
+    if (lastNotified !== info.version) {
+      setConfigValue('lastNotifiedUpdateVersion', info.version);
+      broadcastToRenderers('update-available', {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+      });
+    } else {
+      broadcastToRenderers('update-available-silent', {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    broadcastToRenderers('update-not-available');
+  });
+
+  autoUpdater.on('download-progress', (progress: ProgressInfo) => {
+    broadcastToRenderers('update-download-progress', {
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+    broadcastToRenderers('update-downloaded', {
+      version: info.version,
+      releaseNotes: info.releaseNotes,
+    });
+  });
+
+  autoUpdater.on('error', (err: Error) => {
+    broadcastToRenderers('update-error', err?.message || 'Update error');
+  });
+
+  // Kick off background check once on startup
+  autoUpdater.checkForUpdates().catch((err: Error) => console.error('update check failed', err));
 }
 
 function createWindow() {
@@ -296,6 +363,8 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
 app.whenReady().then(() => {
   initDiscordRPC();
 
+  initAutoUpdate();
+
   createWindow();
 
   const sendLog = (sender: any, serverId: string, log: string) => {
@@ -305,6 +374,31 @@ app.whenReady().then(() => {
   const sendStatus = (serverId: string, status: string) => {
     mainWindow?.webContents.send('server-status-update', { serverId, status });
   };
+
+  ipcMain.handle('updates/check', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      lastUpdateCheck = result;
+      const info = result?.updateInfo;
+      return {
+        available: Boolean(info && info.version !== app.getVersion()),
+        version: info?.version,
+        releaseNotes: info?.releaseNotes,
+      };
+    } catch (err: any) {
+      return { available: false, error: err?.message || 'Update check failed' };
+    }
+  });
+
+  ipcMain.handle('updates/download', async () => {
+    await autoUpdater.downloadUpdate();
+    return true;
+  });
+
+  ipcMain.handle('updates/install', () => {
+    autoUpdater.quitAndInstall();
+    return true;
+  });
 
 
   ipcMain.on('update-discord-presence', (_event, data) => {

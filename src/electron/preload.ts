@@ -113,4 +113,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearNgrokToken: () => ipcRenderer.invoke('clear-ngrok-token'),
   getNgrokStatus: (serverId: string) => ipcRenderer.invoke('get-ngrok-status', serverId),
   openNgrokGuide: () => ipcRenderer.send('open-ngrok-guide'),
+
+  // --- Updates ---
+  checkForUpdates: () => ipcRenderer.invoke('updates/check'),
+  downloadUpdate: () => ipcRenderer.invoke('updates/download'),
+  installUpdate: () => ipcRenderer.invoke('updates/install'),
+  onUpdateAvailable: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => {
+    const listener = (_event: unknown, payload: any) => callback(payload);
+    ipcRenderer.on('update-available', listener);
+    return () => ipcRenderer.removeListener('update-available', listener);
+  },
+  onUpdateAvailableSilent: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => {
+    const listener = (_event: unknown, payload: any) => callback(payload);
+    ipcRenderer.on('update-available-silent', listener);
+    return () => ipcRenderer.removeListener('update-available-silent', listener);
+  },
+  onUpdateNotAvailable: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('update-not-available', listener);
+    return () => ipcRenderer.removeListener('update-not-available', listener);
+  },
+  onUpdateDownloadProgress: (callback: (payload: { percent: number }) => void) => {
+    const listener = (_event: unknown, payload: any) => callback(payload);
+    ipcRenderer.on('update-download-progress', listener);
+    return () => ipcRenderer.removeListener('update-download-progress', listener);
+  },
+  onUpdateDownloaded: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => {
+    const listener = (_event: unknown, payload: any) => callback(payload);
+    ipcRenderer.on('update-downloaded', listener);
+    return () => ipcRenderer.removeListener('update-downloaded', listener);
+  },
+  onUpdateError: (callback: (message: string) => void) => {
+    const listener = (_event: unknown, payload: any) => callback(payload);
+    ipcRenderer.on('update-error', listener);
+    return () => ipcRenderer.removeListener('update-error', listener);
+  },
 })
