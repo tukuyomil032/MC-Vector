@@ -1,6 +1,6 @@
-import React from 'react';
+import type { FC } from 'react';
 
-const ProxyHelpView: React.FC = () => {
+const ProxyHelpView: FC = () => {
   const openLink = (url: string) => {
     window.open(url, '_blank');
   };

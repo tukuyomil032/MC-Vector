@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 
 interface AddServerModalProps {
   onClose: () => void;
   onAdd: (serverData: any) => void;
 }
 
-const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
+const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
   const [name, setName] = useState('');
   const [software, setSoftware] = useState('Paper');
   const [version, setVersion] = useState('1.21.10');
@@ -64,8 +65,8 @@ const AddServerModal: React.FC<AddServerModalProps> = ({ onClose, onAdd }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-1000">
-      <div className="bg-[#2c2c2c] p-5 rounded-lg w-[450px] text-white border border-zinc-700 shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
+    <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-1000 modal-backdrop">
+      <div className="bg-[#2c2c2c] p-5 rounded-lg w-[450px] text-white border border-zinc-700 shadow-[0_4px_15px_rgba(0,0,0,0.5)] modal-panel">
         <h3 className="mt-0 mb-5">新しいサーバーを追加</h3>
 
         <form onSubmit={handleSubmit}>

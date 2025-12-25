@@ -1,30 +1,20 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../../shared/server declaration';
+import { useToast } from '../ToastProvider';
 
 interface Props {
   server: MinecraftServer;
 }
 
-interface ServerProperties {
-  'server-port': number | string;
-  'max-players': number | string;
-  'gamemode': string;
-  'difficulty': string;
-  'pvp': boolean | string;
-  'online-mode': boolean | string;
-  'enable-command-block': boolean | string;
-  'allow-flight': boolean | string;
-  'white-list': boolean | string;
-  'motd': string;
-  [key: string]: any;
-}
+type PropertyValue = string | number | boolean;
+type ServerProperties = Record<string, PropertyValue>;
 
 export default function PropertiesView({ server }: Props) {
   const [props, setProps] = useState<ServerProperties>({
     'server-port': server.port || 25565,
     'max-players': 20,
     'gamemode': 'survival',
-    'difficulty': 'normal',
+    'difficulty': 'easy',
     'pvp': true,
     'online-mode': true,
     'enable-command-block': false,
@@ -32,11 +22,11 @@ export default function PropertiesView({ server }: Props) {
     'white-list': false,
     'motd': 'A Minecraft Server'
   });
-
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const sep = server.path.includes('\\') ? '\\' : '/';
   const propFilePath = `${server.path}${sep}server.properties`;
+  const { showToast } = useToast();
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -44,52 +34,53 @@ export default function PropertiesView({ server }: Props) {
       try {
         const content = await window.electronAPI.readFile(propFilePath);
         const lines = content.split('\n');
-        const newProps: any = {};
+        const newProps: ServerProperties = {};
 
         lines.forEach(line => {
           const trimmed = line.trim();
           if (trimmed && !trimmed.startsWith('#')) {
             const [key, ...vals] = trimmed.split('=');
             if (key) {
-              const value = vals.join('=').trim();
-              if (value === 'true') newProps[key.trim()] = true;
-              else if (value === 'false') newProps[key.trim()] = false;
-              else if (!isNaN(Number(value)) && value !== '') newProps[key.trim()] = Number(value);
-              else newProps[key.trim()] = value;
+              const value = vals.join('=');
+              const cleaned = value.trim();
+              if (cleaned === 'true') newProps[key.trim()] = true;
+              else if (cleaned === 'false') newProps[key.trim()] = false;
+              else if (!isNaN(Number(cleaned)) && cleaned !== '') newProps[key.trim()] = Number(cleaned);
+              else newProps[key.trim()] = cleaned;
             }
           }
         });
 
-        setProps(prev => ({ ...prev, ...newProps }));
+        setProps(prev => ({ ...prev, ...newProps, 'server-port': newProps['server-port'] ?? prev['server-port'] }));
         setHasChanges(false);
       } catch (e) {
-        console.error("Failed to load properties:", e);
+        console.error('Failed to load properties:', e);
       } finally {
         setLoading(false);
       }
     };
 
     loadProperties();
-  }, [propFilePath]);
+  }, [propFilePath, server.port]);
 
   useEffect(() => {
     if (window.electronAPI) {
       const removeListener = window.electronAPI.onSettingsSavedInWindow((_event, newSettings: any) => {
         setProps((prev: ServerProperties) => ({ ...prev, ...newSettings }));
         setHasChanges(true);
-        alert('詳細設定ウィンドウでの変更を適用しました。\n反映するには右上の「変更を保存」を押してください。');
+        showToast('詳細設定の変更を読み込みました。右上の「変更を保存」で反映します。', 'info');
       });
       return () => (removeListener as any)?.();
     }
-  }, []);
+  }, [showToast]);
 
-  const handleChange = (key: string, value: unknown) => {
+  const handleChange = (key: string, value: PropertyValue) => {
     setProps(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
 
   const handleSave = async () => {
-    let content = "#Minecraft server properties\n#Edited by MC-Vector\n";
+    let content = '#Minecraft server properties\n#Edited by MC-Vector\n';
     Object.entries(props).forEach(([key, value]) => {
       content += `${key}=${value}\n`;
     });
@@ -97,10 +88,10 @@ export default function PropertiesView({ server }: Props) {
     try {
       await window.electronAPI.saveFile(propFilePath, content);
       setHasChanges(false);
-      alert('設定を保存しました');
+      showToast('設定を保存しました', 'success');
     } catch (e) {
       console.error(e);
-      alert('保存に失敗しました');
+      showToast('保存に失敗しました', 'error');
     }
   };
 
@@ -118,7 +109,7 @@ export default function PropertiesView({ server }: Props) {
 
         <div className="flex justify-between items-center mb-5">
           <h3>サーバー設定 (server.properties)</h3>
-          <div className="flex gap-2.5">
+          <div className="flex gap-2.5 flex-wrap">
             <button
               className="btn-secondary"
               onClick={openAdvancedWindow}
@@ -146,8 +137,8 @@ export default function PropertiesView({ server }: Props) {
             </div>
             <input
               type="text"
-              className="input-field w-[300px]"
-              value={props['motd']}
+              className="input-field w-[320px]"
+              value={props['motd'] as string}
               onChange={(e) => handleChange('motd', e.target.value)}
             />
           </div>
@@ -158,7 +149,7 @@ export default function PropertiesView({ server }: Props) {
             </div>
             <select
               className="input-field"
-              value={props['gamemode']}
+              value={props['gamemode'] as string}
               onChange={(e) => handleChange('gamemode', e.target.value)}
             >
               <option value="survival">サバイバル</option>
@@ -174,7 +165,7 @@ export default function PropertiesView({ server }: Props) {
             </div>
             <select
               className="input-field"
-              value={props['difficulty']}
+              value={props['difficulty'] as string}
               onChange={(e) => handleChange('difficulty', e.target.value)}
             >
               <option value="peaceful">ピースフル</option>
@@ -216,9 +207,9 @@ export default function PropertiesView({ server }: Props) {
             </div>
             <input
               type="number"
-              className="input-field w-[100px]"
-              value={props['max-players']}
-              onChange={(e) => handleChange('max-players', e.target.value)}
+              className="input-field w-[120px]"
+              value={props['max-players'] as number}
+              onChange={(e) => handleChange('max-players', Number(e.target.value))}
             />
           </div>
 
@@ -228,15 +219,15 @@ export default function PropertiesView({ server }: Props) {
             </div>
             <input
               type="number"
-              className="input-field w-[120px]"
-              value={props['server-port']}
-              onChange={(e) => handleChange('server-port', e.target.value)}
+              className="input-field w-[140px]"
+              value={props['server-port'] as number}
+              onChange={(e) => handleChange('server-port', Number(e.target.value))}
             />
           </div>
 
           <ToggleItem
             label="オンラインモード"
-            desc="正規アカウント認証 (OFFで割れサーバー化)"
+            desc="正規アカウント認証 (OFFでオフライン許可)"
             checked={Boolean(props['online-mode'])}
             onChange={(v) => handleChange('online-mode', v)}
           />

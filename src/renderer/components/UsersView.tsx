@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import { useToast } from './ToastProvider';
 
 interface Props {
   server: MinecraftServer;
@@ -20,28 +21,56 @@ type ListType = 'whitelist' | 'ops' | 'banned-players' | 'banned-ips';
 
 export default function UsersView({ server }: Props) {
   const sep = server.path.includes('\\') ? '\\' : '/';
+  const { showToast } = useToast();
 
   const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
   const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
 
+  const resolvePlayerIdentity = async (name: string): Promise<{ name: string; uuid?: string }> => {
+    try {
+      const res = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`);
+      if (!res.ok) return { name };
+      const data = await res.json();
+      if (data?.id) {
+        return { name: data.name || name, uuid: data.id };
+      }
+    } catch (_) {}
+    return { name };
+  };
+
+  const maybeApplyLiveCommand = async (type: ListType, action: 'add' | 'remove', nameOrIp: string, rawInput: string) => {
+    if (server.status !== 'online') return;
+    const command = (() => {
+      if (type === 'whitelist') return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${nameOrIp}`;
+      if (type === 'ops') return `${action === 'add' ? 'op' : 'deop'} ${nameOrIp}`;
+      if (type === 'banned-players') return `${action === 'add' ? 'ban' : 'pardon'} ${nameOrIp}`;
+      if (type === 'banned-ips') return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${rawInput}`;
+      return '';
+    })();
+    if (!command) return;
+    await window.electronAPI.sendCommand(server.id, command);
+    setTimeout(() => loadAllLists(), 500);
+  };
+
   useEffect(() => {
     loadAllLists();
   }, [server.path]);
 
   const loadAllLists = async () => {
-    setWhitelist(await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`) || []);
-    setOps(await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`) || []);
-    setBannedPlayers(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-players.json`) || []);
-    setBannedIps(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`) || []);
+    setWhitelist(await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`, server.id) || []);
+    setOps(await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`, server.id) || []);
+    setBannedPlayers(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-players.json`, server.id) || []);
+    setBannedIps(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`, server.id) || []);
   };
 
   const handleAdd = async (type: ListType, nameOrIp: string) => {
     if (!nameOrIp) return;
+    const identity = await resolvePlayerIdentity(nameOrIp);
     const filePath = `${server.path}${sep}${getFileName(type)}`;
     let currentList: PlayerEntry[] = [];
-    let newItem: PlayerEntry = { name: nameOrIp };
+    let newItem: PlayerEntry = { name: identity.name, uuid: identity.uuid };
 
     switch(type) {
       case 'whitelist': currentList = [...whitelist]; break;
@@ -60,18 +89,20 @@ export default function UsersView({ server }: Props) {
     }
 
     if (currentList.some(p => (type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase()))) {
-      alert('Already exists');
+      showToast('既に存在します', 'info');
       return;
     }
 
     const newData = [...currentList, newItem];
-    await window.electronAPI.writeJsonFile(filePath, newData);
+    await window.electronAPI.writeJsonFile(filePath, newData, server.id);
+    await maybeApplyLiveCommand(type, 'add', identity.name, nameOrIp);
+    showToast('リストを更新しました', 'success');
 
     switch(type) {
-        case 'whitelist': setWhitelist(newData); break;
-        case 'ops': setOps(newData); break;
-        case 'banned-players': setBannedPlayers(newData); break;
-        case 'banned-ips': setBannedIps(newData); break;
+      case 'whitelist': setWhitelist(newData); break;
+      case 'ops': setOps(newData); break;
+      case 'banned-players': setBannedPlayers(newData); break;
+      case 'banned-ips': setBannedIps(newData); break;
     }
   };
 
@@ -87,7 +118,9 @@ export default function UsersView({ server }: Props) {
     }
 
     const newData = currentList.filter(p => (type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier));
-    await window.electronAPI.writeJsonFile(filePath, newData);
+    await window.electronAPI.writeJsonFile(filePath, newData, server.id);
+    await maybeApplyLiveCommand(type, 'remove', identifier, identifier);
+    showToast('削除しました', 'success');
 
     switch(type) {
         case 'whitelist': setWhitelist(newData); break;

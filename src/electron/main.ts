@@ -3,15 +3,21 @@ import path from 'path';
 import fs from 'fs';
 import https from 'https';
 import AdmZip from 'adm-zip';
+import archiver from 'archiver';
 import * as tar from 'tar';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
-import { spawn, ChildProcess, execSync } from 'child_process';
+import { spawn, execSync } from 'child_process';
+import type { ChildProcess } from 'child_process';
 import pidusage from 'pidusage';
 import os from 'os';
 import DiscordRPC from 'discord-rpc';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+(globalThis as any).__filename = __filename;
+(globalThis as any).__dirname = __dirname;
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const RUNTIMES_PATH = path.join(app.getPath('userData'), 'runtimes');
 const NGROK_BIN_DIR = path.join(app.getPath('userData'), 'ngrok-bin');
@@ -48,7 +54,6 @@ function getServersJsonPath(): string {
   return path.join(getServersRootDir(), 'servers.json');
 }
 
-// セキュリティ: パストラバーサル攻撃を防ぐため、パスが指定されたベースディレクトリ内にあることを検証
 function isPathSafe(targetPath: string, baseDir: string): boolean {
   try {
     const normalizedTarget = path.resolve(targetPath);
@@ -59,7 +64,6 @@ function isPathSafe(targetPath: string, baseDir: string): boolean {
   }
 }
 
-// サーバーパスを取得して検証
 function getServerPath(serverId: string): string | null {
   const servers = loadServersList();
   const server = servers.find((s: any) => s.id === serverId);
@@ -169,6 +173,10 @@ const ngrokSessions = new Map<string, { process: ChildProcess, url: string | nul
 
 let rpc: DiscordRPC.Client | null = null;
 
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+
 function initDiscordRPC() {
   rpc = new DiscordRPC.Client({ transport: 'ipc' });
 
@@ -192,7 +200,7 @@ async function setDiscordActivity(details: string, state: string, largeImageKey:
       smallImageKey,
       smallImageText: 'MC-Vector',
       instance: false,
-      startTimestamp: Date.now(), 
+      startTimestamp: Date.now(),
     });
   } catch (e) {
     console.error('RPC Error:', e);
@@ -243,8 +251,8 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
 
   const platform = os.platform();
   const arch = os.arch();
-  let binaryName = platform === 'win32' ? 'ngrok.exe' : 'ngrok';
-  let binaryPath = path.join(NGROK_BIN_DIR, binaryName);
+  const binaryName = platform === 'win32' ? 'ngrok.exe' : 'ngrok';
+  const binaryPath = path.join(NGROK_BIN_DIR, binaryName);
 
   if (fs.existsSync(binaryPath)) return binaryPath;
 
@@ -301,9 +309,9 @@ app.whenReady().then(() => {
 
   ipcMain.on('update-discord-presence', (_event, data) => {
     const { serverName, viewName } = data;
-    
+
     let stateText = 'Idling';
-    let imageKey = 'logo'; 
+    let imageKey = 'logo';
 
 
     switch (viewName) {
@@ -543,7 +551,7 @@ app.whenReady().then(() => {
       if (!fs.existsSync(proxyPath)) fs.mkdirSync(proxyPath, { recursive: true });
 
       let velocityServersConfig = '';
-      let tryOrderList: string[] = [];
+      const tryOrderList: string[] = [];
       const allServers = loadServersList();
 
       for (const serverId of backendServerIds) {
@@ -801,7 +809,6 @@ config-version = "2.7"
 
   ipcMain.handle('list-files', async (_event, dirPath, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath && !isPathSafe(dirPath, serverPath)) {
         console.error('Path traversal attempt blocked:', dirPath);
@@ -823,7 +830,6 @@ config-version = "2.7"
 
   ipcMain.handle('read-file', async (_event, filePath, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath && !isPathSafe(filePath, serverPath)) {
         console.error('Path traversal attempt blocked:', filePath);
@@ -837,7 +843,6 @@ config-version = "2.7"
 
   ipcMain.handle('save-file', async (_event, filePath, content, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath && !isPathSafe(filePath, serverPath)) {
         console.error('Path traversal attempt blocked:', filePath);
@@ -852,7 +857,6 @@ config-version = "2.7"
 
   ipcMain.handle('create-directory', async (_event, dirPath, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath && !isPathSafe(dirPath, serverPath)) {
         console.error('Path traversal attempt blocked:', dirPath);
@@ -867,7 +871,6 @@ config-version = "2.7"
 
   ipcMain.handle('delete-path', async (_event, targetPath, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath && !isPathSafe(targetPath, serverPath)) {
         console.error('Path traversal attempt blocked:', targetPath);
@@ -882,7 +885,6 @@ config-version = "2.7"
 
   ipcMain.handle('move-path', async (_event, srcPath, destPath, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath) {
         if (!isPathSafe(srcPath, serverPath) || !isPathSafe(destPath, serverPath)) {
@@ -905,7 +907,6 @@ config-version = "2.7"
 
   ipcMain.handle('upload-files', async (_event, filePaths, destDir, serverId) => {
     try {
-      // セキュリティ: サーバーパス内に制限
       const serverPath = serverId ? getServerPath(serverId) : null;
       if (serverPath && !isPathSafe(destDir, serverPath)) {
         console.error('Path traversal attempt blocked:', destDir);
@@ -914,7 +915,6 @@ config-version = "2.7"
       for (const src of filePaths) {
         const fileName = path.basename(src);
         const dest = path.join(destDir, fileName);
-        // さらに、destが安全であることを確認
         if (serverPath && !isPathSafe(dest, serverPath)) {
           console.error('Path traversal attempt blocked:', dest);
           continue;
@@ -927,8 +927,13 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('import-files-dialog', async (_event, destDir) => {
+  ipcMain.handle('import-files-dialog', async (_event, destDir, serverId: string) => {
     if (!mainWindow) return { success: false, message: 'Window not found' };
+
+    const serverPath = serverId ? getServerPath(serverId) : null;
+    if (!serverPath || !isPathSafe(destDir, serverPath)) {
+      return { success: false, message: '許可されていないパスです' };
+    }
 
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile', 'multiSelections'],
@@ -945,6 +950,10 @@ config-version = "2.7"
       for (const srcPath of result.filePaths) {
         const fileName = path.basename(srcPath);
         const destPath = path.join(destDir, fileName);
+        if (!isPathSafe(destPath, serverPath)) {
+          console.error('Path traversal attempt blocked:', destPath);
+          continue;
+        }
         await fs.promises.copyFile(srcPath, destPath);
         count++;
       }
@@ -955,10 +964,17 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('compress-files', async (_event, filePaths, destPath) => {
+  ipcMain.handle('compress-files', async (_event, filePaths: string[], destPath: string, serverId: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath || !isPathSafe(destPath, serverPath)) return false;
+
       const zip = new AdmZip();
       for (const filePath of filePaths) {
+        if (!isPathSafe(filePath, serverPath)) {
+          console.error('Path traversal attempt blocked:', filePath);
+          continue;
+        }
         const stat = fs.statSync(filePath);
         if (stat.isDirectory()) {
           zip.addLocalFolder(filePath, path.basename(filePath));
@@ -968,56 +984,106 @@ config-version = "2.7"
       }
       zip.writeZip(destPath);
       return true;
-    } catch {
+    } catch (e) {
+      console.error(e);
       return false;
     }
   });
 
-  ipcMain.handle('extract-archive', async (_event, archivePath, destPath) => {
+  ipcMain.handle('extract-archive', async (_event, archivePath: string, destPath: string, serverId: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath || !isPathSafe(destPath, serverPath) || !isPathSafe(archivePath, serverPath)) return false;
+
       const zip = new AdmZip(archivePath);
-      zip.extractAllTo(destPath, true);
+      const normalizedDest = path.resolve(destPath);
+      for (const entry of zip.getEntries()) {
+        const entryPath = path.resolve(normalizedDest, entry.entryName);
+        if (!entryPath.startsWith(normalizedDest + path.sep) && entryPath !== normalizedDest) {
+          console.error('Unsafe zip entry blocked:', entry.entryName);
+          return false;
+        }
+      }
+      zip.extractAllTo(normalizedDest, true);
       return true;
-    } catch {
+    } catch (e) {
+      console.error(e);
       return false;
     }
   });
 
-  ipcMain.handle('open-path-in-explorer', async (_event, targetPath) => {
+  ipcMain.handle('open-path-in-explorer', async (_event, targetPath: string, serverId?: string) => {
     try {
+      if (serverId) {
+        const serverPath = getServerPath(serverId);
+        if (!serverPath || !isPathSafe(targetPath, serverPath)) return;
+      }
       await shell.showItemInFolder(targetPath);
     } catch (e) {
       console.error(e);
     }
   });
 
-  ipcMain.handle('create-backup', async (_event, _id, serverPath) => {
+  ipcMain.handle('create-backup', async (_event, serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath) return false;
       if (!fs.existsSync(serverPath)) return false;
       const backupsDir = path.join(serverPath, 'backups');
       if (!fs.existsSync(backupsDir)) {
         await fs.promises.mkdir(backupsDir);
       }
-      const zip = new AdmZip();
-      const files = await fs.promises.readdir(serverPath);
-      files.forEach(f => {
-        if (f === 'backups') return;
-        const p = path.join(serverPath, f);
-        if (fs.statSync(p).isDirectory()) {
-          zip.addLocalFolder(p, f);
+
+      const archiveName = options?.name && options.name.trim() !== ''
+        ? options.name.trim().replace(/\.zip$/i, '') + '.zip'
+        : `backup-${Date.now()}.zip`;
+
+      const outputPath = path.join(backupsDir, archiveName);
+      const output = fs.createWriteStream(outputPath);
+      const archive = archiver('zip', { zlib: { level: Math.min(9, Math.max(1, options?.compressionLevel || 5)) } });
+
+      const pathsToInclude = (options?.paths && options.paths.length > 0)
+        ? options.paths
+        : (await fs.promises.readdir(serverPath)).filter(f => f !== 'backups').map(f => f);
+
+      const addEntry = (relPath: string) => {
+        const absPath = path.join(serverPath, relPath);
+        const normalizedServer = path.resolve(serverPath);
+        const normalizedAbs = path.resolve(absPath);
+        if (!normalizedAbs.startsWith(normalizedServer)) return;
+        if (!fs.existsSync(absPath)) return;
+        const stat = fs.statSync(absPath);
+        if (stat.isDirectory()) {
+          archive.directory(absPath, relPath);
         } else {
-          zip.addLocalFile(p);
+          archive.file(absPath, { name: relPath });
         }
+      };
+
+      pathsToInclude.forEach(p => addEntry(p));
+
+      await new Promise<void>((resolve, reject) => {
+        output.on('close', () => resolve());
+        archive.on('warning', (err: any) => {
+          if (err.code === 'ENOENT') return;
+          reject(err);
+        });
+        archive.on('error', (err: any) => reject(err));
+        archive.pipe(output);
+        archive.finalize();
       });
-      zip.writeZip(path.join(backupsDir, `backup-${Date.now()}.zip`));
+
       return true;
-    } catch {
+    } catch (e) {
+      console.error(e);
       return false;
     }
   });
 
-  ipcMain.handle('list-backups', async (_event, serverPath) => {
+  ipcMain.handle('list-backups', async (_event, serverId: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath) return [];
       const dir = path.join(serverPath, 'backups');
       if (!fs.existsSync(dir)) return [];
       const files = await fs.promises.readdir(dir);
@@ -1034,27 +1100,42 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('restore-backup', async (_event, serverPath, backupName) => {
+  ipcMain.handle('restore-backup', async (_event, serverId: string, backupName: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath) return false;
       const p = path.join(serverPath, 'backups', backupName);
-      if (!fs.existsSync(p)) return false;
+      if (!isPathSafe(p, serverPath) || !fs.existsSync(p)) return false;
       const zip = new AdmZip(p);
-      zip.extractAllTo(serverPath, true);
+      const normalizedDest = path.resolve(serverPath);
+      for (const entry of zip.getEntries()) {
+        const entryPath = path.resolve(normalizedDest, entry.entryName);
+        if (!entryPath.startsWith(normalizedDest + path.sep) && entryPath !== normalizedDest) {
+          console.error('Unsafe zip entry blocked during restore:', entry.entryName);
+          return false;
+        }
+      }
+      zip.extractAllTo(normalizedDest, true);
       return true;
-    } catch {
+    } catch (e) {
+      console.error(e);
       return false;
     }
   });
 
-  ipcMain.handle('delete-backup', async (_event, serverPath, backupName) => {
+  ipcMain.handle('delete-backup', async (_event, serverId: string, backupName: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath) return false;
       const p = path.join(serverPath, 'backups', backupName);
+      if (!isPathSafe(p, serverPath)) return false;
       if (fs.existsSync(p)) {
         await fs.promises.unlink(p);
         return true;
       }
       return false;
-    } catch {
+    } catch (e) {
+      console.error(e);
       return false;
     }
   });
@@ -1076,16 +1157,24 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('install-modrinth-project', async (_event, _projectId, _versionId, fileName, downloadUrl, serverPath, type) => {
+  ipcMain.handle('install-modrinth-project', async (_event, _projectId, _versionId, fileName, downloadUrl, serverId: string, type) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath) return false;
       const folderName = type === 'plugin' ? 'plugins' : 'mods';
       const targetDir = path.join(serverPath, folderName);
+
+      const safeName = path.basename(fileName);
+      if (safeName !== fileName) return false;
 
       if (!fs.existsSync(targetDir)) {
         await fs.promises.mkdir(targetDir, { recursive: true });
       }
 
-      const destPath = path.join(targetDir, fileName);
+      const destPath = path.join(targetDir, safeName);
+      if (!isPathSafe(destPath, serverPath)) return false;
+
+      const maxSize = 200 * 1024 * 1024;
 
       await new Promise<void>((resolve, reject) => {
         const file = fs.createWriteStream(destPath);
@@ -1093,6 +1182,21 @@ config-version = "2.7"
           if (res.statusCode !== 200 && res.statusCode !== 302) {
             return reject(new Error(`Status: ${res.statusCode}`));
           }
+          const totalSize = parseInt(res.headers['content-length'] || '0', 10);
+          if (totalSize > maxSize) {
+            res.destroy();
+            return reject(new Error('Download too large'));
+          }
+          let downloaded = 0;
+          res.on('data', (chunk) => {
+            downloaded += chunk.length;
+            if (downloaded > maxSize) {
+              res.destroy();
+              file.destroy();
+              fs.unlink(destPath, () => {});
+              reject(new Error('Download too large'));
+            }
+          });
           res.pipe(file);
           file.on('finish', () => { file.close(); resolve(); });
         }).on('error', (err) => {
@@ -1119,13 +1223,22 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('install-hangar-project', async (_event, downloadUrl, fileName, serverPath) => {
+  ipcMain.handle('install-hangar-project', async (_event, downloadUrl, fileName, serverId: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath) return false;
       const targetDir = path.join(serverPath, 'plugins');
+
+      const safeName = path.basename(fileName);
+      if (safeName !== fileName) return false;
+
       if (!fs.existsSync(targetDir)) {
         await fs.promises.mkdir(targetDir, { recursive: true });
       }
-      const destPath = path.join(targetDir, fileName);
+      const destPath = path.join(targetDir, safeName);
+      if (!isPathSafe(destPath, serverPath)) return false;
+
+      const maxSize = 200 * 1024 * 1024;
 
       await new Promise<void>((resolve, reject) => {
         const file = fs.createWriteStream(destPath);
@@ -1133,15 +1246,35 @@ config-version = "2.7"
           if (res.statusCode !== 200 && res.statusCode !== 302) {
             return reject(new Error(`Status: ${res.statusCode}`));
           }
+          const totalSize = parseInt(res.headers['content-length'] || '0', 10);
+          if (totalSize > maxSize) {
+            res.destroy();
+            return reject(new Error('Download too large'));
+          }
+          let downloaded = 0;
+          res.on('data', (chunk) => {
+            downloaded += chunk.length;
+            if (downloaded > maxSize) {
+              res.destroy();
+              file.destroy();
+              fs.unlink(destPath, () => {});
+              reject(new Error('Download too large'));
+            }
+          });
           res.pipe(file);
           file.on('finish', () => { file.close(); resolve(); });
-        }).on('error', reject);
+        }).on('error', (err) => {
+          fs.unlink(destPath, () => {});
+          reject(err);
+        });
       });
       return true;
     } catch (e) {
+      console.error('Hangar install failed:', e);
       return false;
     }
   });
+
 
   ipcMain.handle('get-java-versions', async () => {
     if (!fs.existsSync(RUNTIMES_PATH)) return [];
@@ -1222,6 +1355,19 @@ config-version = "2.7"
     }
   });
 
+  ipcMain.handle('select-java-binary', async () => {
+    const filters = [{ name: 'Java Executable', extensions: process.platform === 'win32' ? ['exe'] : ['*'] }];
+    const result = await dialog.showOpenDialog({
+      title: 'Java 実行ファイルを選択',
+      properties: ['openFile'],
+      filters,
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const picked = result.filePaths[0];
+    if (!fs.existsSync(picked)) return null;
+    return picked;
+  });
+
   ipcMain.handle('delete-java', async (_event, version: number) => {
     try {
       const dirs = await fs.promises.readdir(RUNTIMES_PATH);
@@ -1236,8 +1382,10 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('read-json-file', async (_event, filePath) => {
+  ipcMain.handle('read-json-file', async (_event, filePath: string, serverId: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath || !isPathSafe(filePath, serverPath)) return [];
       if (fs.existsSync(filePath)) {
         const content = await fs.promises.readFile(filePath, 'utf-8');
         return JSON.parse(content);
@@ -1249,8 +1397,10 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('write-json-file', async (_event, filePath, data) => {
+  ipcMain.handle('write-json-file', async (_event, filePath: string, data, serverId: string) => {
     try {
+      const serverPath = getServerPath(serverId);
+      if (!serverPath || !isPathSafe(filePath, serverPath)) return false;
       await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
       return true;
     } catch (e) {
@@ -1368,9 +1518,18 @@ config-version = "2.7"
     return { active: false, url: null, logs: [] };
   });
 
-  ipcMain.handle('get-ngrok-token', async () => {
+  ipcMain.handle('has-ngrok-token', async () => {
     const config = loadConfig();
-    return config.ngrokToken || '';
+    return Boolean(config.ngrokToken);
+  });
+
+  ipcMain.handle('clear-ngrok-token', async () => {
+    const config = loadConfig();
+    if ('ngrokToken' in config) {
+      delete config.ngrokToken;
+      saveConfig(config);
+    }
+    return true;
   });
 
   ipcMain.on('open-proxy-help-window', () => {

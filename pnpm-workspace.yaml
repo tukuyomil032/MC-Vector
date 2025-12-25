@@ -1,0 +1,6 @@
+ignoredBuiltDependencies:
+  - electron
+  - electron-winstaller
+  - esbuild
+  - node-pty
+  - register-scheme

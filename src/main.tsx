@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { ToastProvider } from './renderer/components/ToastProvider'
 import AdvancedSettingsWindow from './renderer/components/properties/AdvancedSettingsWindow'
 import './index.css'
 
@@ -15,7 +16,9 @@ if (window.location.hash === '#settings') {
 } else {
   root.render(
     <React.StrictMode>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </React.StrictMode>
   )
 }

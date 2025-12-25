@@ -59,23 +59,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listFiles: (dirPath: string, serverId?: string) => ipcRenderer.invoke('list-files', dirPath, serverId),
   readFile: (filePath: string, serverId?: string) => ipcRenderer.invoke('read-file', filePath, serverId),
   saveFile: (filePath: string, content: string, serverId?: string) => ipcRenderer.invoke('save-file', filePath, content, serverId),
-  importFilesDialog: (destDir: string) => ipcRenderer.invoke('import-files-dialog', destDir),
+  importFilesDialog: (destDir: string, serverId: string) => ipcRenderer.invoke('import-files-dialog', destDir, serverId),
 
   createDirectory: (path: string, serverId?: string) => ipcRenderer.invoke('create-directory', path, serverId),
   deletePath: (path: string, serverId?: string) => ipcRenderer.invoke('delete-path', path, serverId),
   movePath: (src: string, dest: string, serverId?: string) => ipcRenderer.invoke('move-path', src, dest, serverId),
   uploadFiles: (files: string[], dest: string, serverId?: string) => ipcRenderer.invoke('upload-files', files, dest, serverId),
-  compressFiles: (files: string[], dest: string) => ipcRenderer.invoke('compress-files', files, dest),
-  extractArchive: (archive: string, dest: string) => ipcRenderer.invoke('extract-archive', archive, dest),
+  compressFiles: (files: string[], dest: string, serverId: string) => ipcRenderer.invoke('compress-files', files, dest, serverId),
+  extractArchive: (archive: string, dest: string, serverId: string) => ipcRenderer.invoke('extract-archive', archive, dest, serverId),
 
   // Reveal in Finder / Explorer
-  openPathInExplorer: (path: string) => ipcRenderer.invoke('open-path-in-explorer', path),
+  openPathInExplorer: (path: string, serverId?: string) => ipcRenderer.invoke('open-path-in-explorer', path, serverId),
 
   // --- Backups ---
-  createBackup: (serverId: string, serverPath: string) => ipcRenderer.invoke('create-backup', serverId, serverPath),
-  listBackups: (serverPath: string) => ipcRenderer.invoke('list-backups', serverPath),
-  restoreBackup: (serverPath: string, backupName: string) => ipcRenderer.invoke('restore-backup', serverPath, backupName),
-  deleteBackup: (serverPath: string, backupName: string) => ipcRenderer.invoke('delete-backup', serverPath, backupName),
+  createBackup: (serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) => ipcRenderer.invoke('create-backup', serverId, options),
+  listBackups: (serverId: string) => ipcRenderer.invoke('list-backups', serverId),
+  restoreBackup: (serverId: string, backupName: string) => ipcRenderer.invoke('restore-backup', serverId, backupName),
+  deleteBackup: (serverId: string, backupName: string) => ipcRenderer.invoke('delete-backup', serverId, backupName),
 
   // --- Proxy ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,22 +85,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Mod/Plugin Browser ---
   searchModrinth: (query: string, type: 'mod' | 'plugin', version: string, offset: number) =>
     ipcRenderer.invoke('search-modrinth', query, type, version, offset),
-  installModrinthProject: (projectId: string, versionId: string, fileName: string, downloadUrl: string, serverPath: string, type: 'mod' | 'plugin') =>
-    ipcRenderer.invoke('install-modrinth-project', projectId, versionId, fileName, downloadUrl, serverPath, type),
+  installModrinthProject: (projectId: string, versionId: string, fileName: string, downloadUrl: string, serverId: string, type: 'mod' | 'plugin') =>
+    ipcRenderer.invoke('install-modrinth-project', projectId, versionId, fileName, downloadUrl, serverId, type),
 
   searchHangar: (query: string, version: string, offset: number) =>
     ipcRenderer.invoke('search-hangar', query, version, offset),
-  installHangarProject: (downloadUrl: string, fileName: string, serverPath: string) =>
-    ipcRenderer.invoke('install-hangar-project', downloadUrl, fileName, serverPath),
+  installHangarProject: (downloadUrl: string, fileName: string, serverId: string) =>
+    ipcRenderer.invoke('install-hangar-project', downloadUrl, fileName, serverId),
 
   // --- Java Manager ---
   getJavaVersions: () => ipcRenderer.invoke('get-java-versions'),
   downloadJava: (version: number) => ipcRenderer.invoke('download-java', version),
+  selectJavaBinary: () => ipcRenderer.invoke('select-java-binary'),
   deleteJava: (version: number) => ipcRenderer.invoke('delete-java', version),
 
   // --- Users ---
-  readJsonFile: (filePath: string) => ipcRenderer.invoke('read-json-file', filePath),
-  writeJsonFile: (filePath: string, data: any[]) => ipcRenderer.invoke('write-json-file', filePath, data),
+  readJsonFile: (filePath: string, serverId: string) => ipcRenderer.invoke('read-json-file', filePath, serverId),
+  writeJsonFile: (filePath: string, data: any[], serverId: string) => ipcRenderer.invoke('write-json-file', filePath, data, serverId),
 
   toggleNgrok: (serverId: string, enabled: boolean, token?: string) => ipcRenderer.invoke('toggle-ngrok', serverId, enabled, token),
   onNgrokInfo: (callback: (event: unknown, data: any) => void) => {
@@ -108,7 +109,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('ngrok-info', subscription);
     return () => { ipcRenderer.removeListener('ngrok-info', subscription); };
   },
-  getNgrokToken: () => ipcRenderer.invoke('get-ngrok-token'),
+  hasNgrokToken: () => ipcRenderer.invoke('has-ngrok-token'),
+  clearNgrokToken: () => ipcRenderer.invoke('clear-ngrok-token'),
   getNgrokStatus: (serverId: string) => ipcRenderer.invoke('get-ngrok-status', serverId),
   openNgrokGuide: () => ipcRenderer.send('open-ngrok-guide'),
 })

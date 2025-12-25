@@ -2,7 +2,8 @@
   "name": "mc-vector",
   "productName": "MC-Vector",
   "private": true,
-  "version": "1.0.1",
+  "packageManager": "pnpm@10.26.2",
+  "version": "1.1.0",
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
   "type": "module",
@@ -12,10 +13,13 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "dist": "npm run build && electron-builder --mac --win"
+    "dist": "pnpm run dist:mac",
+    "dist:mac": "pnpm run build && electron-builder --mac --x64 --arm64",
+    "dist:win": "pnpm run build && electron-builder --win --x64"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "archiver": "^6.0.2",
     "adm-zip": "^0.5.16",
     "discord-rpc": "^4.0.1",
     "pidusage": "^4.0.1",
@@ -65,7 +69,12 @@
       "package.json"
     ],
     "mac": {
-      "target": "dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
       "icon": "build/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false

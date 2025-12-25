@@ -12,8 +12,8 @@ import UsersView from './renderer/components/UsersView';
 import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/ProxySetupView';
 import ProxyHelpView from './renderer/components/ProxyHelpView';
 import AddServerModal from './renderer/components/AddServerModal';
-import Toast from './renderer/components/Toast';
 import NgrokGuideView from './renderer/components/NgrokGuideView';
+import { useToast } from './renderer/components/ToastProvider';
 
 import iconMenu from './assets/icons/menu.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
@@ -26,6 +26,8 @@ import iconProperties from './assets/icons/properties.svg';
 import iconSettings from './assets/icons/settings.svg';
 import iconProxy from './assets/icons/proxy.svg';
 
+const TAB_CYCLE: AppView[] = ['dashboard', 'console', 'users', 'files', 'plugins', 'backups', 'properties', 'general-settings', 'proxy'];
+
 function App() {
   const [servers, setServers] = useState<MinecraftServer[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>('');
@@ -33,7 +35,7 @@ function App() {
   const [showAddServerModal, setShowAddServerModal] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, serverId: string } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
-  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
+  const { showToast } = useToast();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
@@ -46,6 +48,22 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const delta = e.shiftKey ? -1 : 1;
+        const idx = TAB_CYCLE.indexOf(currentView);
+        const baseIdx = idx === -1 ? 0 : idx;
+        const next = TAB_CYCLE[(baseIdx + delta + TAB_CYCLE.length) % TAB_CYCLE.length];
+        setCurrentView(next);
+        return;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [currentView]);
+
 
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
@@ -55,10 +73,6 @@ function App() {
     return <NgrokGuideView />;
   }
 
-
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToast({ msg, type });
-  };
 
   const [serverLogs, setServerLogs] = useState<Record<string, string[]>>({});
   const selectedServerIdRef = useRef(selectedServerId);
@@ -216,7 +230,8 @@ function App() {
     const contentKey = `${activeServer.id}-${currentView}`;
 
     switch (currentView) {
-      case 'dashboard': return <DashboardView key={contentKey} server={activeServer} />;
+      case 'dashboard':
+        return <DashboardView key={contentKey} server={activeServer} />;
       case 'console':
         return <ConsoleView
           key={contentKey}
@@ -224,20 +239,25 @@ function App() {
           logs={serverLogs[activeServer.id] || []}
           ngrokUrl={ngrokData[activeServer.id] || null}
         />;
-      case 'properties': return <PropertiesView key={contentKey} server={activeServer} />;
-      case 'files': return <FilesView key={contentKey} server={activeServer} />;
-      case 'plugins' as any: return <PluginBrowser key={contentKey} server={activeServer} />;
-      case 'backups': return <BackupsView key={contentKey} server={activeServer} />;
-      case 'general-settings': return <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />;
-      case 'users': return <UsersView key={contentKey} server={activeServer} />;
-      default: return <div>Unknown View</div>;
+      case 'properties':
+        return <PropertiesView key={contentKey} server={activeServer} />;
+      case 'files':
+        return <FilesView key={contentKey} server={activeServer} />;
+      case 'plugins' as any:
+        return <PluginBrowser key={contentKey} server={activeServer} />;
+      case 'backups':
+        return <BackupsView key={contentKey} server={activeServer} />;
+      case 'general-settings':
+        return <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />;
+      case 'users':
+        return <UsersView key={contentKey} server={activeServer} />;
+      default:
+        return <div>Unknown View</div>;
     }
   };
 
   return (
     <div className="flex h-screen w-screen" onClick={handleClickOutside}>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-
       <aside className={`bg-[#202225] flex flex-col border-r border-border-color shrink-0 z-20 transition-all duration-200 ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}>
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}>
           {isSidebarOpen && <span className="font-bold text-xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">MC-Vector</span>}

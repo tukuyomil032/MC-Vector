@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from './ToastProvider';
 
 interface JavaRuntime {
   name: string;
@@ -13,10 +14,23 @@ interface Props {
 export default function JavaManagerModal({ onClose }: Props) {
   const [installed, setInstalled] = useState<JavaRuntime[]>([]);
   const [downloading, setDownloading] = useState<number | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<string>('');
   const availableVersions = [8, 17, 21];
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadInstalled();
+
+    const remove = window.electronAPI.onDownloadProgress
+      ? (window.electronAPI.onDownloadProgress((_event: unknown, data: any) => {
+          if (data?.serverId !== 'java-install') return;
+          setDownloadProgress(typeof data.progress === 'number' ? data.progress : null);
+          setDownloadStatus(typeof data.status === 'string' ? data.status : '');
+        }) as unknown as (() => void) | undefined)
+      : undefined;
+
+    return () => { if (typeof remove === 'function') remove(); };
   }, []);
 
   const loadInstalled = async () => {
@@ -26,14 +40,22 @@ export default function JavaManagerModal({ onClose }: Props) {
 
   const handleDownload = async (ver: number) => {
     setDownloading(ver);
+    setDownloadProgress(0);
+    setDownloadStatus('');
     try {
-      await window.electronAPI.downloadJava(ver);
+      const ok = await window.electronAPI.downloadJava(ver);
       await loadInstalled();
-      alert(`Java ${ver} downloaded!`);
+      if (ok) {
+        showToast(`Java ${ver} をダウンロードしました`, 'success');
+      } else {
+        showToast('Javaのダウンロードに失敗しました', 'error');
+      }
     } catch {
-      alert('Download failed');
+      showToast('Javaのダウンロードに失敗しました', 'error');
     } finally {
       setDownloading(null);
+      setDownloadProgress(null);
+      setDownloadStatus('');
     }
   };
 
@@ -41,11 +63,12 @@ export default function JavaManagerModal({ onClose }: Props) {
     if (!window.confirm(`Uninstall Java ${ver}?`)) return;
     await window.electronAPI.deleteJava(ver);
     loadInstalled();
+    showToast(`Java ${ver} removed`, 'info');
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-1000 animate-fadeIn" onClick={onClose}>
-      <div className="bg-bg-secondary p-6 rounded-xl w-[600px] border border-border-color shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-scaleIn" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-1000 modal-backdrop" onClick={onClose}>
+      <div className="bg-bg-secondary p-6 rounded-xl w-[600px] border border-border-color shadow-[0_20px_50px_rgba(0,0,0,0.5)] modal-panel" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
           <h2 className="m-0">Java Runtime Manager</h2>
           <button onClick={onClose} className="bg-transparent border-none text-white text-2xl cursor-pointer hover:opacity-70">×</button>
@@ -67,13 +90,41 @@ export default function JavaManagerModal({ onClose }: Props) {
                       onClick={() => handleDownload(v)}
                       disabled={downloading !== null}
                     >
-                      {downloading === v ? 'Downloading...' : 'Download'}
+                      {downloading === v ? `Downloading... ${downloadProgress ?? ''}` : 'Download'}
                     </button>
                   )}
                 </div>
               );
             })}
           </div>
+          {downloading !== null && (
+            <div className="mt-3 text-xs text-zinc-400">{downloadStatus || 'Downloading...'}</div>
+          )}
+        </div>
+
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="border-b border-zinc-700 pb-1.5 mb-2">手動でJavaを指定</h3>
+            <p className="text-xs text-zinc-400">環境変数にパスを通す場合や、既存のJavaを利用したいときに選択できます。</p>
+          </div>
+          <button
+            className="btn-secondary"
+            onClick={async () => {
+              const picked = await window.electronAPI.selectJavaBinary();
+              if (picked) {
+                try {
+                  await navigator.clipboard.writeText(picked);
+                  showToast('パスをクリップボードにコピーしました', 'success');
+                } catch {
+                  showToast('パス: ' + picked, 'info');
+                }
+              } else {
+                showToast('選択がキャンセルされました', 'info');
+              }
+            }}
+          >
+            既存のJavaを選択
+          </button>
         </div>
 
         <div>

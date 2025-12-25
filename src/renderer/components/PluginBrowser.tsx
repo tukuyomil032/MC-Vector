@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import { useToast } from './ToastProvider';
 
 interface Props {
   server: MinecraftServer;
@@ -13,7 +14,8 @@ interface ProjectItem {
   icon_url?: string;
   downloads?: number;
   stars?: number;
-  platform: 'Modrinth' | 'Hangar';
+  platform: 'Modrinth' | 'Hangar' | 'Spigot';
+  slug?: string;
   source_obj: any;
 }
 
@@ -22,22 +24,51 @@ export default function PluginBrowser({ server }: Props) {
   const [results, setResults] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installedFiles, setInstalledFiles] = useState<string[]>([]);
+  const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(null);
   const [page, setPage] = useState(0);
   const LIMIT = 30;
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<'Modrinth' | 'Hangar' | 'CurseForge' | 'Spigot'>(isModServer ? 'Modrinth' : 'Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
+  const { showToast } = useToast();
+  const folderName = isModServer ? 'mods' : 'plugins';
+
+  const refreshInstalled = async () => {
+    try {
+      const dirPath = `${server.path}/${folderName}`;
+      const entries = await window.electronAPI.listFiles(dirPath, server.id);
+      setInstalledFiles(entries.filter(e => !e.isDirectory).map(e => e.name));
+    } catch (e) {
+      console.error(e);
+      setInstalledFiles([]);
+    }
+  };
 
   useEffect(() => {
     search();
   }, [page, platform]);
 
-  const search = async () => {
-    if (platform === 'CurseForge' || platform === 'Spigot') {
-        setResults([]);
-        return;
-    }
+  useEffect(() => {
+    refreshInstalled();
+  }, [server.id, server.path, isModServer]);
 
+  const normalize = (text?: string) => (text || '').toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/g, '');
+
+  const findInstalledMatch = (item: ProjectItem) => {
+    const candidates = [item.slug, item.title, item.id, item.source_obj?.slug, item.source_obj?.project_id]
+      .map(normalize)
+      .filter(Boolean);
+
+    if (candidates.length === 0) return null;
+
+    return installedFiles.find(file => {
+      const base = normalize(file);
+      return candidates.some(c => base.includes(c) || c.includes(base));
+    }) || null;
+  };
+
+  const search = async () => {
     setLoading(true);
     setResults([]);
 
@@ -56,6 +87,7 @@ export default function PluginBrowser({ server }: Props) {
           author: h.author,
           icon_url: h.icon_url,
           downloads: h.downloads,
+          slug: h.slug || h.project_id,
           platform: 'Modrinth',
           source_obj: h
         }));
@@ -71,6 +103,7 @@ export default function PluginBrowser({ server }: Props) {
           icon_url: h.avatarUrl,
           stars: h.stats.stars,
           downloads: h.stats.downloads,
+          slug: h.namespace?.slug || h.name,
           platform: 'Hangar',
           source_obj: h
         }));
@@ -79,13 +112,28 @@ export default function PluginBrowser({ server }: Props) {
       setResults(items);
     } catch (e) {
       console.error(e);
-      alert('データの取得に失敗しました');
+      showToast('データの取得に失敗しました', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInstall = async (item: ProjectItem) => {
+  const performInstall = async (item: ProjectItem, mode: 'fresh' | 'overwrite' | 'update', installedFile?: string) => {
+    if (installedFile) {
+      const targetPath = `${server.path}/${folderName}/${installedFile}`;
+      try {
+        const removed = await window.electronAPI.deletePath(targetPath, server.id);
+        if (!removed) {
+          showToast('既存ファイルの削除に失敗しました', 'error');
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('既存ファイルの削除に失敗しました', 'error');
+        return;
+      }
+    }
+
     setInstallingId(item.id);
     try {
       if (item.platform === 'Modrinth') {
@@ -98,14 +146,14 @@ export default function PluginBrowser({ server }: Props) {
         const versions = await res.json();
 
         if (!versions || versions.length === 0) {
-            alert('対応バージョンが見つかりませんでした');
-            return;
+          showToast('対応バージョンが見つかりませんでした', 'error');
+          return;
         }
         const file = versions[0].files[0];
         const type = isModServer ? 'mod' : 'plugin';
 
-        await window.electronAPI.installModrinthProject(item.id, versions[0].id, file.filename, file.url, server.path, type);
-        alert(`インストール完了: ${item.title}`);
+        await window.electronAPI.installModrinthProject(item.id, versions[0].id, file.filename, file.url, server.id, type);
+        showToast(`${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`, 'success');
 
       } else if (item.platform === 'Hangar') {
         const author = item.source_obj.namespace.owner;
@@ -114,27 +162,38 @@ export default function PluginBrowser({ server }: Props) {
         const data = await res.json();
 
         if (!data.result || data.result.length === 0) {
-             alert('対応バージョンが見つかりませんでした');
-             return;
+          showToast('対応バージョンが見つかりませんでした', 'error');
+          return;
         }
 
         const version = data.result[0];
         const downloadUrl = version.downloads.PAPER.downloadUrl;
         const fileName = `${slug}-${version.name}.jar`;
 
-        await window.electronAPI.installHangarProject(downloadUrl, fileName, server.path);
-        alert(`インストール完了: ${item.title}`);
+        await window.electronAPI.installHangarProject(downloadUrl, fileName, server.id);
+        showToast(`${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`, 'success');
       }
     } catch (e) {
       console.error(e);
-      alert('インストールエラー');
+      showToast('インストールエラー', 'error');
     } finally {
       setInstallingId(null);
+      refreshInstalled();
     }
   };
 
+  const handleInstall = (item: ProjectItem) => {
+    const installedMatch = findInstalledMatch(item);
+    if (installedMatch) {
+      setDupDialog({ item, installedFile: installedMatch });
+      return;
+    }
+
+    void performInstall(item, 'fresh');
+  };
+
   const openExternal = (url: string) => {
-      alert(`ブラウザで開いてください: ${url}`);
+        showToast(`ブラウザで開いてください: ${url}`, 'info');
   };
 
   return (
@@ -180,6 +239,7 @@ export default function PluginBrowser({ server }: Props) {
           >
             ブラウザで {platform} を開く
           </button>
+          <p className="text-xs text-zinc-500 mt-3">ダウンロードした.jarは Files から plugins フォルダへ配置してください。</p>
         </div>
       )}
 
@@ -202,13 +262,18 @@ export default function PluginBrowser({ server }: Props) {
                     <div className="font-bold text-base whitespace-nowrap overflow-hidden text-ellipsis mr-2.5">
                       {item.title}
                     </div>
-                    <button
-                      onClick={() => handleInstall(item)}
-                      disabled={installingId === item.id}
-                      className="py-1.5 px-3.5 text-xs h-8 border-none rounded bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold cursor-pointer shadow-[0_2px_8px_rgba(6,182,212,0.3)] disabled:opacity-70"
-                    >
-                      {installingId === item.id ? '...' : 'Install'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {findInstalledMatch(item) && (
+                        <span className="text-xs font-semibold text-emerald-400">Installed</span>
+                      )}
+                      <button
+                        onClick={() => handleInstall(item)}
+                        disabled={installingId === item.id}
+                        className="py-1.5 px-3.5 text-xs h-8 border-none rounded bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold cursor-pointer shadow-[0_2px_8px_rgba(6,182,212,0.3)] disabled:opacity-70"
+                      >
+                        {installingId === item.id ? '...' : 'Install'}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="text-sm text-zinc-400 mb-auto line-clamp-2 leading-snug">
@@ -250,6 +315,55 @@ export default function PluginBrowser({ server }: Props) {
             </button>
           </div>
         </>
+      )}
+
+      {dupDialog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1200] flex items-center justify-center px-4 modal-backdrop">
+          <div className="bg-[#1f1f22] text-white w-full max-w-md rounded-xl border border-zinc-700 shadow-2xl p-6 modal-panel">
+            <h3 className="text-lg font-bold mb-2">既にインストール済みです</h3>
+            <p className="text-sm text-zinc-300 mb-4 leading-relaxed">
+              {dupDialog.item.title} は既に {folderName} フォルダに存在します。どうしますか？
+            </p>
+
+            <div className="bg-[#26262a] border border-zinc-700 rounded-lg p-3 mb-4 text-xs text-zinc-400 font-mono break-all">
+              既存ファイル: {dupDialog.installedFile}
+            </div>
+
+            <div className="flex flex-col gap-2 mb-4 text-xs text-zinc-400">
+              <div>・上書き: そのまま置き換えます。</div>
+              <div>・アップデート: サーバーバージョンに合う最新ビルドを入れ直します。</div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 text-sm rounded border border-zinc-700 text-zinc-300 hover:bg-white/5"
+                onClick={() => setDupDialog(null)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+                onClick={() => {
+                  const target = dupDialog;
+                  setDupDialog(null);
+                  if (target) void performInstall(target.item, 'overwrite', target.installedFile);
+                }}
+              >
+                上書き
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold"
+                onClick={() => {
+                  const target = dupDialog;
+                  setDupDialog(null);
+                  if (target) void performInstall(target.item, 'update', target.installedFile);
+                }}
+              >
+                アップデート
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

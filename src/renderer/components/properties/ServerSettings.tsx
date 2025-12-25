@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { type MinecraftServer } from '../../components/../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
+import { useToast } from '../ToastProvider';
 
 interface ServerSettingsProps {
   server: MinecraftServer;
@@ -25,6 +26,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
 
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [inputToken, setInputToken] = useState('');
+
+  const { showToast } = useToast();
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -130,19 +133,22 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     const nextState = !isTunneling;
 
     if (nextState) {
-        const token = await window.electronAPI.getNgrokToken();
-        if (!token) {
-            setShowTokenModal(true);
-            return;
-        }
-        setTunnelLog(prev => [...prev, '--- Initializing ngrok ---']);
-        await window.electronAPI.toggleNgrok(server.id, true, token);
+      const hasToken = await window.electronAPI.hasNgrokToken();
+      if (!hasToken && !inputToken) {
+        setShowTokenModal(true);
+        return;
+      }
+      const tokenToUse = inputToken || undefined;
+      setTunnelLog(prev => [...prev, '--- Initializing ngrok ---']);
+      await window.electronAPI.toggleNgrok(server.id, true, tokenToUse);
+      setInputToken('');
     } else {
-        await window.electronAPI.toggleNgrok(server.id, false);
+      await window.electronAPI.toggleNgrok(server.id, false);
     }
   };
 
-  const handleResetToken = () => {
+  const handleResetToken = async () => {
+    await window.electronAPI.clearNgrokToken();
     setInputToken('');
     setShowTokenModal(true);
   };
@@ -152,12 +158,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     setShowTokenModal(false);
     setTunnelLog(['--- Initializing ngrok with new token ---']);
     await window.electronAPI.toggleNgrok(server.id, true, inputToken);
+    setInputToken('');
   };
 
   const handleCopyUrl = () => {
     if (tunnelUrl) {
         navigator.clipboard.writeText(tunnelUrl);
-        alert('アドレスをコピーしました！');
+        showToast('アドレスをコピーしました！', 'success');
     }
   };
 
@@ -166,7 +173,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
       window.electronAPI.openNgrokGuide();
     } else {
       console.error("openNgrokGuide API is not defined.");
-      alert("ガイド機能はまだ実装されていません (preloadを確認してください)");
+      showToast('ガイド機能はまだ実装されていません (preloadを確認してください)', 'info');
     }
   };
 

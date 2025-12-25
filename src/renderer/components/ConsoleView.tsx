@@ -1,5 +1,117 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { FC } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+
+type AnsiStyle = {
+  color?: string;
+  backgroundColor?: string;
+  fontWeight?: number;
+};
+
+type AnsiSegment = {
+  text: string;
+  style: AnsiStyle;
+};
+
+const ANSI_COLOR_MAP: Record<string, string> = {
+  '30': '#000000',
+  '31': '#ef4444',
+  '32': '#22c55e',
+  '33': '#eab308',
+  '34': '#3b82f6',
+  '35': '#a855f7',
+  '36': '#06b6d4',
+  '37': '#e5e7eb',
+  '90': '#6b7280',
+  '91': '#f87171',
+  '92': '#4ade80',
+  '93': '#facc15',
+  '94': '#60a5fa',
+  '95': '#c084fc',
+  '96': '#22d3ee',
+  '97': '#f8fafc',
+};
+
+const ANSI_BG_MAP: Record<string, string> = {
+  '40': '#000000',
+  '41': '#7f1d1d',
+  '42': '#14532d',
+  '43': '#78350f',
+  '44': '#1e3a8a',
+  '45': '#4c1d95',
+  '46': '#0f766e',
+  '47': '#374151',
+  '100': '#1f2937',
+  '101': '#9f1239',
+  '102': '#166534',
+  '103': '#854d0e',
+  '104': '#1e40af',
+  '105': '#581c87',
+  '106': '#115e59',
+  '107': '#f3f4f6',
+};
+
+const ansiToSegments = (text: string): AnsiSegment[] => {
+  const regex = /\x1b\[[0-9;]*m/g;
+  let currentStyle: AnsiStyle = {};
+  let lastIndex = 0;
+  const segments: AnsiSegment[] = [];
+
+  const pushText = (end: number) => {
+    if (end <= lastIndex) return;
+    segments.push({ text: text.slice(lastIndex, end), style: { ...currentStyle } });
+    lastIndex = end;
+  };
+
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    pushText(match.index);
+
+    const codes = match[0]
+      .slice(2, -1)
+      .split(';')
+      .filter(Boolean);
+
+    if (codes.length === 0) {
+      currentStyle = {};
+      lastIndex = regex.lastIndex;
+      continue;
+    }
+
+    for (const code of codes) {
+      if (code === '0') {
+        currentStyle = {};
+      } else if (code === '1') {
+        currentStyle.fontWeight = 700;
+      } else if (code === '22') {
+        delete currentStyle.fontWeight;
+      } else if (ANSI_COLOR_MAP[code]) {
+        currentStyle.color = ANSI_COLOR_MAP[code];
+      } else if (ANSI_BG_MAP[code]) {
+        currentStyle.backgroundColor = ANSI_BG_MAP[code];
+      }
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ text: text.slice(lastIndex), style: { ...currentStyle } });
+  }
+
+  if (segments.length === 0) {
+    return [{ text, style: {} }];
+  }
+
+  return segments;
+};
+
+const getSeverityStyle = (text: string): AnsiStyle | undefined => {
+  const upper = text.toUpperCase();
+  if (upper.includes('ERROR')) return { color: '#ef4444', fontWeight: 700 };
+  if (upper.includes('WARN')) return { color: '#f59e0b', fontWeight: 700 };
+  return undefined;
+};
 
 interface ConsoleViewProps {
   server: MinecraftServer;
@@ -7,15 +119,19 @@ interface ConsoleViewProps {
   ngrokUrl: string | null;
 }
 
-const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
+const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
   const [command, setCommand] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
   const [internalNgrokUrl, setInternalNgrokUrl] = useState<string | null>(null);
   const [memoryUsage, setMemoryUsage] = useState(0);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (autoScroll) {
+      logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [logs]);
 
   useEffect(() => {
@@ -92,8 +208,8 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         <div className="text-center border-r border-[#3e3e42]">
           <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">STATUS</div>
           <div className={`font-bold text-sm ${
-            server.status === 'online' ? 'text-green-500' : 
-            server.status === 'offline' ? 'text-red-500' : 
+            server.status === 'online' ? 'text-green-500' :
+            server.status === 'offline' ? 'text-red-500' :
             'text-yellow-500'
           }`}>
             {server.status.toUpperCase()}
@@ -108,10 +224,29 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ server, logs }) => {
         </div>
       </div>
 
-      <div className="flex-1 bg-[#121214] p-4 overflow-y-auto font-mono text-[13px] text-[#d4d4d4] whitespace-pre-wrap leading-relaxed">
-        {logs.map((log, index) => (
-          <div key={index} className="break-all">
-            {log}
+      <div
+        ref={logContainerRef}
+        className="flex-1 bg-[#121214] p-4 overflow-y-auto font-mono text-[13px] text-[#d4d4d4] whitespace-pre-wrap leading-relaxed"
+        onScroll={() => {
+          const el = logContainerRef.current;
+          if (!el) return;
+          const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+          setAutoScroll(distanceFromBottom < 120);
+        }}
+      >
+        {logs.map((log: string, index: number) => (
+          <div key={index} className="break-words">
+            {(() => {
+              const severityStyle = getSeverityStyle(log);
+              return ansiToSegments(log).map((seg, i) => {
+                const style = { ...seg.style } as AnsiStyle;
+                if (severityStyle) {
+                  if (!style.color) style.color = severityStyle.color;
+                  if (!style.fontWeight) style.fontWeight = severityStyle.fontWeight;
+                }
+                return <span key={i} style={style}>{seg.text}</span>;
+              });
+            })()}
           </div>
         ))}
 
