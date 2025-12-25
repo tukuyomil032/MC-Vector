@@ -22,7 +22,7 @@ jobs:
             build-command: pnpm exec electron-builder --mac --arm64 --publish never
             artifact-name: mac-arm64
             asset-pattern: release/*.dmg
-          - os: macos-13
+          - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
             build-command: pnpm exec electron-builder --mac --x64 --publish never
