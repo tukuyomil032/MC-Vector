@@ -28,6 +28,7 @@ import iconSettings from './assets/icons/settings.svg';
 import iconProxy from './assets/icons/proxy.svg';
 
 const TAB_CYCLE: AppView[] = ['dashboard', 'console', 'users', 'files', 'plugins', 'backups', 'properties', 'general-settings', 'proxy'];
+type AppTheme = 'dark' | 'darkBlue' | 'grey' | 'forest' | 'sunset' | 'neon' | 'coffee' | 'ocean' | 'system';
 
 function App() {
   const [servers, setServers] = useState<MinecraftServer[]>([]);
@@ -46,6 +47,13 @@ function App() {
   const [updateReady, setUpdateReady] = useState(false);
 
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
+  const [appTheme, setAppTheme] = useState<AppTheme>('system');
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  const normalizeTheme = (value: unknown): AppTheme => {
+    const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
+    return allowed.includes(value as AppTheme) ? value as AppTheme : 'dark';
+  };
 
   useEffect(() => {
     const handleHashChange = () => setCurrentHash(window.location.hash);
@@ -62,6 +70,7 @@ function App() {
         const baseIdx = idx === -1 ? 0 : idx;
         const next = TAB_CYCLE[(baseIdx + delta + TAB_CYCLE.length) % TAB_CYCLE.length];
         setCurrentView(next);
+
         return;
       }
     };
@@ -93,6 +102,37 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const loadAppSettings = async () => {
+      try {
+        const settings = await window.electronAPI.getAppSettings();
+        if (settings?.theme) {
+          setAppTheme(normalizeTheme(settings.theme));
+        }
+      } catch (e) {
+        console.error('Failed to load app settings', e);
+      }
+    };
+    loadAppSettings();
+
+    const disposeSaved = window.electronAPI.onSettingsSavedInWindow?.((_event, newSettings) => {
+      if (newSettings?.theme) {
+        setAppTheme(normalizeTheme(newSettings.theme));
+      }
+    });
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleMedia = (event: MediaQueryListEvent) => setSystemPrefersDark(event.matches);
+    media.addEventListener('change', handleMedia);
+
+    return () => {
+      if (typeof disposeSaved === 'function') {
+        (disposeSaved as any)();
+      }
+      media.removeEventListener('change', handleMedia);
+    };
+  }, []);
+
 
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
@@ -102,7 +142,7 @@ function App() {
     return <NgrokGuideView />;
   }
 
-  if (currentHash === '#settings') {
+  if (currentHash === '#app-settings') {
     return <SettingsWindow />;
   }
 
@@ -129,12 +169,16 @@ function App() {
     loadServers();
 
     const removeLogListener = window.electronAPI.onServerLog((_event: any, data: any) => {
-      if (!data || !data.serverId) return;
+      if (!data || !data.serverId) {
+        return;
+      }
       const formattedLog = data.log.replace(/\n/g, '\r\n');
       setServerLogs(prev => {
         const currentLogs = prev[data.serverId] || [];
         const newLogs = [...currentLogs, formattedLog];
-        if (newLogs.length > 2000) newLogs.shift();
+        if (newLogs.length > 2000) {
+          newLogs.shift();
+        }
         return { ...prev, [data.serverId]: newLogs };
       });
     });
@@ -163,15 +207,23 @@ function App() {
     });
 
     return () => {
-      if (typeof removeLogListener === 'function') (removeLogListener as any)();
-      if (typeof removeStatusListener === 'function') (removeStatusListener as any)();
-      if (typeof removeNgrokListener === 'function') (removeNgrokListener as any)();
+      if (typeof removeLogListener === 'function') {
+        (removeLogListener as any)();
+      }
+      if (typeof removeStatusListener === 'function') {
+        (removeStatusListener as any)();
+      }
+      if (typeof removeNgrokListener === 'function') {
+        (removeNgrokListener as any)();
+      }
     };
   }, []);
 
   useEffect(() => {
     const checkNgrok = async () => {
-      if (!selectedServerId) return;
+      if (!selectedServerId) {
+        return;
+      }
       try {
         const status = await window.electronAPI.getNgrokStatus(selectedServerId);
         setNgrokData(prev => ({ ...prev, [selectedServerId]: status.active ? status.url : null }));
@@ -184,11 +236,21 @@ function App() {
 
   const activeServer = servers.find(s => s.id === selectedServerId);
 
-  const handleStart = () => { if (selectedServerId) window.electronAPI.startServer(selectedServerId); };
-  const handleStop = () => { if (selectedServerId) window.electronAPI.stopServer(selectedServerId); };
+  const handleStart = () => {
+    if (selectedServerId) {
+      window.electronAPI.startServer(selectedServerId);
+    }
+  };
+  const handleStop = () => {
+    if (selectedServerId) {
+      window.electronAPI.stopServer(selectedServerId);
+    }
+  };
 
   const handleRestart = async () => {
-    if (!selectedServerId) return;
+    if (!selectedServerId) {
+      return;
+    }
     setServers(prev => prev.map(s => s.id === selectedServerId ? { ...s, status: 'restarting' } : s));
     await window.electronAPI.stopServer(selectedServerId);
     setTimeout(() => {
@@ -220,7 +282,9 @@ function App() {
   };
 
   const handleBuildProxyNetwork = async (config: ProxyNetworkConfig) => {
-    if (!window.confirm(`構成を開始しますか？`)) return;
+    if (!window.confirm(`構成を開始しますか？`)) {
+      return;
+    }
     try {
       const result = await window.electronAPI.setupProxy(config);
       showToast(result.message, result.success ? 'success' : 'error');
@@ -252,24 +316,110 @@ function App() {
   };
 
   const handleDeleteServer = async () => {
-    if (!contextMenu) return;
+    if (!contextMenu) {
+      return;
+    }
     const { serverId } = contextMenu;
     const target = servers.find(s => s.id === serverId);
-    if (!window.confirm(`本当に「${target?.name}」を削除しますか？`)) { setContextMenu(null); return; }
+    if (!window.confirm(`本当に「${target?.name}」を削除しますか？`)) {
+      setContextMenu(null);
+      return;
+    }
     try {
       const success = await window.electronAPI.deleteServer(serverId);
       if (success) {
         const newServers = servers.filter(s => s.id !== serverId);
         setServers(newServers);
         setServerLogs(prev => { const n = {...prev}; delete n[serverId]; return n; });
-        if (selectedServerId === serverId) setSelectedServerId(newServers.length > 0 ? newServers[0].id : '');
+        if (selectedServerId === serverId) {
+          setSelectedServerId(newServers.length > 0 ? newServers[0].id : '');
+        }
         showToast('サーバーを削除しました', 'success');
-      } else { showToast('削除に失敗しました', 'error'); }
+      } else {
+        showToast('削除に失敗しました', 'error');
+      }
     } catch (e) { showToast('削除エラー', 'error'); }
     setContextMenu(null);
   };
 
   const handleClickOutside = () => { if (contextMenu) setContextMenu(null); };
+
+  const resolvedTheme: AppTheme = appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'darkBlue') : appTheme;
+  const themePalette: Record<Exclude<AppTheme, 'system'>, { mainBg: string; headerBg: string; text: string; sidebarBg: string; sidebarPanelBg: string; panelBg: string; border: string }> = {
+    dark: {
+      mainBg: '#0f0f11',
+      headerBg: 'rgba(18,18,20,0.92)',
+      text: '#ffffff',
+      sidebarBg: '#16171d',
+      sidebarPanelBg: '#1f2027',
+      panelBg: '#1c1d23',
+      border: '#2f2f3d',
+    },
+    darkBlue: {
+      mainBg: 'radial-gradient(circle at 20% 20%, rgba(45,70,120,0.25), transparent 40%), radial-gradient(circle at 80% 10%, rgba(24,57,99,0.3), transparent 35%), #0b1628',
+      headerBg: 'rgba(11,22,40,0.92)',
+      text: '#e2e8f0',
+      sidebarBg: '#0c1525',
+      sidebarPanelBg: '#122036',
+      panelBg: '#0f1d31',
+      border: '#1f3657',
+    },
+    grey: {
+      mainBg: '#1b1d21',
+      headerBg: 'rgba(36,38,44,0.92)',
+      text: '#f3f4f6',
+      sidebarBg: '#1f2227',
+      sidebarPanelBg: '#252932',
+      panelBg: '#21242b',
+      border: '#2e323a',
+    },
+    forest: {
+      mainBg: 'radial-gradient(circle at 20% 20%, rgba(46, 94, 72, 0.35), transparent 45%), #0f1914',
+      headerBg: 'rgba(20, 40, 32, 0.9)',
+      text: '#e9f5eb',
+      sidebarBg: '#13201a',
+      sidebarPanelBg: '#192b22',
+      panelBg: '#16251d',
+      border: '#214231',
+    },
+    sunset: {
+      mainBg: 'linear-gradient(135deg, #1d1b2f 0%, #2b1d38 35%, #40202f 70%, #46271f 100%)',
+      headerBg: 'rgba(46, 32, 54, 0.9)',
+      text: '#ffe8d9',
+      sidebarBg: '#261b32',
+      sidebarPanelBg: '#2f203b',
+      panelBg: '#2a1e32',
+      border: '#4a2d3c',
+    },
+    neon: {
+      mainBg: '#0a0a0f',
+      headerBg: 'rgba(12,12,18,0.9)',
+      text: '#e0f7ff',
+      sidebarBg: '#0f1220',
+      sidebarPanelBg: '#13172b',
+      panelBg: '#0f1426',
+      border: '#1f2b3f',
+    },
+    coffee: {
+      mainBg: '#1a120f',
+      headerBg: 'rgba(34,24,20,0.9)',
+      text: '#f4e9dd',
+      sidebarBg: '#221914',
+      sidebarPanelBg: '#2a201b',
+      panelBg: '#241c17',
+      border: '#3a2c24',
+    },
+    ocean: {
+      mainBg: 'radial-gradient(circle at 10% 20%, rgba(20,80,120,0.3), transparent 40%), #0c1720',
+      headerBg: 'rgba(14,30,44,0.9)',
+      text: '#e3f2ff',
+      sidebarBg: '#0f1e2b',
+      sidebarPanelBg: '#132538',
+      panelBg: '#10212f',
+      border: '#1f3a50',
+    },
+  };
+  const themeColors = themePalette[resolvedTheme as Exclude<AppTheme, 'system'>] || themePalette.dark;
 
   const getReleaseNotesText = () => {
     const notes: unknown = updatePrompt?.releaseNotes;
@@ -282,7 +432,9 @@ function App() {
     if (Array.isArray(notes)) {
       return notes
         .map((entry: any) => {
-          if (typeof entry === 'string') return entry;
+          if (typeof entry === 'string') {
+            return entry;
+          }
           if (entry && typeof entry === 'object' && 'body' in entry && typeof (entry as any).body === 'string') {
             return (entry as any).body as string;
           }
@@ -299,8 +451,12 @@ function App() {
   };
 
   const renderContent = () => {
-    if (currentView === 'proxy') return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
-    if (!activeServer) return <div className="p-10 text-center text-zinc-500 text-xl">サーバーを選択するか、作成してください</div>;
+    if (currentView === 'proxy') {
+      return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
+    }
+    if (!activeServer) {
+      return <div className="p-10 text-center text-zinc-500 text-xl">サーバーを選択するか、作成してください</div>;
+    }
 
     const contentKey = `${activeServer.id}-${currentView}`;
 
@@ -332,14 +488,18 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen" onClick={handleClickOutside}>
-      <aside className={`bg-[#202225] flex flex-col border-r border-border-color shrink-0 z-20 transition-all duration-200 ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}>
+    <div className="flex h-screen w-screen" onClick={handleClickOutside} style={{ background: themeColors.mainBg, color: themeColors.text }}>
+      <aside
+        className={`flex flex-col border-r shrink-0 z-20 transition-all duration-200 ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}
+        style={{ background: themeColors.sidebarBg, borderColor: themeColors.border, color: themeColors.text }}
+      >
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}>
           {isSidebarOpen && (
             <span
-              className="font-bold text-xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] cursor-pointer"
+              className="font-bold text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] cursor-pointer"
               onClick={handleOpenSettingsWindow}
               title="設定ウィンドウを開く"
+              style={{ color: themeColors.text }}
             >
               MC-Vector
             </span>
@@ -353,7 +513,7 @@ function App() {
           </button>
         </div>
 
-        <div className="flex-1 p-2.5 flex flex-col bg-[#2b2d31] overflow-y-auto rounded-xl">
+        <div className="flex-1 p-2.5 flex flex-col overflow-y-auto rounded-xl" style={{ background: themeColors.sidebarPanelBg }}>
           <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} iconSrc={iconDashboard} />
           <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} iconSrc={iconConsole} />
           <NavItem label={isSidebarOpen ? "Users" : ""} view="users" current={currentView} set={setCurrentView} iconSrc={iconUsers} />
@@ -369,7 +529,7 @@ function App() {
         </div>
 
         {isSidebarOpen && (
-          <div className="max-h-[40%] flex flex-col border-t border-border-color bg-black/20">
+          <div className="max-h-[40%] flex flex-col" style={{ borderTop: `1px solid ${themeColors.border}`, background: themeColors.sidebarPanelBg }}>
             <div className="px-2.5 py-1 text-xs text-text-secondary font-bold tracking-wider">SERVERS</div>
             <div className="overflow-y-auto flex-1 p-2.5 shrink-0">
               {servers.map((server) => (
@@ -384,11 +544,14 @@ function App() {
         )}
       </aside>
 
-      <main className="flex-1 flex flex-col bg-bg-primary overflow-hidden relative">
-        <header className="h-[60px] px-5 flex items-center justify-between border-b border-border-color bg-bg-primary/80 backdrop-blur-xl z-10 shrink-0">
+      <main className="flex-1 flex flex-col overflow-hidden relative" style={{ background: themeColors.mainBg, color: themeColors.text }}>
+        <header
+          className="h-[60px] px-5 flex items-center justify-between border-b backdrop-blur-xl z-10 shrink-0"
+          style={{ background: themeColors.headerBg, color: themeColors.text, borderColor: themeColors.border }}
+        >
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold text-white">{currentView === 'proxy' ? 'Network' : activeServer?.name}</h2>
-            <span className="text-text-secondary text-sm opacity-70"> / {currentView}</span>
+            <h2 className="text-xl font-bold" style={{ color: themeColors.text }}>{currentView === 'proxy' ? 'Network' : activeServer?.name}</h2>
+            <span className="text-sm" style={{ color: themeColors.text, opacity: 0.7 }}> / {currentView}</span>
           </div>
           <div className="flex items-center gap-2.5 ml-auto">
             {currentView !== 'proxy' && (
@@ -400,7 +563,7 @@ function App() {
             )}
           </div>
         </header>
-        <div className="flex-1 p-0 overflow-hidden relative flex flex-col">{renderContent()}</div>
+        <div className="flex-1 p-0 overflow-hidden relative flex flex-col" style={{ background: themeColors.panelBg }}>{renderContent()}</div>
       </main>
 
       {downloadStatus && (

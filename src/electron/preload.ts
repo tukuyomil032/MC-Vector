@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Settings Window ---
   openSettingsWindow: (currentSettings: any) => ipcRenderer.send('open-settings-window', currentSettings),
   settingsWindowReady: () => ipcRenderer.send('settings-window-ready'),
+  getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   onSettingsData: (callback: (data: any) => void) => {
     const subscription = (_event: unknown, data: any) => callback(data);
     ipcRenderer.on('init-settings-data', subscription);

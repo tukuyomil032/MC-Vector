@@ -50,6 +50,15 @@ function setConfigValue<T>(key: string, value: T) {
   saveConfig(config);
 }
 
+function getAppSettings() {
+  const rawTheme = getConfigValue<string>('appTheme', 'system');
+  const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
+  const normalizedTheme: AppTheme = allowed.includes(rawTheme as AppTheme) ? rawTheme as AppTheme : 'dark';
+  return {
+    theme: normalizedTheme,
+  };
+}
+
 function getServersRootDir(): string {
   const config = loadConfig();
   if (config.rootDir && fs.existsSync(config.rootDir)) {
@@ -84,7 +93,9 @@ function getServerPath(serverId: string): string | null {
 
 function loadServersList() {
   const jsonPath = getServersJsonPath();
-  if (!fs.existsSync(jsonPath)) return [];
+  if (!fs.existsSync(jsonPath)) {
+    return [];
+  }
   try {
     return JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
   } catch (e) {
@@ -101,7 +112,9 @@ function saveServersList(servers: any[]) {
 }
 
 function readServerProperties(filePath: string): Map<string, string> {
-  if (!fs.existsSync(filePath)) return new Map();
+  if (!fs.existsSync(filePath)) {
+    return new Map();
+  }
   const content = fs.readFileSync(filePath, 'utf-8');
   const properties = new Map<string, string>();
   content.split('\n').forEach(line => {
@@ -177,8 +190,9 @@ let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let proxyHelpWindow: BrowserWindow | null = null;
 let ngrokGuideWindow: BrowserWindow | null = null;
-
 let lastUpdateCheck: UpdateCheckResult | null = null;
+
+type AppTheme = 'dark' | 'darkBlue' | 'grey' | 'forest' | 'sunset' | 'neon' | 'coffee' | 'ocean' | 'system';
 
 let tempSettingsData: any = null;
 
@@ -204,7 +218,9 @@ function initDiscordRPC() {
 }
 
 async function setDiscordActivity(details: string, state: string, largeImageKey: string, smallImageKey?: string) {
-  if (!rpc) return;
+  if (!rpc) {
+    return;
+  }
   try {
     await rpc.setActivity({
       details,
@@ -222,8 +238,12 @@ async function setDiscordActivity(details: string, state: string, largeImageKey:
 }
 
 function broadcastToRenderers(channel: string, payload?: any) {
-  if (mainWindow) mainWindow.webContents.send(channel, payload);
-  if (settingsWindow) settingsWindow.webContents.send(channel, payload);
+  if (mainWindow) {
+    mainWindow.webContents.send(channel, payload);
+  }
+  if (settingsWindow) {
+    settingsWindow.webContents.send(channel, payload);
+  }
 }
 
 function initAutoUpdate() {
@@ -247,6 +267,7 @@ function initAutoUpdate() {
   });
 
   autoUpdater.on('update-not-available', () => {
+    lastUpdateCheck = null;
     broadcastToRenderers('update-not-available');
   });
 
@@ -270,7 +291,6 @@ function initAutoUpdate() {
     broadcastToRenderers('update-error', err?.message || 'Update error');
   });
 
-  // Kick off background check once on startup
   autoUpdater.checkForUpdates().catch((err: Error) => console.error('update check failed', err));
 }
 
@@ -293,7 +313,9 @@ function createWindow() {
   }
 
   setInterval(async () => {
-    if (activeServers.size === 0) return;
+    if (activeServers.size === 0) {
+      return;
+    }
 
     for (const [serverId, process] of activeServers) {
       if (process && process.pid) {
@@ -321,7 +343,9 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
   const binaryName = platform === 'win32' ? 'ngrok.exe' : 'ngrok';
   const binaryPath = path.join(NGROK_BIN_DIR, binaryName);
 
-  if (fs.existsSync(binaryPath)) return binaryPath;
+  if (fs.existsSync(binaryPath)) {
+    return binaryPath;
+  }
 
   let url = '';
   if (platform === 'win32') {
@@ -340,7 +364,9 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
 
   const zipPath = path.join(NGROK_BIN_DIR, 'ngrok.zip');
   await downloadFile(url, zipPath, (p) => {
-    if (onProgress) onProgress(p);
+    if (onProgress) {
+      onProgress(p);
+    }
   });
 
   const zip = new AdmZip(zipPath);
@@ -455,12 +481,16 @@ app.whenReady().then(() => {
   ipcMain.handle('get-server-root', async () => getServersRootDir());
 
   ipcMain.handle('select-root-folder', async () => {
-    if (!mainWindow) return null;
+    if (!mainWindow) {
+      return null;
+    }
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory'],
       title: 'サーバーデータの保存先を選択'
     });
-    if (result.canceled || result.filePaths.length === 0) return null;
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
     const newPath = result.filePaths[0];
     const config = loadConfig();
     config.rootDir = newPath;
@@ -481,7 +511,9 @@ app.whenReady().then(() => {
       const id = crypto.randomUUID();
       const rootDir = getServersRootDir();
       let folderName = serverData.name.replace(/[\\/:*?"<>|]/g, "").trim();
-      if (!folderName) folderName = `server-${id}`;
+      if (!folderName) {
+        folderName = `server-${id}`;
+      }
 
       let serverDir = path.join(rootDir, folderName);
       if (fs.existsSync(serverDir)) {
@@ -553,7 +585,9 @@ app.whenReady().then(() => {
 
       const servers = loadServersList();
       const index = servers.findIndex((s: any) => s.id === serverId);
-      if (index === -1) return false;
+      if (index === -1) {
+        return false;
+      }
 
       const serverToDelete = servers[index];
       if (serverToDelete.path && fs.existsSync(serverToDelete.path)) {
@@ -575,7 +609,9 @@ app.whenReady().then(() => {
   ipcMain.handle('download-server-jar', async (event, serverId) => {
     const servers = loadServersList();
     const server = servers.find((s: any) => s.id === serverId);
-    if (!server) return false;
+    if (!server) {
+      return false;
+    }
 
     const sender = event.sender;
     const sendProgress = (percent: number, status: string) => {
@@ -622,7 +658,9 @@ app.whenReady().then(() => {
         downloadUrl = `https://meta.fabricmc.net/v2/versions/loader/${server.version}/${stableLoader}/${stableInstaller}/server/jar`;
       }
 
-      if (!downloadUrl) throw new Error(`${server.software} (${server.version}) のダウンロードリンクが見つかりません。`);
+      if (!downloadUrl) {
+        throw new Error(`${server.software} (${server.version}) のダウンロードリンクが見つかりません。`);
+      }
 
       sendProgress(0, 'ダウンロード中...');
       const destPath = path.join(server.path, fileName);
@@ -642,7 +680,9 @@ app.whenReady().then(() => {
     try {
       const rootDir = getServersRootDir();
       const proxyPath = path.join(rootDir, 'Proxy-Server');
-      if (!fs.existsSync(proxyPath)) fs.mkdirSync(proxyPath, { recursive: true });
+      if (!fs.existsSync(proxyPath)) {
+        fs.mkdirSync(proxyPath, { recursive: true });
+      }
 
       let velocityServersConfig = '';
       const tryOrderList: string[] = [];
@@ -771,10 +811,14 @@ config-version = "2.7"
   });
 
   ipcMain.on('start-server', (event, serverId) => {
-    if (activeServers.has(serverId)) return;
+    if (activeServers.has(serverId)) {
+      return;
+    }
     const servers = loadServersList();
     const server = servers.find((s: any) => s.id === serverId);
-    if (!server || !server.path) return;
+    if (!server || !server.path) {
+      return;
+    }
 
     const sender = event.sender;
 
@@ -867,7 +911,10 @@ config-version = "2.7"
       settingsWindow.focus();
       return;
     }
-    tempSettingsData = currentSettings;
+    tempSettingsData = {
+      ...currentSettings,
+      ...getAppSettings(),
+    };
     settingsWindow = new BrowserWindow({
       width: 900,
       height: 700,
@@ -880,9 +927,9 @@ config-version = "2.7"
       }
     });
     if (process.env.VITE_DEV_SERVER_URL) {
-      settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#settings`);
+      settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#app-settings`);
     } else {
-      settingsWindow.loadURL(`file://${path.join(__dirname, '../dist/index.html')}#settings`);
+      settingsWindow.loadURL(`file://${path.join(__dirname, '../dist/index.html')}#app-settings`);
     }
     settingsWindow.on('closed', () => {
       settingsWindow = null;
@@ -893,13 +940,27 @@ config-version = "2.7"
     if (tempSettingsData) {
       event.sender.send('init-settings-data', tempSettingsData);
     }
+    if (lastUpdateCheck?.updateInfo) {
+      event.sender.send('init-update-check', {
+        version: lastUpdateCheck.updateInfo.version,
+        releaseNotes: lastUpdateCheck.updateInfo.releaseNotes,
+      });
+    }
   });
 
   ipcMain.on('save-settings-from-window', (_event, newSettings) => {
+    if (newSettings && typeof newSettings === 'object') {
+      if (typeof newSettings.theme === 'string') {
+        setConfigValue<AppTheme>('appTheme', newSettings.theme as AppTheme);
+      }
+      tempSettingsData = { ...tempSettingsData, ...newSettings };
+    }
     if (mainWindow) {
       mainWindow.webContents.send('settings-updated', newSettings);
     }
   });
+
+  ipcMain.handle('get-app-settings', async () => getAppSettings());
 
   ipcMain.handle('list-files', async (_event, dirPath, serverId) => {
     try {
@@ -908,13 +969,17 @@ config-version = "2.7"
         console.error('Path traversal attempt blocked:', dirPath);
         return [];
       }
-      if (!fs.existsSync(dirPath)) return [];
+      if (!fs.existsSync(dirPath)) {
+        return [];
+      }
       const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
       return dirents.map(d => ({
         name: d.name,
         isDirectory: d.isDirectory()
       })).sort((a, b) => {
-        if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
+        if (a.isDirectory === b.isDirectory) {
+          return a.name.localeCompare(b.name);
+        }
         return a.isDirectory ? -1 : 1;
       });
     } catch {
@@ -1022,7 +1087,9 @@ config-version = "2.7"
   });
 
   ipcMain.handle('import-files-dialog', async (_event, destDir, serverId: string) => {
-    if (!mainWindow) return { success: false, message: 'Window not found' };
+    if (!mainWindow) {
+      return { success: false, message: 'Window not found' };
+    }
 
     const serverPath = serverId ? getServerPath(serverId) : null;
     if (!serverPath || !isPathSafe(destDir, serverPath)) {
@@ -1061,7 +1128,9 @@ config-version = "2.7"
   ipcMain.handle('compress-files', async (_event, filePaths: string[], destPath: string, serverId: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath || !isPathSafe(destPath, serverPath)) return false;
+      if (!serverPath || !isPathSafe(destPath, serverPath)) {
+        return false;
+      }
 
       const zip = new AdmZip();
       for (const filePath of filePaths) {
@@ -1087,7 +1156,9 @@ config-version = "2.7"
   ipcMain.handle('extract-archive', async (_event, archivePath: string, destPath: string, serverId: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath || !isPathSafe(destPath, serverPath) || !isPathSafe(archivePath, serverPath)) return false;
+      if (!serverPath || !isPathSafe(destPath, serverPath) || !isPathSafe(archivePath, serverPath)) {
+        return false;
+      }
 
       const zip = new AdmZip(archivePath);
       const normalizedDest = path.resolve(destPath);
@@ -1121,8 +1192,12 @@ config-version = "2.7"
   ipcMain.handle('create-backup', async (_event, serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath) return false;
-      if (!fs.existsSync(serverPath)) return false;
+      if (!serverPath) {
+        return false;
+      }
+      if (!fs.existsSync(serverPath)) {
+        return false;
+      }
       const backupsDir = path.join(serverPath, 'backups');
       if (!fs.existsSync(backupsDir)) {
         await fs.promises.mkdir(backupsDir);
@@ -1144,8 +1219,12 @@ config-version = "2.7"
         const absPath = path.join(serverPath, relPath);
         const normalizedServer = path.resolve(serverPath);
         const normalizedAbs = path.resolve(absPath);
-        if (!normalizedAbs.startsWith(normalizedServer)) return;
-        if (!fs.existsSync(absPath)) return;
+        if (!normalizedAbs.startsWith(normalizedServer)) {
+          return;
+        }
+        if (!fs.existsSync(absPath)) {
+          return;
+        }
         const stat = fs.statSync(absPath);
         if (stat.isDirectory()) {
           archive.directory(absPath, relPath);
@@ -1159,7 +1238,9 @@ config-version = "2.7"
       await new Promise<void>((resolve, reject) => {
         output.on('close', () => resolve());
         archive.on('warning', (err: any) => {
-          if (err.code === 'ENOENT') return;
+          if (err.code === 'ENOENT') {
+            return;
+          }
           reject(err);
         });
         archive.on('error', (err: any) => reject(err));
@@ -1177,9 +1258,13 @@ config-version = "2.7"
   ipcMain.handle('list-backups', async (_event, serverId: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath) return [];
+      if (!serverPath) {
+        return [];
+      }
       const dir = path.join(serverPath, 'backups');
-      if (!fs.existsSync(dir)) return [];
+      if (!fs.existsSync(dir)) {
+        return [];
+      }
       const files = await fs.promises.readdir(dir);
       const res = [];
       for (const f of files) {
@@ -1197,9 +1282,13 @@ config-version = "2.7"
   ipcMain.handle('restore-backup', async (_event, serverId: string, backupName: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath) return false;
+      if (!serverPath) {
+        return false;
+      }
       const p = path.join(serverPath, 'backups', backupName);
-      if (!isPathSafe(p, serverPath) || !fs.existsSync(p)) return false;
+      if (!isPathSafe(p, serverPath) || !fs.existsSync(p)) {
+        return false;
+      }
       const zip = new AdmZip(p);
       const normalizedDest = path.resolve(serverPath);
       for (const entry of zip.getEntries()) {
@@ -1220,9 +1309,13 @@ config-version = "2.7"
   ipcMain.handle('delete-backup', async (_event, serverId: string, backupName: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath) return false;
+      if (!serverPath) {
+        return false;
+      }
       const p = path.join(serverPath, 'backups', backupName);
-      if (!isPathSafe(p, serverPath)) return false;
+      if (!isPathSafe(p, serverPath)) {
+        return false;
+      }
       if (fs.existsSync(p)) {
         await fs.promises.unlink(p);
         return true;
@@ -1254,19 +1347,25 @@ config-version = "2.7"
   ipcMain.handle('install-modrinth-project', async (_event, _projectId, _versionId, fileName, downloadUrl, serverId: string, type) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath) return false;
+      if (!serverPath) {
+        return false;
+      }
       const folderName = type === 'plugin' ? 'plugins' : 'mods';
       const targetDir = path.join(serverPath, folderName);
 
       const safeName = path.basename(fileName);
-      if (safeName !== fileName) return false;
+      if (safeName !== fileName) {
+        return false;
+      }
 
       if (!fs.existsSync(targetDir)) {
         await fs.promises.mkdir(targetDir, { recursive: true });
       }
 
       const destPath = path.join(targetDir, safeName);
-      if (!isPathSafe(destPath, serverPath)) return false;
+      if (!isPathSafe(destPath, serverPath)) {
+        return false;
+      }
 
       const maxSize = 200 * 1024 * 1024;
 
@@ -1320,17 +1419,22 @@ config-version = "2.7"
   ipcMain.handle('install-hangar-project', async (_event, downloadUrl, fileName, serverId: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath) return false;
+      if (!serverPath) {
+        return false;
+      }
       const targetDir = path.join(serverPath, 'plugins');
 
       const safeName = path.basename(fileName);
-      if (safeName !== fileName) return false;
-
+      if (safeName !== fileName) {
+        return false;
+      }
       if (!fs.existsSync(targetDir)) {
         await fs.promises.mkdir(targetDir, { recursive: true });
       }
       const destPath = path.join(targetDir, safeName);
-      if (!isPathSafe(destPath, serverPath)) return false;
+      if (!isPathSafe(destPath, serverPath)) {
+        return false;
+      }
 
       const maxSize = 200 * 1024 * 1024;
 
@@ -1371,7 +1475,9 @@ config-version = "2.7"
 
 
   ipcMain.handle('get-java-versions', async () => {
-    if (!fs.existsSync(RUNTIMES_PATH)) return [];
+    if (!fs.existsSync(RUNTIMES_PATH)) {
+      return [];
+    }
     const dirs = await fs.promises.readdir(RUNTIMES_PATH, { withFileTypes: true });
     const javaList: { name: string, path: string, version: number }[] = [];
 
@@ -1414,16 +1520,24 @@ config-version = "2.7"
       const isMac = process.platform === 'darwin';
 
       let osStr = 'linux';
-      if (isWin) osStr = 'windows';
-      if (isMac) osStr = 'mac';
+      if (isWin) {
+        osStr = 'windows';
+      }
+      if (isMac) {
+        osStr = 'mac';
+      }
 
       let archStr = 'x64';
-      if (process.arch === 'arm64') archStr = 'aarch64';
+      if (process.arch === 'arm64') {
+        archStr = 'aarch64';
+      }
 
       const ext = isWin ? 'zip' : 'tar.gz';
       const url = `https://api.adoptium.net/v3/binary/latest/${version}/ga/${osStr}/${archStr}/jdk/hotspot/normal/eclipse?project=jdk`;
 
-      if (!fs.existsSync(RUNTIMES_PATH)) await fs.promises.mkdir(RUNTIMES_PATH, { recursive: true });
+      if (!fs.existsSync(RUNTIMES_PATH)) {
+        await fs.promises.mkdir(RUNTIMES_PATH, { recursive: true });
+      }
 
       const downloadPath = path.join(RUNTIMES_PATH, `java-${version}.${ext}`);
       await downloadFile(url, downloadPath, sendProgress);
@@ -1456,9 +1570,13 @@ config-version = "2.7"
       properties: ['openFile'],
       filters,
     });
-    if (result.canceled || result.filePaths.length === 0) return null;
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
     const picked = result.filePaths[0];
-    if (!fs.existsSync(picked)) return null;
+    if (!fs.existsSync(picked)) {
+      return null;
+    }
     return picked;
   });
 
@@ -1479,7 +1597,9 @@ config-version = "2.7"
   ipcMain.handle('read-json-file', async (_event, filePath: string, serverId: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath || !isPathSafe(filePath, serverPath)) return [];
+      if (!serverPath || !isPathSafe(filePath, serverPath)) {
+        return [];
+      }
       if (fs.existsSync(filePath)) {
         const content = await fs.promises.readFile(filePath, 'utf-8');
         return JSON.parse(content);
@@ -1494,7 +1614,9 @@ config-version = "2.7"
   ipcMain.handle('write-json-file', async (_event, filePath: string, data, serverId: string) => {
     try {
       const serverPath = getServerPath(serverId);
-      if (!serverPath || !isPathSafe(filePath, serverPath)) return false;
+      if (!serverPath || !isPathSafe(filePath, serverPath)) {
+        return false;
+      }
       await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
       return true;
     } catch (e) {
@@ -1533,7 +1655,9 @@ config-version = "2.7"
 
         const servers = loadServersList();
         const server = servers.find((s: any) => s.id === serverId);
-        if (!server) throw new Error('Server not found');
+        if (!server) {
+          throw new Error('Server not found');
+        }
 
         const args = [
             'tcp',
@@ -1560,15 +1684,21 @@ config-version = "2.7"
           const session = ngrokSessions.get(serverId);
 
           for (const line of lines) {
-            if (!line.trim()) continue;
+            if (!line.trim()) {
+              continue;
+            }
 
-            if (session) session.logs.push(line);
+            if (session) {
+              session.logs.push(line);
+            }
             sendInfo({ log: line });
 
             const urlMatch = line.match(/url=(tcp:\/\/.+)/);
             if (urlMatch) {
                 const url = urlMatch[1];
-                if (session) session.url = url;
+                if (session) {
+                  session.url = url;
+                }
                 sendInfo({ url: url });
             }
           }
@@ -1577,7 +1707,9 @@ config-version = "2.7"
         process.stderr.on('data', (data) => {
           const text = data.toString();
           const session = ngrokSessions.get(serverId);
-          if (session) session.logs.push(text);
+          if (session) {
+            session.logs.push(text);
+          }
           sendInfo({ log: `[Stderr] ${text}` });
         });
 

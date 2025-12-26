@@ -32,6 +32,7 @@ export interface IElectronAPI {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   openSettingsWindow: (currentSettings: any) => void;
   settingsWindowReady: () => void;
+  getAppSettings: () => Promise<{ theme: 'dark' | 'darkBlue' | 'grey' | 'system' }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSettingsData: (callback: (data: any) => void) => () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
