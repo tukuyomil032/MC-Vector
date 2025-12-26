@@ -19,19 +19,19 @@ jobs:
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
-            build-command: pnpm exec electron-builder --mac --arm64 --publish never
+            build-command: pnpm exec electron-builder --mac --arm64 --publish always
             artifact-name: mac-arm64
             asset-pattern: release/*.dmg
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
-            build-command: pnpm exec electron-builder --mac --x64 --publish never
+            build-command: pnpm exec electron-builder --mac --x64 --publish always
             artifact-name: mac-x64
             asset-pattern: release/*.dmg
           - os: windows-latest
             node-version: 20
             pnpm-version: 10.26.2
-            build-command: pnpm exec electron-builder --win --x64 --publish never
+            build-command: pnpm exec electron-builder --win --x64 --publish always
             artifact-name: win-x64
             asset-pattern: release/*.exe
 
@@ -58,7 +58,7 @@ jobs:
 
       - name: Build Electron app
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: ${{ matrix.build-command }}
 
       - name: Upload artifacts

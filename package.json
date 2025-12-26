@@ -66,6 +66,13 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tukuyomil032",
+        "repo": "MC-Vector"
+      }
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
