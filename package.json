@@ -70,7 +70,8 @@
       {
         "provider": "github",
         "owner": "tukuyomil032",
-        "repo": "MC-Vector"
+        "repo": "MC-Vector",
+        "releaseType": "release"
       }
     ],
     "files": [

@@ -21,13 +21,13 @@ jobs:
             pnpm-version: 10.26.2
             build-command: pnpm exec electron-builder --mac --arm64 --publish always
             artifact-name: mac-arm64
-            asset-pattern: release/*.dmg
+            asset-pattern: release/*.zip
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
             build-command: pnpm exec electron-builder --mac --x64 --publish always
             artifact-name: mac-x64
-            asset-pattern: release/*.dmg
+            asset-pattern: release/*.zip
           - os: windows-latest
             node-version: 20
             pnpm-version: 10.26.2
