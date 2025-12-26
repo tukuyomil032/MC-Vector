@@ -19,12 +19,14 @@ jobs:
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
+            arch-label: Apple-silion
             build-command: pnpm exec electron-builder --mac --arm64 --publish always
             artifact-name: mac-arm64
             asset-pattern: release/*.zip
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
+            arch-label: Intel-CPU
             build-command: pnpm exec electron-builder --mac --x64 --publish always
             artifact-name: mac-x64
             asset-pattern: release/*.zip
@@ -59,6 +61,7 @@ jobs:
       - name: Build Electron app
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          ARCH_LABEL: ${{ matrix.arch-label }}
         run: ${{ matrix.build-command }}
 
       - name: Upload artifacts
