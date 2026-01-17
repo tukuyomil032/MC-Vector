@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   CI: true
   CSC_IDENTITY_AUTO_DISCOVERY: false
