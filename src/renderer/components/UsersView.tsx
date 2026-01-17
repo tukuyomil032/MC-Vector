@@ -211,7 +211,7 @@ function UserListCard({ title, data, type, onAdd, onRemove }: {
                                 {/* ★ Head Image */}
                                 {type !== 'banned-ips' && (
                                     <img
-                                        src={`https://minotar.net/avatar/${item.name}/24`}
+                                        src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
                                         alt=""
                                         className="rounded w-6 h-6"
                                         onError={(e) => { (e.target as HTMLImageElement).src = 'https://minotar.net/avatar/MHF_Steve/24' }}
