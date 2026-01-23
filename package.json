@@ -15,8 +15,7 @@
     "lint": "eslint . --ignore-pattern 'dist-electron/**' --ignore-pattern 'dist/**' --ignore-pattern 'release/**'",
     "dist": "pnpm run dist:mac",
     "dist:mac": "pnpm run build && electron-builder --mac --x64 --arm64",
-    "dist:win": "pnpm run build && electron-builder --win --x64",
-    "prepare": "husky"
+    "dist:win": "pnpm run build && electron-builder --win --x64"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
