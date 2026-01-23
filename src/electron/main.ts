@@ -123,6 +123,45 @@ function loadServersList() {
   }
 }
 
+function isSafeJavaExecutable(javaPath: string): boolean {
+  // Allow plain "java" to defer to the system-resolved Java executable.
+  if (javaPath === 'java') {
+    return true;
+  }
+
+  // Only allow absolute, normalized paths.
+  const resolvedPath = path.resolve(javaPath);
+  if (!path.isAbsolute(resolvedPath)) {
+    return false;
+  }
+
+  // Path must exist and be a file.
+  if (!fs.existsSync(resolvedPath)) {
+    return false;
+  }
+  const stat = fs.statSync(resolvedPath);
+  if (!stat.isFile()) {
+    return false;
+  }
+
+  // Ensure the filename looks like a Java binary (java or javaw).
+  const base = path.basename(resolvedPath).toLowerCase();
+  if (!(base === 'java' || base === 'java.exe' || base === 'javaw' || base === 'javaw.exe')) {
+    return false;
+  }
+
+  // On non-Windows platforms, require the file to be executable.
+  if (os.platform() !== 'win32') {
+    try {
+      fs.accessSync(resolvedPath, fs.constants.X_OK);
+    } catch {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function validateDownloadUrl(url: string): string {
   let parsed: URL;
   try {
@@ -929,14 +968,17 @@ config-version = "2.7"
 
     let javaCommand = 'java';
 
-    if (server.javaPath && isSafeJavaPath(server.javaPath)) {
-      javaCommand = server.javaPath === 'java' ? 'java' : path.resolve(server.javaPath);
-    } else if (server.javaPath) {
-      sendLog(
-        sender,
-        serverId,
-        `[WARNING] Custom Java path is invalid or not executable: ${server.javaPath}. Falling back to system 'java'.`,
-      );
+    if (server.javaPath) {
+      if (isSafeJavaExecutable(server.javaPath)) {
+        // Use system-resolved Java when configured as "java", otherwise the validated absolute path.
+        javaCommand = server.javaPath === 'java' ? 'java' : path.resolve(server.javaPath);
+      } else {
+        sendLog(
+          sender,
+          serverId,
+          `[WARNING] Custom Java path is invalid or not executable: ${server.javaPath}. Falling back to system 'java'.`,
+        );
+      }
     }
 
     const args = [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', jarName];
