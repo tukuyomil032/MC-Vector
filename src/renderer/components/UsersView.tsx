@@ -40,7 +40,12 @@ export default function UsersView({ server }: Props) {
     return { name };
   };
 
-  const maybeApplyLiveCommand = async (type: ListType, action: 'add' | 'remove', nameOrIp: string, rawInput: string) => {
+  const maybeApplyLiveCommand = async (
+    type: ListType,
+    action: 'add' | 'remove',
+    nameOrIp: string,
+    rawInput: string,
+  ) => {
     if (server.status !== 'online') return;
     const command = (() => {
       if (type === 'whitelist') return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${nameOrIp}`;
@@ -59,10 +64,12 @@ export default function UsersView({ server }: Props) {
   }, [server.path]);
 
   const loadAllLists = async () => {
-    setWhitelist(await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`, server.id) || []);
-    setOps(await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`, server.id) || []);
-    setBannedPlayers(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-players.json`, server.id) || []);
-    setBannedIps(await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`, server.id) || []);
+    setWhitelist((await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`, server.id)) || []);
+    setOps((await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`, server.id)) || []);
+    setBannedPlayers(
+      (await window.electronAPI.readJsonFile(`${server.path}${sep}banned-players.json`, server.id)) || [],
+    );
+    setBannedIps((await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`, server.id)) || []);
   };
 
   const handleAdd = async (type: ListType, nameOrIp: string) => {
@@ -72,23 +79,40 @@ export default function UsersView({ server }: Props) {
     let currentList: PlayerEntry[] = [];
     let newItem: PlayerEntry = { name: identity.name, uuid: identity.uuid };
 
-    switch(type) {
-      case 'whitelist': currentList = [...whitelist]; break;
+    switch (type) {
+      case 'whitelist':
+        currentList = [...whitelist];
+        break;
       case 'ops':
         currentList = [...ops];
         newItem = { ...newItem, level: 4, bypassesPlayerLimit: false } as any;
         break;
       case 'banned-players':
         currentList = [...bannedPlayers];
-        newItem = { ...newItem, created: new Date().toISOString(), source: 'Console', reason: 'Banned by Admin' };
+        newItem = {
+          ...newItem,
+          created: new Date().toISOString(),
+          source: 'Console',
+          reason: 'Banned by Admin',
+        };
         break;
       case 'banned-ips':
         currentList = [...bannedIps];
-        newItem = { ip: nameOrIp, name: 'unknown', created: new Date().toISOString(), source: 'Console', reason: 'IP Banned' };
+        newItem = {
+          ip: nameOrIp,
+          name: 'unknown',
+          created: new Date().toISOString(),
+          source: 'Console',
+          reason: 'IP Banned',
+        };
         break;
     }
 
-    if (currentList.some(p => (type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase()))) {
+    if (
+      currentList.some((p) =>
+        type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase(),
+      )
+    ) {
       showToast('既に存在します', 'info');
       return;
     }
@@ -98,11 +122,19 @@ export default function UsersView({ server }: Props) {
     await maybeApplyLiveCommand(type, 'add', identity.name, nameOrIp);
     showToast('リストを更新しました', 'success');
 
-    switch(type) {
-      case 'whitelist': setWhitelist(newData); break;
-      case 'ops': setOps(newData); break;
-      case 'banned-players': setBannedPlayers(newData); break;
-      case 'banned-ips': setBannedIps(newData); break;
+    switch (type) {
+      case 'whitelist':
+        setWhitelist(newData);
+        break;
+      case 'ops':
+        setOps(newData);
+        break;
+      case 'banned-players':
+        setBannedPlayers(newData);
+        break;
+      case 'banned-ips':
+        setBannedIps(newData);
+        break;
     }
   };
 
@@ -110,23 +142,39 @@ export default function UsersView({ server }: Props) {
     const filePath = `${server.path}${sep}${getFileName(type)}`;
     let currentList: PlayerEntry[] = [];
 
-    switch(type) {
-        case 'whitelist': currentList = whitelist; break;
-        case 'ops': currentList = ops; break;
-        case 'banned-players': currentList = bannedPlayers; break;
-        case 'banned-ips': currentList = bannedIps; break;
+    switch (type) {
+      case 'whitelist':
+        currentList = whitelist;
+        break;
+      case 'ops':
+        currentList = ops;
+        break;
+      case 'banned-players':
+        currentList = bannedPlayers;
+        break;
+      case 'banned-ips':
+        currentList = bannedIps;
+        break;
     }
 
-    const newData = currentList.filter(p => (type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier));
+    const newData = currentList.filter((p) => (type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier));
     await window.electronAPI.writeJsonFile(filePath, newData, server.id);
     await maybeApplyLiveCommand(type, 'remove', identifier, identifier);
     showToast('削除しました', 'success');
 
-    switch(type) {
-        case 'whitelist': setWhitelist(newData); break;
-        case 'ops': setOps(newData); break;
-        case 'banned-players': setBannedPlayers(newData); break;
-        case 'banned-ips': setBannedIps(newData); break;
+    switch (type) {
+      case 'whitelist':
+        setWhitelist(newData);
+        break;
+      case 'ops':
+        setOps(newData);
+        break;
+      case 'banned-players':
+        setBannedPlayers(newData);
+        break;
+      case 'banned-ips':
+        setBannedIps(newData);
+        break;
     }
   };
 
@@ -140,120 +188,121 @@ export default function UsersView({ server }: Props) {
 
   return (
     <div className="h-full p-5 flex flex-col">
-      <h2 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">
-        User Management
-      </h2>
+      <h2 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">User Management</h2>
 
       <div className="grid grid-cols-2 grid-rows-2 gap-5 flex-1 min-h-0">
         <UserListCard
-            title="Whitelist"
-            data={whitelist}
-            type="whitelist"
-            onAdd={(val) => handleAdd('whitelist', val)}
-            onRemove={(val) => handleRemove('whitelist', val)}
+          title="Whitelist"
+          data={whitelist}
+          type="whitelist"
+          onAdd={(val) => handleAdd('whitelist', val)}
+          onRemove={(val) => handleRemove('whitelist', val)}
         />
         <UserListCard
-            title="Operators (OP)"
-            data={ops}
-            type="ops"
-            onAdd={(val) => handleAdd('ops', val)}
-            onRemove={(val) => handleRemove('ops', val)}
+          title="Operators (OP)"
+          data={ops}
+          type="ops"
+          onAdd={(val) => handleAdd('ops', val)}
+          onRemove={(val) => handleRemove('ops', val)}
         />
         <UserListCard
-            title="Banned Players"
-            data={bannedPlayers}
-            type="banned-players"
-            onAdd={(val) => handleAdd('banned-players', val)}
-            onRemove={(val) => handleRemove('banned-players', val)}
+          title="Banned Players"
+          data={bannedPlayers}
+          type="banned-players"
+          onAdd={(val) => handleAdd('banned-players', val)}
+          onRemove={(val) => handleRemove('banned-players', val)}
         />
         <UserListCard
-            title="Banned IPs"
-            data={bannedIps}
-            type="banned-ips"
-            onAdd={(val) => handleAdd('banned-ips', val)}
-            onRemove={(val) => handleRemove('banned-ips', val)}
+          title="Banned IPs"
+          data={bannedIps}
+          type="banned-ips"
+          onAdd={(val) => handleAdd('banned-ips', val)}
+          onRemove={(val) => handleRemove('banned-ips', val)}
         />
       </div>
     </div>
   );
 }
 
-function UserListCard({ title, data, type, onAdd, onRemove }: {
-    title: string,
-    data: PlayerEntry[],
-    type: ListType,
-    onAdd: (val: string) => void,
-    onRemove: (val: string) => void
+function UserListCard({
+  title,
+  data,
+  type,
+  onAdd,
+  onRemove,
+}: {
+  title: string;
+  data: PlayerEntry[];
+  type: ListType;
+  onAdd: (val: string) => void;
+  onRemove: (val: string) => void;
 }) {
-    const [input, setInput] = useState('');
+  const [input, setInput] = useState('');
 
-    const handleAddClick = () => {
-        if(!input) return;
-        onAdd(input);
-        setInput('');
-    };
+  const handleAddClick = () => {
+    if (!input) return;
+    onAdd(input);
+    setInput('');
+  };
 
-    return (
-        <div className="bg-[#252526] rounded-lg border border-zinc-700 flex flex-col overflow-hidden">
-            <div className="px-4 py-2.5 bg-zinc-800 font-bold border-b border-zinc-700 flex justify-between items-center">
-                {title}
-                <span className="text-xs text-zinc-400 font-normal">{data.length} entries</span>
-            </div>
+  return (
+    <div className="bg-[#252526] rounded-lg border border-zinc-700 flex flex-col overflow-hidden">
+      <div className="px-4 py-2.5 bg-zinc-800 font-bold border-b border-zinc-700 flex justify-between items-center">
+        {title}
+        <span className="text-xs text-zinc-400 font-normal">{data.length} entries</span>
+      </div>
 
-            {/* リスト表示エリア */}
-            <div className="flex-1 overflow-y-auto p-2.5">
-                {data.length === 0 ? (
-                    <div className="text-zinc-600 text-center mt-5">Empty</div>
-                ) : (
-                    data.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 mb-1.5 bg-[#2b2b2b] rounded">
-                            <div className="flex items-center gap-2.5">
-                                {/* ★ Head Image */}
-                                {type !== 'banned-ips' && (
-                                    <img
-                                        src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
-                                        alt=""
-                                        className="rounded w-6 h-6"
-                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://minotar.net/avatar/MHF_Steve/24' }}
-                                    />
-                                )}
-                                <div>
-                                    <div className="font-bold text-sm">
-                                        {type === 'banned-ips' ? item.ip : item.name}
-                                    </div>
-                                    {/* Additional Info */}
-                                    {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
-                                    {item.level && <div className="text-xs text-yellow-500">Level: {item.level}</div>}
-                                </div>
-                            </div>
-                            <button
-                                className="btn-stop py-0.5 px-2 text-xs"
-                                onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
-                            >
-                                Remove
-                            </button>
-                        </div>
-                    ))
+      {/* リスト表示エリア */}
+      <div className="flex-1 overflow-y-auto p-2.5">
+        {data.length === 0 ? (
+          <div className="text-zinc-600 text-center mt-5">Empty</div>
+        ) : (
+          data.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between p-2 mb-1.5 bg-[#2b2b2b] rounded">
+              <div className="flex items-center gap-2.5">
+                {/* ★ Head Image */}
+                {type !== 'banned-ips' && (
+                  <img
+                    src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
+                    alt=""
+                    className="rounded w-6 h-6"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://minotar.net/avatar/MHF_Steve/24';
+                    }}
+                  />
                 )}
+                <div>
+                  <div className="font-bold text-sm">{type === 'banned-ips' ? item.ip : item.name}</div>
+                  {/* Additional Info */}
+                  {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
+                  {item.level && <div className="text-xs text-yellow-500">Level: {item.level}</div>}
+                </div>
+              </div>
+              <button
+                className="btn-stop py-0.5 px-2 text-xs"
+                onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
+              >
+                Remove
+              </button>
             </div>
+          ))
+        )}
+      </div>
 
-            {/* 追加フォーム */}
-            <div className="p-2.5 border-t border-zinc-700 flex gap-1.5">
-                <input
-                    type="text"
-                    className="input-field flex-1 py-1.5"
-                    placeholder={type === 'banned-ips' ? "IP Address" : "Player Name"}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
-                />
-                <button
-                    className="btn-primary py-1.5 px-3"
-                    onClick={handleAddClick}
-                >
-                    Add
-                </button>
-            </div>
-        </div>
-    );
+      {/* 追加フォーム */}
+      <div className="p-2.5 border-t border-zinc-700 flex gap-1.5">
+        <input
+          type="text"
+          className="input-field flex-1 py-1.5"
+          placeholder={type === 'banned-ips' ? 'IP Address' : 'Player Name'}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
+        />
+        <button className="btn-primary py-1.5 px-3" onClick={handleAddClick}>
+          Add
+        </button>
+      </div>
+    </div>
+  );
 }

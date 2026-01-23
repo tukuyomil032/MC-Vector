@@ -23,10 +23,14 @@ export interface IElectronAPI {
   selectRootFolder: () => Promise<string | null>;
 
   // --- Logs, Progress, Stats ---
-  onServerLog: (callback: (event: unknown, log: string) => void) => (() => void);
-  onDownloadProgress: (callback: (event: unknown, data: { serverId: string, progress: number, status: string }) => void) => void;
-  onServerStats: (callback: (event: unknown, data: { serverId: string, cpu: number, memory: number }) => void) => (() => void);
-  onServerStatusUpdate: (callback: (event: unknown, data: { serverId: string, status: string }) => void) => (() => void);
+  onServerLog: (callback: (event: unknown, log: string) => void) => () => void;
+  onDownloadProgress: (
+    callback: (event: unknown, data: { serverId: string; progress: number; status: string }) => void,
+  ) => void;
+  onServerStats: (
+    callback: (event: unknown, data: { serverId: string; cpu: number; memory: number }) => void,
+  ) => () => void;
+  onServerStatusUpdate: (callback: (event: unknown, data: { serverId: string; status: string }) => void) => () => void;
 
   // --- Settings Window ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,7 +59,10 @@ export interface IElectronAPI {
   openPathInExplorer: (path: string, serverId?: string) => Promise<void>;
 
   // --- Backups ---
-  createBackup: (serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) => Promise<boolean>;
+  createBackup: (
+    serverId: string,
+    options?: { name?: string; paths?: string[]; compressionLevel?: number },
+  ) => Promise<boolean>;
   listBackups: (serverId: string) => Promise<{ name: string; date: Date; size: number }[]>;
   restoreBackup: (serverId: string, backupName: string) => Promise<boolean>;
   deleteBackup: (serverId: string, backupName: string) => Promise<boolean>;
@@ -66,14 +73,21 @@ export interface IElectronAPI {
 
   // --- Mod/Plugin Browser ---
   searchModrinth: (query: string, type: 'mod' | 'plugin', version: string, offset: number) => Promise<any[]>;
-  installModrinthProject: (projectId: string, versionId: string, fileName: string, downloadUrl: string, serverId: string, type: 'mod' | 'plugin') => Promise<boolean>;
+  installModrinthProject: (
+    projectId: string,
+    versionId: string,
+    fileName: string,
+    downloadUrl: string,
+    serverId: string,
+    type: 'mod' | 'plugin',
+  ) => Promise<boolean>;
 
   // Hangar API
   searchHangar: (query: string, version: string, offset: number) => Promise<any[]>;
   installHangarProject: (downloadUrl: string, fileName: string, serverId: string) => Promise<boolean>;
 
   // --- Java Manager ---
-  getJavaVersions: () => Promise<{ name: string, path: string, version: number }[]>;
+  getJavaVersions: () => Promise<{ name: string; path: string; version: number }[]>;
   downloadJava: (version: number) => Promise<boolean>;
   selectJavaBinary: () => Promise<string | null>;
   deleteJava: (version: number) => Promise<boolean>;
@@ -85,23 +99,38 @@ export interface IElectronAPI {
   writeJsonFile: (filePath: string, data: any[], serverId: string) => Promise<boolean>;
 
   // ngrok (Public Access)
-  toggleNgrok: (serverId: string, enabled: boolean, token?: string) => Promise<{ success: boolean, message?: string }>;
-  onNgrokInfo: (callback: (event: unknown, data: { serverId: string, url?: string, log?: string, status: 'running' | 'stopped' | 'error' | 'downloading' }) => void) => (() => void);
+  toggleNgrok: (serverId: string, enabled: boolean, token?: string) => Promise<{ success: boolean; message?: string }>;
+  onNgrokInfo: (
+    callback: (
+      event: unknown,
+      data: {
+        serverId: string;
+        url?: string;
+        log?: string;
+        status: 'running' | 'stopped' | 'error' | 'downloading';
+      },
+    ) => void,
+  ) => () => void;
   hasNgrokToken: () => Promise<boolean>;
   clearNgrokToken: () => Promise<boolean>;
-  getNgrokStatus: (serverId: string) => Promise<{ active: boolean, url: string | null, logs?: string[]}>;
+  getNgrokStatus: (serverId: string) => Promise<{ active: boolean; url: string | null; logs?: string[] }>;
   openNgrokGuide: () => void;
 
   // Updates
-  checkForUpdates: () => Promise<{ available?: boolean; version?: string; releaseNotes?: unknown; error?: string }>;
+  checkForUpdates: () => Promise<{
+    available?: boolean;
+    version?: string;
+    releaseNotes?: unknown;
+    error?: string;
+  }>;
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
-  onUpdateAvailable: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => (() => void);
-  onUpdateAvailableSilent: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => (() => void);
-  onUpdateNotAvailable: (callback: () => void) => (() => void);
-  onUpdateDownloadProgress: (callback: (payload: { percent: number }) => void) => (() => void);
-  onUpdateDownloaded: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => (() => void);
-  onUpdateError: (callback: (message: string) => void) => (() => void);
+  onUpdateAvailable: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => () => void;
+  onUpdateAvailableSilent: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => () => void;
+  onUpdateNotAvailable: (callback: () => void) => () => void;
+  onUpdateDownloadProgress: (callback: (payload: { percent: number }) => void) => () => void;
+  onUpdateDownloaded: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => () => void;
+  onUpdateError: (callback: (message: string) => void) => () => void;
 }
 
 declare global {

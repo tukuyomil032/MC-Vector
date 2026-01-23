@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function DashboardView({ server }: Props) {
-  const [stats, setStats] = useState<{ time: string, cpu: number, memory: number }[]>([]);
+  const [stats, setStats] = useState<{ time: string; cpu: number; memory: number }[]>([]);
   const [currentCpu, setCurrentCpu] = useState(0);
   const [currentMem, setCurrentMem] = useState(0);
 
@@ -22,7 +22,7 @@ export default function DashboardView({ server }: Props) {
       setCurrentCpu(cpuVal);
       setCurrentMem(memVal);
 
-      setStats(prev => {
+      setStats((prev) => {
         const newData = [...prev, { time: now, cpu: cpuVal, memory: memVal }];
         if (newData.length > 20) newData.shift();
         return newData;
@@ -35,9 +35,9 @@ export default function DashboardView({ server }: Props) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
-      　return '#10b981';
+        return '#10b981';
       case 'offline':
-      　return '#ef4444';
+        return '#ef4444';
       case 'starting':
         return '#eab308';
       case 'stopping':
@@ -51,9 +51,7 @@ export default function DashboardView({ server }: Props) {
 
   return (
     <div className="h-full p-5 overflow-y-auto">
-      <h2 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">
-        Dashboard: {server.name}
-      </h2>
+      <h2 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">Dashboard: {server.name}</h2>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-5 mb-8">
         <div className="p-5 text-center bg-[#252526] rounded-lg border border-border-color">
@@ -84,10 +82,16 @@ export default function DashboardView({ server }: Props) {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="time" stroke="#666" tick={{fontSize: 10}} />
-                <YAxis stroke="#666" tick={{fontSize: 10}} />
+                <XAxis dataKey="time" stroke="#666" tick={{ fontSize: 10 }} />
+                <YAxis stroke="#666" tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={{ backgroundColor: '#333', border: 'none' }} />
-                <Area type="monotone" dataKey="cpu" stroke="#3b82f6" fill="rgba(59, 130, 246, 0.3)" isAnimationActive={false} />
+                <Area
+                  type="monotone"
+                  dataKey="cpu"
+                  stroke="#3b82f6"
+                  fill="rgba(59, 130, 246, 0.3)"
+                  isAnimationActive={false}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -99,10 +103,16 @@ export default function DashboardView({ server }: Props) {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="time" stroke="#666" tick={{fontSize: 10}} />
-                <YAxis stroke="#666" tick={{fontSize: 10}} />
+                <XAxis dataKey="time" stroke="#666" tick={{ fontSize: 10 }} />
+                <YAxis stroke="#666" tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={{ backgroundColor: '#333', border: 'none' }} />
-                <Area type="monotone" dataKey="memory" stroke="#a855f7" fill="rgba(168, 85, 247, 0.3)" isAnimationActive={false} />
+                <Area
+                  type="monotone"
+                  dataKey="memory"
+                  stroke="#a855f7"
+                  fill="rgba(168, 85, 247, 0.3)"
+                  isAnimationActive={false}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>

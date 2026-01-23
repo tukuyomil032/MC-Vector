@@ -19,6 +19,26 @@ const __dirname = path.dirname(__filename);
 
 (globalThis as any).__filename = __filename;
 (globalThis as any).__dirname = __dirname;
+
+const ERROR_LOG_PATH = path.join(app.getPath ? app.getPath('userData') : __dirname, 'electron-error.log');
+function writeErrorLog(item: any) {
+  try {
+    const text = typeof item === 'string' ? item : item && item.stack ? item.stack : JSON.stringify(item);
+    const line = `[${new Date().toISOString()}] ${text}\n\n`;
+    fs.appendFileSync(ERROR_LOG_PATH, line, { encoding: 'utf-8' });
+  } catch (e) {
+    console.error('Failed to write error log', e);
+  }
+}
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException', err);
+  writeErrorLog(err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection', reason);
+  writeErrorLog(reason);
+});
+
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const RUNTIMES_PATH = path.join(app.getPath('userData'), 'runtimes');
 const NGROK_BIN_DIR = path.join(app.getPath('userData'), 'ngrok-bin');
@@ -53,7 +73,7 @@ function setConfigValue<T>(key: string, value: T) {
 function getAppSettings() {
   const rawTheme = getConfigValue<string>('appTheme', 'system');
   const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
-  const normalizedTheme: AppTheme = allowed.includes(rawTheme as AppTheme) ? rawTheme as AppTheme : 'dark';
+  const normalizedTheme: AppTheme = allowed.includes(rawTheme as AppTheme) ? (rawTheme as AppTheme) : 'dark';
   return {
     theme: normalizedTheme,
   };
@@ -103,6 +123,32 @@ function loadServersList() {
   }
 }
 
+function validateDownloadUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Invalid download URL');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Only HTTPS protocol is allowed for downloads');
+  }
+
+  const allowedHosts = new Set<string>([
+    'api.papermc.io',
+    'piston-meta.mojang.com',
+    'launchermeta.mojang.com',
+    'meta.fabricmc.net',
+  ]);
+
+  if (!allowedHosts.has(parsed.hostname)) {
+    throw new Error(`Host not allowed for downloads: ${parsed.hostname}`);
+  }
+
+  return parsed.toString();
+}
+
 function saveServersList(servers: any[]) {
   const root = getServersRootDir();
   if (!fs.existsSync(root)) {
@@ -111,13 +157,36 @@ function saveServersList(servers: any[]) {
   fs.writeFileSync(getServersJsonPath(), JSON.stringify(servers, null, 2), 'utf-8');
 }
 
+function isSafeJavaPath(javaPath: string): boolean {
+  if (javaPath === 'java') {
+    return true;
+  }
+
+  const unsafePattern = /[;&|`]/;
+  if (unsafePattern.test(javaPath)) {
+    return false;
+  }
+
+  const resolved = path.resolve(javaPath);
+
+  if (!fs.existsSync(resolved)) {
+    return false;
+  }
+  try {
+    fs.accessSync(resolved, fs.constants.X_OK);
+  } catch {
+    return false;
+  }
+  return true;
+}
+
 function readServerProperties(filePath: string): Map<string, string> {
   if (!fs.existsSync(filePath)) {
     return new Map();
   }
   const content = fs.readFileSync(filePath, 'utf-8');
   const properties = new Map<string, string>();
-  content.split('\n').forEach(line => {
+  content.split('\n').forEach((line) => {
     line = line.trim();
     if (line && !line.startsWith('#')) {
       const [key, ...values] = line.split('=');
@@ -130,7 +199,7 @@ function readServerProperties(filePath: string): Map<string, string> {
 }
 
 function writeServerProperties(filePath: string, properties: Map<string, string>) {
-  let content = "#Minecraft server properties\n#Edited by MC-Vector\n";
+  let content = '#Minecraft server properties\n#Edited by MC-Vector\n';
   properties.forEach((value, key) => {
     content += `${key}=${value}\n`;
   });
@@ -138,46 +207,53 @@ function writeServerProperties(filePath: string, properties: Map<string, string>
 }
 
 function fetchJson(url: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }).on('error', reject);
+  return new Promise((reject) => {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch (e) {
+      return reject(new Error('Invalid URL'));
+    }
+
+    if (parsedUrl.protocol !== 'https:' || parsedUrl.hostname !== 'api.papermc.io') {
+      return reject(new Error('Disallowed URL'));
+    }
   });
 }
 
 function downloadFile(url: string, destPath: string, onProgress: (percent: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
+    let safeUrl: string;
+    try {
+      safeUrl = validateDownloadUrl(url);
+    } catch (err) {
+      return reject(err);
+    }
     const file = fs.createWriteStream(destPath);
-    https.get(url, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
-      if (res.statusCode !== 200 && res.statusCode !== 302) {
-        return reject(new Error(`Download failed with status code: ${res.statusCode}`));
-      }
-      const totalSize = parseInt(res.headers['content-length'] || '0', 10);
-      let downloaded = 0;
-      res.pipe(file);
-      res.on('data', (chunk) => {
-        downloaded += chunk.length;
-        if (totalSize > 0) {
-          const percent = Math.round((downloaded / totalSize) * 100);
-          onProgress(percent);
+    https
+      .get(safeUrl, { headers: { 'User-Agent': `MC-Vector/${app.getVersion()}` } }, (res) => {
+        if (res.statusCode !== 200 && res.statusCode !== 302) {
+          return reject(new Error(`Download failed with status code: ${res.statusCode}`));
         }
+        const totalSize = parseInt(res.headers['content-length'] || '0', 10);
+        let downloaded = 0;
+        res.pipe(file);
+        res.on('data', (chunk) => {
+          downloaded += chunk.length;
+          if (totalSize > 0) {
+            const percent = Math.round((downloaded / totalSize) * 100);
+            onProgress(percent);
+          }
+        });
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
+      })
+      .on('error', (err) => {
+        fs.unlink(destPath, () => {});
+        reject(err);
       });
-      file.on('finish', () => {
-        file.close();
-        resolve();
-      });
-    }).on('error', (err) => {
-      fs.unlink(destPath, () => {});
-      reject(err);
-    });
   });
 }
 
@@ -197,7 +273,7 @@ type AppTheme = 'dark' | 'darkBlue' | 'grey' | 'forest' | 'sunset' | 'neon' | 'c
 let tempSettingsData: any = null;
 
 const activeServers = new Map<string, ChildProcess>();
-const ngrokSessions = new Map<string, { process: ChildProcess, url: string | null, logs: string[] }>();
+const ngrokSessions = new Map<string, { process: ChildProcess; url: string | null; logs: string[] }>();
 
 let rpc: DiscordRPC.Client | null = null;
 
@@ -301,7 +377,7 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
     },
   });
 
@@ -324,10 +400,9 @@ function createWindow() {
           mainWindow?.webContents.send('server-stats', {
             serverId,
             cpu: stats.cpu,
-            memory: stats.memory
+            memory: stats.memory,
           });
-        } catch (e) {
-        }
+        } catch (e) {}
       }
     }
   }, 1000);
@@ -378,8 +453,7 @@ async function getNgrokBinary(onProgress?: (p: number) => void): Promise<string>
     if (platform === 'darwin') {
       try {
         execSync(`xattr -d com.apple.quarantine "${binaryPath}"`);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -426,13 +500,11 @@ app.whenReady().then(() => {
     return true;
   });
 
-
   ipcMain.on('update-discord-presence', (_event, data) => {
     const { serverName, viewName } = data;
 
     let stateText = 'Idling';
     let imageKey = 'logo';
-
 
     switch (viewName) {
       case 'console':
@@ -477,7 +549,6 @@ app.whenReady().then(() => {
     setDiscordActivity(detailsText, stateText, imageKey, 'logo');
   });
 
-
   ipcMain.handle('get-server-root', async () => getServersRootDir());
 
   ipcMain.handle('select-root-folder', async () => {
@@ -486,7 +557,7 @@ app.whenReady().then(() => {
     }
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory'],
-      title: 'サーバーデータの保存先を選択'
+      title: 'サーバーデータの保存先を選択',
     });
     if (result.canceled || result.filePaths.length === 0) {
       return null;
@@ -502,7 +573,7 @@ app.whenReady().then(() => {
     const servers = loadServersList();
     return servers.map((s: any) => ({
       ...s,
-      status: activeServers.has(s.id) ? 'online' : 'offline'
+      status: activeServers.has(s.id) ? 'online' : 'offline',
     }));
   });
 
@@ -510,7 +581,7 @@ app.whenReady().then(() => {
     try {
       const id = crypto.randomUUID();
       const rootDir = getServersRootDir();
-      let folderName = serverData.name.replace(/[\\/:*?"<>|]/g, "").trim();
+      let folderName = serverData.name.replace(/[\\/:*?"<>|]/g, '').trim();
       if (!folderName) {
         folderName = `server-${id}`;
       }
@@ -540,7 +611,7 @@ app.whenReady().then(() => {
         memory: serverData.memory,
         path: serverDir,
         status: 'offline',
-        createdDate: new Date().toISOString()
+        createdDate: new Date().toISOString(),
       };
 
       const servers = loadServersList();
@@ -626,22 +697,25 @@ app.whenReady().then(() => {
       if (server.software === 'Velocity') {
         sendProgress(0, 'Velocityサーバーを立ち上げるには、Proxy Network→「設定方法の詳細を見る」を確認して下さい。');
         return false;
-      }
-      else if (['Paper', 'Waterfall', 'LeafMC'].includes(server.software)) {
-        const projectMap: {[key: string]: string} = { 'Paper': 'paper', 'Waterfall': 'waterfall', 'LeafMC': 'leaf' };
+      } else if (['Paper', 'Waterfall', 'LeafMC'].includes(server.software)) {
+        const projectMap: { [key: string]: string } = {
+          Paper: 'paper',
+          Waterfall: 'waterfall',
+          LeafMC: 'leaf',
+        };
         const projectId = projectMap[server.software] || 'paper';
         const buildListUrl = `https://api.papermc.io/v2/projects/${projectId}/versions/${server.version}`;
         try {
-            const buildData = await fetchJson(buildListUrl);
-            const latestBuild = buildData.builds[buildData.builds.length - 1];
-            const jarName = `${projectId}-${server.version}-${latestBuild}.jar`;
-            downloadUrl = `https://api.papermc.io/v2/projects/${projectId}/versions/${server.version}/builds/${latestBuild}/downloads/${jarName}`;
+          const buildData = await fetchJson(buildListUrl);
+          const latestBuild = buildData.builds[buildData.builds.length - 1];
+          const jarName = `${projectId}-${server.version}-${latestBuild}.jar`;
+          downloadUrl = `https://api.papermc.io/v2/projects/${projectId}/versions/${server.version}/builds/${latestBuild}/downloads/${jarName}`;
         } catch {
-            sendProgress(0, 'API未対応。Paperとして試行...');
-            const pBuildUrl = `https://api.papermc.io/v2/projects/paper/versions/${server.version}`;
-            const pData = await fetchJson(pBuildUrl);
-            const pBuild = pData.builds[pData.builds.length - 1];
-            downloadUrl = `https://api.papermc.io/v2/projects/paper/versions/${server.version}/builds/${pBuild}/downloads/paper-${server.version}-${pBuild}.jar`;
+          sendProgress(0, 'API未対応。Paperとして試行...');
+          const pBuildUrl = `https://api.papermc.io/v2/projects/paper/versions/${server.version}`;
+          const pData = await fetchJson(pBuildUrl);
+          const pBuild = pData.builds[pData.builds.length - 1];
+          downloadUrl = `https://api.papermc.io/v2/projects/paper/versions/${server.version}/builds/${pBuild}/downloads/paper-${server.version}-${pBuild}.jar`;
         }
       } else if (server.software === 'Vanilla') {
         const manifest = await fetchJson('https://piston-meta.mojang.com/mc/game/version_manifest.json');
@@ -691,15 +765,15 @@ app.whenReady().then(() => {
       for (const serverId of backendServerIds) {
         const targetServer = allServers.find((s: any) => s.id === serverId);
         if (targetServer && fs.existsSync(targetServer.path)) {
-            const propFile = path.join(targetServer.path, 'server.properties');
-            if (fs.existsSync(propFile)) {
-                const props = readServerProperties(propFile);
-                props.set('online-mode', 'false');
-                writeServerProperties(propFile, props);
-            }
-            const cleanName = targetServer.name.replace(/[^a-zA-Z0-9]/g, '');
-            velocityServersConfig += `\t${cleanName} = "127.0.0.1:${targetServer.port}"\n`;
-            tryOrderList.push(`"${cleanName}"`);
+          const propFile = path.join(targetServer.path, 'server.properties');
+          if (fs.existsSync(propFile)) {
+            const props = readServerProperties(propFile);
+            props.set('online-mode', 'false');
+            writeServerProperties(propFile, props);
+          }
+          const cleanName = targetServer.name.replace(/[^a-zA-Z0-9]/g, '');
+          velocityServersConfig += `\t${cleanName} = "127.0.0.1:${targetServer.port}"\n`;
+          tryOrderList.push(`"${cleanName}"`);
         }
       }
 
@@ -798,7 +872,7 @@ config-version = "2.7"
           memory: 1,
           path: proxyPath,
           status: 'offline',
-          createdDate: new Date().toISOString()
+          createdDate: new Date().toISOString(),
         };
         allServers.push(proxyServer);
         saveServersList(allServers);
@@ -826,21 +900,25 @@ config-version = "2.7"
     let jarPath = path.join(server.path, jarName);
 
     if (!fs.existsSync(jarPath)) {
-        try {
-            const files = fs.readdirSync(server.path);
-            const foundJar = files.find(f => f.endsWith('.jar'));
-            if (foundJar) {
-                jarName = foundJar;
-                jarPath = path.join(server.path, jarName);
-                sendLog(sender, serverId, `[INFO] server.jarが見つかりませんが、${jarName} を検出しました。これを使用して起動します。`);
-            } else {
-                sendLog(sender, serverId, `[ERROR] Jarファイルが見つかりません。手動で配置してください。`);
-                return;
-            }
-        } catch (e) {
-            sendLog(sender, serverId, `[ERROR] Jarファイルの検索に失敗しました。`);
-            return;
+      try {
+        const files = fs.readdirSync(server.path);
+        const foundJar = files.find((f) => f.endsWith('.jar'));
+        if (foundJar) {
+          jarName = foundJar;
+          jarPath = path.join(server.path, jarName);
+          sendLog(
+            sender,
+            serverId,
+            `[INFO] server.jarが見つかりませんが、${jarName} を検出しました。これを使用して起動します。`,
+          );
+        } else {
+          sendLog(sender, serverId, `[ERROR] Jarファイルが見つかりません。手動で配置してください。`);
+          return;
         }
+      } catch (e) {
+        sendLog(sender, serverId, `[ERROR] Jarファイルの検索に失敗しました。`);
+        return;
+      }
     }
 
     sendLog(sender, serverId, `[INFO] Starting Server: ${server.name} (${server.version})...`);
@@ -849,11 +927,16 @@ config-version = "2.7"
     const minMem = '512M';
     const maxMem = `${server.memory || 1}G`;
 
-    let javaCommand = server.javaPath ? server.javaPath : 'java';
+    let javaCommand = 'java';
 
-    if (server.javaPath && !fs.existsSync(server.javaPath) && server.javaPath !== 'java') {
-        sendLog(sender, serverId, `[WARNING] Custom Java path not found: ${server.javaPath}. Falling back to system 'java'.`);
-        javaCommand = 'java';
+    if (server.javaPath && isSafeJavaPath(server.javaPath)) {
+      javaCommand = server.javaPath === 'java' ? 'java' : path.resolve(server.javaPath);
+    } else if (server.javaPath) {
+      sendLog(
+        sender,
+        serverId,
+        `[WARNING] Custom Java path is invalid or not executable: ${server.javaPath}. Falling back to system 'java'.`,
+      );
     }
 
     const args = [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', jarName];
@@ -863,7 +946,7 @@ config-version = "2.7"
     }
 
     const javaProcess = spawn(javaCommand, args, {
-      cwd: server.path
+      cwd: server.path,
     });
 
     activeServers.set(serverId, javaProcess);
@@ -923,8 +1006,8 @@ config-version = "2.7"
       webPreferences: {
         preload: path.join(__dirname, 'preload.mjs'),
         nodeIntegration: false,
-        contextIsolation: true
-      }
+        contextIsolation: true,
+      },
     });
     if (process.env.VITE_DEV_SERVER_URL) {
       settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#app-settings`);
@@ -973,15 +1056,17 @@ config-version = "2.7"
         return [];
       }
       const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
-      return dirents.map(d => ({
-        name: d.name,
-        isDirectory: d.isDirectory()
-      })).sort((a, b) => {
-        if (a.isDirectory === b.isDirectory) {
-          return a.name.localeCompare(b.name);
-        }
-        return a.isDirectory ? -1 : 1;
-      });
+      return dirents
+        .map((d) => ({
+          name: d.name,
+          isDirectory: d.isDirectory(),
+        }))
+        .sort((a, b) => {
+          if (a.isDirectory === b.isDirectory) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.isDirectory ? -1 : 1;
+        });
     } catch {
       return [];
     }
@@ -1099,7 +1184,7 @@ config-version = "2.7"
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile', 'multiSelections'],
       title: 'インポートするファイルを選択',
-      buttonLabel: 'インポート'
+      buttonLabel: 'インポート',
     });
 
     if (result.canceled || result.filePaths.length === 0) {
@@ -1181,7 +1266,9 @@ config-version = "2.7"
     try {
       if (serverId) {
         const serverPath = getServerPath(serverId);
-        if (!serverPath || !isPathSafe(targetPath, serverPath)) return;
+        if (!serverPath || !isPathSafe(targetPath, serverPath)) {
+          return;
+        }
       }
       await shell.showItemInFolder(targetPath);
     } catch (e) {
@@ -1189,71 +1276,78 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('create-backup', async (_event, serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) => {
-    try {
-      const serverPath = getServerPath(serverId);
-      if (!serverPath) {
-        return false;
-      }
-      if (!fs.existsSync(serverPath)) {
-        return false;
-      }
-      const backupsDir = path.join(serverPath, 'backups');
-      if (!fs.existsSync(backupsDir)) {
-        await fs.promises.mkdir(backupsDir);
-      }
-
-      const archiveName = options?.name && options.name.trim() !== ''
-        ? options.name.trim().replace(/\.zip$/i, '') + '.zip'
-        : `backup-${Date.now()}.zip`;
-
-      const outputPath = path.join(backupsDir, archiveName);
-      const output = fs.createWriteStream(outputPath);
-      const archive = archiver('zip', { zlib: { level: Math.min(9, Math.max(1, options?.compressionLevel || 5)) } });
-
-      const pathsToInclude = (options?.paths && options.paths.length > 0)
-        ? options.paths
-        : (await fs.promises.readdir(serverPath)).filter(f => f !== 'backups').map(f => f);
-
-      const addEntry = (relPath: string) => {
-        const absPath = path.join(serverPath, relPath);
-        const normalizedServer = path.resolve(serverPath);
-        const normalizedAbs = path.resolve(absPath);
-        if (!normalizedAbs.startsWith(normalizedServer)) {
-          return;
+  ipcMain.handle(
+    'create-backup',
+    async (_event, serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) => {
+      try {
+        const serverPath = getServerPath(serverId);
+        if (!serverPath) {
+          return false;
         }
-        if (!fs.existsSync(absPath)) {
-          return;
+        if (!fs.existsSync(serverPath)) {
+          return false;
         }
-        const stat = fs.statSync(absPath);
-        if (stat.isDirectory()) {
-          archive.directory(absPath, relPath);
-        } else {
-          archive.file(absPath, { name: relPath });
+        const backupsDir = path.join(serverPath, 'backups');
+        if (!fs.existsSync(backupsDir)) {
+          await fs.promises.mkdir(backupsDir);
         }
-      };
 
-      pathsToInclude.forEach(p => addEntry(p));
+        const archiveName =
+          options?.name && options.name.trim() !== ''
+            ? options.name.trim().replace(/\.zip$/i, '') + '.zip'
+            : `backup-${Date.now()}.zip`;
 
-      await new Promise<void>((resolve, reject) => {
-        output.on('close', () => resolve());
-        archive.on('warning', (err: any) => {
-          if (err.code === 'ENOENT') {
+        const outputPath = path.join(backupsDir, archiveName);
+        const output = fs.createWriteStream(outputPath);
+        const archive = archiver('zip', {
+          zlib: { level: Math.min(9, Math.max(1, options?.compressionLevel || 5)) },
+        });
+
+        const pathsToInclude =
+          options?.paths && options.paths.length > 0
+            ? options.paths
+            : (await fs.promises.readdir(serverPath)).filter((f) => f !== 'backups').map((f) => f);
+
+        const addEntry = (relPath: string) => {
+          const absPath = path.join(serverPath, relPath);
+          const normalizedServer = path.resolve(serverPath);
+          const normalizedAbs = path.resolve(absPath);
+          if (!normalizedAbs.startsWith(normalizedServer)) {
             return;
           }
-          reject(err);
-        });
-        archive.on('error', (err: any) => reject(err));
-        archive.pipe(output);
-        archive.finalize();
-      });
+          if (!fs.existsSync(absPath)) {
+            return;
+          }
+          const stat = fs.statSync(absPath);
+          if (stat.isDirectory()) {
+            archive.directory(absPath, relPath);
+          } else {
+            archive.file(absPath, { name: relPath });
+          }
+        };
 
-      return true;
-    } catch (e) {
-      console.error(e);
-      return false;
-    }
-  });
+        pathsToInclude.forEach((p) => addEntry(p));
+
+        await new Promise<void>((resolve, reject) => {
+          output.on('close', () => resolve());
+          archive.on('warning', (err: any) => {
+            if (err.code === 'ENOENT') {
+              return;
+            }
+            reject(err);
+          });
+          archive.on('error', (err: any) => reject(err));
+          archive.pipe(output);
+          archive.finalize();
+        });
+
+        return true;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+    },
+  );
 
   ipcMain.handle('list-backups', async (_event, serverId: string) => {
     try {
@@ -1330,10 +1424,7 @@ config-version = "2.7"
   ipcMain.handle('search-modrinth', async (_event, query, type, version, offset = 0) => {
     try {
       const projectType = type === 'plugin' ? 'plugin' : 'mod';
-      const facets = JSON.stringify([
-        [`project_type:${projectType}`],
-        [`versions:${version}`]
-      ]);
+      const facets = JSON.stringify([[`project_type:${projectType}`], [`versions:${version}`]]);
       const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&facets=${encodeURIComponent(facets)}&limit=30&offset=${offset}&index=downloads`;
 
       const result = await fetchJson(url);
@@ -1344,66 +1435,74 @@ config-version = "2.7"
     }
   });
 
-  ipcMain.handle('install-modrinth-project', async (_event, _projectId, _versionId, fileName, downloadUrl, serverId: string, type) => {
-    try {
-      const serverPath = getServerPath(serverId);
-      if (!serverPath) {
-        return false;
-      }
-      const folderName = type === 'plugin' ? 'plugins' : 'mods';
-      const targetDir = path.join(serverPath, folderName);
+  ipcMain.handle(
+    'install-modrinth-project',
+    async (_event, _projectId, _versionId, fileName, downloadUrl, serverId: string, type) => {
+      try {
+        const serverPath = getServerPath(serverId);
+        if (!serverPath) {
+          return false;
+        }
+        const folderName = type === 'plugin' ? 'plugins' : 'mods';
+        const targetDir = path.join(serverPath, folderName);
 
-      const safeName = path.basename(fileName);
-      if (safeName !== fileName) {
-        return false;
-      }
+        const safeName = path.basename(fileName);
+        if (safeName !== fileName) {
+          return false;
+        }
 
-      if (!fs.existsSync(targetDir)) {
-        await fs.promises.mkdir(targetDir, { recursive: true });
-      }
+        if (!fs.existsSync(targetDir)) {
+          await fs.promises.mkdir(targetDir, { recursive: true });
+        }
 
-      const destPath = path.join(targetDir, safeName);
-      if (!isPathSafe(destPath, serverPath)) {
-        return false;
-      }
+        const destPath = path.join(targetDir, safeName);
+        if (!isPathSafe(destPath, serverPath)) {
+          return false;
+        }
 
-      const maxSize = 200 * 1024 * 1024;
+        const maxSize = 200 * 1024 * 1024;
 
-      await new Promise<void>((resolve, reject) => {
-        const file = fs.createWriteStream(destPath);
-        https.get(downloadUrl, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
-          if (res.statusCode !== 200 && res.statusCode !== 302) {
-            return reject(new Error(`Status: ${res.statusCode}`));
-          }
-          const totalSize = parseInt(res.headers['content-length'] || '0', 10);
-          if (totalSize > maxSize) {
-            res.destroy();
-            return reject(new Error('Download too large'));
-          }
-          let downloaded = 0;
-          res.on('data', (chunk) => {
-            downloaded += chunk.length;
-            if (downloaded > maxSize) {
-              res.destroy();
-              file.destroy();
+        await new Promise<void>((resolve, reject) => {
+          const file = fs.createWriteStream(destPath);
+          https
+            .get(downloadUrl, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
+              if (res.statusCode !== 200 && res.statusCode !== 302) {
+                return reject(new Error(`Status: ${res.statusCode}`));
+              }
+              const totalSize = parseInt(res.headers['content-length'] || '0', 10);
+              if (totalSize > maxSize) {
+                res.destroy();
+                return reject(new Error('Download too large'));
+              }
+              let downloaded = 0;
+              res.on('data', (chunk) => {
+                downloaded += chunk.length;
+                if (downloaded > maxSize) {
+                  res.destroy();
+                  file.destroy();
+                  fs.unlink(destPath, () => {});
+                  reject(new Error('Download too large'));
+                }
+              });
+              res.pipe(file);
+              file.on('finish', () => {
+                file.close();
+                resolve();
+              });
+            })
+            .on('error', (err) => {
               fs.unlink(destPath, () => {});
-              reject(new Error('Download too large'));
-            }
-          });
-          res.pipe(file);
-          file.on('finish', () => { file.close(); resolve(); });
-        }).on('error', (err) => {
-          fs.unlink(destPath, () => {});
-          reject(err);
+              reject(err);
+            });
         });
-      });
 
-      return true;
-    } catch (e) {
-      console.error('Install failed:', e);
-      return false;
-    }
-  });
+        return true;
+      } catch (e) {
+        console.error('Install failed:', e);
+        return false;
+      }
+    },
+  );
 
   ipcMain.handle('search-hangar', async (_event, query, _version, offset = 0) => {
     try {
@@ -1440,31 +1539,36 @@ config-version = "2.7"
 
       await new Promise<void>((resolve, reject) => {
         const file = fs.createWriteStream(destPath);
-        https.get(downloadUrl, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
-          if (res.statusCode !== 200 && res.statusCode !== 302) {
-            return reject(new Error(`Status: ${res.statusCode}`));
-          }
-          const totalSize = parseInt(res.headers['content-length'] || '0', 10);
-          if (totalSize > maxSize) {
-            res.destroy();
-            return reject(new Error('Download too large'));
-          }
-          let downloaded = 0;
-          res.on('data', (chunk) => {
-            downloaded += chunk.length;
-            if (downloaded > maxSize) {
-              res.destroy();
-              file.destroy();
-              fs.unlink(destPath, () => {});
-              reject(new Error('Download too large'));
+        https
+          .get(downloadUrl, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
+            if (res.statusCode !== 200 && res.statusCode !== 302) {
+              return reject(new Error(`Status: ${res.statusCode}`));
             }
+            const totalSize = parseInt(res.headers['content-length'] || '0', 10);
+            if (totalSize > maxSize) {
+              res.destroy();
+              return reject(new Error('Download too large'));
+            }
+            let downloaded = 0;
+            res.on('data', (chunk) => {
+              downloaded += chunk.length;
+              if (downloaded > maxSize) {
+                res.destroy();
+                file.destroy();
+                fs.unlink(destPath, () => {});
+                reject(new Error('Download too large'));
+              }
+            });
+            res.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              resolve();
+            });
+          })
+          .on('error', (err) => {
+            fs.unlink(destPath, () => {});
+            reject(err);
           });
-          res.pipe(file);
-          file.on('finish', () => { file.close(); resolve(); });
-        }).on('error', (err) => {
-          fs.unlink(destPath, () => {});
-          reject(err);
-        });
       });
       return true;
     } catch (e) {
@@ -1473,13 +1577,12 @@ config-version = "2.7"
     }
   });
 
-
   ipcMain.handle('get-java-versions', async () => {
     if (!fs.existsSync(RUNTIMES_PATH)) {
       return [];
     }
     const dirs = await fs.promises.readdir(RUNTIMES_PATH, { withFileTypes: true });
-    const javaList: { name: string, path: string, version: number }[] = [];
+    const javaList: { name: string; path: string; version: number }[] = [];
 
     const isWin = process.platform === 'win32';
     const binName = isWin ? 'java.exe' : 'java';
@@ -1489,10 +1592,10 @@ config-version = "2.7"
         const fullPath = path.join(RUNTIMES_PATH, d.name);
         let binPath = path.join(fullPath, 'bin', binName);
         if (!fs.existsSync(binPath) && process.platform === 'darwin') {
-           const macPath = path.join(fullPath, 'Contents', 'Home', 'bin', binName);
-           if (fs.existsSync(macPath)) {
-             binPath = macPath;
-           }
+          const macPath = path.join(fullPath, 'Contents', 'Home', 'bin', binName);
+          if (fs.existsSync(macPath)) {
+            binPath = macPath;
+          }
         }
 
         if (fs.existsSync(binPath)) {
@@ -1501,7 +1604,7 @@ config-version = "2.7"
           javaList.push({
             name: d.name,
             path: binPath,
-            version: version
+            version: version,
           });
         }
       }
@@ -1512,7 +1615,11 @@ config-version = "2.7"
   ipcMain.handle('download-java', async (event, version: number) => {
     const sender = event.sender;
     const sendProgress = (percent: number) => {
-      sender.send('download-progress', { serverId: 'java-install', progress: percent, status: `Downloading Java ${version}...` });
+      sender.send('download-progress', {
+        serverId: 'java-install',
+        progress: percent,
+        status: `Downloading Java ${version}...`,
+      });
     };
 
     try {
@@ -1543,7 +1650,11 @@ config-version = "2.7"
       await downloadFile(url, downloadPath, sendProgress);
 
       sendProgress(100);
-      sender.send('download-progress', { serverId: 'java-install', progress: 100, status: `Extracting Java ${version}...` });
+      sender.send('download-progress', {
+        serverId: 'java-install',
+        progress: 100,
+        status: `Extracting Java ${version}...`,
+      });
 
       if (isWin) {
         const zip = new AdmZip(downloadPath);
@@ -1551,7 +1662,7 @@ config-version = "2.7"
       } else {
         await tar.x({
           file: downloadPath,
-          cwd: RUNTIMES_PATH
+          cwd: RUNTIMES_PATH,
         });
       }
 
@@ -1585,7 +1696,10 @@ config-version = "2.7"
       const dirs = await fs.promises.readdir(RUNTIMES_PATH);
       for (const d of dirs) {
         if (d.includes(`jdk-${version}`) || d.includes(`jdk${version}`)) {
-          await fs.promises.rm(path.join(RUNTIMES_PATH, d), { recursive: true, force: true });
+          await fs.promises.rm(path.join(RUNTIMES_PATH, d), {
+            recursive: true,
+            force: true,
+          });
         }
       }
       return true;
@@ -1633,8 +1747,8 @@ config-version = "2.7"
       if (enabled) {
         const existingSession = ngrokSessions.get(serverId);
         if (existingSession) {
-            existingSession.process.kill();
-            ngrokSessions.delete(serverId);
+          existingSession.process.kill();
+          ngrokSessions.delete(serverId);
         }
 
         sendInfo({ status: 'downloading', log: 'Checking ngrok binary...' });
@@ -1648,7 +1762,7 @@ config-version = "2.7"
 
         const savedToken = token || loadConfig().ngrokToken;
         if (!savedToken) {
-            throw new Error("No authtoken provided");
+          throw new Error('No authtoken provided');
         }
 
         const cleanToken = savedToken.trim();
@@ -1659,13 +1773,7 @@ config-version = "2.7"
           throw new Error('Server not found');
         }
 
-        const args = [
-            'tcp',
-            server.port.toString(),
-            '--authtoken', cleanToken,
-            '--region', 'jp',
-            '--log=stdout'
-        ];
+        const args = ['tcp', server.port.toString(), '--authtoken', cleanToken, '--region', 'jp', '--log=stdout'];
 
         const process = spawn(ngrokPath, args);
         ngrokSessions.set(serverId, { process, url: null, logs: [] });
@@ -1673,8 +1781,8 @@ config-version = "2.7"
         sendInfo({ status: 'running', log: 'Starting ngrok tunnel (region: jp)...' });
 
         process.on('error', (err) => {
-            sendInfo({ status: 'error', log: `Failed to spawn ngrok: ${err.message}` });
-            ngrokSessions.delete(serverId);
+          sendInfo({ status: 'error', log: `Failed to spawn ngrok: ${err.message}` });
+          ngrokSessions.delete(serverId);
         });
 
         process.stdout.on('data', (data) => {
@@ -1695,11 +1803,11 @@ config-version = "2.7"
 
             const urlMatch = line.match(/url=(tcp:\/\/.+)/);
             if (urlMatch) {
-                const url = urlMatch[1];
-                if (session) {
-                  session.url = url;
-                }
-                sendInfo({ url: url });
+              const url = urlMatch[1];
+              if (session) {
+                session.url = url;
+              }
+              sendInfo({ url: url });
             }
           }
         });
@@ -1719,7 +1827,6 @@ config-version = "2.7"
         });
 
         return { success: true };
-
       } else {
         const session = ngrokSessions.get(serverId);
         if (session) {
@@ -1739,7 +1846,7 @@ config-version = "2.7"
   ipcMain.handle('get-ngrok-status', async (_event, serverId) => {
     const session = ngrokSessions.get(serverId);
     if (session) {
-        return { active: true, url: session.url, logs: session.logs };
+      return { active: true, url: session.url, logs: session.logs };
     }
     return { active: false, url: null, logs: [] };
   });
@@ -1768,12 +1875,12 @@ config-version = "2.7"
       height: 700,
       parent: mainWindow || undefined,
       autoHideMenuBar: true,
-      title: "Proxy Network ヘルプ",
+      title: 'Proxy Network ヘルプ',
       webPreferences: {
         preload: path.join(__dirname, 'preload.mjs'),
         nodeIntegration: false,
-        contextIsolation: true
-      }
+        contextIsolation: true,
+      },
     });
 
     if (process.env.VITE_DEV_SERVER_URL) {
@@ -1797,12 +1904,12 @@ config-version = "2.7"
       height: 800,
       parent: mainWindow || undefined,
       autoHideMenuBar: true,
-      title: "ngrok 接続ガイド (ポート開放不要)",
+      title: 'ngrok 接続ガイド (ポート開放不要)',
       webPreferences: {
         preload: path.join(__dirname, 'preload.mjs'),
         nodeIntegration: false,
-        contextIsolation: true
-      }
+        contextIsolation: true,
+      },
     });
 
     if (process.env.VITE_DEV_SERVER_URL) {

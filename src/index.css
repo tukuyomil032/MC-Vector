@@ -7,7 +7,8 @@
     @apply box-border select-none;
   }
 
-  body, html {
+  body,
+  html {
     @apply m-0 p-0 h-full font-sans bg-bg-primary text-text-primary overflow-hidden;
     -webkit-font-smoothing: antialiased;
   }
@@ -87,8 +88,8 @@
   }
 
   .slider:before {
-    content: "";
-    @apply absolute h-4 w-4 left-0.5 bottom-0.5 bg-text-secondary transition-all rounded-full;
+    content: '';
+    @apply absolute h-4 w-4 left-1 top-1 bg-text-secondary transition-all rounded-full;
   }
 
   .toggle-switch input:checked + .slider {
@@ -135,21 +136,22 @@
   @keyframes modalScaleIn {
     from {
       opacity: 0;
-      transform: translateY(8px) scale(0.97)
+      transform: translateY(8px) scale(0.97);
     }
     to {
-      opacity: 1; transform: translateY(0) scale(1)
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
   }
 
   @keyframes windowSlideIn {
     from {
       opacity: 0;
-      transform: translateY(6px)
+      transform: translateY(6px);
     }
     to {
       opacity: 1;
-      transform: translateY(0)
+      transform: translateY(0);
     }
   }
 

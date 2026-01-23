@@ -27,7 +27,17 @@ import iconProperties from './assets/icons/properties.svg';
 import iconSettings from './assets/icons/settings.svg';
 import iconProxy from './assets/icons/proxy.svg';
 
-const TAB_CYCLE: AppView[] = ['dashboard', 'console', 'users', 'files', 'plugins', 'backups', 'properties', 'general-settings', 'proxy'];
+const TAB_CYCLE: AppView[] = [
+  'dashboard',
+  'console',
+  'users',
+  'files',
+  'plugins',
+  'backups',
+  'properties',
+  'general-settings',
+  'proxy',
+];
 type AppTheme = 'dark' | 'darkBlue' | 'grey' | 'forest' | 'sunset' | 'neon' | 'coffee' | 'ocean' | 'system';
 
 function App() {
@@ -35,24 +45,37 @@ function App() {
   const [selectedServerId, setSelectedServerId] = useState<string>('');
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [showAddServerModal, setShowAddServerModal] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, serverId: string } | null>(null);
-  const [downloadStatus, setDownloadStatus] = useState<{ id: string, progress: number, msg: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    serverId: string;
+  } | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<{
+    id: string;
+    progress: number;
+    msg: string;
+  } | null>(null);
   const { showToast } = useToast();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
 
-  const [updatePrompt, setUpdatePrompt] = useState<{ version?: string; releaseNotes?: unknown } | null>(null);
+  const [updatePrompt, setUpdatePrompt] = useState<{
+    version?: string;
+    releaseNotes?: unknown;
+  } | null>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
 
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
   const [appTheme, setAppTheme] = useState<AppTheme>('system');
-  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
+    window.matchMedia('(prefers-color-scheme: dark)').matches,
+  );
 
   const normalizeTheme = (value: unknown): AppTheme => {
     const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
-    return allowed.includes(value as AppTheme) ? value as AppTheme : 'dark';
+    return allowed.includes(value as AppTheme) ? (value as AppTheme) : 'dark';
   };
 
   useEffect(() => {
@@ -133,7 +156,6 @@ function App() {
     };
   }, []);
 
-
   if (currentHash === '#proxy-help') {
     return <ProxyHelpView />;
   }
@@ -145,7 +167,6 @@ function App() {
   if (currentHash === '#app-settings') {
     return <SettingsWindow />;
   }
-
 
   const [serverLogs, setServerLogs] = useState<Record<string, string[]>>({});
   const selectedServerIdRef = useRef(selectedServerId);
@@ -163,7 +184,7 @@ function App() {
           setSelectedServerId(loadedServers[0].id);
         }
       } catch (e) {
-        showToast("サーバーリスト読み込みエラー", 'error');
+        showToast('サーバーリスト読み込みエラー', 'error');
       }
     };
     loadServers();
@@ -173,7 +194,7 @@ function App() {
         return;
       }
       const formattedLog = data.log.replace(/\n/g, '\r\n');
-      setServerLogs(prev => {
+      setServerLogs((prev) => {
         const currentLogs = prev[data.serverId] || [];
         const newLogs = [...currentLogs, formattedLog];
         if (newLogs.length > 2000) {
@@ -193,16 +214,14 @@ function App() {
     });
 
     const removeStatusListener = window.electronAPI.onServerStatusUpdate((_event: any, data: any) => {
-      setServers(prev => prev.map(s =>
-        s.id === data.serverId ? { ...s, status: data.status } : s
-      ));
+      setServers((prev) => prev.map((s) => (s.id === data.serverId ? { ...s, status: data.status } : s)));
     });
 
     const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
       if (data.status === 'stopped' || data.status === 'error') {
-        setNgrokData(prev => ({ ...prev, [data.serverId]: null }));
+        setNgrokData((prev) => ({ ...prev, [data.serverId]: null }));
       } else if (data.url) {
-        setNgrokData(prev => ({ ...prev, [data.serverId]: data.url }));
+        setNgrokData((prev) => ({ ...prev, [data.serverId]: data.url }));
       }
     });
 
@@ -226,7 +245,10 @@ function App() {
       }
       try {
         const status = await window.electronAPI.getNgrokStatus(selectedServerId);
-        setNgrokData(prev => ({ ...prev, [selectedServerId]: status.active ? status.url : null }));
+        setNgrokData((prev) => ({
+          ...prev,
+          [selectedServerId]: status.active ? status.url : null,
+        }));
       } catch (e) {
         console.error(e);
       }
@@ -234,7 +256,7 @@ function App() {
     checkNgrok();
   }, [selectedServerId]);
 
-  const activeServer = servers.find(s => s.id === selectedServerId);
+  const activeServer = servers.find((s) => s.id === selectedServerId);
 
   const handleStart = () => {
     if (selectedServerId) {
@@ -251,7 +273,7 @@ function App() {
     if (!selectedServerId) {
       return;
     }
-    setServers(prev => prev.map(s => s.id === selectedServerId ? { ...s, status: 'restarting' } : s));
+    setServers((prev) => prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'restarting' } : s)));
     await window.electronAPI.stopServer(selectedServerId);
     setTimeout(() => {
       window.electronAPI.startServer(selectedServerId);
@@ -259,7 +281,7 @@ function App() {
   };
 
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
-    setServers(prev => prev.map(s => s.id === updatedServer.id ? updatedServer : s));
+    setServers((prev) => prev.map((s) => (s.id === updatedServer.id ? updatedServer : s)));
     await window.electronAPI.updateServer(updatedServer);
     showToast('設定を保存しました', 'success');
   };
@@ -267,14 +289,14 @@ function App() {
   const handleAddServer = async (serverData: any) => {
     try {
       const newServer = await window.electronAPI.addServer(serverData);
-      setServers(prev => [...prev, newServer]);
+      setServers((prev) => [...prev, newServer]);
       setSelectedServerId(newServer.id);
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
 
       if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)) {
-         setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
-         await window.electronAPI.downloadServerJar(newServer.id);
+        setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
+        await window.electronAPI.downloadServerJar(newServer.id);
       }
     } catch (e) {
       showToast('サーバー作成に失敗しました', 'error');
@@ -320,7 +342,7 @@ function App() {
       return;
     }
     const { serverId } = contextMenu;
-    const target = servers.find(s => s.id === serverId);
+    const target = servers.find((s) => s.id === serverId);
     if (!window.confirm(`本当に「${target?.name}」を削除しますか？`)) {
       setContextMenu(null);
       return;
@@ -328,9 +350,13 @@ function App() {
     try {
       const success = await window.electronAPI.deleteServer(serverId);
       if (success) {
-        const newServers = servers.filter(s => s.id !== serverId);
+        const newServers = servers.filter((s) => s.id !== serverId);
         setServers(newServers);
-        setServerLogs(prev => { const n = {...prev}; delete n[serverId]; return n; });
+        setServerLogs((prev) => {
+          const n = { ...prev };
+          delete n[serverId];
+          return n;
+        });
         if (selectedServerId === serverId) {
           setSelectedServerId(newServers.length > 0 ? newServers[0].id : '');
         }
@@ -338,14 +364,29 @@ function App() {
       } else {
         showToast('削除に失敗しました', 'error');
       }
-    } catch (e) { showToast('削除エラー', 'error'); }
+    } catch (e) {
+      showToast('削除エラー', 'error');
+    }
     setContextMenu(null);
   };
 
-  const handleClickOutside = () => { if (contextMenu) setContextMenu(null); };
+  const handleClickOutside = () => {
+    if (contextMenu) setContextMenu(null);
+  };
 
   const resolvedTheme: AppTheme = appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'darkBlue') : appTheme;
-  const themePalette: Record<Exclude<AppTheme, 'system'>, { mainBg: string; headerBg: string; text: string; sidebarBg: string; sidebarPanelBg: string; panelBg: string; border: string }> = {
+  const themePalette: Record<
+    Exclude<AppTheme, 'system'>,
+    {
+      mainBg: string;
+      headerBg: string;
+      text: string;
+      sidebarBg: string;
+      sidebarPanelBg: string;
+      panelBg: string;
+      border: string;
+    }
+  > = {
     dark: {
       mainBg: '#0f0f11',
       headerBg: 'rgba(18,18,20,0.92)',
@@ -356,7 +397,8 @@ function App() {
       border: '#2f2f3d',
     },
     darkBlue: {
-      mainBg: 'radial-gradient(circle at 20% 20%, rgba(45,70,120,0.25), transparent 40%), radial-gradient(circle at 80% 10%, rgba(24,57,99,0.3), transparent 35%), #0b1628',
+      mainBg:
+        'radial-gradient(circle at 20% 20%, rgba(45,70,120,0.25), transparent 40%), radial-gradient(circle at 80% 10%, rgba(24,57,99,0.3), transparent 35%), #0b1628',
       headerBg: 'rgba(11,22,40,0.92)',
       text: '#e2e8f0',
       sidebarBg: '#0c1525',
@@ -464,12 +506,14 @@ function App() {
       case 'dashboard':
         return <DashboardView key={contentKey} server={activeServer} />;
       case 'console':
-        return <ConsoleView
-          key={contentKey}
-          server={activeServer}
-          logs={serverLogs[activeServer.id] || []}
-          ngrokUrl={ngrokData[activeServer.id] || null}
-        />;
+        return (
+          <ConsoleView
+            key={contentKey}
+            server={activeServer}
+            logs={serverLogs[activeServer.id] || []}
+            ngrokUrl={ngrokData[activeServer.id] || null}
+          />
+        );
       case 'properties':
         return <PropertiesView key={contentKey} server={activeServer} />;
       case 'files':
@@ -488,10 +532,18 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen" onClick={handleClickOutside} style={{ background: themeColors.mainBg, color: themeColors.text }}>
+    <div
+      className="flex h-screen w-screen"
+      onClick={handleClickOutside}
+      style={{ background: themeColors.mainBg, color: themeColors.text }}
+    >
       <aside
         className={`flex flex-col border-r shrink-0 z-20 transition-all duration-200 ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}
-        style={{ background: themeColors.sidebarBg, borderColor: themeColors.border, color: themeColors.text }}
+        style={{
+          background: themeColors.sidebarBg,
+          borderColor: themeColors.border,
+          color: themeColors.text,
+        }}
       >
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}>
           {isSidebarOpen && (
@@ -513,57 +565,152 @@ function App() {
           </button>
         </div>
 
-        <div className="flex-1 p-2.5 flex flex-col overflow-y-auto rounded-xl" style={{ background: themeColors.sidebarPanelBg }}>
-          <NavItem label={isSidebarOpen ? "Dashboard" : ""} view="dashboard" current={currentView} set={setCurrentView} iconSrc={iconDashboard} />
-          <NavItem label={isSidebarOpen ? "Console" : ""} view="console" current={currentView} set={setCurrentView} iconSrc={iconConsole} />
-          <NavItem label={isSidebarOpen ? "Users" : ""} view="users" current={currentView} set={setCurrentView} iconSrc={iconUsers} />
-          <NavItem label={isSidebarOpen ? "Files" : ""} view="files" current={currentView} set={setCurrentView} iconSrc={iconFiles} />
-          <NavItem label={isSidebarOpen ? "Plugins / Mods" : ""} view="plugins" current={currentView} set={setCurrentView} iconSrc={iconPlugins} />
-          <NavItem label={isSidebarOpen ? "Backups" : ""} view="backups" current={currentView} set={setCurrentView} iconSrc={iconBackups} />
-          <NavItem label={isSidebarOpen ? "Properties" : ""} view="properties" current={currentView} set={setCurrentView} iconSrc={iconProperties} />
-          <NavItem label={isSidebarOpen ? "General Settings" : ""} view="general-settings" current={currentView} set={setCurrentView} iconSrc={iconSettings} />
+        <div
+          className="flex-1 p-2.5 flex flex-col overflow-y-auto rounded-xl"
+          style={{ background: themeColors.sidebarPanelBg }}
+        >
+          <NavItem
+            label={isSidebarOpen ? 'Dashboard' : ''}
+            view="dashboard"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconDashboard}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'Console' : ''}
+            view="console"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconConsole}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'Users' : ''}
+            view="users"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconUsers}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'Files' : ''}
+            view="files"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconFiles}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'Plugins / Mods' : ''}
+            view="plugins"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconPlugins}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'Backups' : ''}
+            view="backups"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconBackups}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'Properties' : ''}
+            view="properties"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconProperties}
+          />
+          <NavItem
+            label={isSidebarOpen ? 'General Settings' : ''}
+            view="general-settings"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconSettings}
+          />
 
           <hr className="w-[90%] border-white/10 my-2.5 mx-auto" />
 
-          <NavItem label={isSidebarOpen ? "Proxy Network" : ""} view="proxy" current={currentView} set={setCurrentView} iconSrc={iconProxy} />
+          <NavItem
+            label={isSidebarOpen ? 'Proxy Network' : ''}
+            view="proxy"
+            current={currentView}
+            set={setCurrentView}
+            iconSrc={iconProxy}
+          />
         </div>
 
         {isSidebarOpen && (
-          <div className="max-h-[40%] flex flex-col" style={{ borderTop: `1px solid ${themeColors.border}`, background: themeColors.sidebarPanelBg }}>
+          <div
+            className="max-h-[40%] flex flex-col"
+            style={{
+              borderTop: `1px solid ${themeColors.border}`,
+              background: themeColors.sidebarPanelBg,
+            }}
+          >
             <div className="px-2.5 py-1 text-xs text-text-secondary font-bold tracking-wider">SERVERS</div>
             <div className="overflow-y-auto flex-1 p-2.5 shrink-0">
               {servers.map((server) => (
-                <div key={server.id} className={`px-3 py-2.5 mb-1.5 rounded-md flex items-center gap-3 transition-all cursor-pointer border border-transparent hover:bg-white/5 hover:translate-x-0.5 ${server.id === selectedServerId ? 'bg-accent/15 border-accent/30' : ''}`} onClick={() => setSelectedServerId(server.id)} onContextMenu={(e) => handleContextMenu(e, server.id)}>
+                <div
+                  key={server.id}
+                  className={`px-3 py-2.5 mb-1.5 rounded-md flex items-center gap-3 transition-all cursor-pointer border border-transparent hover:bg-white/5 hover:translate-x-0.5 ${server.id === selectedServerId ? 'bg-accent/15 border-accent/30' : ''}`}
+                  onClick={() => setSelectedServerId(server.id)}
+                  onContextMenu={(e) => handleContextMenu(e, server.id)}
+                >
                   <div className={`status-indicator ${server.status}`}></div>
-                  <div className="flex flex-col"><div className="font-semibold text-sm text-text-primary">{server.name}</div></div>
+                  <div className="flex flex-col">
+                    <div className="font-semibold text-sm text-text-primary">{server.name}</div>
+                  </div>
                 </div>
               ))}
             </div>
-            <button className="mt-1.5 w-full py-2.5 bg-white/3 border border-dashed border-border-color text-text-secondary rounded-md transition-all text-sm hover:bg-white/8 hover:border-text-primary hover:text-text-primary hover:border-solid" onClick={() => setShowAddServerModal(true)}>+ Add Server</button>
+            <button
+              className="mt-1.5 w-full py-2.5 bg-white/3 border border-dashed border-border-color text-text-secondary rounded-md transition-all text-sm hover:bg-white/8 hover:border-text-primary hover:text-text-primary hover:border-solid"
+              onClick={() => setShowAddServerModal(true)}
+            >
+              + Add Server
+            </button>
           </div>
         )}
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden relative" style={{ background: themeColors.mainBg, color: themeColors.text }}>
+      <main
+        className="flex-1 flex flex-col overflow-hidden relative"
+        style={{ background: themeColors.mainBg, color: themeColors.text }}
+      >
         <header
           className="h-[60px] px-5 flex items-center justify-between border-b backdrop-blur-xl z-10 shrink-0"
-          style={{ background: themeColors.headerBg, color: themeColors.text, borderColor: themeColors.border }}
+          style={{
+            background: themeColors.headerBg,
+            color: themeColors.text,
+            borderColor: themeColors.border,
+          }}
         >
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold" style={{ color: themeColors.text }}>{currentView === 'proxy' ? 'Network' : activeServer?.name}</h2>
-            <span className="text-sm" style={{ color: themeColors.text, opacity: 0.7 }}> / {currentView}</span>
+            <h2 className="text-xl font-bold" style={{ color: themeColors.text }}>
+              {currentView === 'proxy' ? 'Network' : activeServer?.name}
+            </h2>
+            <span className="text-sm" style={{ color: themeColors.text, opacity: 0.7 }}>
+              {' '}
+              / {currentView}
+            </span>
           </div>
           <div className="flex items-center gap-2.5 ml-auto">
             {currentView !== 'proxy' && (
               <>
-                <button className="btn-start" onClick={handleStart} title="Start Server">▶ Start</button>
-                <button className="btn-restart btn-secondary" onClick={handleRestart} title="Restart Server">↻ Restart</button>
-                <button className="btn-stop" onClick={handleStop} title="Stop Server">■ Stop</button>
+                <button className="btn-start" onClick={handleStart} title="Start Server">
+                  ▶ Start
+                </button>
+                <button className="btn-restart btn-secondary" onClick={handleRestart} title="Restart Server">
+                  ↻ Restart
+                </button>
+                <button className="btn-stop" onClick={handleStop} title="Stop Server">
+                  ■ Stop
+                </button>
               </>
             )}
           </div>
         </header>
-        <div className="flex-1 p-0 overflow-hidden relative flex flex-col" style={{ background: themeColors.panelBg }}>{renderContent()}</div>
+        <div className="flex-1 p-0 overflow-hidden relative flex flex-col" style={{ background: themeColors.panelBg }}>
+          {renderContent()}
+        </div>
       </main>
 
       {downloadStatus && (
@@ -574,15 +721,24 @@ function App() {
           </div>
           <div className="text-sm mb-2 text-zinc-300">{downloadStatus.msg}</div>
           <div className="w-full h-1 bg-zinc-700 rounded-sm overflow-hidden">
-            <div className="h-full bg-accent rounded-sm transition-all duration-200" style={{ width: `${downloadStatus.progress}%` }}></div>
+            <div
+              className="h-full bg-accent rounded-sm transition-all duration-200"
+              style={{ width: `${downloadStatus.progress}%` }}
+            ></div>
           </div>
         </div>
       )}
       {showAddServerModal && <AddServerModal onClose={() => setShowAddServerModal(false)} onAdd={handleAddServer} />}
       {contextMenu && (
-        <div className="fixed bg-[#252526] border border-border-color rounded-md shadow-[0_4px_20px_rgba(0,0,0,0.4)] z-9999 p-1 min-w-[140px]" style={{ top: contextMenu.y, left: contextMenu.x }}>
+        <div
+          className="fixed bg-[#252526] border border-border-color rounded-md shadow-[0_4px_20px_rgba(0,0,0,0.4)] z-9999 p-1 min-w-[140px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
           <div
-            onClick={(e) => { e.stopPropagation(); handleDeleteServer(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteServer();
+            }}
             className="px-3 py-2 cursor-pointer text-red-400 text-sm rounded transition-colors flex items-center gap-2 hover:bg-red-500/10"
           >
             🗑️ 削除
@@ -594,9 +750,7 @@ function App() {
         <div className="fixed inset-0 bg-black/70 z-10000 flex items-center justify-center p-4">
           <div className="bg-[#252526] border border-zinc-700 rounded-lg shadow-2xl w-full max-w-[520px] p-6 text-white">
             <h3 className="text-xl font-semibold mt-0 mb-2">アップデートが利用可能です</h3>
-            <p className="text-sm text-zinc-300 mb-4">
-              バージョン: {updatePrompt.version || '不明'}
-            </p>
+            <p className="text-sm text-zinc-300 mb-4">バージョン: {updatePrompt.version || '不明'}</p>
 
             {getReleaseNotesText() && (
               <div className="mb-4">
@@ -611,7 +765,12 @@ function App() {
               <div className="mb-4">
                 <div className="text-sm text-zinc-300 mb-1">ダウンロード中... {Math.round(updateProgress)}%</div>
                 <div className="h-2 bg-zinc-800 rounded">
-                  <div className="h-2 bg-accent rounded" style={{ width: `${Math.min(100, Math.round(updateProgress))}%` }} />
+                  <div
+                    className="h-2 bg-accent rounded"
+                    style={{
+                      width: `${Math.min(100, Math.round(updateProgress))}%`,
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -621,14 +780,22 @@ function App() {
             )}
 
             <div className="flex justify-end gap-2">
-              <button className="btn-secondary" onClick={handleDismissUpdate}>後で</button>
+              <button className="btn-secondary" onClick={handleDismissUpdate}>
+                後で
+              </button>
               {!updateReady && (
-                <button className="btn-primary" onClick={handleUpdateNow} disabled={updateProgress !== null && !updateReady}>
+                <button
+                  className="btn-primary"
+                  onClick={handleUpdateNow}
+                  disabled={updateProgress !== null && !updateReady}
+                >
                   今すぐアップデート
                 </button>
               )}
               {updateReady && (
-                <button className="btn-primary" onClick={handleInstallUpdate}>再起動して適用</button>
+                <button className="btn-primary" onClick={handleInstallUpdate}>
+                  再起動して適用
+                </button>
               )}
             </div>
           </div>
@@ -637,7 +804,6 @@ function App() {
     </div>
   );
 }
-
 
 function NavItem({ label, view, current, set, iconSrc }: any) {
   const isOpen = !!label;
@@ -654,11 +820,7 @@ function NavItem({ label, view, current, set, iconSrc }: any) {
         alt={view}
         className={`w-5 h-5 shrink-0 block ${isOpen ? 'mr-3' : 'mr-0'} ${isActive ? 'invert' : 'opacity-70'}`}
       />
-      {isOpen && (
-        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-          {label}
-        </span>
-      )}
+      {isOpen && <span className="whitespace-nowrap overflow-hidden text-ellipsis">{label}</span>}
     </div>
   );
 }

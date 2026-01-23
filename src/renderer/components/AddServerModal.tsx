@@ -30,33 +30,79 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
 
   const versionOptions = [
     // 1.21.x
-    '1.21.10', '1.21.9', '1.21.8', '1.21.7', '1.21.6', '1.21.5', '1.21.4', '1.21.3', '1.21.2', '1.21.1', '1.21',
+    '1.21.10',
+    '1.21.9',
+    '1.21.8',
+    '1.21.7',
+    '1.21.6',
+    '1.21.5',
+    '1.21.4',
+    '1.21.3',
+    '1.21.2',
+    '1.21.1',
+    '1.21',
     // 1.20.x
-    '1.20.6', '1.20.5', '1.20.4', '1.20.3', '1.20.2', '1.20.1', '1.20',
+    '1.20.6',
+    '1.20.5',
+    '1.20.4',
+    '1.20.3',
+    '1.20.2',
+    '1.20.1',
+    '1.20',
     // 1.19.x
-    '1.19.4', '1.19.3', '1.19.2', '1.19.1', '1.19',
+    '1.19.4',
+    '1.19.3',
+    '1.19.2',
+    '1.19.1',
+    '1.19',
     // 1.18.x
-    '1.18.2', '1.18.1', '1.18',
+    '1.18.2',
+    '1.18.1',
+    '1.18',
     // 1.17.x
-    '1.17.1', '1.17',
+    '1.17.1',
+    '1.17',
     // 1.16.x
-    '1.16.5', '1.16.4', '1.16.3', '1.16.2', '1.16.1', '1.16',
+    '1.16.5',
+    '1.16.4',
+    '1.16.3',
+    '1.16.2',
+    '1.16.1',
+    '1.16',
     // 1.15.x
-    '1.15.2', '1.15.1', '1.15',
+    '1.15.2',
+    '1.15.1',
+    '1.15',
     // 1.14.x
-    '1.14.4', '1.14.3', '1.14.2', '1.14.1', '1.14',
+    '1.14.4',
+    '1.14.3',
+    '1.14.2',
+    '1.14.1',
+    '1.14',
     // 1.13.x
-    '1.13.2', '1.13.1', '1.13',
+    '1.13.2',
+    '1.13.1',
+    '1.13',
     // 1.12.x
-    '1.12.2', '1.12.1', '1.12',
+    '1.12.2',
+    '1.12.1',
+    '1.12',
     // 1.11.x
-    '1.11.2', '1.11.1', '1.11',
+    '1.11.2',
+    '1.11.1',
+    '1.11',
     // 1.10.x
-    '1.10.2', '1.10.1', '1.10',
+    '1.10.2',
+    '1.10.1',
+    '1.10',
     // 1.9.x
-    '1.9.4', '1.9.3', '1.9.2', '1.9.1', '1.9',
+    '1.9.4',
+    '1.9.3',
+    '1.9.2',
+    '1.9.1',
+    '1.9',
     // 1.8.x
-    '1.8.9'
+    '1.8.9',
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -73,8 +119,10 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
           <div className="mb-4">
             <label className="block mb-1.5 text-sm text-zinc-300">サーバー名</label>
             <input
-              type="text" required
-              value={name} onChange={e => setName(e.target.value)}
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="例: Survival Server"
               className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white text-base"
             />
@@ -87,7 +135,8 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
             <div className="flex-1">
               <label className="block mb-1.5 text-sm text-zinc-300">ソフトウェア</label>
               <select
-                value={software} onChange={e => setSoftware(e.target.value)}
+                value={software}
+                onChange={(e) => setSoftware(e.target.value)}
                 className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               >
                 <optgroup label="Standard">
@@ -111,12 +160,15 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
             <div className="flex-1">
               <label className="block mb-1.5 text-sm text-zinc-300">バージョン</label>
               <select
-                value={version} onChange={e => setVersion(e.target.value)}
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
                 className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               >
-                 {versionOptions.map(v => (
-                   <option key={v} value={v}>{v}</option>
-                 ))}
+                {versionOptions.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -125,24 +177,39 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
             <div className="flex-1">
               <label className="block mb-1.5 text-sm text-zinc-300">ポート</label>
               <input
-                type="number" required
-                value={port} onChange={e => setPort(Number(e.target.value))}
+                type="number"
+                required
+                value={port}
+                onChange={(e) => setPort(Number(e.target.value))}
                 className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               />
             </div>
             <div className="flex-1">
               <label className="block mb-1.5 text-sm text-zinc-300">メモリ(GB)</label>
               <input
-                type="number" required
-                value={memory} onChange={e => setMemory(Number(e.target.value))}
+                type="number"
+                required
+                value={memory}
+                onChange={(e) => setMemory(Number(e.target.value))}
                 className="w-full p-2.5 bg-zinc-700 border border-zinc-600 rounded text-white"
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-2.5 border-t border-zinc-700 pt-4">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 bg-transparent border border-zinc-600 text-zinc-300 rounded cursor-pointer hover:bg-white/5">キャンセル</button>
-            <button type="submit" className="px-5 py-2.5 bg-accent border-none text-white rounded cursor-pointer font-bold hover:bg-accent-hover">作成</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 bg-transparent border border-zinc-600 text-zinc-300 rounded cursor-pointer hover:bg-white/5"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-accent border-none text-white rounded cursor-pointer font-bold hover:bg-accent-hover"
+            >
+              作成
+            </button>
           </div>
         </form>
       </div>

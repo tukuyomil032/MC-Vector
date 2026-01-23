@@ -13,14 +13,14 @@ export default function PropertiesView({ server }: Props) {
   const [props, setProps] = useState<ServerProperties>({
     'server-port': server.port || 25565,
     'max-players': 20,
-    'gamemode': 'survival',
-    'difficulty': 'easy',
-    'pvp': true,
+    gamemode: 'survival',
+    difficulty: 'easy',
+    pvp: true,
     'online-mode': true,
     'enable-command-block': false,
     'allow-flight': false,
     'white-list': false,
-    'motd': 'A Minecraft Server'
+    motd: 'A Minecraft Server',
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ export default function PropertiesView({ server }: Props) {
         const lines = content.split('\n');
         const newProps: ServerProperties = {};
 
-        lines.forEach(line => {
+        lines.forEach((line) => {
           const trimmed = line.trim();
           if (trimmed && !trimmed.startsWith('#')) {
             const [key, ...vals] = trimmed.split('=');
@@ -51,7 +51,11 @@ export default function PropertiesView({ server }: Props) {
           }
         });
 
-        setProps(prev => ({ ...prev, ...newProps, 'server-port': newProps['server-port'] ?? prev['server-port'] }));
+        setProps((prev) => ({
+          ...prev,
+          ...newProps,
+          'server-port': newProps['server-port'] ?? prev['server-port'],
+        }));
         setHasChanges(false);
       } catch (e) {
         console.error('Failed to load properties:', e);
@@ -75,7 +79,7 @@ export default function PropertiesView({ server }: Props) {
   }, [showToast]);
 
   const handleChange = (key: string, value: PropertyValue) => {
-    setProps(prev => ({ ...prev, [key]: value }));
+    setProps((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
 
@@ -106,22 +110,14 @@ export default function PropertiesView({ server }: Props) {
   return (
     <div className="h-full overflow-y-auto relative">
       <div className="p-10 max-w-4xl mx-auto">
-
         <div className="flex justify-between items-center mb-5">
           <h3>サーバー設定 (server.properties)</h3>
           <div className="flex gap-2.5 flex-wrap">
-            <button
-              className="btn-secondary"
-              onClick={openAdvancedWindow}
-            >
+            <button className="btn-secondary" onClick={openAdvancedWindow}>
               🛠️ 詳細設定を開く (別窓)
             </button>
 
-            <button
-              className="btn-primary disabled:opacity-50"
-              onClick={handleSave}
-              disabled={!hasChanges}
-            >
+            <button className="btn-primary disabled:opacity-50" onClick={handleSave} disabled={!hasChanges}>
               変更を保存
             </button>
           </div>
@@ -199,7 +195,9 @@ export default function PropertiesView({ server }: Props) {
         </div>
 
         <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
-          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">接続・ネットワーク</div>
+          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">
+            接続・ネットワーク
+          </div>
 
           <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
             <div className="flex flex-col">
@@ -239,14 +237,21 @@ export default function PropertiesView({ server }: Props) {
             onChange={(v) => handleChange('white-list', v)}
           />
         </div>
-
       </div>
     </div>
   );
 }
 
-function ToggleItem({ label, desc, checked, onChange }: {
-  label: string, desc: string, checked: boolean, onChange: (val: boolean) => void
+function ToggleItem({
+  label,
+  desc,
+  checked,
+  onChange,
+}: {
+  label: string;
+  desc: string;
+  checked: boolean;
+  onChange: (val: boolean) => void;
 }) {
   return (
     <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
@@ -255,11 +260,7 @@ function ToggleItem({ label, desc, checked, onChange }: {
         <span className="text-xs text-text-secondary mt-0.5">{desc}</span>
       </div>
       <label className="toggle-switch">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-        />
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
         <span className="slider"></span>
       </label>
     </div>

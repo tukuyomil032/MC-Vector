@@ -19,11 +19,11 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const removeToast = useCallback((id: number) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const showToast = useCallback((message: string, type: ToastKind = 'info') => {
-    setToasts(prev => [...prev, { id: Date.now() + Math.random(), message, type }]);
+    setToasts((prev) => [...prev, { id: Date.now() + Math.random(), message, type }]);
   }, []);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
@@ -32,7 +32,7 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       <div className="fixed top-5 right-5 space-y-3 z-[99999]">
-        {toasts.map(t => (
+        {toasts.map((t) => (
           <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
         ))}
       </div>

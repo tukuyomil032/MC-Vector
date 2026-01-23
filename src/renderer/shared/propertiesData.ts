@@ -374,7 +374,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     default: 100,
   },
 
-
   // Security
   {
     key: 'online-mode',
@@ -408,7 +407,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     category: 'Security',
     default: false,
   },
-
 
   // Resource pack
   {
@@ -545,7 +543,6 @@ export const serverPropertiesList: PropertyDefinition[] = [
     category: 'Advanced',
     default: 1000000,
   },
-
 
   // Misc
 

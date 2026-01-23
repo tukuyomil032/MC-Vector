@@ -29,7 +29,9 @@ export default function PluginBrowser({ server }: Props) {
   const [page, setPage] = useState(0);
   const LIMIT = 30;
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
-  const [platform, setPlatform] = useState<'Modrinth' | 'Hangar' | 'CurseForge' | 'Spigot'>(isModServer ? 'Modrinth' : 'Modrinth');
+  const [platform, setPlatform] = useState<'Modrinth' | 'Hangar' | 'CurseForge' | 'Spigot'>(
+    isModServer ? 'Modrinth' : 'Modrinth',
+  );
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
   const { showToast } = useToast();
   const folderName = isModServer ? 'mods' : 'plugins';
@@ -38,7 +40,7 @@ export default function PluginBrowser({ server }: Props) {
     try {
       const dirPath = `${server.path}/${folderName}`;
       const entries = await window.electronAPI.listFiles(dirPath, server.id);
-      setInstalledFiles(entries.filter(e => !e.isDirectory).map(e => e.name));
+      setInstalledFiles(entries.filter((e) => !e.isDirectory).map((e) => e.name));
     } catch (e) {
       console.error(e);
       setInstalledFiles([]);
@@ -53,7 +55,11 @@ export default function PluginBrowser({ server }: Props) {
     refreshInstalled();
   }, [server.id, server.path, isModServer]);
 
-  const normalize = (text?: string) => (text || '').toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/g, '');
+  const normalize = (text?: string) =>
+    (text || '')
+      .toLowerCase()
+      .replace(/\.[^.]+$/, '')
+      .replace(/[^a-z0-9]/g, '');
 
   const findInstalledMatch = (item: ProjectItem) => {
     const candidates = [item.slug, item.title, item.id, item.source_obj?.slug, item.source_obj?.project_id]
@@ -62,10 +68,12 @@ export default function PluginBrowser({ server }: Props) {
 
     if (candidates.length === 0) return null;
 
-    return installedFiles.find(file => {
-      const base = normalize(file);
-      return candidates.some(c => base.includes(c) || c.includes(base));
-    }) || null;
+    return (
+      installedFiles.find((file) => {
+        const base = normalize(file);
+        return candidates.some((c) => base.includes(c) || c.includes(base));
+      }) || null
+    );
   };
 
   const search = async () => {
@@ -89,9 +97,8 @@ export default function PluginBrowser({ server }: Props) {
           downloads: h.downloads,
           slug: h.slug || h.project_id,
           platform: 'Modrinth',
-          source_obj: h
+          source_obj: h,
         }));
-
       } else if (platform === 'Hangar') {
         const hits = await window.electronAPI.searchHangar(query, server.version, offset);
 
@@ -105,7 +112,7 @@ export default function PluginBrowser({ server }: Props) {
           downloads: h.stats.downloads,
           slug: h.namespace?.slug || h.name,
           platform: 'Hangar',
-          source_obj: h
+          source_obj: h,
         }));
       }
 
@@ -152,13 +159,24 @@ export default function PluginBrowser({ server }: Props) {
         const file = versions[0].files[0];
         const type = isModServer ? 'mod' : 'plugin';
 
-        await window.electronAPI.installModrinthProject(item.id, versions[0].id, file.filename, file.url, server.id, type);
-        showToast(`${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`, 'success');
-
+        await window.electronAPI.installModrinthProject(
+          item.id,
+          versions[0].id,
+          file.filename,
+          file.url,
+          server.id,
+          type,
+        );
+        showToast(
+          `${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`,
+          'success',
+        );
       } else if (item.platform === 'Hangar') {
         const author = item.source_obj.namespace.owner;
         const slug = item.source_obj.namespace.slug;
-        const res = await fetch(`https://hangar.papermc.io/api/v1/projects/${author}/${slug}/versions?limit=1&platform=PAPER&platformVersion=${server.version}`);
+        const res = await fetch(
+          `https://hangar.papermc.io/api/v1/projects/${author}/${slug}/versions?limit=1&platform=PAPER&platformVersion=${server.version}`,
+        );
         const data = await res.json();
 
         if (!data.result || data.result.length === 0) {
@@ -171,7 +189,10 @@ export default function PluginBrowser({ server }: Props) {
         const fileName = `${slug}-${version.name}.jar`;
 
         await window.electronAPI.installHangarProject(downloadUrl, fileName, server.id);
-        showToast(`${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`, 'success');
+        showToast(
+          `${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`,
+          'success',
+        );
       }
     } catch (e) {
       console.error(e);
@@ -193,12 +214,11 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   const openExternal = (url: string) => {
-        showToast(`ブラウザで開いてください: ${url}`, 'info');
+    showToast(`ブラウザで開いてください: ${url}`, 'info');
   };
 
   return (
     <div className="h-full flex flex-col p-5">
-
       <div className="flex justify-between items-center mb-5">
         <h2 className="m-0">{isModServer ? 'Mod' : 'Plugin'} Browser</h2>
 
@@ -206,7 +226,10 @@ export default function PluginBrowser({ server }: Props) {
           <select
             className="input-field w-[150px]"
             value={platform}
-            onChange={e => { setPlatform(e.target.value as any); setPage(0); }}
+            onChange={(e) => {
+              setPlatform(e.target.value as any);
+              setPage(0);
+            }}
           >
             <option value="Modrinth">Modrinth</option>
             {isPaper && <option value="Hangar">Hangar (Paper)</option>}
@@ -216,15 +239,15 @@ export default function PluginBrowser({ server }: Props) {
         </div>
       </div>
 
-      {(platform === 'Modrinth' || platform === 'Hangar') ? (
+      {platform === 'Modrinth' || platform === 'Hangar' ? (
         <div className="mb-5 flex gap-2.5">
           <input
             type="text"
             className="input-field flex-1"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search on ${platform}...`}
-            onKeyDown={e => e.key === 'Enter' && search()}
+            onKeyDown={(e) => e.key === 'Enter' && search()}
           />
           <button className="btn-primary disabled:opacity-50" onClick={search} disabled={loading}>
             {loading ? '...' : 'Search'}
@@ -235,26 +258,34 @@ export default function PluginBrowser({ server }: Props) {
           <p>このプラットフォームはアプリ内検索に対応していません。</p>
           <button
             className="btn-primary mt-2"
-            onClick={() => openExternal(platform === 'CurseForge' ? 'https://www.curseforge.com/minecraft/mc-mods' : 'https://www.spigotmc.org/resources/')}
+            onClick={() =>
+              openExternal(
+                platform === 'CurseForge'
+                  ? 'https://www.curseforge.com/minecraft/mc-mods'
+                  : 'https://www.spigotmc.org/resources/',
+              )
+            }
           >
             ブラウザで {platform} を開く
           </button>
-          <p className="text-xs text-zinc-500 mt-3">ダウンロードした.jarは Files から plugins フォルダへ配置してください。</p>
+          <p className="text-xs text-zinc-500 mt-3">
+            ダウンロードした.jarは Files から plugins フォルダへ配置してください。
+          </p>
         </div>
       )}
 
       {(platform === 'Modrinth' || platform === 'Hangar') && (
         <>
           <div className="flex-1 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4 pr-1">
-            {results.map(item => (
+            {results.map((item) => (
               <div key={item.id} className="p-4 flex gap-4 bg-[#252526] border border-zinc-800 rounded-lg">
                 <div
-                    className="w-16 h-16 rounded-lg shrink-0 bg-zinc-800"
-                    style={{
-                      backgroundImage: item.icon_url ? `url(${item.icon_url})` : 'none',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
+                  className="w-16 h-16 rounded-lg shrink-0 bg-zinc-800"
+                  style={{
+                    backgroundImage: item.icon_url ? `url(${item.icon_url})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
                 ></div>
 
                 <div className="flex-1 min-w-0 flex flex-col">
@@ -276,14 +307,12 @@ export default function PluginBrowser({ server }: Props) {
                     </div>
                   </div>
 
-                  <div className="text-sm text-zinc-400 mb-auto line-clamp-2 leading-snug">
-                    {item.description}
-                  </div>
+                  <div className="text-sm text-zinc-400 mb-auto line-clamp-2 leading-snug">{item.description}</div>
 
                   <div className="mt-2.5 text-xs text-zinc-600 flex justify-between">
                     <span>By {item.author}</span>
                     <span>
-                      {item.downloads ? `⬇ ${item.downloads.toLocaleString()}` : (item.stars ? `★ ${item.stars}` : '')}
+                      {item.downloads ? `⬇ ${item.downloads.toLocaleString()}` : item.stars ? `★ ${item.stars}` : ''}
                     </span>
                   </div>
                 </div>
@@ -291,16 +320,14 @@ export default function PluginBrowser({ server }: Props) {
             ))}
 
             {results.length === 0 && !loading && (
-              <div className="col-span-full text-center text-zinc-600 p-5">
-                結果がありません。
-              </div>
+              <div className="col-span-full text-center text-zinc-600 p-5">結果がありません。</div>
             )}
           </div>
 
           <div className="mt-5 flex justify-center gap-5 items-center">
             <button
               className="btn-secondary disabled:opacity-50"
-              onClick={() => setPage(p => Math.max(0, p - 1))}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0 || loading}
             >
               ← Prev
@@ -308,7 +335,7 @@ export default function PluginBrowser({ server }: Props) {
             <span className="text-zinc-400">Page {page + 1}</span>
             <button
               className="btn-secondary disabled:opacity-50"
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => setPage((p) => p + 1)}
               disabled={results.length < LIMIT || loading}
             >
               Next →

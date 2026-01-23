@@ -35,7 +35,11 @@ export default function FilesView({ server }: Props) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, file: FileEntry | null } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    file: FileEntry | null;
+  } | null>(null);
   const [modalType, setModalType] = useState<string | null>(null);
 
   const [newFileName, setNewFileName] = useState('');
@@ -62,7 +66,7 @@ export default function FilesView({ server }: Props) {
       const entries = await window.electronAPI.listFiles(path, server.id);
       setFiles(entries);
     } catch (e) {
-      console.error("Failed to list files", e);
+      console.error('Failed to list files', e);
     }
   };
 
@@ -125,7 +129,6 @@ export default function FilesView({ server }: Props) {
     return normalizedFull;
   };
 
-
   const handleRowClick = (fileName: string, e: React.MouseEvent) => {
     if (e.ctrlKey || e.metaKey) {
       toggleSelect(fileName);
@@ -141,14 +144,14 @@ export default function FilesView({ server }: Props) {
 
   const toggleSelect = (name: string) => {
     if (selectedFiles.includes(name)) {
-        setSelectedFiles(selectedFiles.filter(f => f !== name));
+      setSelectedFiles(selectedFiles.filter((f) => f !== name));
     } else {
-        setSelectedFiles([...selectedFiles, name]);
+      setSelectedFiles([...selectedFiles, name]);
     }
   };
 
   const handleFileDoubleClick = async (fileName: string) => {
-    const target = files.find(f => f.name === fileName);
+    const target = files.find((f) => f.name === fileName);
     if (!target) return;
 
     if (target.isDirectory) {
@@ -166,7 +169,7 @@ export default function FilesView({ server }: Props) {
         setFileContent(content);
         setIsEditorOpen(true);
       } catch (e) {
-        console.error("Failed to read file", e);
+        console.error('Failed to read file', e);
       }
     }
   };
@@ -280,7 +283,7 @@ export default function FilesView({ server }: Props) {
     const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
 
     if (realDest.startsWith('servers/')) {
-       realDest = realDest.replace('servers', normalizedRoot);
+      realDest = realDest.replace('servers', normalizedRoot);
     }
     realDest = realDest.replace(/\/+/g, '/');
 
@@ -290,9 +293,9 @@ export default function FilesView({ server }: Props) {
         handleGoUp();
       } else {
         for (const name of selectedFiles) {
-            const src = `${currentPath}/${name}`;
-            const dest = `${realDest}/${name}`.replace(/\/+/g, '/').replace(/\\+/g, '/');
-            await window.electronAPI.movePath(src, dest, server.id);
+          const src = `${currentPath}/${name}`;
+          const dest = `${realDest}/${name}`.replace(/\/+/g, '/').replace(/\\+/g, '/');
+          await window.electronAPI.movePath(src, dest, server.id);
         }
         setSelectedFiles([]);
         loadFiles(currentPath);
@@ -329,7 +332,7 @@ export default function FilesView({ server }: Props) {
 
   const handleZip = async () => {
     if (selectedFiles.length === 0) return;
-    const targets = selectedFiles.map(f => `${currentPath}/${f}`);
+    const targets = selectedFiles.map((f) => `${currentPath}/${f}`);
     const dest = `${currentPath}/archive-${Date.now()}.zip`;
     try {
       await window.electronAPI.compressFiles(targets, dest, server.id);
@@ -346,9 +349,9 @@ export default function FilesView({ server }: Props) {
     if (selectedFiles.length === 0) return;
     try {
       for (const f of selectedFiles) {
-          if (f.endsWith('.zip')) {
-              await window.electronAPI.extractArchive(`${currentPath}/${f}`, currentPath, server.id);
-          }
+        if (f.endsWith('.zip')) {
+          await window.electronAPI.extractArchive(`${currentPath}/${f}`, currentPath, server.id);
+        }
       }
       showToast('解凍しました', 'success');
       loadFiles(currentPath);
@@ -371,95 +374,163 @@ export default function FilesView({ server }: Props) {
     e.preventDefault();
     e.stopPropagation();
     try {
-        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-        if (data.fromPath === currentPath && data.fileName !== folderName) {
-            const src = `${currentPath}/${data.fileName}`;
-            const dest = `${currentPath}/${folderName}/${data.fileName}`;
-            await window.electronAPI.movePath(src, dest, server.id);
-            loadFiles(currentPath);
-        }
-    } catch (err) {
-    }
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (data.fromPath === currentPath && data.fileName !== folderName) {
+        const src = `${currentPath}/${data.fileName}`;
+        const dest = `${currentPath}/${folderName}/${data.fileName}`;
+        await window.electronAPI.movePath(src, dest, server.id);
+        loadFiles(currentPath);
+      }
+    } catch (err) {}
   };
-
-
 
   return (
     <div className="h-full flex flex-col text-zinc-300" onClick={() => setContextMenu(null)}>
       {/* ツールバー */}
       <div className="py-2.5 px-5 border-b border-zinc-800 flex items-center gap-2.5 bg-[#252526]">
-        <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white disabled:opacity-50" onClick={handleGoUp} disabled={currentPath === server.path} title="上の階層へ">⬆</button>
+        <button
+          className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+          onClick={handleGoUp}
+          disabled={currentPath === server.path}
+          title="上の階層へ"
+        >
+          ⬆
+        </button>
 
         {/* パンくずリスト */}
         <div className="flex-1 bg-[#1e1e1e] px-2.5 py-1.5 rounded overflow-x-auto whitespace-nowrap">
-            {renderBreadcrumbs()}
+          {renderBreadcrumbs()}
         </div>
 
-        <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white" onClick={() => setModalType('create')} title="新規作成 / インポート">+</button>
-        <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white" onClick={handleOpenExplorer} title="エクスプローラーで開く"><img src={iconOpenLocation} className="w-4" alt="Open" /></button>
+        <button
+          className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white"
+          onClick={() => setModalType('create')}
+          title="新規作成 / インポート"
+        >
+          +
+        </button>
+        <button
+          className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white"
+          onClick={handleOpenExplorer}
+          title="エクスプローラーで開く"
+        >
+          <img src={iconOpenLocation} className="w-4" alt="Open" />
+        </button>
         {selectedFiles.length > 0 && (
-            <>
-                <div className="w-px h-5 bg-zinc-700 mx-1.5"></div>
-                <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white" onClick={() => openMoveModal(false)} title="移動"><img src={iconMove} className="w-4" alt="Move" /></button>
-                <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white" onClick={handleZip} title="圧縮"><img src={iconZip} className="w-4" alt="Zip" /></button>
-                <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white" onClick={handleUnzip} title="解凍"><img src={iconUnzip} className="w-4" alt="Unzip" /></button>
-                <button className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-red-500/20 hover:text-red-400" onClick={handleDelete} title="削除"><img src={iconTrash} className="w-4" alt="Delete" /></button>
-            </>
+          <>
+            <div className="w-px h-5 bg-zinc-700 mx-1.5"></div>
+            <button
+              className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white"
+              onClick={() => openMoveModal(false)}
+              title="移動"
+            >
+              <img src={iconMove} className="w-4" alt="Move" />
+            </button>
+            <button
+              className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white"
+              onClick={handleZip}
+              title="圧縮"
+            >
+              <img src={iconZip} className="w-4" alt="Zip" />
+            </button>
+            <button
+              className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-zinc-800 hover:text-white"
+              onClick={handleUnzip}
+              title="解凍"
+            >
+              <img src={iconUnzip} className="w-4" alt="Unzip" />
+            </button>
+            <button
+              className="bg-transparent border-none cursor-pointer text-zinc-400 p-1.5 rounded hover:bg-red-500/20 hover:text-red-400"
+              onClick={handleDelete}
+              title="削除"
+            >
+              <img src={iconTrash} className="w-4" alt="Delete" />
+            </button>
+          </>
         )}
       </div>
 
       {/* ファイルリスト表示エリア */}
       <div className="flex-1 overflow-y-auto p-0 bg-[#1e1e1e]" onContextMenu={(e) => handleContextMenu(e, null)}>
-          <div className="flex flex-col gap-0">
-            {files.map(file => (
-              <div
-                key={file.name}
-                className={`flex items-center p-2.5 bg-transparent border-b border-zinc-800 cursor-pointer user-select-none last:border-b-0 hover:bg-zinc-800/50 ${selectedFiles.includes(file.name) ? 'bg-zinc-900/50' : ''}`}
-                onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, file); }}
-                onClick={(e) => handleRowClick(file.name, e)}
-                onDoubleClick={() => handleFileDoubleClick(file.name)}
-                draggable
-                onDragStart={(e) => handleDragStart(e, file.name)}
-                onDragOver={(e) => { if(file.isDirectory) { e.preventDefault(); e.stopPropagation(); } }}
-                onDrop={(e) => { if(file.isDirectory) handleDropOnFolder(e, file.name); }}
+        <div className="flex flex-col gap-0">
+          {files.map((file) => (
+            <div
+              key={file.name}
+              className={`flex items-center p-2.5 bg-transparent border-b border-zinc-800 cursor-pointer user-select-none last:border-b-0 hover:bg-zinc-800/50 ${selectedFiles.includes(file.name) ? 'bg-zinc-900/50' : ''}`}
+              onContextMenu={(e) => {
+                e.stopPropagation();
+                handleContextMenu(e, file);
+              }}
+              onClick={(e) => handleRowClick(file.name, e)}
+              onDoubleClick={() => handleFileDoubleClick(file.name)}
+              draggable
+              onDragStart={(e) => handleDragStart(e, file.name)}
+              onDragOver={(e) => {
+                if (file.isDirectory) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              onDrop={(e) => {
+                if (file.isDirectory) handleDropOnFolder(e, file.name);
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedFiles.includes(file.name)}
+                onChange={() => {}}
+                onClick={(e) => handleCheckboxClick(file.name, e)}
+                className="cursor-pointer mr-2.5 ml-2.5"
+              />
+              <img
+                src={file.isDirectory ? iconFolder : iconFile}
+                alt={file.isDirectory ? 'Folder' : 'File'}
+                className="w-5 h-5 object-contain mr-2.5"
+              />
+              <span
+                className={`flex-1 ${file.isDirectory ? 'font-bold text-accent' : 'font-normal text-text-primary'} whitespace-nowrap overflow-hidden text-ellipsis`}
               >
-                <input
-                    type="checkbox"
-                    checked={selectedFiles.includes(file.name)}
-                    onChange={() => {}}
-                    onClick={(e) => handleCheckboxClick(file.name, e)}
-                    className="cursor-pointer mr-2.5 ml-2.5"
-                />
-                <img
-                  src={file.isDirectory ? iconFolder : iconFile}
-                  alt={file.isDirectory ? 'Folder' : 'File'}
-                  className="w-5 h-5 object-contain mr-2.5"
-                />
-                <span className={`flex-1 ${file.isDirectory ? 'font-bold text-accent' : 'font-normal text-text-primary'} whitespace-nowrap overflow-hidden text-ellipsis`}>{file.name}</span>
-                <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">{file.isDirectory ? '-' : (file.size ? (file.size / 1024).toFixed(1) + ' KB' : '0 KB')}</span>
-              </div>
-            ))}
-            {files.length === 0 && <div className="p-5 text-center text-text-secondary">フォルダは空です</div>}
-          </div>
+                {file.name}
+              </span>
+              <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">
+                {file.isDirectory ? '-' : file.size ? (file.size / 1024).toFixed(1) + ' KB' : '0 KB'}
+              </span>
+            </div>
+          ))}
+          {files.length === 0 && <div className="p-5 text-center text-text-secondary">フォルダは空です</div>}
+        </div>
       </div>
 
       {/* Editor Modal */}
       {isEditorOpen && (
         <div className="fixed inset-0 bg-[#1e1e1e] z-2000 flex flex-col">
-            <div className="p-2.5 bg-[#252526] flex justify-between items-center">
-                <span>{editingFile}</span>
-                <div>
-                    <button className="btn-secondary mr-2.5" onClick={() => setIsEditorOpen(false)}>閉じる</button>
-                    <button className="btn-primary disabled:opacity-50" onClick={handleSaveFile} disabled={isSaving}>{isSaving ? '保存中...' : '保存'}</button>
-                </div>
+          <div className="p-2.5 bg-[#252526] flex justify-between items-center">
+            <span>{editingFile}</span>
+            <div>
+              <button className="btn-secondary mr-2.5" onClick={() => setIsEditorOpen(false)}>
+                閉じる
+              </button>
+              <button className="btn-primary disabled:opacity-50" onClick={handleSaveFile} disabled={isSaving}>
+                {isSaving ? '保存中...' : '保存'}
+              </button>
             </div>
-            <Editor
-                height="100%"
-                defaultLanguage={editingFile?.endsWith('.json') ? 'json' : editingFile?.endsWith('.yml') || editingFile?.endsWith('.yaml') ? 'yaml' : editingFile?.endsWith('.properties') ? 'ini' : 'plaintext'}
-                theme="vs-dark"
-                value={fileContent}
-                onChange={(val) => setFileContent(val || '')}
-            />
+          </div>
+          <Editor
+            height="100%"
+            defaultLanguage={
+              editingFile?.endsWith('.json')
+                ? 'json'
+                : editingFile?.endsWith('.yml') || editingFile?.endsWith('.yaml')
+                  ? 'yaml'
+                  : editingFile?.endsWith('.properties')
+                    ? 'ini'
+                    : 'plaintext'
+            }
+            theme="vs-dark"
+            value={fileContent}
+            onChange={(val) => setFileContent(val || '')}
+          />
         </div>
       )}
 
@@ -500,10 +571,12 @@ export default function FilesView({ server }: Props) {
               type="text"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
-              placeholder={createMode === 'folder' ? "新しいフォルダ名" : "新しいファイル名.txt"}
+              placeholder={createMode === 'folder' ? '新しいフォルダ名' : '新しいファイル名.txt'}
               className="w-full p-2.5 mt-4 mb-5 bg-[#1e1e1e] border border-zinc-700 text-white rounded-md text-base box-border"
               autoFocus
-              onKeyDown={(e) => { if(e.key === 'Enter') handleCreate(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate();
+              }}
             />
 
             <div className="flex justify-end gap-2.5 mt-2.5">
@@ -530,12 +603,12 @@ export default function FilesView({ server }: Props) {
         <div className="fixed inset-0 bg-black/60 z-1000 flex justify-center items-center">
           <div className="bg-[#252526] p-6 rounded-xl w-[450px] border border-[#3e3e42] text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
             <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-               {modalType === 'moveCurrent' ? 'ディレクトリの移動' : '移動'}
+              {modalType === 'moveCurrent' ? 'ディレクトリの移動' : '移動'}
             </h3>
             <p className="text-zinc-400 text-sm mb-2.5">
-                {modalType === 'moveCurrent'
-                  ? '現在のディレクトリ全体を移動します。'
-                  : `選択した ${selectedFiles.length} 個の項目を移動します。`}
+              {modalType === 'moveCurrent'
+                ? '現在のディレクトリ全体を移動します。'
+                : `選択した ${selectedFiles.length} 個の項目を移動します。`}
             </p>
             <input
               type="text"
@@ -564,7 +637,7 @@ export default function FilesView({ server }: Props) {
 
       {/* Rename Modal */}
       {modalType === 'rename' && (
-         <div className="fixed inset-0 bg-black/60 z-1000 flex justify-center items-center">
+        <div className="fixed inset-0 bg-black/60 z-1000 flex justify-center items-center">
           <div className="bg-[#252526] p-6 rounded-xl w-[450px] border border-[#3e3e42] text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
             <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">名前の変更</h3>
             <input
@@ -575,64 +648,123 @@ export default function FilesView({ server }: Props) {
               autoFocus
             />
             <div className="flex justify-end gap-2.5 mt-2.5">
-              <button onClick={() => setModalType(null)} className="px-4 py-2 rounded-lg border border-zinc-700 bg-transparent text-zinc-300 cursor-pointer text-sm font-bold hover:bg-zinc-800">キャンセル</button>
-              <button onClick={handleRename} className="px-4 py-2 rounded-lg border-none bg-accent text-white cursor-pointer text-sm font-bold hover:bg-accent-hover">変更</button>
+              <button
+                onClick={() => setModalType(null)}
+                className="px-4 py-2 rounded-lg border border-zinc-700 bg-transparent text-zinc-300 cursor-pointer text-sm font-bold hover:bg-zinc-800"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleRename}
+                className="px-4 py-2 rounded-lg border-none bg-accent text-white cursor-pointer text-sm font-bold hover:bg-accent-hover"
+              >
+                変更
+              </button>
             </div>
           </div>
-         </div>
+        </div>
       )}
 
       {/* Context Menu (機能追加・画像付き) */}
       {contextMenu && (
-        <div className="fixed bg-[#252526] border border-zinc-700 rounded-md shadow-[0_4px_10px_rgba(0,0,0,0.5)] z-3000 min-w-[180px] p-1" style={{ top: contextMenu.y, left: contextMenu.x }}>
-            {contextMenu.file ? (
-                <>
-                    {/* 1. 名前の変更 (画像なしのため透明なスペースで位置合わせ) */}
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { setRenameFileName(contextMenu.file!.name); setModalType('rename'); setContextMenu(null); }}>
-                        <div className="w-4 h-4 inline-block"></div>
-                        名前の変更
-                    </div>
+        <div
+          className="fixed bg-[#252526] border border-zinc-700 rounded-md shadow-[0_4px_10px_rgba(0,0,0,0.5)] z-3000 min-w-[180px] p-1"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          {contextMenu.file ? (
+            <>
+              {/* 1. 名前の変更 (画像なしのため透明なスペースで位置合わせ) */}
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  setRenameFileName(contextMenu.file!.name);
+                  setModalType('rename');
+                  setContextMenu(null);
+                }}
+              >
+                <div className="w-4 h-4 inline-block"></div>
+                名前の変更
+              </div>
 
-                    {/* 2. アイテムを移動 */}
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { openMoveModal(false); setContextMenu(null); }}>
-                        <img src={iconMove} className="w-4 h-4 object-contain" alt="" />
-                        アイテムを移動...
-                    </div>
+              {/* 2. アイテムを移動 */}
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  openMoveModal(false);
+                  setContextMenu(null);
+                }}
+              >
+                <img src={iconMove} className="w-4 h-4 object-contain" alt="" />
+                アイテムを移動...
+              </div>
 
-                    {/* 3. アイテムを圧縮 */}
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { handleZip(); setContextMenu(null); }}>
-                        <img src={iconZip} className="w-4 h-4 object-contain" alt="" />
-                        アイテムを圧縮
-                    </div>
+              {/* 3. アイテムを圧縮 */}
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  handleZip();
+                  setContextMenu(null);
+                }}
+              >
+                <img src={iconZip} className="w-4 h-4 object-contain" alt="" />
+                アイテムを圧縮
+              </div>
 
-                    {/* 4. アイテムを解凍 */}
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { handleUnzip(); setContextMenu(null); }}>
-                        <img src={iconUnzip} className="w-4 h-4 object-contain" alt="" />
-                        アイテムを解凍
-                    </div>
+              {/* 4. アイテムを解凍 */}
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  handleUnzip();
+                  setContextMenu(null);
+                }}
+              >
+                <img src={iconUnzip} className="w-4 h-4 object-contain" alt="" />
+                アイテムを解凍
+              </div>
 
-                    {/* 5. アイテムを削除 */}
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-red-500 hover:text-white transition-colors" onClick={handleDelete}>
-                        <img src={iconTrash} className="w-4 h-4 object-contain" alt="" />
-                        アイテムを削除
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { setModalType('create'); setContextMenu(null); }}>
-                        <div className="w-4 h-4 inline-block"></div>
-                        新規作成...
-                    </div>
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { handleImport(); setContextMenu(null); }}>
-                        <div className="w-4 h-4 inline-block"></div>
-                        インポート...
-                    </div>
-                    <div className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors" onClick={() => { openMoveModal(true); setContextMenu(null); }}>
-                        <img src={iconMove} className="w-4 h-4 object-contain" alt="" />
-                        移動...
-                    </div>
-                </>
-            )}
+              {/* 5. アイテムを削除 */}
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-red-500 hover:text-white transition-colors"
+                onClick={handleDelete}
+              >
+                <img src={iconTrash} className="w-4 h-4 object-contain" alt="" />
+                アイテムを削除
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  setModalType('create');
+                  setContextMenu(null);
+                }}
+              >
+                <div className="w-4 h-4 inline-block"></div>
+                新規作成...
+              </div>
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  handleImport();
+                  setContextMenu(null);
+                }}
+              >
+                <div className="w-4 h-4 inline-block"></div>
+                インポート...
+              </div>
+              <div
+                className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm rounded hover:bg-accent hover:text-white transition-colors"
+                onClick={() => {
+                  openMoveModal(true);
+                  setContextMenu(null);
+                }}
+              >
+                <img src={iconMove} className="w-4 h-4 object-contain" alt="" />
+                移動...
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

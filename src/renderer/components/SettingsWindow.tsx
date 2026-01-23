@@ -38,7 +38,7 @@ const SettingsWindow = () => {
 
   const normalizeTheme = (value: unknown): AppTheme => {
     const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
-    return allowed.includes(value as AppTheme) ? value as AppTheme : 'dark';
+    return allowed.includes(value as AppTheme) ? (value as AppTheme) : 'dark';
   };
 
   const releaseNotesText = useMemo(() => normalizeReleaseNotes(updateState.releaseNotes), [updateState.releaseNotes]);
@@ -50,19 +50,35 @@ const SettingsWindow = () => {
     window.electronAPI.settingsWindowReady();
 
     const disposeAvailable = window.electronAPI.onUpdateAvailable((payload) => {
-      setUpdateState({ status: 'available', version: payload?.version, releaseNotes: payload?.releaseNotes });
+      setUpdateState({
+        status: 'available',
+        version: payload?.version,
+        releaseNotes: payload?.releaseNotes,
+      });
     });
     const disposeAvailableSilent = window.electronAPI.onUpdateAvailableSilent((payload) => {
-      setUpdateState({ status: 'available', version: payload?.version, releaseNotes: payload?.releaseNotes });
+      setUpdateState({
+        status: 'available',
+        version: payload?.version,
+        releaseNotes: payload?.releaseNotes,
+      });
     });
     const disposeNotAvailable = window.electronAPI.onUpdateNotAvailable(() => {
       setUpdateState({ status: 'not-available' });
     });
     const disposeProgress = window.electronAPI.onUpdateDownloadProgress((payload) => {
-      setUpdateState((prev) => ({ ...prev, status: 'downloading', progress: payload?.percent ?? prev.progress }));
+      setUpdateState((prev) => ({
+        ...prev,
+        status: 'downloading',
+        progress: payload?.percent ?? prev.progress,
+      }));
     });
     const disposeDownloaded = window.electronAPI.onUpdateDownloaded((payload) => {
-      setUpdateState({ status: 'downloaded', version: payload?.version, releaseNotes: payload?.releaseNotes });
+      setUpdateState({
+        status: 'downloaded',
+        version: payload?.version,
+        releaseNotes: payload?.releaseNotes,
+      });
     });
     const disposeError = window.electronAPI.onUpdateError((message) => {
       setUpdateState({ status: 'error', error: message });
@@ -83,14 +99,22 @@ const SettingsWindow = () => {
     setUpdateState({ status: 'checking' });
     const result = await window.electronAPI.checkForUpdates();
     if (result?.available) {
-      setUpdateState({ status: 'available', version: result.version, releaseNotes: result.releaseNotes });
+      setUpdateState({
+        status: 'available',
+        version: result.version,
+        releaseNotes: result.releaseNotes,
+      });
     } else {
       setUpdateState(result?.error ? { status: 'error', error: result.error } : { status: 'not-available' });
     }
   };
 
   const handleDownload = async () => {
-    setUpdateState((prev) => ({ ...prev, status: 'downloading', progress: prev.progress ?? 0 }));
+    setUpdateState((prev) => ({
+      ...prev,
+      status: 'downloading',
+      progress: prev.progress ?? 0,
+    }));
     await window.electronAPI.downloadUpdate();
   };
 
@@ -136,7 +160,9 @@ const SettingsWindow = () => {
           {updateState.status === 'idle' && <div>まだ確認していません。</div>}
           {updateState.status === 'checking' && <div>更新を確認しています...</div>}
           {updateState.status === 'available' && (
-            <div className="text-accent font-semibold">アップデートを検知しました！ v{updateState.version || 'unknown'}</div>
+            <div className="text-accent font-semibold">
+              アップデートを検知しました！ v{updateState.version || 'unknown'}
+            </div>
           )}
           {updateState.status === 'not-available' && <div>最新の状態です。</div>}
           {updateState.status === 'downloading' && (
@@ -145,7 +171,9 @@ const SettingsWindow = () => {
               <div className="mt-2 h-2 bg-zinc-800 rounded">
                 <div
                   className="h-2 bg-accent rounded"
-                  style={{ width: `${Math.min(100, Math.round(updateState.progress || 0))}%` }}
+                  style={{
+                    width: `${Math.min(100, Math.round(updateState.progress || 0))}%`,
+                  }}
                 />
               </div>
             </div>
@@ -172,7 +200,9 @@ const SettingsWindow = () => {
           </div>
         </div>
 
-        <label className="text-sm text-zinc-300 block mb-2" htmlFor="theme-select">配色</label>
+        <label className="text-sm text-zinc-300 block mb-2" htmlFor="theme-select">
+          配色
+        </label>
         <select
           id="theme-select"
           className="input-field bg-[#1c1c1c] border border-zinc-700 text-white"

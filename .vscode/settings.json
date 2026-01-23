@@ -11,6 +11,13 @@
   "tailwindCSS.lint.invalidScreen": "ignore",
   "tailwindCSS.lint.invalidTailwindDirective": "ignore",
   "tailwindCSS.lint.invalidVariant": "ignore",
-  "tailwindCSS.lint.recommendedVariantOrder": "ignore"
+  "tailwindCSS.lint.recommendedVariantOrder": "ignore",
+  "[typescript]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionOnSave": {
+      "source.fixAll.eslint": true
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
 }
-

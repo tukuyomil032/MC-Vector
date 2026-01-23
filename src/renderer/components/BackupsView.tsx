@@ -96,7 +96,7 @@ export default function BackupsView({ server }: Props) {
     setTree(rootNodes);
     const allPaths = new Set<string>();
     const collect = (nodes: FileNode[]) => {
-      nodes.forEach(n => {
+      nodes.forEach((n) => {
         if (n.path) allPaths.add(n.path);
         if (n.children) collect(n.children);
       });
@@ -108,7 +108,8 @@ export default function BackupsView({ server }: Props) {
   const togglePath = (node: FileNode, checked: boolean) => {
     const newSet = new Set(selectedPaths);
     const apply = (n: FileNode) => {
-      if (checked) newSet.add(n.path); else newSet.delete(n.path);
+      if (checked) newSet.add(n.path);
+      else newSet.delete(n.path);
       if (n.children) n.children.forEach(apply);
     };
     apply(node);
@@ -117,7 +118,11 @@ export default function BackupsView({ server }: Props) {
 
   const selectAll = () => {
     const all = new Set<string>();
-    const collect = (nodes: FileNode[]) => nodes.forEach(n => { all.add(n.path); if (n.children) collect(n.children); });
+    const collect = (nodes: FileNode[]) =>
+      nodes.forEach((n) => {
+        all.add(n.path);
+        if (n.children) collect(n.children);
+      });
     collect(tree);
     setSelectedPaths(all);
   };
@@ -187,14 +192,9 @@ export default function BackupsView({ server }: Props) {
 
   return (
     <div className="h-full flex flex-col p-5">
-
       <div className="flex justify-between items-center mb-5">
         <h3>バックアップ管理</h3>
-        <button
-          className="btn-primary disabled:opacity-70"
-          onClick={openCreateModal}
-          disabled={processing}
-        >
+        <button className="btn-primary disabled:opacity-70" onClick={openCreateModal} disabled={processing}>
           {processing ? '処理中...' : '+ バックアップ作成'}
         </button>
       </div>
@@ -203,49 +203,39 @@ export default function BackupsView({ server }: Props) {
         {loading && <div className="p-5 text-center">読み込み中...</div>}
 
         {!loading && backups.length === 0 && (
-          <div className="p-10 text-center text-text-secondary">
-            バックアップはまだありません
-          </div>
+          <div className="p-10 text-center text-text-secondary">バックアップはまだありません</div>
         )}
 
-        {!loading && backups.map((backup) => (
-          <div
-            key={backup.name}
-            className="px-5 py-4 border-b border-white/5 flex items-center gap-5"
-          >
-            <div className="text-2xl">📦</div>
+        {!loading &&
+          backups.map((backup) => (
+            <div key={backup.name} className="px-5 py-4 border-b border-white/5 flex items-center gap-5">
+              <div className="text-2xl">📦</div>
 
-            <div className="flex-1">
-              <div className="font-bold text-base text-text-primary">
-                {backup.name}
+              <div className="flex-1">
+                <div className="font-bold text-base text-text-primary">{backup.name}</div>
+                <div className="text-sm text-text-secondary mt-1">{formatDate(backup.date)}</div>
               </div>
-              <div className="text-sm text-text-secondary mt-1">
-                {formatDate(backup.date)}
+
+              <div className="text-text-secondary text-sm w-20 text-right">{formatSize(backup.size)}</div>
+
+              <div className="flex gap-2.5">
+                <button
+                  className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-70"
+                  onClick={() => handleRestore(backup.name)}
+                  disabled={processing}
+                >
+                  復元
+                </button>
+                <button
+                  className="btn-stop text-sm px-3 py-1.5 disabled:opacity-70"
+                  onClick={() => handleDelete(backup.name)}
+                  disabled={processing}
+                >
+                  削除
+                </button>
               </div>
             </div>
-
-            <div className="text-text-secondary text-sm w-20 text-right">
-              {formatSize(backup.size)}
-            </div>
-
-            <div className="flex gap-2.5">
-              <button
-                className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-70"
-                onClick={() => handleRestore(backup.name)}
-                disabled={processing}
-              >
-                復元
-              </button>
-              <button
-                className="btn-stop text-sm px-3 py-1.5 disabled:opacity-70"
-                onClick={() => handleDelete(backup.name)}
-                disabled={processing}
-              >
-                削除
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       <div className="mt-4 text-xs text-text-secondary">
@@ -253,11 +243,19 @@ export default function BackupsView({ server }: Props) {
       </div>
 
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-bg-secondary border border-border-color rounded-xl shadow-2xl w-[900px] max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="bg-bg-secondary border border-border-color rounded-xl shadow-2xl w-[900px] max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="px-6 py-4 border-b border-border-color flex items-center justify-between">
               <div className="text-lg font-bold">バックアップを作成</div>
-              <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>閉じる</button>
+              <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>
+                閉じる
+              </button>
             </div>
 
             <div className="p-6 space-y-5 overflow-y-auto" style={{ maxHeight: '70vh' }}>
@@ -281,7 +279,9 @@ export default function BackupsView({ server }: Props) {
                     onChange={(e) => setCompressionLevel(Number(e.target.value))}
                   >
                     {Array.from({ length: 9 }).map((_, i) => (
-                      <option key={i + 1} value={i + 1}>{i + 1}</option>
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </option>
                     ))}
                   </select>
                   <div className="text-xs text-text-secondary">1: 低圧縮 / 9: 高圧縮</div>
@@ -291,8 +291,12 @@ export default function BackupsView({ server }: Props) {
               <div className="flex items-center justify-between">
                 <div className="font-semibold">バックアップ対象を選択</div>
                 <div className="flex gap-2">
-                  <button className="btn-secondary text-sm" onClick={selectAll}>全選択</button>
-                  <button className="btn-secondary text-sm" onClick={clearAll}>全解除</button>
+                  <button className="btn-secondary text-sm" onClick={selectAll}>
+                    全選択
+                  </button>
+                  <button className="btn-secondary text-sm" onClick={clearAll}>
+                    全解除
+                  </button>
                 </div>
               </div>
 
@@ -300,17 +304,19 @@ export default function BackupsView({ server }: Props) {
                 {tree.length === 0 ? (
                   <div className="text-text-secondary text-sm">読み込み中...</div>
                 ) : (
-                  <FileTree
-                    nodes={tree}
-                    selected={selectedPaths}
-                    onToggle={togglePath}
-                  />
+                  <FileTree nodes={tree} selected={selectedPaths} onToggle={togglePath} />
                 )}
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button className="btn-secondary" onClick={() => setShowCreateModal(false)} disabled={processing}>キャンセル</button>
-                <button className="btn-primary" onClick={handleCreateBackup} disabled={processing || selectedPaths.size === 0}>
+                <button className="btn-secondary" onClick={() => setShowCreateModal(false)} disabled={processing}>
+                  キャンセル
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={handleCreateBackup}
+                  disabled={processing || selectedPaths.size === 0}
+                >
                   {processing ? '作成中...' : 'バックアップを作成'}
                 </button>
               </div>
@@ -322,31 +328,50 @@ export default function BackupsView({ server }: Props) {
   );
 }
 
-function FileTree({ nodes, selected, onToggle }: { nodes: FileNode[]; selected: Set<string>; onToggle: (node: FileNode, checked: boolean) => void }) {
+function FileTree({
+  nodes,
+  selected,
+  onToggle,
+}: {
+  nodes: FileNode[];
+  selected: Set<string>;
+  onToggle: (node: FileNode, checked: boolean) => void;
+}) {
   return (
     <div className="space-y-1">
-      {nodes.map(node => (
+      {nodes.map((node) => (
         <TreeNode key={node.path} node={node} selected={selected} onToggle={onToggle} depth={0} />
       ))}
     </div>
   );
 }
 
-function TreeNode({ node, selected, onToggle, depth }: { node: FileNode; selected: Set<string>; onToggle: (node: FileNode, checked: boolean) => void; depth: number }) {
+function TreeNode({
+  node,
+  selected,
+  onToggle,
+  depth,
+}: {
+  node: FileNode;
+  selected: Set<string>;
+  onToggle: (node: FileNode, checked: boolean) => void;
+  depth: number;
+}) {
   const isChecked = selected.has(node.path);
   return (
-    <div className={`flex flex-col border border-transparent rounded ${isChecked ? 'bg-white/5 border-accent/40' : ''}`}>
-      <label className="flex items-center gap-2 px-2 py-1 cursor-pointer" style={{ paddingLeft: `${depth * 16 + 8}px` }}>
-        <input
-          type="checkbox"
-          checked={isChecked}
-          onChange={(e) => onToggle(node, e.target.checked)}
-        />
+    <div
+      className={`flex flex-col border border-transparent rounded ${isChecked ? 'bg-white/5 border-accent/40' : ''}`}
+    >
+      <label
+        className="flex items-center gap-2 px-2 py-1 cursor-pointer"
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      >
+        <input type="checkbox" checked={isChecked} onChange={(e) => onToggle(node, e.target.checked)} />
         <span className="text-sm text-text-primary">{node.name || '(root)'}</span>
       </label>
       {node.children && node.children.length > 0 && (
         <div className="pl-4">
-          {node.children.map(child => (
+          {node.children.map((child) => (
             <TreeNode key={child.path} node={child} selected={selected} onToggle={onToggle} depth={depth + 1} />
           ))}
         </div>

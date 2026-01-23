@@ -2,11 +2,11 @@ name: release
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   CI: true
@@ -22,23 +22,23 @@ jobs:
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
-            arch-label: Apple-silion
+            arch-label: Apple-silicon
             build-command: pnpm exec electron-builder --mac --arm64 --publish always
             artifact-name: mac-arm64
-            asset-pattern: release/*.zip
+            asset-pattern: release/*
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
             arch-label: Intel-CPU
             build-command: pnpm exec electron-builder --mac --x64 --publish always
             artifact-name: mac-x64
-            asset-pattern: release/*.zip
+            asset-pattern: release/*
           - os: windows-latest
             node-version: 20
             pnpm-version: 10.26.2
             build-command: pnpm exec electron-builder --win --x64 --publish always
             artifact-name: win-x64
-            asset-pattern: release/*.exe
+            asset-pattern: release/*
 
     steps:
       - name: Check out Git repository
@@ -63,7 +63,7 @@ jobs:
 
       - name: Build Electron app
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARCH_LABEL: ${{ matrix.arch-label }}
         run: ${{ matrix.build-command }}
 

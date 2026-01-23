@@ -67,10 +67,7 @@ const ansiToSegments = (text: string): AnsiSegment[] => {
   while ((match = regex.exec(text)) !== null) {
     pushText(match.index);
 
-    const codes = match[0]
-      .slice(2, -1)
-      .split(';')
-      .filter(Boolean);
+    const codes = match[0].slice(2, -1).split(';').filter(Boolean);
 
     if (codes.length === 0) {
       currentStyle = {};
@@ -140,23 +137,25 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
         setMemoryUsage(data.memory);
       }
     });
-    return () => { if (typeof removeStatsListener === 'function') (removeStatsListener as any)(); };
+    return () => {
+      if (typeof removeStatsListener === 'function') (removeStatsListener as any)();
+    };
   }, [server.id]);
 
   useEffect(() => {
     const fetchStatus = async () => {
-        try {
-            const status = await window.electronAPI.getNgrokStatus(server.id);
-            setInternalNgrokUrl(status.active ? status.url : null);
-        } catch {
-            setInternalNgrokUrl(null);
-        }
+      try {
+        const status = await window.electronAPI.getNgrokStatus(server.id);
+        setInternalNgrokUrl(status.active ? status.url : null);
+      } catch {
+        setInternalNgrokUrl(null);
+      }
     };
 
     fetchStatus();
     const interval = setInterval(() => {
-        fetchStatus();
-        setCurrentAddressIndex(prev => (prev === 0 ? 1 : 0));
+      fetchStatus();
+      setCurrentAddressIndex((prev) => (prev === 0 ? 1 : 0));
     }, 3000);
 
     return () => clearInterval(interval);
@@ -175,9 +174,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
   const localAddress = `localhost:${server.port}`;
   const publicAddress = internalNgrokUrl ? internalNgrokUrl.replace('tcp://', '') : localAddress;
 
-  const displayAddress = (!internalNgrokUrl)
-    ? localAddress
-    : (currentAddressIndex === 0 ? localAddress : publicAddress);
+  const displayAddress = !internalNgrokUrl ? localAddress : currentAddressIndex === 0 ? localAddress : publicAddress;
 
   const handleCopyAddress = () => {
     navigator.clipboard.writeText(displayAddress);
@@ -191,7 +188,6 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e]">
-
       <div className="grid grid-cols-3 bg-[#252526] border-b border-[#3e3e42] py-3 shrink-0">
         <div className="text-center border-r border-[#3e3e42] overflow-hidden">
           <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">ADDRESS</div>
@@ -199,7 +195,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
             key={currentAddressIndex}
             onClick={handleCopyAddress}
             title="Click to Copy"
-            className={`font-bold cursor-pointer text-sm transition-all ${(internalNgrokUrl && currentAddressIndex === 1) ? 'text-accent' : 'text-[#f0f0f0]'}`}
+            className={`font-bold cursor-pointer text-sm transition-all ${internalNgrokUrl && currentAddressIndex === 1 ? 'text-accent' : 'text-[#f0f0f0]'}`}
           >
             {displayAddress}
           </div>
@@ -207,11 +203,15 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
 
         <div className="text-center border-r border-[#3e3e42]">
           <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">STATUS</div>
-          <div className={`font-bold text-sm ${
-            server.status === 'online' ? 'text-green-500' :
-            server.status === 'offline' ? 'text-red-500' :
-            'text-yellow-500'
-          }`}>
+          <div
+            className={`font-bold text-sm ${
+              server.status === 'online'
+                ? 'text-green-500'
+                : server.status === 'offline'
+                  ? 'text-red-500'
+                  : 'text-yellow-500'
+            }`}
+          >
             {server.status.toUpperCase()}
           </div>
         </div>
@@ -244,7 +244,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
                   if (!style.color) style.color = severityStyle.color;
                   if (!style.fontWeight) style.fontWeight = severityStyle.fontWeight;
                 }
-                return <span key={i} style={style}>{seg.text}</span>;
+                return (
+                  <span key={i} style={style}>
+                    {seg.text}
+                  </span>
+                );
               });
             })()}
           </div>
@@ -252,11 +256,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
 
         <div ref={logEndRef} />
 
-        {logs.length === 0 && (
-          <div className="text-zinc-600 italic text-center mt-5">
-             Waiting for logs...
-          </div>
-        )}
+        {logs.length === 0 && <div className="text-zinc-600 italic text-center mt-5">Waiting for logs...</div>}
       </div>
 
       <div className="h-[60px] bg-[#252526] border-t border-[#3e3e42] flex items-center px-5 shrink-0">
