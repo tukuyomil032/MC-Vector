@@ -27,15 +27,15 @@ function writeErrorLog(item: any) {
     const line = `[${new Date().toISOString()}] ${text}\n\n`;
     fs.appendFileSync(ERROR_LOG_PATH, line, { encoding: 'utf-8' });
   } catch (e) {
-    console.error('Failed to write error log', e);
+    console.error('エラーログの書き込みに失敗しました', e);
   }
 }
 process.on('uncaughtException', (err) => {
-  console.error('uncaughtException', err);
+  console.error('未捕捉例外', err);
   writeErrorLog(err);
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('unhandledRejection', reason);
+  console.error('未処理のPromise拒否', reason);
   writeErrorLog(reason);
 });
 
@@ -167,11 +167,11 @@ function validateDownloadUrl(url: string): string {
   try {
     parsed = new URL(url);
   } catch {
-    throw new Error('Invalid download URL');
+    throw new Error('無効なダウンロードURLです');
   }
 
   if (parsed.protocol !== 'https:') {
-    throw new Error('Only HTTPS protocol is allowed for downloads');
+    throw new Error('ダウンロードにはHTTPSプロトコルのみ許可されています');
   }
 
   const allowedHosts = new Set<string>([
@@ -182,7 +182,7 @@ function validateDownloadUrl(url: string): string {
   ]);
 
   if (!allowedHosts.has(parsed.hostname)) {
-    throw new Error(`Host not allowed for downloads: ${parsed.hostname}`);
+    throw new Error(`ダウンロードが許可されていないホスト: ${parsed.hostname}`);
   }
 
   return parsed.toString();
@@ -194,29 +194,6 @@ function saveServersList(servers: any[]) {
     fs.mkdirSync(root, { recursive: true });
   }
   fs.writeFileSync(getServersJsonPath(), JSON.stringify(servers, null, 2), 'utf-8');
-}
-
-function isSafeJavaPath(javaPath: string): boolean {
-  if (javaPath === 'java') {
-    return true;
-  }
-
-  const unsafePattern = /[;&|`]/;
-  if (unsafePattern.test(javaPath)) {
-    return false;
-  }
-
-  const resolved = path.resolve(javaPath);
-
-  if (!fs.existsSync(resolved)) {
-    return false;
-  }
-  try {
-    fs.accessSync(resolved, fs.constants.X_OK);
-  } catch {
-    return false;
-  }
-  return true;
 }
 
 function readServerProperties(filePath: string): Map<string, string> {
@@ -272,7 +249,7 @@ function downloadFile(url: string, destPath: string, onProgress: (percent: numbe
     https
       .get(safeUrl, { headers: { 'User-Agent': `MC-Vector/${app.getVersion()}` } }, (res) => {
         if (res.statusCode !== 200 && res.statusCode !== 302) {
-          return reject(new Error(`Download failed with status code: ${res.statusCode}`));
+          return reject(new Error(`ダウンロードに失敗しました。ステータスコード: ${res.statusCode}`));
         }
         const totalSize = parseInt(res.headers['content-length'] || '0', 10);
         let downloaded = 0;
@@ -317,7 +294,7 @@ const ngrokSessions = new Map<string, { process: ChildProcess; url: string | nul
 let rpc: DiscordRPC.Client | null = null;
 
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled rejection:', reason);
+  console.error('未処理のPromise拒否:', reason);
 });
 
 function initDiscordRPC() {
@@ -328,7 +305,7 @@ function initDiscordRPC() {
   });
 
   rpc.login({ clientId: DISCORD_CLIENT_ID }).catch((err) => {
-    console.error('Failed to connect to Discord', err);
+    console.error('Discordへの接続に失敗しました', err);
   });
 }
 
@@ -348,7 +325,7 @@ async function setDiscordActivity(details: string, state: string, largeImageKey:
       startTimestamp: Date.now(),
     });
   } catch (e) {
-    console.error('RPC Error:', e);
+    console.error('RPC エラー:', e);
   }
 }
 
@@ -525,7 +502,7 @@ app.whenReady().then(() => {
         releaseNotes: info?.releaseNotes,
       };
     } catch (err: any) {
-      return { available: false, error: err?.message || 'Update check failed' };
+      return { available: false, error: err?.message || 'アップデートチェックに失敗しました' };
     }
   });
 
@@ -658,7 +635,7 @@ app.whenReady().then(() => {
       saveServersList(servers);
       return newServer;
     } catch (e) {
-      console.error('Failed to add server:', e);
+      console.error('サーバーの追加に失敗しました:', e);
       throw e;
     }
   });
@@ -782,7 +759,7 @@ app.whenReady().then(() => {
       sendProgress(100, '完了');
       return true;
     } catch (error: any) {
-      console.error('Download error:', error);
+      console.error('ダウンロードエラー:', error);
       sendProgress(0, `エラー: ${error.message}`);
       return false;
     }
@@ -960,7 +937,7 @@ config-version = "2.7"
       }
     }
 
-    sendLog(sender, serverId, `[INFO] Starting Server: ${server.name} (${server.version})...`);
+    sendLog(sender, serverId, `[INFO] サーバーを起動しています: ${server.name} (${server.version})...`);
     sendStatus(serverId, 'online');
 
     const minMem = '512M';
@@ -969,16 +946,32 @@ config-version = "2.7"
     let javaCommand = 'java';
 
     if (server.javaPath) {
-      if (isSafeJavaExecutable(server.javaPath)) {
-        // Use system-resolved Java when configured as "java", otherwise the validated absolute path.
-        javaCommand = server.javaPath === 'java' ? 'java' : path.resolve(server.javaPath);
+      const requestedJava = server.javaPath.trim();
+
+      if (requestedJava === 'java') {
+        javaCommand = 'java';
       } else {
-        sendLog(
-          sender,
-          serverId,
-          `[WARNING] Custom Java path is invalid or not executable: ${server.javaPath}. Falling back to system 'java'.`,
-        );
+        const resolvedJavaPath = path.resolve(requestedJava);
+        if (isSafeJavaExecutable(resolvedJavaPath)) {
+          javaCommand = resolvedJavaPath;
+        } else {
+          sendLog(
+            sender,
+            serverId,
+            `[WARNING] カスタムJavaパスは無効か、実行可能ではありません: ${server.javaPath}.
+            システムの 'java' にフォールバックします。`,
+          );
+          javaCommand = 'java';
+        }
       }
+    }
+
+    if (javaCommand !== 'java' && !isSafeJavaExecutable(javaCommand)) {
+      sendLog(
+        sender,
+        serverId,
+        `[WARNING] 選択されたJava実行ファイルは無効か、実行可能ではありません: ${javaCommand}。システムの 'java' にフォールバックします。`,
+      );
     }
 
     const args = [`-Xms${minMem}`, `-Xmx${maxMem}`, '-jar', jarName];
@@ -997,13 +990,13 @@ config-version = "2.7"
     javaProcess.stderr.on('data', (data) => sendLog(sender, serverId, data.toString()));
 
     javaProcess.on('close', (code) => {
-      sendLog(sender, serverId, `[INFO] Server stopped with exit code ${code}`);
+      sendLog(sender, serverId, `[INFO] サーバーは停止しました (終了コード ${code})`);
       activeServers.delete(serverId);
       sendStatus(serverId, 'offline');
     });
 
     javaProcess.on('error', (err) => {
-      sendLog(sender, serverId, `[ERROR] Failed to start process: ${err.message}`);
+      sendLog(sender, serverId, `[ERROR] プロセスの起動に失敗しました: ${err.message}`);
       activeServers.delete(serverId);
       sendStatus(serverId, 'offline');
     });
@@ -1012,12 +1005,12 @@ config-version = "2.7"
   ipcMain.on('stop-server', (event, serverId) => {
     const process = activeServers.get(serverId);
     if (process) {
-      sendLog(event.sender, serverId, '[INFO] Sending stop command...');
+      sendLog(event.sender, serverId, '[INFO] 停止コマンドを送信しています...');
       process.stdin?.write('end\n');
       process.stdin?.write('stop\n');
       sendStatus(serverId, 'stopping');
     } else {
-      sendLog(event.sender, serverId, '[INFO] Server is not running.');
+      sendLog(event.sender, serverId, '[INFO] サーバーは起動していません。');
     }
   });
 
@@ -1027,7 +1020,7 @@ config-version = "2.7"
       sendLog(event.sender, serverId, `> ${command}`);
       process.stdin?.write(`${command}\n`);
     } else {
-      sendLog(event.sender, serverId, '[ERROR] Server is not running.');
+      sendLog(event.sender, serverId, '[ERROR] サーバーは起動していません。');
     }
   });
 
@@ -1507,14 +1500,14 @@ config-version = "2.7"
         await new Promise<void>((resolve, reject) => {
           const file = fs.createWriteStream(destPath);
           https
-            .get(downloadUrl, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
+            .get(downloadUrl, { headers: { 'User-Agent': `MC-Vector/${app.getVersion()}` } }, (res) => {
               if (res.statusCode !== 200 && res.statusCode !== 302) {
-                return reject(new Error(`Status: ${res.statusCode}`));
+                return reject(new Error(`ステータス: ${res.statusCode}`));
               }
               const totalSize = parseInt(res.headers['content-length'] || '0', 10);
               if (totalSize > maxSize) {
                 res.destroy();
-                return reject(new Error('Download too large'));
+                return reject(new Error('ダウンロードが大きすぎます'));
               }
               let downloaded = 0;
               res.on('data', (chunk) => {
@@ -1523,7 +1516,7 @@ config-version = "2.7"
                   res.destroy();
                   file.destroy();
                   fs.unlink(destPath, () => {});
-                  reject(new Error('Download too large'));
+                  reject(new Error('ダウンロードが大きすぎます'));
                 }
               });
               res.pipe(file);
@@ -1540,7 +1533,7 @@ config-version = "2.7"
 
         return true;
       } catch (e) {
-        console.error('Install failed:', e);
+        console.error('インストールに失敗しました:', e);
         return false;
       }
     },
@@ -1582,14 +1575,14 @@ config-version = "2.7"
       await new Promise<void>((resolve, reject) => {
         const file = fs.createWriteStream(destPath);
         https
-          .get(downloadUrl, { headers: { 'User-Agent': 'MC-Vector/1.0' } }, (res) => {
+          .get(downloadUrl, { headers: { 'User-Agent': `MC-Vector/${app.getVersion()}` } }, (res) => {
             if (res.statusCode !== 200 && res.statusCode !== 302) {
-              return reject(new Error(`Status: ${res.statusCode}`));
+              return reject(new Error(`ステータス: ${res.statusCode}`));
             }
             const totalSize = parseInt(res.headers['content-length'] || '0', 10);
             if (totalSize > maxSize) {
               res.destroy();
-              return reject(new Error('Download too large'));
+              return reject(new Error('ダウンロードが大きすぎます'));
             }
             let downloaded = 0;
             res.on('data', (chunk) => {
@@ -1598,7 +1591,7 @@ config-version = "2.7"
                 res.destroy();
                 file.destroy();
                 fs.unlink(destPath, () => {});
-                reject(new Error('Download too large'));
+                reject(new Error('ダウンロードが大きすぎます'));
               }
             });
             res.pipe(file);
@@ -1614,7 +1607,7 @@ config-version = "2.7"
       });
       return true;
     } catch (e) {
-      console.error('Hangar install failed:', e);
+      console.error('Hangarのインストールに失敗しました:', e);
       return false;
     }
   });
@@ -1660,7 +1653,7 @@ config-version = "2.7"
       sender.send('download-progress', {
         serverId: 'java-install',
         progress: percent,
-        status: `Downloading Java ${version}...`,
+        status: `Java ${version} をダウンロードしています...`,
       });
     };
 
@@ -1695,7 +1688,7 @@ config-version = "2.7"
       sender.send('download-progress', {
         serverId: 'java-install',
         progress: 100,
-        status: `Extracting Java ${version}...`,
+        status: `Java ${version} を展開しています...`,
       });
 
       if (isWin) {
@@ -1793,7 +1786,7 @@ config-version = "2.7"
           ngrokSessions.delete(serverId);
         }
 
-        sendInfo({ status: 'downloading', log: 'Checking ngrok binary...' });
+        sendInfo({ status: 'downloading', log: 'ngrokバイナリを確認しています...' });
         const ngrokPath = await getNgrokBinary();
 
         if (token) {
@@ -1804,7 +1797,7 @@ config-version = "2.7"
 
         const savedToken = token || loadConfig().ngrokToken;
         if (!savedToken) {
-          throw new Error('No authtoken provided');
+          throw new Error('authtokenが提供されていません');
         }
 
         const cleanToken = savedToken.trim();
@@ -1812,7 +1805,7 @@ config-version = "2.7"
         const servers = loadServersList();
         const server = servers.find((s: any) => s.id === serverId);
         if (!server) {
-          throw new Error('Server not found');
+          throw new Error('サーバーが見つかりません');
         }
 
         const args = ['tcp', server.port.toString(), '--authtoken', cleanToken, '--region', 'jp', '--log=stdout'];
@@ -1820,10 +1813,10 @@ config-version = "2.7"
         const process = spawn(ngrokPath, args);
         ngrokSessions.set(serverId, { process, url: null, logs: [] });
 
-        sendInfo({ status: 'running', log: 'Starting ngrok tunnel (region: jp)...' });
+        sendInfo({ status: 'running', log: 'ngrokトンネルを開始しています (リージョン: jp)...' });
 
         process.on('error', (err) => {
-          sendInfo({ status: 'error', log: `Failed to spawn ngrok: ${err.message}` });
+          sendInfo({ status: 'error', log: `ngrokの起動に失敗しました: ${err.message}` });
           ngrokSessions.delete(serverId);
         });
 
@@ -1860,12 +1853,12 @@ config-version = "2.7"
           if (session) {
             session.logs.push(text);
           }
-          sendInfo({ log: `[Stderr] ${text}` });
+          sendInfo({ log: `[標準エラー] ${text}` });
         });
 
         process.on('close', (code) => {
           ngrokSessions.delete(serverId);
-          sendInfo({ status: 'stopped', log: `ngrok stopped (code ${code})` });
+          sendInfo({ status: 'stopped', log: `ngrokが停止しました (コード ${code})` });
         });
 
         return { success: true };
@@ -1874,13 +1867,13 @@ config-version = "2.7"
         if (session) {
           session.process.kill();
           ngrokSessions.delete(serverId);
-          sendInfo({ status: 'stopped', log: 'Stopping tunnel...' });
+          sendInfo({ status: 'stopped', log: 'トンネルを停止しています...' });
         }
         return { success: true };
       }
     } catch (e) {
       console.error(e);
-      sendInfo({ status: 'error', log: `Error: ${(e as Error).message}` });
+      sendInfo({ status: 'error', log: `エラー: ${(e as Error).message}` });
       return { success: false, message: (e as Error).message };
     }
   });
