@@ -92,6 +92,13 @@
       "artifactName": "MC-Vector-${version}-${env.ARCH_LABEL}.${ext}",
       "target": [
         {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
           "target": "dmg",
           "arch": [
             "x64",
@@ -105,7 +112,7 @@
       "identity": null
     },
     "dmg": {
-      "writeUpdateInfo": false
+      "writeUpdateInfo": true
     },
     "generateUpdatesFilesForAllChannels": false,
     "win": {

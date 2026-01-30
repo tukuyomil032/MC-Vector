@@ -28,6 +28,7 @@ jobs:
             build-command: pnpm exec electron-builder --mac --arm64
             artifact-name: mac-arm64
             asset-pattern-bin: release/*.dmg
+            asset-pattern-zip: release/*.zip
             asset-pattern-yml: release/latest-mac.yml
           - os: macos-14
             node-version: 20
@@ -36,6 +37,7 @@ jobs:
             build-command: pnpm exec electron-builder --mac --x64
             artifact-name: mac-x64
             asset-pattern-bin: release/*.dmg
+            asset-pattern-zip: release/*.zip
             asset-pattern-yml: release/latest-mac.yml
           - os: windows-latest
             node-version: 20
@@ -77,6 +79,14 @@ jobs:
         with:
           name: ${{ matrix.artifact-name }}-bin
           path: ${{ matrix.asset-pattern-bin }}
+          retention-days: 5
+
+      - name: Upload zip artifacts (macOS only)
+        if: matrix.asset-pattern-zip != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}-zip
+          path: ${{ matrix.asset-pattern-zip }}
           retention-days: 5
 
       - name: Upload update yml artifacts
@@ -124,9 +134,8 @@ jobs:
           # Copy latest-mac.yml (macOS) - use arm64 version as base
           if [[ -f artifacts/mac-arm64-yml/latest-mac.yml ]]; then
             cp artifacts/mac-arm64-yml/latest-mac.yml gh-pages-deploy/
-            # Update URL - for mac we need to handle both architectures
-            # Users will download based on their architecture from Releases page
-            sed -i "s|url:.*|url: https://github.com/tukuyomil032/MC-Vector/releases/tag/v${{ steps.version.outputs.version }}|" gh-pages-deploy/latest-mac.yml
+            # Update URL to point to ZIP file for auto-update (ZIP is required for macOS auto-update)
+            sed -i "s|url:.*|url: https://github.com/tukuyomil032/MC-Vector/releases/download/v${{ steps.version.outputs.version }}/MC-Vector-${{ steps.version.outputs.version }}-Apple-silicon.zip|" gh-pages-deploy/latest-mac.yml
           fi
 
           echo "Files prepared for gh-pages:"
@@ -153,6 +162,7 @@ jobs:
           prerelease: false
           files: |
             artifacts/**/*.dmg
+            artifacts/**/*.zip
             artifacts/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
