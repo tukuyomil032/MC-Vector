@@ -235,13 +235,22 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
 
           <div className="mb-5 flex flex-col gap-2">
             <label className="block mb-2 text-zinc-400">サーバー名</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-field" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input-field"
+            />
           </div>
 
           <div className="flex gap-5 mb-5">
             <div className="flex-1">
               <label className="block mb-2 text-zinc-400">サーバーソフトウェア</label>
-              <select value={software} onChange={(e) => setSoftware(e.target.value)} className="input-field">
+              <select
+                value={software}
+                onChange={(e) => setSoftware(e.target.value)}
+                className="input-field"
+              >
                 <optgroup label="Standard">
                   <option value="Vanilla">Vanilla (公式)</option>
                   <option value="Paper">Paper (推奨)</option>
@@ -262,7 +271,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
 
             <div className="flex-1">
               <label className="block mb-2 text-zinc-400">バージョン</label>
-              <select value={version} onChange={(e) => setVersion(e.target.value)} className="input-field">
+              <select
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                className="input-field"
+              >
                 {versionOptions.map((v) => (
                   <option key={v} value={v}>
                     {v}
@@ -275,7 +288,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           <div className="mb-5 flex flex-col gap-2">
             <label className="block mb-2 text-zinc-400">Java Runtime</label>
             <div className="flex gap-2.5">
-              <select value={javaPath} onChange={(e) => setJavaPath(e.target.value)} className="input-field flex-1">
+              <select
+                value={javaPath}
+                onChange={(e) => setJavaPath(e.target.value)}
+                className="input-field flex-1"
+              >
                 <option value="">System Default (Path環境変数)</option>
                 {installedJava.map((j) => (
                   <option key={j.path} value={j.path}>
@@ -319,7 +336,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           <div className="mb-5 flex flex-col gap-2">
             <label className="block mb-2 text-zinc-400">保存先パス</label>
             <div className="flex gap-2.5">
-              <input type="text" value={path} readOnly className="input-field flex-1 text-zinc-500 bg-[#222]" />
+              <input
+                type="text"
+                value={path}
+                readOnly
+                className="input-field flex-1 text-zinc-500 bg-[#222]"
+              />
             </div>
           </div>
 
@@ -330,14 +352,20 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           </div>
         </div>
 
-        <div className={`p-6 bg-[#252526] rounded-lg border ${isTunneling ? 'border-accent' : 'border-zinc-700'}`}>
+        <div
+          className={`p-6 bg-[#252526] rounded-lg border ${isTunneling ? 'border-accent' : 'border-zinc-700'}`}
+        >
           <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
             <div className="min-w-[200px]">
               <h3 className="m-0 flex items-center gap-2.5 text-lg text-zinc-300">
                 🌐 Public Access (ngrok)
-                {isTunneling && <span className="text-xs bg-success text-white px-2 py-0.5 rounded">ONLINE</span>}
+                {isTunneling && (
+                  <span className="text-xs bg-success text-white px-2 py-0.5 rounded">ONLINE</span>
+                )}
               </h3>
-              <div className="text-zinc-400 text-sm mt-1.5">ポート開放なしで外部から接続できるようにします。</div>
+              <div className="text-zinc-400 text-sm mt-1.5">
+                ポート開放なしで外部から接続できるようにします。
+              </div>
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -379,7 +407,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             <>
               {tunnelUrl && (
                 <div className="bg-[#1e1e1e] p-4 rounded-md mb-4">
-                  <div className="text-sm text-zinc-500 mb-1.5">公開アドレス (友人にこれを共有):</div>
+                  <div className="text-sm text-zinc-500 mb-1.5">
+                    公開アドレス (友人にこれを共有):
+                  </div>
                   <div className="flex gap-2.5 items-center">
                     <code className="text-xl text-white font-mono bg-zinc-800 px-2.5 py-1.5 rounded">
                       {tunnelUrl.replace('tcp://', '')}
@@ -443,7 +473,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               <button onClick={() => setShowTokenModal(false)} className="btn-secondary mr-2.5">
                 キャンセル
               </button>
-              <button onClick={handleTokenSubmit} className="btn-primary disabled:opacity-50" disabled={!inputToken}>
+              <button
+                onClick={handleTokenSubmit}
+                className="btn-primary disabled:opacity-50"
+                disabled={!inputToken}
+              >
                 保存して接続
               </button>
             </div>

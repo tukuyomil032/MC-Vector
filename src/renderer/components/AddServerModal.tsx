@@ -26,7 +26,9 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
     fetchRoot();
   }, []);
 
-  const previewPath = rootPath ? `${rootPath}/${name || 'server-id'}`.replace(/\\/g, '/') : 'Loading...';
+  const previewPath = rootPath
+    ? `${rootPath}/${name || 'server-id'}`.replace(/\\/g, '/')
+    : 'Loading...';
 
   const versionOptions = [
     // 1.21.x

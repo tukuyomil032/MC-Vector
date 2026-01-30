@@ -191,7 +191,11 @@ export default function FilesView({ server }: Props) {
     if (!editingFile) return;
     setIsSaving(true);
     try {
-      const ok = await window.electronAPI.saveFile(`${currentPath}/${editingFile}`, fileContent, server.id);
+      const ok = await window.electronAPI.saveFile(
+        `${currentPath}/${editingFile}`,
+        fileContent,
+        server.id
+      );
       if (ok) {
         showToast('保存しました', 'success');
       } else {
@@ -381,7 +385,9 @@ export default function FilesView({ server }: Props) {
         await window.electronAPI.movePath(src, dest, server.id);
         loadFiles(currentPath);
       }
-    } catch (err) {}
+    } catch {
+      // Ignore drag-drop errors
+    }
   };
 
   return (
@@ -452,7 +458,10 @@ export default function FilesView({ server }: Props) {
       </div>
 
       {/* ファイルリスト表示エリア */}
-      <div className="flex-1 overflow-y-auto p-0 bg-[#1e1e1e]" onContextMenu={(e) => handleContextMenu(e, null)}>
+      <div
+        className="flex-1 overflow-y-auto p-0 bg-[#1e1e1e]"
+        onContextMenu={(e) => handleContextMenu(e, null)}
+      >
         <div className="flex flex-col gap-0">
           {files.map((file) => (
             <div
@@ -494,11 +503,17 @@ export default function FilesView({ server }: Props) {
                 {file.name}
               </span>
               <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">
-                {file.isDirectory ? '-' : file.size ? (file.size / 1024).toFixed(1) + ' KB' : '0 KB'}
+                {file.isDirectory
+                  ? '-'
+                  : file.size
+                    ? (file.size / 1024).toFixed(1) + ' KB'
+                    : '0 KB'}
               </span>
             </div>
           ))}
-          {files.length === 0 && <div className="p-5 text-center text-text-secondary">フォルダは空です</div>}
+          {files.length === 0 && (
+            <div className="p-5 text-center text-text-secondary">フォルダは空です</div>
+          )}
         </div>
       </div>
 
@@ -511,7 +526,11 @@ export default function FilesView({ server }: Props) {
               <button className="btn-secondary mr-2.5" onClick={() => setIsEditorOpen(false)}>
                 閉じる
               </button>
-              <button className="btn-primary disabled:opacity-50" onClick={handleSaveFile} disabled={isSaving}>
+              <button
+                className="btn-primary disabled:opacity-50"
+                onClick={handleSaveFile}
+                disabled={isSaving}
+              >
                 {isSaving ? '保存中...' : '保存'}
               </button>
             </div>
@@ -538,7 +557,9 @@ export default function FilesView({ server }: Props) {
       {modalType === 'create' && (
         <div className="fixed inset-0 bg-black/60 z-1000 flex justify-center items-center">
           <div className="bg-[#252526] p-6 rounded-xl w-[450px] border border-[#3e3e42] text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">新規作成 / インポート</h3>
+            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+              新規作成 / インポート
+            </h3>
 
             <div className="grid grid-cols-3 gap-2.5 mb-2.5">
               <div
@@ -546,7 +567,11 @@ export default function FilesView({ server }: Props) {
                 onClick={() => setCreateMode('folder')}
               >
                 <img src={iconFiles} alt="Folder" className="w-8 h-8 object-contain" />
-                <span className={`text-sm ${createMode === 'folder' ? 'font-bold' : 'font-normal'}`}>フォルダ</span>
+                <span
+                  className={`text-sm ${createMode === 'folder' ? 'font-bold' : 'font-normal'}`}
+                >
+                  フォルダ
+                </span>
               </div>
 
               <div
@@ -554,7 +579,9 @@ export default function FilesView({ server }: Props) {
                 onClick={() => setCreateMode('file')}
               >
                 <img src={iconFile} alt="File" className="w-8 h-8 object-contain" />
-                <span className={`text-sm ${createMode === 'file' ? 'font-bold' : 'font-normal'}`}>ファイル</span>
+                <span className={`text-sm ${createMode === 'file' ? 'font-bold' : 'font-normal'}`}>
+                  ファイル
+                </span>
               </div>
 
               <div

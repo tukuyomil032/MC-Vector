@@ -11,7 +11,7 @@ if (window.location.hash === '#settings') {
   root.render(
     <React.StrictMode>
       <AdvancedSettingsWindow />
-    </React.StrictMode>,
+    </React.StrictMode>
   );
 } else {
   root.render(
@@ -19,6 +19,6 @@ if (window.location.hash === '#settings') {
       <ToastProvider>
         <App />
       </ToastProvider>
-    </React.StrictMode>,
+    </React.StrictMode>
   );
 }

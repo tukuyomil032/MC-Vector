@@ -30,13 +30,17 @@ export default function UsersView({ server }: Props) {
 
   const resolvePlayerIdentity = async (name: string): Promise<{ name: string; uuid?: string }> => {
     try {
-      const res = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`);
+      const res = await fetch(
+        `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`
+      );
       if (!res.ok) return { name };
       const data = await res.json();
       if (data?.id) {
         return { name: data.name || name, uuid: data.id };
       }
-    } catch (_) {}
+    } catch {
+      // Ignore UUID fetch errors
+    }
     return { name };
   };
 
@@ -44,11 +48,12 @@ export default function UsersView({ server }: Props) {
     type: ListType,
     action: 'add' | 'remove',
     nameOrIp: string,
-    rawInput: string,
+    rawInput: string
   ) => {
     if (server.status !== 'online') return;
     const command = (() => {
-      if (type === 'whitelist') return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${nameOrIp}`;
+      if (type === 'whitelist')
+        return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${nameOrIp}`;
       if (type === 'ops') return `${action === 'add' ? 'op' : 'deop'} ${nameOrIp}`;
       if (type === 'banned-players') return `${action === 'add' ? 'ban' : 'pardon'} ${nameOrIp}`;
       if (type === 'banned-ips') return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${rawInput}`;
@@ -64,12 +69,22 @@ export default function UsersView({ server }: Props) {
   }, [server.path]);
 
   const loadAllLists = async () => {
-    setWhitelist((await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`, server.id)) || []);
-    setOps((await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`, server.id)) || []);
-    setBannedPlayers(
-      (await window.electronAPI.readJsonFile(`${server.path}${sep}banned-players.json`, server.id)) || [],
+    setWhitelist(
+      (await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`, server.id)) || []
     );
-    setBannedIps((await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`, server.id)) || []);
+    setOps(
+      (await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`, server.id)) || []
+    );
+    setBannedPlayers(
+      (await window.electronAPI.readJsonFile(
+        `${server.path}${sep}banned-players.json`,
+        server.id
+      )) || []
+    );
+    setBannedIps(
+      (await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`, server.id)) ||
+        []
+    );
   };
 
   const handleAdd = async (type: ListType, nameOrIp: string) => {
@@ -110,7 +125,7 @@ export default function UsersView({ server }: Props) {
 
     if (
       currentList.some((p) =>
-        type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase(),
+        type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase()
       )
     ) {
       showToast('既に存在します', 'info');
@@ -157,7 +172,9 @@ export default function UsersView({ server }: Props) {
         break;
     }
 
-    const newData = currentList.filter((p) => (type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier));
+    const newData = currentList.filter((p) =>
+      type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier
+    );
     await window.electronAPI.writeJsonFile(filePath, newData, server.id);
     await maybeApplyLiveCommand(type, 'remove', identifier, identifier);
     showToast('削除しました', 'success');
@@ -258,7 +275,10 @@ function UserListCard({
           <div className="text-zinc-600 text-center mt-5">Empty</div>
         ) : (
           data.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between p-2 mb-1.5 bg-[#2b2b2b] rounded">
+            <div
+              key={idx}
+              className="flex items-center justify-between p-2 mb-1.5 bg-[#2b2b2b] rounded"
+            >
               <div className="flex items-center gap-2.5">
                 {/* ★ Head Image */}
                 {type !== 'banned-ips' && (
@@ -267,12 +287,15 @@ function UserListCard({
                     alt=""
                     className="rounded w-6 h-6"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://minotar.net/avatar/MHF_Steve/24';
+                      (e.target as HTMLImageElement).src =
+                        'https://minotar.net/avatar/MHF_Steve/24';
                     }}
                   />
                 )}
                 <div>
-                  <div className="font-bold text-sm">{type === 'banned-ips' ? item.ip : item.name}</div>
+                  <div className="font-bold text-sm">
+                    {type === 'banned-ips' ? item.ip : item.name}
+                  </div>
                   {/* Additional Info */}
                   {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
                   {item.level && <div className="text-xs text-yellow-500">Level: {item.level}</div>}

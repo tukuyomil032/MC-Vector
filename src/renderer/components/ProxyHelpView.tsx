@@ -29,7 +29,9 @@ const ProxyHelpView: FC = () => {
           <li>
             <strong>ソフトウェアの選択:</strong>
             <br />
-            <span className="text-sm text-zinc-400">Velocity (推奨), Waterfall, BungeeCord から選択します。</span>
+            <span className="text-sm text-zinc-400">
+              Velocity (推奨), Waterfall, BungeeCord から選択します。
+            </span>
           </li>
           <li>
             <strong>公開ポートの設定:</strong>
@@ -44,7 +46,9 @@ const ProxyHelpView: FC = () => {
           <li>
             <strong>接続先サーバーの選択:</strong>
             <br />
-            <span className="text-sm text-zinc-400">連結したいサーバーをリストからチェックします。</span>
+            <span className="text-sm text-zinc-400">
+              連結したいサーバーをリストからチェックします。
+            </span>
           </li>
         </ul>
         <p>
@@ -59,7 +63,9 @@ const ProxyHelpView: FC = () => {
           Step 2
         </div>
         <h3>サーバーファイルの配置</h3>
-        <p>構築ボタンを押すとフォルダが生成されます。必要なファイルをダウンロードして配置します。</p>
+        <p>
+          構築ボタンを押すとフォルダが生成されます。必要なファイルをダウンロードして配置します。
+        </p>
 
         <div className="mb-4">
           <strong>1. フォルダへ移動</strong>

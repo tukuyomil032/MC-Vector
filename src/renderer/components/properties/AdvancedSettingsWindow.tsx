@@ -1,7 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
-import { serverPropertiesList, type PropertyCategory, type PropertyDefinition } from '../../shared/propertiesData';
+import {
+  serverPropertiesList,
+  type PropertyCategory,
+  type PropertyDefinition,
+} from '../../shared/propertiesData';
 
-const CATEGORY_ORDER: PropertyCategory[] = ['General', 'Gameplay', 'World', 'Network', 'Security', 'Advanced'];
+const CATEGORY_ORDER: PropertyCategory[] = [
+  'General',
+  'Gameplay',
+  'World',
+  'Network',
+  'Security',
+  'Advanced',
+];
 
 export default function AdvancedSettingsWindow() {
   const [activeTab, setActiveTab] = useState<PropertyCategory>('General');
@@ -39,7 +50,8 @@ export default function AdvancedSettingsWindow() {
     const inferred: PropertyDefinition[] = [];
     Object.entries(formData).forEach(([key, value]) => {
       if (known.has(key)) return;
-      const valueType = typeof value === 'boolean' ? 'boolean' : typeof value === 'number' ? 'number' : 'string';
+      const valueType =
+        typeof value === 'boolean' ? 'boolean' : typeof value === 'number' ? 'number' : 'string';
       inferred.push({
         key,
         label: key,
@@ -52,11 +64,16 @@ export default function AdvancedSettingsWindow() {
     return inferred;
   }, [formData]);
 
-  const allDefinitions = useMemo(() => [...serverPropertiesList, ...inferredDefinitions], [inferredDefinitions]);
+  const allDefinitions = useMemo(
+    () => [...serverPropertiesList, ...inferredDefinitions],
+    [inferredDefinitions]
+  );
 
   const categories = useMemo(() => {
     const defined = Array.from(new Set(allDefinitions.map((p) => p.category)));
-    return CATEGORY_ORDER.filter((c) => defined.includes(c)).concat(defined.filter((c) => !CATEGORY_ORDER.includes(c)));
+    return CATEGORY_ORDER.filter((c) => defined.includes(c)).concat(
+      defined.filter((c) => !CATEGORY_ORDER.includes(c))
+    );
   }, [allDefinitions]);
 
   const filteredProps = allDefinitions.filter((p) => p.category === activeTab);
@@ -158,16 +175,22 @@ export default function AdvancedSettingsWindow() {
                         <span>{prop.label}</span>
                         <span className="text-xs text-accent">({prop.key})</span>
                       </div>
-                      <div className="text-xs text-text-secondary leading-relaxed">{prop.description}</div>
+                      <div className="text-xs text-text-secondary leading-relaxed">
+                        {prop.description}
+                      </div>
                       <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 bg-zinc-800 text-white rounded-md p-2.5 shadow-xl border border-accent absolute top-full left-0 mt-2 text-xs w-[min(320px,90vw)] whitespace-normal break-words transition-opacity z-20">
                         {prop.description}
                       </div>
                     </div>
 
-                    {prop.type === 'boolean' && <div className="shrink-0">{renderInput(prop, currentValue)}</div>}
+                    {prop.type === 'boolean' && (
+                      <div className="shrink-0">{renderInput(prop, currentValue)}</div>
+                    )}
                   </div>
 
-                  {prop.type !== 'boolean' && <div className="w-full">{renderInput(prop, currentValue)}</div>}
+                  {prop.type !== 'boolean' && (
+                    <div className="w-full">{renderInput(prop, currentValue)}</div>
+                  )}
                 </div>
               );
             })}

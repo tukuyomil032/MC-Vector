@@ -1,9 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 
-type AppTheme = 'dark' | 'darkBlue' | 'grey' | 'forest' | 'sunset' | 'neon' | 'coffee' | 'ocean' | 'system';
+type AppTheme =
+  | 'dark'
+  | 'darkBlue'
+  | 'grey'
+  | 'forest'
+  | 'sunset'
+  | 'neon'
+  | 'coffee'
+  | 'ocean'
+  | 'system';
 
 interface UpdateState {
-  status: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+  status:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'downloading'
+    | 'downloaded'
+    | 'error';
   version?: string;
   releaseNotes?: unknown;
   progress?: number;
@@ -21,7 +37,12 @@ function normalizeReleaseNotes(notes: unknown): string {
           return entry;
         }
 
-        if (entry && typeof entry === 'object' && 'body' in entry && typeof (entry as any).body === 'string') {
+        if (
+          entry &&
+          typeof entry === 'object' &&
+          'body' in entry &&
+          typeof (entry as any).body === 'string'
+        ) {
           return (entry as any).body as string;
         }
         return '';
@@ -37,11 +58,24 @@ const SettingsWindow = () => {
   const [theme, setTheme] = useState<AppTheme>('system');
 
   const normalizeTheme = (value: unknown): AppTheme => {
-    const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
+    const allowed: AppTheme[] = [
+      'dark',
+      'darkBlue',
+      'grey',
+      'forest',
+      'sunset',
+      'neon',
+      'coffee',
+      'ocean',
+      'system',
+    ];
     return allowed.includes(value as AppTheme) ? (value as AppTheme) : 'dark';
   };
 
-  const releaseNotesText = useMemo(() => normalizeReleaseNotes(updateState.releaseNotes), [updateState.releaseNotes]);
+  const releaseNotesText = useMemo(
+    () => normalizeReleaseNotes(updateState.releaseNotes),
+    [updateState.releaseNotes]
+  );
 
   useEffect(() => {
     const disposeSettings = window.electronAPI.onSettingsData((data) => {
@@ -105,7 +139,9 @@ const SettingsWindow = () => {
         releaseNotes: result.releaseNotes,
       });
     } else {
-      setUpdateState(result?.error ? { status: 'error', error: result.error } : { status: 'not-available' });
+      setUpdateState(
+        result?.error ? { status: 'error', error: result.error } : { status: 'not-available' }
+      );
     }
   };
 
@@ -139,7 +175,11 @@ const SettingsWindow = () => {
           </div>
           <div className="flex gap-2">
             {['idle', 'not-available', 'error'].includes(updateState.status) && (
-              <button className="btn-secondary" onClick={handleCheck} disabled={updateState.status === 'checking'}>
+              <button
+                className="btn-secondary"
+                onClick={handleCheck}
+                disabled={updateState.status === 'checking'}
+              >
                 {updateState.status === 'checking' ? '確認中...' : 'アップデートを確認'}
               </button>
             )}
@@ -178,8 +218,12 @@ const SettingsWindow = () => {
               </div>
             </div>
           )}
-          {updateState.status === 'downloaded' && <div>ダウンロード完了。再起動して適用できます。</div>}
-          {updateState.status === 'error' && <div className="text-red-400">エラー: {updateState.error}</div>}
+          {updateState.status === 'downloaded' && (
+            <div>ダウンロード完了。再起動して適用できます。</div>
+          )}
+          {updateState.status === 'error' && (
+            <div className="text-red-400">エラー: {updateState.error}</div>
+          )}
         </div>
 
         {releaseNotesText && (
@@ -196,7 +240,9 @@ const SettingsWindow = () => {
         <div className="flex justify-between items-center mb-3 gap-3 flex-wrap">
           <div>
             <h2 className="text-lg m-0">テーマ</h2>
-            <p className="text-sm text-zinc-400 m-0">アプリ全体に適用される背景テーマを選択します。</p>
+            <p className="text-sm text-zinc-400 m-0">
+              アプリ全体に適用される背景テーマを選択します。
+            </p>
           </div>
         </div>
 

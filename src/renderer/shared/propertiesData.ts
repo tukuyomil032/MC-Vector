@@ -1,5 +1,11 @@
 export type PropertyType = 'boolean' | 'number' | 'string' | 'select';
-export type PropertyCategory = 'General' | 'Gameplay' | 'World' | 'Network' | 'Security' | 'Advanced';
+export type PropertyCategory =
+  | 'General'
+  | 'Gameplay'
+  | 'World'
+  | 'Network'
+  | 'Security'
+  | 'Advanced';
 
 export interface PropertyDefinition {
   key: string;

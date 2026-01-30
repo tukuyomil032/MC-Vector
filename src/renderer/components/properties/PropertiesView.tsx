@@ -45,7 +45,8 @@ export default function PropertiesView({ server }: Props) {
               const cleaned = value.trim();
               if (cleaned === 'true') newProps[key.trim()] = true;
               else if (cleaned === 'false') newProps[key.trim()] = false;
-              else if (!isNaN(Number(cleaned)) && cleaned !== '') newProps[key.trim()] = Number(cleaned);
+              else if (!isNaN(Number(cleaned)) && cleaned !== '')
+                newProps[key.trim()] = Number(cleaned);
               else newProps[key.trim()] = cleaned;
             }
           }
@@ -69,11 +70,13 @@ export default function PropertiesView({ server }: Props) {
 
   useEffect(() => {
     if (window.electronAPI) {
-      const removeListener = window.electronAPI.onSettingsSavedInWindow((_event, newSettings: any) => {
-        setProps((prev: ServerProperties) => ({ ...prev, ...newSettings }));
-        setHasChanges(true);
-        showToast('詳細設定の変更を読み込みました。右上の「変更を保存」で反映します。', 'info');
-      });
+      const removeListener = window.electronAPI.onSettingsSavedInWindow(
+        (_event, newSettings: any) => {
+          setProps((prev: ServerProperties) => ({ ...prev, ...newSettings }));
+          setHasChanges(true);
+          showToast('詳細設定の変更を読み込みました。右上の「変更を保存」で反映します。', 'info');
+        }
+      );
       return () => (removeListener as any)?.();
     }
   }, [showToast]);
@@ -117,19 +120,27 @@ export default function PropertiesView({ server }: Props) {
               🛠️ 詳細設定を開く (別窓)
             </button>
 
-            <button className="btn-primary disabled:opacity-50" onClick={handleSave} disabled={!hasChanges}>
+            <button
+              className="btn-primary disabled:opacity-50"
+              onClick={handleSave}
+              disabled={!hasChanges}
+            >
               変更を保存
             </button>
           </div>
         </div>
 
         <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
-          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">基本設定</div>
+          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">
+            基本設定
+          </div>
 
           <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
             <div className="flex flex-col">
               <span>MOTD</span>
-              <span className="text-xs text-text-secondary mt-0.5">サーバーリストに表示される説明文</span>
+              <span className="text-xs text-text-secondary mt-0.5">
+                サーバーリストに表示される説明文
+              </span>
             </div>
             <input
               type="text"
@@ -173,7 +184,9 @@ export default function PropertiesView({ server }: Props) {
         </div>
 
         <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
-          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">ゲームプレイ</div>
+          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">
+            ゲームプレイ
+          </div>
           <ToggleItem
             label="PvP"
             desc="プレイヤー同士の攻撃を許可"

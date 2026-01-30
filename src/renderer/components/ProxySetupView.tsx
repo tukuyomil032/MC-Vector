@@ -18,12 +18,14 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
 
   const backendCandidates = servers.filter(
-    (s) => !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) && !s.name.toLowerCase().includes('proxy'),
+    (s) =>
+      !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) &&
+      !s.name.toLowerCase().includes('proxy')
   );
 
   const handleCheckboxChange = (serverId: string) => {
     setSelectedBackendIds((prev) =>
-      prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId],
+      prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId]
     );
   };
 
@@ -53,7 +55,11 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
       <div className="p-8 max-w-4xl bg-[#252526] rounded-lg border border-border-color">
         <div className="mb-6 flex flex-col gap-2">
           <label className="block mb-2 font-bold">Proxy Software</label>
-          <select className="input-field" value={proxySoftware} onChange={(e) => setProxySoftware(e.target.value)}>
+          <select
+            className="input-field"
+            value={proxySoftware}
+            onChange={(e) => setProxySoftware(e.target.value)}
+          >
             <option value="Velocity">Velocity (Recommended)</option>
             <option value="Waterfall">Waterfall</option>
             <option value="BungeeCord">BungeeCord</option>
@@ -68,7 +74,9 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
             value={proxyPort}
             onChange={(e) => setProxyPort(Number(e.target.value))}
           />
-          <div className="text-xs text-zinc-500 mt-1.5">プレイヤーが最初に接続するポートです (デフォルト: 25577)</div>
+          <div className="text-xs text-zinc-500 mt-1.5">
+            プレイヤーが最初に接続するポートです (デフォルト: 25577)
+          </div>
         </div>
 
         <div className="mb-8 flex flex-col gap-2">

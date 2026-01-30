@@ -7,7 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Server Operations ---
   startServer: (serverId: string) => ipcRenderer.send('start-server', serverId),
   stopServer: (serverId: string) => ipcRenderer.send('stop-server', serverId),
-  sendCommand: (serverId: string, command: string) => ipcRenderer.send('send-command', { serverId, command }),
+  sendCommand: (serverId: string, command: string) =>
+    ipcRenderer.send('send-command', { serverId, command }),
 
   // --- Server Management ---
   getServers: () => ipcRenderer.invoke('get-servers'),
@@ -30,7 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('server-log', subscription);
     };
   },
-  onDownloadProgress: (callback: (event: unknown, data: any) => void) => ipcRenderer.on('download-progress', callback),
+  onDownloadProgress: (callback: (event: unknown, data: any) => void) =>
+    ipcRenderer.on('download-progress', callback),
   onServerStats: (callback: (event: unknown, data: any) => void) => {
     const subscription = (_event: unknown, data: any) => callback(_event, data);
     ipcRenderer.on('server-stats', subscription);
@@ -47,7 +49,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // --- Settings Window ---
-  openSettingsWindow: (currentSettings: any) => ipcRenderer.send('open-settings-window', currentSettings),
+  openSettingsWindow: (currentSettings: any) =>
+    ipcRenderer.send('open-settings-window', currentSettings),
   settingsWindowReady: () => ipcRenderer.send('settings-window-ready'),
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   onSettingsData: (callback: (data: any) => void) => {
@@ -55,7 +58,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('init-settings-data', subscription);
     return () => ipcRenderer.removeListener('init-settings-data', subscription);
   },
-  saveSettingsFromWindow: (newSettings: any) => ipcRenderer.send('save-settings-from-window', newSettings),
+  saveSettingsFromWindow: (newSettings: any) =>
+    ipcRenderer.send('save-settings-from-window', newSettings),
   onSettingsSavedInWindow: (callback: (event: unknown, newSettings: any) => void) => {
     ipcRenderer.on('settings-updated', callback);
     return () => {
@@ -64,16 +68,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // --- File Manager ---
-  listFiles: (dirPath: string, serverId?: string) => ipcRenderer.invoke('list-files', dirPath, serverId),
-  readFile: (filePath: string, serverId?: string) => ipcRenderer.invoke('read-file', filePath, serverId),
+  listFiles: (dirPath: string, serverId?: string) =>
+    ipcRenderer.invoke('list-files', dirPath, serverId),
+  readFile: (filePath: string, serverId?: string) =>
+    ipcRenderer.invoke('read-file', filePath, serverId),
   saveFile: (filePath: string, content: string, serverId?: string) =>
     ipcRenderer.invoke('save-file', filePath, content, serverId),
   importFilesDialog: (destDir: string, serverId: string) =>
     ipcRenderer.invoke('import-files-dialog', destDir, serverId),
 
-  createDirectory: (path: string, serverId?: string) => ipcRenderer.invoke('create-directory', path, serverId),
-  deletePath: (path: string, serverId?: string) => ipcRenderer.invoke('delete-path', path, serverId),
-  movePath: (src: string, dest: string, serverId?: string) => ipcRenderer.invoke('move-path', src, dest, serverId),
+  createDirectory: (path: string, serverId?: string) =>
+    ipcRenderer.invoke('create-directory', path, serverId),
+  deletePath: (path: string, serverId?: string) =>
+    ipcRenderer.invoke('delete-path', path, serverId),
+  movePath: (src: string, dest: string, serverId?: string) =>
+    ipcRenderer.invoke('move-path', src, dest, serverId),
   uploadFiles: (files: string[], dest: string, serverId?: string) =>
     ipcRenderer.invoke('upload-files', files, dest, serverId),
   compressFiles: (files: string[], dest: string, serverId: string) =>
@@ -82,14 +91,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('extract-archive', archive, dest, serverId),
 
   // Reveal in Finder / Explorer
-  openPathInExplorer: (path: string, serverId?: string) => ipcRenderer.invoke('open-path-in-explorer', path, serverId),
+  openPathInExplorer: (path: string, serverId?: string) =>
+    ipcRenderer.invoke('open-path-in-explorer', path, serverId),
 
   // --- Backups ---
-  createBackup: (serverId: string, options?: { name?: string; paths?: string[]; compressionLevel?: number }) =>
-    ipcRenderer.invoke('create-backup', serverId, options),
+  createBackup: (
+    serverId: string,
+    options?: { name?: string; paths?: string[]; compressionLevel?: number }
+  ) => ipcRenderer.invoke('create-backup', serverId, options),
   listBackups: (serverId: string) => ipcRenderer.invoke('list-backups', serverId),
-  restoreBackup: (serverId: string, backupName: string) => ipcRenderer.invoke('restore-backup', serverId, backupName),
-  deleteBackup: (serverId: string, backupName: string) => ipcRenderer.invoke('delete-backup', serverId, backupName),
+  restoreBackup: (serverId: string, backupName: string) =>
+    ipcRenderer.invoke('restore-backup', serverId, backupName),
+  deleteBackup: (serverId: string, backupName: string) =>
+    ipcRenderer.invoke('delete-backup', serverId, backupName),
 
   // --- Proxy ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,8 +119,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     fileName: string,
     downloadUrl: string,
     serverId: string,
-    type: 'mod' | 'plugin',
-  ) => ipcRenderer.invoke('install-modrinth-project', projectId, versionId, fileName, downloadUrl, serverId, type),
+    type: 'mod' | 'plugin'
+  ) =>
+    ipcRenderer.invoke(
+      'install-modrinth-project',
+      projectId,
+      versionId,
+      fileName,
+      downloadUrl,
+      serverId,
+      type
+    ),
 
   searchHangar: (query: string, version: string, offset: number) =>
     ipcRenderer.invoke('search-hangar', query, version, offset),
@@ -120,7 +143,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteJava: (version: number) => ipcRenderer.invoke('delete-java', version),
 
   // --- Users ---
-  readJsonFile: (filePath: string, serverId: string) => ipcRenderer.invoke('read-json-file', filePath, serverId),
+  readJsonFile: (filePath: string, serverId: string) =>
+    ipcRenderer.invoke('read-json-file', filePath, serverId),
   writeJsonFile: (filePath: string, data: any[], serverId: string) =>
     ipcRenderer.invoke('write-json-file', filePath, data, serverId),
 
@@ -142,12 +166,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.invoke('updates/check'),
   downloadUpdate: () => ipcRenderer.invoke('updates/download'),
   installUpdate: () => ipcRenderer.invoke('updates/install'),
-  onUpdateAvailable: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => {
+  onUpdateAvailable: (
+    callback: (payload: { version?: string; releaseNotes?: unknown }) => void
+  ) => {
     const listener = (_event: unknown, payload: any) => callback(payload);
     ipcRenderer.on('update-available', listener);
     return () => ipcRenderer.removeListener('update-available', listener);
   },
-  onUpdateAvailableSilent: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => {
+  onUpdateAvailableSilent: (
+    callback: (payload: { version?: string; releaseNotes?: unknown }) => void
+  ) => {
     const listener = (_event: unknown, payload: any) => callback(payload);
     ipcRenderer.on('update-available-silent', listener);
     return () => ipcRenderer.removeListener('update-available-silent', listener);
@@ -162,7 +190,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-download-progress', listener);
     return () => ipcRenderer.removeListener('update-download-progress', listener);
   },
-  onUpdateDownloaded: (callback: (payload: { version?: string; releaseNotes?: unknown }) => void) => {
+  onUpdateDownloaded: (
+    callback: (payload: { version?: string; releaseNotes?: unknown }) => void
+  ) => {
     const listener = (_event: unknown, payload: any) => callback(payload);
     ipcRenderer.on('update-downloaded', listener);
     return () => ipcRenderer.removeListener('update-downloaded', listener);

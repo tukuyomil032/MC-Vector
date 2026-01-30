@@ -25,12 +25,14 @@ export default function PluginBrowser({ server }: Props) {
   const [loading, setLoading] = useState(false);
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [installedFiles, setInstalledFiles] = useState<string[]>([]);
-  const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(null);
+  const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
+    null
+  );
   const [page, setPage] = useState(0);
   const LIMIT = 30;
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<'Modrinth' | 'Hangar' | 'CurseForge' | 'Spigot'>(
-    isModServer ? 'Modrinth' : 'Modrinth',
+    isModServer ? 'Modrinth' : 'Modrinth'
   );
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
   const { showToast } = useToast();
@@ -62,7 +64,13 @@ export default function PluginBrowser({ server }: Props) {
       .replace(/[^a-z0-9]/g, '');
 
   const findInstalledMatch = (item: ProjectItem) => {
-    const candidates = [item.slug, item.title, item.id, item.source_obj?.slug, item.source_obj?.project_id]
+    const candidates = [
+      item.slug,
+      item.title,
+      item.id,
+      item.source_obj?.slug,
+      item.source_obj?.project_id,
+    ]
       .map(normalize)
       .filter(Boolean);
 
@@ -86,7 +94,12 @@ export default function PluginBrowser({ server }: Props) {
 
       if (platform === 'Modrinth') {
         const searchType = isModServer ? 'mod' : 'plugin';
-        const hits = await window.electronAPI.searchModrinth(query, searchType, server.version, offset);
+        const hits = await window.electronAPI.searchModrinth(
+          query,
+          searchType,
+          server.version,
+          offset
+        );
 
         items = hits.map((h: any) => ({
           id: h.project_id,
@@ -125,7 +138,11 @@ export default function PluginBrowser({ server }: Props) {
     }
   };
 
-  const performInstall = async (item: ProjectItem, mode: 'fresh' | 'overwrite' | 'update', installedFile?: string) => {
+  const performInstall = async (
+    item: ProjectItem,
+    mode: 'fresh' | 'overwrite' | 'update',
+    installedFile?: string
+  ) => {
     if (installedFile) {
       const targetPath = `${server.path}/${folderName}/${installedFile}`;
       try {
@@ -149,7 +166,9 @@ export default function PluginBrowser({ server }: Props) {
         params.append('loaders', `["${loader}"]`);
         params.append('game_versions', `["${server.version}"]`);
 
-        const res = await fetch(`https://api.modrinth.com/v2/project/${item.id}/version?${params.toString()}`);
+        const res = await fetch(
+          `https://api.modrinth.com/v2/project/${item.id}/version?${params.toString()}`
+        );
         const versions = await res.json();
 
         if (!versions || versions.length === 0) {
@@ -165,17 +184,17 @@ export default function PluginBrowser({ server }: Props) {
           file.filename,
           file.url,
           server.id,
-          type,
+          type
         );
         showToast(
           `${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`,
-          'success',
+          'success'
         );
       } else if (item.platform === 'Hangar') {
         const author = item.source_obj.namespace.owner;
         const slug = item.source_obj.namespace.slug;
         const res = await fetch(
-          `https://hangar.papermc.io/api/v1/projects/${author}/${slug}/versions?limit=1&platform=PAPER&platformVersion=${server.version}`,
+          `https://hangar.papermc.io/api/v1/projects/${author}/${slug}/versions?limit=1&platform=PAPER&platformVersion=${server.version}`
         );
         const data = await res.json();
 
@@ -191,7 +210,7 @@ export default function PluginBrowser({ server }: Props) {
         await window.electronAPI.installHangarProject(downloadUrl, fileName, server.id);
         showToast(
           `${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`,
-          'success',
+          'success'
         );
       }
     } catch (e) {
@@ -262,7 +281,7 @@ export default function PluginBrowser({ server }: Props) {
               openExternal(
                 platform === 'CurseForge'
                   ? 'https://www.curseforge.com/minecraft/mc-mods'
-                  : 'https://www.spigotmc.org/resources/',
+                  : 'https://www.spigotmc.org/resources/'
               )
             }
           >
@@ -278,7 +297,10 @@ export default function PluginBrowser({ server }: Props) {
         <>
           <div className="flex-1 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4 pr-1">
             {results.map((item) => (
-              <div key={item.id} className="p-4 flex gap-4 bg-[#252526] border border-zinc-800 rounded-lg">
+              <div
+                key={item.id}
+                className="p-4 flex gap-4 bg-[#252526] border border-zinc-800 rounded-lg"
+              >
                 <div
                   className="w-16 h-16 rounded-lg shrink-0 bg-zinc-800"
                   style={{
@@ -307,12 +329,18 @@ export default function PluginBrowser({ server }: Props) {
                     </div>
                   </div>
 
-                  <div className="text-sm text-zinc-400 mb-auto line-clamp-2 leading-snug">{item.description}</div>
+                  <div className="text-sm text-zinc-400 mb-auto line-clamp-2 leading-snug">
+                    {item.description}
+                  </div>
 
                   <div className="mt-2.5 text-xs text-zinc-600 flex justify-between">
                     <span>By {item.author}</span>
                     <span>
-                      {item.downloads ? `⬇ ${item.downloads.toLocaleString()}` : item.stars ? `★ ${item.stars}` : ''}
+                      {item.downloads
+                        ? `⬇ ${item.downloads.toLocaleString()}`
+                        : item.stars
+                          ? `★ ${item.stars}`
+                          : ''}
                     </span>
                   </div>
                 </div>

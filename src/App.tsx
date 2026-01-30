@@ -38,7 +38,16 @@ const TAB_CYCLE: AppView[] = [
   'general-settings',
   'proxy',
 ];
-type AppTheme = 'dark' | 'darkBlue' | 'grey' | 'forest' | 'sunset' | 'neon' | 'coffee' | 'ocean' | 'system';
+type AppTheme =
+  | 'dark'
+  | 'darkBlue'
+  | 'grey'
+  | 'forest'
+  | 'sunset'
+  | 'neon'
+  | 'coffee'
+  | 'ocean'
+  | 'system';
 
 function App() {
   const [servers, setServers] = useState<MinecraftServer[]>([]);
@@ -70,11 +79,21 @@ function App() {
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
   const [appTheme, setAppTheme] = useState<AppTheme>('system');
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
-    window.matchMedia('(prefers-color-scheme: dark)').matches,
+    window.matchMedia('(prefers-color-scheme: dark)').matches
   );
 
   const normalizeTheme = (value: unknown): AppTheme => {
-    const allowed: AppTheme[] = ['dark', 'darkBlue', 'grey', 'forest', 'sunset', 'neon', 'coffee', 'ocean', 'system'];
+    const allowed: AppTheme[] = [
+      'dark',
+      'darkBlue',
+      'grey',
+      'forest',
+      'sunset',
+      'neon',
+      'coffee',
+      'ocean',
+      'system',
+    ];
     return allowed.includes(value as AppTheme) ? (value as AppTheme) : 'dark';
   };
 
@@ -183,7 +202,7 @@ function App() {
         if (loadedServers.length > 0 && !selectedServerId) {
           setSelectedServerId(loadedServers[0].id);
         }
-      } catch (e) {
+      } catch {
         showToast('サーバーリスト読み込みエラー', 'error');
       }
     };
@@ -213,9 +232,13 @@ function App() {
       }
     });
 
-    const removeStatusListener = window.electronAPI.onServerStatusUpdate((_event: any, data: any) => {
-      setServers((prev) => prev.map((s) => (s.id === data.serverId ? { ...s, status: data.status } : s)));
-    });
+    const removeStatusListener = window.electronAPI.onServerStatusUpdate(
+      (_event: any, data: any) => {
+        setServers((prev) =>
+          prev.map((s) => (s.id === data.serverId ? { ...s, status: data.status } : s))
+        );
+      }
+    );
 
     const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
       if (data.status === 'stopped' || data.status === 'error') {
@@ -273,7 +296,9 @@ function App() {
     if (!selectedServerId) {
       return;
     }
-    setServers((prev) => prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'restarting' } : s)));
+    setServers((prev) =>
+      prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'restarting' } : s))
+    );
     await window.electronAPI.stopServer(selectedServerId);
     setTimeout(() => {
       window.electronAPI.startServer(selectedServerId);
@@ -294,11 +319,13 @@ function App() {
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
 
-      if (['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)) {
+      if (
+        ['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)
+      ) {
         setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
         await window.electronAPI.downloadServerJar(newServer.id);
       }
-    } catch (e) {
+    } catch {
       showToast('サーバー作成に失敗しました', 'error');
     }
   };
@@ -312,7 +339,7 @@ function App() {
       showToast(result.message, result.success ? 'success' : 'error');
       const loadedServers = await window.electronAPI.getServers();
       setServers(loadedServers);
-    } catch (error) {
+    } catch {
       showToast('エラーが発生しました', 'error');
     }
   };
@@ -364,7 +391,7 @@ function App() {
       } else {
         showToast('削除に失敗しました', 'error');
       }
-    } catch (e) {
+    } catch {
       showToast('削除エラー', 'error');
     }
     setContextMenu(null);
@@ -374,7 +401,8 @@ function App() {
     if (contextMenu) setContextMenu(null);
   };
 
-  const resolvedTheme: AppTheme = appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'darkBlue') : appTheme;
+  const resolvedTheme: AppTheme =
+    appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'darkBlue') : appTheme;
   const themePalette: Record<
     Exclude<AppTheme, 'system'>,
     {
@@ -416,7 +444,8 @@ function App() {
       border: '#2e323a',
     },
     forest: {
-      mainBg: 'radial-gradient(circle at 20% 20%, rgba(46, 94, 72, 0.35), transparent 45%), #0f1914',
+      mainBg:
+        'radial-gradient(circle at 20% 20%, rgba(46, 94, 72, 0.35), transparent 45%), #0f1914',
       headerBg: 'rgba(20, 40, 32, 0.9)',
       text: '#e9f5eb',
       sidebarBg: '#13201a',
@@ -461,7 +490,8 @@ function App() {
       border: '#1f3a50',
     },
   };
-  const themeColors = themePalette[resolvedTheme as Exclude<AppTheme, 'system'>] || themePalette.dark;
+  const themeColors =
+    themePalette[resolvedTheme as Exclude<AppTheme, 'system'>] || themePalette.dark;
 
   const getReleaseNotesText = () => {
     const notes: unknown = updatePrompt?.releaseNotes;
@@ -477,7 +507,12 @@ function App() {
           if (typeof entry === 'string') {
             return entry;
           }
-          if (entry && typeof entry === 'object' && 'body' in entry && typeof (entry as any).body === 'string') {
+          if (
+            entry &&
+            typeof entry === 'object' &&
+            'body' in entry &&
+            typeof (entry as any).body === 'string'
+          ) {
             return (entry as any).body as string;
           }
           return '';
@@ -497,7 +532,11 @@ function App() {
       return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
     }
     if (!activeServer) {
-      return <div className="p-10 text-center text-zinc-500 text-xl">サーバーを選択するか、作成してください</div>;
+      return (
+        <div className="p-10 text-center text-zinc-500 text-xl">
+          サーバーを選択するか、作成してください
+        </div>
+      );
     }
 
     const contentKey = `${activeServer.id}-${currentView}`;
@@ -523,7 +562,9 @@ function App() {
       case 'backups':
         return <BackupsView key={contentKey} server={activeServer} />;
       case 'general-settings':
-        return <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />;
+        return (
+          <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />
+        );
       case 'users':
         return <UsersView key={contentKey} server={activeServer} />;
       default:
@@ -545,7 +586,9 @@ function App() {
           color: themeColors.text,
         }}
       >
-        <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}>
+        <div
+          className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} p-5 bg-transparent`}
+        >
           {isSidebarOpen && (
             <span
               className="font-bold text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] cursor-pointer"
@@ -645,7 +688,9 @@ function App() {
               background: themeColors.sidebarPanelBg,
             }}
           >
-            <div className="px-2.5 py-1 text-xs text-text-secondary font-bold tracking-wider">SERVERS</div>
+            <div className="px-2.5 py-1 text-xs text-text-secondary font-bold tracking-wider">
+              SERVERS
+            </div>
             <div className="overflow-y-auto flex-1 p-2.5 shrink-0">
               {servers.map((server) => (
                 <div
@@ -698,7 +743,11 @@ function App() {
                 <button className="btn-start" onClick={handleStart} title="Start Server">
                   ▶ Start
                 </button>
-                <button className="btn-restart btn-secondary" onClick={handleRestart} title="Restart Server">
+                <button
+                  className="btn-restart btn-secondary"
+                  onClick={handleRestart}
+                  title="Restart Server"
+                >
                   ↻ Restart
                 </button>
                 <button className="btn-stop" onClick={handleStop} title="Stop Server">
@@ -708,7 +757,10 @@ function App() {
             )}
           </div>
         </header>
-        <div className="flex-1 p-0 overflow-hidden relative flex flex-col" style={{ background: themeColors.panelBg }}>
+        <div
+          className="flex-1 p-0 overflow-hidden relative flex flex-col"
+          style={{ background: themeColors.panelBg }}
+        >
           {renderContent()}
         </div>
       </main>
@@ -728,7 +780,9 @@ function App() {
           </div>
         </div>
       )}
-      {showAddServerModal && <AddServerModal onClose={() => setShowAddServerModal(false)} onAdd={handleAddServer} />}
+      {showAddServerModal && (
+        <AddServerModal onClose={() => setShowAddServerModal(false)} onAdd={handleAddServer} />
+      )}
       {contextMenu && (
         <div
           className="fixed bg-[#252526] border border-border-color rounded-md shadow-[0_4px_20px_rgba(0,0,0,0.4)] z-9999 p-1 min-w-[140px]"
@@ -750,7 +804,9 @@ function App() {
         <div className="fixed inset-0 bg-black/70 z-10000 flex items-center justify-center p-4">
           <div className="bg-[#252526] border border-zinc-700 rounded-lg shadow-2xl w-full max-w-[520px] p-6 text-white">
             <h3 className="text-xl font-semibold mt-0 mb-2">アップデートが利用可能です</h3>
-            <p className="text-sm text-zinc-300 mb-4">バージョン: {updatePrompt.version || '不明'}</p>
+            <p className="text-sm text-zinc-300 mb-4">
+              バージョン: {updatePrompt.version || '不明'}
+            </p>
 
             {getReleaseNotesText() && (
               <div className="mb-4">
@@ -763,7 +819,9 @@ function App() {
 
             {updateProgress !== null && !updateReady && (
               <div className="mb-4">
-                <div className="text-sm text-zinc-300 mb-1">ダウンロード中... {Math.round(updateProgress)}%</div>
+                <div className="text-sm text-zinc-300 mb-1">
+                  ダウンロード中... {Math.round(updateProgress)}%
+                </div>
                 <div className="h-2 bg-zinc-800 rounded">
                   <div
                     className="h-2 bg-accent rounded"
@@ -776,7 +834,9 @@ function App() {
             )}
 
             {updateReady && (
-              <div className="mb-4 text-sm text-green-400">ダウンロードが完了しました。再起動して適用できます。</div>
+              <div className="mb-4 text-sm text-green-400">
+                ダウンロードが完了しました。再起動して適用できます。
+              </div>
             )}
 
             <div className="flex justify-end gap-2">

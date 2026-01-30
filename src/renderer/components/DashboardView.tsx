@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface Props {
   server: MinecraftServer;

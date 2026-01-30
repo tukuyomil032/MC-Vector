@@ -93,7 +93,10 @@ export default function JavaManagerModal({ onClose }: Props) {
             {availableVersions.map((v) => {
               const isInstalled = installed.some((i) => i.version === v);
               return (
-                <div key={v} className="bg-[#252526] p-4 rounded-lg text-center border border-zinc-700">
+                <div
+                  key={v}
+                  className="bg-[#252526] p-4 rounded-lg text-center border border-zinc-700"
+                >
                   <div className="text-xl font-bold mb-2.5">Java {v}</div>
                   {isInstalled ? (
                     <div className="text-success font-bold">Installed</div>
@@ -149,12 +152,18 @@ export default function JavaManagerModal({ onClose }: Props) {
           ) : (
             <div className="flex flex-col gap-2.5">
               {installed.map((java) => (
-                <div key={java.path} className="flex items-center justify-between bg-[#252526] px-4 py-2.5 rounded-md">
+                <div
+                  key={java.path}
+                  className="flex items-center justify-between bg-[#252526] px-4 py-2.5 rounded-md"
+                >
                   <div>
                     <div className="font-bold">{java.name}</div>
                     <div className="text-xs text-zinc-500 break-all">{java.path}</div>
                   </div>
-                  <button className="btn-stop py-1.5 px-2.5 text-xs min-w-0" onClick={() => handleDelete(java.version)}>
+                  <button
+                    className="btn-stop py-1.5 px-2.5 text-xs min-w-0"
+                    onClick={() => handleDelete(java.version)}
+                  >
                     Delete
                   </button>
                 </div>

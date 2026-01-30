@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode, type FC } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  type ReactNode,
+  type FC,
+} from 'react';
 import Toast from './Toast';
 
 export type ToastKind = 'success' | 'error' | 'info';

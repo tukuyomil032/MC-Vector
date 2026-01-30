@@ -194,7 +194,11 @@ export default function BackupsView({ server }: Props) {
     <div className="h-full flex flex-col p-5">
       <div className="flex justify-between items-center mb-5">
         <h3>バックアップ管理</h3>
-        <button className="btn-primary disabled:opacity-70" onClick={openCreateModal} disabled={processing}>
+        <button
+          className="btn-primary disabled:opacity-70"
+          onClick={openCreateModal}
+          disabled={processing}
+        >
           {processing ? '処理中...' : '+ バックアップ作成'}
         </button>
       </div>
@@ -208,7 +212,10 @@ export default function BackupsView({ server }: Props) {
 
         {!loading &&
           backups.map((backup) => (
-            <div key={backup.name} className="px-5 py-4 border-b border-white/5 flex items-center gap-5">
+            <div
+              key={backup.name}
+              className="px-5 py-4 border-b border-white/5 flex items-center gap-5"
+            >
               <div className="text-2xl">📦</div>
 
               <div className="flex-1">
@@ -216,7 +223,9 @@ export default function BackupsView({ server }: Props) {
                 <div className="text-sm text-text-secondary mt-1">{formatDate(backup.date)}</div>
               </div>
 
-              <div className="text-text-secondary text-sm w-20 text-right">{formatSize(backup.size)}</div>
+              <div className="text-text-secondary text-sm w-20 text-right">
+                {formatSize(backup.size)}
+              </div>
 
               <div className="flex gap-2.5">
                 <button
@@ -268,7 +277,9 @@ export default function BackupsView({ server }: Props) {
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                   />
-                  <div className="text-xs text-text-secondary">未指定の場合は「{defaultName()}」が使われます</div>
+                  <div className="text-xs text-text-secondary">
+                    未指定の場合は「{defaultName()}」が使われます
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -309,7 +320,11 @@ export default function BackupsView({ server }: Props) {
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button className="btn-secondary" onClick={() => setShowCreateModal(false)} disabled={processing}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={processing}
+                >
                   キャンセル
                 </button>
                 <button
@@ -366,13 +381,23 @@ function TreeNode({
         className="flex items-center gap-2 px-2 py-1 cursor-pointer"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
-        <input type="checkbox" checked={isChecked} onChange={(e) => onToggle(node, e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={(e) => onToggle(node, e.target.checked)}
+        />
         <span className="text-sm text-text-primary">{node.name || '(root)'}</span>
       </label>
       {node.children && node.children.length > 0 && (
         <div className="pl-4">
           {node.children.map((child) => (
-            <TreeNode key={child.path} node={child} selected={selected} onToggle={onToggle} depth={depth + 1} />
+            <TreeNode
+              key={child.path}
+              node={child}
+              selected={selected}
+              onToggle={onToggle}
+              depth={depth + 1}
+            />
           ))}
         </div>
       )}

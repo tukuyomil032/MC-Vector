@@ -52,6 +52,7 @@ const ANSI_BG_MAP: Record<string, string> = {
 };
 
 const ansiToSegments = (text: string): AnsiSegment[] => {
+  // eslint-disable-next-line no-control-regex
   const regex = /\x1b\[[0-9;]*m/g;
   let currentStyle: AnsiStyle = {};
   let lastIndex = 0;
@@ -174,7 +175,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
   const localAddress = `localhost:${server.port}`;
   const publicAddress = internalNgrokUrl ? internalNgrokUrl.replace('tcp://', '') : localAddress;
 
-  const displayAddress = !internalNgrokUrl ? localAddress : currentAddressIndex === 0 ? localAddress : publicAddress;
+  const displayAddress = !internalNgrokUrl
+    ? localAddress
+    : currentAddressIndex === 0
+      ? localAddress
+      : publicAddress;
 
   const handleCopyAddress = () => {
     navigator.clipboard.writeText(displayAddress);
@@ -219,7 +224,9 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
         <div className="text-center">
           <div className="text-xs text-[#8b9bb4] mb-1 font-bold tracking-wider">MEMORY</div>
           <div className="font-bold text-[#f0f0f0] text-sm">
-            {server.status === 'online' ? formatMemoryDetailed(memoryUsage, server.memory) : '- / - MB'}
+            {server.status === 'online'
+              ? formatMemoryDetailed(memoryUsage, server.memory)
+              : '- / - MB'}
           </div>
         </div>
       </div>
@@ -256,7 +263,9 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
 
         <div ref={logEndRef} />
 
-        {logs.length === 0 && <div className="text-zinc-600 italic text-center mt-5">Waiting for logs...</div>}
+        {logs.length === 0 && (
+          <div className="text-zinc-600 italic text-center mt-5">Waiting for logs...</div>
+        )}
       </div>
 
       <div className="h-[60px] bg-[#252526] border-t border-[#3e3e42] flex items-center px-5 shrink-0">

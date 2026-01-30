@@ -1,23 +1,22 @@
 import eslint from '@eslint/js';
 import globals from 'globals';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
+import tseslint from 'typescript-eslint';
 import prettier from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
 
-export default [
+export default tseslint.config(
   eslint.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
     languageOptions: {
-      parser: tsparser,
       parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        project: './tsconfig.json',
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.node,
+        ...globals.browser,
         console: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
@@ -26,11 +25,9 @@ export default [
       },
     },
     plugins: {
-      '@typescript-eslint': tseslint,
       prettier: prettier,
     },
     rules: {
-      ...tseslint.configs.recommended.rules,
       ...prettierConfig.rules,
       'prettier/prettier': 'error',
       '@typescript-eslint/no-unused-vars': [
@@ -46,6 +43,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', '*.js'],
-  },
-];
+    ignores: ['dist/**', 'dist-electron/**', 'node_modules/**', '*.js'],
+  }
+);
