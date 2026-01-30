@@ -6,5 +6,5 @@ coverage
 node_modules
 **/build
 **/dist
-.github/CODEOWNERS
+.github/*
 pnpm-lock.yaml

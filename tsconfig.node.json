@@ -19,12 +19,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "vite": ["node_modules/vite"],
-      "vite/*": ["node_modules/vite/*"]
-    }
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["vite.config.ts"]
 }

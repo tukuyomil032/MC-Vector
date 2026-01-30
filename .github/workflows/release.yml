@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 env:
   CI: true
@@ -23,22 +25,25 @@ jobs:
             node-version: 20
             pnpm-version: 10.26.2
             arch-label: Apple-silicon
-            build-command: pnpm exec electron-builder --mac --arm64 --publish always
+            build-command: pnpm exec electron-builder --mac --arm64
             artifact-name: mac-arm64
-            asset-pattern: release/*
+            asset-pattern-bin: release/*.dmg
+            asset-pattern-yml: release/latest-mac.yml
           - os: macos-14
             node-version: 20
             pnpm-version: 10.26.2
             arch-label: Intel-CPU
-            build-command: pnpm exec electron-builder --mac --x64 --publish always
+            build-command: pnpm exec electron-builder --mac --x64
             artifact-name: mac-x64
-            asset-pattern: release/*
+            asset-pattern-bin: release/*.dmg
+            asset-pattern-yml: release/latest-mac.yml
           - os: windows-latest
             node-version: 20
             pnpm-version: 10.26.2
-            build-command: pnpm exec electron-builder --win --x64 --publish always
+            build-command: pnpm exec electron-builder --win --x64
             artifact-name: win-x64
-            asset-pattern: release/*
+            asset-pattern-bin: release/*.exe
+            asset-pattern-yml: release/latest.yml
 
     steps:
       - name: Check out Git repository
@@ -67,9 +72,87 @@ jobs:
           ARCH_LABEL: ${{ matrix.arch-label }}
         run: ${{ matrix.build-command }}
 
-      - name: Upload artifacts
+      - name: Upload binary artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.asset-pattern }}
+          name: ${{ matrix.artifact-name }}-bin
+          path: ${{ matrix.asset-pattern-bin }}
           retention-days: 5
+
+      - name: Upload update yml artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}-yml
+          path: ${{ matrix.asset-pattern-yml }}
+          retention-days: 5
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version from filename
+        id: version
+        run: |
+          for f in artifacts/*/*.dmg artifacts/*/*.exe; do
+            if [[ -f "$f" ]]; then
+              FILENAME=$(basename "$f")
+              VERSION=$(echo "$FILENAME" | sed -E 's/MC-Vector-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              break
+            fi
+          done
+
+      - name: Prepare update files for gh-pages
+        run: |
+          mkdir -p gh-pages-deploy
+
+          # Copy latest.yml (Windows)
+          if [[ -f artifacts/win-x64-yml/latest.yml ]]; then
+            cp artifacts/win-x64-yml/latest.yml gh-pages-deploy/
+            # Update URL to point to GitHub Releases
+            sed -i "s|url:.*|url: https://github.com/tukuyomil032/MC-Vector/releases/download/v${{ steps.version.outputs.version }}/MC-Vector-${{ steps.version.outputs.version }}-x64-Windows-Installer.exe|" gh-pages-deploy/latest.yml
+          fi
+
+          # Copy latest-mac.yml (macOS) - use arm64 version as base
+          if [[ -f artifacts/mac-arm64-yml/latest-mac.yml ]]; then
+            cp artifacts/mac-arm64-yml/latest-mac.yml gh-pages-deploy/
+            # Update URL - for mac we need to handle both architectures
+            # Users will download based on their architecture from Releases page
+            sed -i "s|url:.*|url: https://github.com/tukuyomil032/MC-Vector/releases/tag/v${{ steps.version.outputs.version }}|" gh-pages-deploy/latest-mac.yml
+          fi
+
+          echo "Files prepared for gh-pages:"
+          ls -la gh-pages-deploy/
+          echo "--- latest.yml ---"
+          cat gh-pages-deploy/latest.yml 2>/dev/null || echo "not found"
+          echo "--- latest-mac.yml ---"
+          cat gh-pages-deploy/latest-mac.yml 2>/dev/null || echo "not found"
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages-deploy
+          publish_branch: gh-pages
+          keep_files: false
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: MC-Vector v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
