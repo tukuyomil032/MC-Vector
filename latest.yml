@@ -1,8 +1,8 @@
 version: 1.1.7
 files:
   - url: https://github.com/tukuyomil032/MC-Vector/releases/download/v1.1.7/MC-Vector-1.1.7-x64-Windows-Installer.exe
-    sha512: U0eizEyUpWNf+ZeytnEtOtglkmPE10MjnKP3c2oE2JtuXhAfU3FeO9ue/HAiPykye5nVpfsYdiw+dtkE686ebg==
-    size: 106263526
+    sha512: 8aYVAB96oVz9m9XYoOoQOZ0YgfIOkKsvDVpqUtYSVn36DqVeBuxoRXYrD6oB+vvoz8OlLrGS57y9QfdaIqFFaw==
+    size: 106263611
 path: MC-Vector-1.1.7-x64-Windows-Installer.exe
-sha512: U0eizEyUpWNf+ZeytnEtOtglkmPE10MjnKP3c2oE2JtuXhAfU3FeO9ue/HAiPykye5nVpfsYdiw+dtkE686ebg==
-releaseDate: '2026-01-30T09:48:54.811Z'
+sha512: 8aYVAB96oVz9m9XYoOoQOZ0YgfIOkKsvDVpqUtYSVn36DqVeBuxoRXYrD6oB+vvoz8OlLrGS57y9QfdaIqFFaw==
+releaseDate: '2026-01-30T10:08:20.111Z'

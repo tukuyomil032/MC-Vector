@@ -1,17 +1,11 @@
 version: 1.1.7
 files:
   - url: https://github.com/tukuyomil032/MC-Vector/releases/download/v1.1.7/MC-Vector-1.1.7-Apple-silicon.zip
-    sha512: p8BEYUZaXIqfm1UuGyNTEGFe3dMAJmFSyfctsX5MBWULVYMzKne/iLJtjXrr+z8KFEzZ5Q0Td7j77i6iT4flMg==
-    size: 54525952
+    sha512: rB111tSKY0gSJ4hx9/30U7p3Dpx4E+KDKhY6PcFpSYKNDxufudE3xgdqPPEB8iXePoKZbZn5ib3zQgshQ3HNKw==
+    size: 117533728
   - url: https://github.com/tukuyomil032/MC-Vector/releases/download/v1.1.7/MC-Vector-1.1.7-Apple-silicon.zip
-    sha512: x6/QEOLARZwZyjbw2IzEuFwmcg2IIfnY0qFD5z7m91hno2FtLtZX4h9cdaVgfBE+1fkvugC9GEcMSez+gTBNmw==
-    size: 122381283
-  - url: https://github.com/tukuyomil032/MC-Vector/releases/download/v1.1.7/MC-Vector-1.1.7-Apple-silicon.zip
-    sha512: T5/yTCTXoO786u6LDcCgYWKrRjm/9Nd2ArDg/NCcxBdd03+hlbXRaS+o+qmUnmL19AN94GcDwUa+rq+kvct9uQ==
-    size: 123954198
-  - url: https://github.com/tukuyomil032/MC-Vector/releases/download/v1.1.7/MC-Vector-1.1.7-Apple-silicon.zip
-    sha512: sR6TOKA5nyUbNHYWs5sPthKEDTTFvIOL39Pm/uis9d7qdvJixbU9000OaU+5JMczcddbXCC/+Q0dcMDVApESdA==
-    size: 128862014
+    sha512: mEMpJeilFxKK3kHve+YgQdbKHl2BBmsL5boP6jZsVOrBhP8lxEmM7BOdI4PJjpfVOUF4Yltqo3COdoBz7KXMQQ==
+    size: 123952815
 path: MC-Vector-1.1.7-Apple-silicon.zip
-sha512: p8BEYUZaXIqfm1UuGyNTEGFe3dMAJmFSyfctsX5MBWULVYMzKne/iLJtjXrr+z8KFEzZ5Q0Td7j77i6iT4flMg==
-releaseDate: '2026-01-30T09:47:40.095Z'
+sha512: rB111tSKY0gSJ4hx9/30U7p3Dpx4E+KDKhY6PcFpSYKNDxufudE3xgdqPPEB8iXePoKZbZn5ib3zQgshQ3HNKw==
+releaseDate: '2026-01-30T10:06:09.949Z'
