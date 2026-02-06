@@ -194,9 +194,6 @@ jobs:
           draft: false
           prerelease: false
           fail_on_unmatched_files: false
-          files: |
-            artifacts/**/*.dmg
-            artifacts/**/*.app.tar.gz
-            artifacts/**/*.exe
+          files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
