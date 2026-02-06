@@ -8,7 +8,6 @@ on:
 permissions:
   contents: write
   pages: write
-  workflows: write
   id-token: write
 
 jobs:
@@ -128,13 +127,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Create git tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ needs.check-version.outputs.version }}"
-          git push origin "v${{ needs.check-version.outputs.version }}"
 
       - name: Generate latest.json for updater
         run: |
