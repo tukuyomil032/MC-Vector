@@ -193,10 +193,10 @@ jobs:
           name: MC-Vector v${{ needs.check-version.outputs.version }}
           draft: false
           prerelease: false
+          fail_on_unmatched_files: false
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.app.tar.gz
             artifacts/**/*.exe
-            artifacts/**/*.nsis.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
