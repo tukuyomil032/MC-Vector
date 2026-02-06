@@ -5,7 +5,7 @@
 ## Technology Stacks
 
 - TailwindCSS
-- Electron
+- Tauri
 - Node.js
 - React 19
 - Vite
