@@ -1,9 +1,8 @@
-name: release
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +11,37 @@ permissions:
   id-token: write
 
 jobs:
+  # ── バージョンタグが既に存在するかチェック ──
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version tag already exists
+        id: check
+        run: |
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          TAG="v${VERSION}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists — skipping release"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist — will release"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ── マルチプラットフォームビルド ──
   build:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -69,9 +98,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          # build frontend (already installed earlier)
           pnpm build
-          # build and bundle the Tauri app for the current matrix target
           pnpm tauri build ${{ matrix.args }}
 
       - name: Upload build artifacts
@@ -87,8 +114,10 @@ jobs:
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.nsis.zip.sig
           retention-days: 5
 
+  # ── リリース作成 + gh-pages デプロイ ──
   release:
-    needs: build
+    needs: [check-version, build]
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -99,16 +128,17 @@ jobs:
         with:
           path: artifacts
 
-      - name: Get version from tauri.conf.json
-        id: version
+      - name: Create git tag
         run: |
-          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ needs.check-version.outputs.version }}"
+          git push origin "v${{ needs.check-version.outputs.version }}"
 
       - name: Generate latest.json for updater
         run: |
           mkdir -p gh-pages-deploy
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.check-version.outputs.version }}"
           TAG="v${VERSION}"
           BASE_URL="https://github.com/tukuyomil032/MC-Vector/releases/download/${TAG}"
 
@@ -116,19 +146,19 @@ jobs:
           MAC_X64_SIG=""
           WIN_X64_SIG=""
 
-          if ls artifacts/mac-arm64/*.app.tar.gz.sig 1>/dev/null 2>&1; then
-            MAC_ARM64_SIG=$(cat artifacts/mac-arm64/*.app.tar.gz.sig)
-          fi
-          if ls artifacts/mac-x64/*.app.tar.gz.sig 1>/dev/null 2>&1; then
-            MAC_X64_SIG=$(cat artifacts/mac-x64/*.app.tar.gz.sig)
-          fi
-          if ls artifacts/win-x64/*.nsis.zip.sig 1>/dev/null 2>&1; then
-            WIN_X64_SIG=$(cat artifacts/win-x64/*.nsis.zip.sig)
-          fi
+          # 署名ファイルはネストされたフォルダ内にあるので再帰検索する
+          SIG_FILE=$(find artifacts/mac-arm64 -name '*.app.tar.gz.sig' 2>/dev/null | head -1)
+          if [ -n "$SIG_FILE" ]; then MAC_ARM64_SIG=$(cat "$SIG_FILE"); fi
 
-          MAC_ARM64_FILE=$(basename artifacts/mac-arm64/*.app.tar.gz 2>/dev/null | head -1)
-          MAC_X64_FILE=$(basename artifacts/mac-x64/*.app.tar.gz 2>/dev/null | head -1)
-          WIN_X64_FILE=$(basename artifacts/win-x64/*.nsis.zip 2>/dev/null | head -1)
+          SIG_FILE=$(find artifacts/mac-x64 -name '*.app.tar.gz.sig' 2>/dev/null | head -1)
+          if [ -n "$SIG_FILE" ]; then MAC_X64_SIG=$(cat "$SIG_FILE"); fi
+
+          SIG_FILE=$(find artifacts/win-x64 -name '*.nsis.zip.sig' 2>/dev/null | head -1)
+          if [ -n "$SIG_FILE" ]; then WIN_X64_SIG=$(cat "$SIG_FILE"); fi
+
+          MAC_ARM64_FILE=$(find artifacts/mac-arm64 -name '*.app.tar.gz' ! -name '*.sig' 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || echo "")
+          MAC_X64_FILE=$(find artifacts/mac-x64 -name '*.app.tar.gz' ! -name '*.sig' 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || echo "")
+          WIN_X64_FILE=$(find artifacts/win-x64 -name '*.nsis.zip' ! -name '*.sig' 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || echo "")
 
           cat > gh-pages-deploy/latest.json << EOF
           {
@@ -164,10 +194,10 @@ jobs:
           keep_files: false
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: MC-Vector v${{ steps.version.outputs.version }}
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: MC-Vector v${{ needs.check-version.outputs.version }}
           draft: false
           prerelease: false
           files: |
