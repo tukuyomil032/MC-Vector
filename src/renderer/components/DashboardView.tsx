@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import { tauriListen } from '../../lib/tauri-api';
 import {
   AreaChart,
   Area,
@@ -20,7 +21,8 @@ export default function DashboardView({ server }: Props) {
   const [currentMem, setCurrentMem] = useState(0);
 
   useEffect(() => {
-    const removeListener = window.electronAPI.onServerStats((_event: any, data: any) => {
+    let unlisten: (() => void) | undefined;
+    tauriListen<{ serverId: string; cpu: number; memory: number }>('server-stats', (data) => {
       if (data.serverId !== server.id) return;
 
       const now = new Date().toLocaleTimeString();
@@ -35,9 +37,11 @@ export default function DashboardView({ server }: Props) {
         if (newData.length > 20) newData.shift();
         return newData;
       });
+    }).then((u) => {
+      unlisten = u;
     });
 
-    return () => (removeListener as any)?.();
+    return () => unlisten?.();
   }, [server.id]);
 
   const getStatusColor = (status: string) => {

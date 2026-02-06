@@ -29,9 +29,14 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
     );
   };
 
-  const handleBuild = () => {
+  const handleBuild = async () => {
     if (selectedBackendIds.length < 2) {
-      if (!window.confirm('接続するサーバーが1つ以下です。ネットワークを構築しますか？')) return;
+      const { ask } = await import('@tauri-apps/plugin-dialog');
+      const confirmed = await ask('接続するサーバーが1つ以下です。ネットワークを構築しますか？', {
+        title: 'プロキシ構成',
+        kind: 'warning',
+      });
+      if (!confirmed) return;
     }
     onBuildNetwork({
       proxySoftware,
@@ -40,8 +45,9 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
     });
   };
 
-  const openHelp = () => {
-    window.electronAPI.openProxyHelpWindow();
+  const openHelp = async () => {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl('https://papermc.io/docs/velocity');
   };
 
   return (

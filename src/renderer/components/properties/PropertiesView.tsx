@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../../shared/server declaration';
 import { useToast } from '../ToastProvider';
+import { readFileContent, saveFileContent } from '../../../lib/file-commands';
+import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 
 interface Props {
   server: MinecraftServer;
@@ -24,6 +26,7 @@ export default function PropertiesView({ server }: Props) {
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const sep = server.path.includes('\\') ? '\\' : '/';
   const propFilePath = `${server.path}${sep}server.properties`;
   const { showToast } = useToast();
@@ -32,7 +35,7 @@ export default function PropertiesView({ server }: Props) {
     const loadProperties = async () => {
       setLoading(true);
       try {
-        const content = await window.electronAPI.readFile(propFilePath);
+        const content = await readFileContent(propFilePath);
         const lines = content.split('\n');
         const newProps: ServerProperties = {};
 
@@ -69,16 +72,7 @@ export default function PropertiesView({ server }: Props) {
   }, [propFilePath, server.port]);
 
   useEffect(() => {
-    if (window.electronAPI) {
-      const removeListener = window.electronAPI.onSettingsSavedInWindow(
-        (_event, newSettings: any) => {
-          setProps((prev: ServerProperties) => ({ ...prev, ...newSettings }));
-          setHasChanges(true);
-          showToast('詳細設定の変更を読み込みました。右上の「変更を保存」で反映します。', 'info');
-        }
-      );
-      return () => (removeListener as any)?.();
-    }
+    // Advanced settings changes are now handled inline, no separate window IPC needed
   }, [showToast]);
 
   const handleChange = (key: string, value: PropertyValue) => {
@@ -93,7 +87,7 @@ export default function PropertiesView({ server }: Props) {
     });
 
     try {
-      await window.electronAPI.saveFile(propFilePath, content);
+      await saveFileContent(propFilePath, content);
       setHasChanges(false);
       showToast('設定を保存しました', 'success');
     } catch (e) {
@@ -103,11 +97,47 @@ export default function PropertiesView({ server }: Props) {
   };
 
   const openAdvancedWindow = () => {
-    window.electronAPI.openSettingsWindow(props);
+    setShowAdvanced(true);
+  };
+
+  const handleAdvancedSave = async (data: Record<string, unknown>) => {
+    let content = '#Minecraft server properties\n#Edited by MC-Vector\n';
+    Object.entries(data).forEach(([key, value]) => {
+      content += `${key}=${value}\n`;
+    });
+    try {
+      await saveFileContent(propFilePath, content);
+      // Sync local props state with advanced changes
+      const newProps: ServerProperties = {};
+      Object.entries(data).forEach(([key, value]) => {
+        if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
+          newProps[key] = value;
+        } else {
+          newProps[key] = String(value);
+        }
+      });
+      setProps((prev) => ({ ...prev, ...newProps }));
+      setShowAdvanced(false);
+      setHasChanges(false);
+      showToast('詳細設定を保存しました', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('保存に失敗しました', 'error');
+    }
   };
 
   if (loading) {
     return <div className="p-5 text-zinc-400">Loading properties...</div>;
+  }
+
+  if (showAdvanced) {
+    return (
+      <AdvancedSettingsWindow
+        initialData={props as Record<string, unknown>}
+        onSave={handleAdvancedSave}
+        onCancel={() => setShowAdvanced(false)}
+      />
+    );
   }
 
   return (

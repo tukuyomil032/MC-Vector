@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useToast } from './ToastProvider';
-
-interface JavaRuntime {
-  name: string;
-  path: string;
-  version: number;
-}
+import {
+  getJavaVersions,
+  downloadJava,
+  deleteJava,
+  selectJavaBinary,
+  onJavaDownloadProgress,
+  type JavaVersion,
+} from '../../lib/java-commands';
 
 interface Props {
   onClose: () => void;
 }
 
 export default function JavaManagerModal({ onClose }: Props) {
-  const [installed, setInstalled] = useState<JavaRuntime[]>([]);
+  const [installed, setInstalled] = useState<JavaVersion[]>([]);
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<string>('');
@@ -22,21 +24,20 @@ export default function JavaManagerModal({ onClose }: Props) {
   useEffect(() => {
     loadInstalled();
 
-    const remove = window.electronAPI.onDownloadProgress
-      ? (window.electronAPI.onDownloadProgress((_event: unknown, data: any) => {
-          if (data?.serverId !== 'java-install') return;
-          setDownloadProgress(typeof data.progress === 'number' ? data.progress : null);
-          setDownloadStatus(typeof data.status === 'string' ? data.status : '');
-        }) as unknown as (() => void) | undefined)
-      : undefined;
+    let unlisten: (() => void) | undefined;
+    onJavaDownloadProgress((data) => {
+      setDownloadProgress(typeof data.progress === 'number' ? data.progress : null);
+    }).then((u) => {
+      unlisten = u;
+    });
 
     return () => {
-      if (typeof remove === 'function') remove();
+      unlisten?.();
     };
   }, []);
 
   const loadInstalled = async () => {
-    const list = await window.electronAPI.getJavaVersions();
+    const list = await getJavaVersions();
     setInstalled(list);
   };
 
@@ -45,7 +46,7 @@ export default function JavaManagerModal({ onClose }: Props) {
     setDownloadProgress(0);
     setDownloadStatus('');
     try {
-      const ok = await window.electronAPI.downloadJava(ver);
+      const ok = await downloadJava(ver);
       await loadInstalled();
       if (ok) {
         showToast(`Java ${ver} をダウンロードしました`, 'success');
@@ -62,8 +63,10 @@ export default function JavaManagerModal({ onClose }: Props) {
   };
 
   const handleDelete = async (ver: number) => {
-    if (!window.confirm(`Uninstall Java ${ver}?`)) return;
-    await window.electronAPI.deleteJava(ver);
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+    const confirmed = await ask(`Uninstall Java ${ver}?`, { title: 'Java削除', kind: 'warning' });
+    if (!confirmed) return;
+    await deleteJava(ver);
     loadInstalled();
     showToast(`Java ${ver} removed`, 'info');
   };
@@ -128,7 +131,7 @@ export default function JavaManagerModal({ onClose }: Props) {
           <button
             className="btn-secondary"
             onClick={async () => {
-              const picked = await window.electronAPI.selectJavaBinary();
+              const picked = await selectJavaBinary();
               if (picked) {
                 try {
                   await navigator.clipboard.writeText(picked);

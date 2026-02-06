@@ -14,35 +14,36 @@ const CATEGORY_ORDER: PropertyCategory[] = [
   'Advanced',
 ];
 
-export default function AdvancedSettingsWindow() {
+export default function AdvancedSettingsWindow({
+  initialData,
+  onSave,
+  onCancel,
+}: {
+  initialData?: Record<string, unknown>;
+  onSave?: (data: Record<string, unknown>) => void;
+  onCancel?: () => void;
+}) {
   const [activeTab, setActiveTab] = useState<PropertyCategory>('General');
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [formData, setFormData] = useState<Record<string, unknown>>(initialData ?? {});
+  const [isLoaded, setIsLoaded] = useState(!!initialData);
 
   useEffect(() => {
-    const removeListener = window.electronAPI.onSettingsData((data: any) => {
-      setFormData(data ?? {});
+    if (initialData) {
+      setFormData(initialData);
       setIsLoaded(true);
-    });
-
-    window.electronAPI.settingsWindowReady();
-
-    return () => {
-      if (removeListener) removeListener();
-    };
-  }, []);
+    }
+  }, [initialData]);
 
   const handleChange = (key: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
-    window.electronAPI.saveSettingsFromWindow(formData);
-    window.close();
+    onSave?.(formData);
   };
 
   const handleCancel = () => {
-    window.close();
+    onCancel?.();
   };
 
   const inferredDefinitions = useMemo<PropertyDefinition[]>(() => {

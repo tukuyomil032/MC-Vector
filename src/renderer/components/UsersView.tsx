@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import { useToast } from './ToastProvider';
+import { sendCommand } from '../../lib/server-commands';
+import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
 
 interface Props {
   server: MinecraftServer;
@@ -60,7 +62,7 @@ export default function UsersView({ server }: Props) {
       return '';
     })();
     if (!command) return;
-    await window.electronAPI.sendCommand(server.id, command);
+    await sendCommand(server.id, command);
     setTimeout(() => loadAllLists(), 500);
   };
 
@@ -70,20 +72,15 @@ export default function UsersView({ server }: Props) {
 
   const loadAllLists = async () => {
     setWhitelist(
-      (await window.electronAPI.readJsonFile(`${server.path}${sep}whitelist.json`, server.id)) || []
+      ((await readJsonFile(`${server.path}${sep}whitelist.json`)) as PlayerEntry[] | null) || []
     );
-    setOps(
-      (await window.electronAPI.readJsonFile(`${server.path}${sep}ops.json`, server.id)) || []
-    );
+    setOps(((await readJsonFile(`${server.path}${sep}ops.json`)) as PlayerEntry[] | null) || []);
     setBannedPlayers(
-      (await window.electronAPI.readJsonFile(
-        `${server.path}${sep}banned-players.json`,
-        server.id
-      )) || []
+      ((await readJsonFile(`${server.path}${sep}banned-players.json`)) as PlayerEntry[] | null) ||
+        []
     );
     setBannedIps(
-      (await window.electronAPI.readJsonFile(`${server.path}${sep}banned-ips.json`, server.id)) ||
-        []
+      ((await readJsonFile(`${server.path}${sep}banned-ips.json`)) as PlayerEntry[] | null) || []
     );
   };
 
@@ -133,7 +130,7 @@ export default function UsersView({ server }: Props) {
     }
 
     const newData = [...currentList, newItem];
-    await window.electronAPI.writeJsonFile(filePath, newData, server.id);
+    await writeJsonFile(filePath, newData);
     await maybeApplyLiveCommand(type, 'add', identity.name, nameOrIp);
     showToast('リストを更新しました', 'success');
 
@@ -175,7 +172,7 @@ export default function UsersView({ server }: Props) {
     const newData = currentList.filter((p) =>
       type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier
     );
-    await window.electronAPI.writeJsonFile(filePath, newData, server.id);
+    await writeJsonFile(filePath, newData);
     await maybeApplyLiveCommand(type, 'remove', identifier, identifier);
     showToast('削除しました', 'success');
 

@@ -2,7 +2,8 @@ name: release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
 
 permissions:
@@ -10,90 +11,80 @@ permissions:
   pages: write
   id-token: write
 
-env:
-  CI: true
-  CSC_IDENTITY_AUTO_DISCOVERY: false
-
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
-            node-version: 20
-            pnpm-version: 10.26.2
-            arch-label: Apple-silicon
-            build-command: pnpm exec electron-builder --mac --arm64
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust-target: aarch64-apple-darwin
             artifact-name: mac-arm64
-            asset-pattern-bin: release/*.dmg
-            asset-pattern-zip: release/*.zip
-            asset-pattern-yml: release/latest-mac.yml
-          - os: macos-14
-            node-version: 20
-            pnpm-version: 10.26.2
-            arch-label: Intel-CPU
-            build-command: pnpm exec electron-builder --mac --x64
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            rust-target: x86_64-apple-darwin
             artifact-name: mac-x64
-            asset-pattern-bin: release/*.dmg
-            asset-pattern-zip: release/*.zip
-            asset-pattern-yml: release/latest-mac.yml
-          - os: windows-latest
-            node-version: 20
-            pnpm-version: 10.26.2
-            build-command: pnpm exec electron-builder --win --x64
+          - platform: windows-latest
+            args: --target x86_64-pc-windows-msvc
+            rust-target: x86_64-pc-windows-msvc
             artifact-name: win-x64
-            asset-pattern-bin: release/*.exe
-            asset-pattern-yml: release/latest.yml
 
+    runs-on: ${{ matrix.platform }}
     steps:
-      - name: Check out Git repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: ${{ matrix.pnpm-version }}
+          version: 10.26.2
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Add Rust target (macOS cross-compile)
+        if: runner.os == 'macOS'
+        run: rustup target add ${{ matrix.rust-target }}
+
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build React app
-        run: pnpm run build
-
-      - name: Build Electron app
+      - name: Build Tauri app
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARCH_LABEL: ${{ matrix.arch-label }}
-        run: ${{ matrix.build-command }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          # build frontend (already installed earlier)
+          pnpm build
+          # build and bundle the Tauri app for the current matrix target
+          pnpm tauri build ${{ matrix.args }}
 
-      - name: Upload binary artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact-name }}-bin
-          path: ${{ matrix.asset-pattern-bin }}
-          retention-days: 5
-
-      - name: Upload zip artifacts (macOS only)
-        if: matrix.asset-pattern-zip != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact-name }}-zip
-          path: ${{ matrix.asset-pattern-zip }}
-          retention-days: 5
-
-      - name: Upload update yml artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact-name }}-yml
-          path: ${{ matrix.asset-pattern-yml }}
+          name: ${{ matrix.artifact-name }}
+          path: |
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.app.tar.gz
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.app.tar.gz.sig
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.nsis.zip
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.nsis.zip.sig
           retention-days: 5
 
   release:
@@ -108,42 +99,61 @@ jobs:
         with:
           path: artifacts
 
-      - name: Get version from filename
+      - name: Get version from tauri.conf.json
         id: version
         run: |
-          for f in artifacts/*/*.dmg artifacts/*/*.exe; do
-            if [[ -f "$f" ]]; then
-              FILENAME=$(basename "$f")
-              VERSION=$(echo "$FILENAME" | sed -E 's/MC-Vector-([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-              break
-            fi
-          done
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Prepare update files for gh-pages
+      - name: Generate latest.json for updater
         run: |
           mkdir -p gh-pages-deploy
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="v${VERSION}"
+          BASE_URL="https://github.com/tukuyomil032/MC-Vector/releases/download/${TAG}"
 
-          # Copy latest.yml (Windows)
-          if [[ -f artifacts/win-x64-yml/latest.yml ]]; then
-            cp artifacts/win-x64-yml/latest.yml gh-pages-deploy/
-            # Update URL to point to GitHub Releases
-            sed -i "s|url:.*|url: https://github.com/tukuyomil032/MC-Vector/releases/download/v${{ steps.version.outputs.version }}/MC-Vector-${{ steps.version.outputs.version }}-x64-Windows-Installer.exe|" gh-pages-deploy/latest.yml
+          MAC_ARM64_SIG=""
+          MAC_X64_SIG=""
+          WIN_X64_SIG=""
+
+          if ls artifacts/mac-arm64/*.app.tar.gz.sig 1>/dev/null 2>&1; then
+            MAC_ARM64_SIG=$(cat artifacts/mac-arm64/*.app.tar.gz.sig)
+          fi
+          if ls artifacts/mac-x64/*.app.tar.gz.sig 1>/dev/null 2>&1; then
+            MAC_X64_SIG=$(cat artifacts/mac-x64/*.app.tar.gz.sig)
+          fi
+          if ls artifacts/win-x64/*.nsis.zip.sig 1>/dev/null 2>&1; then
+            WIN_X64_SIG=$(cat artifacts/win-x64/*.nsis.zip.sig)
           fi
 
-          # Copy latest-mac.yml (macOS) - use arm64 version as base
-          if [[ -f artifacts/mac-arm64-yml/latest-mac.yml ]]; then
-            cp artifacts/mac-arm64-yml/latest-mac.yml gh-pages-deploy/
-            # Update URL to point to ZIP file for auto-update (ZIP is required for macOS auto-update)
-            sed -i "s|url:.*|url: https://github.com/tukuyomil032/MC-Vector/releases/download/v${{ steps.version.outputs.version }}/MC-Vector-${{ steps.version.outputs.version }}-Apple-silicon.zip|" gh-pages-deploy/latest-mac.yml
-          fi
+          MAC_ARM64_FILE=$(basename artifacts/mac-arm64/*.app.tar.gz 2>/dev/null | head -1)
+          MAC_X64_FILE=$(basename artifacts/mac-x64/*.app.tar.gz 2>/dev/null | head -1)
+          WIN_X64_FILE=$(basename artifacts/win-x64/*.nsis.zip 2>/dev/null | head -1)
 
-          echo "Files prepared for gh-pages:"
-          ls -la gh-pages-deploy/
-          echo "--- latest.yml ---"
-          cat gh-pages-deploy/latest.yml 2>/dev/null || echo "not found"
-          echo "--- latest-mac.yml ---"
-          cat gh-pages-deploy/latest-mac.yml 2>/dev/null || echo "not found"
+          cat > gh-pages-deploy/latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": "MC-Vector ${TAG}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${MAC_ARM64_SIG}",
+                "url": "${BASE_URL}/${MAC_ARM64_FILE}"
+              },
+              "darwin-x86_64": {
+                "signature": "${MAC_X64_SIG}",
+                "url": "${BASE_URL}/${MAC_X64_FILE}"
+              },
+              "windows-x86_64": {
+                "signature": "${WIN_X64_SIG}",
+                "url": "${BASE_URL}/${WIN_X64_FILE}"
+              }
+            }
+          }
+          EOF
+
+          echo "Generated latest.json:"
+          cat gh-pages-deploy/latest.json
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
@@ -153,7 +163,7 @@ jobs:
           publish_branch: gh-pages
           keep_files: false
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -162,7 +172,8 @@ jobs:
           prerelease: false
           files: |
             artifacts/**/*.dmg
-            artifacts/**/*.zip
+            artifacts/**/*.app.tar.gz
             artifacts/**/*.exe
+            artifacts/**/*.nsis.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -16,6 +16,23 @@ import NgrokGuideView from './renderer/components/NgrokGuideView';
 import { useToast } from './renderer/components/ToastProvider';
 import SettingsWindow from './renderer/components/SettingsWindow';
 
+// Tauri API ラッパー
+import {
+  getServers,
+  addServer as addServerApi,
+  updateServer as updateServerApi,
+  deleteServer as deleteServerApi,
+  startServer as startServerApi,
+  stopServer as stopServerApi,
+  downloadServerJar,
+  onServerLog,
+  onServerStatusChange,
+  onDownloadProgress,
+} from './lib/server-commands';
+import { getAppSettings } from './lib/config-commands';
+import { checkForUpdates, downloadAndInstallUpdate } from './lib/update-commands';
+import { onNgrokStatusChange } from './lib/ngrok-commands';
+
 import iconMenu from './assets/icons/menu.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
 import iconConsole from './assets/icons/console.svg';
@@ -67,7 +84,6 @@ function App() {
   const { showToast } = useToast();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [currentHash, setCurrentHash] = useState(window.location.hash);
 
   const [updatePrompt, setUpdatePrompt] = useState<{
     version?: string;
@@ -98,12 +114,6 @@ function App() {
   };
 
   useEffect(() => {
-    const handleHashChange = () => setCurrentHash(window.location.hash);
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Tab' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -121,33 +131,24 @@ function App() {
   }, [currentView]);
 
   useEffect(() => {
-    const disposeAvailable = window.electronAPI.onUpdateAvailable((payload) => {
-      setUpdatePrompt({ version: payload?.version, releaseNotes: payload?.releaseNotes });
-      setUpdateReady(false);
-    });
-    const disposeProgress = window.electronAPI.onUpdateDownloadProgress((payload) => {
-      setUpdateProgress(payload?.percent ?? null);
-    });
-    const disposeDownloaded = window.electronAPI.onUpdateDownloaded((payload) => {
-      setUpdateReady(true);
-      setUpdatePrompt({ version: payload?.version, releaseNotes: payload?.releaseNotes });
-    });
-    const disposeError = window.electronAPI.onUpdateError(() => {
-      setUpdateProgress(null);
-    });
-
-    return () => {
-      disposeAvailable();
-      disposeProgress();
-      disposeDownloaded();
-      disposeError();
+    const doUpdateCheck = async () => {
+      try {
+        const result = await checkForUpdates();
+        if (result.available) {
+          setUpdatePrompt({ version: result.version, releaseNotes: result.body });
+          setUpdateReady(false);
+        }
+      } catch (e) {
+        console.error('Update check failed', e);
+      }
     };
+    doUpdateCheck();
   }, []);
 
   useEffect(() => {
     const loadAppSettings = async () => {
       try {
-        const settings = await window.electronAPI.getAppSettings();
+        const settings = await getAppSettings();
         if (settings?.theme) {
           setAppTheme(normalizeTheme(settings.theme));
         }
@@ -157,35 +158,23 @@ function App() {
     };
     loadAppSettings();
 
-    const disposeSaved = window.electronAPI.onSettingsSavedInWindow?.((_event, newSettings) => {
-      if (newSettings?.theme) {
-        setAppTheme(normalizeTheme(newSettings.theme));
-      }
-    });
+    let disposeThemeWatch: (() => void) | undefined;
+    (async () => {
+      const { onConfigChange } = await import('./lib/config-commands');
+      disposeThemeWatch = await onConfigChange('theme', (value) => {
+        setAppTheme(normalizeTheme(value));
+      });
+    })();
 
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMedia = (event: MediaQueryListEvent) => setSystemPrefersDark(event.matches);
     media.addEventListener('change', handleMedia);
 
     return () => {
-      if (typeof disposeSaved === 'function') {
-        (disposeSaved as any)();
-      }
+      disposeThemeWatch?.();
       media.removeEventListener('change', handleMedia);
     };
   }, []);
-
-  if (currentHash === '#proxy-help') {
-    return <ProxyHelpView />;
-  }
-
-  if (currentHash === '#ngrok-guide') {
-    return <NgrokGuideView />;
-  }
-
-  if (currentHash === '#app-settings') {
-    return <SettingsWindow />;
-  }
 
   const [serverLogs, setServerLogs] = useState<Record<string, string[]>>({});
   const selectedServerIdRef = useRef(selectedServerId);
@@ -197,7 +186,7 @@ function App() {
   useEffect(() => {
     const loadServers = async () => {
       try {
-        const loadedServers = await window.electronAPI.getServers();
+        const loadedServers = await getServers();
         setServers(loadedServers);
         if (loadedServers.length > 0 && !selectedServerId) {
           setSelectedServerId(loadedServers[0].id);
@@ -208,149 +197,299 @@ function App() {
     };
     loadServers();
 
-    const removeLogListener = window.electronAPI.onServerLog((_event: any, data: any) => {
-      if (!data || !data.serverId) {
-        return;
-      }
-      const formattedLog = data.log.replace(/\n/g, '\r\n');
-      setServerLogs((prev) => {
-        const currentLogs = prev[data.serverId] || [];
-        const newLogs = [...currentLogs, formattedLog];
-        if (newLogs.length > 2000) {
-          newLogs.shift();
-        }
-        return { ...prev, [data.serverId]: newLogs };
+    let cancelled = false;
+    const unlisteners: Array<() => void> = [];
+
+    const setupListeners = async () => {
+      const u1 = await onServerLog((data) => {
+        if (cancelled) return;
+        if (!data || !data.serverId) return;
+        const formattedLog = data.line.replace(/\n/g, '\r\n');
+        setServerLogs((prev) => {
+          const currentLogs = prev[data.serverId] || [];
+          const newLogs = [...currentLogs, formattedLog];
+          if (newLogs.length > 2000) newLogs.shift();
+          return { ...prev, [data.serverId]: newLogs };
+        });
       });
-    });
+      unlisteners.push(u1);
 
-    window.electronAPI.onDownloadProgress((_event: any, data: any) => {
-      if (data.progress === 100) {
-        setDownloadStatus(null);
-        showToast(`ダウンロード完了: ${data.status}`, 'success');
-      } else {
-        setDownloadStatus({ id: data.serverId, progress: data.progress, msg: data.status });
-      }
-    });
+      const u2 = await onDownloadProgress((data) => {
+        if (cancelled) return;
+        if (data.progress === 100) {
+          setDownloadStatus(null);
+          showToast(`ダウンロード完了: ${data.status}`, 'success');
+        } else {
+          setDownloadStatus({ id: data.serverId, progress: data.progress, msg: data.status });
+        }
+      });
+      unlisteners.push(u2);
 
-    const removeStatusListener = window.electronAPI.onServerStatusUpdate(
-      (_event: any, data: any) => {
+      const u3 = await onServerStatusChange((data) => {
+        if (cancelled) return;
         setServers((prev) =>
-          prev.map((s) => (s.id === data.serverId ? { ...s, status: data.status } : s))
+          prev.map((s) => (s.id === data.serverId ? { ...s, status: data.status as any } : s))
         );
-      }
-    );
+      });
+      unlisteners.push(u3);
 
-    const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
-      if (data.status === 'stopped' || data.status === 'error') {
-        setNgrokData((prev) => ({ ...prev, [data.serverId]: null }));
-      } else if (data.url) {
-        setNgrokData((prev) => ({ ...prev, [data.serverId]: data.url }));
+      const u4 = await onNgrokStatusChange((data) => {
+        if (cancelled) return;
+        if (data.status === 'stopped' || data.status === 'error') {
+          setNgrokData((prev) => ({ ...prev, [data.serverId ?? '']: null }));
+        } else if (data.url && data.serverId) {
+          setNgrokData((prev) => ({ ...prev, [data.serverId!]: data.url! }));
+        }
+      });
+      unlisteners.push(u4);
+
+      // クリーンアップ済みなら即解除
+      if (cancelled) {
+        unlisteners.forEach((u) => u());
       }
-    });
+    };
+
+    setupListeners();
 
     return () => {
-      if (typeof removeLogListener === 'function') {
-        (removeLogListener as any)();
-      }
-      if (typeof removeStatusListener === 'function') {
-        (removeStatusListener as any)();
-      }
-      if (typeof removeNgrokListener === 'function') {
-        (removeNgrokListener as any)();
-      }
+      cancelled = true;
+      unlisteners.forEach((u) => u());
     };
   }, []);
 
   useEffect(() => {
-    const checkNgrok = async () => {
-      if (!selectedServerId) {
-        return;
-      }
-      try {
-        const status = await window.electronAPI.getNgrokStatus(selectedServerId);
-        setNgrokData((prev) => ({
-          ...prev,
-          [selectedServerId]: status.active ? status.url : null,
-        }));
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    checkNgrok();
+    // Ngrok status is now tracked via events; no poll needed
   }, [selectedServerId]);
 
   const activeServer = servers.find((s) => s.id === selectedServerId);
 
-  const handleStart = () => {
-    if (selectedServerId) {
-      window.electronAPI.startServer(selectedServerId);
+  const handleStart = async () => {
+    if (!activeServer) return;
+    setServers((prev) =>
+      prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'starting' } : s))
+    );
+    const javaPath = activeServer.javaPath || 'java';
+    const jarFile = activeServer.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
+    try {
+      await startServerApi(
+        activeServer.id,
+        javaPath,
+        activeServer.path,
+        activeServer.memory,
+        jarFile
+      );
+    } catch (e) {
+      console.error('Start failed:', e);
+      setServers((prev) =>
+        prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'offline' } : s))
+      );
+      showToast('サーバーの起動に失敗しました', 'error');
     }
   };
-  const handleStop = () => {
+  const handleStop = async () => {
     if (selectedServerId) {
-      window.electronAPI.stopServer(selectedServerId);
+      await stopServerApi(selectedServerId);
     }
   };
 
   const handleRestart = async () => {
-    if (!selectedServerId) {
-      return;
-    }
+    if (!activeServer) return;
     setServers((prev) =>
       prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'restarting' } : s))
     );
-    await window.electronAPI.stopServer(selectedServerId);
-    setTimeout(() => {
-      window.electronAPI.startServer(selectedServerId);
-    }, 3000);
+    await stopServerApi(selectedServerId);
+    // サーバーが完全に停止するまでポーリング
+    const { isServerRunning } = await import('./lib/server-commands');
+    const maxWait = 30; // 最大30秒待つ
+    for (let i = 0; i < maxWait; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const running = await isServerRunning(selectedServerId);
+      if (!running) break;
+    }
+    const javaPath = activeServer.javaPath || 'java';
+    const jarFile = activeServer.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
+    await startServerApi(
+      selectedServerId,
+      javaPath,
+      activeServer.path,
+      activeServer.memory,
+      jarFile
+    );
   };
 
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
     setServers((prev) => prev.map((s) => (s.id === updatedServer.id ? updatedServer : s)));
-    await window.electronAPI.updateServer(updatedServer);
+    await updateServerApi(updatedServer);
     showToast('設定を保存しました', 'success');
   };
 
   const handleAddServer = async (serverData: any) => {
     try {
-      const newServer = await window.electronAPI.addServer(serverData);
+      const id = crypto.randomUUID();
+      const serverPath = serverData.path || '';
+      if (!serverPath) {
+        showToast('サーバーパスが空です', 'error');
+        return;
+      }
+
+      // サーバーディレクトリを作成
+      const { mkdir } = await import('@tauri-apps/plugin-fs');
+      await mkdir(serverPath, { recursive: true });
+
+      const newServer: MinecraftServer = {
+        id,
+        name: serverData.name,
+        version: serverData.version || '',
+        software: serverData.software || 'Vanilla',
+        port: serverData.port || 25565,
+        memory: (serverData.memory || 4) * 1024,
+        path: serverPath,
+        status: 'offline',
+        javaPath: serverData.javaPath,
+        createdDate: new Date().toISOString(),
+      };
+      await addServerApi(newServer);
       setServers((prev) => [...prev, newServer]);
       setSelectedServerId(newServer.id);
       setShowAddServerModal(false);
       showToast('サーバーを作成しました', 'success');
 
-      if (
-        ['Forge', 'Fabric', 'LeafMC', 'Paper', 'Vanilla', 'Waterfall'].includes(serverData.software)
-      ) {
-        setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
-        await window.electronAPI.downloadServerJar(newServer.id);
+      // ダウンロードURL構築 & jarダウンロード
+      const sw = serverData.software || 'Vanilla';
+      const ver = serverData.version || '';
+      let downloadUrl = '';
+
+      try {
+        if (sw === 'Paper' || sw === 'LeafMC') {
+          const project = sw === 'Paper' ? 'paper' : 'leafmc';
+          const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+          const buildsResp = await tauriFetch(
+            `https://api.papermc.io/v2/projects/${project}/versions/${ver}/builds`
+          );
+          const buildsData = (await buildsResp.json()) as any;
+          if (buildsData.builds && buildsData.builds.length > 0) {
+            const latestBuild = buildsData.builds[buildsData.builds.length - 1];
+            const buildNum = latestBuild.build;
+            const fileName =
+              latestBuild.downloads?.application?.name || `${project}-${ver}-${buildNum}.jar`;
+            downloadUrl = `https://api.papermc.io/v2/projects/${project}/versions/${ver}/builds/${buildNum}/downloads/${fileName}`;
+          }
+        } else if (sw === 'Vanilla') {
+          const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+          const manifestResp = await tauriFetch(
+            'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
+          );
+          const manifest = (await manifestResp.json()) as any;
+          const verInfo = manifest.versions?.find((v: any) => v.id === ver);
+          if (verInfo) {
+            const verDetailResp = await tauriFetch(verInfo.url);
+            const verDetail = (await verDetailResp.json()) as any;
+            downloadUrl = verDetail.downloads?.server?.url || '';
+          }
+        } else if (sw === 'Fabric') {
+          const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+          const loaderResp = await tauriFetch('https://meta.fabricmc.net/v2/versions/loader');
+          const loaders = (await loaderResp.json()) as any[];
+          const latestLoader = loaders?.[0]?.version || '';
+          if (latestLoader) {
+            downloadUrl = `https://meta.fabricmc.net/v2/versions/loader/${ver}/${latestLoader}/1.0.1/server/jar`;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to resolve download URL:', e);
       }
-    } catch {
+
+      if (downloadUrl) {
+        setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
+        try {
+          await downloadServerJar(downloadUrl, serverPath + '/server.jar', newServer.id);
+        } catch (e) {
+          console.error('Download failed:', e);
+          setDownloadStatus(null);
+          showToast('JARのダウンロードに失敗しました', 'error');
+        }
+      } else {
+        showToast('ダウンロードURLの取得に失敗しました。手動でJARを配置してください。', 'info');
+      }
+    } catch (e) {
+      console.error('Server creation error:', e);
       showToast('サーバー作成に失敗しました', 'error');
+      setDownloadStatus(null);
     }
   };
 
-  const handleBuildProxyNetwork = async (config: ProxyNetworkConfig) => {
-    if (!window.confirm(`構成を開始しますか？`)) {
-      return;
-    }
+  const handleBuildProxyNetwork = async (_config: ProxyNetworkConfig) => {
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+    const confirmed = await ask(
+      '構成を開始しますか？各サーバーの server.properties を書き換えます。',
+      { title: 'プロキシ構成', kind: 'info' }
+    );
+    if (!confirmed) return;
     try {
-      const result = await window.electronAPI.setupProxy(config);
-      showToast(result.message, result.success ? 'success' : 'error');
-      const loadedServers = await window.electronAPI.getServers();
+      const { readFileContent, saveFileContent } = await import('./lib/file-commands');
+      const backendServers = servers.filter((s) => _config.backendServerIds.includes(s.id));
+
+      // 各バックエンドサーバーの server.properties を更新
+      for (let i = 0; i < backendServers.length; i++) {
+        const srv = backendServers[i];
+        const propsPath = `${srv.path}/server.properties`;
+        let props = '';
+        try {
+          props = await readFileContent(propsPath);
+        } catch {
+          props = '';
+        }
+
+        // online-mode=false に設定
+        if (props.includes('online-mode=')) {
+          props = props.replace(/online-mode=.*/g, 'online-mode=false');
+        } else {
+          props += '\nonline-mode=false';
+        }
+
+        // 各サーバーに一意のポートを割り当て (25566 + i)
+        const port = 25566 + i;
+        if (props.includes('server-port=')) {
+          props = props.replace(/server-port=.*/g, `server-port=${port}`);
+        } else {
+          props += `\nserver-port=${port}`;
+        }
+
+        await saveFileContent(propsPath, props);
+
+        // サーバーオブジェクトのポートも更新
+        const updated = { ...srv, port };
+        await updateServerApi(updated);
+      }
+
+      showToast(
+        `${backendServers.length} 台のサーバーの設定を更新しました。プロキシサーバー (${_config.proxySoftware}) のポート ${_config.proxyPort} で接続してください。`,
+        'success'
+      );
+      const loadedServers = await getServers();
       setServers(loadedServers);
-    } catch {
-      showToast('エラーが発生しました', 'error');
+    } catch (e) {
+      console.error('Proxy build error:', e);
+      showToast('プロキシ構成中にエラーが発生しました', 'error');
     }
   };
 
   const handleUpdateNow = async () => {
     setUpdateProgress(0);
-    await window.electronAPI.downloadUpdate();
+    try {
+      await downloadAndInstallUpdate((downloaded, total) => {
+        const pct = total > 0 ? (downloaded / total) * 100 : 0;
+        setUpdateProgress(pct);
+      });
+    } catch (e) {
+      console.error('Update error', e);
+      setUpdateProgress(null);
+    }
   };
 
   const handleInstallUpdate = async () => {
-    await window.electronAPI.installUpdate();
+    // downloadAndInstallUpdate already relaunches the app
+    await handleUpdateNow();
   };
 
   const handleDismissUpdate = () => {
@@ -370,12 +509,18 @@ function App() {
     }
     const { serverId } = contextMenu;
     const target = servers.find((s) => s.id === serverId);
-    if (!window.confirm(`本当に「${target?.name}」を削除しますか？`)) {
-      setContextMenu(null);
-      return;
-    }
+    setContextMenu(null);
+
+    // Tauri の ask() ダイアログで確認
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+    const confirmed = await ask(`本当に「${target?.name}」を削除しますか？`, {
+      title: 'サーバー削除',
+      kind: 'warning',
+    });
+    if (!confirmed) return;
+
     try {
-      const success = await window.electronAPI.deleteServer(serverId);
+      const success = await deleteServerApi(serverId);
       if (success) {
         const newServers = servers.filter((s) => s.id !== serverId);
         setServers(newServers);
@@ -394,7 +539,6 @@ function App() {
     } catch {
       showToast('削除エラー', 'error');
     }
-    setContextMenu(null);
   };
 
   const handleClickOutside = () => {
@@ -524,10 +668,19 @@ function App() {
   };
 
   const handleOpenSettingsWindow = () => {
-    window.electronAPI.openSettingsWindow({});
+    setCurrentView('app-settings');
   };
 
   const renderContent = () => {
+    if (currentView === 'app-settings') {
+      return <SettingsWindow onClose={() => setCurrentView('dashboard')} />;
+    }
+    if (currentView === 'proxy-help') {
+      return <ProxyHelpView />;
+    }
+    if (currentView === 'ngrok-guide') {
+      return <NgrokGuideView />;
+    }
     if (currentView === 'proxy') {
       return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
     }
@@ -557,7 +710,7 @@ function App() {
         return <PropertiesView key={contentKey} server={activeServer} />;
       case 'files':
         return <FilesView key={contentKey} server={activeServer} />;
-      case 'plugins' as any:
+      case 'plugins':
         return <PluginBrowser key={contentKey} server={activeServer} />;
       case 'backups':
         return <BackupsView key={contentKey} server={activeServer} />;

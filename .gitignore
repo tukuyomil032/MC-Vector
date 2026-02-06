@@ -1,6 +1,7 @@
 /node_modules
 /dist
 /release
+docs/*.md
 /dist-electron
 .DS_Store
 # Logs

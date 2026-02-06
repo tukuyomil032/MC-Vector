@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { type MinecraftServer } from '../../components/../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
 import { useToast } from '../ToastProvider';
+import { getJavaVersions, type JavaVersion } from '../../../lib/java-commands';
+import { startNgrok, stopNgrok, hasNgrokToken, clearNgrokToken } from '../../../lib/ngrok-commands';
+import { onNgrokStatusChange } from '../../../lib/ngrok-commands';
 
 interface ServerSettingsProps {
   server: MinecraftServer;
@@ -18,7 +21,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   const [javaPath, setJavaPath] = useState((server as any).javaPath || '');
 
   const [showJavaManager, setShowJavaManager] = useState(false);
-  const [installedJava, setInstalledJava] = useState<{ name: string; path: string }[]>([]);
+  const [installedJava, setInstalledJava] = useState<JavaVersion[]>([]);
 
   const [isTunneling, setIsTunneling] = useState(false);
   const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
@@ -46,50 +49,26 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   }, [server]);
 
   const checkNgrokStatus = async () => {
-    try {
-      const status = await window.electronAPI.getNgrokStatus(server.id);
-      if (status.active) {
-        setIsTunneling(true);
-        setTunnelUrl(status.url);
-
-        if (status.logs && status.logs.length > 0) {
-          setTunnelLog(status.logs.slice(-50));
-        } else if (tunnelLog.length === 0) {
-          setTunnelLog(['Resumed monitoring ngrok session...']);
-        }
-      } else {
-        setIsTunneling(false);
-        setTunnelUrl(null);
-      }
-    } catch (e) {
-      console.error('Failed to check status', e);
-    }
+    // Ngrok status is now event-driven via onNgrokStatusChange
   };
 
   useEffect(() => {
-    const removeNgrokListener = window.electronAPI.onNgrokInfo((_event: any, data: any) => {
+    let unlisten: (() => void) | undefined;
+    onNgrokStatusChange((data) => {
       if (data.serverId === server.id) {
-        if (data.status === 'running') setIsTunneling(true);
-
+        if (data.status === 'connecting' || data.status === 'connected') setIsTunneling(true);
         if (data.status === 'stopped' || data.status === 'error') {
           setIsTunneling(false);
           setTunnelUrl(null);
         }
-
-        if (data.status === 'downloading') {
-          setTunnelLog((prev) => [...prev, 'Downloading ngrok binary...']);
-        }
-
         if (data.url) setTunnelUrl(data.url);
-
-        if (data.log) {
-          setTunnelLog((prev) => [...prev, data.log].slice(-50));
-        }
       }
+    }).then((u) => {
+      unlisten = u;
     });
 
     return () => {
-      if (typeof removeNgrokListener === 'function') (removeNgrokListener as any)();
+      unlisten?.();
     };
   }, [server.id]);
 
@@ -98,7 +77,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   }, [tunnelLog]);
 
   const loadJavaList = async () => {
-    const list = await window.electronAPI.getJavaVersions();
+    const list = await getJavaVersions();
     setInstalledJava(list);
   };
 
@@ -181,31 +160,42 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     const nextState = !isTunneling;
 
     if (nextState) {
-      const hasToken = await window.electronAPI.hasNgrokToken();
+      const hasToken = await hasNgrokToken();
       if (!hasToken && !inputToken) {
         setShowTokenModal(true);
         return;
       }
-      const tokenToUse = inputToken || undefined;
+      const { getNgrokToken } = await import('../../../lib/ngrok-commands');
+      const tokenToUse = inputToken || (await getNgrokToken()) || '';
+      if (!tokenToUse) {
+        setShowTokenModal(true);
+        return;
+      }
       setTunnelLog((prev) => [...prev, '--- Initializing ngrok ---']);
-      await window.electronAPI.toggleNgrok(server.id, true, tokenToUse);
+      const { appDataDir } = await import('@tauri-apps/api/path');
+      const ngrokPath = `${await appDataDir()}/ngrok`;
+      await startNgrok(ngrokPath, 'tcp', server.port, tokenToUse, server.id);
       setInputToken('');
     } else {
-      await window.electronAPI.toggleNgrok(server.id, false);
+      await stopNgrok();
     }
   };
 
   const handleResetToken = async () => {
-    await window.electronAPI.clearNgrokToken();
+    await clearNgrokToken();
     setInputToken('');
     setShowTokenModal(true);
   };
 
   const handleTokenSubmit = async () => {
     if (!inputToken) return;
+    const { setNgrokToken } = await import('../../../lib/ngrok-commands');
+    await setNgrokToken(inputToken);
     setShowTokenModal(false);
     setTunnelLog(['--- Initializing ngrok with new token ---']);
-    await window.electronAPI.toggleNgrok(server.id, true, inputToken);
+    const { appDataDir } = await import('@tauri-apps/api/path');
+    const ngrokPath = `${await appDataDir()}/ngrok`;
+    await startNgrok(ngrokPath, 'tcp', server.port, inputToken, server.id);
     setInputToken('');
   };
 
@@ -216,13 +206,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
     }
   };
 
-  const handleOpenGuide = () => {
-    if (window.electronAPI.openNgrokGuide) {
-      window.electronAPI.openNgrokGuide();
-    } else {
-      console.error('openNgrokGuide API is not defined.');
-      showToast('ガイド機能はまだ実装されていません (preloadを確認してください)', 'info');
-    }
+  const handleOpenGuide = async () => {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl('https://dashboard.ngrok.com/get-started/setup');
   };
 
   return (
@@ -314,7 +300,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
 
           <div className="flex gap-5 mb-8">
             <div className="flex-1">
-              <label className="block mb-2 text-zinc-400">メモリ (GB)</label>
+              <label className="block mb-2 text-zinc-400">メモリ (MB)</label>
               <input
                 type="number"
                 value={memory}

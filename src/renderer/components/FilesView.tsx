@@ -3,6 +3,19 @@ import type * as React from 'react';
 import Editor from '@monaco-editor/react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import { useToast } from './ToastProvider';
+import {
+  listFilesWithMetadata,
+  readFileContent,
+  saveFileContent,
+  deleteItem,
+  createFolder,
+  importFilesDialog,
+  moveItem,
+  compressItem,
+  extractItem,
+  openInFinder,
+} from '../../lib/file-commands';
+import { getServerRoot } from '../../lib/config-commands';
 
 import iconFolder from '../../assets/icons/folder.svg';
 import iconFile from '../../assets/icons/file.svg';
@@ -51,7 +64,7 @@ export default function FilesView({ server }: Props) {
 
   useEffect(() => {
     const loadRoot = async () => {
-      const root = await window.electronAPI.getServerRoot();
+      const root = await getServerRoot();
       setServersRootAbsPath(root.replace(/\\/g, '/'));
     };
     loadRoot();
@@ -63,7 +76,7 @@ export default function FilesView({ server }: Props) {
 
   const loadFiles = async (path: string) => {
     try {
-      const entries = await window.electronAPI.listFiles(path, server.id);
+      const entries = await listFilesWithMetadata(path);
       setFiles(entries);
     } catch (e) {
       console.error('Failed to list files', e);
@@ -164,7 +177,7 @@ export default function FilesView({ server }: Props) {
       }
     } else {
       try {
-        const content = await window.electronAPI.readFile(`${currentPath}/${fileName}`, server.id);
+        const content = await readFileContent(`${currentPath}/${fileName}`);
         setEditingFile(fileName);
         setFileContent(content);
         setIsEditorOpen(true);
@@ -191,16 +204,8 @@ export default function FilesView({ server }: Props) {
     if (!editingFile) return;
     setIsSaving(true);
     try {
-      const ok = await window.electronAPI.saveFile(
-        `${currentPath}/${editingFile}`,
-        fileContent,
-        server.id
-      );
-      if (ok) {
-        showToast('保存しました', 'success');
-      } else {
-        showToast('保存に失敗しました', 'error');
-      }
+      await saveFileContent(`${currentPath}/${editingFile}`, fileContent);
+      showToast('保存しました', 'success');
     } catch (err) {
       console.error(err);
       showToast('保存に失敗しました', 'error');
@@ -232,11 +237,16 @@ export default function FilesView({ server }: Props) {
 
   const handleDelete = async () => {
     if (selectedFiles.length === 0) return;
-    if (!window.confirm(`${selectedFiles.length}個の項目を削除しますか？`)) return;
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+    const confirmed = await ask(`${selectedFiles.length}個の項目を削除しますか？`, {
+      title: 'ファイル削除',
+      kind: 'warning',
+    });
+    if (!confirmed) return;
 
     try {
       for (const name of selectedFiles) {
-        await window.electronAPI.deletePath(`${currentPath}/${name}`, server.id);
+        await deleteItem(`${currentPath}/${name}`);
       }
       showToast('削除しました', 'success');
       setSelectedFiles([]);
@@ -254,9 +264,9 @@ export default function FilesView({ server }: Props) {
 
     try {
       if (createMode === 'folder') {
-        await window.electronAPI.createDirectory(target, server.id);
+        await createFolder(currentPath, newFileName);
       } else {
-        await window.electronAPI.saveFile(target, '', server.id);
+        await saveFileContent(target, '');
       }
       showToast('作成しました', 'success');
       setModalType(null);
@@ -270,13 +280,11 @@ export default function FilesView({ server }: Props) {
 
   const handleImport = async () => {
     setModalType(null);
-    const result = await window.electronAPI.importFilesDialog(currentPath, server.id);
+    const result = await importFilesDialog(currentPath);
 
-    if (result.success) {
+    if (result.length > 0) {
       loadFiles(currentPath);
       showToast('インポートしました', 'success');
-    } else if (result.message !== 'キャンセルされました') {
-      showToast(result.message, 'error');
     }
   };
 
@@ -293,13 +301,13 @@ export default function FilesView({ server }: Props) {
 
     try {
       if (modalType === 'moveCurrent') {
-        await window.electronAPI.movePath(currentPath, realDest, server.id);
+        await moveItem(currentPath, realDest);
         handleGoUp();
       } else {
         for (const name of selectedFiles) {
           const src = `${currentPath}/${name}`;
           const dest = `${realDest}/${name}`.replace(/\/+/g, '/').replace(/\\+/g, '/');
-          await window.electronAPI.movePath(src, dest, server.id);
+          await moveItem(src, dest);
         }
         setSelectedFiles([]);
         loadFiles(currentPath);
@@ -323,7 +331,7 @@ export default function FilesView({ server }: Props) {
     const src = `${currentPath}/${contextMenu.file.name}`;
     const dest = `${currentPath}/${renameFileName}`;
     try {
-      await window.electronAPI.movePath(src, dest, server.id);
+      await moveItem(src, dest);
       showToast('名前を変更しました', 'success');
       setModalType(null);
       setRenameFileName('');
@@ -339,7 +347,7 @@ export default function FilesView({ server }: Props) {
     const targets = selectedFiles.map((f) => `${currentPath}/${f}`);
     const dest = `${currentPath}/archive-${Date.now()}.zip`;
     try {
-      await window.electronAPI.compressFiles(targets, dest, server.id);
+      await compressItem(targets, dest);
       showToast('圧縮しました', 'success');
       loadFiles(currentPath);
       setContextMenu(null);
@@ -354,7 +362,7 @@ export default function FilesView({ server }: Props) {
     try {
       for (const f of selectedFiles) {
         if (f.endsWith('.zip')) {
-          await window.electronAPI.extractArchive(`${currentPath}/${f}`, currentPath, server.id);
+          await extractItem(`${currentPath}/${f}`, currentPath);
         }
       }
       showToast('解凍しました', 'success');
@@ -367,7 +375,7 @@ export default function FilesView({ server }: Props) {
   };
 
   const handleOpenExplorer = () => {
-    window.electronAPI.openPathInExplorer(currentPath, server.id);
+    openInFinder(currentPath);
   };
 
   const handleDragStart = (e: React.DragEvent, fileName: string) => {
@@ -382,7 +390,7 @@ export default function FilesView({ server }: Props) {
       if (data.fromPath === currentPath && data.fileName !== folderName) {
         const src = `${currentPath}/${data.fileName}`;
         const dest = `${currentPath}/${folderName}/${data.fileName}`;
-        await window.electronAPI.movePath(src, dest, server.id);
+        await moveItem(src, dest);
         loadFiles(currentPath);
       }
     } catch {

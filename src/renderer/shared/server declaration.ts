@@ -21,5 +21,8 @@ export type AppView =
   | 'plugins'
   | 'backups'
   | 'general-settings'
+  | 'app-settings'
   | 'proxy'
+  | 'proxy-help'
+  | 'ngrok-guide'
   | 'users';

@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { type MinecraftServer } from '../shared/server declaration';
 import { useToast } from './ToastProvider';
+import {
+  createBackup,
+  listBackupsWithMetadata,
+  restoreBackup,
+  deleteBackup,
+} from '../../lib/backup-commands';
+import { listFiles } from '../../lib/file-commands';
 
 interface Props {
   server: MinecraftServer;
@@ -44,12 +51,12 @@ export default function BackupsView({ server }: Props) {
 
   useEffect(() => {
     loadBackups();
-  }, [server.id]);
+  }, [server.path]);
 
   const loadBackups = async () => {
     setLoading(true);
     try {
-      const list = await window.electronAPI.listBackups(server.id);
+      const list = await listBackupsWithMetadata(server.path);
       setBackups(list);
     } catch (e) {
       console.error(e);
@@ -76,33 +83,21 @@ export default function BackupsView({ server }: Props) {
   };
 
   const loadTree = async () => {
-    const fetchNode = async (base: string, relPath: string): Promise<FileNode[]> => {
-      const entries = await window.electronAPI.listFiles(base, server.id);
-      const nodes: FileNode[] = [];
-      for (const entry of entries) {
-        if (entry.name === 'backups') continue;
-        const childRel = relPath ? `${relPath}/${entry.name}` : entry.name;
-        if (entry.isDirectory) {
-          const children = await fetchNode(`${base}/${entry.name}`, childRel);
-          nodes.push({ name: entry.name, path: childRel, isDirectory: true, children });
-        } else {
-          nodes.push({ name: entry.name, path: childRel, isDirectory: false });
-        }
-      }
-      return nodes;
-    };
-
-    const rootNodes = await fetchNode(server.path, '');
-    setTree(rootNodes);
-    const allPaths = new Set<string>();
-    const collect = (nodes: FileNode[]) => {
-      nodes.forEach((n) => {
-        if (n.path) allPaths.add(n.path);
-        if (n.children) collect(n.children);
-      });
-    };
-    collect(rootNodes);
-    setSelectedPaths(allPaths);
+    try {
+      const entries = await listFiles(server.path);
+      const rootNodes: FileNode[] = entries
+        .filter((e) => e.name !== 'backups')
+        .map((e) => ({
+          name: e.name,
+          path: e.name,
+          isDirectory: e.isDirectory,
+        }));
+      setTree(rootNodes);
+      setSelectedPaths(new Set(rootNodes.map((n) => n.path)));
+    } catch (e) {
+      console.error('Failed to load tree:', e);
+      setTree([]);
+    }
   };
 
   const togglePath = (node: FileNode, checked: boolean) => {
@@ -133,19 +128,12 @@ export default function BackupsView({ server }: Props) {
     if (processing) return;
     setProcessing(true);
     try {
-      const paths = Array.from(selectedPaths);
-      const success = await window.electronAPI.createBackup(server.id, {
-        name: customName.trim() || defaultName(),
-        paths,
-        compressionLevel,
-      });
-      if (success) {
-        showToast('バックアップを作成しました！', 'success');
-        setShowCreateModal(false);
-        loadBackups();
-      } else {
-        showToast('バックアップ作成に失敗しました。', 'error');
-      }
+      const backupName = customName.trim() || defaultName();
+      const sources = Array.from(selectedPaths);
+      await createBackup(server.path, backupName, sources, compressionLevel);
+      showToast('バックアップを作成しました！', 'success');
+      setShowCreateModal(false);
+      loadBackups();
     } finally {
       setProcessing(false);
     }
@@ -154,12 +142,8 @@ export default function BackupsView({ server }: Props) {
   const handleRestore = async (backupName: string) => {
     setProcessing(true);
     try {
-      const success = await window.electronAPI.restoreBackup(server.id, backupName);
-      if (success) {
-        showToast('復元が完了しました！', 'success');
-      } else {
-        showToast('復元に失敗しました。', 'error');
-      }
+      await restoreBackup(server.path, backupName);
+      showToast('復元が完了しました！', 'success');
     } finally {
       setProcessing(false);
     }
@@ -167,12 +151,8 @@ export default function BackupsView({ server }: Props) {
 
   const handleDelete = async (backupName: string) => {
     try {
-      const success = await window.electronAPI.deleteBackup(server.id, backupName);
-      if (success) {
-        loadBackups();
-      } else {
-        showToast('削除に失敗しました。', 'error');
-      }
+      await deleteBackup(server.path, backupName);
+      loadBackups();
     } catch (e) {
       console.error(e);
     }

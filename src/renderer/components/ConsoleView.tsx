@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FC } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import { tauriListen } from '../../lib/tauri-api';
+import { sendCommand } from '../../lib/server-commands';
 
 type AnsiStyle = {
   color?: string;
@@ -117,11 +119,10 @@ interface ConsoleViewProps {
   ngrokUrl: string | null;
 }
 
-const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
+const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
   const [command, setCommand] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
-  const [internalNgrokUrl, setInternalNgrokUrl] = useState<string | null>(null);
   const [memoryUsage, setMemoryUsage] = useState(0);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -130,41 +131,33 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
     if (autoScroll) {
       logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs]);
+  }, [logs, autoScroll]);
 
   useEffect(() => {
-    const removeStatsListener = window.electronAPI.onServerStats((_event: any, data: any) => {
+    let unlisten: (() => void) | undefined;
+    tauriListen<{ serverId: string; memory: number }>('server-stats', (data) => {
       if (data.serverId === server.id) {
         setMemoryUsage(data.memory);
       }
+    }).then((fn) => {
+      unlisten = fn;
     });
     return () => {
-      if (typeof removeStatsListener === 'function') (removeStatsListener as any)();
+      unlisten?.();
     };
   }, [server.id]);
 
+  // Ngrok status is now event-driven; cycle the display address periodically
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const status = await window.electronAPI.getNgrokStatus(server.id);
-        setInternalNgrokUrl(status.active ? status.url : null);
-      } catch {
-        setInternalNgrokUrl(null);
-      }
-    };
-
-    fetchStatus();
     const interval = setInterval(() => {
-      fetchStatus();
       setCurrentAddressIndex((prev) => (prev === 0 ? 1 : 0));
     }, 3000);
-
     return () => clearInterval(interval);
   }, [server.id]);
 
   const handleSend = () => {
     if (!command.trim()) return;
-    window.electronAPI.sendCommand(server.id, command);
+    sendCommand(server.id, command);
     setCommand('');
   };
 
@@ -173,9 +166,9 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
   };
 
   const localAddress = `localhost:${server.port}`;
-  const publicAddress = internalNgrokUrl ? internalNgrokUrl.replace('tcp://', '') : localAddress;
+  const publicAddress = ngrokUrl ? ngrokUrl.replace('tcp://', '') : localAddress;
 
-  const displayAddress = !internalNgrokUrl
+  const displayAddress = !ngrokUrl
     ? localAddress
     : currentAddressIndex === 0
       ? localAddress
@@ -185,9 +178,8 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
     navigator.clipboard.writeText(displayAddress);
   };
 
-  const formatMemoryDetailed = (usageBytes: number, allocatedGb: number) => {
+  const formatMemoryDetailed = (usageBytes: number, allocatedMb: number) => {
     const usageMb = (usageBytes / 1024 / 1024).toFixed(0);
-    const allocatedMb = (allocatedGb * 1024).toFixed(0);
     return `${usageMb} / ${allocatedMb} MB`;
   };
 
@@ -200,7 +192,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs }) => {
             key={currentAddressIndex}
             onClick={handleCopyAddress}
             title="Click to Copy"
-            className={`font-bold cursor-pointer text-sm transition-all ${internalNgrokUrl && currentAddressIndex === 1 ? 'text-accent' : 'text-[#f0f0f0]'}`}
+            className={`font-bold cursor-pointer text-sm transition-all ${ngrokUrl && currentAddressIndex === 1 ? 'text-accent' : 'text-[#f0f0f0]'}`}
           >
             {displayAddress}
           </div>

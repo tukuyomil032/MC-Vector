@@ -3,56 +3,50 @@
   "productName": "MC-Vector",
   "private": true,
   "packageManager": "pnpm@10.26.2",
-  "version": "1.1.7",
+  "version": "2.0.0",
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
   "type": "module",
-  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "prepare": "husky",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
-    "lint-staged": "lint-staged",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
-    "dist": "pnpm run dist:mac",
-    "dist:mac": "pnpm run build && electron-builder --mac --x64 --arm64",
-    "dist:win": "pnpm run build && electron-builder --win --x64"
+    "prepare": "husky",
+    "rustfmt": "cargo fmt --all",
+    "lint-staged": "lint-staged"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
-    "adm-zip": "^0.5.16",
-    "archiver": "^6.0.2",
-    "discord-rpc": "^4.0.1",
-    "node-pty": "^1.0.0",
-    "pidusage": "^4.0.1",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "~2",
+    "@tauri-apps/plugin-fs": "~2",
+    "@tauri-apps/plugin-http": "~2",
+    "@tauri-apps/plugin-opener": "~2",
+    "@tauri-apps/plugin-os": "~2",
+    "@tauri-apps/plugin-process": "~2",
+    "@tauri-apps/plugin-shell": "~2",
+    "@tauri-apps/plugin-store": "~2",
+    "@tauri-apps/plugin-updater": "~2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.5.1",
-    "tar": "^7.5.7",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/adm-zip": "^0.5.7",
-    "@types/archiver": "^7.0.0",
-    "@types/discord-rpc": "^4.0.10",
-    "@types/node": "^24.10.1",
-    "@types/pidusage": "^2.0.5",
+    "@tauri-apps/cli": "^2.0.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
-    "@types/tar": "^6.1.13",
-    "@types/xterm": "^2.0.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
-    "electron": "^39.2.5",
-    "electron-builder": "^26.0.12",
-    "electron-updater": "^6.7.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -66,63 +60,6 @@
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4",
-    "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6"
-  },
-  "build": {
-    "appId": "com.tukuyomi032.mcvector",
-    "productName": "MC-Vector",
-    "copyright": "Copyright © 2025 tukuyomi032",
-    "directories": {
-      "output": "release"
-    },
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "https://tukuyomil032.github.io/MC-Vector/"
-      }
-    ],
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "package.json"
-    ],
-    "mac": {
-      "artifactName": "MC-Vector-${version}-${env.ARCH_LABEL}.${ext}",
-      "target": ["zip", "dmg"],
-      "icon": "build/icon.icns",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "identity": null
-    },
-    "dmg": {
-      "writeUpdateInfo": true
-    },
-    "generateUpdatesFilesForAllChannels": false,
-    "win": {
-      "artifactName": "MC-Vector-${version}-${arch}-Windows-Installer.${ext}",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
-  },
-  "lint-staged": {
-    "src/**/*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ]
+    "vite": "^7.2.4"
   }
 }

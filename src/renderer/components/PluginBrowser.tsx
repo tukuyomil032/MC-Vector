@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import { useToast } from './ToastProvider';
+import { listFiles, deleteItem } from '../../lib/file-commands';
+import {
+  searchModrinth,
+  searchHangar,
+  installModrinthProject,
+  installHangarProject,
+} from '../../lib/plugin-commands';
 
 interface Props {
   server: MinecraftServer;
@@ -41,7 +48,7 @@ export default function PluginBrowser({ server }: Props) {
   const refreshInstalled = async () => {
     try {
       const dirPath = `${server.path}/${folderName}`;
-      const entries = await window.electronAPI.listFiles(dirPath, server.id);
+      const entries = await listFiles(dirPath);
       setInstalledFiles(entries.filter((e) => !e.isDirectory).map((e) => e.name));
     } catch (e) {
       console.error(e);
@@ -64,6 +71,7 @@ export default function PluginBrowser({ server }: Props) {
       .replace(/[^a-z0-9]/g, '');
 
   const findInstalledMatch = (item: ProjectItem) => {
+    // Strategy 1: normalized slug/title/id matching
     const candidates = [
       item.slug,
       item.title,
@@ -74,12 +82,23 @@ export default function PluginBrowser({ server }: Props) {
       .map(normalize)
       .filter(Boolean);
 
-    if (candidates.length === 0) return null;
+    // Strategy 2: case-insensitive plain name matching (less aggressive)
+    const plainCandidates = [item.slug, item.title, item.source_obj?.slug]
+      .filter(Boolean)
+      .map((s: string) => s.toLowerCase());
 
     return (
       installedFiles.find((file) => {
         const base = normalize(file);
-        return candidates.some((c) => base.includes(c) || c.includes(base));
+        const fileLower = file.toLowerCase();
+        // Remove extension and version number for loose matching
+        const fileBase = fileLower.replace(/\.[^.]+$/, '').replace(/-[\d.]+$/, '');
+
+        // Normalized match (existing logic)
+        if (candidates.some((c) => base.includes(c) || c.includes(base))) return true;
+        // Plain case-insensitive match on filename
+        if (plainCandidates.some((c) => fileLower.includes(c) || fileBase === c)) return true;
+        return false;
       }) || null
     );
   };
@@ -94,12 +113,9 @@ export default function PluginBrowser({ server }: Props) {
 
       if (platform === 'Modrinth') {
         const searchType = isModServer ? 'mod' : 'plugin';
-        const hits = await window.electronAPI.searchModrinth(
-          query,
-          searchType,
-          server.version,
-          offset
-        );
+        const facets = `[["project_type:${searchType}"],["versions:${server.version}"]]`;
+        const result = await searchModrinth(query, facets, offset);
+        const hits = result.hits;
 
         items = hits.map((h: any) => ({
           id: h.project_id,
@@ -113,7 +129,8 @@ export default function PluginBrowser({ server }: Props) {
           source_obj: h,
         }));
       } else if (platform === 'Hangar') {
-        const hits = await window.electronAPI.searchHangar(query, server.version, offset);
+        const data = await searchHangar(query, server.version, offset);
+        const hits = data.result;
 
         items = hits.map((h: any) => ({
           id: h.name,
@@ -146,11 +163,7 @@ export default function PluginBrowser({ server }: Props) {
     if (installedFile) {
       const targetPath = `${server.path}/${folderName}/${installedFile}`;
       try {
-        const removed = await window.electronAPI.deletePath(targetPath, server.id);
-        if (!removed) {
-          showToast('既存ファイルの削除に失敗しました', 'error');
-          return;
-        }
+        await deleteItem(targetPath);
       } catch (err) {
         console.error(err);
         showToast('既存ファイルの削除に失敗しました', 'error');
@@ -176,16 +189,8 @@ export default function PluginBrowser({ server }: Props) {
           return;
         }
         const file = versions[0].files[0];
-        const type = isModServer ? 'mod' : 'plugin';
 
-        await window.electronAPI.installModrinthProject(
-          item.id,
-          versions[0].id,
-          file.filename,
-          file.url,
-          server.id,
-          type
-        );
+        await installModrinthProject(versions[0].id, file.filename, `${server.path}/${folderName}`);
         showToast(
           `${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`,
           'success'
@@ -207,7 +212,7 @@ export default function PluginBrowser({ server }: Props) {
         const downloadUrl = version.downloads.PAPER.downloadUrl;
         const fileName = `${slug}-${version.name}.jar`;
 
-        await window.electronAPI.installHangarProject(downloadUrl, fileName, server.id);
+        await installHangarProject(downloadUrl, fileName, `${server.path}/${folderName}`);
         showToast(
           `${mode === 'fresh' ? 'インストール完了' : mode === 'overwrite' ? '上書き完了' : 'アップデート完了'}: ${item.title}`,
           'success'
@@ -232,8 +237,9 @@ export default function PluginBrowser({ server }: Props) {
     void performInstall(item, 'fresh');
   };
 
-  const openExternal = (url: string) => {
-    showToast(`ブラウザで開いてください: ${url}`, 'info');
+  const openExternal = async (url: string) => {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl(url);
   };
 
   return (

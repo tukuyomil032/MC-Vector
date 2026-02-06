@@ -1,0 +1,60 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "fs:default",
+    "process:default",
+    "store:default",
+    "updater:default",
+    "opener:default",
+    "os:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.papermc.io/**" },
+        { "url": "https://piston-meta.mojang.com/**" },
+        { "url": "https://launchermeta.mojang.com/**" },
+        { "url": "https://meta.fabricmc.net/**" },
+        { "url": "https://api.modrinth.com/**" },
+        { "url": "https://cdn.modrinth.com/**" },
+        { "url": "https://hangar.papermc.io/**" },
+        { "url": "https://api.adoptium.net/**" },
+        { "url": "https://api.mojang.com/**" },
+        { "url": "https://bin.equinox.io/**" },
+        { "url": "https://tukuyomil032.github.io/**" }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "java",
+          "cmd": "java",
+          "args": true
+        },
+        {
+          "name": "ngrok",
+          "cmd": "ngrok",
+          "args": true
+        }
+      ]
+    },
+    "shell:allow-execute",
+    "shell:allow-kill",
+    "shell:allow-stdin-write",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$APPLOCALDATA/**" },
+        { "path": "$HOME/**" }
+      ]
+    },
+    "fs:read-all",
+    "fs:write-all"
+  ]
+}

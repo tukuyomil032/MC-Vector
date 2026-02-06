@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getAppSettings, saveAppSettings } from '../../lib/config-commands';
+import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
 
 type AppTheme =
   | 'dark'
@@ -53,7 +55,7 @@ function normalizeReleaseNotes(notes: unknown): string {
   return '';
 }
 
-const SettingsWindow = () => {
+const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
   const [theme, setTheme] = useState<AppTheme>('system');
 
@@ -78,70 +80,32 @@ const SettingsWindow = () => {
   );
 
   useEffect(() => {
-    const disposeSettings = window.electronAPI.onSettingsData((data) => {
-      if (data?.theme) setTheme(normalizeTheme(data.theme));
-    });
-    window.electronAPI.settingsWindowReady();
-
-    const disposeAvailable = window.electronAPI.onUpdateAvailable((payload) => {
-      setUpdateState({
-        status: 'available',
-        version: payload?.version,
-        releaseNotes: payload?.releaseNotes,
-      });
-    });
-    const disposeAvailableSilent = window.electronAPI.onUpdateAvailableSilent((payload) => {
-      setUpdateState({
-        status: 'available',
-        version: payload?.version,
-        releaseNotes: payload?.releaseNotes,
-      });
-    });
-    const disposeNotAvailable = window.electronAPI.onUpdateNotAvailable(() => {
-      setUpdateState({ status: 'not-available' });
-    });
-    const disposeProgress = window.electronAPI.onUpdateDownloadProgress((payload) => {
-      setUpdateState((prev) => ({
-        ...prev,
-        status: 'downloading',
-        progress: payload?.percent ?? prev.progress,
-      }));
-    });
-    const disposeDownloaded = window.electronAPI.onUpdateDownloaded((payload) => {
-      setUpdateState({
-        status: 'downloaded',
-        version: payload?.version,
-        releaseNotes: payload?.releaseNotes,
-      });
-    });
-    const disposeError = window.electronAPI.onUpdateError((message) => {
-      setUpdateState({ status: 'error', error: message });
-    });
-
-    return () => {
-      if (typeof disposeSettings === 'function') disposeSettings();
-      disposeAvailable();
-      disposeAvailableSilent();
-      disposeNotAvailable();
-      disposeProgress();
-      disposeDownloaded();
-      disposeError();
+    const loadSettings = async () => {
+      try {
+        const settings = await getAppSettings();
+        if (settings?.theme) setTheme(normalizeTheme(settings.theme));
+      } catch (e) {
+        console.error('Failed to load settings', e);
+      }
     };
+    loadSettings();
   }, []);
 
   const handleCheck = async () => {
     setUpdateState({ status: 'checking' });
-    const result = await window.electronAPI.checkForUpdates();
-    if (result?.available) {
-      setUpdateState({
-        status: 'available',
-        version: result.version,
-        releaseNotes: result.releaseNotes,
-      });
-    } else {
-      setUpdateState(
-        result?.error ? { status: 'error', error: result.error } : { status: 'not-available' }
-      );
+    try {
+      const result = await checkForUpdates();
+      if (result.available) {
+        setUpdateState({
+          status: 'available',
+          version: result.version,
+          releaseNotes: result.body,
+        });
+      } else {
+        setUpdateState({ status: 'not-available' });
+      }
+    } catch (e) {
+      setUpdateState({ status: 'error', error: String(e) });
     }
   };
 
@@ -151,21 +115,36 @@ const SettingsWindow = () => {
       status: 'downloading',
       progress: prev.progress ?? 0,
     }));
-    await window.electronAPI.downloadUpdate();
+    try {
+      await downloadAndInstallUpdate((downloaded, total) => {
+        const pct = total > 0 ? (downloaded / total) * 100 : 0;
+        setUpdateState((prev) => ({ ...prev, progress: pct }));
+      });
+    } catch (e) {
+      setUpdateState({ status: 'error', error: String(e) });
+    }
   };
 
   const handleInstall = async () => {
-    await window.electronAPI.installUpdate();
+    // downloadAndInstallUpdate already relaunches
+    await handleDownload();
   };
 
-  const handleThemeChange = (value: AppTheme) => {
+  const handleThemeChange = async (value: AppTheme) => {
     setTheme(value);
-    window.electronAPI.saveSettingsFromWindow({ theme: value });
+    await saveAppSettings({ theme: value });
   };
 
   return (
-    <div className="h-screen w-screen bg-[#1e1e1e] text-white p-8 box-border">
-      <h1 className="text-2xl font-semibold mb-6">Application Preferences</h1>
+    <div className="h-full overflow-y-auto bg-[#1e1e1e] text-white p-8 box-border">
+      <div className="flex items-center gap-4 mb-6">
+        {onClose && (
+          <button className="btn-secondary text-sm" onClick={onClose}>
+            ← 戻る
+          </button>
+        )}
+        <h1 className="text-2xl font-semibold m-0">Application Preferences</h1>
+      </div>
 
       <section className="bg-[#252526] border border-zinc-700 rounded-lg p-5 mb-6">
         <div className="flex justify-between items-center mb-3 gap-3 flex-wrap">

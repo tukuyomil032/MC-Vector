@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
+import { getServerRoot } from '../../lib/config-commands';
 
 interface AddServerModalProps {
   onClose: () => void;
@@ -17,7 +18,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
   useEffect(() => {
     const fetchRoot = async () => {
       try {
-        const path = await window.electronAPI.getServerRoot();
+        const path = await getServerRoot();
         setRootPath(path);
       } catch (e) {
         console.error(e);
@@ -109,7 +110,9 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, software, version, port, memory });
+    const sanitizedName = name.trim().replace(/[^a-zA-Z0-9_-]/g, '-') || 'server';
+    const serverPath = rootPath ? `${rootPath}/${sanitizedName}` : '';
+    onAdd({ name, software, version, port, memory, path: serverPath });
   };
 
   return (
