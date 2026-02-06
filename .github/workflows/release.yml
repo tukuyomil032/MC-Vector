@@ -186,6 +186,14 @@ jobs:
           publish_branch: gh-pages
           keep_files: false
 
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          echo "=== Searching for release files ==="
+          find artifacts -type f \( -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.exe" \) -exec cp {} release-assets/ \;
+          echo "=== Files to be released ==="
+          ls -lh release-assets/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -193,7 +201,6 @@ jobs:
           name: MC-Vector v${{ needs.check-version.outputs.version }}
           draft: false
           prerelease: false
-          fail_on_unmatched_files: false
-          files: artifacts/**/*
+          files: release-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
