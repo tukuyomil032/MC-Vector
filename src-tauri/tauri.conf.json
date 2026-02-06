@@ -45,7 +45,7 @@
   "plugins": {
     "updater": {
       "active": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMyRUIwRkIyQkFEMDVGNTcKUldSWFg5QzZzZy9yd21ua1dqeG1mcG83U05VYkVyMHl3NkxwN3l3Y2NsYmNOUWxoeGo2MG9zQkIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENBNkYwQzkwRDM3RDIzQzgKUldUSUkzM1RrQXh2eXQ4NHNNN1BhZThuZEJxK1V6OGx0QVBhQkI0ODQ4dmNQSW1KVWZFRmxBVXoK",
       "endpoints": [
         "https://tukuyomil032.github.io/MC-Vector/latest.json"
       ],
