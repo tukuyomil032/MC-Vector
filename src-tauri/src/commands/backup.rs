@@ -266,6 +266,28 @@ pub async fn extract_item(archive: String, dest: String) -> Result<(), String> {
 
 /// ディレクトリ内のファイルを再帰的に収集
 fn collect_files(dir: &Path) -> std::io::Result<Vec<std::path::PathBuf>> {
+    let root = dir;
+    collect_files_internal(dir, root)
+}
+
+/// 内部ヘルパー: ルートディレクトリ内でのみファイルを収集
+fn collect_files_internal(dir: &Path, root: &Path) -> std::io::Result<Vec<std::path::PathBuf>> {
+    // ディレクトリをcanonicalizeしてチェック
+    let dir_canonical = match std::fs::canonicalize(dir) {
+        Ok(path) => path,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let root_canonical = match std::fs::canonicalize(root) {
+        Ok(path) => path,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    // ディレクトリがroot内にない場合は空のVecを返す
+    if !dir_canonical.starts_with(&root_canonical) {
+        return Ok(Vec::new());
+    }
+
     let mut files = Vec::new();
     if dir.is_dir() {
         for entry in std::fs::read_dir(dir)? {
@@ -273,7 +295,7 @@ fn collect_files(dir: &Path) -> std::io::Result<Vec<std::path::PathBuf>> {
             let path = entry.path();
             if path.is_dir() {
                 files.push(path.clone());
-                files.extend(collect_files(&path)?);
+                files.extend(collect_files_internal(&path, root)?);
             } else {
                 files.push(path);
             }
