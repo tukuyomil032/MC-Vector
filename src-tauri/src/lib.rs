@@ -58,6 +58,9 @@ pub fn run() {
             commands::ngrok::is_ngrok_installed,
             // ファイルユーティリティ
             commands::file_utils::list_dir_with_metadata,
+            // アップデートユーティリティ
+            commands::updater_utils::can_update_app,
+            commands::updater_utils::get_app_location,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

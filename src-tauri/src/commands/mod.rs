@@ -5,3 +5,4 @@ pub mod java;
 pub mod ngrok;
 pub mod process_stats;
 pub mod server;
+pub mod updater_utils;
