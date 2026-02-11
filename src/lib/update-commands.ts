@@ -5,6 +5,11 @@ import { invoke } from '@tauri-apps/api/core';
 
 let currentUpdate: Update | null = null;
 
+interface UpdateCheckResult {
+  can_update: boolean;
+  reason?: string;
+}
+
 function createReadOnlyErrorMessage(location: string): string {
   return (
     `アプリは読み取り専用の場所から実行されています。\n\n` +
@@ -20,6 +25,25 @@ function createReadOnlyErrorMessage(location: string): string {
     `1. Quit this app\n` +
     `2. Drag and drop the app to the Applications folder in Finder\n` +
     `3. Launch the app again from the Applications folder\n` +
+    `4. Try updating again`
+  );
+}
+
+function createPermissionErrorMessage(location: string): string {
+  return (
+    `アプリの更新に必要な権限がありません。\n\n` +
+    `現在の場所: ${location}\n\n` +
+    `アップデートを適用するには：\n` +
+    `1. このアプリを終了してください\n` +
+    `2. Finderでアプリを「アプリケーション」フォルダに移動してください\n` +
+    `3. フォルダの権限を確認してください\n` +
+    `4. もう一度アップデートを試してください\n\n` +
+    `The app does not have the necessary permissions to update.\n\n` +
+    `Current location: ${location}\n\n` +
+    `To apply the update:\n` +
+    `1. Quit this app\n` +
+    `2. Move the app to the Applications folder in Finder\n` +
+    `3. Check the folder permissions\n` +
     `4. Try updating again`
   );
 }
@@ -42,14 +66,14 @@ export async function checkForUpdates(): Promise<{
   }
 }
 
-export async function canUpdateApp(): Promise<boolean> {
+export async function canUpdateApp(): Promise<UpdateCheckResult> {
   try {
-    return await invoke<boolean>('can_update_app');
+    return await invoke<UpdateCheckResult>('can_update_app');
   } catch (e) {
     console.error('Failed to check if app can update:', e);
-    // Return true as a safe default when the check itself fails, allowing the update
+    // Return a safe default when the check itself fails, allowing the update
     // to proceed and potentially fail with a more specific error later
-    return true;
+    return { can_update: true };
   }
 }
 
@@ -68,10 +92,21 @@ export async function downloadAndInstallUpdate(
   if (!currentUpdate) throw new Error('No update available');
 
   // Check if the app can be updated before proceeding
-  const canUpdate = await canUpdateApp();
-  if (!canUpdate) {
+  const updateCheck = await canUpdateApp();
+  if (!updateCheck.can_update) {
     const location = await getAppLocation();
-    throw new Error(createReadOnlyErrorMessage(location));
+    // Only show read-only specific message for read-only filesystem errors
+    if (updateCheck.reason === 'read_only') {
+      throw new Error(createReadOnlyErrorMessage(location));
+    } else if (updateCheck.reason === 'permission_denied') {
+      throw new Error(createPermissionErrorMessage(location));
+    } else {
+      // Generic error for other cases
+      throw new Error(
+        `アップデートを適用できません。アプリを「アプリケーション」フォルダに移動してから再度お試しください。\n\n` +
+          `Cannot apply update. Please move the app to the Applications folder and try again.`
+      );
+    }
   }
 
   let downloaded = 0;
