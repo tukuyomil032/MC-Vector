@@ -47,7 +47,9 @@ export async function canUpdateApp(): Promise<boolean> {
     return await invoke<boolean>('can_update_app');
   } catch (e) {
     console.error('Failed to check if app can update:', e);
-    return true; // Default to true on error for non-macOS platforms
+    // Return true as a safe default when the check itself fails, allowing the update
+    // to proceed and potentially fail with a more specific error later
+    return true;
   }
 }
 

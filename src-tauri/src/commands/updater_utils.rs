@@ -24,9 +24,12 @@ pub fn can_update_app() -> Result<bool, String> {
 
         // Try to create a temporary file in the parent directory to check write permissions
         if let Some(parent_dir) = app_bundle_path.parent() {
-            let test_file = parent_dir.join(".mc-vector-update-test");
+            // Use a unique temporary filename to avoid conflicts
+            let test_file =
+                parent_dir.join(format!(".mc-vector-update-test-{}", std::process::id()));
             match fs::write(&test_file, b"test") {
                 Ok(_) => {
+                    // Ensure cleanup even if removal fails
                     let _ = fs::remove_file(&test_file);
                     Ok(true)
                 }
