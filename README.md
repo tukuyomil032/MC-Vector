@@ -13,6 +13,7 @@
 ## Languages
 
 - Typescript
+- Rust
 - CSS
 
 # Tutorial - How to create a server
@@ -81,7 +82,135 @@ This application contains the following main configuration items:
 - **Proxy Network**
   - **_Here, you can easily set up a proxy server!_**
   - For detailed setup instructions, click the “See Detailed Setup Guide” button.
+---
 
+## Prerequisites
+Before you start developing, make sure you have the following installed:
+
+- **Node.js** (v18 or later recommended)
+- **pnpm** (Package manager)
+- **Rust** (v1.77.2 or later)
+- **Cargo** (Included with Rust)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   $ git clone https://github.com/tukuyomil032/MC-Vector.git
+
+   $ cd MC-Vector
+   ```
+
+2. **Install dependencies**
+   ```bash
+   $ pnpm install
+   ```
+
+3. **Run development server**
+   ```bash
+   $ pnpm tauri dev
+   ```
+
+### Build
+
+To create a production build:
+
+```bash
+$ pnpm tauri build
+```
+
+This will generate platform-specific installers in `src-tauri/target/release/bundle/`.
+
+### Project Structure
+
+```
+MC-Vector/
+├── src/                              # Frontend source code
+│   ├── App.tsx                       # Main application component
+│   ├── main.tsx                      # React entry point
+│   ├── index.css                     # Global styles
+│   ├── vite-env.d.ts                 # Vite type definitions
+│   ├── assets/                       # Static assets
+│   │   └── icons/                    # Icon files
+│   ├── lib/                          # Frontend API layer
+│   │   ├── backup-commands.ts        # Backup operations
+│   │   ├── config-commands.ts        # Configuration management
+│   │   ├── file-commands.ts          # File system operations
+│   │   ├── java-commands.ts          # Java runtime management
+│   │   ├── ngrok-commands.ts         # Ngrok tunnel operations
+│   │   ├── plugin-commands.ts        # Plugin/mod management
+│   │   ├── proxy-commands.ts         # Proxy server setup
+│   │   ├── server-commands.ts        # Server lifecycle management
+│   │   ├── update-commands.ts        # App update operations
+│   │   └── tauri-api.ts              # Tauri API wrappers
+│   └── renderer/                     # React components
+│       ├── components/               # UI components
+│       │   ├── AddServerModal.tsx    # Server creation modal
+│       │   ├── BackupsView.tsx       # Backup management view
+│       │   ├── ConsoleView.tsx       # Server console view
+│       │   ├── DashboardView.tsx     # Server dashboard
+│       │   ├── FilesView.tsx         # File browser view
+│       │   ├── JavaManagerModal.tsx  # Java version manager
+│       │   ├── NgrokGuideView.tsx    # Ngrok setup guide
+│       │   ├── PluginBrowser.tsx     # Plugin/mod browser
+│       │   ├── ProxyHelpView.tsx     # Proxy help documentation
+│       │   ├── ProxySetupView.tsx    # Proxy configuration
+│       │   ├── SettingsWindow.tsx    # Server settings window
+│       │   ├── UsersView.tsx         # User/whitelist management
+│       │   ├── Toast.tsx             # Toast notification component
+│       │   ├── ToastProvider.tsx     # Toast context provider
+│       │   └── properties/           # Server properties components
+│       │       ├── PropertiesView.tsx
+│       │       ├── ServerSettings.tsx
+│       │       └── AdvancedSettingsWindow.tsx
+│       └── shared/                   # Shared utilities
+│           ├── propertiesData.ts     # Server properties definitions
+│           └── server declaration.ts # Server type declarations
+│
+├── src-tauri/                        # Rust backend (Tauri core)
+│   ├── Cargo.toml                    # Rust dependencies
+│   ├── Cargo.lock                    # Dependency lock file
+│   ├── tauri.conf.json               # Tauri configuration
+│   ├── build.rs                      # Build script
+│   ├── capabilities/                 # Tauri capability definitions
+│   │   ├── default.json
+│   │   └── desktop.json
+│   ├── icons/                        # Application icons
+│   ├── gen/                          # Generated schema files
+│   └── src/
+│       ├── main.rs                   # Rust entry point
+│       ├── lib.rs                    # Library exports
+│       └── commands/                 # Tauri command handlers
+│           ├── mod.rs                # Command module exports
+│           ├── backup.rs             # Backup/restore operations
+│           ├── download.rs           # Server software downloads
+│           ├── file_utils.rs         # File system utilities
+│           ├── java.rs               # Java runtime detection
+│           ├── ngrok.rs              # Ngrok integration
+│           ├── process_stats.rs      # Server process monitoring
+│           └── server.rs             # Server process management
+│
+├── .github/                          # GitHub configurations
+│   └── workflows/                    # CI/CD workflows
+├── .vscode/                          # VS Code settings
+├── build/                            # Build artifacts
+├── eslint.config.js                  # ESLint configuration
+├── tailwind.config.js                # Tailwind CSS configuration
+├── postcss.config.js                 # PostCSS configuration
+├── lint-staged.config.js             # lint-staged configuration
+├── vite.config.ts                    # Vite build configuration
+├── tsconfig.app.json                 # TypeScript configuration
+├── tsconfig.node.json                # TypeScript configuration
+├── tsconfig.json                     # TypeScript configuration
+├── .editorconfig                     # Sync format configuration
+├── .prettierrc                       # Prettier rules
+├── .prettierignore                   # Ignore prettier files
+├── package.json                      # Node.js project manifest
+├── pnpm-lock.yaml                    # pnpm lock file
+└── README.md                         # This file
+```
+
+---
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

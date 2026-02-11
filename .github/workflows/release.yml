@@ -48,15 +48,21 @@ jobs:
         include:
           - platform: macos-latest
             args: --target aarch64-apple-darwin
+            rust-targets: aarch64-apple-darwin
             rust-target: aarch64-apple-darwin
+            bundle-target: aarch64-apple-darwin
             artifact-name: mac-arm64
           - platform: macos-latest
             args: --target x86_64-apple-darwin
+            rust-targets: x86_64-apple-darwin
             rust-target: x86_64-apple-darwin
+            bundle-target: x86_64-apple-darwin
             artifact-name: mac-x64
           - platform: windows-latest
             args: --target x86_64-pc-windows-msvc
+            rust-targets: x86_64-pc-windows-msvc
             rust-target: x86_64-pc-windows-msvc
+            bundle-target: x86_64-pc-windows-msvc
             artifact-name: win-x64
 
     runs-on: ${{ matrix.platform }}
@@ -78,16 +84,12 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust-target }}
+          targets: ${{ matrix.rust-targets }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> target
-
-      - name: Add Rust target (macOS cross-compile)
-        if: runner.os == 'macOS'
-        run: rustup target add ${{ matrix.rust-target }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -101,17 +103,62 @@ jobs:
           pnpm build
           pnpm tauri build ${{ matrix.args }}
 
+      - name: Ad-hoc sign macOS app and rebuild DMG
+        if: runner.os == 'macOS'
+        run: |
+          APP_DIR=$(find "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos" -maxdepth 1 -name "*.app" -print -quit)
+          if [ -z "$APP_DIR" ]; then
+            echo "App bundle not found" >&2
+            exit 1
+          fi
+
+          codesign -s - --force --deep --timestamp=none "$APP_DIR"
+
+          DMG_DIR="src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg"
+          DMG_PATH=$(find "$DMG_DIR" -maxdepth 1 -name "*.dmg" -print -quit)
+          if [ -z "$DMG_PATH" ]; then
+            echo "DMG not found" >&2
+            exit 1
+          fi
+
+          STAGE=$(mktemp -d)
+          cp -R "$APP_DIR" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+
+          hdiutil create -volname "MC-Vector" -srcfolder "$STAGE" -ov -format UDZO "$DMG_PATH" -quiet
+
+          rm -rf "$STAGE"
+
+      - name: Verify macOS app signature and architecture
+        if: runner.os == 'macOS'
+        run: |
+          APP_DIR=$(find "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos" -maxdepth 1 -name "*.app" -print -quit)
+          BIN_DIR="$APP_DIR/Contents/MacOS"
+          BIN_FILE=$(find "$BIN_DIR" -maxdepth 1 -type f -executable -print -quit)
+
+          echo "--- App Bundle: $APP_DIR ---"
+          echo "--- Binary: $BIN_FILE ---"
+
+          echo "=== Architecture ==="
+          lipo -info "$BIN_FILE"
+
+          echo "=== Code Signature Verification ==="
+          codesign --verify --deep --verbose=2 "$APP_DIR" || true
+
+          echo "=== Gatekeeper Assessment ==="
+          spctl --assess --type execute --verbose=4 "$APP_DIR" || true
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
           path: |
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.app.tar.gz
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.app.tar.gz.sig
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.exe
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.nsis.zip
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.nsis.zip.sig
+            src-tauri/target/${{ matrix.bundle-target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.bundle-target }}/release/bundle/**/*.app.tar.gz
+            src-tauri/target/${{ matrix.bundle-target }}/release/bundle/**/*.app.tar.gz.sig
+            src-tauri/target/${{ matrix.bundle-target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.bundle-target }}/release/bundle/**/*.nsis.zip
+            src-tauri/target/${{ matrix.bundle-target }}/release/bundle/**/*.nsis.zip.sig
           retention-days: 5
 
   # ── リリース作成 + gh-pages デプロイ ──
