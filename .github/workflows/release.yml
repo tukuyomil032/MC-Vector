@@ -134,10 +134,15 @@ jobs:
         run: |
           APP_DIR=$(find "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos" -maxdepth 1 -name "*.app" -print -quit)
           BIN_DIR="$APP_DIR/Contents/MacOS"
-          BIN_FILE=$(find "$BIN_DIR" -maxdepth 1 -type f -executable -print -quit)
+          BIN_FILE=$(find "$BIN_DIR" -maxdepth 1 -type f -perm -111 -print -quit)
 
           echo "--- App Bundle: $APP_DIR ---"
           echo "--- Binary: $BIN_FILE ---"
+
+          if [ -z "$BIN_FILE" ]; then
+            echo "Executable not found" >&2
+            exit 1
+          fi
 
           echo "=== Architecture ==="
           lipo -info "$BIN_FILE"
