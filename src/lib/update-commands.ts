@@ -5,6 +5,25 @@ import { invoke } from '@tauri-apps/api/core';
 
 let currentUpdate: Update | null = null;
 
+function createReadOnlyErrorMessage(location: string): string {
+  return (
+    `アプリは読み取り専用の場所から実行されています。\n\n` +
+    `現在の場所: ${location}\n\n` +
+    `アップデートを適用するには：\n` +
+    `1. このアプリを終了してください\n` +
+    `2. Finderでアプリを「アプリケーション」フォルダにドラッグ&ドロップしてください\n` +
+    `3. 「アプリケーション」フォルダから再度起動してください\n` +
+    `4. もう一度アップデートを試してください\n\n` +
+    `The app is running from a read-only location.\n\n` +
+    `Current location: ${location}\n\n` +
+    `To apply the update:\n` +
+    `1. Quit this app\n` +
+    `2. Drag and drop the app to the Applications folder in Finder\n` +
+    `3. Launch the app again from the Applications folder\n` +
+    `4. Try updating again`
+  );
+}
+
 export async function checkForUpdates(): Promise<{
   available: boolean;
   version?: string;
@@ -50,22 +69,7 @@ export async function downloadAndInstallUpdate(
   const canUpdate = await canUpdateApp();
   if (!canUpdate) {
     const location = await getAppLocation();
-    throw new Error(
-      `アプリは読み取り専用の場所から実行されています。\n\n` +
-        `現在の場所: ${location}\n\n` +
-        `アップデートを適用するには：\n` +
-        `1. このアプリを終了してください\n` +
-        `2. Finderでアプリを「アプリケーション」フォルダにドラッグ&ドロップしてください\n` +
-        `3. 「アプリケーション」フォルダから再度起動してください\n` +
-        `4. もう一度アップデートを試してください\n\n` +
-        `The app is running from a read-only location.\n\n` +
-        `Current location: ${location}\n\n` +
-        `To apply the update:\n` +
-        `1. Quit this app\n` +
-        `2. Drag and drop the app to the Applications folder in Finder\n` +
-        `3. Launch the app again from the Applications folder\n` +
-        `4. Try updating again`
-    );
+    throw new Error(createReadOnlyErrorMessage(location));
   }
 
   let downloaded = 0;
@@ -92,22 +96,7 @@ export async function downloadAndInstallUpdate(
     const errorMessage = String(error);
     if (errorMessage.includes('Read-only file system') || errorMessage.includes('os error 30')) {
       const location = await getAppLocation();
-      throw new Error(
-        `アプリは読み取り専用の場所から実行されています。\n\n` +
-          `現在の場所: ${location}\n\n` +
-          `アップデートを適用するには：\n` +
-          `1. このアプリを終了してください\n` +
-          `2. Finderでアプリを「アプリケーション」フォルダにドラッグ&ドロップしてください\n` +
-          `3. 「アプリケーション」フォルダから再度起動してください\n` +
-          `4. もう一度アップデートを試してください\n\n` +
-          `The app is running from a read-only location.\n\n` +
-          `Current location: ${location}\n\n` +
-          `To apply the update:\n` +
-          `1. Quit this app\n` +
-          `2. Drag and drop the app to the Applications folder in Finder\n` +
-          `3. Launch the app again from the Applications folder\n` +
-          `4. Try updating again`
-      );
+      throw new Error(createReadOnlyErrorMessage(location));
     }
     throw error;
   }
