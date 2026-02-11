@@ -17,11 +17,6 @@ pub fn can_update_app() -> Result<bool, String> {
             .and_then(|p| p.parent())
             .ok_or_else(|| "Failed to determine app bundle path".to_string())?;
 
-        // Check if the app is running from /Volumes (DMG mount point)
-        if app_bundle_path.starts_with("/Volumes") {
-            return Ok(false);
-        }
-
         // Try to create a temporary file in the parent directory to check write permissions
         if let Some(parent_dir) = app_bundle_path.parent() {
             // Use a unique temporary filename to avoid conflicts
