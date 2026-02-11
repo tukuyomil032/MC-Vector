@@ -3,7 +3,7 @@
   "productName": "MC-Vector",
   "private": true,
   "packageManager": "pnpm@10.26.2",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
   "type": "module",

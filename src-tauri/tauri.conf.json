@@ -1,6 +1,6 @@
 {
   "productName": "MC-Vector",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "identifier": "com.tukuyomi032.mcvector",
   "build": {
     "beforeDevCommand": "pnpm dev",
