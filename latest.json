@@ -1,19 +1,19 @@
 {
-  "version": "2.0.3",
-  "notes": "MC-Vector v2.0.3",
-  "pub_date": "2026-02-11T09:32:58Z",
+  "version": "2.0.4",
+  "notes": "MC-Vector v2.0.4",
+  "pub_date": "2026-02-25T03:43:15Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eWcyRCtBU1RuMDJCakdmYmFmMVM4RW5JSkhtTzdGa0VqakpwaG1HZTQyWDBLcERWVTJ0a2VTT1N3L3ljZHFlajQxQ3FSY0o0ZWdBcks0azNvSEpieVF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwODAyMjg4CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKdnZldk1uNW94NlljNXhya1dTNzI3VVBFM2FOKzYwVVVrRVBjOEw4ZUxqR2lmQjIvMWUrSnNlcmttQXV0NExQcUVKdDZVMEsyNE1RcDc2L3VKbEJZQlE9PQo=",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.3/MC-Vector.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eXZoQk5GT2ZESDloU1lBeklTb1V0WTdERW13dFZyYy96Y1VrNGJjZ1dJaWhUUUxvSEQ1UjAxdW11VUJTUC9xanJoYWNhZFozUDVZOXZka08vUzBNRmc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxOTkwNjEzCWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKVWxMcUpLTFVQaGlWVCtoSTZIbXVDNHdNVkJzc29MZDZrNjc5Y0J1YlBreWlXSnZta1QvcEZWbG1EZUdaUEg5eUhqR0tscG85dGdLNG1lSnova3AyRFE9PQo=",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.4/MC-Vector.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eWdEUGpOZzVpUngyNFhmYmpKenZLOHpMSTV6Kys3bVZQSlRaNTY5N0MyNmdkVmZQODJpc1hkaEgra1NKb21NeG1ESndrTHBmSGFFV3NSY3J6YThrbWdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwODAyMzA2CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKTFFTWDgvcEptMHJKSHpWdTZUZmVHQ0EyTi9yaXhmZDArUWw0RUJyeENMUnpIekxwRmJBTlZ6aWs4YzArbm9sSmlIMVRuVkNpRGQrQ0VsdVdGYVRLRFE9PQo=",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.3/MC-Vector.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eXVKMEtwRGxxdXRmclUwd2RPNmRobHVvenRFVEM0SDJmdi9FODFlZjlCSFNkL3NvWWV6YkozcVhLb3ZDVFJGQkZ3bGZUSU52N2IyZEFlSWp2M0JsamdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxOTkwNTMzCWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKTzZZNFJJWWY3SkxZQjVpRUR2YjIzMUQva08xMVlPSzZrVzFRQUtLVWt3SVpvdnpVajB2MGlOQVl3djFmVDVLL3VZeUJDeWFCanE4c2piV1NTVnBHQ0E9PQo=",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.4/MC-Vector.app.tar.gz"
     },
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.3/"
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.4/"
     }
   }
 }
