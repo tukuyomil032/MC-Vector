@@ -25,7 +25,7 @@ jobs:
       - name: Run update script
         id: update
         run: |
-          node scripts/update-versions.js > update-output.json
+          node scripts/update-versions.mjs > update-output.json
           cat update-output.json
         working-directory: ${{ github.workspace }}
 
