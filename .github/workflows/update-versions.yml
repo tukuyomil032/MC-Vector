@@ -1,0 +1,52 @@
+name: Update Minecraft versions
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run update script
+        id: update
+        run: |
+          node scripts/update-versions.js > update-output.json
+          cat update-output.json
+        working-directory: ${{ github.workspace }}
+
+      - name: Parse update output
+        id: parse
+        run: |
+          DETECTED=$(cat update-output.json | jq -r '.detected | join("+")')
+          CHANGED=$(cat update-output.json | jq -r '.changed')
+          # sanitize detected string for branch name (replace / and spaces)
+          DETECTED_SANITIZED=${DETECTED//\//-}
+          DETECTED_SANITIZED=${DETECTED_SANITIZED// /-}
+          echo "detected=$DETECTED_SANITIZED" >> $GITHUB_OUTPUT
+          echo "changed=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request if changed
+        if: steps.parse.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update Minecraft version list'
+          branch: ver-up/${{ steps.parse.outputs.detected }}/${{ github.run_started_at && format('{0}', github.run_started_at) || '' }}
+          title: 'chore: update Minecraft versions'
+          body: 'Automated update of Minecraft version list from Mojang manifest'
+          labels: automated
