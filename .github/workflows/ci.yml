@@ -24,9 +24,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Biome — Version
-        run: biome --version
+        run: pnpm dlx biome --version
       - name: Biome — Check (lint & format)
-        run: biome check --max-diagnostics 200
+        run: pnpm dlx biome check --max-diagnostics 200
 
   build-check:
     runs-on: ${{ matrix.platform }}
