@@ -22,10 +22,14 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install yamllint
-        run: pip install yamllint
+        run: pip install 'yamllint==1.35.1'
       - name: YAML Lint
         run: pnpm yamllint
       - name: Biome — Version

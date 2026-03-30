@@ -91,6 +91,10 @@ Before you start developing, make sure you have the following installed:
 - **pnpm** (Package manager)
 - **Rust** (v1.77.2 or later)
 - **Cargo** (Included with Rust)
+- **yamllint** (Python-based YAML linter, required for pre-commit hooks)
+  ```bash
+  pip install 'yamllint==1.35.1'
+  ```
 
 ### Installation
 
@@ -145,6 +149,11 @@ $ pnpm tauri build
 5. **Install recommended Extensions**
    ```bash
    $ pnpm install:extensions
+   ```
+
+6. **Lint YAML files**
+   ```bash
+   $ pnpm yamllint
    ```
 
 This will generate platform-specific installers in `src-tauri/target/release/bundle/`.
