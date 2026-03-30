@@ -15,6 +15,8 @@ type AnsiSegment = {
   style: AnsiStyle;
 };
 
+type LogLevelFilter = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
+
 const ANSI_COLOR_MAP: Record<string, string> = {
   '30': '#000000',
   '31': '#ef4444',
@@ -131,6 +133,21 @@ const countMatches = (text: string, query: string): number => {
   return count;
 };
 
+const detectLogLevel = (text: string): Exclude<LogLevelFilter, 'ALL'> => {
+  const upper = text.toUpperCase();
+
+  if (upper.includes('FATAL')) {
+    return 'FATAL';
+  }
+  if (upper.includes('ERROR') || upper.includes('SEVERE')) {
+    return 'ERROR';
+  }
+  if (upper.includes('WARN') || upper.includes('WARNING')) {
+    return 'WARN';
+  }
+  return 'INFO';
+};
+
 const getSeverityStyle = (text: string): AnsiStyle | undefined => {
   const upper = text.toUpperCase();
   if (upper.includes('ERROR')) {
@@ -158,8 +175,23 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+  const [logFilter, setLogFilter] = useState<LogLevelFilter>('ALL');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const matchRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+
+  const visibleLogs = useMemo(() => {
+    const parsedLogs = logs.map((line, originalIndex) => ({
+      line,
+      originalIndex,
+      level: detectLogLevel(stripAnsiCodes(line)),
+    }));
+
+    if (logFilter === 'ALL') {
+      return parsedLogs;
+    }
+
+    return parsedLogs.filter((entry) => entry.level === logFilter);
+  }, [logs, logFilter]);
 
   const normalizedSearchQuery = searchQuery.trim();
   const lowerSearchQuery = normalizedSearchQuery.toLowerCase();
@@ -168,10 +200,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
       return 0;
     }
 
-    return logs.reduce((total, line) => {
-      return total + countMatches(stripAnsiCodes(line), normalizedSearchQuery);
+    return visibleLogs.reduce((total, entry) => {
+      return total + countMatches(stripAnsiCodes(entry.line), normalizedSearchQuery);
     }, 0);
-  }, [logs, normalizedSearchQuery]);
+  }, [visibleLogs, normalizedSearchQuery]);
 
   const openSearch = () => {
     setIsSearchOpen(true);
@@ -205,7 +237,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
     if (autoScroll && !(isSearchOpen && normalizedSearchQuery)) {
       logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs, autoScroll, isSearchOpen, normalizedSearchQuery]);
+  }, [visibleLogs, autoScroll, isSearchOpen, normalizedSearchQuery]);
 
   useEffect(() => {
     const onWindowKeyDown = (event: KeyboardEvent) => {
@@ -241,7 +273,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
     const activeElement = matchRefs.current[`m-${activeMatchIndex}`];
     activeElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [activeMatchIndex, totalMatches, isSearchOpen, normalizedSearchQuery, logs.length]);
+  }, [activeMatchIndex, totalMatches, isSearchOpen, normalizedSearchQuery, visibleLogs.length]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -397,9 +429,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         {(() => {
           let renderedMatchIndex = -1;
 
-          return logs.map((log: string, index: number) => (
-            <div key={index} className="break-words">
+          return visibleLogs.map((entry, index: number) => (
+            <div key={`${entry.originalIndex}-${index}`} className="break-words">
               {(() => {
+                const log = entry.line;
                 const severityStyle = getSeverityStyle(log);
                 return ansiToSegments(log).map((seg, i) => {
                   const style = { ...seg.style } as AnsiStyle;
@@ -460,7 +493,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
         <div ref={logEndRef} />
 
-        {logs.length === 0 && <div className="console-view__empty-log">Waiting for logs...</div>}
+        {visibleLogs.length === 0 && (
+          <div className="console-view__empty-log">
+            {logFilter === 'ALL' ? 'Waiting for logs...' : `${logFilter} logs not found.`}
+          </div>
+        )}
       </div>
 
       <div className="console-view__command-bar">
@@ -479,6 +516,24 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         <button onClick={handleSend} className="console-view__send-button">
           Send
         </button>
+
+        <div className="console-view__filter-wrap">
+          <span className="console-view__filter-label">Level</span>
+          <select
+            className="console-view__filter-select"
+            value={logFilter}
+            onChange={(event) => {
+              setLogFilter(event.target.value as LogLevelFilter);
+              setActiveMatchIndex(0);
+            }}
+          >
+            <option value="ALL">ALL</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+            <option value="FATAL">FATAL</option>
+          </select>
+        </div>
       </div>
     </div>
   );

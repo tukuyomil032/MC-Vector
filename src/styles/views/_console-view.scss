@@ -138,6 +138,22 @@
     background-color: #263041;
   }
 
+  .console-view__filter-wrap {
+    @apply ml-3 flex items-center gap-2;
+  }
+
+  .console-view__filter-label {
+    @apply text-[11px] uppercase tracking-wider font-semibold;
+    color: #8b9bb4;
+  }
+
+  .console-view__filter-select {
+    @apply rounded-md border text-xs px-2 py-1.5 outline-none;
+    background-color: #121214;
+    border-color: #3f3f46;
+    color: #f3f4f6;
+  }
+
   .console-view__command-input {
     @apply flex-1 rounded-md text-white text-sm py-2.5 px-3 outline-none font-mono border;
     background-color: #18181b;
