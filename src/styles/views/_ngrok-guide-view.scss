@@ -69,13 +69,13 @@
 
   .ngrok-guide-view__step-badge {
     @apply absolute -top-2.5 left-5 px-2.5 py-0.5 rounded-xl text-xs font-bold;
-    background: linear-gradient(125deg, rgba(14, 165, 233, 0.95), rgba(6, 182, 212, 0.9));
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 22px rgba(14, 165, 233, 0.24);
   }
 
   .ngrok-guide-view__cta-btn {
     @apply mt-2;
-    background: linear-gradient(125deg, rgba(14, 165, 233, 0.95), rgba(6, 182, 212, 0.9));
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 20px rgba(14, 165, 233, 0.22);
   }
 

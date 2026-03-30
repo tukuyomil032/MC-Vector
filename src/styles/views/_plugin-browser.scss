@@ -23,7 +23,8 @@
 
   .plugin-browser__hero-chip {
     @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-cyan-300/30 text-cyan-200;
-    background: linear-gradient(120deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.1));
+    background: linear-gradient(120deg, var(--mv-accent-start), var(--mv-accent-end));
+    opacity: 0.85;
   }
 
   .plugin-browser__platform-grid {
@@ -43,7 +44,7 @@
 
   .plugin-browser__platform-chip.is-active {
     @apply text-white border-cyan-300/70;
-    background: linear-gradient(120deg, rgba(6, 182, 212, 0.3), rgba(16, 185, 129, 0.2));
+    background: linear-gradient(120deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 24px rgba(34, 211, 238, 0.24);
   }
 
@@ -78,7 +79,7 @@
 
   .plugin-browser__search-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all disabled:opacity-60;
-    background: linear-gradient(120deg, #0ea5e9, #06b6d4);
+    background: linear-gradient(120deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 20px rgba(14, 165, 233, 0.28);
   }
 
@@ -94,7 +95,7 @@
 
   .plugin-browser__unsupported-btn {
     @apply inline-flex items-center gap-2 mt-3 rounded-lg px-4 py-2.5 text-sm font-semibold text-white;
-    background: linear-gradient(125deg, rgba(14, 165, 233, 0.95), rgba(56, 189, 248, 0.8));
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
   }
 
   .plugin-browser__unsupported-note {
@@ -194,7 +195,7 @@
 
   .plugin-browser__install-btn {
     @apply inline-flex items-center gap-1.5 py-2 px-3 text-xs rounded-lg text-white font-semibold transition-all;
-    background: linear-gradient(125deg, rgba(14, 165, 233, 0.95), rgba(6, 182, 212, 0.9));
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2);
   }
 
@@ -204,7 +205,7 @@
   }
 
   .plugin-browser__install-btn--external {
-    background: linear-gradient(130deg, rgba(245, 158, 11, 0.95), rgba(249, 115, 22, 0.9));
+    background: linear-gradient(130deg, var(--mv-warn-start), var(--mv-warn-end));
     box-shadow: 0 8px 20px rgba(249, 115, 22, 0.2);
   }
 

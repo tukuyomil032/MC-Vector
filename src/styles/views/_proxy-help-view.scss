@@ -69,7 +69,7 @@
 
   .proxy-help-view__step-badge {
     @apply absolute -top-3 left-5 text-white px-3 py-1 rounded-xl text-sm font-bold;
-    background: linear-gradient(125deg, rgba(14, 165, 233, 0.95), rgba(6, 182, 212, 0.9));
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 22px rgba(14, 165, 233, 0.24);
   }
 
@@ -97,7 +97,7 @@
 
   .proxy-help-view__cta-btn {
     @apply text-sm py-1.5 px-4;
-    background: linear-gradient(125deg, rgba(14, 165, 233, 0.95), rgba(6, 182, 212, 0.9));
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 20px rgba(14, 165, 233, 0.22);
   }
 

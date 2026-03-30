@@ -1,11 +1,27 @@
 @layer components {
   :root {
     --mv-font-display: 'Avenir Next', 'Noto Sans JP', 'Segoe UI', sans-serif;
+    --mv-view-glow-a: rgba(74, 222, 128, 0.1);
+    --mv-view-glow-b: rgba(56, 189, 248, 0.15);
+    --mv-panel-start: rgba(24, 24, 27, 0.94);
+    --mv-panel-end: rgba(17, 24, 39, 0.88);
+    --mv-panel-alt-start: rgba(24, 24, 27, 0.95);
+    --mv-panel-alt-end: rgba(31, 41, 55, 0.84);
+    --mv-accent-start: #0ea5e9;
+    --mv-accent-end: #06b6d4;
+    --mv-success-start: #22c55e;
+    --mv-success-end: #10b981;
+    --mv-warn-start: #f59e0b;
+    --mv-warn-end: #f97316;
     --mv-view-bg:
-      radial-gradient(circle at 0% 0%, rgba(74, 222, 128, 0.1), transparent 42%),
-      radial-gradient(circle at 95% 100%, rgba(56, 189, 248, 0.15), transparent 50%);
-    --mv-panel-bg: linear-gradient(135deg, rgba(24, 24, 27, 0.94), rgba(17, 24, 39, 0.88));
-    --mv-panel-bg-alt: linear-gradient(140deg, rgba(24, 24, 27, 0.95), rgba(31, 41, 55, 0.84));
+      radial-gradient(circle at 0% 0%, var(--mv-view-glow-a), transparent 42%),
+      radial-gradient(circle at 95% 100%, var(--mv-view-glow-b), transparent 50%);
+    --mv-panel-bg: linear-gradient(135deg, var(--mv-panel-start), var(--mv-panel-end));
+    --mv-panel-bg-alt: linear-gradient(
+      140deg,
+      var(--mv-panel-alt-start),
+      var(--mv-panel-alt-end)
+    );
     --mv-border-soft: rgba(82, 82, 91, 0.72);
     --mv-border-strong: rgba(34, 211, 238, 0.42);
     --mv-shadow-panel: 0 18px 45px rgba(2, 6, 23, 0.25);
@@ -41,13 +57,25 @@
   }
 
   .btn-primary {
-    @apply bg-accent text-white px-4 py-2 rounded-md font-bold transition-colors;
-    @apply hover:bg-accent-hover;
+    @apply text-white px-4 py-2 rounded-md font-bold transition-all;
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.22);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
   }
 
   .btn-secondary {
-    @apply bg-white/5 border border-border-color text-text-secondary px-4 py-2 rounded-md text-sm transition-colors;
-    @apply hover:bg-white/10 hover:text-text-primary;
+    @apply border text-text-secondary px-4 py-2 rounded-md text-sm transition-colors;
+    @apply hover:text-text-primary;
+    border-color: var(--mv-border-soft);
+    background: rgba(39, 39, 42, 0.45);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(63, 63, 70, 0.45);
   }
 
   .btn-start {
