@@ -14,15 +14,15 @@ User-requested set:
 | #10 | インスタンスグループ管理 | pending | Phase 4 |
 | #11 | ログ検索 | done | Ctrl/Cmd+F + match nav |
 | #12 | ログフィルタ | done | ALL/INFO/WARN/ERROR/FATAL |
-| #13 | ログ色分け | pending | can leverage level tagging |
-| #14 | ログ保存 | pending | export visible/filtered logs |
+| #13 | ログ色分け | done | severity colors applied in console output |
+| #14 | ログ保存 | done | save visible logs to .log/.txt |
 | #17 | コマンド履歴 | done | up/down + draft restore |
-| #18 | TPSリアルタイムグラフ | pending | extend dashboard metrics |
-| #19 | CPU使用率グラフ | pending-partial | graph exists, needs 60s target alignment |
+| #18 | TPSリアルタイムグラフ | done | dashboard chart + log parser + Paper polling |
+| #19 | CPU使用率グラフ | done | aligned to rolling 60s metric window |
 | #29 | 依存関係チェック | pending | plugin adapter phase |
 | #30 | 有効/無効トグル | pending | jar <-> jar.disabled |
 | #32 | バージョン互換チェック | pending | compare plugin support vs server version |
-| #36 | ドラッグ&ドロップアップロード | pending | Files view enhancement |
+| #36 | ドラッグ&ドロップアップロード | done | external file drop upload in Files view |
 | #39 | 自動バックアップスケジュール | done-partial | interval scheduler implemented; time-based policy pending |
 | #40 | 差分バックアップ | pending | Rust backup index/diff design required |
 | #44 | バックアップタグ | pending | metadata file + UI |
@@ -40,18 +40,18 @@ User-requested set:
 
 ## 3. Next Implementation Order
 
-### Phase A (Stability + UX)
+### Phase A (Stability + UX) - Completed
 
 1. #13 ログ色分け
 2. #14 ログ保存
 3. #36 ドラッグ&ドロップアップロード
 
-### Phase B (Monitoring)
+### Phase B (Monitoring) - Completed
 
 1. #18 TPSリアルタイムグラフ
 2. #19 CPUグラフの仕様合わせ（60秒ウィンドウ + 表示整合）
 
-### Phase C (Plugin Depth)
+### Phase C (Plugin Depth) - Next
 
 1. #29 依存関係チェック
 2. #30 有効/無効トグル

@@ -29,11 +29,12 @@
   }
 
   .dashboard-view__chart-grid {
-    @apply grid grid-cols-2 gap-5 h-[300px];
+    @apply grid gap-5;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
   .dashboard-view__chart-card {
-    @apply p-4 rounded-lg border border-border-color flex flex-col;
+    @apply p-4 rounded-lg border border-border-color flex flex-col min-h-[300px];
     background-color: #1e1e24;
   }
 
@@ -43,5 +44,9 @@
 
   .dashboard-view__chart-body {
     @apply flex-1;
+  }
+
+  .dashboard-view__chart-empty {
+    @apply h-full flex items-center justify-center text-center text-sm text-zinc-400 px-4;
   }
 }
