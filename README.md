@@ -156,7 +156,7 @@ MC-Vector/
 ├── src/                              # Frontend source code
 │   ├── App.tsx                       # Main application component
 │   ├── main.tsx                      # React entry point
-│   ├── index.css                     # Global styles
+│   ├── index.scss                    # Global styles
 │   ├── vite-env.d.ts                 # Vite type definitions
 │   ├── assets/                       # Static assets
 │   │   └── icons/                    # Icon files

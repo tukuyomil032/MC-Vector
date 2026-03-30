@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import './index.css';
+import './index.scss';
 import iconBackups from './assets/icons/backups.svg';
 import iconConsole from './assets/icons/console.svg';
 import iconDashboard from './assets/icons/dashboard.svg';
