@@ -1,4 +1,5 @@
 import Editor from '@monaco-editor/react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask } from '@tauri-apps/plugin-dialog';
 import type * as React from 'react';
 import { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import {
   deleteItem,
   extractItem,
   importFilesDialog,
+  importFilesFromPaths,
   listFilesWithMetadata,
   moveItem,
   openInFinder,
@@ -47,6 +49,7 @@ export default function FilesView({ server }: Props) {
   const [fileContent, setFileContent] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExternalDropActive, setIsExternalDropActive] = useState(false);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -73,6 +76,54 @@ export default function FilesView({ server }: Props) {
   useEffect(() => {
     loadFiles(currentPath);
   }, [currentPath]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    getCurrentWindow()
+      .onDragDropEvent(async (event) => {
+        const payload = event.payload;
+
+        if (payload.type === 'enter' || payload.type === 'over') {
+          setIsExternalDropActive(true);
+          return;
+        }
+
+        if (payload.type === 'leave') {
+          setIsExternalDropActive(false);
+          return;
+        }
+
+        if (payload.type !== 'drop') {
+          return;
+        }
+
+        setIsExternalDropActive(false);
+
+        if (payload.paths.length === 0) {
+          return;
+        }
+
+        try {
+          const imported = await importFilesFromPaths(payload.paths, currentPath);
+          if (imported.length > 0) {
+            showToast(`${imported.length}件のファイルをアップロードしました`, 'success');
+            await loadFiles(currentPath);
+          }
+        } catch (error) {
+          console.error(error);
+          showToast('ドロップしたファイルのアップロードに失敗しました', 'error');
+        }
+      })
+      .then((dispose) => {
+        unlisten = dispose;
+      });
+
+    return () => {
+      setIsExternalDropActive(false);
+      unlisten?.();
+    };
+  }, [currentPath, showToast]);
 
   const loadFiles = async (path: string) => {
     try {
@@ -480,7 +531,16 @@ export default function FilesView({ server }: Props) {
       </div>
 
       {/* ファイルリスト表示エリア */}
-      <div className="files-view__list-pane" onContextMenu={(e) => handleContextMenu(e, null)}>
+      <div
+        className={`files-view__list-pane ${isExternalDropActive ? 'is-drop-active' : ''}`}
+        onContextMenu={(e) => handleContextMenu(e, null)}
+      >
+        {isExternalDropActive && (
+          <div className="files-view__drop-hint">
+            ここにドロップして現在のフォルダへアップロード
+          </div>
+        )}
+
         <div className="flex flex-col gap-0">
           {files.map((file) => (
             <div

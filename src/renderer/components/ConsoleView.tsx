@@ -1,8 +1,11 @@
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import { useToast } from './ToastProvider';
 
 type AnsiStyle = {
   color?: string;
@@ -148,15 +151,17 @@ const detectLogLevel = (text: string): Exclude<LogLevelFilter, 'ALL'> => {
   return 'INFO';
 };
 
-const getSeverityStyle = (text: string): AnsiStyle | undefined => {
-  const upper = text.toUpperCase();
-  if (upper.includes('ERROR')) {
-    return { color: '#ef4444', fontWeight: 700 };
+const getSeverityStyle = (level: Exclude<LogLevelFilter, 'ALL'>): AnsiStyle => {
+  switch (level) {
+    case 'FATAL':
+      return { color: '#f43f5e', fontWeight: 700 };
+    case 'ERROR':
+      return { color: '#ef4444', fontWeight: 700 };
+    case 'WARN':
+      return { color: '#f59e0b', fontWeight: 700 };
+    default:
+      return { color: '#d1d5db' };
   }
-  if (upper.includes('WARN')) {
-    return { color: '#f59e0b', fontWeight: 700 };
-  }
-  return undefined;
 };
 
 interface ConsoleViewProps {
@@ -166,6 +171,7 @@ interface ConsoleViewProps {
 }
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
+  const { showToast } = useToast();
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyCursor, setHistoryCursor] = useState(-1);
@@ -383,6 +389,46 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
     navigator.clipboard.writeText(displayAddress);
   };
 
+  const handleExportLogs = async () => {
+    if (visibleLogs.length === 0) {
+      showToast('保存対象のログがありません', 'info');
+      return;
+    }
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const sec = String(now.getSeconds()).padStart(2, '0');
+    const defaultFileName = `${server.name}-console-${yyyy}${mm}${dd}-${hh}${min}${sec}.log`;
+
+    try {
+      const targetPath = await save({
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'Log File', extensions: ['log'] },
+          { name: 'Text File', extensions: ['txt'] },
+        ],
+      });
+
+      if (!targetPath) {
+        return;
+      }
+
+      const output = visibleLogs
+        .map((entry) => stripAnsiCodes(entry.line).replace(/\r\n/g, '\n'))
+        .join('\n');
+
+      await writeTextFile(targetPath, output);
+      showToast('ログを保存しました', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast('ログの保存に失敗しました', 'error');
+    }
+  };
+
   const formatMemoryDetailed = (usageBytes: number, allocatedMb: number) => {
     const usageMb = (usageBytes / 1024 / 1024).toFixed(0);
     return `${usageMb} / ${allocatedMb} MB`;
@@ -489,10 +535,13 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
           let renderedMatchIndex = -1;
 
           return visibleLogs.map((entry, index: number) => (
-            <div key={`${entry.originalIndex}-${index}`} className="break-words">
+            <div
+              key={`${entry.originalIndex}-${index}`}
+              className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()} break-words`}
+            >
               {(() => {
                 const log = entry.line;
-                const severityStyle = getSeverityStyle(log);
+                const severityStyle = getSeverityStyle(entry.level);
                 return ansiToSegments(log).map((seg, i) => {
                   const style = { ...seg.style } as AnsiStyle;
                   if (severityStyle) {
@@ -562,6 +611,13 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
       <div className="console-view__command-bar">
         <button type="button" className="console-view__find-button" onClick={openSearch}>
           Find
+        </button>
+        <button
+          type="button"
+          className="console-view__save-button"
+          onClick={() => void handleExportLogs()}
+        >
+          Save Logs
         </button>
         <span className="console-view__command-prefix">&gt;</span>
         <input

@@ -48,8 +48,20 @@
   }
 
   .files-view__list-pane {
-    @apply flex-1 overflow-y-auto p-0;
+    @apply flex-1 overflow-y-auto p-0 relative;
     background-color: #1e1e1e;
+  }
+
+  .files-view__list-pane.is-drop-active {
+    background-color: rgba(20, 83, 45, 0.16);
+  }
+
+  .files-view__drop-hint {
+    @apply absolute inset-4 rounded-lg border-2 border-dashed text-sm font-semibold flex items-center justify-center pointer-events-none;
+    border-color: rgba(52, 211, 153, 0.65);
+    color: #bbf7d0;
+    background: rgba(6, 78, 59, 0.32);
+    z-index: 4;
   }
 
   .files-view__row {

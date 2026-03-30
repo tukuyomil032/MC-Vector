@@ -63,6 +63,30 @@
     color: #d4d4d4;
   }
 
+  .console-view__log-line {
+    @apply pl-2.5 border-l-2 mb-0.5;
+    border-left-color: transparent;
+  }
+
+  .console-view__log-line--info {
+    border-left-color: rgba(148, 163, 184, 0.4);
+  }
+
+  .console-view__log-line--warn {
+    border-left-color: rgba(245, 158, 11, 0.55);
+    background-color: rgba(120, 53, 15, 0.12);
+  }
+
+  .console-view__log-line--error {
+    border-left-color: rgba(239, 68, 68, 0.65);
+    background-color: rgba(127, 29, 29, 0.12);
+  }
+
+  .console-view__log-line--fatal {
+    border-left-color: rgba(244, 63, 94, 0.78);
+    background-color: rgba(136, 19, 55, 0.2);
+  }
+
   .console-view__search-bar {
     @apply h-[46px] border-y flex items-center gap-2 px-4;
     background-color: #1a1b20;
@@ -136,6 +160,17 @@
 
   .console-view__find-button:hover {
     background-color: #263041;
+  }
+
+  .console-view__save-button {
+    @apply rounded-md border px-2.5 py-1.5 text-xs font-semibold mr-3 transition-colors;
+    background-color: #0f3d2f;
+    border-color: #14532d;
+    color: #d1fae5;
+  }
+
+  .console-view__save-button:hover {
+    background-color: #13553f;
   }
 
   .console-view__filter-wrap {
