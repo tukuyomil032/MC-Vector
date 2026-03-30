@@ -3,15 +3,17 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask } from '@tauri-apps/plugin-dialog';
 import type * as React from 'react';
 import { useEffect, useState } from 'react';
-import iconFile from '../../assets/icons/file.svg';
-import iconFiles from '../../assets/icons/files.svg';
-import iconFolder from '../../assets/icons/folder.svg';
-import iconImport from '../../assets/icons/import.svg';
-import iconMove from '../../assets/icons/move.svg';
-import iconOpenLocation from '../../assets/icons/open-folder.svg';
-import iconTrash from '../../assets/icons/trash.svg';
-import iconUnzip from '../../assets/icons/unzip.svg';
-import iconZip from '../../assets/icons/zip.svg';
+import {
+  iconFile,
+  iconFiles,
+  iconFolder,
+  iconImport,
+  iconMove,
+  iconOpenFolder,
+  iconTrash,
+  iconUnzip,
+  iconZip,
+} from '../../assets/icons';
 import { getServerRoot } from '../../lib/config-commands';
 import {
   compressItem,
@@ -501,7 +503,7 @@ export default function FilesView({ server }: Props) {
           onClick={handleOpenExplorer}
           title="エクスプローラーで開く"
         >
-          <img src={iconOpenLocation} className="w-4" alt="Open" />
+          <img src={iconOpenFolder} className="w-4" alt="Open" />
         </button>
         {selectedFiles.length > 0 && (
           <>

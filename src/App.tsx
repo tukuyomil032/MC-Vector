@@ -2,16 +2,18 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
-import iconBackups from './assets/icons/backups.svg';
-import iconConsole from './assets/icons/console.svg';
-import iconDashboard from './assets/icons/dashboard.svg';
-import iconFiles from './assets/icons/files.svg';
-import iconMenu from './assets/icons/menu.svg';
-import iconPlugins from './assets/icons/plugins.svg';
-import iconProperties from './assets/icons/properties.svg';
-import iconProxy from './assets/icons/proxy.svg';
-import iconSettings from './assets/icons/settings.svg';
-import iconUsers from './assets/icons/users.svg';
+import {
+  iconBackups,
+  iconConsole,
+  iconDashboard,
+  iconFiles,
+  iconMenu,
+  iconPlugins,
+  iconProperties,
+  iconProxy,
+  iconSettings,
+  iconUsers,
+} from './assets/icons';
 import { createBackup } from './lib/backup-commands';
 import { getAppSettings, onConfigChange } from './lib/config-commands';
 import { readFileContent, saveFileContent } from './lib/file-commands';
