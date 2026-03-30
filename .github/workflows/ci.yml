@@ -1,3 +1,4 @@
+---
 name: CI
 
 on:
@@ -23,6 +24,10 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: YAML Lint
+        run: pnpm yamllint
       - name: Biome — Version
         run: pnpm dlx biome --version
       - name: Biome — Check (lint & format)
