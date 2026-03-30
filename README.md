@@ -179,7 +179,12 @@ MC-Vector/
 │   │       ├── _dashboard-view.scss  # Dashboard view styles
 │   │       ├── _java-manager-modal.scss # Java manager modal styles
 │   │       ├── _plugin-browser.scss  # Plugin browser styles
-│   │       └── _settings-window.scss # App settings styles
+│   │       ├── _settings-window.scss # App settings styles
+│   │       ├── _advanced-settings-window.scss # Advanced server.properties view styles
+│   │       ├── _properties-view.scss # Basic properties view styles
+│   │       ├── _server-settings.scss # Server general settings styles
+│   │       ├── _users-view.scss      # User management view styles
+│   │       └── _proxy-help-view.scss # Proxy guide view styles
 │   ├── lib/                          # Frontend API layer
 │   │   ├── backup-commands.ts        # Backup operations
 │   │   ├── config-commands.ts        # Configuration management

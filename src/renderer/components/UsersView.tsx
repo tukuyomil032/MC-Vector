@@ -202,10 +202,10 @@ export default function UsersView({ server }: Props) {
   };
 
   return (
-    <div className="h-full p-5 flex flex-col">
-      <h2 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">User Management</h2>
+    <div className="users-view">
+      <h2 className="users-view__title">User Management</h2>
 
-      <div className="grid grid-cols-2 grid-rows-2 gap-5 flex-1 min-h-0">
+      <div className="users-view__grid">
         <UserListCard
           title="Whitelist"
           data={whitelist}
@@ -261,37 +261,34 @@ function UserListCard({
   };
 
   return (
-    <div className="bg-[#252526] rounded-lg border border-zinc-700 flex flex-col overflow-hidden">
-      <div className="px-4 py-2.5 bg-zinc-800 font-bold border-b border-zinc-700 flex justify-between items-center">
+    <div className="users-view__card">
+      <div className="users-view__card-header">
         {title}
-        <span className="text-xs text-zinc-400 font-normal">{data.length} entries</span>
+        <span className="users-view__count">{data.length} entries</span>
       </div>
 
       {/* リスト表示エリア */}
-      <div className="flex-1 overflow-y-auto p-2.5">
+      <div className="users-view__list">
         {data.length === 0 ? (
-          <div className="text-zinc-600 text-center mt-5">Empty</div>
+          <div className="users-view__empty">Empty</div>
         ) : (
           data.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between p-2 mb-1.5 bg-[#2b2b2b] rounded"
-            >
-              <div className="flex items-center gap-2.5">
+            <div key={idx} className="users-view__item">
+              <div className="users-view__item-main">
                 {/* ★ Head Image */}
                 {type !== 'banned-ips' && (
                   <img
                     src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
                     alt=""
-                    className="rounded w-6 h-6"
+                    className="users-view__avatar"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
                         'https://minotar.net/avatar/MHF_Steve/24';
                     }}
                   />
                 )}
-                <div>
-                  <div className="font-bold text-sm">
+                <div className="users-view__item-meta">
+                  <div className="users-view__item-name">
                     {type === 'banned-ips' ? item.ip : item.name}
                   </div>
                   {/* Additional Info */}
@@ -300,7 +297,7 @@ function UserListCard({
                 </div>
               </div>
               <button
-                className="btn-stop py-0.5 px-2 text-xs"
+                className="btn-stop users-view__remove-btn"
                 onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
               >
                 Remove
@@ -311,16 +308,16 @@ function UserListCard({
       </div>
 
       {/* 追加フォーム */}
-      <div className="p-2.5 border-t border-zinc-700 flex gap-1.5">
+      <div className="users-view__form">
         <input
           type="text"
-          className="input-field flex-1 py-1.5"
+          className="input-field users-view__input"
           placeholder={type === 'banned-ips' ? 'IP Address' : 'Player Name'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
         />
-        <button className="btn-primary py-1.5 px-3" onClick={handleAddClick}>
+        <button className="btn-primary users-view__add-btn" onClick={handleAddClick}>
           Add
         </button>
       </div>

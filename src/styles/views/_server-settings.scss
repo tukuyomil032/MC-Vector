@@ -1,0 +1,186 @@
+@layer components {
+  .server-settings {
+    @apply h-full overflow-y-auto p-10 box-border block;
+    color: #ecf0f1;
+  }
+
+  .server-settings__inner {
+    @apply max-w-4xl pb-12;
+  }
+
+  .server-settings__title {
+    @apply mt-0 mb-8 border-b border-zinc-700 pb-2.5;
+  }
+
+  .server-settings__panel {
+    @apply mb-8 p-6 rounded-lg border border-border-color;
+    background-color: #252526;
+  }
+
+  .server-settings__panel-title {
+    @apply mt-0 mb-5 text-zinc-300 text-lg;
+  }
+
+  .server-settings__field-block {
+    @apply mb-5 flex flex-col gap-2;
+  }
+
+  .server-settings__label {
+    @apply block mb-2 text-zinc-400;
+  }
+
+  .server-settings__row {
+    @apply flex gap-5 mb-5;
+  }
+
+  .server-settings__row--spaced {
+    @apply mb-8;
+  }
+
+  .server-settings__col {
+    @apply flex-1;
+  }
+
+  .server-settings__java-row {
+    @apply flex gap-2.5;
+  }
+
+  .server-settings__path-input {
+    @apply flex-1 text-zinc-500;
+    background-color: #222;
+  }
+
+  .server-settings__actions {
+    @apply text-right mt-5;
+  }
+
+  .server-settings__save-btn {
+    @apply py-2.5 px-6 text-sm;
+  }
+
+  .server-settings__ngrok-panel {
+    @apply p-6 rounded-lg border border-zinc-700;
+    background-color: #252526;
+  }
+
+  .server-settings__ngrok-panel.is-active {
+    @apply border-accent;
+  }
+
+  .server-settings__ngrok-header {
+    @apply flex justify-between items-center mb-4 flex-wrap gap-4;
+  }
+
+  .server-settings__ngrok-title-wrap {
+    min-width: 200px;
+  }
+
+  .server-settings__ngrok-title {
+    @apply m-0 flex items-center gap-2.5 text-lg text-zinc-300;
+  }
+
+  .server-settings__online-badge {
+    @apply text-xs bg-success text-white px-2 py-0.5 rounded;
+  }
+
+  .server-settings__ngrok-description {
+    @apply text-zinc-400 text-sm mt-1.5;
+  }
+
+  .server-settings__ngrok-controls {
+    @apply flex items-center gap-2.5;
+  }
+
+  .server-settings__ngrok-btn {
+    @apply text-xs px-3 py-1.5;
+  }
+
+  .server-settings__ngrok-btn--with-icon {
+    @apply flex items-center gap-1.5;
+  }
+
+  .server-settings__ngrok-switch {
+    @apply relative inline-block w-12 h-7 shrink-0;
+  }
+
+  .server-settings__ngrok-switch-input {
+    @apply opacity-0 w-0 h-0;
+  }
+
+  .server-settings__ngrok-switch-track {
+    @apply absolute cursor-pointer top-0 left-0 right-0 bottom-0 transition-all rounded-full;
+  }
+
+  .server-settings__ngrok-switch-track.is-on {
+    @apply bg-accent;
+  }
+
+  .server-settings__ngrok-switch-track.is-off {
+    @apply bg-zinc-700;
+  }
+
+  .server-settings__ngrok-switch-thumb {
+    @apply absolute h-5 w-5 left-0.5 bottom-0.5 bg-white transition-all rounded-full;
+  }
+
+  .server-settings__ngrok-switch-thumb.is-on {
+    transform: translateX(1.5rem);
+  }
+
+  .server-settings__address-card {
+    @apply p-4 rounded-md mb-4;
+    background-color: #1e1e1e;
+  }
+
+  .server-settings__address-label {
+    @apply text-sm text-zinc-500 mb-1.5;
+  }
+
+  .server-settings__address-row {
+    @apply flex gap-2.5 items-center;
+  }
+
+  .server-settings__address-code {
+    @apply text-xl text-white font-mono bg-zinc-800 px-2.5 py-1.5 rounded;
+  }
+
+  .server-settings__copy-btn {
+    @apply py-1.5 px-2.5;
+  }
+
+  .server-settings__log-panel {
+    @apply text-zinc-400 p-2.5 rounded h-[150px] overflow-y-auto text-xs font-mono border border-zinc-800;
+    background-color: #111;
+  }
+
+  .server-settings__log-line {
+    @apply border-b border-zinc-900 pb-0.5 mb-0.5;
+  }
+
+  .server-settings__token-overlay {
+    @apply fixed inset-0 bg-black/70 flex justify-center items-center;
+    z-index: 10000;
+  }
+
+  .server-settings__token-panel {
+    width: 450px;
+    background-color: #2c2c2c;
+    border-color: #3f3f46;
+  }
+
+  .server-settings__token-title {
+    @apply mt-0;
+  }
+
+  .server-settings__token-text {
+    @apply text-zinc-400 text-sm;
+  }
+
+  .server-settings__token-actions {
+    @apply flex justify-end;
+  }
+
+  .server-settings__token-cancel {
+    @apply mr-2.5;
+  }
+}

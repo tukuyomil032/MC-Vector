@@ -1,0 +1,67 @@
+@layer components {
+  .users-view {
+    @apply h-full p-5 flex flex-col;
+  }
+
+  .users-view__title {
+    @apply mt-0 mb-5 border-b border-zinc-700 pb-2.5;
+  }
+
+  .users-view__grid {
+    @apply grid grid-cols-2 grid-rows-2 gap-5 flex-1 min-h-0;
+  }
+
+  .users-view__card {
+    @apply rounded-lg border border-zinc-700 flex flex-col overflow-hidden;
+    background-color: #252526;
+  }
+
+  .users-view__card-header {
+    @apply px-4 py-2.5 bg-zinc-800 font-bold border-b border-zinc-700 flex justify-between items-center;
+  }
+
+  .users-view__count {
+    @apply text-xs text-zinc-400 font-normal;
+  }
+
+  .users-view__list {
+    @apply flex-1 overflow-y-auto p-2.5;
+  }
+
+  .users-view__empty {
+    @apply text-zinc-600 text-center mt-5;
+  }
+
+  .users-view__item {
+    @apply flex items-center justify-between p-2 mb-1.5 rounded;
+    background-color: #2b2b2b;
+  }
+
+  .users-view__item-main {
+    @apply flex items-center gap-2.5;
+  }
+
+  .users-view__avatar {
+    @apply rounded w-6 h-6;
+  }
+
+  .users-view__item-name {
+    @apply font-bold text-sm;
+  }
+
+  .users-view__remove-btn {
+    @apply py-0.5 px-2 text-xs;
+  }
+
+  .users-view__form {
+    @apply p-2.5 border-t border-zinc-700 flex gap-1.5;
+  }
+
+  .users-view__input {
+    @apply flex-1 py-1.5;
+  }
+
+  .users-view__add-btn {
+    @apply py-1.5 px-3;
+  }
+}

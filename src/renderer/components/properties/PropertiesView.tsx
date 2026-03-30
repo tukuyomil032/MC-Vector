@@ -131,7 +131,7 @@ export default function PropertiesView({ server }: Props) {
   };
 
   if (loading) {
-    return <div className="p-5 text-zinc-400">Loading properties...</div>;
+    return <div className="properties-view__loading">Loading properties...</div>;
   }
 
   if (showAdvanced) {
@@ -145,11 +145,11 @@ export default function PropertiesView({ server }: Props) {
   }
 
   return (
-    <div className="h-full overflow-y-auto relative">
-      <div className="p-10 max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-5">
+    <div className="properties-view">
+      <div className="properties-view__container">
+        <div className="properties-view__header">
           <h3>サーバー設定 (server.properties)</h3>
-          <div className="flex gap-2.5 flex-wrap">
+          <div className="properties-view__actions">
             <button className="btn-secondary" onClick={openAdvancedWindow}>
               🛠️ 詳細設定を開く (別窓)
             </button>
@@ -164,28 +164,26 @@ export default function PropertiesView({ server }: Props) {
           </div>
         </div>
 
-        <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
-          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">
-            基本設定
-          </div>
+        <div className="properties-view__section">
+          <div className="properties-view__section-title">基本設定</div>
 
-          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
-            <div className="flex flex-col">
+          <div className="properties-view__row">
+            <div className="properties-view__row-info">
               <span>MOTD</span>
-              <span className="text-xs text-text-secondary mt-0.5">
+              <span className="properties-view__row-description">
                 サーバーリストに表示される説明文
               </span>
             </div>
             <input
               type="text"
-              className="input-field w-[320px]"
+              className="input-field properties-view__motd-input"
               value={props['motd'] as string}
               onChange={(e) => handleChange('motd', e.target.value)}
             />
           </div>
 
-          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
-            <div className="flex flex-col">
+          <div className="properties-view__row">
+            <div className="properties-view__row-info">
               <span>ゲームモード</span>
             </div>
             <select
@@ -200,8 +198,8 @@ export default function PropertiesView({ server }: Props) {
             </select>
           </div>
 
-          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
-            <div className="flex flex-col">
+          <div className="properties-view__row">
+            <div className="properties-view__row-info">
               <span>難易度</span>
             </div>
             <select
@@ -217,10 +215,8 @@ export default function PropertiesView({ server }: Props) {
           </div>
         </div>
 
-        <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
-          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">
-            ゲームプレイ
-          </div>
+        <div className="properties-view__section">
+          <div className="properties-view__section-title">ゲームプレイ</div>
           <ToggleItem
             label="PvP"
             desc="プレイヤー同士の攻撃を許可"
@@ -241,30 +237,28 @@ export default function PropertiesView({ server }: Props) {
           />
         </div>
 
-        <div className="bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color">
-          <div className="text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color">
-            接続・ネットワーク
-          </div>
+        <div className="properties-view__section">
+          <div className="properties-view__section-title">接続・ネットワーク</div>
 
-          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
-            <div className="flex flex-col">
+          <div className="properties-view__row">
+            <div className="properties-view__row-info">
               <span>最大プレイヤー数</span>
             </div>
             <input
               type="number"
-              className="input-field w-[120px]"
+              className="input-field properties-view__number-input properties-view__number-input--sm"
               value={props['max-players'] as number}
               onChange={(e) => handleChange('max-players', Number(e.target.value))}
             />
           </div>
 
-          <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
-            <div className="flex flex-col">
+          <div className="properties-view__row">
+            <div className="properties-view__row-info">
               <span>サーバーポート</span>
             </div>
             <input
               type="number"
-              className="input-field w-[140px]"
+              className="input-field properties-view__number-input properties-view__number-input--md"
               value={props['server-port'] as number}
               onChange={(e) => handleChange('server-port', Number(e.target.value))}
             />
@@ -301,10 +295,10 @@ function ToggleItem({
   onChange: (val: boolean) => void;
 }) {
   return (
-    <div className="flex justify-between items-center py-3 border-b border-white/5 last:border-b-0">
-      <div className="flex flex-col">
+    <div className="properties-view__row">
+      <div className="properties-view__row-info">
         <span>{label}</span>
-        <span className="text-xs text-text-secondary mt-0.5">{desc}</span>
+        <span className="properties-view__row-description">{desc}</span>
       </div>
       <label className="toggle-switch">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />

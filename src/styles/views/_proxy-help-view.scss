@@ -1,0 +1,63 @@
+@layer components {
+  .proxy-help-view {
+    @apply p-10 text-white h-screen box-border overflow-y-auto font-sans;
+    background-color: #1e1e1e;
+  }
+
+  .proxy-help-view__title {
+    @apply border-b border-zinc-700 pb-4 mt-0;
+  }
+
+  .proxy-help-view__intro {
+    @apply mb-8;
+  }
+
+  .proxy-help-view__intro-text {
+    @apply leading-relaxed text-zinc-300;
+  }
+
+  .proxy-help-view__step {
+    @apply rounded-lg px-5 pt-6 pb-5 mb-6 border relative shadow-md;
+    background-color: #252526;
+    border-color: #3e3e42;
+  }
+
+  .proxy-help-view__step-badge {
+    @apply absolute -top-3 left-5 bg-accent text-white px-3 py-1 rounded-xl text-sm font-bold shadow-md;
+  }
+
+  .proxy-help-view__list {
+    @apply text-zinc-300 leading-relaxed pl-5;
+  }
+
+  .proxy-help-view__muted {
+    @apply text-zinc-300 text-[0.95rem];
+  }
+
+  .proxy-help-view__list .proxy-help-view__muted {
+    @apply text-sm text-zinc-400;
+  }
+
+  .proxy-help-view__code {
+    @apply px-4 py-2.5 rounded border mt-1.5 mb-2.5 inline-block font-mono text-zinc-200;
+    background-color: #111;
+    border-color: #27272a;
+  }
+
+  .proxy-help-view__cta-row {
+    @apply mt-2.5;
+  }
+
+  .proxy-help-view__cta-btn {
+    @apply text-sm py-1.5 px-4 mr-2.5;
+    background-color: #28c1be;
+  }
+
+  .proxy-help-view__cta-btn:hover {
+    background-color: #24a8a5;
+  }
+
+  .proxy-help-view__done {
+    @apply mt-8 p-5 text-center text-success font-bold bg-success/10 rounded-lg border border-success/30;
+  }
+}

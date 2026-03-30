@@ -12,6 +12,11 @@
 @use './views/java-manager-modal';
 @use './views/plugin-browser';
 @use './views/settings-window';
+@use './views/advanced-settings-window';
+@use './views/properties-view';
+@use './views/server-settings';
+@use './views/users-view';
+@use './views/proxy-help-view';
 
 @tailwind base;
 @tailwind components;

@@ -1,0 +1,57 @@
+@layer components {
+  .properties-view__loading {
+    @apply p-5 text-zinc-400;
+  }
+
+  .properties-view {
+    @apply h-full overflow-y-auto relative;
+  }
+
+  .properties-view__container {
+    @apply p-10 max-w-4xl mx-auto;
+  }
+
+  .properties-view__header {
+    @apply flex justify-between items-center mb-5;
+  }
+
+  .properties-view__actions {
+    @apply flex gap-2.5 flex-wrap;
+  }
+
+  .properties-view__section {
+    @apply bg-bg-secondary rounded-lg p-5 mb-5 border border-border-color;
+  }
+
+  .properties-view__section-title {
+    @apply text-lg font-bold mb-4 text-accent pb-2.5 border-b border-border-color;
+  }
+
+  .properties-view__row {
+    @apply flex justify-between items-center py-3 border-b border-white/5;
+  }
+
+  .properties-view__row:last-child {
+    @apply border-b-0;
+  }
+
+  .properties-view__row-info {
+    @apply flex flex-col;
+  }
+
+  .properties-view__row-description {
+    @apply text-xs text-text-secondary mt-0.5;
+  }
+
+  .properties-view__motd-input {
+    width: 320px;
+  }
+
+  .properties-view__number-input--sm {
+    width: 120px;
+  }
+
+  .properties-view__number-input--md {
+    width: 140px;
+  }
+}

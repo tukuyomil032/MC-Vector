@@ -166,15 +166,15 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   };
 
   return (
-    <div className="h-full overflow-y-auto p-10 text-[#ecf0f1] box-border block">
-      <div className="max-w-4xl pb-12">
-        <h2 className="mt-0 mb-8 border-b border-zinc-700 pb-2.5">General Settings</h2>
+    <div className="server-settings">
+      <div className="server-settings__inner">
+        <h2 className="server-settings__title">General Settings</h2>
 
-        <div className="mb-8 p-6 bg-[#252526] rounded-lg border border-border-color">
-          <h3 className="mt-0 mb-5 text-zinc-300 text-lg">Basic Configuration</h3>
+        <div className="server-settings__panel">
+          <h3 className="server-settings__panel-title">Basic Configuration</h3>
 
-          <div className="mb-5 flex flex-col gap-2">
-            <label className="block mb-2 text-zinc-400">サーバー名</label>
+          <div className="server-settings__field-block">
+            <label className="server-settings__label">サーバー名</label>
             <input
               type="text"
               value={name}
@@ -183,9 +183,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             />
           </div>
 
-          <div className="flex gap-5 mb-5">
-            <div className="flex-1">
-              <label className="block mb-2 text-zinc-400">サーバーソフトウェア</label>
+          <div className="server-settings__row">
+            <div className="server-settings__col">
+              <label className="server-settings__label">サーバーソフトウェア</label>
               <select
                 value={software}
                 onChange={(e) => setSoftware(e.target.value)}
@@ -209,8 +209,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               </select>
             </div>
 
-            <div className="flex-1">
-              <label className="block mb-2 text-zinc-400">バージョン</label>
+            <div className="server-settings__col">
+              <label className="server-settings__label">バージョン</label>
               <select
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
@@ -225,9 +225,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             </div>
           </div>
 
-          <div className="mb-5 flex flex-col gap-2">
-            <label className="block mb-2 text-zinc-400">Java Runtime</label>
-            <div className="flex gap-2.5">
+          <div className="server-settings__field-block">
+            <label className="server-settings__label">Java Runtime</label>
+            <div className="server-settings__java-row">
               <select
                 value={javaPath}
                 onChange={(e) => setJavaPath(e.target.value)}
@@ -252,9 +252,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             </div>
           </div>
 
-          <div className="flex gap-5 mb-8">
-            <div className="flex-1">
-              <label className="block mb-2 text-zinc-400">メモリ (MB)</label>
+          <div className="server-settings__row server-settings__row--spaced">
+            <div className="server-settings__col">
+              <label className="server-settings__label">メモリ (MB)</label>
               <input
                 type="number"
                 value={memory}
@@ -262,8 +262,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                 className="input-field"
               />
             </div>
-            <div className="flex-1">
-              <label className="block mb-2 text-zinc-400">ポート</label>
+            <div className="server-settings__col">
+              <label className="server-settings__label">ポート</label>
               <input
                 type="number"
                 value={port}
@@ -273,44 +273,40 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             </div>
           </div>
 
-          <div className="mb-5 flex flex-col gap-2">
-            <label className="block mb-2 text-zinc-400">保存先パス</label>
-            <div className="flex gap-2.5">
+          <div className="server-settings__field-block">
+            <label className="server-settings__label">保存先パス</label>
+            <div className="server-settings__java-row">
               <input
                 type="text"
                 value={path}
                 readOnly
-                className="input-field flex-1 text-zinc-500 bg-[#222]"
+                className="input-field server-settings__path-input"
               />
             </div>
           </div>
 
-          <div className="text-right mt-5">
-            <button onClick={handleSubmit} className="btn-start py-2.5 px-6 text-sm">
+          <div className="server-settings__actions">
+            <button onClick={handleSubmit} className="btn-start server-settings__save-btn">
               設定を保存
             </button>
           </div>
         </div>
 
-        <div
-          className={`p-6 bg-[#252526] rounded-lg border ${isTunneling ? 'border-accent' : 'border-zinc-700'}`}
-        >
-          <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-            <div className="min-w-[200px]">
-              <h3 className="m-0 flex items-center gap-2.5 text-lg text-zinc-300">
+        <div className={`server-settings__ngrok-panel ${isTunneling ? 'is-active' : ''}`}>
+          <div className="server-settings__ngrok-header">
+            <div className="server-settings__ngrok-title-wrap">
+              <h3 className="server-settings__ngrok-title">
                 🌐 Public Access (ngrok)
-                {isTunneling && (
-                  <span className="text-xs bg-success text-white px-2 py-0.5 rounded">ONLINE</span>
-                )}
+                {isTunneling && <span className="server-settings__online-badge">ONLINE</span>}
               </h3>
-              <div className="text-zinc-400 text-sm mt-1.5">
+              <div className="server-settings__ngrok-description">
                 ポート開放なしで外部から接続できるようにします。
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="server-settings__ngrok-controls">
               <button
-                className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
+                className="btn-secondary server-settings__ngrok-btn server-settings__ngrok-btn--with-icon"
                 onClick={handleOpenGuide}
                 title="接続手順のガイドを開きます"
               >
@@ -318,25 +314,25 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               </button>
 
               <button
-                className="btn-secondary text-xs px-3 py-1.5"
+                className="btn-secondary server-settings__ngrok-btn"
                 onClick={handleResetToken}
                 title="認証トークンを変更・修正します"
               >
                 Change Token
               </button>
 
-              <label className="relative inline-block w-12 h-7 shrink-0">
+              <label className="server-settings__ngrok-switch">
                 <input
                   type="checkbox"
                   checked={isTunneling}
                   onChange={handleToggleTunnel}
-                  className="opacity-0 w-0 h-0"
+                  className="server-settings__ngrok-switch-input"
                 />
                 <span
-                  className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 transition-all rounded-full ${isTunneling ? 'bg-accent' : 'bg-zinc-700'}`}
+                  className={`server-settings__ngrok-switch-track ${isTunneling ? 'is-on' : 'is-off'}`}
                 >
                   <span
-                    className={`absolute h-5 w-5 left-0.5 bottom-0.5 bg-white transition-all rounded-full ${isTunneling ? 'translate-x-6' : ''}`}
+                    className={`server-settings__ngrok-switch-thumb ${isTunneling ? 'is-on' : ''}`}
                   ></span>
                 </span>
               </label>
@@ -344,33 +340,36 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
           </div>
 
           {(isTunneling || tunnelLog.length > 0) && (
-            <>
+            <div className="server-settings__ngrok-status">
               {tunnelUrl && (
-                <div className="bg-[#1e1e1e] p-4 rounded-md mb-4">
-                  <div className="text-sm text-zinc-500 mb-1.5">
+                <div className="server-settings__address-card">
+                  <div className="server-settings__address-label">
                     公開アドレス (友人にこれを共有):
                   </div>
-                  <div className="flex gap-2.5 items-center">
-                    <code className="text-xl text-white font-mono bg-zinc-800 px-2.5 py-1.5 rounded">
+                  <div className="server-settings__address-row">
+                    <code className="server-settings__address-code">
                       {tunnelUrl.replace('tcp://', '')}
                     </code>
-                    <button className="btn-secondary py-1.5 px-2.5" onClick={handleCopyUrl}>
+                    <button
+                      className="btn-secondary server-settings__copy-btn"
+                      onClick={handleCopyUrl}
+                    >
                       Copy
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="bg-[#111] text-zinc-400 p-2.5 rounded h-[150px] overflow-y-auto text-xs font-mono border border-zinc-800">
+              <div className="server-settings__log-panel">
                 {tunnelLog.length === 0 && <div>Ready to start...</div>}
                 {tunnelLog.map((line, i) => (
-                  <div key={i} className="border-b border-zinc-900 pb-0.5 mb-0.5">
+                  <div key={i} className="server-settings__log-line">
                     {line}
                   </div>
                 ))}
                 <div ref={logEndRef} />
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -385,10 +384,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
       )}
 
       {showTokenModal && (
-        <div className="fixed inset-0 bg-black/70 z-10000 flex justify-center items-center">
-          <div className="bg-[#2c2c2c] p-6 rounded-lg w-[450px] border border-zinc-700 text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-            <h3 className="mt-0">ngrok AuthToken Required</h3>
-            <p className="text-zinc-400 text-sm">
+        <div className="server-settings__token-overlay modal-backdrop">
+          <div className="server-settings__token-panel modal-panel">
+            <h3 className="server-settings__token-title">ngrok AuthToken Required</h3>
+            <p className="server-settings__token-text">
               ngrokを使用するには認証トークンが必要です。
               <br />
               公式サイト (
@@ -409,8 +408,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               value={inputToken}
               onChange={(e) => setInputToken(e.target.value)}
             />
-            <div className="text-right">
-              <button onClick={() => setShowTokenModal(false)} className="btn-secondary mr-2.5">
+            <div className="server-settings__token-actions">
+              <button
+                onClick={() => setShowTokenModal(false)}
+                className="btn-secondary server-settings__token-cancel"
+              >
                 キャンセル
               </button>
               <button

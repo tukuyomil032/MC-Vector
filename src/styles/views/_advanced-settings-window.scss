@@ -1,0 +1,106 @@
+@layer components {
+  .advanced-settings-window__loading {
+    @apply p-5 text-white;
+  }
+
+  .advanced-settings-window {
+    @apply fixed inset-0 z-[2000] flex flex-col;
+    @apply bg-bg-primary animate-fadeIn;
+  }
+
+  .advanced-settings-window__header {
+    @apply px-8 py-4 bg-bg-secondary border-b border-border-color flex justify-between items-center;
+  }
+
+  .advanced-settings-window__title {
+    @apply text-xl font-bold text-text-primary flex items-center gap-2.5;
+  }
+
+  .advanced-settings-window__header-actions {
+    @apply flex gap-2.5;
+  }
+
+  .advanced-settings-window__body {
+    @apply flex-1 flex overflow-hidden;
+  }
+
+  .advanced-settings-window__sidebar {
+    width: 220px;
+    @apply bg-bg-secondary border-r border-border-color py-5 flex flex-col;
+  }
+
+  .advanced-settings-window__tab {
+    @apply px-6 py-3 cursor-pointer text-text-secondary transition-all border-l-[3px];
+  }
+
+  .advanced-settings-window__tab.is-active {
+    @apply bg-bg-tertiary text-accent border-l-accent font-bold;
+  }
+
+  .advanced-settings-window__tab.is-idle {
+    @apply border-l-transparent hover:bg-white/5 hover:text-text-primary;
+  }
+
+  .advanced-settings-window__content {
+    @apply flex-1 p-8 overflow-y-auto bg-bg-primary;
+  }
+
+  .advanced-settings-window__section-title {
+    @apply mt-0 mb-5 border-b border-zinc-700 pb-2.5;
+  }
+
+  .advanced-settings-window__grid {
+    @apply grid gap-5;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  }
+
+  .advanced-settings-window__card {
+    @apply bg-bg-tertiary border border-border-color rounded-lg p-4 flex flex-col gap-3 relative;
+    overflow: visible;
+  }
+
+  .advanced-settings-window__card-head {
+    @apply flex justify-between items-start gap-3;
+  }
+
+  .advanced-settings-window__card-info {
+    @apply flex flex-col gap-1 relative;
+    overflow: visible;
+  }
+
+  .advanced-settings-window__card-label {
+    @apply text-sm font-bold text-text-primary flex items-center gap-1.5;
+  }
+
+  .advanced-settings-window__card-key {
+    @apply text-xs text-accent;
+  }
+
+  .advanced-settings-window__card-description {
+    @apply text-xs text-text-secondary leading-relaxed;
+  }
+
+  .advanced-settings-window__tooltip {
+    @apply invisible opacity-0 bg-zinc-800 text-white rounded-md p-2.5 shadow-xl border border-accent;
+    @apply absolute top-full left-0 mt-2 text-xs whitespace-normal break-words transition-opacity;
+    width: min(320px, 90vw);
+    z-index: 20;
+  }
+
+  .advanced-settings-window__card-info:hover .advanced-settings-window__tooltip {
+    @apply visible opacity-100;
+  }
+
+  .advanced-settings-window__toggle-wrap {
+    @apply shrink-0;
+  }
+
+  .advanced-settings-window__input-wrap {
+    @apply w-full;
+  }
+
+  .advanced-settings-window__input {
+    @apply w-full px-2 py-2 bg-bg-secondary border border-border-color text-text-primary rounded;
+    @apply focus:outline-none focus:border-accent;
+  }
+}

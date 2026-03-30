@@ -98,7 +98,7 @@ export default function AdvancedSettingsWindow({
       return (
         <input
           type="number"
-          className="setting-input w-full px-2 py-2 bg-bg-secondary border border-border-color text-text-primary rounded focus:outline-none focus:border-accent"
+          className="advanced-settings-window__input"
           value={Number(currentValue ?? 0)}
           onChange={(e) => handleChange(prop.key, Number(e.target.value))}
         />
@@ -107,7 +107,7 @@ export default function AdvancedSettingsWindow({
     if (prop.type === 'select' && prop.options) {
       return (
         <select
-          className="setting-input w-full px-2 py-2 bg-bg-secondary border border-border-color text-text-primary rounded focus:outline-none focus:border-accent"
+          className="advanced-settings-window__input"
           value={String(currentValue ?? '')}
           onChange={(e) => handleChange(prop.key, e.target.value)}
         >
@@ -122,7 +122,7 @@ export default function AdvancedSettingsWindow({
     return (
       <input
         type="text"
-        className="setting-input w-full px-2 py-2 bg-bg-secondary border border-border-color text-text-primary rounded focus:outline-none focus:border-accent"
+        className="advanced-settings-window__input"
         value={String(currentValue ?? '')}
         onChange={(e) => handleChange(prop.key, e.target.value)}
       />
@@ -130,16 +130,16 @@ export default function AdvancedSettingsWindow({
   };
 
   if (!isLoaded) {
-    return <div className="p-5 text-white">Loading settings...</div>;
+    return <div className="advanced-settings-window__loading">Loading settings...</div>;
   }
 
   return (
-    <div className="fixed inset-0 bg-bg-primary z-2000 flex flex-col animate-fadeIn">
-      <header className="px-8 py-4 bg-bg-secondary border-b border-border-color flex justify-between items-center">
-        <div className="text-xl font-bold text-text-primary flex items-center gap-2.5">
+    <div className="advanced-settings-window">
+      <header className="advanced-settings-window__header">
+        <div className="advanced-settings-window__title">
           <span>🛠️ 詳細サーバー設定 (server.properties)</span>
         </div>
-        <div className="flex gap-2.5">
+        <div className="advanced-settings-window__header-actions">
           <button className="btn-secondary" onClick={handleCancel}>
             キャンセル
           </button>
@@ -149,12 +149,12 @@ export default function AdvancedSettingsWindow({
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="w-[220px] bg-bg-secondary border-r border-border-color py-5 flex flex-col">
+      <div className="advanced-settings-window__body">
+        <aside className="advanced-settings-window__sidebar">
           {categories.map((cat) => (
             <div
               key={cat}
-              className={`px-6 py-3 cursor-pointer text-text-secondary transition-all border-l-[3px] ${activeTab === cat ? 'bg-bg-tertiary text-accent border-l-accent font-bold' : 'border-l-transparent hover:bg-white/5 hover:text-text-primary'}`}
+              className={`advanced-settings-window__tab ${activeTab === cat ? 'is-active' : 'is-idle'}`}
               onClick={() => setActiveTab(cat)}
             >
               {cat}
@@ -162,39 +162,38 @@ export default function AdvancedSettingsWindow({
           ))}
         </aside>
 
-        <div className="flex-1 p-8 overflow-y-auto bg-bg-primary">
-          <h3 className="mt-0 mb-5 border-b border-zinc-700 pb-2.5">{activeTab}</h3>
+        <div className="advanced-settings-window__content">
+          <h3 className="advanced-settings-window__section-title">{activeTab}</h3>
 
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5">
+          <div className="advanced-settings-window__grid">
             {filteredProps.map((prop) => {
               const currentValue = formData[prop.key] ?? prop.default;
 
               return (
-                <div
-                  key={prop.key}
-                  className="bg-bg-tertiary border border-border-color rounded-lg p-4 flex flex-col gap-3 relative overflow-visible"
-                >
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex flex-col gap-1 relative group overflow-visible">
-                      <div className="text-sm font-bold text-text-primary flex items-center gap-1.5">
+                <div key={prop.key} className="advanced-settings-window__card">
+                  <div className="advanced-settings-window__card-head">
+                    <div className="advanced-settings-window__card-info group">
+                      <div className="advanced-settings-window__card-label">
                         <span>{prop.label}</span>
-                        <span className="text-xs text-accent">({prop.key})</span>
+                        <span className="advanced-settings-window__card-key">({prop.key})</span>
                       </div>
-                      <div className="text-xs text-text-secondary leading-relaxed">
+                      <div className="advanced-settings-window__card-description">
                         {prop.description}
                       </div>
-                      <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 bg-zinc-800 text-white rounded-md p-2.5 shadow-xl border border-accent absolute top-full left-0 mt-2 text-xs w-[min(320px,90vw)] whitespace-normal break-words transition-opacity z-20">
-                        {prop.description}
-                      </div>
+                      <div className="advanced-settings-window__tooltip">{prop.description}</div>
                     </div>
 
                     {prop.type === 'boolean' && (
-                      <div className="shrink-0">{renderInput(prop, currentValue)}</div>
+                      <div className="advanced-settings-window__toggle-wrap">
+                        {renderInput(prop, currentValue)}
+                      </div>
                     )}
                   </div>
 
                   {prop.type !== 'boolean' && (
-                    <div className="w-full">{renderInput(prop, currentValue)}</div>
+                    <div className="advanced-settings-window__input-wrap">
+                      {renderInput(prop, currentValue)}
+                    </div>
                   )}
                 </div>
               );
