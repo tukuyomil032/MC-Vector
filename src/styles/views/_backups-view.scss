@@ -19,8 +19,60 @@
     @apply px-5 py-4 border-b border-white/5 flex items-center gap-5;
   }
 
+  .backups-view__item-meta {
+    @apply flex flex-wrap items-center gap-1.5;
+  }
+
+  .backups-view__mode-badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-semibold border border-cyan-400/40 text-cyan-200 bg-cyan-500/10;
+  }
+
+  .backups-view__mode-badge.is-diff {
+    @apply border-amber-400/40 text-amber-200 bg-amber-500/10;
+  }
+
+  .backups-view__parent-label {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[0.66rem] border border-zinc-600 text-zinc-300;
+  }
+
+  .backups-view__tag-chip {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[0.66rem] border border-emerald-400/40 text-emerald-200 bg-emerald-500/10;
+  }
+
+  .backups-view__item-note {
+    @apply text-xs text-zinc-300 leading-relaxed;
+  }
+
   .backups-view__note {
     @apply mt-4 text-xs text-text-secondary;
+  }
+
+  .backups-view__world-panel {
+    @apply mt-5 rounded-lg border border-border-color bg-bg-secondary p-4;
+  }
+
+  .backups-view__world-header {
+    @apply flex items-center justify-between mb-3;
+  }
+
+  .backups-view__world-title {
+    @apply m-0 text-sm font-semibold;
+  }
+
+  .backups-view__world-help {
+    @apply text-xs text-text-secondary;
+  }
+
+  .backups-view__world-empty {
+    @apply text-sm text-text-secondary;
+  }
+
+  .backups-view__world-row {
+    @apply flex items-center justify-between gap-3 py-2 border-t border-white/5;
+  }
+
+  .backups-view__world-name {
+    @apply text-sm font-medium;
   }
 
   .backups-view__create-overlay {
@@ -73,6 +125,40 @@
 
   .backups-view__create-actions {
     @apply flex justify-end gap-3 pt-2;
+  }
+
+  .backups-view__tag-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4;
+    z-index: 2100;
+  }
+
+  .backups-view__tag-panel {
+    @apply w-full max-w-lg rounded-xl border border-border-color bg-bg-secondary p-5;
+  }
+
+  .backups-view__tag-header {
+    @apply mb-4;
+  }
+
+  .backups-view__tag-title {
+    @apply m-0 text-base font-semibold;
+  }
+
+  .backups-view__tag-target {
+    @apply mt-1 text-xs text-text-secondary break-all;
+  }
+
+  .backups-view__tag-body {
+    @apply flex flex-col;
+  }
+
+  .backups-view__tag-note {
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  .backups-view__tag-actions {
+    @apply mt-4 flex justify-end gap-3;
   }
 
   .backups-view__tree {

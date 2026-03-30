@@ -24,9 +24,9 @@ User-requested set:
 | #32 | バージョン互換チェック | done | compatibility badges + pre-install warnings |
 | #36 | ドラッグ&ドロップアップロード | done | external file drop upload in Files view |
 | #39 | 自動バックアップスケジュール | done-partial | interval scheduler implemented; time-based policy pending |
-| #40 | 差分バックアップ | pending | Rust backup index/diff design required |
-| #44 | バックアップタグ | pending | metadata file + UI |
-| #47 | ワールド削除GUI | pending | world list flow required |
+| #40 | 差分バックアップ | done | metadata snapshot diff mode in Backups view |
+| #44 | バックアップタグ | done | tags/notes editor persisted in backup metadata |
+| #47 | ワールド削除GUI | done | world list + double-confirm delete flow |
 
 ## 2. Architecture Progress
 
@@ -57,13 +57,13 @@ User-requested set:
 2. #30 有効/無効トグル
 3. #32 バージョン互換チェック
 
-### Phase D (Backup/World) - Next
+### Phase D (Backup/World) - Completed
 
 1. #40 差分バックアップ
 2. #44 バックアップタグ
 3. #47 ワールド削除GUI
 
-### Phase E (Server Expansion)
+### Phase E (Server Expansion) - Next
 
 1. #1 サーバープロファイル
 2. #2 サーバーテンプレート
