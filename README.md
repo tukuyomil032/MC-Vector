@@ -184,7 +184,9 @@ MC-Vector/
 │   │       ├── _properties-view.scss # Basic properties view styles
 │   │       ├── _server-settings.scss # Server general settings styles
 │   │       ├── _users-view.scss      # User management view styles
-│   │       └── _proxy-help-view.scss # Proxy guide view styles
+│   │       ├── _proxy-help-view.scss # Proxy guide view styles
+│   │       ├── _proxy-setup-view.scss # Proxy setup view styles
+│   │       └── _ngrok-guide-view.scss # ngrok guide view styles
 │   ├── lib/                          # Frontend API layer
 │   │   ├── backup-commands.ts        # Backup operations
 │   │   ├── config-commands.ts        # Configuration management

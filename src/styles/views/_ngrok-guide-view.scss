@@ -1,0 +1,41 @@
+@layer components {
+  .ngrok-guide-view {
+    @apply p-10 text-white h-screen box-border overflow-y-auto;
+    background-color: #1e1e1e;
+  }
+
+  .ngrok-guide-view__title {
+    @apply border-b border-zinc-700 pb-4 mt-0;
+  }
+
+  .ngrok-guide-view__intro {
+    @apply mb-8;
+  }
+
+  .ngrok-guide-view__intro-text {
+    @apply leading-relaxed text-zinc-300;
+  }
+
+  .ngrok-guide-view__step {
+    @apply rounded-lg p-5 mb-5 border relative;
+    background-color: #252526;
+    border-color: #3e3e42;
+  }
+
+  .ngrok-guide-view__step-badge {
+    @apply absolute -top-2.5 left-5 bg-accent px-2.5 py-0.5 rounded-xl text-xs font-bold;
+  }
+
+  .ngrok-guide-view__cta-btn {
+    @apply mt-2;
+  }
+
+  .ngrok-guide-view__token-example {
+    @apply p-2.5 rounded font-mono text-zinc-500 mt-2.5;
+    background-color: #111;
+  }
+
+  .ngrok-guide-view__note {
+    @apply text-sm text-zinc-400 mt-2;
+  }
+}

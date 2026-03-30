@@ -17,6 +17,8 @@
 @use './views/server-settings';
 @use './views/users-view';
 @use './views/proxy-help-view';
+@use './views/proxy-setup-view';
+@use './views/ngrok-guide-view';
 
 @tailwind base;
 @tailwind components;

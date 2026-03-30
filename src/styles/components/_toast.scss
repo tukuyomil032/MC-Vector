@@ -1,4 +1,9 @@
 @layer components {
+  .toast-stack {
+    @apply fixed top-5 right-5 space-y-3;
+    z-index: 99999;
+  }
+
   .toast {
     @apply min-w-[300px] p-4 text-white rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] flex items-center gap-3;
     @apply transition-all duration-300 ease-out font-sans font-medium;
