@@ -77,6 +77,16 @@ interface DependencyIdentity {
 }
 
 const MINECRAFT_VERSION_REGEX = /\b1\.\d+(?:\.\d+)?\b/g;
+const LOADER_KEYWORDS = [
+  'paper',
+  'spigot',
+  'bukkit',
+  'velocity',
+  'waterfall',
+  'fabric',
+  'forge',
+  'neoforge',
+];
 
 function toSlug(value: string): string {
   const normalized = value
@@ -131,6 +141,22 @@ function extractVersionHints(text: string): string[] {
   }
 
   return Array.from(new Set(matches));
+}
+
+function extractLoaderHintsFromUnknown(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const hints = value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => {
+      const lower = entry.toLowerCase();
+      return LOADER_KEYWORDS.some((keyword) => lower.includes(keyword));
+    });
+
+  return Array.from(new Set(hints));
 }
 
 function isDisabledPluginFile(fileName: string): boolean {
@@ -856,6 +882,29 @@ export default function PluginBrowser({ server }: Props) {
     return versions.length > 6 ? `${preview}, ...` : preview;
   };
 
+  const loaderLabel = (item: ProjectItem) => {
+    if (item.platform === 'Spigot') {
+      return 'Spigot / Paper互換';
+    }
+
+    if (item.platform === 'Hangar') {
+      return server.software || 'Paper';
+    }
+
+    const source = item.source_obj;
+    const loaders = [
+      ...extractLoaderHintsFromUnknown(source.display_categories),
+      ...extractLoaderHintsFromUnknown(source.categories),
+      ...extractLoaderHintsFromUnknown(source.loaders),
+    ];
+
+    if (loaders.length > 0) {
+      return loaders.slice(0, 4).join(', ');
+    }
+
+    return isModServer ? server.software || 'Mod loader' : 'Paper / Spigot';
+  };
+
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
@@ -1107,6 +1156,12 @@ export default function PluginBrowser({ server }: Props) {
                             <span className="plugin-browser__detail-key">Supported MC</span>
                             <span className="plugin-browser__detail-value">
                               {supportedVersionsLabel(item.id)}
+                            </span>
+                          </div>
+                          <div className="plugin-browser__detail-row">
+                            <span className="plugin-browser__detail-key">Loader</span>
+                            <span className="plugin-browser__detail-value">
+                              {loaderLabel(item)}
                             </span>
                           </div>
                         </div>
