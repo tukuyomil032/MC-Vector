@@ -152,6 +152,8 @@ export default function PluginBrowser({ server }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [installedFiles, setInstalledFiles] = useState<string[]>([]);
   const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
@@ -188,7 +190,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: 'Paper ecosystem',
         inApp: true,
         icon: Server,
-        logoUrl: 'https://hangar.papermc.io/favicon.ico',
+        logoUrl: 'https://docs.papermc.io/img/paper.png',
       });
     }
 
@@ -246,6 +248,7 @@ export default function PluginBrowser({ server }: Props) {
     }
 
     setLoading(false);
+    setHasNextPage(false);
     setResults([]);
   }, [page, platform, isInAppSearch]);
 
@@ -428,7 +431,7 @@ export default function PluginBrowser({ server }: Props) {
       if (platform === 'Modrinth') {
         const searchType = isModServer ? 'mod' : 'plugin';
         const facets = `[["project_type:${searchType}"],["versions:${server.version}"]]`;
-        const result = await searchModrinth(query, facets, offset);
+        const result = await searchModrinth(query, facets, offset, LIMIT);
 
         items = result.hits
           .map((hit) => ({
@@ -445,6 +448,8 @@ export default function PluginBrowser({ server }: Props) {
             },
           }))
           .filter((item) => Boolean(item.id));
+
+        setHasNextPage(result.total_hits > offset + items.length);
       } else if (platform === 'Hangar') {
         const data = await searchHangar(query, offset);
 
@@ -462,14 +467,18 @@ export default function PluginBrowser({ server }: Props) {
             ...project,
           },
         }));
+
+        setHasNextPage(items.length === LIMIT);
       } else if (platform === 'Spigot') {
         const resources = await searchSpigot(query, page + 1, LIMIT);
         items = resources.map(mapSpigotResource);
+        setHasNextPage(items.length === LIMIT);
       }
 
       setResults(items);
     } catch (error) {
       console.error(error);
+      setHasNextPage(false);
       const message = toErrorMessage(error);
       if (platform === 'Hangar') {
         showToast(`Hangarの取得に失敗しました: ${message}`, 'error');
@@ -763,6 +772,7 @@ export default function PluginBrowser({ server }: Props) {
         {platformOptions.map((option) => {
           const Icon = option.icon;
           const active = option.key === platform;
+          const showLogo = option.logoUrl.length > 0 && !logoLoadFailed[option.key];
 
           return (
             <motion.button
@@ -777,18 +787,27 @@ export default function PluginBrowser({ server }: Props) {
               }}
             >
               <div className="plugin-browser__platform-logo-wrap">
-                <img
-                  src={option.logoUrl}
-                  alt={`${option.label} logo`}
-                  className="plugin-browser__platform-logo"
-                  loading="lazy"
-                />
+                {showLogo ? (
+                  <img
+                    src={option.logoUrl}
+                    alt={`${option.label} logo`}
+                    className="plugin-browser__platform-logo"
+                    loading="lazy"
+                    onError={() =>
+                      setLogoLoadFailed((prev) => ({
+                        ...prev,
+                        [option.key]: true,
+                      }))
+                    }
+                  />
+                ) : (
+                  <Icon size={14} className="plugin-browser__platform-fallback-icon" />
+                )}
               </div>
               <div className="plugin-browser__platform-copy">
                 <span className="plugin-browser__platform-label">{option.label}</span>
                 <span className="plugin-browser__platform-hint">{option.hint}</span>
               </div>
-              {!option.logoUrl && <Icon size={14} />}
             </motion.button>
           );
         })}
@@ -999,7 +1018,7 @@ export default function PluginBrowser({ server }: Props) {
               type="button"
               className="plugin-browser__pager-btn"
               onClick={() => setPage((value) => value + 1)}
-              disabled={results.length < LIMIT || loading}
+              disabled={!hasNextPage || loading}
             >
               <span>Next</span>
               <ArrowRight size={14} />

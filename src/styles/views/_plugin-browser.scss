@@ -41,6 +41,10 @@
     @apply h-4 w-4 object-contain;
   }
 
+  .plugin-browser__platform-fallback-icon {
+    @apply text-cyan-200;
+  }
+
   .plugin-browser__platform-label {
     @apply text-[0.82rem] font-semibold leading-tight;
   }
