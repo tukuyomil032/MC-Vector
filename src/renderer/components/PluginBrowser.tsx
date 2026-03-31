@@ -64,6 +64,7 @@ interface PlatformOption {
 const LIMIT = 25;
 
 type CompatibilityStatus = 'checking' | 'compatible' | 'incompatible' | 'unknown';
+type SortMode = 'relevance' | 'downloads' | 'name' | 'compatibility';
 
 type CompatibilityDetail = {
   supportedVersions: string[];
@@ -159,6 +160,7 @@ export default function PluginBrowser({ server }: Props) {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [pageInput, setPageInput] = useState('1');
+  const [sortMode, setSortMode] = useState<SortMode>('relevance');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -804,6 +806,47 @@ export default function PluginBrowser({ server }: Props) {
     return requiresBrowser ? 'Open' : 'Install';
   };
 
+  const getCompatibilityPriority = (itemId: string): number => {
+    const status = compatibilityByItemId[itemId] ?? 'unknown';
+    if (status === 'compatible') {
+      return 4;
+    }
+    if (status === 'unknown') {
+      return 3;
+    }
+    if (status === 'checking') {
+      return 2;
+    }
+    return 1;
+  };
+
+  const sortedResults = useMemo(() => {
+    if (sortMode === 'relevance') {
+      return results;
+    }
+
+    const next = [...results];
+    if (sortMode === 'downloads') {
+      next.sort((left, right) => (right.downloads ?? 0) - (left.downloads ?? 0));
+      return next;
+    }
+
+    if (sortMode === 'name') {
+      next.sort((left, right) => left.title.localeCompare(right.title));
+      return next;
+    }
+
+    next.sort((left, right) => {
+      const byCompatibility =
+        getCompatibilityPriority(right.id) - getCompatibilityPriority(left.id);
+      if (byCompatibility !== 0) {
+        return byCompatibility;
+      }
+      return (right.downloads ?? 0) - (left.downloads ?? 0);
+    });
+    return next;
+  }, [results, sortMode, compatibilityByItemId]);
+
   const supportedVersionsLabel = (itemId: string) => {
     const versions = compatibilityDetailByItemId[itemId]?.supportedVersions ?? [];
     if (versions.length === 0) {
@@ -873,29 +916,45 @@ export default function PluginBrowser({ server }: Props) {
       </div>
 
       {isInAppSearch ? (
-        <div className="plugin-browser__search-row">
-          <div className="plugin-browser__search-input-wrap">
-            <Search size={16} />
-            <input
-              type="text"
-              className="plugin-browser__search-input"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search on ${selectedPlatform?.label || platform}...`}
-              onKeyDown={(event) => event.key === 'Enter' && void search()}
-            />
+        <>
+          <div className="plugin-browser__search-row">
+            <div className="plugin-browser__search-input-wrap">
+              <Search size={16} />
+              <input
+                type="text"
+                className="plugin-browser__search-input"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={`Search on ${selectedPlatform?.label || platform}...`}
+                onKeyDown={(event) => event.key === 'Enter' && void search()}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="plugin-browser__search-btn"
+              onClick={() => void search()}
+              disabled={loading}
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+              <span>{loading ? 'Searching...' : 'Search'}</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            className="plugin-browser__search-btn"
-            onClick={() => void search()}
-            disabled={loading}
-          >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            <span>{loading ? 'Searching...' : 'Search'}</span>
-          </button>
-        </div>
+          <div className="plugin-browser__sort-row">
+            <span className="plugin-browser__sort-label">Sort</span>
+            <select
+              className="plugin-browser__sort-select"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+            >
+              <option value="relevance">Relevance</option>
+              <option value="downloads">Downloads</option>
+              <option value="name">Name</option>
+              <option value="compatibility">Compatibility</option>
+            </select>
+          </div>
+        </>
       ) : (
         <div className="plugin-browser__unsupported-panel">
           <p>このプラットフォームはアプリ内検索に対応していません。</p>
@@ -931,7 +990,7 @@ export default function PluginBrowser({ server }: Props) {
         <>
           <div className="plugin-browser__results-grid">
             <AnimatePresence initial={false}>
-              {results.map((item, index) => {
+              {sortedResults.map((item, index) => {
                 const installedMatch = findInstalledMatch(item);
                 const installedState = installedMatch
                   ? isDisabledPluginFile(installedMatch)
@@ -1078,7 +1137,7 @@ export default function PluginBrowser({ server }: Props) {
                 );
               })}
 
-              {results.length === 0 && !loading && (
+              {sortedResults.length === 0 && !loading && (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0, y: 8 }}

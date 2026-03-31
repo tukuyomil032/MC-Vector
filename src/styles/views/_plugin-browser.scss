@@ -81,6 +81,19 @@
     transform: translateY(-1px);
   }
 
+  .plugin-browser__sort-row {
+    @apply flex items-center justify-end gap-2;
+  }
+
+  .plugin-browser__sort-label {
+    @apply text-xs uppercase tracking-[0.08em] text-zinc-500;
+  }
+
+  .plugin-browser__sort-select {
+    @apply rounded-lg border border-zinc-700/85 px-2.5 py-1.5 text-xs text-zinc-100 outline-none;
+    background: rgba(15, 23, 42, 0.8);
+  }
+
   .plugin-browser__unsupported-panel {
     @apply p-8 text-center rounded-xl border border-zinc-700;
     background: rgba(24, 24, 27, 0.75);
