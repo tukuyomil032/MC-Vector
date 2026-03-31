@@ -65,6 +65,10 @@ const LIMIT = 25;
 
 type CompatibilityStatus = 'checking' | 'compatible' | 'incompatible' | 'unknown';
 
+type CompatibilityDetail = {
+  supportedVersions: string[];
+};
+
 interface DependencyIdentity {
   projectId: string;
   slug: string;
@@ -157,6 +161,7 @@ export default function PluginBrowser({ server }: Props) {
   const [pageInput, setPageInput] = useState('1');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [installedFiles, setInstalledFiles] = useState<string[]>([]);
   const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
     null
@@ -164,6 +169,9 @@ export default function PluginBrowser({ server }: Props) {
   const [page, setPage] = useState(0);
   const [compatibilityByItemId, setCompatibilityByItemId] = useState<
     Record<string, CompatibilityStatus>
+  >({});
+  const [compatibilityDetailByItemId, setCompatibilityDetailByItemId] = useState<
+    Record<string, CompatibilityDetail>
   >({});
   const dependencyIdentityCacheRef = useRef<Record<string, DependencyIdentity>>({});
 
@@ -268,26 +276,36 @@ export default function PluginBrowser({ server }: Props) {
 
     if (!isInAppSearch || results.length === 0) {
       setCompatibilityByItemId({});
+      setCompatibilityDetailByItemId({});
       return;
     }
 
     const initial: Record<string, CompatibilityStatus> = {};
+    const initialDetails: Record<string, CompatibilityDetail> = {};
     for (const item of results) {
       if (item.platform === 'Modrinth') {
         initial[item.id] = 'compatible';
+        initialDetails[item.id] = { supportedVersions: [server.version] };
       } else if (item.platform === 'Spigot') {
         initial[item.id] = inferSpigotCompatibility(item);
+        initialDetails[item.id] = {
+          supportedVersions: extractVersionHints(
+            `${item.description} ${typeof item.source_obj.tag === 'string' ? item.source_obj.tag : ''}`
+          ),
+        };
       } else {
         initial[item.id] = 'checking';
+        initialDetails[item.id] = { supportedVersions: [] };
       }
     }
     setCompatibilityByItemId(initial);
+    setCompatibilityDetailByItemId(initialDetails);
 
     const run = async () => {
       const updates = await Promise.all(
-        results.map(async (item): Promise<[string, CompatibilityStatus]> => {
+        results.map(async (item): Promise<[string, CompatibilityStatus, CompatibilityDetail]> => {
           if (item.platform !== 'Hangar') {
-            return [item.id, initial[item.id] ?? 'unknown'];
+            return [item.id, initial[item.id] ?? 'unknown', initialDetails[item.id]];
           }
 
           try {
@@ -299,13 +317,19 @@ export default function PluginBrowser({ server }: Props) {
             });
 
             if (compatibility.supportedVersions.length === 0) {
-              return [item.id, 'unknown'];
+              return [item.id, 'unknown', { supportedVersions: [] }];
             }
 
-            return [item.id, compatibility.compatible ? 'compatible' : 'incompatible'];
+            return [
+              item.id,
+              compatibility.compatible ? 'compatible' : 'incompatible',
+              {
+                supportedVersions: compatibility.supportedVersions,
+              },
+            ];
           } catch (error) {
             console.error(error);
-            return [item.id, 'unknown'];
+            return [item.id, 'unknown', { supportedVersions: [] }];
           }
         })
       );
@@ -315,10 +339,13 @@ export default function PluginBrowser({ server }: Props) {
       }
 
       const next: Record<string, CompatibilityStatus> = { ...initial };
-      for (const [id, status] of updates) {
+      const nextDetails: Record<string, CompatibilityDetail> = { ...initialDetails };
+      for (const [id, status, detail] of updates) {
         next[id] = status;
+        nextDetails[id] = detail;
       }
       setCompatibilityByItemId(next);
+      setCompatibilityDetailByItemId(nextDetails);
     };
 
     void run();
@@ -777,6 +804,15 @@ export default function PluginBrowser({ server }: Props) {
     return requiresBrowser ? 'Open' : 'Install';
   };
 
+  const supportedVersionsLabel = (itemId: string) => {
+    const versions = compatibilityDetailByItemId[itemId]?.supportedVersions ?? [];
+    if (versions.length === 0) {
+      return '未公開';
+    }
+    const preview = versions.slice(0, 6).join(', ');
+    return versions.length > 6 ? `${preview}, ...` : preview;
+  };
+
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
@@ -979,12 +1015,43 @@ export default function PluginBrowser({ server }: Props) {
                             )}
                             <span>{actionLabel(item)}</span>
                           </button>
+
+                          <button
+                            type="button"
+                            className="plugin-browser__details-btn"
+                            onClick={() =>
+                              setExpandedItemId((prev) => (prev === item.id ? null : item.id))
+                            }
+                          >
+                            {expandedItemId === item.id ? 'Hide' : 'Details'}
+                          </button>
                         </div>
                       </div>
 
                       <div className="plugin-browser__result-description">
                         {item.description || 'No description provided.'}
                       </div>
+
+                      {expandedItemId === item.id && (
+                        <div className="plugin-browser__detail-panel">
+                          <div className="plugin-browser__detail-row">
+                            <span className="plugin-browser__detail-key">Project</span>
+                            <span className="plugin-browser__detail-value">{item.id}</span>
+                          </div>
+                          <div className="plugin-browser__detail-row">
+                            <span className="plugin-browser__detail-key">Slug</span>
+                            <span className="plugin-browser__detail-value">
+                              {item.slug || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="plugin-browser__detail-row">
+                            <span className="plugin-browser__detail-key">Supported MC</span>
+                            <span className="plugin-browser__detail-value">
+                              {supportedVersionsLabel(item.id)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="plugin-browser__result-meta">
                         <span className="plugin-browser__meta-item">

@@ -202,8 +202,35 @@
     box-shadow: 0 8px 20px rgba(249, 115, 22, 0.2);
   }
 
+  .plugin-browser__details-btn {
+    @apply inline-flex items-center rounded-md border border-zinc-600/85 px-2.5 py-1.5 text-xs font-semibold text-zinc-200;
+    background: rgba(51, 65, 85, 0.72);
+  }
+
+  .plugin-browser__details-btn:hover {
+    @apply border-zinc-400 text-zinc-100;
+    background: rgba(71, 85, 105, 0.8);
+  }
+
   .plugin-browser__result-description {
     @apply text-sm text-zinc-400 line-clamp-2 leading-snug;
+  }
+
+  .plugin-browser__detail-panel {
+    @apply rounded-lg border border-zinc-700/70 px-3 py-2.5 flex flex-col gap-1.5;
+    background: rgba(15, 23, 42, 0.66);
+  }
+
+  .plugin-browser__detail-row {
+    @apply flex items-start gap-2 text-xs;
+  }
+
+  .plugin-browser__detail-key {
+    @apply w-[95px] shrink-0 uppercase tracking-[0.06em] text-zinc-500;
+  }
+
+  .plugin-browser__detail-value {
+    @apply text-zinc-200 break-all;
   }
 
   .plugin-browser__result-meta {
