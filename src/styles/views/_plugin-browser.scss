@@ -7,33 +7,13 @@
       radial-gradient(circle at 95% 100%, rgba(56, 189, 248, 0.15), transparent 50%);
   }
 
-  .plugin-browser__hero {
-    @apply rounded-2xl border border-zinc-700/70 px-5 py-4 flex items-start justify-between gap-4;
-    background: linear-gradient(135deg, rgba(24, 24, 27, 0.94), rgba(17, 24, 39, 0.88));
-    box-shadow: 0 18px 45px rgba(2, 6, 23, 0.25);
-  }
-
-  .plugin-browser__hero-title {
-    @apply m-0 text-[1.4rem] font-semibold tracking-wide text-zinc-100;
-  }
-
-  .plugin-browser__hero-description {
-    @apply mt-1.5 mb-0 text-sm text-zinc-400 leading-relaxed;
-  }
-
-  .plugin-browser__hero-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-cyan-300/30 text-cyan-200;
-    background: linear-gradient(120deg, var(--mv-accent-start), var(--mv-accent-end));
-    opacity: 0.85;
-  }
-
   .plugin-browser__platform-grid {
     @apply grid gap-2;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
   }
 
   .plugin-browser__platform-chip {
-    @apply flex items-center gap-2.5 rounded-xl px-3 py-2.5 border border-zinc-700 text-zinc-300 transition-all;
+    @apply flex items-center gap-2 rounded-xl px-2.5 py-2 border border-zinc-700 text-zinc-300 transition-all;
     background: rgba(24, 24, 27, 0.62);
   }
 
@@ -52,8 +32,17 @@
     @apply flex flex-col min-w-0;
   }
 
+  .plugin-browser__platform-logo-wrap {
+    @apply h-7 w-7 rounded-md border border-zinc-600/80 flex items-center justify-center overflow-hidden shrink-0;
+    background: rgba(15, 23, 42, 0.82);
+  }
+
+  .plugin-browser__platform-logo {
+    @apply h-4 w-4 object-contain;
+  }
+
   .plugin-browser__platform-label {
-    @apply text-sm font-semibold leading-tight;
+    @apply text-[0.82rem] font-semibold leading-tight;
   }
 
   .plugin-browser__platform-hint {
@@ -299,10 +288,6 @@
 }
 
 @media (max-width: 920px) {
-  .plugin-browser__hero {
-    @apply flex-col items-start;
-  }
-
   .plugin-browser__search-row {
     @apply flex-col;
   }

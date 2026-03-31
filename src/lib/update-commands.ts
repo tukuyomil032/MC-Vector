@@ -110,6 +110,11 @@ export async function getAppLocation(): Promise<string> {
 export async function downloadAndInstallUpdate(
   onProgress?: (downloaded: number, total: number) => void
 ): Promise<void> {
+  const latestUpdate = await check();
+  if (latestUpdate) {
+    currentUpdate = latestUpdate;
+  }
+
   if (!currentUpdate) throw new Error('No update available');
 
   // Check if the app can be updated before proceeding
@@ -133,8 +138,11 @@ export async function downloadAndInstallUpdate(
   let downloaded = 0;
   let contentLength = 0;
 
-  try {
-    await currentUpdate.downloadAndInstall((event) => {
+  const installWithProgress = async () => {
+    downloaded = 0;
+    contentLength = 0;
+
+    await currentUpdate!.downloadAndInstall((event) => {
       switch (event.event) {
         case 'Started':
           contentLength = event.data.contentLength ?? 0;
@@ -147,6 +155,10 @@ export async function downloadAndInstallUpdate(
           break;
       }
     });
+  };
+
+  try {
+    await installWithProgress();
 
     await relaunch();
   } catch (error) {
@@ -155,6 +167,16 @@ export async function downloadAndInstallUpdate(
     if (errorMessage.includes('Read-only file system') || errorMessage.includes('os error 30')) {
       const location = await getAppLocation();
       throw new Error(createReadOnlyErrorMessage(location));
+    }
+
+    if (errorMessage.toLowerCase().includes('signature verification failed')) {
+      const refreshed = await check();
+      if (refreshed) {
+        currentUpdate = refreshed;
+        await installWithProgress();
+        await relaunch();
+        return;
+      }
     }
 
     throw new Error(normalizeUpdaterError(error));

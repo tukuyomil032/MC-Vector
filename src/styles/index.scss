@@ -19,6 +19,7 @@
 @use './views/proxy-help-view';
 @use './views/proxy-setup-view';
 @use './views/ngrok-guide-view';
+@use './views/backup-selector-window';
 
 @tailwind base;
 @tailwind components;

@@ -1,11 +1,11 @@
 import { ask } from '@tauri-apps/plugin-dialog';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import { useState } from 'react';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 
 interface ProxySetupViewProps {
   servers: MinecraftServer[];
   onBuildNetwork: (config: ProxyNetworkConfig) => Promise<void> | void;
+  onOpenHelp: () => void;
 }
 
 export interface ProxyNetworkConfig {
@@ -14,7 +14,11 @@ export interface ProxyNetworkConfig {
   backendServerIds: string[];
 }
 
-export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupViewProps) {
+export default function ProxySetupView({
+  servers,
+  onBuildNetwork,
+  onOpenHelp,
+}: ProxySetupViewProps) {
   const [proxySoftware, setProxySoftware] = useState('Velocity');
   const [proxyPort, setProxyPort] = useState(25577);
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
@@ -55,17 +59,9 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
     }
   };
 
-  const openHelp = async () => {
-    await openUrl('https://papermc.io/docs/velocity');
-  };
-
   return (
     <div className="proxy-setup-view">
       <h2 className="proxy-setup-view__title">Proxy Network Setup</h2>
-
-      <p className="proxy-setup-view__description">
-        複数のサーバーを接続してネットワークを構築します。各サーバーの設定(ポート、転送設定)を自動で書き換えます。
-      </p>
 
       <div className="proxy-setup-view__panel">
         <div className="proxy-setup-view__field">
@@ -131,7 +127,7 @@ export default function ProxySetupView({ servers, onBuildNetwork }: ProxySetupVi
             {isBuilding ? '実行中...' : 'ネットワーク構築を実行'}
           </button>
 
-          <button className="btn-secondary proxy-setup-view__help-btn" onClick={openHelp}>
+          <button className="btn-secondary proxy-setup-view__help-btn" onClick={onOpenHelp}>
             設定方法の詳細を見る
           </button>
         </div>

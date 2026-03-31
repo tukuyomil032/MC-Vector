@@ -177,25 +177,34 @@
   }
 
   .server-settings__token-panel {
-    width: 450px;
+    width: min(560px, calc(100vw - 2rem));
+    padding: 1.25rem 1.25rem 1rem;
     border-color: var(--mv-border-soft);
     background: linear-gradient(145deg, rgba(17, 24, 39, 0.96), rgba(24, 24, 27, 0.95));
   }
 
   .server-settings__token-title {
-    @apply mt-0;
+    @apply mt-0 mb-2;
   }
 
   .server-settings__token-text {
-    @apply text-zinc-400 text-sm leading-relaxed;
+    @apply text-zinc-400 text-sm leading-relaxed mb-4;
+  }
+
+  .server-settings__token-input {
+    @apply w-full mb-4;
   }
 
   .server-settings__token-actions {
-    @apply flex justify-end;
+    @apply flex justify-end gap-2;
   }
 
   .server-settings__token-cancel {
-    @apply mr-2.5;
+    @apply mr-0;
+  }
+
+  .server-settings__token-save {
+    min-width: 110px;
   }
 }
 

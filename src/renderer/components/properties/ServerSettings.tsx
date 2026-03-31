@@ -1,5 +1,4 @@
 import { appDataDir } from '@tauri-apps/api/path';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import React, { useEffect, useRef, useState } from 'react';
 import { getJavaVersions, type JavaVersion } from '../../../lib/java-commands';
 import {
@@ -19,6 +18,7 @@ import { useToast } from '../ToastProvider';
 interface ServerSettingsProps {
   server: MinecraftServer;
   onSave: (updatedServer: MinecraftServer) => void;
+  onOpenNgrokGuide: () => void;
 }
 
 const WEEKDAY_OPTIONS: Array<{ value: number; label: string }> = [
@@ -31,7 +31,7 @@ const WEEKDAY_OPTIONS: Array<{ value: number; label: string }> = [
   { value: 6, label: '土曜' },
 ];
 
-const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
+const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenNgrokGuide }) => {
   const [name, setName] = useState(server.name);
   const [profileName, setProfileName] = useState(server.profileName || '');
   const [groupName, setGroupName] = useState(server.groupName || '');
@@ -222,7 +222,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
   };
 
   const handleOpenGuide = async () => {
-    await openUrl('https://dashboard.ngrok.com/get-started/setup');
+    onOpenNgrokGuide();
   };
 
   return (
@@ -388,7 +388,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                   min={0}
                   max={20}
                   value={maxAutoRestarts}
-                  disabled={!autoRestartOnCrash}
                   onChange={(event) => setMaxAutoRestarts(Number(event.target.value))}
                   className="input-field"
                 />
@@ -401,7 +400,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                   min={1}
                   max={300}
                   value={autoRestartDelaySec}
-                  disabled={!autoRestartOnCrash}
                   onChange={(event) => setAutoRestartDelaySec(Number(event.target.value))}
                   className="input-field"
                 />
@@ -425,7 +423,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                 <label className="server-settings__label">スケジュール方式</label>
                 <select
                   value={autoBackupScheduleType}
-                  disabled={!autoBackupEnabled}
                   onChange={(event) =>
                     setAutoBackupScheduleType(event.target.value as 'interval' | 'daily' | 'weekly')
                   }
@@ -445,7 +442,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                     min={1}
                     max={1440}
                     value={autoBackupIntervalMin}
-                    disabled={!autoBackupEnabled}
                     onChange={(event) => setAutoBackupIntervalMin(Number(event.target.value))}
                     className="input-field"
                   />
@@ -456,7 +452,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                   <input
                     type="time"
                     value={autoBackupTime}
-                    disabled={!autoBackupEnabled}
                     onChange={(event) => setAutoBackupTime(event.target.value)}
                     className="input-field"
                   />
@@ -468,7 +463,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
                   <label className="server-settings__label">曜日</label>
                   <select
                     value={autoBackupWeekday}
-                    disabled={!autoBackupEnabled}
                     onChange={(event) => setAutoBackupWeekday(Number(event.target.value))}
                     className="input-field"
                   >
@@ -601,7 +595,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
             </p>
             <input
               type="text"
-              className="input-field w-full mb-5"
+              className="input-field server-settings__token-input"
               placeholder="Ex: 2A..."
               value={inputToken}
               onChange={(e) => setInputToken(e.target.value)}
@@ -615,7 +609,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave }) => {
               </button>
               <button
                 onClick={handleTokenSubmit}
-                className="btn-primary disabled:opacity-50"
+                className="btn-primary server-settings__token-save disabled:opacity-50"
                 disabled={!inputToken}
               >
                 保存して接続

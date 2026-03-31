@@ -20,6 +20,8 @@ type AnsiSegment = {
 
 type LogLevelFilter = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 
+const LOG_FILTER_OPTIONS: LogLevelFilter[] = ['ALL', 'INFO', 'WARN', 'ERROR', 'FATAL'];
+
 const ANSI_COLOR_MAP: Record<string, string> = {
   '30': '#000000',
   '31': '#ef4444',
@@ -641,20 +643,23 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
         <div className="console-view__filter-wrap">
           <span className="console-view__filter-label">Level</span>
-          <select
-            className="console-view__filter-select"
-            value={logFilter}
-            onChange={(event) => {
-              setLogFilter(event.target.value as LogLevelFilter);
-              setActiveMatchIndex(0);
-            }}
-          >
-            <option value="ALL">ALL</option>
-            <option value="INFO">INFO</option>
-            <option value="WARN">WARN</option>
-            <option value="ERROR">ERROR</option>
-            <option value="FATAL">FATAL</option>
-          </select>
+          <div className="console-view__filter-pills" role="tablist" aria-label="Log level filter">
+            {LOG_FILTER_OPTIONS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                role="tab"
+                aria-selected={logFilter === level}
+                className={`console-view__filter-pill ${logFilter === level ? 'is-active' : ''}`}
+                onClick={() => {
+                  setLogFilter(level);
+                  setActiveMatchIndex(0);
+                }}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

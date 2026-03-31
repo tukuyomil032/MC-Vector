@@ -141,6 +141,23 @@
     @apply text-zinc-400 text-sm;
   }
 
+  .backups-view__selected-summary {
+    @apply flex flex-col gap-2;
+  }
+
+  .backups-view__selected-count {
+    @apply text-xs font-semibold uppercase tracking-[0.08em] text-cyan-200;
+  }
+
+  .backups-view__selected-list {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .backups-view__selected-item {
+    @apply rounded-md border border-zinc-700/70 px-2.5 py-1.5 text-xs text-zinc-200 break-all;
+    background: rgba(15, 23, 42, 0.65);
+  }
+
   .backups-view__create-actions {
     @apply flex justify-end gap-3 pt-2;
   }

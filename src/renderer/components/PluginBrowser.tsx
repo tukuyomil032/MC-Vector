@@ -12,7 +12,6 @@ import {
   Package,
   Search,
   Server,
-  Sparkles,
   Star,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -59,9 +58,10 @@ interface PlatformOption {
   hint: string;
   inApp: boolean;
   icon: LucideIcon;
+  logoUrl: string;
 }
 
-const LIMIT = 30;
+const LIMIT = 25;
 
 type CompatibilityStatus = 'checking' | 'compatible' | 'incompatible' | 'unknown';
 
@@ -177,6 +177,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: isModServer ? 'Mods + Datapacks' : 'Plugins + Mods',
         inApp: true,
         icon: Package,
+        logoUrl: 'https://modrinth.com/favicon.ico',
       },
     ];
 
@@ -187,6 +188,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: 'Paper ecosystem',
         inApp: true,
         icon: Server,
+        logoUrl: 'https://hangar.papermc.io/favicon.ico',
       });
     }
 
@@ -197,6 +199,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: 'Spiget API',
         inApp: true,
         icon: Flame,
+        logoUrl: 'https://www.spigotmc.org/favicon.ico',
       });
     }
 
@@ -207,6 +210,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: 'Open in web',
         inApp: false,
         icon: ExternalLink,
+        logoUrl: 'https://www.curseforge.com/favicon.ico',
       });
     }
 
@@ -755,22 +759,6 @@ export default function PluginBrowser({ server }: Props) {
 
   return (
     <div className="plugin-browser">
-      <div className="plugin-browser__hero">
-        <div>
-          <h2 className="plugin-browser__hero-title">
-            Discover {isModServer ? 'Mods' : 'Plugins'}
-          </h2>
-          <p className="plugin-browser__hero-description">
-            {selectedPlatform?.label} から直接検索して、{folderName}{' '}
-            フォルダへ即時インストールできます。
-          </p>
-        </div>
-        <div className="plugin-browser__hero-chip">
-          <Sparkles size={14} />
-          <span>In-app installer</span>
-        </div>
-      </div>
-
       <div className="plugin-browser__platform-grid">
         {platformOptions.map((option) => {
           const Icon = option.icon;
@@ -788,11 +776,19 @@ export default function PluginBrowser({ server }: Props) {
                 setPage(0);
               }}
             >
-              <Icon size={16} />
+              <div className="plugin-browser__platform-logo-wrap">
+                <img
+                  src={option.logoUrl}
+                  alt={`${option.label} logo`}
+                  className="plugin-browser__platform-logo"
+                  loading="lazy"
+                />
+              </div>
               <div className="plugin-browser__platform-copy">
                 <span className="plugin-browser__platform-label">{option.label}</span>
                 <span className="plugin-browser__platform-hint">{option.hint}</span>
               </div>
+              {!option.logoUrl && <Icon size={14} />}
             </motion.button>
           );
         })}

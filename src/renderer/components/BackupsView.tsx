@@ -1,3 +1,4 @@
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -13,6 +14,7 @@ import {
   readJsonFile,
   writeJsonFile,
 } from '../../lib/file-commands';
+import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../shared/server declaration';
 import { useToast } from './ToastProvider';
 
@@ -24,13 +26,6 @@ interface Backup {
   name: string;
   date: Date;
   size: number;
-}
-
-interface FileNode {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  children?: FileNode[];
 }
 
 type BackupMode = 'full' | 'differential';
@@ -144,7 +139,6 @@ export default function BackupsView({ server }: Props) {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [tree, setTree] = useState<FileNode[]>([]);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [customName, setCustomName] = useState('');
   const [compressionLevel, setCompressionLevel] = useState(5);
@@ -168,6 +162,25 @@ export default function BackupsView({ server }: Props) {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    tauriListen<{ serverPath: string; paths: string[] }>('backup-selector:apply', (payload) => {
+      if (payload.serverPath !== server.path) {
+        return;
+      }
+
+      setSelectedPaths(new Set(payload.paths));
+      showToast(`バックアップ対象を ${payload.paths.length} 件更新しました`, 'success');
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, [server.path, showToast]);
 
   useEffect(() => {
     void (async () => {
@@ -213,7 +226,17 @@ export default function BackupsView({ server }: Props) {
     setCustomName('');
     setCompressionLevel(5);
     setBackupMode('full');
-    await loadTree();
+    try {
+      const entries = await listFiles(server.path);
+      const initial = entries
+        .filter((entry) => entry.name !== 'backups')
+        .map((entry) => entry.name)
+        .sort((left, right) => left.localeCompare(right));
+      setSelectedPaths(new Set(initial));
+    } catch (error) {
+      console.error(error);
+      setSelectedPaths(new Set());
+    }
   };
 
   const loadWorlds = async () => {
@@ -246,52 +269,50 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const loadTree = async () => {
-    try {
-      const entries = await listFiles(server.path);
-      const rootNodes: FileNode[] = entries
-        .filter((e) => e.name !== 'backups')
-        .map((e) => ({
-          name: e.name,
-          path: e.name,
-          isDirectory: e.isDirectory,
-        }));
-      setTree(rootNodes);
-      setSelectedPaths(new Set(rootNodes.map((n) => n.path)));
-    } catch (e) {
-      console.error('Failed to load tree:', e);
-      setTree([]);
-    }
-  };
-
-  const togglePath = (node: FileNode, checked: boolean) => {
-    const newSet = new Set(selectedPaths);
-    const apply = (n: FileNode) => {
-      if (checked) {
-        newSet.add(n.path);
-      } else newSet.delete(n.path);
-      if (n.children) {
-        n.children.forEach(apply);
-      }
-    };
-    apply(node);
-    setSelectedPaths(newSet);
-  };
-
-  const selectAll = () => {
-    const all = new Set<string>();
-    const collect = (nodes: FileNode[]) =>
-      nodes.forEach((n) => {
-        all.add(n.path);
-        if (n.children) {
-          collect(n.children);
-        }
-      });
-    collect(tree);
-    setSelectedPaths(all);
-  };
-
   const clearAll = () => setSelectedPaths(new Set());
+
+  const openSelectorWindow = async () => {
+    const label = 'backup-selector';
+    const selected = Array.from(selectedPaths).sort((a, b) => a.localeCompare(b));
+
+    const existing = await WebviewWindow.getByLabel(label);
+    if (existing) {
+      await existing.emit('backup-selector:load', {
+        serverPath: server.path,
+        selected,
+      });
+      await existing.setFocus();
+      return;
+    }
+
+    const params = new URLSearchParams({
+      backupSelector: '1',
+      serverPath: server.path,
+      selected: JSON.stringify(selected),
+    });
+
+    const selectorWindow = new WebviewWindow(label, {
+      title: `Backup Target Selector - ${server.name}`,
+      url: `/?${params.toString()}`,
+      width: 980,
+      height: 760,
+      resizable: true,
+      center: true,
+      focus: true,
+    });
+
+    selectorWindow.once('tauri://created', () => {
+      void selectorWindow.emit('backup-selector:load', {
+        serverPath: server.path,
+        selected,
+      });
+    });
+
+    selectorWindow.once('tauri://error', (error) => {
+      console.error(error);
+      showToast('バックアップ選択ウィンドウを開けませんでした', 'error');
+    });
+  };
 
   const buildSnapshotForSelection = async (
     paths: string[]
@@ -660,11 +681,6 @@ export default function BackupsView({ server }: Props) {
           ))}
       </div>
 
-      <div className="backups-view__note">
-        ※ バックアップは <code className="font-mono">{server.path}/backups</code>{' '}
-        に保存され、タグ/差分メタデータは同フォルダ内の {BACKUP_META_FILE} で管理されます。
-      </div>
-
       <div className="backups-view__world-panel">
         <div className="backups-view__world-header">
           <h4 className="backups-view__world-title">ワールド管理</h4>
@@ -756,8 +772,11 @@ export default function BackupsView({ server }: Props) {
               <div className="backups-view__selection-header">
                 <div className="font-semibold">バックアップ対象を選択</div>
                 <div className="flex gap-2">
-                  <button className="btn-secondary text-sm" onClick={selectAll}>
-                    全選択
+                  <button
+                    className="btn-secondary text-sm"
+                    onClick={() => void openSelectorWindow()}
+                  >
+                    別ウィンドウで選択
                   </button>
                   <button className="btn-secondary text-sm" onClick={clearAll}>
                     全解除
@@ -766,10 +785,31 @@ export default function BackupsView({ server }: Props) {
               </div>
 
               <div className="backups-view__tree-panel">
-                {tree.length === 0 ? (
-                  <div className="backups-view__tree-loading">読み込み中...</div>
+                {selectedPaths.size === 0 ? (
+                  <div className="backups-view__tree-loading">
+                    対象が未選択です。別ウィンドウで選択してください。
+                  </div>
                 ) : (
-                  <FileTree nodes={tree} selected={selectedPaths} onToggle={togglePath} />
+                  <div className="backups-view__selected-summary">
+                    <div className="backups-view__selected-count">
+                      選択中: {selectedPaths.size} 件
+                    </div>
+                    <div className="backups-view__selected-list">
+                      {Array.from(selectedPaths)
+                        .sort((left, right) => left.localeCompare(right))
+                        .slice(0, 14)
+                        .map((path) => (
+                          <div key={path} className="backups-view__selected-item">
+                            {path}
+                          </div>
+                        ))}
+                      {selectedPaths.size > 14 && (
+                        <div className="backups-view__selected-item">
+                          ...他 {selectedPaths.size - 14} 件
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -835,63 +875,6 @@ export default function BackupsView({ server }: Props) {
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FileTree({
-  nodes,
-  selected,
-  onToggle,
-}: {
-  nodes: FileNode[];
-  selected: Set<string>;
-  onToggle: (node: FileNode, checked: boolean) => void;
-}) {
-  return (
-    <div className="backups-view__tree">
-      {nodes.map((node) => (
-        <TreeNode key={node.path} node={node} selected={selected} onToggle={onToggle} depth={0} />
-      ))}
-    </div>
-  );
-}
-
-function TreeNode({
-  node,
-  selected,
-  onToggle,
-  depth,
-}: {
-  node: FileNode;
-  selected: Set<string>;
-  onToggle: (node: FileNode, checked: boolean) => void;
-  depth: number;
-}) {
-  const isChecked = selected.has(node.path);
-  return (
-    <div className={`backups-view__tree-node ${isChecked ? 'is-selected' : ''}`}>
-      <label className="backups-view__tree-label" style={{ paddingLeft: `${depth * 16 + 8}px` }}>
-        <input
-          type="checkbox"
-          checked={isChecked}
-          onChange={(e) => onToggle(node, e.target.checked)}
-        />
-        <span className="backups-view__tree-name">{node.name || '(root)'}</span>
-      </label>
-      {node.children && node.children.length > 0 && (
-        <div className="backups-view__tree-children">
-          {node.children.map((child) => (
-            <TreeNode
-              key={child.path}
-              node={child}
-              selected={selected}
-              onToggle={onToggle}
-              depth={depth + 1}
-            />
-          ))}
         </div>
       )}
     </div>

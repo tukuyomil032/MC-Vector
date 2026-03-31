@@ -190,11 +190,27 @@
     color: #8b9bb4;
   }
 
-  .console-view__filter-select {
-    @apply rounded-md border text-xs px-2 py-1.5 outline-none;
-    background-color: rgba(17, 24, 39, 0.82);
+  .console-view__filter-pills {
+    @apply inline-flex rounded-lg border p-1 gap-1;
     border-color: rgba(82, 82, 91, 0.85);
-    color: #f3f4f6;
+    background: rgba(17, 24, 39, 0.82);
+  }
+
+  .console-view__filter-pill {
+    @apply rounded-md border border-transparent px-2 py-1 text-[0.68rem] font-semibold text-zinc-300 transition-all;
+    background: transparent;
+    letter-spacing: 0.02em;
+  }
+
+  .console-view__filter-pill:hover {
+    @apply text-zinc-100;
+    background: rgba(51, 65, 85, 0.75);
+  }
+
+  .console-view__filter-pill.is-active {
+    @apply text-white;
+    border-color: rgba(56, 189, 248, 0.52);
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
   }
 
   .console-view__command-input {

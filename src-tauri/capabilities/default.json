@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": ["main", "backup-selector"],
   "permissions": [
     "core:default",
     "dialog:default",
@@ -22,6 +22,8 @@
         { "url": "https://api.modrinth.com/**" },
         { "url": "https://cdn.modrinth.com/**" },
         { "url": "https://hangar.papermc.io/**" },
+        { "url": "https://api.spiget.org/**" },
+        { "url": "https://www.spigotmc.org/**" },
         { "url": "https://api.adoptium.net/**" },
         { "url": "https://api.mojang.com/**" },
         { "url": "https://bin.equinox.io/**" },

@@ -100,8 +100,11 @@ export default function DashboardView({ server }: Props) {
       }
 
       const now = Date.now();
-      const cpuVal = Math.round(data.cpu * 10) / 10;
-      const memVal = Math.round(data.memory / 1024 / 1024);
+      const rawCpu = typeof data.cpu === 'number' && Number.isFinite(data.cpu) ? data.cpu : 0;
+      const rawMemory =
+        typeof data.memory === 'number' && Number.isFinite(data.memory) ? data.memory : 0;
+      const cpuVal = normalizeMetric(clamp(rawCpu, 0, 100), 1);
+      const memVal = Math.max(0, Math.round(rawMemory / 1024 / 1024));
 
       setCurrentCpu(cpuVal);
       setCurrentMem(memVal);
@@ -270,7 +273,7 @@ export default function DashboardView({ server }: Props) {
                   tick={{ fontSize: 10 }}
                   minTickGap={24}
                 />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} domain={[0, 100]} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#111827',

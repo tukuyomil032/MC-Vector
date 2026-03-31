@@ -1,6 +1,7 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { AnimatePresence, motion } from 'framer-motion';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import {
   iconBackups,
@@ -38,6 +39,7 @@ import {
 import { checkForUpdates, downloadAndInstallUpdate } from './lib/update-commands';
 import AddServerModal from './renderer/components/AddServerModal';
 import BackupsView from './renderer/components/BackupsView';
+import BackupTargetSelectorWindow from './renderer/components/BackupTargetSelectorWindow';
 import ConsoleView from './renderer/components/ConsoleView';
 import DashboardView from './renderer/components/DashboardView';
 import FilesView from './renderer/components/FilesView';
@@ -1358,6 +1360,11 @@ function App() {
     setCurrentView('app-settings');
   };
 
+  const isBackupSelectorWindow = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('backupSelector') === '1';
+  }, []);
+
   const renderContent = () => {
     if (currentView === 'app-settings') {
       return <SettingsWindow onClose={() => setCurrentView('dashboard')} />;
@@ -1369,7 +1376,13 @@ function App() {
       return <NgrokGuideView />;
     }
     if (currentView === 'proxy') {
-      return <ProxySetupView servers={servers} onBuildNetwork={handleBuildProxyNetwork} />;
+      return (
+        <ProxySetupView
+          servers={servers}
+          onBuildNetwork={handleBuildProxyNetwork}
+          onOpenHelp={() => setCurrentView('proxy-help')}
+        />
+      );
     }
     if (!activeServer) {
       return (
@@ -1403,7 +1416,12 @@ function App() {
         return <BackupsView key={contentKey} server={activeServer} />;
       case 'general-settings':
         return (
-          <ServerSettings key={contentKey} server={activeServer} onSave={handleUpdateServer} />
+          <ServerSettings
+            key={contentKey}
+            server={activeServer}
+            onSave={handleUpdateServer}
+            onOpenNgrokGuide={() => setCurrentView('ngrok-guide')}
+          />
         );
       case 'users':
         return <UsersView key={contentKey} server={activeServer} />;
@@ -1411,6 +1429,10 @@ function App() {
         return <div>Unknown View</div>;
     }
   };
+
+  if (isBackupSelectorWindow) {
+    return <BackupTargetSelectorWindow />;
+  }
 
   return (
     <div className="app-shell" onClick={handleClickOutside} style={appShellStyle}>
@@ -1600,7 +1622,18 @@ function App() {
           </div>
         </header>
         <div className="app-main__content" style={{ background: themeColors.panelBg }}>
-          {renderContent()}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`${selectedServerId || 'none'}-${currentView}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="h-full"
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 
