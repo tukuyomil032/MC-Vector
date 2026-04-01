@@ -18,42 +18,41 @@
 | #29 依存関係チェック | Implemented | Modrinth依存解決と不足依存の一括導入フローあり | 依存ツリー可視化なし |
 | #30 有効/無効トグル | Implemented | `.disabled`付け替えで有効化/無効化を実装 | 一括切替やプロファイル化なし |
 | #32 バージョン互換チェック | Implemented | Compatibility判定バッジと互換情報表示あり | 判定理由の詳細表示が不足 |
+| #28 更新通知 | Implemented (v1) | 導入済みModrinth/Hangarに対して更新バッジと候補サマリを表示 | Spigot対応と履歴保存は未対応 |
+| ログ描画の50msバッファ | Implemented | `consoleStore`でログを50ms単位にまとめて反映 | flush統計や可視化メトリクスは未実装 |
 
 ### 1.2 未実装または不足(次フェーズ対象)
 
 | 項目 | 状態 | 不足点 |
 | --- | --- | --- |
-| #28 更新通知 | Not Started | 導入済みプラグインの新バージョン検知と通知がない |
-| ログ描画の50msバッファ | Not Started | 高頻度ログを逐次appendしており、要件のスロットリング未達 |
+| #17 コマンド履歴 | Partial | セッション内履歴のみで永続化・サーバー別履歴・履歴UIがない |
 | サーバー状態機械(Stopped/Starting/Running/Stopping/Crashed/Restarting) | Partial | 実体はonline/offline中心で`crashed`状態を明示していない |
 | Plugin Adapter層分離 | Partial | `src/lib/plugin-commands.ts`に実装が集中し`src/lib/adapters/plugin`未整備 |
 | Guard層分離 | Partial | 型ガードは存在するが`src/lib/guards`へ分離されていない |
 
 ## 2. 次フェーズ実装計画(未実装/不足のみ)
 
-### 2.1 Phase A (最優先)
+### 2.1 Phase A (完了)
 
 1. #28 プラグイン更新通知
-- 目的: 導入済みプラグインの更新を見逃さない
-- 変更:
-  - 導入済みファイルとリモート最新版の対応付けロジックを追加
-  - Plugin Browserに「Update Available」バッジを追加
-  - 一括更新候補のパネルを追加
-- 受け入れ条件:
-  - 少なくともModrinth/Hangarで更新有無が判定できる
-  - 更新候補0件/複数件の双方でUIが崩れない
+- 結果: 導入済みModrinth/Hangarに対する更新候補表示を追加
 
 2. ログ取り込みのバッファリング(50ms)
-- 目的: 高頻度ログ時の描画コストを抑える
-- 変更:
-  - `consoleStore`にバッファキューを追加
-  - 50ms単位でまとめて反映
-  - 既存`MAX_LOG_LINES`制限を維持
-- 受け入れ条件:
-  - 高頻度ログ時に入力操作とスクロールが劣化しない
-  - ログ欠落や順序逆転が発生しない
+- 結果: `consoleStore`で50msバッファ反映を実装
 
-### 2.2 Phase B (運用信頼性)
+### 2.2 Phase B (最優先)
+
+1. #17 コマンド履歴の永続化
+- 目的: 再起動後も運用コマンドを再利用できるようにする
+- 変更:
+  - 履歴をサーバーID単位で保存
+  - 直近N件の重複圧縮と履歴削除機能を追加
+  - ConsoleViewに履歴ドロワーを追加
+- 受け入れ条件:
+  - アプリ再起動後に履歴が復元される
+  - サーバー切替時に履歴コンテキストが正しく切り替わる
+
+### 2.3 Phase C (運用信頼性)
 
 1. サーバー状態機械の厳密化
 - 目的: UI操作可否と実行状態を一致させる
@@ -74,7 +73,7 @@
   - 連続失敗時に再試行間隔が段階的に伸びる
   - 履歴画面で試行回数と失敗理由が確認できる
 
-### 2.3 Phase C (構造改善)
+### 2.4 Phase D (構造改善)
 
 1. Plugin Adapter分離
 - 目的: ソース差異吸収をUIから切り離す
@@ -119,13 +118,13 @@
 
 1. Phase A-1: #28 更新通知
 2. Phase A-2: ログ50msバッファ
-3. Phase B-1: 状態機械の厳密化
-4. Phase C-1: Adapter/Guard分離
-5. 新規タブはOps Timelineから着手
+3. Phase B-1: #17 コマンド履歴の永続化
+4. Phase C-1: 状態機械の厳密化
+5. Phase D-1: Adapter/Guard分離
+6. 新規タブはOps Timelineから着手
 
 ## 5. 直近タスク(最小着手セット)
 
-1. Plugin更新通知のデータモデルを定義する
-2. `consoleStore`にログバッファキューを追加する
-3. Rustの`server-status-change`イベント拡張案を設計する
-4. Adapter/Guard移設対象関数の一覧を作る
+1. #17向けに履歴保存ストア仕様を定義する
+2. Rustの`server-status-change`イベント拡張案を設計する
+3. Adapter/Guard移設対象関数の一覧を作る
