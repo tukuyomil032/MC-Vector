@@ -13,13 +13,17 @@ import {
   Search,
   Server,
   Star,
+  X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
 import {
   checkHangarCompatibility,
   getCompatibleModrinthVersion,
+  getHangarProjectBody,
+  getModrinthProjectBody,
   getModrinthProjectIdentity,
+  getSpigotResourceBody,
   installHangarProject,
   installModrinthProject,
   installSpigotProject,
@@ -75,6 +79,8 @@ interface DependencyIdentity {
   slug: string;
   title: string;
 }
+
+type DetailTab = 'info' | 'readme';
 
 const MINECRAFT_VERSION_REGEX = /\b1\.\d+(?:\.\d+)?\b/g;
 const LOADER_KEYWORDS = [
@@ -179,6 +185,35 @@ function mapSpigotResource(resource: SpigetResource): ProjectItem {
   };
 }
 
+function stripHtmlToText(value: string): string {
+  try {
+    const parsed = new DOMParser().parseFromString(value, 'text/html');
+    const text = parsed.body.textContent || '';
+    return text.replace(/\n{3,}/g, '\n\n').trim();
+  } catch {
+    return value;
+  }
+}
+
+function normalizeReadme(platform: ProjectItem['platform'], value: string): string {
+  const normalized = value.replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
+    return '';
+  }
+  return platform === 'Spigot' ? stripHtmlToText(normalized) : normalized;
+}
+
+function projectPageUrl(item: ProjectItem): string {
+  if (item.platform === 'Modrinth') {
+    return `https://modrinth.com/project/${item.slug || item.id}`;
+  }
+  if (item.platform === 'Hangar') {
+    const slug = item.slug || toSlug(item.title);
+    return `https://hangar.papermc.io/${encodeURIComponent(item.author)}/${encodeURIComponent(slug)}`;
+  }
+  return `https://www.spigotmc.org/resources/${item.id}/`;
+}
+
 export default function PluginBrowser({ server }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProjectItem[]>([]);
@@ -189,7 +224,11 @@ export default function PluginBrowser({ server }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('relevance');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<ProjectItem | null>(null);
+  const [detailTab, setDetailTab] = useState<DetailTab>('info');
+  const [detailReadme, setDetailReadme] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [installedFiles, setInstalledFiles] = useState<string[]>([]);
   const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
     null
@@ -202,6 +241,8 @@ export default function PluginBrowser({ server }: Props) {
     Record<string, CompatibilityDetail>
   >({});
   const dependencyIdentityCacheRef = useRef<Record<string, DependencyIdentity>>({});
+  const detailReadmeCacheRef = useRef<Record<string, string | null>>({});
+  const detailRequestIdRef = useRef(0);
 
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
@@ -228,7 +269,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: 'Paper ecosystem',
         inApp: true,
         icon: Server,
-        logoUrl: 'https://docs.papermc.io/img/paper.png',
+        logoUrl: 'https://hangar.papermc.io/favicon.ico',
       });
     }
 
@@ -905,6 +946,94 @@ export default function PluginBrowser({ server }: Props) {
     return isModServer ? server.software || 'Mod loader' : 'Paper / Spigot';
   };
 
+  const resolveReadme = async (item: ProjectItem): Promise<string | null> => {
+    if (item.platform === 'Modrinth') {
+      return getModrinthProjectBody(item.id);
+    }
+
+    if (item.platform === 'Hangar') {
+      const owner = item.author.trim();
+      const slug = (item.slug || '').trim() || toSlug(item.title);
+      if (!owner || !slug) {
+        return null;
+      }
+      return getHangarProjectBody(owner, slug);
+    }
+
+    const resourceId = Number(item.id);
+    if (!Number.isFinite(resourceId)) {
+      return null;
+    }
+    return getSpigotResourceBody(resourceId);
+  };
+
+  const closeDetailModal = () => {
+    detailRequestIdRef.current += 1;
+    setDetailItem(null);
+    setDetailTab('info');
+    setDetailError(null);
+  };
+
+  const openDetailModal = (item: ProjectItem) => {
+    setDetailItem(item);
+    setDetailTab('info');
+    setDetailError(null);
+
+    const cacheKey = `${item.platform}:${item.id}`;
+    if (Object.hasOwn(detailReadmeCacheRef.current, cacheKey)) {
+      setDetailLoading(false);
+      setDetailReadme(detailReadmeCacheRef.current[cacheKey]);
+      return;
+    }
+
+    setDetailLoading(true);
+    setDetailReadme(null);
+
+    const requestId = detailRequestIdRef.current + 1;
+    detailRequestIdRef.current = requestId;
+
+    void (async () => {
+      try {
+        const raw = await resolveReadme(item);
+        const normalized = raw ? normalizeReadme(item.platform, raw) : null;
+        detailReadmeCacheRef.current[cacheKey] = normalized;
+
+        if (detailRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setDetailReadme(normalized);
+      } catch (error) {
+        console.error(error);
+        if (detailRequestIdRef.current !== requestId) {
+          return;
+        }
+        setDetailError('READMEの取得に失敗しました。時間をおいて再試行してください。');
+      } finally {
+        if (detailRequestIdRef.current === requestId) {
+          setDetailLoading(false);
+        }
+      }
+    })();
+  };
+
+  useEffect(() => {
+    if (!detailItem) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDetailModal();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [detailItem]);
+
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
@@ -916,6 +1045,11 @@ export default function PluginBrowser({ server }: Props) {
     const clamped = totalPages ? Math.min(totalPages - 1, targetZeroBased) : targetZeroBased;
     setPage(clamped);
   };
+
+  const detailCompatibility = detailItem
+    ? (compatibilityByItemId[detailItem.id] ?? 'unknown')
+    : 'unknown';
+  const detailProjectUrl = detailItem ? projectPageUrl(detailItem) : '';
 
   return (
     <div className="plugin-browser">
@@ -1127,11 +1261,9 @@ export default function PluginBrowser({ server }: Props) {
                           <button
                             type="button"
                             className="plugin-browser__details-btn"
-                            onClick={() =>
-                              setExpandedItemId((prev) => (prev === item.id ? null : item.id))
-                            }
+                            onClick={() => openDetailModal(item)}
                           >
-                            {expandedItemId === item.id ? 'Hide' : 'Details'}
+                            Details
                           </button>
                         </div>
                       </div>
@@ -1139,33 +1271,6 @@ export default function PluginBrowser({ server }: Props) {
                       <div className="plugin-browser__result-description">
                         {item.description || 'No description provided.'}
                       </div>
-
-                      {expandedItemId === item.id && (
-                        <div className="plugin-browser__detail-panel">
-                          <div className="plugin-browser__detail-row">
-                            <span className="plugin-browser__detail-key">Project</span>
-                            <span className="plugin-browser__detail-value">{item.id}</span>
-                          </div>
-                          <div className="plugin-browser__detail-row">
-                            <span className="plugin-browser__detail-key">Slug</span>
-                            <span className="plugin-browser__detail-value">
-                              {item.slug || 'N/A'}
-                            </span>
-                          </div>
-                          <div className="plugin-browser__detail-row">
-                            <span className="plugin-browser__detail-key">Supported MC</span>
-                            <span className="plugin-browser__detail-value">
-                              {supportedVersionsLabel(item.id)}
-                            </span>
-                          </div>
-                          <div className="plugin-browser__detail-row">
-                            <span className="plugin-browser__detail-key">Loader</span>
-                            <span className="plugin-browser__detail-value">
-                              {loaderLabel(item)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
 
                       <div className="plugin-browser__result-meta">
                         <span className="plugin-browser__meta-item">
@@ -1257,6 +1362,119 @@ export default function PluginBrowser({ server }: Props) {
             </button>
           </div>
         </>
+      )}
+
+      {detailItem && (
+        <div
+          className="plugin-browser__detail-modal-overlay modal-backdrop"
+          onClick={closeDetailModal}
+        >
+          <div
+            className="plugin-browser__detail-modal modal-panel"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="plugin-browser__detail-header">
+              <div className="plugin-browser__detail-title-wrap">
+                <h3 className="plugin-browser__detail-title">{detailItem.title}</h3>
+                <div className="plugin-browser__detail-subtitle">
+                  <span>{detailItem.platform}</span>
+                  <span>by {detailItem.author}</span>
+                  <span className={`plugin-browser__compat-badge is-${detailCompatibility}`}>
+                    {compatibilityLabel(detailCompatibility)}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="plugin-browser__detail-close"
+                onClick={closeDetailModal}
+                aria-label="close details"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="plugin-browser__detail-tabs">
+              <button
+                type="button"
+                className={`plugin-browser__detail-tab ${detailTab === 'info' ? 'is-active' : ''}`}
+                onClick={() => setDetailTab('info')}
+              >
+                Info
+              </button>
+              <button
+                type="button"
+                className={`plugin-browser__detail-tab ${detailTab === 'readme' ? 'is-active' : ''}`}
+                onClick={() => setDetailTab('readme')}
+              >
+                README
+              </button>
+            </div>
+
+            {detailTab === 'info' ? (
+              <div className="plugin-browser__detail-info-panel">
+                <div className="plugin-browser__detail-row">
+                  <span className="plugin-browser__detail-key">Project</span>
+                  <span className="plugin-browser__detail-value">{detailItem.id}</span>
+                </div>
+                <div className="plugin-browser__detail-row">
+                  <span className="plugin-browser__detail-key">Slug</span>
+                  <span className="plugin-browser__detail-value">{detailItem.slug || 'N/A'}</span>
+                </div>
+                <div className="plugin-browser__detail-row">
+                  <span className="plugin-browser__detail-key">Supported MC</span>
+                  <span className="plugin-browser__detail-value">
+                    {supportedVersionsLabel(detailItem.id)}
+                  </span>
+                </div>
+                <div className="plugin-browser__detail-row">
+                  <span className="plugin-browser__detail-key">Loader</span>
+                  <span className="plugin-browser__detail-value">{loaderLabel(detailItem)}</span>
+                </div>
+                <div className="plugin-browser__detail-row">
+                  <span className="plugin-browser__detail-key">Downloads</span>
+                  <span className="plugin-browser__detail-value">
+                    {detailItem.downloads ? detailItem.downloads.toLocaleString() : '-'}
+                  </span>
+                </div>
+                <div className="plugin-browser__detail-row">
+                  <span className="plugin-browser__detail-key">Summary</span>
+                  <span className="plugin-browser__detail-value">
+                    {detailItem.description || 'No description provided.'}
+                  </span>
+                </div>
+                <div className="plugin-browser__detail-actions">
+                  <button
+                    type="button"
+                    className="plugin-browser__detail-link-btn"
+                    onClick={() => void openExternal(detailProjectUrl)}
+                  >
+                    <ExternalLink size={14} />
+                    <span>Project Page</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="plugin-browser__detail-readme-panel">
+                {detailLoading ? (
+                  <div className="plugin-browser__detail-readme-empty">
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>READMEを取得中です...</span>
+                  </div>
+                ) : detailError ? (
+                  <div className="plugin-browser__detail-readme-empty is-error">{detailError}</div>
+                ) : detailReadme ? (
+                  <pre className="plugin-browser__detail-readme-content">{detailReadme}</pre>
+                ) : (
+                  <div className="plugin-browser__detail-readme-empty">
+                    このプロジェクトにはREADME本文が公開されていません。
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {dupDialog && (

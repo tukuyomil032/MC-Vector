@@ -229,9 +229,70 @@
     @apply text-sm text-zinc-400 line-clamp-2 leading-snug;
   }
 
-  .plugin-browser__detail-panel {
-    @apply rounded-lg border border-zinc-700/70 px-3 py-2.5 flex flex-col gap-1.5;
+  .plugin-browser__detail-modal-overlay {
+    @apply fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4;
+    z-index: 1250;
+  }
+
+  .plugin-browser__detail-modal {
+    @apply w-full max-w-3xl rounded-2xl border border-zinc-700/75 text-zinc-100 p-4 md:p-5;
+    max-height: min(86vh, 840px);
+    background:
+      linear-gradient(150deg, rgba(17, 24, 39, 0.96), rgba(24, 24, 27, 0.97)),
+      radial-gradient(circle at 0% 0%, rgba(34, 211, 238, 0.12), transparent 45%);
+    box-shadow: 0 20px 48px rgba(2, 6, 23, 0.55);
+    overflow: hidden;
+  }
+
+  .plugin-browser__detail-header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .plugin-browser__detail-title-wrap {
+    @apply min-w-0;
+  }
+
+  .plugin-browser__detail-title {
+    @apply text-xl font-semibold text-zinc-50 leading-tight truncate;
+  }
+
+  .plugin-browser__detail-subtitle {
+    @apply mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-400;
+  }
+
+  .plugin-browser__detail-close {
+    @apply h-8 w-8 rounded-full border border-zinc-600/75 flex items-center justify-center text-zinc-200;
+    background: rgba(39, 39, 42, 0.75);
+  }
+
+  .plugin-browser__detail-close:hover {
+    @apply text-white border-zinc-400;
+    background: rgba(63, 63, 70, 0.82);
+  }
+
+  .plugin-browser__detail-tabs {
+    @apply mt-4 flex items-center gap-2 border-b border-zinc-700/70 pb-3;
+  }
+
+  .plugin-browser__detail-tab {
+    @apply rounded-md border border-zinc-700/75 px-3 py-1.5 text-xs font-semibold text-zinc-300;
+    background: rgba(39, 39, 42, 0.72);
+  }
+
+  .plugin-browser__detail-tab:hover {
+    @apply border-zinc-500 text-zinc-100;
+  }
+
+  .plugin-browser__detail-tab.is-active {
+    @apply border-cyan-300/70 text-white;
+    background: linear-gradient(120deg, rgba(14, 165, 233, 0.85), rgba(6, 182, 212, 0.8));
+  }
+
+  .plugin-browser__detail-info-panel {
+    @apply mt-4 rounded-lg border border-zinc-700/70 px-3 py-3 flex flex-col gap-2;
     background: rgba(15, 23, 42, 0.66);
+    max-height: min(60vh, 600px);
+    overflow-y: auto;
   }
 
   .plugin-browser__detail-row {
@@ -244,6 +305,40 @@
 
   .plugin-browser__detail-value {
     @apply text-zinc-200 break-all;
+  }
+
+  .plugin-browser__detail-actions {
+    @apply pt-2;
+  }
+
+  .plugin-browser__detail-link-btn {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-zinc-600/80 px-3 py-1.5 text-xs font-semibold text-zinc-100;
+    background: rgba(51, 65, 85, 0.72);
+  }
+
+  .plugin-browser__detail-link-btn:hover {
+    @apply border-cyan-300/70;
+    background: rgba(8, 47, 73, 0.7);
+  }
+
+  .plugin-browser__detail-readme-panel {
+    @apply mt-4 rounded-lg border border-zinc-700/70;
+    background: rgba(15, 23, 42, 0.66);
+    max-height: min(60vh, 600px);
+    overflow-y: auto;
+  }
+
+  .plugin-browser__detail-readme-empty {
+    @apply min-h-32 p-4 text-sm text-zinc-300 flex items-center gap-2;
+  }
+
+  .plugin-browser__detail-readme-empty.is-error {
+    @apply text-rose-300;
+  }
+
+  .plugin-browser__detail-readme-content {
+    @apply m-0 whitespace-pre-wrap p-4 text-sm text-zinc-200 leading-relaxed;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
   }
 
   .plugin-browser__result-meta {
@@ -358,5 +453,18 @@
 
   .plugin-browser__search-btn {
     @apply w-full;
+  }
+
+  .plugin-browser__detail-modal {
+    @apply p-3;
+    max-height: 88vh;
+  }
+
+  .plugin-browser__detail-title {
+    @apply text-lg;
+  }
+
+  .plugin-browser__detail-key {
+    @apply w-20;
   }
 }

@@ -132,6 +132,10 @@ pub async fn start_server(
     let sid_stats = server_id.clone();
     let servers_stats_ref = state.servers.clone();
     tokio::spawn(async move {
+        let mut sys = sysinfo::System::new_all();
+        let spid = sysinfo::Pid::from_u32(pid);
+        sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[spid]), true);
+
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             // サーバーが管理マップに存在するか確認
@@ -141,17 +145,20 @@ pub async fn start_server(
                     break;
                 }
             }
-            let mut sys = sysinfo::System::new();
-            let spid = sysinfo::Pid::from_u32(pid);
-            sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[spid]), true);
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[spid]), true);
             if let Some(process) = sys.process(spid) {
+                let raw_cpu = process.cpu_usage();
+                let cpu_usage = if raw_cpu.is_finite() {
+                    raw_cpu.max(0.0)
+                } else {
+                    0.0
+                };
+
                 let _ = app_stats.emit(
                     "server-stats",
                     serde_json::json!({
                         "serverId": sid_stats,
-                        "cpu": process.cpu_usage(),
+                        "cpu": cpu_usage,
                         "memory": process.memory(),
                     }),
                 );

@@ -76,6 +76,19 @@ export interface SpigetResource {
   latestVersionId?: number;
 }
 
+interface ModrinthProjectDocument {
+  body: string;
+}
+
+interface HangarProjectDocument {
+  description: string;
+  mainPageContent: string | null;
+}
+
+interface SpigotResourceDocument {
+  description: string | null;
+}
+
 interface HangarSearchResponse {
   result: unknown[];
   pagination: unknown;
@@ -237,6 +250,61 @@ function parseModrinthProjectIdentity(project: unknown): ModrinthProjectIdentity
     id,
     slug,
     title,
+  };
+}
+
+function parseModrinthProjectDocument(project: unknown): ModrinthProjectDocument | null {
+  if (!isRecord(project)) {
+    return null;
+  }
+
+  return {
+    body: asString(project.body),
+  };
+}
+
+function parseHangarProjectDocument(project: unknown): HangarProjectDocument | null {
+  if (!isRecord(project)) {
+    return null;
+  }
+
+  const mainPageContent = asString(project.mainPageContent);
+
+  return {
+    description: asString(project.description),
+    mainPageContent: mainPageContent || null,
+  };
+}
+
+function decodeBase64Utf8(value: string): string {
+  try {
+    const normalized = value.trim();
+    if (!normalized) {
+      return '';
+    }
+
+    const binary = atob(normalized);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return value;
+  }
+}
+
+function parseSpigotResourceDocument(resource: unknown): SpigotResourceDocument | null {
+  if (!isRecord(resource)) {
+    return null;
+  }
+
+  const descriptionRaw = asString(resource.description);
+  if (!descriptionRaw) {
+    return {
+      description: null,
+    };
+  }
+
+  return {
+    description: decodeBase64Utf8(descriptionRaw),
   };
 }
 
@@ -443,6 +511,16 @@ export async function getModrinthProjectIdentity(
   return parseModrinthProjectIdentity(payload);
 }
 
+export async function getModrinthProjectBody(projectId: string): Promise<string | null> {
+  const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/project/${projectId}`);
+  const parsed = parseModrinthProjectDocument(payload);
+  if (!parsed) {
+    return null;
+  }
+
+  return parsed.body.trim() ? parsed.body : null;
+}
+
 export async function searchHangar(
   query: string,
   offset: number = 0
@@ -570,6 +648,25 @@ export async function checkHangarCompatibility(params: {
   };
 }
 
+export async function getHangarProjectBody(owner: string, slug: string): Promise<string | null> {
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedSlug = encodeURIComponent(slug);
+  const payload = await fetchJson<unknown>(
+    `https://hangar.papermc.io/api/v1/projects/${encodedOwner}/${encodedSlug}`
+  );
+
+  const parsed = parseHangarProjectDocument(payload);
+  if (!parsed) {
+    return null;
+  }
+
+  if (parsed.mainPageContent?.trim()) {
+    return parsed.mainPageContent;
+  }
+
+  return parsed.description.trim() ? parsed.description : null;
+}
+
 export async function searchSpigot(
   query: string,
   page: number = 1,
@@ -594,6 +691,16 @@ export async function searchSpigot(
   return resources
     .map(parseSpigetResource)
     .filter((resource): resource is SpigetResource => resource !== null);
+}
+
+export async function getSpigotResourceBody(resourceId: number): Promise<string | null> {
+  const payload = await fetchJson<unknown>(`https://api.spiget.org/v2/resources/${resourceId}`);
+  const parsed = parseSpigotResourceDocument(payload);
+  if (!parsed) {
+    return null;
+  }
+
+  return parsed.description?.trim() ? parsed.description : null;
 }
 
 export async function downloadPlugin(url: string, dest: string, eventId: string): Promise<void> {

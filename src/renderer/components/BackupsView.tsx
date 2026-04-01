@@ -272,46 +272,56 @@ export default function BackupsView({ server }: Props) {
   const clearAll = () => setSelectedPaths(new Set());
 
   const openSelectorWindow = async () => {
-    const label = 'backup-selector';
-    const selected = Array.from(selectedPaths).sort((a, b) => a.localeCompare(b));
+    try {
+      const label = 'backup-selector';
+      const selected = Array.from(selectedPaths).sort((a, b) => a.localeCompare(b));
 
-    const existing = await WebviewWindow.getByLabel(label);
-    if (existing) {
-      await existing.emit('backup-selector:load', {
+      const existing = await WebviewWindow.getByLabel(label);
+      if (existing) {
+        await existing.emit('backup-selector:load', {
+          serverPath: server.path,
+          selected,
+        });
+
+        try {
+          await existing.setFocus();
+        } catch (focusError) {
+          console.error(focusError);
+        }
+        return;
+      }
+
+      const params = new URLSearchParams({
+        backupSelector: '1',
         serverPath: server.path,
-        selected,
+        selected: JSON.stringify(selected),
       });
-      await existing.setFocus();
-      return;
-    }
 
-    const params = new URLSearchParams({
-      backupSelector: '1',
-      serverPath: server.path,
-      selected: JSON.stringify(selected),
-    });
-
-    const selectorWindow = new WebviewWindow(label, {
-      title: `Backup Target Selector - ${server.name}`,
-      url: `/?${params.toString()}`,
-      width: 980,
-      height: 760,
-      resizable: true,
-      center: true,
-      focus: true,
-    });
-
-    selectorWindow.once('tauri://created', () => {
-      void selectorWindow.emit('backup-selector:load', {
-        serverPath: server.path,
-        selected,
+      const selectorWindow = new WebviewWindow(label, {
+        title: `Backup Target Selector - ${server.name}`,
+        url: `/?${params.toString()}`,
+        width: 980,
+        height: 760,
+        resizable: true,
+        center: true,
+        focus: true,
       });
-    });
 
-    selectorWindow.once('tauri://error', (error) => {
+      selectorWindow.once('tauri://created', () => {
+        void selectorWindow.emit('backup-selector:load', {
+          serverPath: server.path,
+          selected,
+        });
+      });
+
+      selectorWindow.once('tauri://error', (error) => {
+        console.error(error);
+        showToast('バックアップ選択ウィンドウを開けませんでした', 'error');
+      });
+    } catch (error) {
       console.error(error);
       showToast('バックアップ選択ウィンドウを開けませんでした', 'error');
-    });
+    }
   };
 
   const buildSnapshotForSelection = async (

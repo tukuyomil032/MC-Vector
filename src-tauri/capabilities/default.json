@@ -5,6 +5,8 @@
   "windows": ["main", "backup-selector"],
   "permissions": [
     "core:default",
+    "core:webview:allow-create-webview-window",
+    "core:webview:allow-set-webview-focus",
     "dialog:default",
     "fs:default",
     "process:default",
