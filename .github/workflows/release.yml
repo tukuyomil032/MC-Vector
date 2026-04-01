@@ -107,33 +107,52 @@ jobs:
       - name: Ad-hoc sign macOS app and rebuild DMG
         if: runner.os == 'macOS'
         run: |
-          APP_DIR=$(find "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos" -maxdepth 1 -name "*.app" -print -quit)
+          set -euo pipefail
+
+          APP_ROOT="src-tauri/target/${{ matrix.rust-target }}/release/bundle"
+          APP_DIR=$(find "$APP_ROOT/macos" -maxdepth 1 -name "*.app" -print -quit || true)
           if [ -z "$APP_DIR" ]; then
-            echo "App bundle not found" >&2
+            echo "App bundle not found under: $APP_ROOT/macos" >&2
+            find "$APP_ROOT" -maxdepth 3 -type f | head -200 || true
             exit 1
           fi
 
+          echo "Using app bundle: $APP_DIR"
           codesign -s - --force --deep --timestamp=none "$APP_DIR"
 
-          DMG_DIR="src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg"
-          DMG_PATH=$(find "$DMG_DIR" -maxdepth 1 -name "*.dmg" -print -quit)
+          DMG_DIR="$APP_ROOT/dmg"
+          mkdir -p "$DMG_DIR"
+          DMG_PATH=$(find "$DMG_DIR" -maxdepth 1 -name "*.dmg" -print -quit || true)
           if [ -z "$DMG_PATH" ]; then
-            echo "DMG not found" >&2
-            exit 1
+            APP_NAME=$(basename "$APP_DIR" .app)
+            DMG_PATH="$DMG_DIR/${APP_NAME}.dmg"
           fi
+          echo "DMG output path: $DMG_PATH"
+          rm -f "$DMG_PATH"
 
           STAGE=$(mktemp -d)
+          trap 'rm -rf "$STAGE"' EXIT
           cp -R "$APP_DIR" "$STAGE/"
           ln -s /Applications "$STAGE/Applications"
 
-          hdiutil create -volname "MC-Vector" -srcfolder "$STAGE" -ov -format UDZO "$DMG_PATH" -quiet
-
-          rm -rf "$STAGE"
+          hdiutil create -volname "MC-Vector" -srcfolder "$STAGE" -ov -format UDZO "$DMG_PATH" || {
+            echo "hdiutil create failed for target ${{ matrix.rust-target }}" >&2
+            ls -la "$DMG_DIR" || true
+            exit 1
+          }
 
       - name: Verify macOS app signature and architecture
         if: runner.os == 'macOS'
         run: |
-          APP_DIR=$(find "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos" -maxdepth 1 -name "*.app" -print -quit)
+          set -euo pipefail
+
+          APP_ROOT="src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos"
+          APP_DIR=$(find "$APP_ROOT" -maxdepth 1 -name "*.app" -print -quit || true)
+          if [ -z "$APP_DIR" ]; then
+            echo "App bundle not found under: $APP_ROOT" >&2
+            exit 1
+          fi
+
           BIN_DIR="$APP_DIR/Contents/MacOS"
           BIN_FILE=$(find "$BIN_DIR" -maxdepth 1 -type f -perm -111 -print -quit)
 
