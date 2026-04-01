@@ -170,6 +170,35 @@
     @apply text-zinc-300 border-zinc-500/50 bg-zinc-500/10;
   }
 
+  .plugin-browser__update-badge {
+    @apply text-[0.66rem] font-semibold rounded-full px-2 py-0.5 border;
+  }
+
+  .plugin-browser__update-badge.is-checking {
+    @apply text-sky-200 border-sky-400/40 bg-sky-500/15;
+  }
+
+  .plugin-browser__update-badge.is-update-available {
+    @apply text-amber-200 border-amber-400/45 bg-amber-500/15;
+  }
+
+  .plugin-browser__update-badge.is-up-to-date {
+    @apply text-emerald-200 border-emerald-400/40 bg-emerald-500/10;
+  }
+
+  .plugin-browser__update-badge.is-unknown {
+    @apply text-zinc-300 border-zinc-500/50 bg-zinc-500/10;
+  }
+
+  .plugin-browser__update-summary {
+    @apply rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-100 flex flex-wrap items-center gap-x-2 gap-y-1;
+    background: rgba(120, 53, 15, 0.3);
+  }
+
+  .plugin-browser__update-summary-note {
+    @apply text-amber-200/90;
+  }
+
   .plugin-browser__result-actions {
     @apply flex items-center gap-2 shrink-0;
   }

@@ -70,6 +70,7 @@ interface PlatformOption {
 const LIMIT = 25;
 
 type CompatibilityStatus = 'checking' | 'compatible' | 'incompatible' | 'unknown';
+type UpdateStatus = 'checking' | 'update-available' | 'up-to-date' | 'unknown';
 type SortMode = 'relevance' | 'downloads' | 'name' | 'compatibility';
 
 type CompatibilityDetail = {
@@ -171,6 +172,10 @@ function isDisabledPluginFile(fileName: string): boolean {
   return fileName.toLowerCase().endsWith('.disabled');
 }
 
+function normalizeInstalledPluginFileName(fileName: string): string {
+  return fileName.toLowerCase().replace(/\.disabled$/i, '');
+}
+
 function mapSpigotResource(resource: SpigetResource): ProjectItem {
   return {
     id: String(resource.id),
@@ -242,8 +247,15 @@ export default function PluginBrowser({ server }: Props) {
   const [compatibilityDetailByItemId, setCompatibilityDetailByItemId] = useState<
     Record<string, CompatibilityDetail>
   >({});
+  const [updateStatusByItemId, setUpdateStatusByItemId] = useState<Record<string, UpdateStatus>>(
+    {}
+  );
+  const [latestFileByItemId, setLatestFileByItemId] = useState<Record<string, string>>({});
   const dependencyIdentityCacheRef = useRef<Record<string, DependencyIdentity>>({});
   const detailReadmeCacheRef = useRef<Record<string, string | null>>({});
+  const updateStatusCacheRef = useRef<
+    Record<string, { status: UpdateStatus; latestFileName: string | null }>
+  >({});
   const detailRequestIdRef = useRef(0);
 
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
@@ -425,6 +437,117 @@ export default function PluginBrowser({ server }: Props) {
       cancelled = true;
     };
   }, [isInAppSearch, results, server.software, server.version]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isInAppSearch || results.length === 0) {
+      setUpdateStatusByItemId({});
+      setLatestFileByItemId({});
+      return;
+    }
+
+    const installedTargets = results
+      .map((item) => {
+        const installedMatch = findInstalledMatch(item);
+        return installedMatch ? { item, installedMatch } : null;
+      })
+      .filter((entry): entry is { item: ProjectItem; installedMatch: string } => entry !== null);
+
+    const initialStatus: Record<string, UpdateStatus> = {};
+    for (const target of installedTargets) {
+      initialStatus[target.item.id] = target.item.platform === 'Spigot' ? 'unknown' : 'checking';
+    }
+
+    setUpdateStatusByItemId(initialStatus);
+    setLatestFileByItemId({});
+
+    if (installedTargets.length === 0) {
+      return;
+    }
+
+    const run = async () => {
+      const updates = await Promise.all(
+        installedTargets.map(
+          async ({ item, installedMatch }): Promise<[string, UpdateStatus, string | null]> => {
+            if (item.platform === 'Spigot') {
+              return [item.id, 'unknown', null];
+            }
+
+            const normalizedInstalled = normalizeInstalledPluginFileName(installedMatch);
+            const cacheKey = `${item.platform}:${item.id}:${server.software}:${server.version}:${normalizedInstalled}`;
+            const cached = updateStatusCacheRef.current[cacheKey];
+            if (cached) {
+              return [item.id, cached.status, cached.latestFileName];
+            }
+
+            try {
+              let latestFileName: string | null = null;
+
+              if (item.platform === 'Modrinth') {
+                const loader = (server.software || '').toLowerCase();
+                const resolved = await getCompatibleModrinthVersion({
+                  projectId: item.id,
+                  loader,
+                  minecraftVersion: server.version,
+                });
+                latestFileName = resolved?.fileName ?? null;
+              } else {
+                const owner = item.author;
+                const slug = item.slug || item.title;
+                const resolved = await resolveHangarDownload({
+                  owner,
+                  slug,
+                  software: server.software || 'Paper',
+                  minecraftVersion: server.version || '',
+                });
+                latestFileName = resolved?.fileName ?? null;
+              }
+
+              const status: UpdateStatus = latestFileName
+                ? normalizedInstalled === latestFileName.toLowerCase()
+                  ? 'up-to-date'
+                  : 'update-available'
+                : 'unknown';
+
+              updateStatusCacheRef.current[cacheKey] = {
+                status,
+                latestFileName,
+              };
+
+              return [item.id, status, latestFileName];
+            } catch (error) {
+              console.error(error);
+              return [item.id, 'unknown', null];
+            }
+          }
+        )
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const nextStatus: Record<string, UpdateStatus> = { ...initialStatus };
+      const nextLatest: Record<string, string> = {};
+
+      for (const [id, status, latestFileName] of updates) {
+        nextStatus[id] = status;
+        if (latestFileName) {
+          nextLatest[id] = latestFileName;
+        }
+      }
+
+      setUpdateStatusByItemId(nextStatus);
+      setLatestFileByItemId(nextLatest);
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInAppSearch, results, installedFiles, server.software, server.version]);
 
   const normalize = (text?: unknown) =>
     String(text ?? '')
@@ -811,6 +934,11 @@ export default function PluginBrowser({ server }: Props) {
 
     const installedMatch = findInstalledMatch(item);
     if (installedMatch) {
+      const updateStatus = updateStatusByItemId[item.id] ?? 'unknown';
+      if (updateStatus === 'update-available') {
+        void performInstall(item, 'update', installedMatch);
+        return;
+      }
       setDupDialog({ item, installedFile: installedMatch });
       return;
     }
@@ -865,13 +993,33 @@ export default function PluginBrowser({ server }: Props) {
     }
   };
 
-  const actionLabel = (item: ProjectItem) => {
+  const updateStatusLabel = (status: UpdateStatus): string => {
+    switch (status) {
+      case 'checking':
+        return 'Update: Checking';
+      case 'update-available':
+        return 'Update Available';
+      case 'up-to-date':
+        return 'Up to Date';
+      default:
+        return 'Update: Unknown';
+    }
+  };
+
+  const actionLabel = (
+    item: ProjectItem,
+    installedState: 'none' | 'enabled' | 'disabled',
+    updateStatus: UpdateStatus | null
+  ) => {
     if (installingId === item.id) {
       return 'Installing...';
     }
     const requiresBrowser =
       item.platform === 'Spigot' &&
       (item.source_obj.external === true || item.source_obj.premium === true);
+    if (!requiresBrowser && installedState !== 'none' && updateStatus === 'update-available') {
+      return 'Update';
+    }
     return requiresBrowser ? 'Open' : 'Install';
   };
 
@@ -915,6 +1063,12 @@ export default function PluginBrowser({ server }: Props) {
     });
     return next;
   }, [results, sortMode, compatibilityByItemId]);
+
+  const updateAvailableCount = useMemo(() => {
+    return sortedResults.reduce((count, item) => {
+      return updateStatusByItemId[item.id] === 'update-available' ? count + 1 : count;
+    }, 0);
+  }, [sortedResults, updateStatusByItemId]);
 
   const supportedVersionsLabel = (itemId: string) => {
     const versions = compatibilityDetailByItemId[itemId]?.supportedVersions ?? [];
@@ -1171,6 +1325,15 @@ export default function PluginBrowser({ server }: Props) {
         </div>
       )}
 
+      {isInAppSearch && updateAvailableCount > 0 && (
+        <div className="plugin-browser__update-summary">
+          <span>{updateAvailableCount} 件の更新候補があります。</span>
+          <span className="plugin-browser__update-summary-note">
+            Install を押すと更新処理として実行されます。
+          </span>
+        </div>
+      )}
+
       {isInAppSearch && (
         <>
           <div className="plugin-browser__results-grid">
@@ -1183,6 +1346,10 @@ export default function PluginBrowser({ server }: Props) {
                     : 'enabled'
                   : 'none';
                 const compatibility = compatibilityByItemId[item.id] ?? 'unknown';
+                const updateStatus = installedMatch
+                  ? (updateStatusByItemId[item.id] ?? 'unknown')
+                  : null;
+                const latestFileName = latestFileByItemId[item.id];
                 const requiresBrowser =
                   item.platform === 'Spigot' &&
                   (item.source_obj.external === true || item.source_obj.premium === true);
@@ -1215,6 +1382,18 @@ export default function PluginBrowser({ server }: Props) {
                             <span className={`plugin-browser__compat-badge is-${compatibility}`}>
                               {compatibilityLabel(compatibility)}
                             </span>
+                            {installedMatch && updateStatus && (
+                              <span
+                                className={`plugin-browser__update-badge is-${updateStatus}`}
+                                title={
+                                  updateStatus === 'update-available' && latestFileName
+                                    ? `Latest: ${latestFileName}`
+                                    : undefined
+                                }
+                              >
+                                {updateStatusLabel(updateStatus)}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -1257,7 +1436,7 @@ export default function PluginBrowser({ server }: Props) {
                             ) : (
                               <Download size={14} />
                             )}
-                            <span>{actionLabel(item)}</span>
+                            <span>{actionLabel(item, installedState, updateStatus)}</span>
                           </button>
 
                           <button
