@@ -1,15 +1,15 @@
 {
-  "version": "2.0.44",
-  "notes": "MC-Vector v2.0.44",
-  "pub_date": "2026-03-30T05:16:49Z",
+  "version": "2.0.45",
+  "notes": "MC-Vector v2.0.45",
+  "pub_date": "2026-04-01T03:20:23Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eWdaUm4zRU9mVUJFUWpaL1RNbzkwb0xBSSs4Ky83UWRQM2Y1cmdXSjdSclA0Z0poS0ZTd2pGWGZQckhGRS83SGRoT01SU0lHWVg2dEcvaUFQSlRIRWdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0ODQ3Nzg2CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKcW44RU52YkxpNWFGTmlmdjhxZVBqQjFiZXVZajNFNGpKZE5mTXZKVXpKTDAvOWpFQW9aOUNkV3Q5YVJWZW9FMVhBUEZjZHpWeXlSL0hkUHVkemZUREE9PQo=",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.44/MC-Vector_2.0.44_darwin-aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eXRBV2tSNXJLbk5qMkhJZ2RuMjlFdERqTGQyZXNDbnp3OFp5RWFOWG0xRUVWU2p3azQzQlQ2UmN1bHpRd2dzWFRCaVdsWXhLaHdaWkhUZzBqbmd0cHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc1MDEzNjA0CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKRzNMMEd2YmFiL3B2MnMyRjRSMDZzcHNDUExmbExzN0R5NVRDaVJ3VzZMWkVYZ0lXQVJPc0dvcE1lSjdWc2txUjVoU21iYU92Q3MwQldGZFhacVF0Q0E9PQo=",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.45/MC-Vector_2.0.45_darwin-aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eWsyQ3lGSnF1dnhXNjBSL1c1dDczbUQ5bWU3cUx4T1FjUjNOQ2VJeW9IeG1rOHdyZVBuVEhaYUwwWHZPYWxLSW9oc2x0VXNUS25jOEI3UG5aQlBXZlFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0ODQ3NzE5CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKV3dULytrT081OFFJOXhMaCtpWXpUdHZDTllSK0c2alFjOW91L0g4ajIyWktUd3B5bkZPNythK0N6NWFiRFNjWkpxTTlHNExkMkY2MEluQ245Vm1RQ1E9PQo=",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.44/MC-Vector_2.0.44_darwin-x86_64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUSUkzM1RrQXh2eXR2ZEhiYmpIOXAzWjAydTZROUdPYjl6eVlIcUdDNHAydHA4SjVGZE5RclovaWF4Rk85ZjIycjk3UFNrN2xlU3piVWt6TllTMXV0MzNQb3FGN1V4Tmc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc1MDEzNDA2CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKVG9TMnVQbVBBSkwyVjBtbDhOc3VDYlZQSzhzYjVINEZPWkNZNmc3UDZUOVpKQWR1dWd6UWk3VTJhR1BMK1ZKTXhDTzVzMkxvenNUQkdmT3oyek03Qmc9PQo=",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.45/MC-Vector_2.0.45_darwin-x86_64.app.tar.gz"
     }
   }
 }
