@@ -2,7 +2,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { AnimatePresence, motion } from 'framer-motion';
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   iconBackups,
   iconConsole,
@@ -41,15 +41,11 @@ import AddServerModal from './renderer/components/AddServerModal';
 import BackupsView from './renderer/components/BackupsView';
 import BackupTargetSelectorWindow from './renderer/components/BackupTargetSelectorWindow';
 import ConsoleView from './renderer/components/ConsoleView';
-import DashboardView from './renderer/components/DashboardView';
-import FilesView from './renderer/components/FilesView';
 import NgrokGuideView from './renderer/components/NgrokGuideView';
-import PluginBrowser from './renderer/components/PluginBrowser.tsx';
 import ProxyHelpView from './renderer/components/ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/ProxySetupView';
 import PropertiesView from './renderer/components/properties/PropertiesView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
-import SettingsWindow from './renderer/components/SettingsWindow.tsx';
 import { useToast } from './renderer/components/ToastProvider';
 import UsersView from './renderer/components/UsersView';
 import { type AppView, type MinecraftServer } from './renderer/shared/server declaration';
@@ -69,6 +65,17 @@ const TAB_CYCLE: AppView[] = [
   'general-settings',
   'proxy',
 ];
+
+const DashboardView = lazy(() => import('./renderer/components/DashboardView'));
+const FilesView = lazy(() => import('./renderer/components/FilesView'));
+const PluginBrowser = lazy(() => import('./renderer/components/PluginBrowser'));
+const SettingsWindow = lazy(() => import('./renderer/components/SettingsWindow'));
+
+const lazyViewFallback = (
+  <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+    ビューを読み込み中...
+  </div>
+);
 
 // 外部APIの簡易レスポンスタイプ
 type PaperBuildsResponse = {
@@ -1650,7 +1657,7 @@ function App() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="h-full"
             >
-              {renderContent()}
+              <Suspense fallback={lazyViewFallback}>{renderContent()}</Suspense>
             </motion.div>
           </AnimatePresence>
         </div>

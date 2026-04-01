@@ -1,9 +1,7 @@
 /node_modules
 /dist
 /release
-docs/*
-!docs/engineering-requirements.md
-!docs/next-phase-plan.md
+docs/*.md
 /dist-electron
 .DS_Store
 # Logs
