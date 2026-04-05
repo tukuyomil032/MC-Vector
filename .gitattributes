@@ -8,6 +8,12 @@ flake.lock linguist-detectable=true
 # Build automation files
 Makefile linguist-language=Makefile linguist-detectable=true
 
+# Shell script files
+*.sh linguist-language=Shell linguist-detectable=true
+
+# js files
+*.js linguist-language=JavaScript linguist-detectable=true
+
 # Exclude documentation from language statistics
 docs/** linguist-documentation=true
 

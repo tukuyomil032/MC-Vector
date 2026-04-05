@@ -144,8 +144,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Copilot/Agent skills
-.agents/
+# documents
+docs/development-environment-research.md
+docs/engineering-requirements.md
 
 # update-version
 update-output.json
