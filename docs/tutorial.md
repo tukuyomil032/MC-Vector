@@ -235,11 +235,12 @@ The Plugins / Mods tab allows you to easily install plugins (for Bukkit/Spigot/P
 ⚠️ **Note:** If you have multiple servers, **only the currently selected server** will receive the installation.
 
 #### Remove a Plugin/Mod
+
 **Backup Location:**
+
 - **macOS:** `/Users/<username>/Library/Application Support/MC-Vector/servers/<servername>/backups`
 - **Windows:** `C:\Users\<username>\AppData\Roaming\MC-Vector\servers\<servername>\backups`
 - **Linux:** `~/.local/share/MC-Vector/servers/<servername>/backups` または `$XDG_DATA_HOME/MC-Vector/servers/<servername>/backups`
-
 
 1. Select a backup from the list
 2. Click **"Delete"**
