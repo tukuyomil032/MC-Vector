@@ -331,7 +331,7 @@ function sanitizeFileName(value: string): string {
 
 function isMatchingMinecraftVersion(
   availableVersions: string[],
-  minecraftVersion: string
+  minecraftVersion: string,
 ): boolean {
   if (availableVersions.length === 0 || !minecraftVersion) {
     return true;
@@ -376,7 +376,7 @@ export async function searchModrinth(
   query: string,
   facets: string,
   offset: number = 0,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<{ hits: ModrinthProject[]; total_hits: number }> {
   const result = await searchModrinthProjects({
     query,
@@ -421,7 +421,7 @@ export async function getCompatibleModrinthVersion(params: {
 }
 
 export async function getModrinthProjectIdentity(
-  projectId: string
+  projectId: string,
 ): Promise<ModrinthProjectIdentity | null> {
   const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/project/${projectId}`);
   return parseModrinthProjectIdentity(payload);
@@ -439,7 +439,7 @@ export async function getModrinthProjectBody(projectId: string): Promise<string 
 
 export async function searchHangar(
   query: string,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ result: HangarProject[]; pagination: unknown }> {
   const payload = await searchHangarProjects({
     query,
@@ -469,7 +469,7 @@ export async function searchHangar(
 export async function getHangarVersions(
   owner: string,
   slug: string,
-  platform?: string
+  platform?: string,
 ): Promise<HangarVersion[]> {
   const encodedOwner = encodeURIComponent(owner);
   const encodedSlug = encodeURIComponent(slug);
@@ -513,7 +513,7 @@ export async function resolveHangarDownload(params: {
   }
 
   const supportedVersions = Array.from(
-    new Set(versions.flatMap((version) => pickHangarDependencies(version, platform)))
+    new Set(versions.flatMap((version) => pickHangarDependencies(version, platform))),
   );
 
   const compatibleVersion = versions.find((version) => {
@@ -557,7 +557,7 @@ export async function checkHangarCompatibility(params: {
   }
 
   const supportedVersions = Array.from(
-    new Set(versions.flatMap((version) => pickHangarDependencies(version, platform)))
+    new Set(versions.flatMap((version) => pickHangarDependencies(version, platform))),
   );
 
   const compatible = versions.some((version) => {
@@ -575,7 +575,7 @@ export async function getHangarProjectBody(owner: string, slug: string): Promise
   const encodedOwner = encodeURIComponent(owner);
   const encodedSlug = encodeURIComponent(slug);
   const payload = await fetchJson<unknown>(
-    `https://hangar.papermc.io/api/v1/projects/${encodedOwner}/${encodedSlug}`
+    `https://hangar.papermc.io/api/v1/projects/${encodedOwner}/${encodedSlug}`,
   );
 
   const parsed = parseHangarProjectDocument(payload);
@@ -593,7 +593,7 @@ export async function getHangarProjectBody(owner: string, slug: string): Promise
 export async function searchSpigot(
   query: string,
   page: number = 1,
-  size: number = 25
+  size: number = 25,
 ): Promise<SpigetResource[]> {
   const resources = await searchSpigotResources({
     query,
@@ -621,7 +621,7 @@ export async function downloadPlugin(url: string, dest: string, eventId: string)
 export async function installModrinthProject(
   versionId: string,
   fileName: string,
-  destDir: string
+  destDir: string,
 ): Promise<void> {
   // Modrinth version の詳細を取得してダウンロード URL を得る
   const response = await fetch(`https://api.modrinth.com/v2/version/${versionId}`);
@@ -643,7 +643,7 @@ export async function installModrinthProject(
 export async function installHangarProject(
   downloadUrl: string,
   fileName: string,
-  destDir: string
+  destDir: string,
 ): Promise<void> {
   const destPath = `${destDir}/${fileName}`;
   await tauriInvoke('download_file', {
@@ -657,7 +657,7 @@ export async function installSpigotProject(
   resourceId: number,
   fileName: string,
   destDir: string,
-  versionId?: number
+  versionId?: number,
 ): Promise<void> {
   const url = new URL(`https://api.spiget.org/v2/resources/${resourceId}/download`);
   if (typeof versionId === 'number' && Number.isFinite(versionId) && versionId > 0) {

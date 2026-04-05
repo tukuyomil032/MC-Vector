@@ -39,7 +39,7 @@ const modrinthSearchAdapter: PluginSourceAdapter<ModrinthSearchParams, ModrinthS
 };
 
 export async function searchModrinthProjects(
-  params: ModrinthSearchParams
+  params: ModrinthSearchParams,
 ): Promise<ModrinthSearchResult> {
   return modrinthSearchAdapter.search(params);
 }

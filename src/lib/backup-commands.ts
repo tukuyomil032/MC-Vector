@@ -12,7 +12,7 @@ export async function createBackup(
   serverPath: string,
   backupName: string,
   sources?: string[],
-  compressionLevel?: number
+  compressionLevel?: number,
 ): Promise<void> {
   const backupDir = `${serverPath}/backups`;
   return tauriInvoke('create_backup', {
@@ -61,7 +61,7 @@ export async function deleteBackup(serverPath: string, backupName: string): Prom
 }
 
 export function onBackupProgress(
-  callback: (data: { serverId: string; progress: number }) => void
+  callback: (data: { serverId: string; progress: number }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('backup-progress', callback);
 }

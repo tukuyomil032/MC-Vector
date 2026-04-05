@@ -12,7 +12,7 @@ export async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>
 
 export async function tauriListen<T>(
   event: string,
-  handler: (payload: T) => void
+  handler: (payload: T) => void,
 ): Promise<UnlistenFn> {
   const unlisten = await listen<T>(event, (e: Event<T>) => handler(e.payload));
   return unlisten;

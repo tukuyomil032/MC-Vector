@@ -82,9 +82,11 @@ This application contains the following main configuration items:
 - **Proxy Network**
   - **_Here, you can easily set up a proxy server!_**
   - For detailed setup instructions, click the “See Detailed Setup Guide” button.
+
 ---
 
 ## Prerequisites
+
 Before you start developing, make sure you have the following installed:
 
 - **Node.js** (v18 or later recommended)
@@ -99,6 +101,7 @@ Before you start developing, make sure you have the following installed:
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    $ git clone https://github.com/tukuyomil032/MC-Vector.git
 
@@ -106,6 +109,7 @@ Before you start developing, make sure you have the following installed:
    ```
 
 2. **Install dependencies**
+
    ```bash
    $ pnpm install
    ```
@@ -125,28 +129,32 @@ $ pnpm tauri build
 
 ### Other commands
 
-
 1. **Format code**
+
    ```bash
    $ pnpm format
    ```
 
 2. **Lint code**
+
    ```bash
    $ pnpm lint
    ```
 
 3. **Check formatting and linting**
+
    ```bash
    $ pnpm biome:check
    ```
-  
+
 4. **Format Rust**
+
    ```bash
    $ pnpm rustfmt
    ```
 
 5. **Install recommended Extensions**
+
    ```bash
    $ pnpm install:extensions
    ```
@@ -275,6 +283,7 @@ MC-Vector/
 ```
 
 ---
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

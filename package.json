@@ -1,26 +1,22 @@
 {
   "name": "mc-vector",
-  "productName": "MC-Vector",
-  "private": true,
-  "packageManager": "pnpm@10.26.2",
   "version": "2.0.46",
+  "private": true,
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "vp dev",
+    "build": "vp build",
+    "preview": "vp preview",
+    "check": "vp check",
+    "lint": "vp lint",
+    "format": "vp fmt",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "format": "biome format --write",
-    "lint": "biome lint --write",
-    "biome:check": "biome check",
     "yamllint": "yamllint .",
-    "prepare": "husky",
     "rustfmt": "cargo fmt --all",
-    "lint-staged": "lint-staged",
     "install:extensions": "./scripts/install-extensions.sh"
   },
   "dependencies": {
@@ -47,19 +43,18 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
     "@tauri-apps/cli": "^2.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "@voidzero-dev/vite-plus-core": "latest",
     "autoprefixer": "^10.4.23",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
     "postcss": "^8.5.8",
     "sass": "^1.98.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.2",
-    "vite": "^8.0.3"
-  }
+    "vite-plus": "latest"
+  },
+  "packageManager": "pnpm@10.26.2",
+  "productName": "MC-Vector"
 }

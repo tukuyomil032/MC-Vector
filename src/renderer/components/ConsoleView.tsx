@@ -562,7 +562,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
                   }
 
                   const parts = seg.text.split(
-                    new RegExp(`(${escapeRegExp(normalizedSearchQuery)})`, 'gi')
+                    new RegExp(`(${escapeRegExp(normalizedSearchQuery)})`, 'gi'),
                   );
 
                   return (

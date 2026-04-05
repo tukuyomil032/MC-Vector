@@ -15,27 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          version: 10.26.2
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          cache: pnpm
+          node-version: '22'
+          cache: true
+      - name: Install dependencies
+        run: vp install --frozen-lockfile
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          python-version: '3.x'
       - name: Install yamllint
         run: pip install 'yamllint==1.35.1'
       - name: YAML Lint
         run: pnpm yamllint
-      - name: Biome — Version
-        run: pnpm dlx biome --version
-      - name: Biome — Check (lint & format)
-        run: pnpm dlx biome check --max-diagnostics 200
+      - name: Vite+ Check (lint & format)
+        run: vp check
 
   build-check:
     runs-on: ${{ matrix.platform }}
@@ -45,16 +40,13 @@ jobs:
         platform: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          version: 10.26.2
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          cache: pnpm
+          node-version: '22'
+          cache: true
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> target
-      - run: pnpm install --frozen-lockfile
+      - run: vp install --frozen-lockfile
       - run: pnpm tauri build --debug --no-bundle

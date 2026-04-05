@@ -79,7 +79,7 @@ const hangarSearchAdapter: PluginSourceAdapter<HangarSearchParams, HangarSearchR
 };
 
 export async function searchHangarProjects(
-  params: HangarSearchParams
+  params: HangarSearchParams,
 ): Promise<HangarSearchResult> {
   return hangarSearchAdapter.search(params);
 }

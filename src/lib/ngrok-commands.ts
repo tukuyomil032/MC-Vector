@@ -8,7 +8,7 @@ export async function startNgrok(
   protocol: string,
   port: number,
   authtoken: string,
-  serverId: string
+  serverId: string,
 ): Promise<void> {
   return tauriInvoke('start_ngrok', { ngrokPath, protocol, port, authtoken, serverId });
 }
@@ -48,13 +48,13 @@ export async function hasNgrokToken(): Promise<boolean> {
 }
 
 export function onNgrokLog(
-  callback: (data: { line: string; serverId: string }) => void
+  callback: (data: { line: string; serverId: string }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('ngrok-log', callback);
 }
 
 export function onNgrokStatusChange(
-  callback: (data: { status: string; url?: string; serverId?: string }) => void
+  callback: (data: { status: string; url?: string; serverId?: string }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('ngrok-status-change', callback);
 }

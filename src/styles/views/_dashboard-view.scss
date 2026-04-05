@@ -21,7 +21,9 @@
     border-color: var(--mv-border-soft);
     background: var(--mv-panel-bg-alt);
     box-shadow: 0 12px 30px rgba(2, 6, 23, 0.2);
-    transition: transform 0.15s ease, border-color 0.2s ease;
+    transition:
+      transform 0.15s ease,
+      border-color 0.2s ease;
   }
 
   .dashboard-view__stat-card:hover {

@@ -104,7 +104,7 @@ export default function BackupTargetSelectorWindow() {
                 size: totalSize,
                 children: sortNodes(children),
               } satisfies SelectorNode;
-            })
+            }),
         );
 
         return sortNodes(nodes);

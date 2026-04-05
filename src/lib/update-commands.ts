@@ -108,7 +108,7 @@ export async function getAppLocation(): Promise<string> {
 }
 
 export async function downloadAndInstallUpdate(
-  onProgress?: (downloaded: number, total: number) => void
+  onProgress?: (downloaded: number, total: number) => void,
 ): Promise<void> {
   const latestUpdate = await check();
   if (latestUpdate) {
@@ -130,7 +130,7 @@ export async function downloadAndInstallUpdate(
       // Generic error for other cases
       throw new Error(
         `アップデートを適用できません。アプリを「アプリケーション」フォルダに移動してから再度お試しください。\n\n` +
-          `Cannot apply update. Please move the app to the Applications folder and try again.`
+          `Cannot apply update. Please move the app to the Applications folder and try again.`,
       );
     }
   }

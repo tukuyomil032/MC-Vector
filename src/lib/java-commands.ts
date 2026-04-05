@@ -106,7 +106,7 @@ export async function selectJavaBinary(): Promise<string | null> {
 }
 
 export function onJavaDownloadProgress(
-  callback: (data: { progress: number }) => void
+  callback: (data: { progress: number }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('java-download-progress', callback);
 }

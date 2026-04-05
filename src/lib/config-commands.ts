@@ -22,7 +22,7 @@ export async function getAllConfig(): Promise<Record<string, unknown>> {
 
 export async function onConfigChange(
   key: string,
-  callback: (value: unknown) => void
+  callback: (value: unknown) => void,
 ): Promise<() => void> {
   const store = await load(STORE_NAME);
   return store.onKeyChange(key, callback);

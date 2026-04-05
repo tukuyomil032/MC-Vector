@@ -69,13 +69,13 @@ export default function AdvancedSettingsWindow({
 
   const allDefinitions = useMemo(
     () => [...serverPropertiesList, ...inferredDefinitions],
-    [inferredDefinitions]
+    [inferredDefinitions],
   );
 
   const categories = useMemo(() => {
     const defined = Array.from(new Set(allDefinitions.map((p) => p.category)));
     return CATEGORY_ORDER.filter((c) => defined.includes(c)).concat(
-      defined.filter((c) => !CATEGORY_ORDER.includes(c))
+      defined.filter((c) => !CATEGORY_ORDER.includes(c)),
     );
   }, [allDefinitions]);
 

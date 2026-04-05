@@ -238,7 +238,7 @@ export default function PluginBrowser({ server }: Props) {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [installedFiles, setInstalledFiles] = useState<string[]>([]);
   const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
-    null
+    null,
   );
   const [page, setPage] = useState(0);
   const [compatibilityByItemId, setCompatibilityByItemId] = useState<
@@ -248,7 +248,7 @@ export default function PluginBrowser({ server }: Props) {
     Record<string, CompatibilityDetail>
   >({});
   const [updateStatusByItemId, setUpdateStatusByItemId] = useState<Record<string, UpdateStatus>>(
-    {}
+    {},
   );
   const [latestFileByItemId, setLatestFileByItemId] = useState<Record<string, string>>({});
   const dependencyIdentityCacheRef = useRef<Record<string, DependencyIdentity>>({});
@@ -373,7 +373,7 @@ export default function PluginBrowser({ server }: Props) {
         initial[item.id] = inferSpigotCompatibility(item);
         initialDetails[item.id] = {
           supportedVersions: extractVersionHints(
-            `${item.description} ${typeof item.source_obj.tag === 'string' ? item.source_obj.tag : ''}`
+            `${item.description} ${typeof item.source_obj.tag === 'string' ? item.source_obj.tag : ''}`,
           ),
         };
       } else {
@@ -414,7 +414,7 @@ export default function PluginBrowser({ server }: Props) {
             console.error(error);
             return [item.id, 'unknown', { supportedVersions: [] }];
           }
-        })
+        }),
       );
 
       if (cancelled) {
@@ -520,8 +520,8 @@ export default function PluginBrowser({ server }: Props) {
               console.error(error);
               return [item.id, 'unknown', null];
             }
-          }
-        )
+          },
+        ),
       );
 
       if (cancelled) {
@@ -600,7 +600,7 @@ export default function PluginBrowser({ server }: Props) {
 
         if (
           plainCandidates.some(
-            (candidate) => fileLower.includes(candidate) || fileBase === candidate
+            (candidate) => fileLower.includes(candidate) || fileBase === candidate,
           )
         ) {
           return true;
@@ -727,7 +727,7 @@ export default function PluginBrowser({ server }: Props) {
   const performInstall = async (
     item: ProjectItem,
     mode: 'fresh' | 'overwrite' | 'update',
-    installedFile?: string
+    installedFile?: string,
   ) => {
     if (installedFile) {
       const targetPath = `${server.path}/${folderName}/${installedFile}`;
@@ -761,22 +761,22 @@ export default function PluginBrowser({ server }: Props) {
               .filter(
                 (dependency) =>
                   dependency.dependencyType.toLowerCase() === 'required' &&
-                  typeof dependency.projectId === 'string'
+                  typeof dependency.projectId === 'string',
               )
-              .map((dependency) => dependency.projectId as string)
-          )
+              .map((dependency) => dependency.projectId as string),
+          ),
         );
 
         if (requiredProjectIds.length > 0) {
           const requiredProjects = await Promise.all(
-            requiredProjectIds.map((projectId) => resolveDependencyIdentity(projectId))
+            requiredProjectIds.map((projectId) => resolveDependencyIdentity(projectId)),
           );
 
           const missingDependencies = requiredProjects.filter(
             (dependency) =>
               !isCandidateInstalled(dependency.slug) &&
               !isCandidateInstalled(dependency.title) &&
-              !isCandidateInstalled(dependency.projectId)
+              !isCandidateInstalled(dependency.projectId),
           );
 
           if (missingDependencies.length > 0) {
@@ -791,7 +791,7 @@ export default function PluginBrowser({ server }: Props) {
               {
                 title: '依存関係チェック',
                 kind: 'warning',
-              }
+              },
             );
 
             if (shouldInstallDependencies) {
@@ -807,7 +807,7 @@ export default function PluginBrowser({ server }: Props) {
                   if (!dependencyVersion) {
                     showToast(
                       `依存プラグイン ${dependency.title} の対応バージョンが見つかりません`,
-                      'info'
+                      'info',
                     );
                     continue;
                   }
@@ -815,7 +815,7 @@ export default function PluginBrowser({ server }: Props) {
                   await installModrinthProject(
                     dependencyVersion.id,
                     dependencyVersion.fileName,
-                    `${server.path}/${folderName}`
+                    `${server.path}/${folderName}`,
                   );
                   installedDependencyCount += 1;
                 } catch (error) {
@@ -827,14 +827,14 @@ export default function PluginBrowser({ server }: Props) {
               if (installedDependencyCount > 0) {
                 showToast(
                   `依存プラグインを ${installedDependencyCount} 件インストールしました`,
-                  'success'
+                  'success',
                 );
                 await refreshInstalled();
               }
             } else {
               showToast(
                 '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
-                'info'
+                'info',
               );
             }
           }
@@ -843,7 +843,7 @@ export default function PluginBrowser({ server }: Props) {
         await installModrinthProject(
           resolvedVersion.id,
           resolvedVersion.fileName,
-          `${server.path}/${folderName}`
+          `${server.path}/${folderName}`,
         );
       } else if (item.platform === 'Hangar') {
         const owner = item.author;
@@ -867,7 +867,7 @@ export default function PluginBrowser({ server }: Props) {
             listedVersions
               ? `サーバー ${server.version} との互換性が未確認です (対応候補: ${listedVersions}${suffix})`
               : `サーバー ${server.version} との互換性が未確認です`,
-            'info'
+            'info',
           );
         }
 
@@ -881,7 +881,7 @@ export default function PluginBrowser({ server }: Props) {
         await installHangarProject(
           resolved.downloadUrl,
           resolved.fileName,
-          `${server.path}/${folderName}`
+          `${server.path}/${folderName}`,
         );
       } else if (item.platform === 'Spigot') {
         const resourceId = Number(item.id);
@@ -899,7 +899,7 @@ export default function PluginBrowser({ server }: Props) {
         }
 
         const extension = normalizeFileExtension(
-          typeof item.source_obj.fileType === 'string' ? item.source_obj.fileType : '.jar'
+          typeof item.source_obj.fileType === 'string' ? item.source_obj.fileType : '.jar',
         );
         const versionId =
           typeof item.source_obj.latestVersionId === 'number'
@@ -969,7 +969,7 @@ export default function PluginBrowser({ server }: Props) {
         isDisabledPluginFile(installedFile)
           ? `${item.title} を有効化しました`
           : `${item.title} を無効化しました`,
-        'success'
+        'success',
       );
     } catch (error) {
       console.error(error);
@@ -1009,7 +1009,7 @@ export default function PluginBrowser({ server }: Props) {
   const actionLabel = (
     item: ProjectItem,
     installedState: 'none' | 'enabled' | 'disabled',
-    updateStatus: UpdateStatus | null
+    updateStatus: UpdateStatus | null,
   ) => {
     if (installingId === item.id) {
       return 'Installing...';
