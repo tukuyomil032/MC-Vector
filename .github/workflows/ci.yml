@@ -58,4 +58,4 @@ jobs:
         run: choco install just
       - run: vp install --frozen-lockfile
       - name: Build (debug mode)
-        run: just tauri-build --debug --no-bundle
+        run: vp exec tauri build --debug --no-bundle
