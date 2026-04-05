@@ -64,7 +64,7 @@ check-all: check yamllint rustfmt
 setup: install check-all
     @echo "✅ Development environment ready!"
 
-# Watch mode for continuous linting (if supported)
+# Start development server with hot reload
 watch:
-    @echo "Starting watch mode..."
+    `@echo` "Starting development server..."
     pnpm dev

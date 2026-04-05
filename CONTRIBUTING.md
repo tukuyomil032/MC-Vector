@@ -245,7 +245,7 @@ just format
 # Format Rust
 just rustfmt
 
-# Format YAML
+# Lint YAML
 just yamllint
 ```
 

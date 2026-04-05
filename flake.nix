@@ -17,7 +17,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        
+
         # Rust toolchain with specific version
         rustToolchain = pkgs.rust-bin.stable."1.77.2".default.override {
           extensions = [ "rust-src" "rust-analyzer" ];
@@ -28,28 +28,28 @@
           # Node.js ecosystem
           nodejs_22
           nodePackages.pnpm
-          
+
           # Rust toolchain
           rustToolchain
-          
+
           # Tauri dependencies
           pkg-config
           openssl
-          
+
           # Linters and formatters
           python311Packages.yamllint
-          
+
           # Task runners
           gnumake
           just
-          
+
           # Development utilities
           git
           curl
         ];
 
         # Platform-specific dependencies
-        platformBuildInputs = 
+        platformBuildInputs =
           if pkgs.stdenv.isDarwin then
             with pkgs.darwin.apple_sdk.frameworks; [
               Security
@@ -76,7 +76,7 @@
         # Development shell
         devShells.default = pkgs.mkShell {
           name = "mc-vector-dev";
-          
+
           buildInputs = commonBuildInputs ++ platformBuildInputs;
 
           shellHook = ''
@@ -106,25 +106,25 @@
         packages = {
           default = pkgs.stdenv.mkDerivation {
             pname = "mc-vector";
-            version = "2.0.47";
-            
+            version = "2.0.48";
+
             src = ./.;
-            
+
             nativeBuildInputs = commonBuildInputs;
             buildInputs = platformBuildInputs;
-            
+
             buildPhase = ''
               pnpm install --frozen-lockfile
               pnpm tauri:build
             '';
-            
+
             installPhase = ''
               mkdir -p $out/bin
               # Platform-specific installation (to be completed)
               # macOS: copy .app bundle
               # Linux: copy AppImage or deb/rpm
             '';
-            
+
             meta = with pkgs.lib; {
               description = "Minecraft Server Management Desktop App";
               homepage = "https://github.com/tukuyomil032/MC-Vector";

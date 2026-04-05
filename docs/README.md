@@ -56,7 +56,7 @@ Welcome to the MC-Vector documentation! This directory contains comprehensive gu
 
 ## Documentation Structure
 
-```
+```text
 docs/
 ├── README.md                                 # This file (documentation index)
 ├── tutorial.md                               # User guide

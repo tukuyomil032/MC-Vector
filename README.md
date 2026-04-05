@@ -99,7 +99,7 @@ just tauri-dev
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
 pnpm install
-make tauri-dev
+pnpm tauri:dev
 ```
 
 For detailed development instructions, see the [Development Guide](docs/development-guide.md).

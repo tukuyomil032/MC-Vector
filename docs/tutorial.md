@@ -235,49 +235,11 @@ The Plugins / Mods tab allows you to easily install plugins (for Bukkit/Spigot/P
 ⚠️ **Note:** If you have multiple servers, **only the currently selected server** will receive the installation.
 
 #### Remove a Plugin/Mod
-
-1. Navigate to the **"Installed"** section
-2. Find the plugin/mod you want to remove
-3. Click **"Remove"**
-4. Confirm the removal
-
----
-
-### Backups
-
-The Backups tab allows you to create, manage, and restore server backups.
-
-**Features:**
-
-- Create full server backups
-- View all backups with timestamps
-- Restore server from a backup
-- Delete old backups
-
 **Backup Location:**
-
 - **macOS:** `/Users/<username>/Library/Application Support/MC-Vector/servers/<servername>/backups`
 - **Windows:** `C:\Users\<username>\AppData\Roaming\MC-Vector\servers\<servername>\backups`
+- **Linux:** `~/.local/share/MC-Vector/servers/<servername>/backups` または `$XDG_DATA_HOME/MC-Vector/servers/<servername>/backups`
 
-**How to Use:**
-
-#### Create a Backup
-
-1. Navigate to the **Backups** tab
-2. Click **"Create Backup"**
-3. Wait for the backup process to complete
-4. The new backup will appear in the list
-
-#### Restore from Backup
-
-1. Select a backup from the list
-2. Click **"Restore"**
-3. Confirm the restoration
-4. Your server will be restored to the state of that backup
-
-⚠️ **Warning:** Restoring a backup will overwrite your current server files.
-
-#### Delete a Backup
 
 1. Select a backup from the list
 2. Click **"Delete"**
