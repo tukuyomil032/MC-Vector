@@ -2,12 +2,11 @@
 # Make build/dev environment files visible in language statistics
 
 # Nix configuration files
-*.nix linguist-language=Nix
-flake.lock linguist-language=Nix
+*.nix linguist-language=Nix linguist-detectable=true
+flake.lock linguist-detectable=true
 
 # Build automation files
-Makefile linguist-language=Makefile
-justfile linguist-language=Just
+Makefile linguist-language=Makefile linguist-detectable=true
 
 # Exclude documentation from language statistics
 docs/** linguist-documentation=true
