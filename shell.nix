@@ -20,30 +20,10 @@ pkgs.mkShell {
     # Tauri dependencies
     pkg-config
     openssl
-    
-    # Platform-specific dependencies
-    (if stdenv.isDarwin then [
-      darwin.apple_sdk.frameworks.Security
-      darwin.apple_sdk.frameworks.CoreServices
-      darwin.apple_sdk.frameworks.CoreFoundation
-      darwin.apple_sdk.frameworks.Foundation
-      darwin.apple_sdk.frameworks.AppKit
-      darwin.apple_sdk.frameworks.WebKit
-      darwin.apple_sdk.frameworks.Cocoa
-    ] else [
-      # Linux dependencies
-      webkitgtk
-      gtk3
-      cairo
-      gdk-pixbuf
-      glib
-      dbus
-      libsoup
-    ])
 
     # Linters and formatters
-    python311Packages.yamllint
-    
+    python3Packages.yamllint
+
     # Task runners
     gnumake
     just
@@ -51,6 +31,23 @@ pkgs.mkShell {
     # Development utilities
     git
     curl
+  ] ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [
+    Security
+    CoreServices
+    CoreFoundation
+    Foundation
+    AppKit
+    WebKit
+    Cocoa
+  ]) ++ lib.optionals (!stdenv.isDarwin) [
+    # Linux dependencies
+    webkitgtk
+    gtk3
+    cairo
+    gdk-pixbuf
+    glib
+    dbus
+    libsoup
   ];
 
   shellHook = ''
@@ -72,7 +69,7 @@ pkgs.mkShell {
   '';
 
   # Environment variables
-  RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+  RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
   
   # Enable Rust backtrace in development
   RUST_BACKTRACE = "1";
