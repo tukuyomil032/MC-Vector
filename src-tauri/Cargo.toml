@@ -1,6 +1,6 @@
 [package]
 name = "mc-vector"
-version = "2.0.46"
+version = "2.0.47"
 description = "Minecraft Server Management App"
 authors = ["tukuyomi032"]
 license = "MIT"

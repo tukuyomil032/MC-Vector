@@ -46,7 +46,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   const [autoRestartDelaySec, setAutoRestartDelaySec] = useState(server.autoRestartDelaySec ?? 5);
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(Boolean(server.autoBackupEnabled));
   const [autoBackupIntervalMin, setAutoBackupIntervalMin] = useState(
-    server.autoBackupIntervalMin ?? 60
+    server.autoBackupIntervalMin ?? 60,
   );
   const [autoBackupScheduleType, setAutoBackupScheduleType] = useState<
     'interval' | 'daily' | 'weekly'
@@ -140,7 +140,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     const normalizedRestartDelay = Math.min(300, Math.max(1, Math.floor(autoRestartDelaySec || 1)));
     const normalizedBackupInterval = Math.min(
       1440,
-      Math.max(1, Math.floor(autoBackupIntervalMin || 1))
+      Math.max(1, Math.floor(autoBackupIntervalMin || 1)),
     );
     const normalizedScheduleType: 'interval' | 'daily' | 'weekly' =
       autoBackupScheduleType === 'daily' || autoBackupScheduleType === 'weekly'

@@ -265,7 +265,7 @@ function App() {
   };
 
   const resolveAutoBackupScheduleType = (
-    server: MinecraftServer
+    server: MinecraftServer,
   ): 'interval' | 'daily' | 'weekly' => {
     return server.autoBackupScheduleType === 'daily' || server.autoBackupScheduleType === 'weekly'
       ? server.autoBackupScheduleType
@@ -385,14 +385,14 @@ function App() {
       if (scheduleType === 'interval') {
         const intervalMinutes = Math.min(
           1440,
-          Math.max(1, Math.floor(server.autoBackupIntervalMin ?? 60))
+          Math.max(1, Math.floor(server.autoBackupIntervalMin ?? 60)),
         );
 
         autoBackupIntervalRef.current[server.id] = window.setInterval(
           () => {
             void runAutoBackup(server.id);
           },
-          intervalMinutes * 60 * 1000
+          intervalMinutes * 60 * 1000,
         );
         continue;
       }
@@ -446,7 +446,7 @@ function App() {
 
   const buildTemplateFromServer = (
     server: MinecraftServer,
-    templateName: string
+    templateName: string,
   ): ServerTemplate => {
     return {
       id: crypto.randomUUID(),
@@ -563,11 +563,11 @@ function App() {
 
         const maxAutoRestarts = Math.min(
           20,
-          Math.max(0, Math.floor(targetServer.maxAutoRestarts ?? 3))
+          Math.max(0, Math.floor(targetServer.maxAutoRestarts ?? 3)),
         );
         const restartDelaySec = Math.min(
           300,
-          Math.max(1, Math.floor(targetServer.autoRestartDelaySec ?? 5))
+          Math.max(1, Math.floor(targetServer.autoRestartDelaySec ?? 5)),
         );
 
         if (maxAutoRestarts <= 0) {
@@ -586,12 +586,12 @@ function App() {
         clearAutoRestartTimer(data.serverId);
         setServers((prev) =>
           prev.map((server) =>
-            server.id === data.serverId ? { ...server, status: 'restarting' } : server
-          )
+            server.id === data.serverId ? { ...server, status: 'restarting' } : server,
+          ),
         );
         showToast(
           `${targetServer.name} が異常終了しました。${restartDelaySec}秒後に自動再起動します (${nextAttempt}/${maxAutoRestarts})`,
-          'info'
+          'info',
         );
 
         autoRestartTimerRef.current[data.serverId] = window.setTimeout(async () => {
@@ -612,8 +612,8 @@ function App() {
 
             setServers((prev) =>
               prev.map((server) =>
-                server.id === data.serverId ? { ...server, status: 'starting' } : server
-              )
+                server.id === data.serverId ? { ...server, status: 'starting' } : server,
+              ),
             );
 
             const javaPath = latestServer.javaPath || 'java';
@@ -623,18 +623,18 @@ function App() {
               javaPath,
               latestServer.path,
               latestServer.memory,
-              jarFile
+              jarFile,
             );
           } catch (error) {
             console.error('Auto restart failed:', error);
             setServers((prev) =>
               prev.map((server) =>
-                server.id === data.serverId ? { ...server, status: 'offline' } : server
-              )
+                server.id === data.serverId ? { ...server, status: 'offline' } : server,
+              ),
             );
             showToast(
               `${latestServer.name} の自動再起動に失敗しました (${nextAttempt}/${maxAutoRestarts})`,
-              'error'
+              'error',
             );
           }
         }, restartDelaySec * 1000);
@@ -704,7 +704,7 @@ function App() {
       markExpectedOffline(selectedServerId);
       clearAutoRestartTimer(selectedServerId);
       setServers((prev) =>
-        prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'stopping' } : s))
+        prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'stopping' } : s)),
       );
 
       try {
@@ -714,7 +714,7 @@ function App() {
         clearExpectedOffline(selectedServerId);
         resetAutoRestartState(selectedServerId);
         setServers((prev) =>
-          prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'offline' } : s))
+          prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'offline' } : s)),
         );
         showToast('サーバーの停止に失敗しました', 'error');
       }
@@ -823,7 +823,7 @@ function App() {
         if (sw === 'Paper' || sw === 'LeafMC') {
           const project = sw === 'Paper' ? 'paper' : 'leafmc';
           const buildsResp = await tauriFetch(
-            `https://api.papermc.io/v2/projects/${project}/versions/${ver}/builds`
+            `https://api.papermc.io/v2/projects/${project}/versions/${ver}/builds`,
           );
           const buildsData = (await buildsResp.json()) as PaperBuildsResponse;
           if (buildsData.builds && buildsData.builds.length > 0) {
@@ -835,7 +835,7 @@ function App() {
           }
         } else if (sw === 'Vanilla') {
           const manifestResp = await tauriFetch(
-            'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
+            'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
           );
           const manifest = (await manifestResp.json()) as MojangManifest;
           const verInfo = manifest.versions?.find((v) => v.id === ver);
@@ -878,7 +878,7 @@ function App() {
   const handleBuildProxyNetwork = async (_config: ProxyNetworkConfig) => {
     const confirmed = await ask(
       '構成を開始しますか？各サーバーの server.properties を書き換えます。',
-      { title: 'プロキシ構成', kind: 'info' }
+      { title: 'プロキシ構成', kind: 'info' },
     );
     if (!confirmed) {
       return;
@@ -912,12 +912,12 @@ function App() {
 
           await saveFileContent(propsPath, props);
           await updateServerApi({ ...srv, port });
-        })
+        }),
       );
 
       showToast(
         `${backendServers.length} 台のサーバーの設定を更新しました。プロキシサーバー (${_config.proxySoftware}) のポート ${_config.proxyPort} で接続してください。`,
-        'success'
+        'success',
       );
       const loadedServers = await getServers();
       setServers(loadedServers);
@@ -1057,7 +1057,7 @@ function App() {
 
     const templateName = window.prompt(
       'テンプレート名を入力してください',
-      `${target.name} Template`
+      `${target.name} Template`,
     );
     if (!templateName || !templateName.trim()) {
       return;

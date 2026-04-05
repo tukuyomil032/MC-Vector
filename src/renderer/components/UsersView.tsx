@@ -34,7 +34,7 @@ export default function UsersView({ server }: Props) {
   const resolvePlayerIdentity = async (name: string): Promise<{ name: string; uuid?: string }> => {
     try {
       const res = await fetch(
-        `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`
+        `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`,
       );
       if (!res.ok) return { name };
       const data = await res.json();
@@ -51,7 +51,7 @@ export default function UsersView({ server }: Props) {
     type: ListType,
     action: 'add' | 'remove',
     nameOrIp: string,
-    rawInput: string
+    rawInput: string,
   ) => {
     if (server.status !== 'online') return;
     const command = (() => {
@@ -123,7 +123,7 @@ export default function UsersView({ server }: Props) {
 
     if (
       currentList.some((p) =>
-        type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase()
+        type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase(),
       )
     ) {
       showToast('既に存在します', 'info');
@@ -171,7 +171,7 @@ export default function UsersView({ server }: Props) {
     }
 
     const newData = currentList.filter((p) =>
-      type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier
+      type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier,
     );
     await writeJsonFile(filePath, newData);
     await maybeApplyLiveCommand(type, 'remove', identifier, identifier);

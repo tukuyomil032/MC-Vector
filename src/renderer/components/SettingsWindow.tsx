@@ -76,7 +76,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
 
   const releaseNotesText = useMemo(
     () => normalizeReleaseNotes(updateState.releaseNotes),
-    [updateState.releaseNotes]
+    [updateState.releaseNotes],
   );
 
   useEffect(() => {

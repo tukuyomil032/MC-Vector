@@ -250,7 +250,7 @@ export default function BackupsView({ server }: Props) {
           try {
             const children = await listFiles(`${server.path}/${candidate.name}`);
             const hasLevelDat = children.some(
-              (child) => !child.isDirectory && child.name === 'level.dat'
+              (child) => !child.isDirectory && child.name === 'level.dat',
             );
             if (hasLevelDat || /^world($|[_-])/i.test(candidate.name)) {
               worldNames.push(candidate.name);
@@ -258,7 +258,7 @@ export default function BackupsView({ server }: Props) {
           } catch (error) {
             console.error(error);
           }
-        })
+        }),
       );
 
       const unique = Array.from(new Set(worldNames)).sort((a, b) => a.localeCompare(b));
@@ -325,7 +325,7 @@ export default function BackupsView({ server }: Props) {
   };
 
   const buildSnapshotForSelection = async (
-    paths: string[]
+    paths: string[],
   ): Promise<Record<string, BackupSnapshotEntry>> => {
     const snapshot: Record<string, BackupSnapshotEntry> = {};
     const rootEntries = await listFilesWithMetadata(server.path);
@@ -482,7 +482,7 @@ export default function BackupsView({ server }: Props) {
         backupMode === 'differential'
           ? `差分バックアップを作成しました (${sourcesForBackup.length} 件)`
           : 'バックアップを作成しました！',
-        'success'
+        'success',
       );
 
       setShowCreateModal(false);
@@ -570,7 +570,7 @@ export default function BackupsView({ server }: Props) {
       {
         title: '最終確認',
         kind: 'warning',
-      }
+      },
     );
     if (!finalConfirm) {
       return;

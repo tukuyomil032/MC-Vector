@@ -66,7 +66,7 @@ export async function importFilesDialog(destDir: string): Promise<string[]> {
   const files = Array.isArray(selected) ? selected : [selected];
   return importFilesFromPaths(
     files.map((filePath) => filePath as string),
-    destDir
+    destDir,
   );
 }
 

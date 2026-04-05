@@ -95,7 +95,7 @@ export async function startServer(
   javaPath: string,
   serverPath: string,
   memory: number,
-  jarFile: string
+  jarFile: string,
 ): Promise<void> {
   return tauriInvoke('start_server', {
     serverId,
@@ -125,7 +125,7 @@ export async function getServerPid(serverId: string): Promise<number> {
 export async function downloadServerJar(
   url: string,
   destPath: string,
-  serverId: string
+  serverId: string,
 ): Promise<void> {
   return tauriInvoke('download_server_jar', { url, destPath, serverId });
 }
@@ -137,19 +137,19 @@ export async function getServerStats(pid: number): Promise<{ cpu: number; memory
 // --- イベントリスナー ---
 
 export function onServerLog(
-  callback: (data: { serverId: string; line: string; stream: string }) => void
+  callback: (data: { serverId: string; line: string; stream: string }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('server-log', callback);
 }
 
 export function onServerStatusChange(
-  callback: (data: { serverId: string; status: string }) => void
+  callback: (data: { serverId: string; status: string }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('server-status-change', callback);
 }
 
 export function onDownloadProgress(
-  callback: (data: { serverId: string; progress: number; status: string }) => void
+  callback: (data: { serverId: string; progress: number; status: string }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('download-progress', callback);
 }

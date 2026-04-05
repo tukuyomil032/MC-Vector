@@ -17,11 +17,7 @@
       radial-gradient(circle at 0% 0%, var(--mv-view-glow-a), transparent 42%),
       radial-gradient(circle at 95% 100%, var(--mv-view-glow-b), transparent 50%);
     --mv-panel-bg: linear-gradient(135deg, var(--mv-panel-start), var(--mv-panel-end));
-    --mv-panel-bg-alt: linear-gradient(
-      140deg,
-      var(--mv-panel-alt-start),
-      var(--mv-panel-alt-end)
-    );
+    --mv-panel-bg-alt: linear-gradient(140deg, var(--mv-panel-alt-start), var(--mv-panel-alt-end));
     --mv-border-soft: rgba(82, 82, 91, 0.72);
     --mv-border-strong: rgba(34, 211, 238, 0.42);
     --mv-shadow-panel: 0 18px 45px rgba(2, 6, 23, 0.25);
@@ -41,7 +37,9 @@
       linear-gradient(to bottom, rgba(63, 63, 70, 0.9), rgba(63, 63, 70, 0.9)),
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 5 4-5' fill='none' stroke='%23cbd5e1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat, no-repeat;
-    background-size: 1px 55%, 0.9rem;
+    background-size:
+      1px 55%,
+      0.9rem;
     background-position:
       right 2rem center,
       right 0.7rem center;

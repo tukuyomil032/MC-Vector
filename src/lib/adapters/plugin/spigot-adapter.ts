@@ -69,7 +69,7 @@ const spigotSearchAdapter: PluginSourceAdapter<SpigotSearchParams, SpigetResourc
     const url = new URL(
       trimmed
         ? `https://api.spiget.org/v2/search/resources/${encodeURIComponent(trimmed)}`
-        : 'https://api.spiget.org/v2/resources/free'
+        : 'https://api.spiget.org/v2/resources/free',
     );
     url.searchParams.set('size', String(params.size));
     url.searchParams.set('page', String(Math.max(1, params.page)));
@@ -88,7 +88,7 @@ const spigotSearchAdapter: PluginSourceAdapter<SpigotSearchParams, SpigetResourc
 };
 
 export async function searchSpigotResources(
-  params: SpigotSearchParams
+  params: SpigotSearchParams,
 ): Promise<SpigetResourceAdapter[]> {
   return spigotSearchAdapter.search(params);
 }

@@ -25,11 +25,11 @@ Frontend UI is built with React and Tailwind, with SCSS partials used to keep re
 1. Keep short utility usage in TSX when it is local and truly one-off.
 2. Move long/repeated class chains into SCSS classes under `src/styles`.
 3. Group styles by responsibility:
-	- `src/styles/base`: global base/reset rules
-	- `src/styles/components`: reusable UI primitives
-	- `src/styles/layout`: app shell/layout rules
-	- `src/styles/modals`: modal-specific styles
-	- `src/styles/views`: per-view styles
+   - `src/styles/base`: global base/reset rules
+   - `src/styles/components`: reusable UI primitives
+   - `src/styles/layout`: app shell/layout rules
+   - `src/styles/modals`: modal-specific styles
+   - `src/styles/views`: per-view styles
 4. Import styles only through `src/styles/index.scss` from `src/main.tsx`.
 5. Avoid invalid Tailwind `@apply` values (for example `bg-white/3`). Use explicit CSS color values when needed.
 
@@ -54,19 +54,19 @@ Frontend UI is built with React and Tailwind, with SCSS partials used to keep re
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
-	return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null;
 }
 
 function parseProject(value: unknown): { id: string; title: string } | null {
-	if (!isRecord(value)) {
-		return null;
-	}
-	const id = typeof value.id === 'string' ? value.id : '';
-	const title = typeof value.title === 'string' ? value.title : '';
-	if (!id || !title) {
-		return null;
-	}
-	return { id, title };
+  if (!isRecord(value)) {
+    return null;
+  }
+  const id = typeof value.id === 'string' ? value.id : '';
+  const title = typeof value.title === 'string' ? value.title : '';
+  if (!id || !title) {
+    return null;
+  }
+  return { id, title };
 }
 ```
 
@@ -74,8 +74,8 @@ function parseProject(value: unknown): { id: string; title: string } | null {
 
 ```ts
 interface PluginSourceAdapter {
-	search(query: string, gameVersion: string, page: number): Promise<PluginProject[]>;
-	resolveDownload(project: PluginProject, gameVersion: string): Promise<PluginDownload | null>;
+  search(query: string, gameVersion: string, page: number): Promise<PluginProject[]>;
+  resolveDownload(project: PluginProject, gameVersion: string): Promise<PluginDownload | null>;
 }
 ```
 
@@ -112,6 +112,7 @@ Before finishing a refactor:
 3. If unexpected modifications are detected, pause and ask for confirmation before proceeding.
 
 ### 共通
+
 - コミットメッセージは英語で feat:, fix:, refactor:, docs: のプレフィックスを使う
 - 実装や編集、1プロンプトの作業が終わったあと、同Phase内での未実装ポイント、あるいは今のPhaseでのすべての実装が終わった場合は次のPhaseで実装すべき点があるか確認し、ある場合はどこから実装を進めていくかユーザーに質問モードで選択肢で質問をすること。これは全てのPhaseの全ての実装を終えるまで、つまりリリースできる段階になるまで実装後に毎回質問をすること。また、その質問の後、その実装ごとの変更内容にふさわしいコミットメッセージを含めたコマンドを生成し、実際にそのコマンドを実行するかしないかユーザーに質問モードで質問をすること。同Phase内での変更や実装ごとにはコミットコマンドの生成は質問はしないこと。ただし、同フェーズ内での変更や実装の場合でも、1つ1つの実装の規模が大きい場合は例外とする。更に、コミットコマンドを実行しないを選んだ場合にも、まだ実装すべき同フェーズ内の作業や、次のフェーズが残っている場合は、実装を続け、実装を完了するまで半永久的に質問→実装→質問を繰り返すこと。ここで言う質問とは、あなたが出力する文章で聞くのではなく、Planモードで要件定義をするときに使用する選択式の質問のこと。コミットコマンドのフォーマットは、git commit -m "message" -m "message" -m "message"のように、実装した内容を大まかにまとめて、-mオプションでそれぞれ改行すること。
 - git操作には、VSCode内のターミナルからコマンドで行うこと。MCPなどを通さず、直接コマンドを叩くこと。

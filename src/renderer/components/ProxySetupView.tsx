@@ -27,12 +27,12 @@ export default function ProxySetupView({
   const backendCandidates = servers.filter(
     (s) =>
       !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) &&
-      !s.name.toLowerCase().includes('proxy')
+      !s.name.toLowerCase().includes('proxy'),
   );
 
   const handleCheckboxChange = (serverId: string) => {
     setSelectedBackendIds((prev) =>
-      prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId]
+      prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId],
     );
   };
 
