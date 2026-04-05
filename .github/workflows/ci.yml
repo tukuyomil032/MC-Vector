@@ -27,10 +27,12 @@ jobs:
           python-version: '3.x'
       - name: Install yamllint
         run: pip install 'yamllint==1.35.1'
+      - name: Install just
+        uses: extractions/setup-just@v2
       - name: YAML Lint
-        run: vp exec yamllint .
+        run: just yamllint
       - name: Vite+ Check (lint & format)
-        run: vp check
+        run: just check
 
   build-check:
     runs-on: ${{ matrix.platform }}
@@ -48,5 +50,12 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> target
+      - name: Install just (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: brew install just
+      - name: Install just (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: choco install just
       - run: vp install --frozen-lockfile
-      - run: vp exec tauri build --debug --no-bundle
+      - name: Build (debug mode)
+        run: just tauri-build --debug --no-bundle

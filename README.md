@@ -1,289 +1,410 @@
 # MC-Vector
 
+[![CI](https://github.com/tukuyomil032/MC-Vector/workflows/CI/badge.svg)](https://github.com/tukuyomil032/MC-Vector/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-2.0.47-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
+
 **Minecraft - Multi-Function Server Management Software**
 
-## Technology Stacks
-
-- TailwindCSS
-- Tauri
-- Node.js
-- React 19
-- Vite+
-
-## Languages
-
-- Typescript
-- Rust
-- SCSS
-
-# Tutorial - How to create a server
-
-1. Install MC-Vector and launch the application.
-2. Press “+ Add Server” to open the server creation screen.
-3. Set the “Server Name,” “Software,” “Version,” “Port,” and “Memory Usage” respectively.
-4. Press the “Create” button.
-   **Completing steps 1 through 4 above will finish creating your server!**
-
-## Tutorial - How to Configure Server Details
-
-This application contains the following main configuration items:
-
-- **Dashboard**
-  - Here you can check the server status, **_software in use, CPU usage, and memory usage_** in real time!
-
-- **Console**
-  - Here you can check the **_server address, status, and memory usage_**!
-  - Additionally, as a key feature of the console, server logs stream here.
-    - Furthermore, **you can execute console commands (with administrator privileges)** by typing a command into the `Type a command...` field and pressing the “Send” button!
-
-- **Users**
-  - Here, you can add or remove four items:
-    - Server whitelist,
-    - Administrator privileges,
-    - User bans (+including checking banned users),
-    - User IP bans.
-
-- **Files**
-  - Here, you can create, delete, edit, and move files or folders.
-  - In the Files tab, **you can create new folders and files within the current directory** by clicking the + button in the upper-left corner!
-
-- **Plugins / Mods**
-  - Here, you can install plugins and mods on your server simply by pressing the “Install” button.
-  - ⚠️However, **if you have created multiple servers**, **_only the currently selected server will be installed_** when you press the “Install” button.
-
-- **Backups**
-  - Here, you can create and delete server backups, as well as restore data from backups.
-  - The backup file you created is saved in the following directory:
-    - For MacOS➡️ `/Users/<username>/Library/Application Support/MC-Vector/servers/<servername>/backups`
-    - For Windows➡️ `C:\Users\<username>\AppData\Roaming\MC-Vector\servers\<servername>\backups`
-      - `<username>` is your operating system's user ID.
-      - `<servername>` is the name of the server you created the backup for.
-
-- **Properties**
-  - Here, you can edit **the basic settings** for your Minecraft server.
-  - For example, setting items include:
-    - Difficulty
-    - allow-flight
-    - max-players
-    - whitelist [``On / Off``] etc.
-
-- **General Settings**
-  - Here, you can change the settings configured when creating the server later!
-  - List of configurable items:
-    - Server name
-    - Software
-    - Version
-    - Memory usage
-    - Port number
-    - Java version
-    - **_Port fowarding elimination feature_**
-      - For detailed setup instructions, press the “❓️Connection Guide” button.
-
-- **Proxy Network**
-  - **_Here, you can easily set up a proxy server!_**
-  - For detailed setup instructions, click the “See Detailed Setup Guide” button.
+MC-Vector is a powerful cross-platform desktop application for managing Minecraft servers with ease. Built with Tauri and React, it provides a modern, fast, and intuitive interface for server administration.
 
 ---
 
-## Prerequisites
+## Features
 
-Before you start developing, make sure you have the following installed:
+- 🖥️ **Multi-Platform Support** - Works on macOS, Windows, and Linux
+- 🎮 **Multiple Server Management** - Create and manage multiple Minecraft servers
+- 🔌 **Plugin/Mod Browser** - Install plugins and mods directly from Modrinth, Hangar, and SpigotMC with one click
+- 📊 **Real-Time Monitoring** - Dashboard with CPU usage, memory usage, and server status
+- 💾 **Backup & Restore** - Create and restore server backups with ease
+- 📁 **Built-in File Manager** - Edit server files directly in the app
+- 👥 **User Management** - Manage whitelist, operators, bans, and IP bans
+- 🌐 **Proxy Network Setup** - Easy proxy server configuration (BungeeCord, Velocity)
+- 🔗 **Port Forwarding Elimination** - Ngrok integration for public access without port forwarding
+- ☕ **Java Version Management** - Detect and select Java runtime versions
+- 🔄 **Auto-Updater** - Keep MC-Vector up to date automatically
 
-- **Node.js** (v18 or later recommended)
-- **pnpm** (Package manager)
-- **Rust** (v1.77.2 or later)
-- **Cargo** (Included with Rust)
-- **yamllint** (Python-based YAML linter, required for pre-commit hooks)
-  ```bash
-  pip install 'yamllint==1.35.1'
-  ```
+---
 
-### Installation
+## Table of Contents
 
-1. **Clone the repository**
+- [Features](#features)
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Development](#development)
+- [Building](#building)
+- [Project Structure](#project-structure)
+- [Commands Reference](#commands-reference)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
-   ```bash
-   $ git clone https://github.com/tukuyomil032/MC-Vector.git
+---
 
-   $ cd MC-Vector
-   ```
+## Requirements
 
-2. **Install dependencies**
+### For Users
 
-   ```bash
-   $ pnpm install
-   ```
+- **macOS** 10.15+ / **Windows** 10+ / **Linux** (with GTK3)
+- 4GB+ RAM recommended
+- Java 17+ (for running Minecraft servers)
 
-3. **Run development server**
-   ```bash
-   $ pnpm tauri dev
-   ```
+### For Developers
 
-### Build
+- **Node.js** v18 or later (v22 recommended)
+- **pnpm** v10.26.2 or later
+- **Rust** v1.77.2 or later
+- **Python** 3.x (for yamllint)
+- **yamllint** v1.35.1
 
-To create a production build:
+Optional:
+- **just** - Modern task runner
+- **Nix** - Reproducible development environment
+- **direnv** - Auto-load development shell
 
+---
+
+## Quick Start
+
+### For Users
+
+1. **Download** the latest release from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
+2. **Install** the application
+3. **Launch** MC-Vector
+4. **Create a server:**
+   - Click "+ Add Server"
+   - Set server name, software, version, port, and memory
+   - Click "Create"
+5. **Start your server** and enjoy!
+
+For detailed usage instructions, see the [User Guide](docs/tutorial.md).
+
+### For Developers
+
+**Using Nix (Recommended):**
 ```bash
-$ pnpm tauri build
+git clone https://github.com/tukuyomil032/MC-Vector.git
+cd MC-Vector
+nix develop
+just setup
+just tauri-dev
 ```
 
-### Other commands
+**Manual Setup:**
+```bash
+git clone https://github.com/tukuyomil032/MC-Vector.git
+cd MC-Vector
+pnpm install
+make tauri-dev
+```
 
-1. **Format code**
+For detailed development instructions, see the [Development Guide](docs/development-guide.md).
 
-   ```bash
-   $ pnpm format
-   ```
+---
 
-2. **Lint code**
+## Installation
 
-   ```bash
-   $ pnpm lint
-   ```
+### macOS
 
-3. **Check formatting and linting**
+1. Download `MC-Vector.dmg` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
+2. Open the `.dmg` file
+3. Drag MC-Vector to Applications
+4. Launch MC-Vector from Applications
 
-   ```bash
-   $ pnpm check
-   ```
+### Windows
 
-4. **Format Rust**
+1. Download `MC-Vector-Setup.exe` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
+2. Run the installer
+3. Follow the installation wizard
+4. Launch MC-Vector from the Start menu
 
-   ```bash
-   $ pnpm rustfmt
-   ```
+### Linux
 
-5. **Install recommended Extensions**
+**AppImage:**
+```bash
+chmod +x MC-Vector.AppImage
+./MC-Vector.AppImage
+```
 
-   ```bash
-   $ pnpm install:extensions
-   ```
+**Debian/Ubuntu (.deb):**
+```bash
+sudo dpkg -i MC-Vector.deb
+mc-vector
+```
 
-6. **Lint YAML files**
-   ```bash
-   $ pnpm yamllint
-   ```
+**Fedora/RHEL (.rpm):**
+```bash
+sudo rpm -i MC-Vector.rpm
+mc-vector
+```
 
-This will generate platform-specific installers in `src-tauri/target/release/bundle/`.
+---
 
-### Project Structure
+## Development
+
+### Setup Development Environment
+
+**Option 1: Using Nix (Recommended)**
+
+Nix provides a fully reproducible development environment:
+
+```bash
+# Install Nix (if not already installed)
+sh <(curl -L https://nixos.org/nix/install) --daemon
+
+# Enable Flakes (add to ~/.config/nix/nix.conf)
+echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+
+# Enter development shell
+nix develop
+
+# Install dependencies and run checks
+just setup
+```
+
+**Option 2: Manual Setup**
+
+Install dependencies manually:
+
+```bash
+# Install Node.js, pnpm, Rust, yamllint
+# (See Development Guide for detailed instructions)
+
+# Install project dependencies
+pnpm install
+
+# Run quality checks
+make check
+```
+
+### Development Workflow
+
+Start the development server:
+
+```bash
+just tauri-dev
+# or
+make tauri-dev
+```
+
+Run quality checks before committing:
+
+```bash
+just check-all
+# or
+make check && make yamllint && make rustfmt
+```
+
+For more details, see the [Development Guide](docs/development-guide.md).
+
+---
+
+## Building
+
+### Build for Production
+
+**Using justfile:**
+```bash
+just tauri-build
+```
+
+**Using Makefile:**
+```bash
+make tauri-build
+```
+
+Build artifacts will be in `src-tauri/target/release/bundle/`:
+- **macOS:** `.dmg` and `.app`
+- **Windows:** `.exe` and `.msi`
+- **Linux:** `.AppImage`, `.deb`, `.rpm`
+
+### Debug Build
+
+```bash
+just tauri-build --debug --no-bundle
+```
+
+---
+
+## Project Structure
 
 ```
 MC-Vector/
 ├── src/                              # Frontend source code
 │   ├── App.tsx                       # Main application component
 │   ├── main.tsx                      # React entry point
-│   ├── vite-env.d.ts                 # Vite type definitions
-│   ├── assets/                       # Static assets
-│   │   └── icons/                    # Icon files
-│   ├── styles/                       # Global and component styles
-│   │   ├── index.scss                # Style entry point
-│   │   ├── base/
-│   │   │   └── _base.scss            # Global base layer
-│   │   ├── components/
-│   │   │   ├── _ui-components.scss   # Shared UI classes
-│   │   │   ├── _animations.scss      # Shared animations
-│   │   │   ├── _modal-primitives.scss# Shared modal primitives
-│   │   │   └── _toast.scss           # Toast component styles
-│   │   ├── layout/
-│   │   │   └── _app-layout.scss      # App shell and navigation layout
-│   │   ├── modals/
-│   │   │   └── _add-server-modal.scss# Add server modal styles
-│   │   └── views/
-│   │       ├── _console-view.scss    # Console view styles
-│   │       ├── _backups-view.scss    # Backups view styles
-│   │       ├── _files-view.scss      # Files view styles
-│   │       ├── _dashboard-view.scss  # Dashboard view styles
-│   │       ├── _java-manager-modal.scss # Java manager modal styles
-│   │       ├── _plugin-browser.scss  # Plugin browser styles
-│   │       ├── _settings-window.scss # App settings styles
-│   │       ├── _advanced-settings-window.scss # Advanced server.properties view styles
-│   │       ├── _properties-view.scss # Basic properties view styles
-│   │       ├── _server-settings.scss # Server general settings styles
-│   │       ├── _users-view.scss      # User management view styles
-│   │       ├── _proxy-help-view.scss # Proxy guide view styles
-│   │       ├── _proxy-setup-view.scss # Proxy setup view styles
-│   │       └── _ngrok-guide-view.scss # ngrok guide view styles
-│   ├── lib/                          # Frontend API layer
-│   │   ├── backup-commands.ts        # Backup operations
-│   │   ├── config-commands.ts        # Configuration management
+│   ├── assets/                       # Static assets (icons, images)
+│   ├── styles/                       # Global and component styles (SCSS)
+│   │   ├── base/                     # Base styles and resets
+│   │   ├── components/               # Reusable UI component styles
+│   │   ├── layout/                   # App shell and navigation layout
+│   │   ├── modals/                   # Modal-specific styles
+│   │   └── views/                    # View-specific styles
+│   ├── lib/                          # Frontend API layer (Tauri wrappers)
+│   │   ├── server-commands.ts        # Server lifecycle operations
 │   │   ├── file-commands.ts          # File system operations
-│   │   ├── java-commands.ts          # Java runtime management
-│   │   ├── ngrok-commands.ts         # Ngrok tunnel operations
 │   │   ├── plugin-commands.ts        # Plugin/mod management
-│   │   ├── proxy-commands.ts         # Proxy server setup
-│   │   ├── server-commands.ts        # Server lifecycle management
-│   │   ├── update-commands.ts        # App update operations
-│   │   └── tauri-api.ts              # Tauri API wrappers
+│   │   └── ...
 │   └── renderer/                     # React components
 │       ├── components/               # UI components
-│       │   ├── AddServerModal.tsx    # Server creation modal
-│       │   ├── BackupsView.tsx       # Backup management view
-│       │   ├── ConsoleView.tsx       # Server console view
-│       │   ├── DashboardView.tsx     # Server dashboard
-│       │   ├── FilesView.tsx         # File browser view
-│       │   ├── JavaManagerModal.tsx  # Java version manager
-│       │   ├── NgrokGuideView.tsx    # Ngrok setup guide
-│       │   ├── PluginBrowser.tsx     # Plugin/mod browser
-│       │   ├── ProxyHelpView.tsx     # Proxy help documentation
-│       │   ├── ProxySetupView.tsx    # Proxy configuration
-│       │   ├── SettingsWindow.tsx    # Server settings window
-│       │   ├── UsersView.tsx         # User/whitelist management
-│       │   ├── Toast.tsx             # Toast notification component
-│       │   ├── ToastProvider.tsx     # Toast context provider
-│       │   └── properties/           # Server properties components
-│       │       ├── PropertiesView.tsx
-│       │       ├── ServerSettings.tsx
-│       │       └── AdvancedSettingsWindow.tsx
-│       └── shared/                   # Shared utilities
-│           ├── propertiesData.ts     # Server properties definitions
-│           └── server declaration.ts # Server type declarations
+│       │   ├── AddServerModal.tsx
+│       │   ├── DashboardView.tsx
+│       │   ├── ConsoleView.tsx
+│       │   ├── FilesView.tsx
+│       │   ├── PluginBrowser.tsx
+│       │   └── ...
+│       └── shared/                   # Shared utilities and types
 │
 ├── src-tauri/                        # Rust backend (Tauri core)
 │   ├── Cargo.toml                    # Rust dependencies
-│   ├── Cargo.lock                    # Dependency lock file
 │   ├── tauri.conf.json               # Tauri configuration
 │   ├── build.rs                      # Build script
 │   ├── capabilities/                 # Tauri capability definitions
-│   │   ├── default.json
-│   │   └── desktop.json
-│   ├── icons/                        # Application icons
-│   ├── gen/                          # Generated schema files
 │   └── src/
 │       ├── main.rs                   # Rust entry point
 │       ├── lib.rs                    # Library exports
 │       └── commands/                 # Tauri command handlers
-│           ├── mod.rs                # Command module exports
-│           ├── backup.rs             # Backup/restore operations
-│           ├── download.rs           # Server software downloads
+│           ├── server.rs             # Server process management
 │           ├── file_utils.rs         # File system utilities
+│           ├── download.rs           # HTTP downloads
+│           ├── process_stats.rs      # System monitoring
+│           ├── backup.rs             # Backup/restore operations
 │           ├── java.rs               # Java runtime detection
-│           ├── ngrok.rs              # Ngrok integration
-│           ├── process_stats.rs      # Server process monitoring
-│           └── server.rs             # Server process management
+│           └── ngrok.rs              # Ngrok integration
+│
+├── docs/                             # Documentation
+│   ├── README.md                     # Documentation index
+│   ├── tutorial.md                   # User guide
+│   ├── development-guide.md          # Developer guide
+│   ├── architecture.md               # Technical architecture
+│   └── ...
 │
 ├── .github/                          # GitHub configurations
 │   └── workflows/                    # CI/CD workflows
-├── .vscode/                          # VS Code settings
-├── build/                            # Build artifacts
-├── eslint.config.js                  # ESLint configuration
-├── tailwind.config.js                # Tailwind CSS configuration
-├── postcss.config.js                 # PostCSS configuration
-├── lint-staged.config.js             # lint-staged configuration
-├── vite.config.ts                    # Vite build configuration
-├── tsconfig.app.json                 # TypeScript configuration
-├── tsconfig.node.json                # TypeScript configuration
-├── tsconfig.json                     # TypeScript configuration
-├── .editorconfig                     # Sync format configuration
-├── .prettierrc                       # Prettier rules
-├── .prettierignore                   # Ignore prettier files
+│
+├── scripts/                          # Utility scripts
+│   ├── install-extensions.sh        # Install VS Code extensions
+│   └── update-versions.js            # Update version numbers
+│
+├── Makefile                          # Traditional task runner
+├── justfile                          # Modern task runner
+├── flake.nix                         # Nix Flakes definition
+├── shell.nix                         # Nix shell environment
+├── .envrc                            # direnv configuration
+├── CONTRIBUTING.md                   # Contribution guidelines
+├── CHANGELOG.md                      # Version history
 ├── package.json                      # Node.js project manifest
 ├── pnpm-lock.yaml                    # pnpm lock file
+├── vite.config.ts                    # Vite build configuration
+├── tailwind.config.js                # Tailwind CSS configuration
+├── tsconfig.json                     # TypeScript configuration
 └── README.md                         # This file
 ```
+
+For a detailed architecture overview, see [Architecture Documentation](docs/architecture.md).
+
+---
+
+## Commands Reference
+
+### Development Tasks
+
+| Task | justfile | Makefile | Description |
+|------|----------|----------|-------------|
+| Install dependencies | `just install` | `make install` | Install all dependencies |
+| Start frontend dev | `just dev` | `make dev` | Start Vite dev server |
+| Start Tauri dev | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode |
+
+### Build Tasks
+
+| Task | justfile | Makefile | Description |
+|------|----------|----------|-------------|
+| Build frontend | `just build` | `make build` | Build frontend for production |
+| Build Tauri app | `just tauri-build` | `make tauri-build` | Build Tauri application |
+
+### Quality Checks
+
+| Task | justfile | Makefile | Description |
+|------|----------|----------|-------------|
+| Lint code | `just lint` | `make lint` | Run ESLint |
+| Format code | `just format` | `make format` | Format with Prettier |
+| Check all | `just check` | `make check` | Run lint & format checks |
+| Lint YAML | `just yamllint` | `make yamllint` | Lint YAML files |
+| Format Rust | `just rustfmt` | `make rustfmt` | Format Rust code |
+| All checks | `just check-all` | N/A | Run all quality checks |
+
+### Utilities
+
+| Task | justfile | Makefile | Description |
+|------|----------|----------|-------------|
+| Full setup | `just setup` | N/A | Install deps + run all checks |
+| Clean builds | `just clean` | `make clean` | Clean build artifacts |
+| Install extensions | `just install-extensions` | `make install-extensions` | Install VS Code extensions |
+| Update versions | `just update-versions` | `make update-versions` | Update version numbers |
+
+For detailed command usage, see the [Development Guide](docs/development-guide.md).
+
+---
+
+## Documentation
+
+- **[User Guide](docs/tutorial.md)** - Complete guide to using MC-Vector
+- **[Development Guide](docs/development-guide.md)** - Developer setup and workflow
+- **[Architecture](docs/architecture.md)** - Technical architecture overview
+- **[CONTRIBUTING](CONTRIBUTING.md)** - Contribution guidelines
+- **[CHANGELOG](CHANGELOG.md)** - Version history
+
+---
+
+## Contributing
+
+We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request.
+
+### Quick Contribution Guide
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes (follow [coding guidelines](CONTRIBUTING.md#coding-guidelines))
+4. Run quality checks: `just check-all` or `make check`
+5. Commit your changes: `git commit -m "feat: your feature description"`
+6. Push to your fork: `git push origin feature/your-feature`
+7. Open a Pull Request
+
+For detailed guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Technology Stack
+
+- **Frontend:** React 19, TypeScript, Vite, TailwindCSS, SCSS
+- **Desktop:** Tauri v2 (Rust backend)
+- **State Management:** Zustand
+- **UI Components:** Lucide React, Framer Motion
+- **Code Editor:** Monaco Editor
+- **Charts:** Recharts
+- **Terminal:** xterm.js
+- **Package Manager:** pnpm
+- **Build Tool:** Vite
+- **Task Runners:** just, Make
+- **Environment:** Nix (optional)
+
+For more details, see the [Technology Stack Documentation](docs/技術スタック.md).
+
+---
+
+## Acknowledgments
+
+- Built with [Tauri](https://tauri.app/)
+- UI powered by [React](https://react.dev/)
+- Icons from [Lucide](https://lucide.dev/)
+
+---
+
+**Made with ❤️ by [tukuyomi032](https://github.com/tukuyomil032)**
