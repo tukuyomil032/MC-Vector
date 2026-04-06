@@ -14,7 +14,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
@@ -22,13 +22,13 @@ jobs:
       - name: Install dependencies
         run: vp install --frozen-lockfile
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: Install yamllint
         run: pip install 'yamllint==1.35.1'
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
       - name: YAML Lint
         run: just yamllint
       - name: Vite+ Check (lint & format)
@@ -41,7 +41,7 @@ jobs:
       matrix:
         platform: [macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
