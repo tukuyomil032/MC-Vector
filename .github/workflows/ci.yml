@@ -32,7 +32,7 @@ jobs:
       - name: YAML Lint
         run: just yamllint
       - name: Vite+ Check (lint & format)
-        run: vp check
+        run: vp check --fix
 
   build-check:
     runs-on: ${{ matrix.platform }}
