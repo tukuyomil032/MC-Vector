@@ -72,7 +72,7 @@ format:
 
 # Run lint and format checks
 check:
-    pnpm check
+    pnpm check:fix
 
 # Run all quality checks (check + yamllint + rustfmt)
 check-all: check yamllint rustfmt
@@ -84,7 +84,7 @@ yamllint:
 
 # Format Rust code
 rustfmt:
-    pnpm rustfmt
+	cargo fmt --manifest-path src-tauri/Cargo.toml
 
 # ═══════════════════════════════════════════════════════════════
 # Testing
