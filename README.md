@@ -113,16 +113,16 @@ just tauri-dev
 pnpm tauri:dev
 ```
 
-**What does `just setup` do?**
+**What does `just setup` / `make setup` do?**
 
-The `just setup` (or `make setup`) command automates your development environment setup:
+Both `just setup` and `make setup` automate your development environment setup:
 
 1. 📦 Installs all project dependencies via `pnpm install`
-2. 🔒 Configures portless CA certificate for HTTPS development (may require system password)
-3. 🌐 Adds `mc-vector.localhost` to `/etc/hosts` for local HTTPS access (**requires sudo password**)
-4. ✅ Runs all quality checks (lint, format, yamllint, rustfmt)
+2. ✅ Runs all quality checks (lint, format, yamllint, rustfmt)
+3. 🔒 Configures portless CA certificate for HTTPS development (may require system password)
+4. 🌐 Adds `mc-vector.localhost` to `/etc/hosts` for local HTTPS access (**requires sudo password**)
 
-**Note:** Steps 2-3 are for portless HTTPS development and are optional. If you skip `just setup`, you can still develop using `pnpm tauri:dev` with standard `http://localhost:5173`.
+**Note:** Steps 3-4 are for portless HTTPS development and are optional. If you skip these steps, you can still develop using `pnpm tauri:dev` with standard `http://localhost:5173`.
 
 **Development server options:**
 

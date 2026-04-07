@@ -139,7 +139,7 @@ else ifeq ($(DETECTED_OS),Darwin)
 else
 	@echo "   Linux: Adds CA to system trust store"
 endif
-	-portless trust || echo "⚠️  portless trust failed. You may need to trust the CA manually."
+	-pnpm exec portless trust || echo "⚠️  portless trust failed. You may need to trust the CA manually."
 	@echo ""
 	@echo "Running: portless hosts sync (adding mc-vector.localhost to hosts file)..."
 ifeq ($(DETECTED_OS),Windows)
@@ -147,7 +147,7 @@ ifeq ($(DETECTED_OS),Windows)
 else
 	@echo "   Unix: Modifies /etc/hosts (requires sudo password)"
 endif
-	-portless hosts sync || echo "⚠️  portless hosts sync failed. This is optional for Chrome/Firefox but required for Safari/cmux."
+	-pnpm exec portless hosts sync || echo "⚠️  portless hosts sync failed. This is optional for Chrome/Firefox but required for Safari/cmux."
 	@echo ""
 	@echo "✅ Development environment ready!"
 

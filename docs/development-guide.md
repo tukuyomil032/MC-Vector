@@ -221,14 +221,14 @@ just setup
 The `just setup` command will:
 
 1. Install all project dependencies via `pnpm install`
-2. Set up portless CA certificate for HTTPS development
-   - Runs `portless trust` to add the CA to your system trust store
+2. Run all quality checks (`check-all`)
+3. Set up portless CA certificate for HTTPS development
+   - Runs `pnpm exec portless trust` to add the CA to your system trust store
    - You may be prompted for your password to trust the certificate
-3. Sync hosts entry for `mc-vector.localhost`
-   - Runs `portless hosts sync` to add the entry to `/etc/hosts`
+4. Sync hosts entry for `mc-vector.localhost`
+   - Runs `pnpm exec portless hosts sync` to add the entry to `/etc/hosts`
    - **Requires sudo password** for modifying `/etc/hosts`
    - If this fails, Chrome/Firefox will still work, but cmux browser requires this step
-4. Run all quality checks (`check-all`)
 
 **Without Nix:**
 
@@ -430,9 +430,9 @@ Currently, there are no automated tests. Testing is done manually during develop
 **Issue: `https://mc-vector.localhost` not accessible in cmux browser**
 
 - **Solution:** cmux uses WKWebView which may have stricter TLS trust requirements:
-  1. Ensure portless CA is trusted: `portless trust`
+  1. Ensure portless CA is trusted: `pnpm exec portless trust`
   2. Start dev server: `just dev`
-  3. Sync hosts file (requires sudo): `portless hosts sync`
+  3. Sync hosts file (requires sudo): `pnpm exec portless hosts sync`
   4. Try accessing in cmux browser
   5. If still not working, you may need to use `.test` TLD instead (see below)
 
@@ -442,10 +442,10 @@ Currently, there are no automated tests. Testing is done manually during develop
 
   ```bash
   # Stop any running portless proxy
-  portless proxy stop
+  pnpm exec portless proxy stop
 
   # Start proxy with .test TLD
-  portless proxy start --tld test
+  pnpm exec portless proxy start --tld test
 
   # Update dev command to use the new TLD
   # The URL will be https://mc-vector.test

@@ -17,8 +17,16 @@ default:
 install:
     pnpm install
 
-# Full development setup (install + check-all)
+# Full development setup (install + portless setup + check-all)
 setup: install check-all
+    @echo ""
+    @echo "Setting up portless CA certificate and hosts entry..."
+    @echo "This will enable HTTPS development at https://mc-vector.localhost"
+    @echo ""
+    pnpm exec portless trust || echo "⚠️  portless trust failed. You may need to trust the CA manually."
+    @echo ""
+    pnpm exec portless hosts sync || echo "⚠️  portless hosts sync failed. This is optional for Chrome/Firefox but required for Safari/cmux."
+    @echo ""
     @echo "✅ Development environment ready!"
 
 # ═══════════════════════════════════════════════════════════════
