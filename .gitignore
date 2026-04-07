@@ -157,3 +157,10 @@ skills-lock.json
 .envrc.local
 result
 result-*
+
+
+# agents
+.agents/*
+.claude
+.codex
+.cursor
