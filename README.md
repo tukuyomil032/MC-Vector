@@ -99,7 +99,7 @@ just tauri-dev  # Start Tauri app with dev server
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
 
-# Install dependencies (Node.js 22+, pnpm 10.26.2+, Rust, yamllint required)
+# Install dependencies (Node.js 18+; 22 recommended, pnpm 10.26.2+, Rust, yamllint required)
 pnpm install
 
 # Optional but recommended: Run full setup with portless
