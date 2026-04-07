@@ -1,6 +1,13 @@
 # MC-Vector Makefile
 # Cross-platform task runner for development workflow
 
+# OS Detection
+ifeq ($(OS),Windows_NT)
+	DETECTED_OS := Windows
+else
+	DETECTED_OS := $(shell uname -s)
+endif
+
 .PHONY: help install dev build lint format check clean tauri-dev tauri-build install-extensions update-versions yamllint rustfmt \
 	test test-rust test-watch \
 	release-prepare release-tag release-publish \
@@ -20,7 +27,7 @@ help:
 	@echo "  make setup                Full setup (install + check-all)"
 	@echo ""
 	@echo "Development:"
-	@echo "  make dev                  Start frontend development server"
+	@echo "  make dev                  Start frontend development server via portless"
 	@echo "  make watch                Start dev server (alias for dev)"
 	@echo "  make tauri-dev            Start Tauri application in dev mode"
 	@echo ""
@@ -115,6 +122,33 @@ clean:
 
 # Setup: Full development environment setup
 setup: install check-all
+	@echo ""
+	@echo "Setting up portless CA certificate and hosts entry..."
+	@echo "This will enable HTTPS development at https://mc-vector.localhost"
+	@echo ""
+ifeq ($(DETECTED_OS),Windows)
+	@echo "⚠️  Windows: Make sure you are running this terminal as Administrator!"
+	@echo "   (Right-click terminal → 'Run as Administrator')"
+	@echo ""
+endif
+	@echo "Running: portless trust (adding CA certificate to system trust store)..."
+ifeq ($(DETECTED_OS),Windows)
+	@echo "   Windows: Uses certutil to add CA to Windows certificate store"
+else ifeq ($(DETECTED_OS),Darwin)
+	@echo "   macOS: Adds CA to Keychain (may require system password)"
+else
+	@echo "   Linux: Adds CA to system trust store"
+endif
+	-pnpm exec portless trust || echo "⚠️  portless trust failed. You may need to trust the CA manually."
+	@echo ""
+	@echo "Running: portless hosts sync (adding mc-vector.localhost to hosts file)..."
+ifeq ($(DETECTED_OS),Windows)
+	@echo "   Windows: Modifies C:\Windows\System32\drivers\etc\hosts (requires Administrator)"
+else
+	@echo "   Unix: Modifies /etc/hosts (requires sudo password)"
+endif
+	-pnpm exec portless hosts sync || echo "⚠️  portless hosts sync failed. This is optional for Chrome/Firefox but required for Safari/cmux."
+	@echo ""
 	@echo "✅ Development environment ready!"
 
 # Development: Alias for dev server

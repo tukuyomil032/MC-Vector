@@ -90,7 +90,7 @@ git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
 nix develop
 just setup
-just tauri-dev
+just tauri-dev  # Start Tauri app with dev server
 ```
 
 **Manual Setup:**
@@ -98,9 +98,36 @@ just tauri-dev
 ```bash
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
+
+# Install dependencies (Node.js 18+; 22 recommended, pnpm 10.26.2+, Rust, yamllint required)
 pnpm install
+
+# Optional but recommended: Run full setup with portless
+just setup
+# or
+make setup
+
+# Start development
+just tauri-dev
+# or
 pnpm tauri:dev
 ```
+
+**What does `just setup` / `make setup` do?**
+
+Both `just setup` and `make setup` automate your development environment setup:
+
+1. 📦 Installs all project dependencies via `pnpm install`
+2. ✅ Runs all quality checks (lint, format, yamllint, rustfmt)
+3. 🔒 Configures portless CA certificate for HTTPS development (may require system password)
+4. 🌐 Adds `mc-vector.localhost` to `/etc/hosts` for local HTTPS access (**requires sudo password**)
+
+**Note:** Steps 3-4 are for portless HTTPS development and are optional. If you skip these steps, you can still develop using `pnpm tauri:dev` with standard `http://localhost:5173`.
+
+**Development server options:**
+
+- `just dev` - Browser-only dev server via portless HTTPS (`https://mc-vector.localhost`)
+- `just tauri-dev` - Full Tauri app with dev server (recommended for app development)
 
 For detailed development instructions, see the [Development Guide](docs/development-guide.md).
 
@@ -165,7 +192,7 @@ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 # Enter development shell
 nix develop
 
-# Install dependencies and run checks
+# Run full setup (installs deps, configures portless, runs checks)
 just setup
 ```
 
@@ -177,22 +204,36 @@ Install dependencies manually:
 # Install Node.js, pnpm, Rust, yamllint
 # (See Development Guide for detailed instructions)
 
-# Install project dependencies
+# Install project dependencies and configure environment
 pnpm install
+just setup  # or make setup
 
-# Run quality checks
+# Alternative: Skip portless setup and use standard localhost
+pnpm install
 make check
 ```
 
 ### Development Workflow
 
-Start the development server:
+**For Tauri app development (recommended):**
 
 ```bash
 just tauri-dev
 # or
 make tauri-dev
 ```
+
+This starts both the Vite dev server and the Tauri application window.
+
+**For browser-only development:**
+
+```bash
+just dev
+# or
+pnpm dev
+```
+
+This starts the Vite dev server via portless at `https://mc-vector.localhost` (requires `just setup` first).
 
 Run quality checks before committing:
 
@@ -319,11 +360,12 @@ For a detailed architecture overview, see [Architecture Documentation](docs/arch
 
 ### Development Tasks
 
-| Task                 | justfile         | Makefile         | Description                 |
-| -------------------- | ---------------- | ---------------- | --------------------------- |
-| Install dependencies | `just install`   | `make install`   | Install all dependencies    |
-| Start frontend dev   | `just dev`       | `make dev`       | Start Vite dev server       |
-| Start Tauri dev      | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode |
+| Task                 | justfile         | Makefile         | Description                                                        |
+| -------------------- | ---------------- | ---------------- | ------------------------------------------------------------------ |
+| Install dependencies | `just install`   | `make install`   | Install all dependencies                                           |
+| Full setup           | `just setup`     | `make setup`     | Install deps + portless setup + quality checks                     |
+| Start frontend dev   | `just dev`       | `make dev`       | Start Vite dev server via portless (`https://mc-vector.localhost`) |
+| Start Tauri dev      | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode                                        |
 
 ### Build Tasks
 
@@ -345,12 +387,12 @@ For a detailed architecture overview, see [Architecture Documentation](docs/arch
 
 ### Utilities
 
-| Task               | justfile                  | Makefile                  | Description                   |
-| ------------------ | ------------------------- | ------------------------- | ----------------------------- |
-| Full setup         | `just setup`              | N/A                       | Install deps + run all checks |
-| Clean builds       | `just clean`              | `make clean`              | Clean build artifacts         |
-| Install extensions | `just install-extensions` | `make install-extensions` | Install VS Code extensions    |
-| Update versions    | `just update-versions`    | `make update-versions`    | Update version numbers        |
+| Task               | justfile                  | Makefile                  | Description                          |
+| ------------------ | ------------------------- | ------------------------- | ------------------------------------ |
+| Full setup         | `just setup`              | `make setup`              | Install deps + portless + all checks |
+| Clean builds       | `just clean`              | `make clean`              | Clean build artifacts                |
+| Install extensions | `just install-extensions` | `make install-extensions` | Install VS Code extensions           |
+| Update versions    | `just update-versions`    | `make update-versions`    | Update version numbers               |
 
 For detailed command usage, see the [Development Guide](docs/development-guide.md).
 

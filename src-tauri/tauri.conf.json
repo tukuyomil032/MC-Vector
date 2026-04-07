@@ -3,7 +3,7 @@
   "version": "2.0.48",
   "identifier": "com.tukuyomi032.mcvector",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm dev:plain",
     "beforeBuildCommand": "pnpm build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"

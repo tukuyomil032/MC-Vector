@@ -17,15 +17,23 @@ default:
 install:
     pnpm install
 
-# Full development setup (install + check-all)
+# Full development setup (install + portless setup + check-all)
 setup: install check-all
+    @echo ""
+    @echo "Setting up portless CA certificate and hosts entry..."
+    @echo "This will enable HTTPS development at https://mc-vector.localhost"
+    @echo ""
+    pnpm exec portless trust || echo "⚠️  portless trust failed. You may need to trust the CA manually."
+    @echo ""
+    pnpm exec portless hosts sync || echo "⚠️  portless hosts sync failed. This is optional for Chrome/Firefox but required for Safari/cmux."
+    @echo ""
     @echo "✅ Development environment ready!"
 
 # ═══════════════════════════════════════════════════════════════
 # Development
 # ═══════════════════════════════════════════════════════════════
 
-# Start frontend development server
+# Start frontend development server via portless
 dev:
     pnpm dev
 
@@ -64,7 +72,7 @@ format:
 
 # Run lint and format checks
 check:
-    pnpm check
+    pnpm check:fix
 
 # Run all quality checks (check + yamllint + rustfmt)
 check-all: check yamllint rustfmt
@@ -76,7 +84,7 @@ yamllint:
 
 # Format Rust code
 rustfmt:
-    pnpm rustfmt
+	cargo fmt --manifest-path src-tauri/Cargo.toml
 
 # ═══════════════════════════════════════════════════════════════
 # Testing

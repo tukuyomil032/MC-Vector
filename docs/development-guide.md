@@ -177,7 +177,7 @@ just --list
 
 ```bash
 just install           # Install dependencies
-just dev               # Start frontend dev server
+just dev               # Start frontend dev server via portless (https://mc-vector.localhost)
 just tauri-dev         # Start Tauri app in dev mode
 just build             # Build frontend
 just tauri-build       # Build Tauri app
@@ -218,14 +218,47 @@ nix develop
 just setup
 ```
 
+The `just setup` command will:
+
+1. Install all project dependencies via `pnpm install`
+2. Run all quality checks (`check-all`)
+3. Set up portless CA certificate for HTTPS development
+   - Runs `pnpm exec portless trust` to add the CA to your system trust store
+   - You may be prompted for your password to trust the certificate
+4. Sync hosts entry for `mc-vector.localhost`
+   - Runs `pnpm exec portless hosts sync` to add the entry to `/etc/hosts`
+   - **Requires sudo password** for modifying `/etc/hosts`
+   - If this fails, Chrome/Firefox will still work, but cmux browser requires this step
+
 **Without Nix:**
 
 ```bash
 pnpm install
+make setup   # Includes portless setup
+# or just run checks without portless setup:
 make check
 ```
 
+**Portless Setup Notes:**
+
+- `portless trust` and `portless hosts sync` are idempotent (safe to run multiple times)
+- If `portless hosts sync` fails, the development server will still work in most browsers
+- cmux browser specifically requires the hosts entry to resolve `mc-vector.localhost`
+- You can skip portless setup and use plain `http://localhost:5173` if preferred
+
 ### 2. Start Development
+
+**For browser-only development:**
+
+```bash
+just dev
+# or
+pnpm dev
+```
+
+This starts the Vite dev server via portless at `https://mc-vector.localhost`.
+
+**For Tauri application development:**
 
 ```bash
 just tauri-dev
@@ -233,7 +266,7 @@ just tauri-dev
 make tauri-dev
 ```
 
-This starts both the Vite dev server and the Tauri application.
+This starts both the Vite dev server (plain, non-portless) and the Tauri application.
 
 ### 3. Code Quality
 
@@ -261,11 +294,11 @@ Built artifacts will be in `src-tauri/target/release/bundle/`.
 
 ### Development
 
-| Command      | justfile         | Makefile         | Description                 |
-| ------------ | ---------------- | ---------------- | --------------------------- |
-| Install deps | `just install`   | `make install`   | Install all dependencies    |
-| Dev server   | `just dev`       | `make dev`       | Start frontend dev server   |
-| Tauri dev    | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode |
+| Command      | justfile         | Makefile         | Description                                                            |
+| ------------ | ---------------- | ---------------- | ---------------------------------------------------------------------- |
+| Install deps | `just install`   | `make install`   | Install all dependencies                                               |
+| Dev server   | `just dev`       | `make dev`       | Start frontend dev server via portless (`https://mc-vector.localhost`) |
+| Tauri dev    | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode                                            |
 
 ### Build
 
@@ -392,6 +425,30 @@ Currently, there are no automated tests. Testing is done manually during develop
   ```bash
   just clean
   just install
+  ```
+
+**Issue: `https://mc-vector.localhost` not accessible in cmux browser**
+
+- **Solution:** cmux uses WKWebView which may have stricter TLS trust requirements:
+  1. Ensure portless CA is trusted: `pnpm exec portless trust`
+  2. Start dev server: `just dev`
+  3. Sync hosts file (requires sudo): `pnpm exec portless hosts sync`
+  4. Try accessing in cmux browser
+  5. If still not working, you may need to use `.test` TLD instead (see below)
+
+**Issue: Want to use `.test` TLD instead of `.localhost`**
+
+- **Solution:** Configure portless to use `.test`:
+
+  ```bash
+  # Stop any running portless proxy
+  pnpm exec portless proxy stop
+
+  # Start proxy with .test TLD
+  pnpm exec portless proxy start --tld test
+
+  # Update dev command to use the new TLD
+  # The URL will be https://mc-vector.test
   ```
 
 ### Getting Help

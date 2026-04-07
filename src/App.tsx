@@ -1803,3 +1803,5 @@ function NavItem({ label, view, current, set, iconSrc }: NavItemProps) {
 }
 
 export default App;
+// test
+// test lint error
