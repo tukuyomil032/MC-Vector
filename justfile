@@ -36,7 +36,7 @@ watch:
 
 # Start Tauri application in dev mode
 tauri-dev:
-    portless run tauri dev
+    pnpm tauri:dev
 
 # ═══════════════════════════════════════════════════════════════
 # Build
