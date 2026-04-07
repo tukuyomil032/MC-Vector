@@ -1,7 +1,9 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite-plus';
 
-const host = process.env.TAURI_DEV_HOST;
+const tauriDevHost = process.env.TAURI_DEV_HOST;
+const portlessPort = process.env.PORT ? Number(process.env.PORT) : undefined;
+const devHost = tauriDevHost ?? process.env.HOST;
 
 export default defineConfig({
   plugins: [react()],
@@ -9,10 +11,10 @@ export default defineConfig({
   clearScreen: false,
 
   server: {
-    port: 5173,
+    port: portlessPort ?? 5173,
     strictPort: true,
-    host: host || false,
-    hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
+    host: devHost || false,
+    hmr: tauriDevHost ? { protocol: 'ws', host: tauriDevHost, port: 1421 } : undefined,
     watch: {
       ignored: ['**/src-tauri/**'],
     },
