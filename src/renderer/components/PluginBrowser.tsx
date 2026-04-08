@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
 import {
@@ -1647,7 +1649,12 @@ export default function PluginBrowser({ server }: Props) {
                   <div className="plugin-browser__detail-readme-empty is-error">{detailError}</div>
                 ) : detailReadme ? (
                   <div className="plugin-browser__detail-readme-markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{detailReadme}</ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                    >
+                      {detailReadme}
+                    </ReactMarkdown>
                   </div>
                 ) : (
                   <div className="plugin-browser__detail-readme-empty">
