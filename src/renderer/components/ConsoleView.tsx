@@ -467,7 +467,6 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           <div className="console-view__status-label">{t('console.status.address')}</div>
           <button
             type="button"
-            key={currentAddressIndex}
             onClick={handleCopyAddress}
             title={t('console.status.clickToCopy')}
             className={`console-view__address ${ngrokUrl && currentAddressIndex === 1 ? 'is-public' : 'is-local'}`}
