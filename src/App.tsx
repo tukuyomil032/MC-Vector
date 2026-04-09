@@ -17,7 +17,7 @@ import {
 } from './assets/icons';
 import { useTranslation } from './i18n';
 import { createBackup } from './lib/backup-commands';
-import { getAppSettings, onConfigChange } from './lib/config-commands';
+import { getAppSettings, onConfigChange, saveAppSettings } from './lib/config-commands';
 import { readFileContent, saveFileContent } from './lib/file-commands';
 import { onNgrokStatusChange } from './lib/ngrok-commands';
 // Tauri API ラッパー
@@ -168,22 +168,35 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const applyNormalizedTheme = async (value: unknown) => {
+      const normalizedTheme = normalizeAppTheme(value);
+      setAppTheme(normalizedTheme);
+
+      if (value !== undefined && value !== normalizedTheme) {
+        try {
+          await saveAppSettings({ theme: normalizedTheme });
+        } catch (persistError) {
+          console.error('Failed to persist normalized app theme', persistError);
+        }
+      }
+    };
+
     const loadAppSettings = async () => {
       try {
         const settings = await getAppSettings();
-        if (settings?.theme) {
-          setAppTheme(normalizeAppTheme(settings.theme));
+        if (settings?.theme !== undefined) {
+          await applyNormalizedTheme(settings.theme);
         }
       } catch (e) {
         console.error('Failed to load app settings', e);
       }
     };
-    loadAppSettings();
+    void loadAppSettings();
 
     let disposeThemeWatch: (() => void) | undefined;
     void (async () => {
       disposeThemeWatch = await onConfigChange('theme', (value) => {
-        setAppTheme(normalizeAppTheme(value));
+        void applyNormalizedTheme(value);
       });
     })();
 
@@ -1087,17 +1100,8 @@ function App() {
 
   const resolvedTheme: Exclude<AppTheme, 'system'> =
     appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : appTheme;
-  type ThemePaletteKey =
-    | Exclude<AppTheme, 'system'>
-    | 'darkBlue'
-    | 'grey'
-    | 'forest'
-    | 'sunset'
-    | 'neon'
-    | 'coffee'
-    | 'ocean';
   const themePalette: Record<
-    ThemePaletteKey,
+    Exclude<AppTheme, 'system'>,
     {
       mainBg: string;
       headerBg: string;
@@ -1169,171 +1173,8 @@ function App() {
       warnStart: '#d97706',
       warnEnd: '#ea580c',
     },
-    darkBlue: {
-      mainBg:
-        'radial-gradient(circle at 20% 20%, rgba(45,70,120,0.25), transparent 40%), radial-gradient(circle at 80% 10%, rgba(24,57,99,0.3), transparent 35%), #0b1628',
-      headerBg: 'rgba(11,22,40,0.92)',
-      text: '#e2e8f0',
-      sidebarBg: '#0c1525',
-      sidebarPanelBg: '#122036',
-      panelBg: '#0f1d31',
-      border: '#1f3657',
-      viewGlowA: 'rgba(59, 130, 246, 0.2)',
-      viewGlowB: 'rgba(14, 165, 233, 0.2)',
-      panelStart: 'rgba(15, 23, 42, 0.94)',
-      panelEnd: 'rgba(30, 58, 138, 0.55)',
-      panelAltStart: 'rgba(15, 23, 42, 0.95)',
-      panelAltEnd: 'rgba(30, 64, 175, 0.5)',
-      borderSoft: 'rgba(37, 99, 235, 0.4)',
-      borderStrong: 'rgba(56, 189, 248, 0.55)',
-      accentStart: '#3b82f6',
-      accentEnd: '#06b6d4',
-      successStart: '#22c55e',
-      successEnd: '#14b8a6',
-      warnStart: '#f59e0b',
-      warnEnd: '#f97316',
-    },
-    grey: {
-      mainBg: '#1b1d21',
-      headerBg: 'rgba(36,38,44,0.92)',
-      text: '#f3f4f6',
-      sidebarBg: '#1f2227',
-      sidebarPanelBg: '#252932',
-      panelBg: '#21242b',
-      border: '#2e323a',
-      viewGlowA: 'rgba(148, 163, 184, 0.12)',
-      viewGlowB: 'rgba(99, 102, 241, 0.1)',
-      panelStart: 'rgba(39, 39, 42, 0.94)',
-      panelEnd: 'rgba(31, 41, 55, 0.88)',
-      panelAltStart: 'rgba(39, 39, 42, 0.95)',
-      panelAltEnd: 'rgba(51, 65, 85, 0.82)',
-      borderSoft: 'rgba(113, 113, 122, 0.66)',
-      borderStrong: 'rgba(148, 163, 184, 0.42)',
-      accentStart: '#6366f1',
-      accentEnd: '#8b5cf6',
-      successStart: '#22c55e',
-      successEnd: '#16a34a',
-      warnStart: '#f59e0b',
-      warnEnd: '#fb7185',
-    },
-    forest: {
-      mainBg:
-        'radial-gradient(circle at 20% 20%, rgba(46, 94, 72, 0.35), transparent 45%), #0f1914',
-      headerBg: 'rgba(20, 40, 32, 0.9)',
-      text: '#e9f5eb',
-      sidebarBg: '#13201a',
-      sidebarPanelBg: '#192b22',
-      panelBg: '#16251d',
-      border: '#214231',
-      viewGlowA: 'rgba(34, 197, 94, 0.16)',
-      viewGlowB: 'rgba(16, 185, 129, 0.15)',
-      panelStart: 'rgba(20, 40, 32, 0.94)',
-      panelEnd: 'rgba(22, 101, 52, 0.55)',
-      panelAltStart: 'rgba(20, 40, 32, 0.95)',
-      panelAltEnd: 'rgba(21, 128, 61, 0.5)',
-      borderSoft: 'rgba(34, 197, 94, 0.38)',
-      borderStrong: 'rgba(74, 222, 128, 0.55)',
-      accentStart: '#22c55e',
-      accentEnd: '#14b8a6',
-      successStart: '#16a34a',
-      successEnd: '#10b981',
-      warnStart: '#f59e0b',
-      warnEnd: '#fb7185',
-    },
-    sunset: {
-      mainBg: 'linear-gradient(135deg, #1d1b2f 0%, #2b1d38 35%, #40202f 70%, #46271f 100%)',
-      headerBg: 'rgba(46, 32, 54, 0.9)',
-      text: '#ffe8d9',
-      sidebarBg: '#261b32',
-      sidebarPanelBg: '#2f203b',
-      panelBg: '#2a1e32',
-      border: '#4a2d3c',
-      viewGlowA: 'rgba(251, 146, 60, 0.18)',
-      viewGlowB: 'rgba(236, 72, 153, 0.16)',
-      panelStart: 'rgba(55, 31, 48, 0.94)',
-      panelEnd: 'rgba(120, 53, 15, 0.45)',
-      panelAltStart: 'rgba(55, 31, 48, 0.95)',
-      panelAltEnd: 'rgba(127, 29, 29, 0.45)',
-      borderSoft: 'rgba(249, 115, 22, 0.42)',
-      borderStrong: 'rgba(251, 146, 60, 0.55)',
-      accentStart: '#f97316',
-      accentEnd: '#ec4899',
-      successStart: '#22c55e',
-      successEnd: '#14b8a6',
-      warnStart: '#f59e0b',
-      warnEnd: '#f43f5e',
-    },
-    neon: {
-      mainBg: '#0a0a0f',
-      headerBg: 'rgba(12,12,18,0.9)',
-      text: '#e0f7ff',
-      sidebarBg: '#0f1220',
-      sidebarPanelBg: '#13172b',
-      panelBg: '#0f1426',
-      border: '#1f2b3f',
-      viewGlowA: 'rgba(6, 182, 212, 0.17)',
-      viewGlowB: 'rgba(236, 72, 153, 0.13)',
-      panelStart: 'rgba(13, 16, 32, 0.94)',
-      panelEnd: 'rgba(17, 24, 39, 0.86)',
-      panelAltStart: 'rgba(13, 16, 32, 0.95)',
-      panelAltEnd: 'rgba(30, 41, 59, 0.82)',
-      borderSoft: 'rgba(56, 189, 248, 0.32)',
-      borderStrong: 'rgba(34, 211, 238, 0.58)',
-      accentStart: '#06b6d4',
-      accentEnd: '#a855f7',
-      successStart: '#22c55e',
-      successEnd: '#14b8a6',
-      warnStart: '#f59e0b',
-      warnEnd: '#fb7185',
-    },
-    coffee: {
-      mainBg: '#1a120f',
-      headerBg: 'rgba(34,24,20,0.9)',
-      text: '#f4e9dd',
-      sidebarBg: '#221914',
-      sidebarPanelBg: '#2a201b',
-      panelBg: '#241c17',
-      border: '#3a2c24',
-      viewGlowA: 'rgba(217, 119, 6, 0.16)',
-      viewGlowB: 'rgba(120, 53, 15, 0.14)',
-      panelStart: 'rgba(34, 24, 20, 0.94)',
-      panelEnd: 'rgba(58, 44, 36, 0.84)',
-      panelAltStart: 'rgba(34, 24, 20, 0.95)',
-      panelAltEnd: 'rgba(68, 64, 60, 0.74)',
-      borderSoft: 'rgba(146, 64, 14, 0.42)',
-      borderStrong: 'rgba(245, 158, 11, 0.52)',
-      accentStart: '#d97706',
-      accentEnd: '#fb923c',
-      successStart: '#22c55e',
-      successEnd: '#16a34a',
-      warnStart: '#f59e0b',
-      warnEnd: '#fb7185',
-    },
-    ocean: {
-      mainBg: 'radial-gradient(circle at 10% 20%, rgba(20,80,120,0.3), transparent 40%), #0c1720',
-      headerBg: 'rgba(14,30,44,0.9)',
-      text: '#e3f2ff',
-      sidebarBg: '#0f1e2b',
-      sidebarPanelBg: '#132538',
-      panelBg: '#10212f',
-      border: '#1f3a50',
-      viewGlowA: 'rgba(14, 165, 233, 0.18)',
-      viewGlowB: 'rgba(45, 212, 191, 0.16)',
-      panelStart: 'rgba(15, 30, 43, 0.94)',
-      panelEnd: 'rgba(16, 33, 47, 0.86)',
-      panelAltStart: 'rgba(15, 30, 43, 0.95)',
-      panelAltEnd: 'rgba(15, 45, 63, 0.82)',
-      borderSoft: 'rgba(14, 116, 144, 0.42)',
-      borderStrong: 'rgba(34, 211, 238, 0.55)',
-      accentStart: '#0ea5e9',
-      accentEnd: '#14b8a6',
-      successStart: '#22c55e',
-      successEnd: '#10b981',
-      warnStart: '#f59e0b',
-      warnEnd: '#f97316',
-    },
   };
-  const themeColors = themePalette[resolvedTheme] || themePalette.dark;
+  const themeColors = themePalette[resolvedTheme];
 
   const appShellCssVars: Record<`--${string}`, string> = {
     '--mv-view-glow-a': themeColors.viewGlowA,
