@@ -50,43 +50,43 @@
     --mv-scrollbar-thumb-hover: rgba(71, 85, 105, 0.72);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --mv-color-scheme: dark;
+  .app-shell.theme-dark,
+  .app-shell[data-theme='dark'] {
+    --mv-color-scheme: dark;
 
-      --mv-surface-base: #0f0f11;
-      --mv-surface-muted: #1c1d23;
-      --mv-surface-elevated-start: var(--mv-panel-start, rgba(24, 24, 27, 0.94));
-      --mv-surface-elevated-end: var(--mv-panel-end, rgba(17, 24, 39, 0.88));
-      --mv-surface-alt-start: var(--mv-panel-alt-start, rgba(24, 24, 27, 0.95));
-      --mv-surface-alt-end: var(--mv-panel-alt-end, rgba(31, 41, 55, 0.84));
+    --mv-surface-base: #0f0f11;
+    --mv-surface-muted: #1c1d23;
+    --mv-surface-elevated-start: var(--mv-panel-start, rgba(24, 24, 27, 0.94));
+    --mv-surface-elevated-end: var(--mv-panel-end, rgba(17, 24, 39, 0.88));
+    --mv-surface-alt-start: var(--mv-panel-alt-start, rgba(24, 24, 27, 0.95));
+    --mv-surface-alt-end: var(--mv-panel-alt-end, rgba(31, 41, 55, 0.84));
 
-      --mv-surface-border: var(--mv-border-soft, rgba(82, 82, 91, 0.72));
-      --mv-surface-border-strong: var(--mv-border-strong, rgba(34, 211, 238, 0.42));
+    --mv-surface-border: var(--mv-border-soft, rgba(82, 82, 91, 0.72));
+    --mv-surface-border-strong: var(--mv-border-strong, rgba(34, 211, 238, 0.42));
 
-      --mv-surface-shadow: 0 18px 45px rgba(2, 6, 23, 0.25);
-      --mv-surface-shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.22);
+    --mv-surface-shadow: 0 18px 45px rgba(2, 6, 23, 0.25);
+    --mv-surface-shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.22);
 
-      --mv-surface-text-primary: #f4f4f5;
-      --mv-surface-text-secondary: #d4d4d8;
-      --mv-surface-text-muted: #a1a1aa;
-      --mv-section-title-color: #9ca3af;
-      --mv-kpi-label-color: #9ca3af;
-      --mv-kpi-value-color: #f9fafb;
-      --mv-kpi-meta-color: #a1a1aa;
+    --mv-surface-text-primary: #f4f4f5;
+    --mv-surface-text-secondary: #d4d4d8;
+    --mv-surface-text-muted: #a1a1aa;
+    --mv-section-title-color: #9ca3af;
+    --mv-kpi-label-color: #9ca3af;
+    --mv-kpi-value-color: #f9fafb;
+    --mv-kpi-meta-color: #a1a1aa;
 
-      --mv-control-chip-bg: rgba(30, 41, 59, 0.72);
-      --mv-control-chip-bg-hover: rgba(51, 65, 85, 0.8);
-      --mv-control-chip-border: rgba(71, 85, 105, 0.82);
-      --mv-control-chip-text: #e5e7eb;
-      --mv-control-chip-active-border: rgba(56, 189, 248, 0.52);
+    --mv-control-chip-bg: rgba(30, 41, 59, 0.72);
+    --mv-control-chip-bg-hover: rgba(51, 65, 85, 0.8);
+    --mv-control-chip-border: rgba(71, 85, 105, 0.82);
+    --mv-control-chip-text: #e5e7eb;
+    --mv-control-chip-active-border: rgba(56, 189, 248, 0.52);
 
-      --mv-scrollbar-thumb: rgba(82, 82, 91, 0.85);
-      --mv-scrollbar-thumb-hover: rgba(113, 113, 122, 0.92);
-    }
+    --mv-scrollbar-thumb: rgba(82, 82, 91, 0.85);
+    --mv-scrollbar-thumb-hover: rgba(113, 113, 122, 0.92);
   }
 
   .app-shell {
+    /* Contract: App.tsx sets the source shell vars that feed this token bridge. */
     --mv-surface-elevated-start: var(--mv-panel-start);
     --mv-surface-elevated-end: var(--mv-panel-end);
     --mv-surface-alt-start: var(--mv-panel-alt-start);

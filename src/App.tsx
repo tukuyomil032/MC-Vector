@@ -1366,7 +1366,12 @@ function App() {
   }
 
   return (
-    <div className="app-shell" onClick={handleClickOutside} style={appShellStyle}>
+    <div
+      className={`app-shell theme-${resolvedTheme}`}
+      data-theme={resolvedTheme}
+      onClick={handleClickOutside}
+      style={appShellStyle}
+    >
       <aside
         className={`app-sidebar ${isSidebarOpen ? 'app-sidebar--open' : 'app-sidebar--collapsed'}`}
         style={{
