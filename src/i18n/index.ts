@@ -136,6 +136,26 @@ export function useTranslation(): UseTranslationReturn {
   };
 }
 
+/**
+ * Get a translation function for use outside React components.
+ * This function reads the current locale from the store and returns
+ * a translator function.
+ *
+ * @example
+ * ```ts
+ * import { getTranslation } from '../i18n';
+ *
+ * function myLibFunction() {
+ *   const t = getTranslation();
+ *   throw new Error(t('errors.updateSignatureVerificationFailed'));
+ * }
+ * ```
+ */
+export function getTranslation() {
+  const { currentLocale } = useI18nStore.getState();
+  return createTranslator(currentLocale);
+}
+
 // Re-export types and utilities
 export { useI18nStore, getCurrentLocale, setLocale } from './store';
 export type { LocaleCode, TranslationKey, TranslationParams, TranslationDictionary } from './types';

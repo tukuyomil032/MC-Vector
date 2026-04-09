@@ -1,100 +1,100 @@
+import { useTranslation } from '../../i18n';
+
 export default function NgrokGuideView() {
+  const { t } = useTranslation();
+
   const openLink = (url: string) => {
     window.open(url, '_blank');
   };
 
   return (
     <div className="ngrok-guide-view">
-      <h1 className="ngrok-guide-view__title">🌐 ポート開放不要化 (ngrok) 設定ガイド</h1>
+      <h1 className="ngrok-guide-view__title">🌐 {t('ngrokGuide.title')}</h1>
 
       <div className="ngrok-guide-view__intro">
         <p className="ngrok-guide-view__intro-text">
-          この機能を使うと、難しいルーターの設定（ポート開放）をせずに、世界中の友達をあなたのサーバーに招待できます。
+          {t('ngrokGuide.introText')}
           <br />
-          利用には無料の <strong>ngrokアカウント</strong> と <strong>認証トークン</strong>{' '}
-          が必要です。
+          {t('ngrokGuide.introRequirements')}
         </p>
       </div>
 
       <div className="ngrok-guide-view__summary-grid">
         <div className="ngrok-guide-view__summary-card">
-          <div className="ngrok-guide-view__summary-label">必要なもの</div>
-          <div className="ngrok-guide-view__summary-value">ngrok アカウント</div>
-          <div className="ngrok-guide-view__summary-note">無料プランで開始できます。</div>
-        </div>
-        <div className="ngrok-guide-view__summary-card">
-          <div className="ngrok-guide-view__summary-label">取得する情報</div>
-          <div className="ngrok-guide-view__summary-value">Authtoken</div>
-          <div className="ngrok-guide-view__summary-note">アプリの初回接続時に必要です。</div>
-        </div>
-        <div className="ngrok-guide-view__summary-card">
-          <div className="ngrok-guide-view__summary-label">共有形式</div>
-          <div className="ngrok-guide-view__summary-value">tcp://host:port</div>
-          <div className="ngrok-guide-view__summary-note">
-            表示されるアドレスを友達に共有します。
+          <div className="ngrok-guide-view__summary-label">
+            {t('ngrokGuide.summary.requirementsLabel')}
           </div>
+          <div className="ngrok-guide-view__summary-value">
+            {t('ngrokGuide.summary.requirementsValue')}
+          </div>
+          <div className="ngrok-guide-view__summary-note">
+            {t('ngrokGuide.summary.requirementsNote')}
+          </div>
+        </div>
+        <div className="ngrok-guide-view__summary-card">
+          <div className="ngrok-guide-view__summary-label">
+            {t('ngrokGuide.summary.obtainLabel')}
+          </div>
+          <div className="ngrok-guide-view__summary-value">
+            {t('ngrokGuide.summary.obtainValue')}
+          </div>
+          <div className="ngrok-guide-view__summary-note">{t('ngrokGuide.summary.obtainNote')}</div>
+        </div>
+        <div className="ngrok-guide-view__summary-card">
+          <div className="ngrok-guide-view__summary-label">
+            {t('ngrokGuide.summary.shareLabel')}
+          </div>
+          <div className="ngrok-guide-view__summary-value">tcp://host:port</div>
+          <div className="ngrok-guide-view__summary-note">{t('ngrokGuide.summary.shareNote')}</div>
         </div>
       </div>
 
       <div className="ngrok-guide-view__checklist-panel">
-        <h2 className="ngrok-guide-view__checklist-title">接続前チェック</h2>
+        <h2 className="ngrok-guide-view__checklist-title">{t('ngrokGuide.checklist.title')}</h2>
         <ul className="ngrok-guide-view__checklist">
-          <li>サーバーが起動済みで、ローカル接続できる</li>
-          <li>ngrokアカウントのログイン状態を確認済み</li>
-          <li>トークン文字列を安全に保管できる状態</li>
+          <li>{t('ngrokGuide.checklist.item1')}</li>
+          <li>{t('ngrokGuide.checklist.item2')}</li>
+          <li>{t('ngrokGuide.checklist.item3')}</li>
         </ul>
       </div>
 
       <div className="ngrok-guide-view__step">
-        <div className="ngrok-guide-view__step-badge">Step 1</div>
-        <h3>公式サイトへアクセス</h3>
-        <p>
-          ngrokの公式サイトにアクセスし、アカウントを作成（Sign up）またはログインしてください。
-        </p>
+        <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step1.badge')}</div>
+        <h3>{t('ngrokGuide.step1.title')}</h3>
+        <p>{t('ngrokGuide.step1.description')}</p>
         <button
           className="btn-primary ngrok-guide-view__cta-btn"
           onClick={() => openLink('https://dashboard.ngrok.com/get-started/your-authtoken')}
         >
-          ngrok ダッシュボードを開く
+          {t('ngrokGuide.step1.button')}
         </button>
-        <div className="ngrok-guide-view__tip-box">
-          初回はダッシュボードの案内に従ってインストール案内が表示されますが、本アプリではバイナリ管理を内部で行うためトークン取得だけで十分です。
-        </div>
+        <div className="ngrok-guide-view__tip-box">{t('ngrokGuide.step1.tip')}</div>
       </div>
 
       <div className="ngrok-guide-view__step">
-        <div className="ngrok-guide-view__step-badge">Step 2</div>
-        <h3>Authtoken (認証トークン) をコピー</h3>
+        <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step2.badge')}</div>
+        <h3>{t('ngrokGuide.step2.title')}</h3>
         <p>
-          ダッシュボードの左メニューから <strong>"Your Authtoken"</strong> をクリックします。
+          {t('ngrokGuide.step2.description1')}
           <br />
-          ページ上部に表示されている <code>2A...</code>{' '}
-          などから始まる長い文字列をコピーしてください。
+          {t('ngrokGuide.step2.description2')}
         </p>
-        <div className="ngrok-guide-view__token-example">
-          例: 2Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxx
-        </div>
+        <div className="ngrok-guide-view__token-example">{t('ngrokGuide.step2.example')}</div>
         <p className="ngrok-guide-view__note ngrok-guide-view__note--warning">
-          セキュリティ注意:
-          このトークンはパスワード同等です。チャットや配信画面へ貼り付けないでください。
+          {t('ngrokGuide.step2.securityWarning')}
         </p>
       </div>
 
       <div className="ngrok-guide-view__step">
-        <div className="ngrok-guide-view__step-badge">Step 3</div>
-        <h3>アプリに入力して接続</h3>
+        <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step3.badge')}</div>
+        <h3>{t('ngrokGuide.step3.title')}</h3>
         <p>
-          このアプリの <strong>General Settings</strong> タブに戻り、スイッチをONにしてください。
+          {t('ngrokGuide.step3.description1')}
           <br />
-          トークンの入力を求められるので、先ほどコピーした文字列を貼り付けてください。
+          {t('ngrokGuide.step3.description2')}
         </p>
-        <p className="ngrok-guide-view__note">
-          ※ アドレスは毎回変わります。遊ぶたびに新しいアドレスを友達に教えてあげてください。
-        </p>
-        <div className="ngrok-guide-view__tip-box">
-          接続テスト手順:
-          表示アドレスをコピーし、別PCまたは友人環境から直接参加して確認します。入れない場合はサーバー側ログを先に確認してください。
-        </div>
+        <p className="ngrok-guide-view__note">{t('ngrokGuide.step3.addressNote')}</p>
+        <div className="ngrok-guide-view__tip-box">{t('ngrokGuide.step3.tip')}</div>
       </div>
     </div>
   );

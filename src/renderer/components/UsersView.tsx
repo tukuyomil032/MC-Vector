@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { type MinecraftServer } from '../components/../shared/server declaration';
@@ -23,6 +24,7 @@ interface PlayerEntry {
 type ListType = 'whitelist' | 'ops' | 'banned-players' | 'banned-ips';
 
 export default function UsersView({ server }: Props) {
+  const { t } = useTranslation();
   const sep = server.path.includes('\\') ? '\\' : '/';
   const { showToast } = useToast();
 
@@ -126,14 +128,14 @@ export default function UsersView({ server }: Props) {
         type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase(),
       )
     ) {
-      showToast('既に存在します', 'info');
+      showToast(t('users.toast.alreadyExists'), 'info');
       return;
     }
 
     const newData = [...currentList, newItem];
     await writeJsonFile(filePath, newData);
     await maybeApplyLiveCommand(type, 'add', identity.name, nameOrIp);
-    showToast('リストを更新しました', 'success');
+    showToast(t('users.toast.listUpdated'), 'success');
 
     switch (type) {
       case 'whitelist':
@@ -175,7 +177,7 @@ export default function UsersView({ server }: Props) {
     );
     await writeJsonFile(filePath, newData);
     await maybeApplyLiveCommand(type, 'remove', identifier, identifier);
-    showToast('削除しました', 'success');
+    showToast(t('users.toast.removed'), 'success');
 
     switch (type) {
       case 'whitelist':
@@ -203,36 +205,60 @@ export default function UsersView({ server }: Props) {
 
   return (
     <div className="users-view">
-      <h2 className="users-view__title">User Management</h2>
+      <h2 className="users-view__title">{t('users.title')}</h2>
 
       <div className="users-view__grid">
         <UserListCard
-          title="Whitelist"
+          title={t('users.lists.whitelist')}
           data={whitelist}
           type="whitelist"
           onAdd={(val) => handleAdd('whitelist', val)}
           onRemove={(val) => handleRemove('whitelist', val)}
+          entriesLabel={t('users.entriesCount')}
+          emptyLabel={t('users.empty')}
+          removeLabel={t('users.actions.remove')}
+          addLabel={t('users.actions.add')}
+          placeholderPlayer={t('users.placeholder.playerName')}
+          placeholderIp={t('users.placeholder.ipAddress')}
         />
         <UserListCard
-          title="Operators (OP)"
+          title={t('users.lists.operators')}
           data={ops}
           type="ops"
           onAdd={(val) => handleAdd('ops', val)}
           onRemove={(val) => handleRemove('ops', val)}
+          entriesLabel={t('users.entriesCount')}
+          emptyLabel={t('users.empty')}
+          removeLabel={t('users.actions.remove')}
+          addLabel={t('users.actions.add')}
+          placeholderPlayer={t('users.placeholder.playerName')}
+          placeholderIp={t('users.placeholder.ipAddress')}
         />
         <UserListCard
-          title="Banned Players"
+          title={t('users.lists.bannedPlayers')}
           data={bannedPlayers}
           type="banned-players"
           onAdd={(val) => handleAdd('banned-players', val)}
           onRemove={(val) => handleRemove('banned-players', val)}
+          entriesLabel={t('users.entriesCount')}
+          emptyLabel={t('users.empty')}
+          removeLabel={t('users.actions.remove')}
+          addLabel={t('users.actions.add')}
+          placeholderPlayer={t('users.placeholder.playerName')}
+          placeholderIp={t('users.placeholder.ipAddress')}
         />
         <UserListCard
-          title="Banned IPs"
+          title={t('users.lists.bannedIps')}
           data={bannedIps}
           type="banned-ips"
           onAdd={(val) => handleAdd('banned-ips', val)}
           onRemove={(val) => handleRemove('banned-ips', val)}
+          entriesLabel={t('users.entriesCount')}
+          emptyLabel={t('users.empty')}
+          removeLabel={t('users.actions.remove')}
+          addLabel={t('users.actions.add')}
+          placeholderPlayer={t('users.placeholder.playerName')}
+          placeholderIp={t('users.placeholder.ipAddress')}
         />
       </div>
     </div>
@@ -245,12 +271,24 @@ function UserListCard({
   type,
   onAdd,
   onRemove,
+  entriesLabel,
+  emptyLabel,
+  removeLabel,
+  addLabel,
+  placeholderPlayer,
+  placeholderIp,
 }: {
   title: string;
   data: PlayerEntry[];
   type: ListType;
   onAdd: (val: string) => void;
   onRemove: (val: string) => void;
+  entriesLabel: string;
+  emptyLabel: string;
+  removeLabel: string;
+  addLabel: string;
+  placeholderPlayer: string;
+  placeholderIp: string;
 }) {
   const [input, setInput] = useState('');
 
@@ -264,18 +302,18 @@ function UserListCard({
     <div className="users-view__card">
       <div className="users-view__card-header">
         {title}
-        <span className="users-view__count">{data.length} entries</span>
+        <span className="users-view__count">
+          {data.length} {entriesLabel}
+        </span>
       </div>
 
-      {/* リスト表示エリア */}
       <div className="users-view__list">
         {data.length === 0 ? (
-          <div className="users-view__empty">Empty</div>
+          <div className="users-view__empty">{emptyLabel}</div>
         ) : (
           data.map((item, idx) => (
             <div key={idx} className="users-view__item">
               <div className="users-view__item-main">
-                {/* ★ Head Image */}
                 {type !== 'banned-ips' && (
                   <img
                     src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
@@ -291,7 +329,6 @@ function UserListCard({
                   <div className="users-view__item-name">
                     {type === 'banned-ips' ? item.ip : item.name}
                   </div>
-                  {/* Additional Info */}
                   {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
                   {item.level && <div className="text-xs text-yellow-500">Level: {item.level}</div>}
                 </div>
@@ -300,25 +337,24 @@ function UserListCard({
                 className="btn-stop users-view__remove-btn"
                 onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
               >
-                Remove
+                {removeLabel}
               </button>
             </div>
           ))
         )}
       </div>
 
-      {/* 追加フォーム */}
       <div className="users-view__form">
         <input
           type="text"
           className="input-field users-view__input"
-          placeholder={type === 'banned-ips' ? 'IP Address' : 'Player Name'}
+          placeholder={type === 'banned-ips' ? placeholderIp : placeholderPlayer}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
         />
         <button className="btn-primary users-view__add-btn" onClick={handleAddClick}>
-          Add
+          {addLabel}
         </button>
       </div>
     </div>

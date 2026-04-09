@@ -14,6 +14,7 @@ import {
   iconUnzip,
   iconZip,
 } from '../../assets/icons';
+import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import {
   compressItem,
@@ -66,6 +67,7 @@ export default function FilesView({ server }: Props) {
   const [moveDestPath, setMoveDestPath] = useState('');
   const [renameFileName, setRenameFileName] = useState('');
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -109,12 +111,12 @@ export default function FilesView({ server }: Props) {
         try {
           const imported = await importFilesFromPaths(payload.paths, currentPath);
           if (imported.length > 0) {
-            showToast(`${imported.length}件のファイルをアップロードしました`, 'success');
+            showToast(t('files.toast.uploadSuccess', { count: imported.length }), 'success');
             await loadFiles(currentPath);
           }
         } catch (error) {
           console.error(error);
-          showToast('ドロップしたファイルのアップロードに失敗しました', 'error');
+          showToast(t('files.toast.uploadFailed'), 'error');
         }
       })
       .then((dispose) => {
@@ -265,10 +267,10 @@ export default function FilesView({ server }: Props) {
     setIsSaving(true);
     try {
       await saveFileContent(`${currentPath}/${editingFile}`, fileContent);
-      showToast('保存しました', 'success');
+      showToast(t('files.toast.saved'), 'success');
     } catch (err) {
       console.error(err);
-      showToast('保存に失敗しました', 'error');
+      showToast(t('files.toast.saveFailed'), 'error');
     }
     setIsSaving(false);
     setIsEditorOpen(false);
@@ -303,8 +305,8 @@ export default function FilesView({ server }: Props) {
     if (selectedFiles.length === 0) {
       return;
     }
-    const confirmed = await ask(`${selectedFiles.length}個の項目を削除しますか？`, {
-      title: 'ファイル削除',
+    const confirmed = await ask(t('files.confirm.delete', { count: selectedFiles.length }), {
+      title: t('files.confirm.deleteTitle'),
       kind: 'warning',
     });
     if (!confirmed) {
@@ -315,13 +317,13 @@ export default function FilesView({ server }: Props) {
       for (const name of selectedFiles) {
         await deleteItem(`${currentPath}/${name}`);
       }
-      showToast('削除しました', 'success');
+      showToast(t('files.toast.deleted'), 'success');
       setSelectedFiles([]);
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
       console.error(e);
-      showToast('削除に失敗しました', 'error');
+      showToast(t('files.toast.deleteFailed'), 'error');
     }
   };
 
@@ -337,13 +339,13 @@ export default function FilesView({ server }: Props) {
       } else {
         await saveFileContent(target, '');
       }
-      showToast('作成しました', 'success');
+      showToast(t('files.toast.created'), 'success');
       setModalType(null);
       setNewFileName('');
       loadFiles(currentPath);
     } catch (e) {
       console.error(e);
-      showToast('作成に失敗しました', 'error');
+      showToast(t('files.toast.createFailed'), 'error');
     }
   };
 
@@ -353,7 +355,7 @@ export default function FilesView({ server }: Props) {
 
     if (result.length > 0) {
       loadFiles(currentPath);
-      showToast('インポートしました', 'success');
+      showToast(t('files.toast.imported'), 'success');
     }
   };
 
@@ -383,11 +385,11 @@ export default function FilesView({ server }: Props) {
         setSelectedFiles([]);
         loadFiles(currentPath);
       }
-      showToast('移動しました', 'success');
+      showToast(t('files.toast.moved'), 'success');
       setModalType(null);
     } catch (e) {
       console.error(e);
-      showToast('移動に失敗しました', 'error');
+      showToast(t('files.toast.moveFailed'), 'error');
     }
   };
 
@@ -405,13 +407,13 @@ export default function FilesView({ server }: Props) {
     const dest = `${currentPath}/${renameFileName}`;
     try {
       await moveItem(src, dest);
-      showToast('名前を変更しました', 'success');
+      showToast(t('files.toast.renamed'), 'success');
       setModalType(null);
       setRenameFileName('');
       loadFiles(currentPath);
     } catch (e) {
       console.error(e);
-      showToast('名前の変更に失敗しました', 'error');
+      showToast(t('files.toast.renameFailed'), 'error');
     }
   };
 
@@ -423,12 +425,12 @@ export default function FilesView({ server }: Props) {
     const dest = `${currentPath}/archive-${Date.now()}.zip`;
     try {
       await compressItem(targets, dest);
-      showToast('圧縮しました', 'success');
+      showToast(t('files.toast.compressed'), 'success');
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
       console.error(e);
-      showToast('圧縮に失敗しました', 'error');
+      showToast(t('files.toast.compressFailed'), 'error');
     }
   };
 
@@ -442,12 +444,12 @@ export default function FilesView({ server }: Props) {
           await extractItem(`${currentPath}/${f}`, currentPath);
         }
       }
-      showToast('解凍しました', 'success');
+      showToast(t('files.toast.extracted'), 'success');
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
       console.error(e);
-      showToast('解凍に失敗しました', 'error');
+      showToast(t('files.toast.extractFailed'), 'error');
     }
   };
 
@@ -483,7 +485,7 @@ export default function FilesView({ server }: Props) {
           className="files-view__toolbar-btn"
           onClick={handleGoUp}
           disabled={currentPath === server.path}
-          title="上の階層へ"
+          title={t('files.toolbar.goUp')}
         >
           ⬆
         </button>
@@ -494,14 +496,14 @@ export default function FilesView({ server }: Props) {
         <button
           className="files-view__toolbar-btn"
           onClick={() => setModalType('create')}
-          title="新規作成 / インポート"
+          title={t('files.toolbar.createImport')}
         >
           +
         </button>
         <button
           className="files-view__toolbar-btn"
           onClick={handleOpenExplorer}
-          title="エクスプローラーで開く"
+          title={t('files.toolbar.openExplorer')}
         >
           <img src={iconOpenFolder} className="w-4" alt="Open" />
         </button>
@@ -511,20 +513,28 @@ export default function FilesView({ server }: Props) {
             <button
               className="files-view__toolbar-btn"
               onClick={() => openMoveModal(false)}
-              title="移動"
+              title={t('files.toolbar.move')}
             >
               <img src={iconMove} className="w-4" alt="Move" />
             </button>
-            <button className="files-view__toolbar-btn" onClick={handleZip} title="圧縮">
+            <button
+              className="files-view__toolbar-btn"
+              onClick={handleZip}
+              title={t('files.toolbar.compress')}
+            >
               <img src={iconZip} className="w-4" alt="Zip" />
             </button>
-            <button className="files-view__toolbar-btn" onClick={handleUnzip} title="解凍">
+            <button
+              className="files-view__toolbar-btn"
+              onClick={handleUnzip}
+              title={t('files.toolbar.extract')}
+            >
               <img src={iconUnzip} className="w-4" alt="Unzip" />
             </button>
             <button
               className="files-view__toolbar-btn files-view__toolbar-btn--danger"
               onClick={handleDelete}
-              title="削除"
+              title={t('files.toolbar.delete')}
             >
               <img src={iconTrash} className="w-4" alt="Delete" />
             </button>
@@ -537,11 +547,7 @@ export default function FilesView({ server }: Props) {
         className={`files-view__list-pane ${isExternalDropActive ? 'is-drop-active' : ''}`}
         onContextMenu={(e) => handleContextMenu(e, null)}
       >
-        {isExternalDropActive && (
-          <div className="files-view__drop-hint">
-            ここにドロップして現在のフォルダへアップロード
-          </div>
-        )}
+        {isExternalDropActive && <div className="files-view__drop-hint">{t('files.dropHint')}</div>}
 
         <div className="flex flex-col gap-0">
           {files.map((file) => (
@@ -591,7 +597,7 @@ export default function FilesView({ server }: Props) {
               </span>
             </div>
           ))}
-          {files.length === 0 && <div className="files-view__empty">フォルダは空です</div>}
+          {files.length === 0 && <div className="files-view__empty">{t('files.emptyFolder')}</div>}
         </div>
       </div>
 
@@ -602,14 +608,14 @@ export default function FilesView({ server }: Props) {
             <span>{editingFile}</span>
             <div className="files-view__editor-actions">
               <button className="btn-secondary mr-2.5" onClick={() => setIsEditorOpen(false)}>
-                閉じる
+                {t('common.close')}
               </button>
               <button
                 className="btn-primary disabled:opacity-50"
                 onClick={handleSaveFile}
                 disabled={isSaving}
               >
-                {isSaving ? '保存中...' : '保存'}
+                {isSaving ? t('files.editor.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -635,7 +641,7 @@ export default function FilesView({ server }: Props) {
       {modalType === 'create' && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title">新規作成 / インポート</h3>
+            <h3 className="mc-modal-title">{t('files.modal.createImportTitle')}</h3>
 
             <div className="files-view__create-grid">
               <div
@@ -646,7 +652,7 @@ export default function FilesView({ server }: Props) {
                 <span
                   className={`files-view__create-option-label ${createMode === 'folder' ? 'is-active' : 'is-idle'}`}
                 >
-                  フォルダ
+                  {t('files.modal.folder')}
                 </span>
               </div>
 
@@ -658,7 +664,7 @@ export default function FilesView({ server }: Props) {
                 <span
                   className={`files-view__create-option-label ${createMode === 'file' ? 'is-active' : 'is-idle'}`}
                 >
-                  ファイル
+                  {t('files.modal.file')}
                 </span>
               </div>
 
@@ -667,16 +673,22 @@ export default function FilesView({ server }: Props) {
                 onClick={handleImport}
               >
                 <img src={iconImport} alt="Import" className="w-8 h-8 object-contain" />
-                <span className="files-view__create-option-label is-idle">インポート</span>
+                <span className="files-view__create-option-label is-idle">
+                  {t('files.modal.import')}
+                </span>
               </div>
             </div>
 
-            <label className="files-view__modal-label">名前:</label>
+            <label className="files-view__modal-label">{t('files.modal.nameLabel')}</label>
             <input
               type="text"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
-              placeholder={createMode === 'folder' ? '新しいフォルダ名' : '新しいファイル名.txt'}
+              placeholder={
+                createMode === 'folder'
+                  ? t('files.modal.newFolderPlaceholder')
+                  : t('files.modal.newFilePlaceholder')
+              }
               className="mc-modal-input"
               autoFocus
               onKeyDown={(e) => {
@@ -686,14 +698,14 @@ export default function FilesView({ server }: Props) {
 
             <div className="mc-modal-footer">
               <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
-                キャンセル
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleCreate}
                 className="mc-modal-btn-primary"
                 disabled={!newFileName}
               >
-                作成
+                {t('common.create')}
               </button>
             </div>
           </div>
@@ -705,26 +717,28 @@ export default function FilesView({ server }: Props) {
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
             <h3 className="mc-modal-title">
-              {modalType === 'moveCurrent' ? 'ディレクトリの移動' : '移動'}
+              {modalType === 'moveCurrent'
+                ? t('files.modal.moveDirectoryTitle')
+                : t('files.modal.moveTitle')}
             </h3>
             <p className="text-zinc-400 text-sm mb-2.5">
               {modalType === 'moveCurrent'
-                ? '現在のディレクトリ全体を移動します。'
-                : `選択した ${selectedFiles.length} 個の項目を移動します。`}
+                ? t('files.modal.moveDirectoryDescription')
+                : t('files.modal.moveDescription', { count: selectedFiles.length })}
             </p>
             <input
               type="text"
               value={moveDestPath}
               onChange={(e) => setMoveDestPath(e.target.value)}
-              placeholder="移動先のパス (例: servers/myserver/plugins)"
+              placeholder={t('files.modal.moveDestPlaceholder')}
               className="mc-modal-input"
             />
             <div className="mc-modal-footer">
               <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
-                キャンセル
+                {t('common.cancel')}
               </button>
               <button onClick={handleMove} className="mc-modal-btn-primary">
-                移動
+                {t('files.modal.moveButton')}
               </button>
             </div>
           </div>
@@ -735,7 +749,7 @@ export default function FilesView({ server }: Props) {
       {modalType === 'rename' && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title">名前の変更</h3>
+            <h3 className="mc-modal-title">{t('files.modal.renameTitle')}</h3>
             <input
               type="text"
               value={renameFileName}
@@ -745,10 +759,10 @@ export default function FilesView({ server }: Props) {
             />
             <div className="mc-modal-footer">
               <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
-                キャンセル
+                {t('common.cancel')}
               </button>
               <button onClick={handleRename} className="mc-modal-btn-primary">
-                変更
+                {t('files.modal.renameButton')}
               </button>
             </div>
           </div>
@@ -773,7 +787,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <div className="files-view__context-spacer"></div>
-                名前の変更
+                {t('files.contextMenu.rename')}
               </div>
 
               {/* 2. アイテムを移動 */}
@@ -785,7 +799,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <img src={iconMove} className="files-view__context-icon" alt="" />
-                アイテムを移動...
+                {t('files.contextMenu.moveItem')}
               </div>
 
               {/* 3. アイテムを圧縮 */}
@@ -797,7 +811,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <img src={iconZip} className="files-view__context-icon" alt="" />
-                アイテムを圧縮
+                {t('files.contextMenu.compressItem')}
               </div>
 
               {/* 4. アイテムを解凍 */}
@@ -809,7 +823,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <img src={iconUnzip} className="files-view__context-icon" alt="" />
-                アイテムを解凍
+                {t('files.contextMenu.extractItem')}
               </div>
 
               {/* 5. アイテムを削除 */}
@@ -818,7 +832,7 @@ export default function FilesView({ server }: Props) {
                 onClick={handleDelete}
               >
                 <img src={iconTrash} className="files-view__context-icon" alt="" />
-                アイテムを削除
+                {t('files.contextMenu.deleteItem')}
               </div>
             </>
           ) : (
@@ -831,7 +845,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <div className="files-view__context-spacer"></div>
-                新規作成...
+                {t('files.contextMenu.newCreate')}
               </div>
               <div
                 className="files-view__context-item"
@@ -841,7 +855,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <div className="files-view__context-spacer"></div>
-                インポート...
+                {t('files.contextMenu.import')}
               </div>
               <div
                 className="files-view__context-item"
@@ -851,7 +865,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 <img src={iconMove} className="files-view__context-icon" alt="" />
-                移動...
+                {t('files.contextMenu.move')}
               </div>
             </>
           )}

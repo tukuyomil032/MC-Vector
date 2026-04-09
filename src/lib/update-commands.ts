@@ -2,6 +2,7 @@ import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check, type Update } from '@tauri-apps/plugin-updater';
+import { getTranslation } from '../i18n';
 
 let currentUpdate: Update | null = null;
 
@@ -11,15 +12,15 @@ interface UpdateCheckResult {
 }
 
 function normalizeUpdaterError(error: unknown): string {
+  const t = getTranslation();
   const raw = String(error);
   const lower = raw.toLowerCase();
 
   if (lower.includes('signature verification failed')) {
     return (
-      'アップデート署名の検証に失敗しました。\n' +
-      '配信中の latest.json / .sig / updater pubkey が一致していない可能性があります。\n' +
-      'しばらく待って再試行するか、最新リリースの配信状態を確認してください。\n\n' +
-      `詳細: ${raw}`
+      t('errors.updateSignatureVerificationFailed') +
+      '\n' +
+      t('errors.updateSignatureVerificationDetails', { error: raw })
     );
   }
 
@@ -27,14 +28,15 @@ function normalizeUpdaterError(error: unknown): string {
 }
 
 function createReadOnlyErrorMessage(location: string): string {
+  const t = getTranslation();
   return (
-    `アプリは読み取り専用の場所から実行されています。\n\n` +
-    `現在の場所: ${location}\n\n` +
-    `アップデートを適用するには：\n` +
-    `1. このアプリを終了してください\n` +
-    `2. Finderでアプリを「アプリケーション」フォルダにドラッグ&ドロップしてください\n` +
-    `3. 「アプリケーション」フォルダから再度起動してください\n` +
-    `4. もう一度アップデートを試してください\n\n` +
+    `${t('errors.updateReadOnlyLocationTitle')}\n\n` +
+    `${t('errors.updateReadOnlyLocationCurrent', { location })}\n\n` +
+    `${t('errors.updateReadOnlyLocationSteps')}\n` +
+    `${t('errors.updateReadOnlyLocationStep1')}\n` +
+    `${t('errors.updateReadOnlyLocationStep2')}\n` +
+    `${t('errors.updateReadOnlyLocationStep3')}\n` +
+    `${t('errors.updateReadOnlyLocationStep4')}\n\n` +
     `The app is running from a read-only location.\n\n` +
     `Current location: ${location}\n\n` +
     `To apply the update:\n` +
@@ -46,14 +48,15 @@ function createReadOnlyErrorMessage(location: string): string {
 }
 
 function createPermissionErrorMessage(location: string): string {
+  const t = getTranslation();
   return (
-    `アプリの更新に必要な権限がありません。\n\n` +
-    `現在の場所: ${location}\n\n` +
-    `アップデートを適用するには：\n` +
-    `1. このアプリを終了してください\n` +
-    `2. Finderでアプリを「アプリケーション」フォルダに移動してください\n` +
-    `3. フォルダの権限を確認してください\n` +
-    `4. もう一度アップデートを試してください\n\n` +
+    `${t('errors.updatePermissionDeniedTitle')}\n\n` +
+    `${t('errors.updatePermissionDeniedCurrent', { location })}\n\n` +
+    `${t('errors.updatePermissionDeniedSteps')}\n` +
+    `${t('errors.updatePermissionDeniedStep1')}\n` +
+    `${t('errors.updatePermissionDeniedStep2')}\n` +
+    `${t('errors.updatePermissionDeniedStep3')}\n` +
+    `${t('errors.updatePermissionDeniedStep4')}\n\n` +
     `The app does not have the necessary permissions to update.\n\n` +
     `Current location: ${location}\n\n` +
     `To apply the update:\n` +
@@ -120,6 +123,7 @@ export async function downloadAndInstallUpdate(
   // Check if the app can be updated before proceeding
   const updateCheck = await canUpdateApp();
   if (!updateCheck.can_update) {
+    const t = getTranslation();
     const location = await getAppLocation();
     // Only show read-only specific message for read-only filesystem errors
     if (updateCheck.reason === 'read_only') {
@@ -129,7 +133,7 @@ export async function downloadAndInstallUpdate(
     } else {
       // Generic error for other cases
       throw new Error(
-        `アップデートを適用できません。アプリを「アプリケーション」フォルダに移動してから再度お試しください。\n\n` +
+        `${t('errors.updateCannotApply')}\n\n` +
           `Cannot apply update. Please move the app to the Applications folder and try again.`,
       );
     }

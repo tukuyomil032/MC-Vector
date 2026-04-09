@@ -15,6 +15,7 @@ import {
   iconSettings,
   iconUsers,
 } from './assets/icons';
+import { useTranslation } from './i18n';
 import { createBackup } from './lib/backup-commands';
 import { getAppSettings, onConfigChange } from './lib/config-commands';
 import { readFileContent, saveFileContent } from './lib/file-commands';
@@ -71,12 +72,6 @@ const FilesView = lazy(() => import('./renderer/components/FilesView'));
 const PluginBrowser = lazy(() => import('./renderer/components/PluginBrowser'));
 const SettingsWindow = lazy(() => import('./renderer/components/SettingsWindow'));
 
-const lazyViewFallback = (
-  <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-    ビューを読み込み中...
-  </div>
-);
-
 // 外部APIの簡易レスポンスタイプ
 type PaperBuildsResponse = {
   builds?: Array<{ build: number; downloads?: { application?: { name?: string } } }>;
@@ -94,6 +89,7 @@ type NavItemProps = {
 };
 
 function App() {
+  const { t } = useTranslation();
   const servers = useServerStore((state) => state.servers);
   const setServers = useServerStore((state) => state.setServers);
   const selectedServerId = useServerStore((state) => state.selectedServerId);
@@ -116,6 +112,12 @@ function App() {
 
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);
   const setIsSidebarOpen = useUiStore((state) => state.setIsSidebarOpen);
+
+  const lazyViewFallback = (
+    <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+      {t('common.loadingView')}
+    </div>
+  );
 
   const [updatePrompt, setUpdatePrompt] = useState<{
     version?: string;
@@ -336,10 +338,10 @@ function App() {
     autoBackupRunningRef.current[serverId] = true;
     try {
       await createBackup(targetServer.path, buildAutoBackupName(targetServer));
-      showToast(`${targetServer.name} の自動バックアップを作成しました`, 'success');
+      showToast(t('server.toast.autoBackupCreated', { name: targetServer.name }), 'success');
     } catch (error) {
       console.error('Auto backup failed:', error);
-      showToast(`${targetServer.name} の自動バックアップに失敗しました`, 'error');
+      showToast(t('server.toast.autoBackupFailed', { name: targetServer.name }), 'error');
     } finally {
       autoBackupRunningRef.current[serverId] = false;
     }
@@ -499,7 +501,7 @@ function App() {
           setSelectedServerId(loadedServers[0].id);
         }
       } catch {
-        showToast('サーバーリスト読み込みエラー', 'error');
+        showToast(t('server.toast.loadError'), 'error');
       }
     };
     loadServers();
@@ -526,7 +528,7 @@ function App() {
         }
         if (data.progress === 100) {
           setDownloadStatus(null);
-          showToast(`ダウンロード完了: ${data.status}`, 'success');
+          showToast(t('server.toast.downloadComplete', { status: data.status }), 'success');
         } else {
           setDownloadStatus({ id: data.serverId, progress: data.progress, msg: data.status });
         }
@@ -576,7 +578,10 @@ function App() {
 
         const currentAttempt = autoRestartAttemptsRef.current[data.serverId] ?? 0;
         if (currentAttempt >= maxAutoRestarts) {
-          showToast(`${targetServer.name} の自動再起動は上限に達しました`, 'error');
+          showToast(
+            t('server.toast.autoRestartLimitReached', { name: targetServer.name }),
+            'error',
+          );
           return;
         }
 
@@ -590,7 +595,12 @@ function App() {
           ),
         );
         showToast(
-          `${targetServer.name} が異常終了しました。${restartDelaySec}秒後に自動再起動します (${nextAttempt}/${maxAutoRestarts})`,
+          t('server.toast.autoRestartScheduled', {
+            name: targetServer.name,
+            seconds: restartDelaySec,
+            attempt: nextAttempt,
+            max: maxAutoRestarts,
+          }),
           'info',
         );
 
@@ -633,7 +643,11 @@ function App() {
               ),
             );
             showToast(
-              `${latestServer.name} の自動再起動に失敗しました (${nextAttempt}/${maxAutoRestarts})`,
+              t('server.toast.autoRestartTriggered', {
+                name: latestServer.name,
+                attempt: nextAttempt,
+                max: maxAutoRestarts,
+              }),
               'error',
             );
           }
@@ -681,7 +695,7 @@ function App() {
 
   const handleStart = async () => {
     if (!activeServer) {
-      showToast('サーバーが選択されていません', 'error');
+      showToast(t('server.toast.noServerSelected'), 'error');
       return;
     }
 
@@ -695,7 +709,7 @@ function App() {
     } catch (e) {
       console.error('Start failed:', e);
       setServers((prev) => prev.map((s) => (s.id === serverId ? { ...s, status: 'offline' } : s)));
-      showToast('サーバーの起動に失敗しました', 'error');
+      showToast(t('server.toast.startFailed'), 'error');
     }
   };
 
@@ -716,14 +730,14 @@ function App() {
         setServers((prev) =>
           prev.map((s) => (s.id === selectedServerId ? { ...s, status: 'offline' } : s)),
         );
-        showToast('サーバーの停止に失敗しました', 'error');
+        showToast(t('server.toast.stopFailed'), 'error');
       }
     }
   };
 
   const handleRestart = async () => {
     if (!activeServer) {
-      showToast('サーバーが選択されていません', 'error');
+      showToast(t('server.toast.noServerSelected'), 'error');
       return;
     }
 
@@ -756,14 +770,14 @@ function App() {
       clearExpectedOffline(serverId);
       resetAutoRestartState(serverId);
       setServers((prev) => prev.map((s) => (s.id === serverId ? { ...s, status: 'offline' } : s)));
-      showToast('サーバーの再起動に失敗しました', 'error');
+      showToast(t('server.toast.restartFailed'), 'error');
     }
   };
 
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
     setServers((prev) => prev.map((s) => (s.id === updatedServer.id ? updatedServer : s)));
     await updateServerApi(updatedServer);
-    showToast('設定を保存しました', 'success');
+    showToast(t('server.toast.settingsSaved'), 'success');
   };
 
   const handleAddServer = async (serverData: unknown) => {
@@ -772,7 +786,7 @@ function App() {
       const id = crypto.randomUUID();
       const serverPath = typeof sd.path === 'string' ? sd.path : '';
       if (!serverPath) {
-        showToast('サーバーパスが空です', 'error');
+        showToast(t('server.toast.pathEmpty'), 'error');
         return;
       }
 
@@ -812,7 +826,7 @@ function App() {
       setServers((prev) => [...prev, newServer]);
       setSelectedServerId(newServer.id);
       setShowAddServerModal(false);
-      showToast('サーバーを作成しました', 'success');
+      showToast(t('server.toast.created'), 'success');
 
       // ダウンロードURL構築 & jarダウンロード
       const sw = (sd.software as string) || 'Vanilla';
@@ -857,29 +871,33 @@ function App() {
       }
 
       if (downloadUrl) {
-        setDownloadStatus({ id: newServer.id, progress: 0, msg: 'ダウンロード開始...' });
+        setDownloadStatus({
+          id: newServer.id,
+          progress: 0,
+          msg: t('server.toast.downloadStarting'),
+        });
         try {
           await downloadServerJar(downloadUrl, serverPath + '/server.jar', newServer.id);
         } catch (e) {
           console.error('Download failed:', e);
           setDownloadStatus(null);
-          showToast('JARのダウンロードに失敗しました', 'error');
+          showToast(t('server.toast.jarDownloadFailed'), 'error');
         }
       } else {
-        showToast('ダウンロードURLの取得に失敗しました。手動でJARを配置してください。', 'info');
+        showToast(t('server.toast.jarUrlFailed'), 'info');
       }
     } catch (e) {
       console.error('Server creation error:', e);
-      showToast('サーバー作成に失敗しました', 'error');
+      showToast(t('server.toast.createFailed'), 'error');
       setDownloadStatus(null);
     }
   };
 
   const handleBuildProxyNetwork = async (_config: ProxyNetworkConfig) => {
-    const confirmed = await ask(
-      '構成を開始しますか？各サーバーの server.properties を書き換えます。',
-      { title: 'プロキシ構成', kind: 'info' },
-    );
+    const confirmed = await ask(t('proxy.confirmRewriteProperties'), {
+      title: t('proxy.configTitle'),
+      kind: 'info',
+    });
     if (!confirmed) {
       return;
     }
@@ -916,14 +934,18 @@ function App() {
       );
 
       showToast(
-        `${backendServers.length} 台のサーバーの設定を更新しました。プロキシサーバー (${_config.proxySoftware}) のポート ${_config.proxyPort} で接続してください。`,
+        t('proxy.settingsUpdated', {
+          count: backendServers.length,
+          software: _config.proxySoftware,
+          port: _config.proxyPort,
+        }),
         'success',
       );
       const loadedServers = await getServers();
       setServers(loadedServers);
     } catch (e) {
       console.error('Proxy build error:', e);
-      showToast('プロキシ構成中にエラーが発生しました', 'error');
+      showToast(t('proxy.configError'), 'error');
     }
   };
 
@@ -965,8 +987,8 @@ function App() {
     setContextMenu(null);
 
     // Tauri の ask() ダイアログで確認
-    const confirmed = await ask(`本当に「${target?.name}」を削除しますか？`, {
-      title: 'サーバー削除',
+    const confirmed = await ask(t('server.confirm.delete', { name: target?.name ?? '' }), {
+      title: t('common.delete'),
       kind: 'warning',
     });
     if (!confirmed) {
@@ -982,13 +1004,13 @@ function App() {
         if (selectedServerId === serverId) {
           setSelectedServerId(newServers.length > 0 ? newServers[0].id : '');
         }
-        showToast('サーバーを削除しました', 'success');
+        showToast(t('server.toast.deleted'), 'success');
       } else {
-        showToast('削除に失敗しました', 'error');
+        showToast(t('server.toast.deleteFailed'), 'error');
       }
     } catch (e) {
       console.error('Delete server error:', e);
-      showToast('削除エラー', 'error');
+      showToast(t('server.toast.deleteError'), 'error');
     }
   };
 
@@ -1004,8 +1026,8 @@ function App() {
       return;
     }
 
-    const confirmed = await ask(`「${target.name}」を複製しますか？`, {
-      title: 'サーバー複製',
+    const confirmed = await ask(t('server.confirm.clone', { name: target.name }), {
+      title: t('common.confirm'),
       kind: 'info',
     });
     if (!confirmed) {
@@ -1027,7 +1049,7 @@ function App() {
       const duplicatedServer: MinecraftServer = {
         ...target,
         id: crypto.randomUUID(),
-        name: `${target.name} Copy`,
+        name: t('server.create.cloneDefaultName', { name: target.name }),
         path: candidatePath,
         status: 'offline',
         createdDate: new Date().toISOString(),
@@ -1036,10 +1058,10 @@ function App() {
       await addServerApi(duplicatedServer);
       setServers((prev) => [...prev, duplicatedServer]);
       setSelectedServerId(duplicatedServer.id);
-      showToast('サーバーを複製しました', 'success');
+      showToast(t('server.toast.cloned'), 'success');
     } catch (error) {
       console.error('Duplicate server error:', error);
-      showToast('サーバー複製に失敗しました', 'error');
+      showToast(t('server.toast.cloneFailed'), 'error');
     }
   };
 
@@ -1056,8 +1078,8 @@ function App() {
     }
 
     const templateName = window.prompt(
-      'テンプレート名を入力してください',
-      `${target.name} Template`,
+      t('server.create.templateNamePrompt'),
+      t('server.create.templateDefaultName', { name: target.name }),
     );
     if (!templateName || !templateName.trim()) {
       return;
@@ -1067,10 +1089,10 @@ function App() {
       const template = buildTemplateFromServer(target, templateName.trim());
       await saveServerTemplate(template);
       await loadTemplates();
-      showToast('テンプレートを保存しました', 'success');
+      showToast(t('server.toast.templateSaved'), 'success');
     } catch (error) {
       console.error('Save template error:', error);
-      showToast('テンプレート保存に失敗しました', 'error');
+      showToast(t('server.toast.templateSaveFailed'), 'error');
     }
   };
 
@@ -1399,7 +1421,7 @@ function App() {
     if (!activeServer) {
       return (
         <div className="p-10 text-center text-zinc-500 text-xl">
-          サーバーを選択するか、作成してください
+          {t('server.list.selectOrCreate')}
         </div>
       );
     }
@@ -1438,7 +1460,7 @@ function App() {
       case 'users':
         return <UsersView key={contentKey} server={activeServer} />;
       default:
-        return <div>Unknown View</div>;
+        return <div>{t('errors.notFound')}</div>;
     }
   };
 
@@ -1463,7 +1485,7 @@ function App() {
             <span
               className="font-bold text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] cursor-pointer"
               onClick={handleOpenSettingsWindow}
-              title="設定ウィンドウを開く"
+              title={t('nav.openSettings')}
               style={{ color: themeColors.text }}
             >
               MC-Vector
@@ -1480,56 +1502,56 @@ function App() {
 
         <div className="app-sidebar__nav" style={{ background: themeColors.sidebarPanelBg }}>
           <NavItem
-            label={isSidebarOpen ? 'Dashboard' : ''}
+            label={isSidebarOpen ? t('nav.dashboard') : ''}
             view="dashboard"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconDashboard}
           />
           <NavItem
-            label={isSidebarOpen ? 'Console' : ''}
+            label={isSidebarOpen ? t('nav.console') : ''}
             view="console"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconConsole}
           />
           <NavItem
-            label={isSidebarOpen ? 'Users' : ''}
+            label={isSidebarOpen ? t('nav.users') : ''}
             view="users"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconUsers}
           />
           <NavItem
-            label={isSidebarOpen ? 'Files' : ''}
+            label={isSidebarOpen ? t('nav.files') : ''}
             view="files"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconFiles}
           />
           <NavItem
-            label={isSidebarOpen ? 'Plugins / Mods' : ''}
+            label={isSidebarOpen ? t('nav.pluginsMods') : ''}
             view="plugins"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconPlugins}
           />
           <NavItem
-            label={isSidebarOpen ? 'Backups' : ''}
+            label={isSidebarOpen ? t('nav.backups') : ''}
             view="backups"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconBackups}
           />
           <NavItem
-            label={isSidebarOpen ? 'Properties' : ''}
+            label={isSidebarOpen ? t('nav.properties') : ''}
             view="properties"
             current={currentView}
             set={setCurrentView}
             iconSrc={iconProperties}
           />
           <NavItem
-            label={isSidebarOpen ? 'General Settings' : ''}
+            label={isSidebarOpen ? t('nav.generalSettings') : ''}
             view="general-settings"
             current={currentView}
             set={setCurrentView}
@@ -1539,7 +1561,7 @@ function App() {
           <hr className="w-[90%] border-white/10 my-2.5 mx-auto" />
 
           <NavItem
-            label={isSidebarOpen ? 'Proxy Network' : ''}
+            label={isSidebarOpen ? t('nav.proxyNetwork') : ''}
             view="proxy"
             current={currentView}
             set={setCurrentView}
@@ -1555,7 +1577,7 @@ function App() {
               background: themeColors.sidebarPanelBg,
             }}
           >
-            <div className="app-sidebar__servers-title">SERVERS</div>
+            <div className="app-sidebar__servers-title">{t('nav.servers').toUpperCase()}</div>
             <div className="app-sidebar__server-list">
               {groupedServers.map((group) => (
                 <div key={group.groupName} className="mb-2.5">
@@ -1586,7 +1608,7 @@ function App() {
               className="app-sidebar__add-server-btn"
               onClick={() => setShowAddServerModal(true)}
             >
-              + Add Server
+              + {t('nav.addServer')}
             </button>
           </div>
         )}
@@ -1666,7 +1688,7 @@ function App() {
       {downloadStatus && (
         <div className="download-toast">
           <div className="download-toast__header">
-            <span>Downloading...</span>
+            <span>{t('common.downloading')}</span>
             <span className="text-accent">{downloadStatus.progress}%</span>
           </div>
           <div className="download-toast__message">{downloadStatus.msg}</div>
@@ -1694,7 +1716,7 @@ function App() {
             }}
             className="app-context-menu__item"
           >
-            📄 複製
+            📄 {t('server.actions.clone')}
           </div>
 
           <div
@@ -1704,7 +1726,7 @@ function App() {
             }}
             className="app-context-menu__item"
           >
-            🧩 テンプレート保存
+            🧩 {t('server.actions.saveTemplate')}
           </div>
 
           <div
@@ -1714,7 +1736,7 @@ function App() {
             }}
             className="app-context-menu__danger-item"
           >
-            🗑️ 削除
+            🗑️ {t('common.delete')}
           </div>
         </div>
       )}
@@ -1722,14 +1744,15 @@ function App() {
       {updatePrompt && (
         <div className="app-update-overlay">
           <div className="app-update-modal">
-            <h3 className="app-update-modal__title">アップデートが利用可能です</h3>
-            <p className="app-update-modal__version">
-              バージョン: {updatePrompt.version || '不明'}
-            </p>
+            <h3 className="app-update-modal__title">
+              {t('settings.update.available', { version: updatePrompt.version || '?' })}
+            </h3>
 
             {getReleaseNotesText() && (
               <div className="mb-4">
-                <div className="app-update-modal__notes-label">リリースノート:</div>
+                <div className="app-update-modal__notes-label">
+                  {t('settings.update.releaseNotes')}
+                </div>
                 <pre className="app-update-modal__notes">{getReleaseNotesText()}</pre>
               </div>
             )}
@@ -1737,7 +1760,7 @@ function App() {
             {updateProgress !== null && !updateReady && (
               <div className="mb-4">
                 <div className="app-update-modal__progress-label">
-                  ダウンロード中... {Math.round(updateProgress)}%
+                  {t('settings.update.downloading', { progress: Math.round(updateProgress) })}
                 </div>
                 <div className="app-update-modal__progress-track">
                   <div
@@ -1751,14 +1774,12 @@ function App() {
             )}
 
             {updateReady && (
-              <div className="mb-4 text-sm text-green-400">
-                ダウンロードが完了しました。再起動して適用できます。
-              </div>
+              <div className="mb-4 text-sm text-green-400">{t('settings.update.downloaded')}</div>
             )}
 
             <div className="flex justify-end gap-2">
               <button className="btn-secondary" onClick={handleDismissUpdate}>
-                後で
+                {t('common.cancel')}
               </button>
               {!updateReady && (
                 <button
@@ -1766,12 +1787,12 @@ function App() {
                   onClick={handleUpdateNow}
                   disabled={updateProgress !== null && !updateReady}
                 >
-                  今すぐアップデート
+                  {t('settings.update.download')}
                 </button>
               )}
               {updateReady && (
                 <button className="btn-primary" onClick={handleInstallUpdate}>
-                  再起動して適用
+                  {t('settings.update.restart')}
                 </button>
               )}
             </div>

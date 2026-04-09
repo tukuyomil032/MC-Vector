@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '../../../i18n';
 import {
   type PropertyCategory,
   type PropertyDefinition,
@@ -14,6 +15,36 @@ const CATEGORY_ORDER: PropertyCategory[] = [
   'Advanced',
 ];
 
+const JAPANESE_TEXT_PATTERN = /[ぁ-んァ-ン一-龯]/;
+const ACRONYM_SEGMENTS: Record<string, string> = {
+  ip: 'IP',
+  op: 'OP',
+  rcon: 'RCON',
+  motd: 'MOTD',
+  jmx: 'JMX',
+  tls: 'TLS',
+  sha1: 'SHA1',
+  url: 'URL',
+};
+
+function humanizePropertyKey(key: string): string {
+  return key
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map((segment) => {
+      const lower = segment.toLowerCase();
+      const acronym = ACRONYM_SEGMENTS[lower];
+      if (acronym) {
+        return acronym;
+      }
+      if (/^\d+$/.test(segment)) {
+        return segment;
+      }
+      return segment.charAt(0).toUpperCase() + segment.slice(1);
+    })
+    .join(' ');
+}
+
 export default function AdvancedSettingsWindow({
   initialData,
   onSave,
@@ -23,6 +54,7 @@ export default function AdvancedSettingsWindow({
   onSave?: (data: Record<string, unknown>) => void;
   onCancel?: () => void;
 }) {
+  const { t, locale } = useTranslation();
   const [activeTab, setActiveTab] = useState<PropertyCategory>('General');
   const [formData, setFormData] = useState<Record<string, unknown>>(initialData ?? {});
   const [isLoaded, setIsLoaded] = useState(!!initialData);
@@ -58,7 +90,7 @@ export default function AdvancedSettingsWindow({
       inferred.push({
         key,
         label: key,
-        description: 'server.properties に存在する項目です。',
+        description: t('advancedSettings.inferredDescription'),
         type: valueType as PropertyDefinition['type'],
         category: 'Advanced',
         default: String(value ?? ''),
@@ -80,6 +112,37 @@ export default function AdvancedSettingsWindow({
   }, [allDefinitions]);
 
   const filteredProps = allDefinitions.filter((p) => p.category === activeTab);
+
+  const getCategoryLabel = (category: PropertyCategory): string => {
+    switch (category) {
+      case 'General':
+        return t('advancedSettings.categories.general');
+      case 'Gameplay':
+        return t('advancedSettings.categories.gameplay');
+      case 'World':
+        return t('advancedSettings.categories.world');
+      case 'Network':
+        return t('advancedSettings.categories.network');
+      case 'Security':
+        return t('advancedSettings.categories.security');
+      case 'Advanced':
+        return t('advancedSettings.categories.advanced');
+    }
+  };
+
+  const getPropertyLabel = (prop: PropertyDefinition): string => {
+    if (locale === 'ja' || !JAPANESE_TEXT_PATTERN.test(prop.label)) {
+      return prop.label;
+    }
+    return humanizePropertyKey(prop.key);
+  };
+
+  const getPropertyDescription = (prop: PropertyDefinition): string => {
+    if (locale === 'ja' || !JAPANESE_TEXT_PATTERN.test(prop.description)) {
+      return prop.description;
+    }
+    return t('advancedSettings.propertyDescriptionFallback', { key: prop.key });
+  };
 
   const renderInput = (prop: PropertyDefinition, currentValue: unknown) => {
     if (prop.type === 'boolean') {
@@ -130,21 +193,21 @@ export default function AdvancedSettingsWindow({
   };
 
   if (!isLoaded) {
-    return <div className="advanced-settings-window__loading">Loading settings...</div>;
+    return <div className="advanced-settings-window__loading">{t('advancedSettings.loading')}</div>;
   }
 
   return (
     <div className="advanced-settings-window">
       <header className="advanced-settings-window__header">
         <div className="advanced-settings-window__title">
-          <span>🛠️ 詳細サーバー設定 (server.properties)</span>
+          <span>🛠️ {t('advancedSettings.title')}</span>
         </div>
         <div className="advanced-settings-window__header-actions">
           <button className="btn-secondary" onClick={handleCancel}>
-            キャンセル
+            {t('common.cancel')}
           </button>
           <button className="btn-primary" onClick={handleSave}>
-            適用して閉じる
+            {t('advancedSettings.applyAndClose')}
           </button>
         </div>
       </header>
@@ -157,30 +220,32 @@ export default function AdvancedSettingsWindow({
               className={`advanced-settings-window__tab ${activeTab === cat ? 'is-active' : 'is-idle'}`}
               onClick={() => setActiveTab(cat)}
             >
-              {cat}
+              {getCategoryLabel(cat)}
             </div>
           ))}
         </aside>
 
         <div className="advanced-settings-window__content">
-          <h3 className="advanced-settings-window__section-title">{activeTab}</h3>
+          <h3 className="advanced-settings-window__section-title">{getCategoryLabel(activeTab)}</h3>
 
           <div className="advanced-settings-window__grid">
             {filteredProps.map((prop) => {
               const currentValue = formData[prop.key] ?? prop.default;
+              const label = getPropertyLabel(prop);
+              const description = getPropertyDescription(prop);
 
               return (
                 <div key={prop.key} className="advanced-settings-window__card">
                   <div className="advanced-settings-window__card-head">
                     <div className="advanced-settings-window__card-info group">
                       <div className="advanced-settings-window__card-label">
-                        <span>{prop.label}</span>
+                        <span>{label}</span>
                         <span className="advanced-settings-window__card-key">({prop.key})</span>
                       </div>
                       <div className="advanced-settings-window__card-description">
-                        {prop.description}
+                        {description}
                       </div>
-                      <div className="advanced-settings-window__tooltip">{prop.description}</div>
+                      <div className="advanced-settings-window__tooltip">{description}</div>
                     </div>
 
                     {prop.type === 'boolean' && (

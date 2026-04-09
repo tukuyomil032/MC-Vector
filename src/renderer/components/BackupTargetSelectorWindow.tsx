@@ -1,6 +1,7 @@
 import { emit } from '@tauri-apps/api/event';
 import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
 
@@ -60,6 +61,7 @@ const sortNodes = (nodes: SelectorNode[]): SelectorNode[] => {
 };
 
 export default function BackupTargetSelectorWindow() {
+  const { t } = useTranslation();
   const initial = useMemo(parseInitialPayload, []);
   const [serverPath, setServerPath] = useState(initial.serverPath);
   const [selected, setSelected] = useState<Set<string>>(new Set(initial.selected));
@@ -246,7 +248,11 @@ export default function BackupTargetSelectorWindow() {
               type="button"
               className="backup-selector-window__expander"
               onClick={() => toggleExpanded(node.path)}
-              aria-label={isExpanded ? 'collapse directory' : 'expand directory'}
+              aria-label={
+                isExpanded
+                  ? t('backupSelector.ariaCollapseDirectory')
+                  : t('backupSelector.ariaExpandDirectory')
+              }
             >
               <ChevronRight className={isExpanded ? 'is-open' : ''} size={14} />
             </button>
@@ -289,37 +295,35 @@ export default function BackupTargetSelectorWindow() {
     <div className="backup-selector-window">
       <header className="backup-selector-window__header">
         <div>
-          <h1 className="backup-selector-window__title">Backup Target Selector</h1>
-          <p className="backup-selector-window__subtitle">
-            ファイル/フォルダの種別とサイズを見ながら対象を選択します。
-          </p>
+          <h1 className="backup-selector-window__title">{t('backupSelector.title')}</h1>
+          <p className="backup-selector-window__subtitle">{t('backupSelector.subtitle')}</p>
         </div>
         <div className="backup-selector-window__server-path" title={serverPath}>
           <HardDrive size={14} />
-          <span>{serverPath || 'server path not set'}</span>
+          <span>{serverPath || t('backupSelector.serverPathNotSet')}</span>
         </div>
       </header>
 
       <div className="backup-selector-window__toolbar">
         <div className="backup-selector-window__selection-count">
           <SquareCheckBig size={14} />
-          <span>{selected.size} items selected</span>
+          <span>{t('backupSelector.selectionCount', { count: selected.size })}</span>
         </div>
         <div className="backup-selector-window__toolbar-actions">
           <button type="button" className="btn-secondary" onClick={handleSelectAll}>
-            全選択
+            {t('backupSelector.selectAll')}
           </button>
           <button type="button" className="btn-secondary" onClick={handleClear}>
-            全解除
+            {t('backupSelector.clearAll')}
           </button>
         </div>
       </div>
 
       <div className="backup-selector-window__tree-panel">
         {loading ? (
-          <div className="backup-selector-window__empty">読み込み中...</div>
+          <div className="backup-selector-window__empty">{t('backupSelector.loading')}</div>
         ) : tree.length === 0 ? (
-          <div className="backup-selector-window__empty">表示できる項目がありません。</div>
+          <div className="backup-selector-window__empty">{t('backupSelector.empty')}</div>
         ) : (
           tree.map((node) => renderNode(node, 0))
         )}
@@ -332,7 +336,7 @@ export default function BackupTargetSelectorWindow() {
           onClick={() => window.close()}
           disabled={saving}
         >
-          キャンセル
+          {t('backupSelector.cancel')}
         </button>
         <button
           type="button"
@@ -340,7 +344,7 @@ export default function BackupTargetSelectorWindow() {
           onClick={() => void handleApply()}
           disabled={saving || selected.size === 0}
         >
-          {saving ? '保存中...' : '選択を適用'}
+          {saving ? t('backupSelector.saving') : t('backupSelector.apply')}
         </button>
       </footer>
     </div>

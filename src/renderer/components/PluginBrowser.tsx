@@ -20,6 +20,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import { useTranslation } from '../../i18n';
 import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
 import {
   checkHangarCompatibility,
@@ -224,6 +225,7 @@ function projectPageUrl(item: ProjectItem): string {
 }
 
 export default function PluginBrowser({ server }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -715,11 +717,11 @@ export default function PluginBrowser({ server }: Props) {
       setTotalPages(null);
       const message = toErrorMessage(error);
       if (platform === 'Hangar') {
-        showToast(`Hangarの取得に失敗しました: ${message}`, 'error');
+        showToast(t('plugins.browser.fetchHangarError', { message }), 'error');
       } else if (platform === 'Spigot') {
-        showToast(`Spigotの取得に失敗しました: ${message}`, 'error');
+        showToast(t('plugins.browser.fetchSpigotError', { message }), 'error');
       } else {
-        showToast('データの取得に失敗しました', 'error');
+        showToast(t('plugins.browser.fetchError'), 'error');
       }
     } finally {
       setLoading(false);
@@ -737,7 +739,7 @@ export default function PluginBrowser({ server }: Props) {
         await deleteItem(targetPath);
       } catch (error) {
         console.error(error);
-        showToast('既存ファイルの削除に失敗しました', 'error');
+        showToast(t('plugins.browser.deleteExistingError'), 'error');
         return;
       }
     }
@@ -753,7 +755,7 @@ export default function PluginBrowser({ server }: Props) {
         });
 
         if (!resolvedVersion) {
-          showToast('対応バージョンが見つかりませんでした', 'error');
+          showToast(t('plugins.browser.noCompatibleVersion'), 'error');
           return;
         }
 
@@ -789,9 +791,13 @@ export default function PluginBrowser({ server }: Props) {
             const suffix = missingDependencies.length > 3 ? ', ...' : '';
 
             const shouldInstallDependencies = await ask(
-              `不足依存プラグインが ${missingDependencies.length} 件あります。\n${preview}${suffix}\n先に一括インストールしますか？`,
+              t('plugins.browser.dependencyMissing', {
+                count: missingDependencies.length,
+                preview,
+                suffix,
+              }),
               {
-                title: '依存関係チェック',
+                title: t('plugins.browser.dependencyCheck'),
                 kind: 'warning',
               },
             );
@@ -808,7 +814,7 @@ export default function PluginBrowser({ server }: Props) {
 
                   if (!dependencyVersion) {
                     showToast(
-                      `依存プラグイン ${dependency.title} の対応バージョンが見つかりません`,
+                      t('plugins.browser.dependencyVersionNotFound', { title: dependency.title }),
                       'info',
                     );
                     continue;
@@ -822,22 +828,24 @@ export default function PluginBrowser({ server }: Props) {
                   installedDependencyCount += 1;
                 } catch (error) {
                   console.error(error);
-                  showToast(`依存プラグイン ${dependency.title} の導入に失敗しました`, 'error');
+                  showToast(
+                    t('plugins.browser.dependencyInstallFailed', { title: dependency.title }),
+                    'error',
+                  );
                 }
               }
 
               if (installedDependencyCount > 0) {
                 showToast(
-                  `依存プラグインを ${installedDependencyCount} 件インストールしました`,
+                  t('plugins.browser.dependencyInstallSuccess', {
+                    count: installedDependencyCount,
+                  }),
                   'success',
                 );
                 await refreshInstalled();
               }
             } else {
-              showToast(
-                '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
-                'info',
-              );
+              showToast(t('plugins.browser.dependencyCheckOnly'), 'info');
             }
           }
         }
@@ -858,7 +866,7 @@ export default function PluginBrowser({ server }: Props) {
         });
 
         if (!resolved) {
-          showToast('対応バージョンが見つかりませんでした', 'error');
+          showToast(t('plugins.browser.noCompatibleVersion'), 'error');
           return;
         }
 
@@ -867,8 +875,11 @@ export default function PluginBrowser({ server }: Props) {
           const suffix = resolved.supportedVersions.length > 3 ? ', ...' : '';
           showToast(
             listedVersions
-              ? `サーバー ${server.version} との互換性が未確認です (対応候補: ${listedVersions}${suffix})`
-              : `サーバー ${server.version} との互換性が未確認です`,
+              ? t('plugins.browser.compatibilityUnknownWithVersions', {
+                  version: server.version,
+                  versions: `${listedVersions}${suffix}`,
+                })
+              : t('plugins.browser.compatibilityUnknown', { version: server.version }),
             'info',
           );
         }
@@ -876,7 +887,7 @@ export default function PluginBrowser({ server }: Props) {
         if (!resolved.downloadUrl) {
           const externalUrl = resolved.externalUrl || `https://hangar.papermc.io/${owner}/${slug}`;
           await openExternal(externalUrl);
-          showToast('このHangarリソースはブラウザ経由でのダウンロードが必要です', 'info');
+          showToast(t('plugins.browser.browserDownloadRequired'), 'info');
           return;
         }
 
@@ -888,7 +899,7 @@ export default function PluginBrowser({ server }: Props) {
       } else if (item.platform === 'Spigot') {
         const resourceId = Number(item.id);
         if (!Number.isFinite(resourceId)) {
-          showToast('SpigotリソースIDが不正です', 'error');
+          showToast(t('plugins.browser.spigotIdInvalid'), 'error');
           return;
         }
 
@@ -896,7 +907,7 @@ export default function PluginBrowser({ server }: Props) {
           item.source_obj.external === true || item.source_obj.premium === true;
         if (shouldOpenBrowser) {
           await openExternal(`https://www.spigotmc.org/resources/${resourceId}/`);
-          showToast('このリソースはブラウザ経由でのダウンロードが必要です', 'info');
+          showToast(t('plugins.browser.spigotBrowserRequired'), 'info');
           return;
         }
 
@@ -914,14 +925,14 @@ export default function PluginBrowser({ server }: Props) {
 
       const successLabel =
         mode === 'fresh'
-          ? 'インストール完了'
+          ? t('plugins.browser.installSuccess', { title: item.title })
           : mode === 'overwrite'
-            ? '上書き完了'
-            : 'アップデート完了';
-      showToast(`${successLabel}: ${item.title}`, 'success');
+            ? t('plugins.browser.overwriteSuccess', { title: item.title })
+            : t('plugins.browser.updateSuccess', { title: item.title });
+      showToast(successLabel, 'success');
     } catch (error) {
       console.error(error);
-      showToast('インストールエラー', 'error');
+      showToast(t('plugins.browser.installError'), 'error');
     } finally {
       setInstallingId(null);
       await refreshInstalled();
@@ -931,7 +942,7 @@ export default function PluginBrowser({ server }: Props) {
   const handleInstall = (item: ProjectItem) => {
     const compatibility = compatibilityByItemId[item.id] ?? 'unknown';
     if (compatibility === 'incompatible') {
-      showToast('このプラグインは現在のサーバーバージョンと非互換の可能性があります', 'info');
+      showToast(t('plugins.browser.incompatibilityWarning'), 'info');
     }
 
     const installedMatch = findInstalledMatch(item);
@@ -953,7 +964,7 @@ export default function PluginBrowser({ server }: Props) {
       await openUrl(url);
     } catch (error) {
       console.error(error);
-      showToast('ブラウザを開けませんでした', 'error');
+      showToast(t('plugins.browser.browserOpenError'), 'error');
     }
   };
 
@@ -969,13 +980,13 @@ export default function PluginBrowser({ server }: Props) {
       await moveItem(sourcePath, targetPath);
       showToast(
         isDisabledPluginFile(installedFile)
-          ? `${item.title} を有効化しました`
-          : `${item.title} を無効化しました`,
+          ? t('plugins.browser.pluginEnabled', { title: item.title })
+          : t('plugins.browser.pluginDisabled', { title: item.title }),
         'success',
       );
     } catch (error) {
       console.error(error);
-      showToast('プラグイン状態の切り替えに失敗しました', 'error');
+      showToast(t('plugins.browser.toggleError'), 'error');
     } finally {
       setInstallingId(null);
       await refreshInstalled();
@@ -985,26 +996,26 @@ export default function PluginBrowser({ server }: Props) {
   const compatibilityLabel = (status: CompatibilityStatus): string => {
     switch (status) {
       case 'compatible':
-        return 'Compatible';
+        return t('plugins.browser.compatCompatible');
       case 'incompatible':
-        return 'Incompatible';
+        return t('plugins.browser.compatIncompatible');
       case 'checking':
-        return 'Checking...';
+        return t('plugins.browser.compatChecking');
       default:
-        return 'Unknown';
+        return t('plugins.browser.compatUnknown');
     }
   };
 
   const updateStatusLabel = (status: UpdateStatus): string => {
     switch (status) {
       case 'checking':
-        return 'Update: Checking';
+        return t('plugins.browser.updateChecking');
       case 'update-available':
-        return 'Update Available';
+        return t('plugins.browser.updateAvailable');
       case 'up-to-date':
-        return 'Up to Date';
+        return t('plugins.browser.upToDate');
       default:
-        return 'Update: Unknown';
+        return t('plugins.browser.updateUnknown');
     }
   };
 
@@ -1014,15 +1025,15 @@ export default function PluginBrowser({ server }: Props) {
     updateStatus: UpdateStatus | null,
   ) => {
     if (installingId === item.id) {
-      return 'Installing...';
+      return t('plugins.browser.installing');
     }
     const requiresBrowser =
       item.platform === 'Spigot' &&
       (item.source_obj.external === true || item.source_obj.premium === true);
     if (!requiresBrowser && installedState !== 'none' && updateStatus === 'update-available') {
-      return 'Update';
+      return t('plugins.browser.update');
     }
-    return requiresBrowser ? 'Open' : 'Install';
+    return requiresBrowser ? t('plugins.browser.open') : t('plugins.install.button');
   };
 
   const getCompatibilityPriority = (itemId: string): number => {
@@ -1075,7 +1086,7 @@ export default function PluginBrowser({ server }: Props) {
   const supportedVersionsLabel = (itemId: string) => {
     const versions = compatibilityDetailByItemId[itemId]?.supportedVersions ?? [];
     if (versions.length === 0) {
-      return '未公開';
+      return t('plugins.browser.versionsNotPublished');
     }
     const preview = versions.slice(0, 6).join(', ');
     return versions.length > 6 ? `${preview}, ...` : preview;
@@ -1083,7 +1094,7 @@ export default function PluginBrowser({ server }: Props) {
 
   const loaderLabel = (item: ProjectItem) => {
     if (item.platform === 'Spigot') {
-      return 'Spigot / Paper互換';
+      return t('plugins.browser.loaderSpigotPaper');
     }
 
     if (item.platform === 'Hangar') {
@@ -1101,7 +1112,9 @@ export default function PluginBrowser({ server }: Props) {
       return loaders.slice(0, 4).join(', ');
     }
 
-    return isModServer ? server.software || 'Mod loader' : 'Paper / Spigot';
+    return isModServer
+      ? server.software || t('plugins.browser.loaderMod')
+      : t('plugins.browser.loaderDefault');
   };
 
   const resolveReadme = async (item: ProjectItem): Promise<string | null> => {
@@ -1166,7 +1179,7 @@ export default function PluginBrowser({ server }: Props) {
         if (detailRequestIdRef.current !== requestId) {
           return;
         }
-        setDetailError('READMEの取得に失敗しました。時間をおいて再試行してください。');
+        setDetailError(t('plugins.browser.readmeFetchError'));
       } finally {
         if (detailRequestIdRef.current === requestId) {
           setDetailLoading(false);
@@ -1195,7 +1208,7 @@ export default function PluginBrowser({ server }: Props) {
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
-      showToast('ページ番号は 1 以上で入力してください', 'info');
+      showToast(t('plugins.browser.pageInputError'), 'info');
       return;
     }
 
@@ -1266,7 +1279,9 @@ export default function PluginBrowser({ server }: Props) {
                 className="plugin-browser__search-input"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={`Search on ${selectedPlatform?.label || platform}...`}
+                placeholder={t('plugins.browser.searchOn', {
+                  platform: selectedPlatform?.label || platform,
+                })}
                 onKeyDown={(event) => event.key === 'Enter' && void search()}
               />
             </div>
@@ -1278,60 +1293,58 @@ export default function PluginBrowser({ server }: Props) {
               disabled={loading}
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-              <span>{loading ? 'Searching...' : 'Search'}</span>
+              <span>{loading ? t('plugins.browser.searching') : t('common.search')}</span>
             </button>
           </div>
 
           <div className="plugin-browser__sort-row">
-            <span className="plugin-browser__sort-label">Sort</span>
+            <span className="plugin-browser__sort-label">{t('plugins.browser.sortLabel')}</span>
             <select
               className="plugin-browser__sort-select"
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
             >
-              <option value="relevance">Relevance</option>
-              <option value="downloads">Downloads</option>
-              <option value="name">Name</option>
-              <option value="compatibility">Compatibility</option>
+              <option value="relevance">{t('plugins.browser.sortRelevance')}</option>
+              <option value="downloads">{t('plugins.browser.sortDownloads')}</option>
+              <option value="name">{t('plugins.browser.sortName')}</option>
+              <option value="compatibility">{t('plugins.browser.sortCompatibility')}</option>
             </select>
           </div>
         </>
       ) : (
         <div className="plugin-browser__unsupported-panel">
-          <p>このプラットフォームはアプリ内検索に対応していません。</p>
+          <p>{t('plugins.browser.unsupportedPlatform')}</p>
           <button
             type="button"
             className="plugin-browser__unsupported-btn"
             onClick={() => openExternal('https://www.curseforge.com/minecraft/mc-mods')}
           >
             <ExternalLink size={16} />
-            <span>ブラウザで {selectedPlatform?.label || platform} を開く</span>
+            <span>
+              {t('plugins.browser.openInBrowser', {
+                platform: selectedPlatform?.label || platform,
+              })}
+            </span>
           </button>
           <p className="plugin-browser__unsupported-note">
-            ダウンロードした .jar は Files から {folderName} フォルダへ配置してください。
+            {t('plugins.browser.downloadInstructions', { folder: folderName })}
           </p>
         </div>
       )}
 
       {isInAppSearch && platform === 'Spigot' && (
-        <div className="plugin-browser__platform-note">
-          Spigot にはブラウザ経由でのみ配布されるリソースがあります。Open
-          と表示される場合は外部ページから取得してください。
-        </div>
+        <div className="plugin-browser__platform-note">{t('plugins.browser.spigotNote')}</div>
       )}
 
       {isInAppSearch && platform === 'Hangar' && (
-        <div className="plugin-browser__platform-note">
-          Hangar には直接ダウンロード URL
-          を公開していないバージョンがあります。その場合は自動的に外部ページを開きます。
-        </div>
+        <div className="plugin-browser__platform-note">{t('plugins.browser.hangarNote')}</div>
       )}
 
       {isInAppSearch && updateAvailableCount > 0 && (
         <div className="plugin-browser__update-summary">
-          <span>{updateAvailableCount} 件の更新候補があります。</span>
+          <span>{t('plugins.browser.updateSummary', { count: updateAvailableCount })}</span>
           <span className="plugin-browser__update-summary-note">
-            Install を押すと更新処理として実行されます。
+            {t('plugins.browser.updateSummaryNote')}
           </span>
         </div>
       )}
@@ -1389,7 +1402,9 @@ export default function PluginBrowser({ server }: Props) {
                                 className={`plugin-browser__update-badge is-${updateStatus}`}
                                 title={
                                   updateStatus === 'update-available' && latestFileName
-                                    ? `Latest: ${latestFileName}`
+                                    ? t('plugins.browser.latestTooltip', {
+                                        fileName: latestFileName,
+                                      })
                                     : undefined
                                 }
                               >
@@ -1406,7 +1421,9 @@ export default function PluginBrowser({ server }: Props) {
                                 installedState === 'disabled' ? 'is-disabled' : ''
                               }`}
                             >
-                              {installedState === 'disabled' ? 'Disabled' : 'Installed'}
+                              {installedState === 'disabled'
+                                ? t('plugins.browser.disabledBadge')
+                                : t('plugins.browser.installedBadge')}
                             </span>
                           )}
 
@@ -1419,7 +1436,9 @@ export default function PluginBrowser({ server }: Props) {
                                 installedState === 'disabled' ? 'is-enable' : 'is-disable'
                               }`}
                             >
-                              {installedState === 'disabled' ? 'Enable' : 'Disable'}
+                              {installedState === 'disabled'
+                                ? t('plugins.browser.enable')
+                                : t('plugins.browser.disable')}
                             </button>
                           )}
 
@@ -1446,13 +1465,13 @@ export default function PluginBrowser({ server }: Props) {
                             className="plugin-browser__details-btn"
                             onClick={() => openDetailModal(item)}
                           >
-                            Details
+                            {t('plugins.browser.details')}
                           </button>
                         </div>
                       </div>
 
                       <div className="plugin-browser__result-description">
-                        {item.description || 'No description provided.'}
+                        {item.description || t('plugins.browser.noDescription')}
                       </div>
 
                       <div className="plugin-browser__result-meta">
@@ -1473,7 +1492,9 @@ export default function PluginBrowser({ server }: Props) {
                       </div>
 
                       {requiresBrowser && (
-                        <div className="plugin-browser__result-tag">External download required</div>
+                        <div className="plugin-browser__result-tag">
+                          {t('plugins.browser.externalDownload')}
+                        </div>
                       )}
                     </div>
                   </motion.div>
@@ -1487,7 +1508,7 @@ export default function PluginBrowser({ server }: Props) {
                   animate={{ opacity: 1, y: 0 }}
                   className="plugin-browser__result-empty"
                 >
-                  結果がありません。
+                  {t('plugins.browser.noResults')}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1501,12 +1522,13 @@ export default function PluginBrowser({ server }: Props) {
               disabled={page === 0 || loading}
             >
               <ArrowLeft size={14} />
-              <span>Prev</span>
+              <span>{t('plugins.browser.prev')}</span>
             </button>
 
             <span className="plugin-browser__pager-label">
-              Page {page + 1}
-              {totalPages ? ` / ${totalPages}` : ''}
+              {totalPages
+                ? t('plugins.browser.pageLabelWithTotal', { current: page + 1, total: totalPages })
+                : t('plugins.browser.pageLabel', { current: page + 1 })}
             </span>
 
             <div className="plugin-browser__pager-jump">
@@ -1530,7 +1552,7 @@ export default function PluginBrowser({ server }: Props) {
                 onClick={jumpToPage}
                 disabled={loading}
               >
-                Go
+                {t('plugins.browser.go')}
               </button>
             </div>
 
@@ -1540,7 +1562,7 @@ export default function PluginBrowser({ server }: Props) {
               onClick={() => setPage((value) => value + 1)}
               disabled={!hasNextPage || loading}
             >
-              <span>Next</span>
+              <span>{t('plugins.browser.next')}</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -1584,47 +1606,61 @@ export default function PluginBrowser({ server }: Props) {
                 className={`plugin-browser__detail-tab ${detailTab === 'info' ? 'is-active' : ''}`}
                 onClick={() => setDetailTab('info')}
               >
-                Info
+                {t('plugins.browser.detailInfo')}
               </button>
               <button
                 type="button"
                 className={`plugin-browser__detail-tab ${detailTab === 'readme' ? 'is-active' : ''}`}
                 onClick={() => setDetailTab('readme')}
               >
-                README
+                {t('plugins.browser.detailReadme')}
               </button>
             </div>
 
             {detailTab === 'info' ? (
               <div className="plugin-browser__detail-info-panel">
                 <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">Project</span>
+                  <span className="plugin-browser__detail-key">
+                    {t('plugins.browser.detailProject')}
+                  </span>
                   <span className="plugin-browser__detail-value">{detailItem.id}</span>
                 </div>
                 <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">Slug</span>
-                  <span className="plugin-browser__detail-value">{detailItem.slug || 'N/A'}</span>
+                  <span className="plugin-browser__detail-key">
+                    {t('plugins.browser.detailSlug')}
+                  </span>
+                  <span className="plugin-browser__detail-value">
+                    {detailItem.slug || t('plugins.browser.na')}
+                  </span>
                 </div>
                 <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">Supported MC</span>
+                  <span className="plugin-browser__detail-key">
+                    {t('plugins.browser.detailSupportedMC')}
+                  </span>
                   <span className="plugin-browser__detail-value">
                     {supportedVersionsLabel(detailItem.id)}
                   </span>
                 </div>
                 <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">Loader</span>
+                  <span className="plugin-browser__detail-key">
+                    {t('plugins.browser.detailLoader')}
+                  </span>
                   <span className="plugin-browser__detail-value">{loaderLabel(detailItem)}</span>
                 </div>
                 <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">Downloads</span>
+                  <span className="plugin-browser__detail-key">
+                    {t('plugins.browser.detailDownloads')}
+                  </span>
                   <span className="plugin-browser__detail-value">
                     {detailItem.downloads ? detailItem.downloads.toLocaleString() : '-'}
                   </span>
                 </div>
                 <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">Summary</span>
+                  <span className="plugin-browser__detail-key">
+                    {t('plugins.browser.detailSummary')}
+                  </span>
                   <span className="plugin-browser__detail-value">
-                    {detailItem.description || 'No description provided.'}
+                    {detailItem.description || t('plugins.browser.noDescription')}
                   </span>
                 </div>
                 <div className="plugin-browser__detail-actions">
@@ -1634,7 +1670,7 @@ export default function PluginBrowser({ server }: Props) {
                     onClick={() => void openExternal(detailProjectUrl)}
                   >
                     <ExternalLink size={14} />
-                    <span>Project Page</span>
+                    <span>{t('plugins.browser.detailProjectPage')}</span>
                   </button>
                 </div>
               </div>
@@ -1643,7 +1679,7 @@ export default function PluginBrowser({ server }: Props) {
                 {detailLoading ? (
                   <div className="plugin-browser__detail-readme-empty">
                     <Loader2 size={15} className="animate-spin" />
-                    <span>READMEを取得中です...</span>
+                    <span>{t('plugins.browser.readmeLoading')}</span>
                   </div>
                 ) : detailError ? (
                   <div className="plugin-browser__detail-readme-empty is-error">{detailError}</div>
@@ -1658,7 +1694,7 @@ export default function PluginBrowser({ server }: Props) {
                   </div>
                 ) : (
                   <div className="plugin-browser__detail-readme-empty">
-                    このプロジェクトにはREADME本文が公開されていません。
+                    {t('plugins.browser.noReadme')}
                   </div>
                 )}
               </div>
@@ -1670,16 +1706,21 @@ export default function PluginBrowser({ server }: Props) {
       {dupDialog && (
         <div className="plugin-browser__dup-overlay modal-backdrop">
           <div className="plugin-browser__dup-panel modal-panel">
-            <h3 className="plugin-browser__dup-title">既にインストール済みです</h3>
+            <h3 className="plugin-browser__dup-title">{t('plugins.browser.dupTitle')}</h3>
             <p className="plugin-browser__dup-description">
-              {dupDialog.item.title} は既に {folderName} フォルダに存在します。どうしますか？
+              {t('plugins.browser.dupDescription', {
+                title: dupDialog.item.title,
+                folder: folderName,
+              })}
             </p>
 
-            <div className="plugin-browser__dup-file">既存ファイル: {dupDialog.installedFile}</div>
+            <div className="plugin-browser__dup-file">
+              {t('plugins.browser.dupExistingFile', { file: dupDialog.installedFile })}
+            </div>
 
             <div className="plugin-browser__dup-notes">
-              <div>・上書き: そのまま置き換えます。</div>
-              <div>・アップデート: サーバーバージョンに合う最新ビルドを入れ直します。</div>
+              <div>{t('plugins.browser.dupOverwriteNote')}</div>
+              <div>{t('plugins.browser.dupUpdateNote')}</div>
             </div>
 
             <div className="plugin-browser__dup-actions">
@@ -1688,7 +1729,7 @@ export default function PluginBrowser({ server }: Props) {
                 className="plugin-browser__dup-btn plugin-browser__dup-btn--cancel"
                 onClick={() => setDupDialog(null)}
               >
-                キャンセル
+                {t('plugins.browser.dupCancel')}
               </button>
 
               <button
@@ -1702,7 +1743,7 @@ export default function PluginBrowser({ server }: Props) {
                   }
                 }}
               >
-                上書き
+                {t('plugins.browser.dupOverwrite')}
               </button>
 
               <button
@@ -1716,7 +1757,7 @@ export default function PluginBrowser({ server }: Props) {
                   }
                 }}
               >
-                アップデート
+                {t('plugins.browser.dupUpdate')}
               </button>
             </div>
           </div>

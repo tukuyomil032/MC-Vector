@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
@@ -11,6 +12,7 @@ interface AddServerModalProps {
 }
 
 const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [profileName, setProfileName] = useState('');
   const [groupName, setGroupName] = useState('');
@@ -84,18 +86,18 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
   return (
     <div className="add-server-modal-backdrop modal-backdrop">
       <div className="add-server-modal-panel modal-panel">
-        <h3 className="add-server-modal__title">新しいサーバーを追加</h3>
+        <h3 className="add-server-modal__title">{t('addServer.title')}</h3>
 
         <form onSubmit={handleSubmit}>
           {templates.length > 0 && (
             <div className="add-server-modal__section">
-              <label className="add-server-modal__label">テンプレート</label>
+              <label className="add-server-modal__label">{t('addServer.template.label')}</label>
               <select
                 value={selectedTemplateId}
                 onChange={(event) => setSelectedTemplateId(event.target.value)}
                 className="add-server-modal__field"
               >
-                <option value="">テンプレートを選択しない</option>
+                <option value="">{t('addServer.template.none')}</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.name}
@@ -106,37 +108,39 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
           )}
 
           <div className="add-server-modal__section">
-            <label className="add-server-modal__label">サーバー名</label>
+            <label className="add-server-modal__label">{t('addServer.name.label')}</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例: Survival Server"
+              placeholder={t('addServer.name.placeholder')}
               className="add-server-modal__field add-server-modal__field--text"
             />
-            <div className="add-server-modal__path-preview">保存先: {previewPath}</div>
+            <div className="add-server-modal__path-preview">
+              {t('addServer.savePath')} {previewPath}
+            </div>
           </div>
 
           <div className="add-server-modal__row">
             <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">プロファイル名</label>
+              <label className="add-server-modal__label">{t('addServer.profileName.label')}</label>
               <input
                 type="text"
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
-                placeholder="例: Survival / Creative"
+                placeholder={t('addServer.profileName.placeholder')}
                 className="add-server-modal__field"
               />
             </div>
 
             <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">グループ名</label>
+              <label className="add-server-modal__label">{t('addServer.groupName.label')}</label>
               <input
                 type="text"
                 value={groupName}
                 onChange={(event) => setGroupName(event.target.value)}
-                placeholder="例: Production"
+                placeholder={t('addServer.groupName.placeholder')}
                 className="add-server-modal__field"
               />
             </div>
@@ -144,32 +148,32 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
 
           <div className="add-server-modal__row">
             <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">ソフトウェア</label>
+              <label className="add-server-modal__label">{t('addServer.software.label')}</label>
               <select
                 value={software}
                 onChange={(e) => setSoftware(e.target.value)}
                 className="add-server-modal__field"
               >
-                <optgroup label="Standard">
-                  <option value="Vanilla">Vanilla (公式)</option>
-                  <option value="Paper">Paper (推奨)</option>
-                  <option value="LeafMC">LeafMC (Paper Fork)</option>
-                  <option value="Spigot">Spigot</option>
+                <optgroup label={t('addServer.software.groups.standard')}>
+                  <option value="Vanilla">{t('addServer.software.options.vanilla')}</option>
+                  <option value="Paper">{t('addServer.software.options.paper')}</option>
+                  <option value="LeafMC">{t('addServer.software.options.leafmc')}</option>
+                  <option value="Spigot">{t('addServer.software.options.spigot')}</option>
                 </optgroup>
-                <optgroup label="Modded">
-                  <option value="Fabric">Fabric</option>
-                  <option value="Forge">Forge</option>
+                <optgroup label={t('addServer.software.groups.modded')}>
+                  <option value="Fabric">{t('addServer.software.options.fabric')}</option>
+                  <option value="Forge">{t('addServer.software.options.forge')}</option>
                 </optgroup>
-                <optgroup label="Proxy">
-                  <option value="Velocity">Velocity</option>
-                  <option value="Waterfall">Waterfall</option>
-                  <option value="BungeeCord">BungeeCord</option>
+                <optgroup label={t('addServer.software.groups.proxy')}>
+                  <option value="Velocity">{t('addServer.software.options.velocity')}</option>
+                  <option value="Waterfall">{t('addServer.software.options.waterfall')}</option>
+                  <option value="BungeeCord">{t('addServer.software.options.bungeecord')}</option>
                 </optgroup>
               </select>
             </div>
 
             <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">バージョン</label>
+              <label className="add-server-modal__label">{t('addServer.version.label')}</label>
               <select
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
@@ -186,7 +190,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
 
           <div className="add-server-modal__row add-server-modal__row--spaced">
             <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">ポート</label>
+              <label className="add-server-modal__label">{t('addServer.port.label')}</label>
               <input
                 type="number"
                 required
@@ -196,7 +200,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
               />
             </div>
             <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">メモリ(GB)</label>
+              <label className="add-server-modal__label">{t('addServer.memory.label')}</label>
               <input
                 type="number"
                 required
@@ -209,10 +213,10 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
 
           <div className="add-server-modal__footer">
             <button type="button" onClick={onClose} className="add-server-modal__cancel-btn">
-              キャンセル
+              {t('common.cancel')}
             </button>
             <button type="submit" className="add-server-modal__submit-btn">
-              作成
+              {t('common.create')}
             </button>
           </div>
         </form>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../../i18n';
 import { readFileContent, saveFileContent } from '../../../lib/file-commands';
 import { type MinecraftServer } from '../../shared/server declaration';
 import { useToast } from '../ToastProvider';
@@ -12,6 +13,7 @@ type PropertyValue = string | number | boolean;
 type ServerProperties = Record<string, PropertyValue>;
 
 export default function PropertiesView({ server }: Props) {
+  const { t } = useTranslation();
   const [props, setProps] = useState<ServerProperties>({
     'server-port': server.port || 25565,
     'max-players': 20,
@@ -93,10 +95,10 @@ export default function PropertiesView({ server }: Props) {
     try {
       await saveFileContent(propFilePath, content);
       setHasChanges(false);
-      showToast('設定を保存しました', 'success');
+      showToast(t('properties.saveSuccess'), 'success');
     } catch (e) {
       console.error(e);
-      showToast('保存に失敗しました', 'error');
+      showToast(t('properties.saveFailed'), 'error');
     }
   };
 
@@ -123,15 +125,15 @@ export default function PropertiesView({ server }: Props) {
       setProps((prev) => ({ ...prev, ...newProps }));
       setShowAdvanced(false);
       setHasChanges(false);
-      showToast('詳細設定を保存しました', 'success');
+      showToast(t('properties.advancedSaveSuccess'), 'success');
     } catch (e) {
       console.error(e);
-      showToast('保存に失敗しました', 'error');
+      showToast(t('properties.saveFailed'), 'error');
     }
   };
 
   if (loading) {
-    return <div className="properties-view__loading">Loading properties...</div>;
+    return <div className="properties-view__loading">{t('properties.loading')}</div>;
   }
 
   if (showAdvanced) {
@@ -148,10 +150,10 @@ export default function PropertiesView({ server }: Props) {
     <div className="properties-view">
       <div className="properties-view__container">
         <div className="properties-view__header">
-          <h3>サーバー設定 (server.properties)</h3>
+          <h3>{t('properties.title')}</h3>
           <div className="properties-view__actions">
             <button className="btn-secondary" onClick={openAdvancedWindow}>
-              🛠️ 詳細設定を開く (別窓)
+              {t('properties.openAdvanced')}
             </button>
 
             <button
@@ -159,19 +161,19 @@ export default function PropertiesView({ server }: Props) {
               onClick={handleSave}
               disabled={!hasChanges}
             >
-              変更を保存
+              {t('properties.saveChanges')}
             </button>
           </div>
         </div>
 
         <div className="properties-view__section">
-          <div className="properties-view__section-title">基本設定</div>
+          <div className="properties-view__section-title">{t('properties.sections.basic')}</div>
 
           <div className="properties-view__row">
             <div className="properties-view__row-info">
-              <span>MOTD</span>
+              <span>{t('properties.motd.label')}</span>
               <span className="properties-view__row-description">
-                サーバーリストに表示される説明文
+                {t('properties.motd.description')}
               </span>
             </div>
             <input
@@ -184,65 +186,65 @@ export default function PropertiesView({ server }: Props) {
 
           <div className="properties-view__row">
             <div className="properties-view__row-info">
-              <span>ゲームモード</span>
+              <span>{t('properties.gameMode.label')}</span>
             </div>
             <select
               className="input-field"
               value={props['gamemode'] as string}
               onChange={(e) => handleChange('gamemode', e.target.value)}
             >
-              <option value="survival">サバイバル</option>
-              <option value="creative">クリエイティブ</option>
-              <option value="adventure">アドベンチャー</option>
-              <option value="spectator">スペクテイター</option>
+              <option value="survival">{t('properties.gameMode.options.survival')}</option>
+              <option value="creative">{t('properties.gameMode.options.creative')}</option>
+              <option value="adventure">{t('properties.gameMode.options.adventure')}</option>
+              <option value="spectator">{t('properties.gameMode.options.spectator')}</option>
             </select>
           </div>
 
           <div className="properties-view__row">
             <div className="properties-view__row-info">
-              <span>難易度</span>
+              <span>{t('properties.difficulty.label')}</span>
             </div>
             <select
               className="input-field"
               value={props['difficulty'] as string}
               onChange={(e) => handleChange('difficulty', e.target.value)}
             >
-              <option value="peaceful">ピースフル</option>
-              <option value="easy">イージー</option>
-              <option value="normal">ノーマル</option>
-              <option value="hard">ハード</option>
+              <option value="peaceful">{t('properties.difficulty.options.peaceful')}</option>
+              <option value="easy">{t('properties.difficulty.options.easy')}</option>
+              <option value="normal">{t('properties.difficulty.options.normal')}</option>
+              <option value="hard">{t('properties.difficulty.options.hard')}</option>
             </select>
           </div>
         </div>
 
         <div className="properties-view__section">
-          <div className="properties-view__section-title">ゲームプレイ</div>
+          <div className="properties-view__section-title">{t('properties.sections.gameplay')}</div>
           <ToggleItem
-            label="PvP"
-            desc="プレイヤー同士の攻撃を許可"
+            label={t('properties.toggles.pvp.label')}
+            desc={t('properties.toggles.pvp.description')}
             checked={Boolean(props['pvp'])}
             onChange={(v) => handleChange('pvp', v)}
           />
           <ToggleItem
-            label="飛行を許可"
-            desc="サバイバルでの飛行(allow-flight)"
+            label={t('properties.toggles.allowFlight.label')}
+            desc={t('properties.toggles.allowFlight.description')}
             checked={Boolean(props['allow-flight'])}
             onChange={(v) => handleChange('allow-flight', v)}
           />
           <ToggleItem
-            label="コマンドブロック"
-            desc="コマンドブロックの使用許可"
+            label={t('properties.toggles.commandBlock.label')}
+            desc={t('properties.toggles.commandBlock.description')}
             checked={Boolean(props['enable-command-block'])}
             onChange={(v) => handleChange('enable-command-block', v)}
           />
         </div>
 
         <div className="properties-view__section">
-          <div className="properties-view__section-title">接続・ネットワーク</div>
+          <div className="properties-view__section-title">{t('properties.sections.network')}</div>
 
           <div className="properties-view__row">
             <div className="properties-view__row-info">
-              <span>最大プレイヤー数</span>
+              <span>{t('properties.maxPlayers')}</span>
             </div>
             <input
               type="number"
@@ -254,7 +256,7 @@ export default function PropertiesView({ server }: Props) {
 
           <div className="properties-view__row">
             <div className="properties-view__row-info">
-              <span>サーバーポート</span>
+              <span>{t('properties.serverPort')}</span>
             </div>
             <input
               type="number"
@@ -265,15 +267,15 @@ export default function PropertiesView({ server }: Props) {
           </div>
 
           <ToggleItem
-            label="オンラインモード"
-            desc="正規アカウント認証 (OFFでオフライン許可)"
+            label={t('properties.toggles.onlineMode.label')}
+            desc={t('properties.toggles.onlineMode.description')}
             checked={Boolean(props['online-mode'])}
             onChange={(v) => handleChange('online-mode', v)}
           />
 
           <ToggleItem
-            label="ホワイトリスト"
-            desc="許可されたプレイヤーのみ参加可能"
+            label={t('properties.toggles.whitelist.label')}
+            desc={t('properties.toggles.whitelist.description')}
             checked={Boolean(props['white-list'])}
             onChange={(v) => handleChange('white-list', v)}
           />

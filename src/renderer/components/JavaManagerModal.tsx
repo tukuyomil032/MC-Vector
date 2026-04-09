@@ -1,5 +1,6 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../i18n';
 import {
   deleteJava,
   downloadJava,
@@ -21,6 +22,7 @@ export default function JavaManagerModal({ onClose }: Props) {
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const availableVersions = [8, 17, 21];
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadInstalled();
@@ -50,12 +52,12 @@ export default function JavaManagerModal({ onClose }: Props) {
       const ok = await downloadJava(ver);
       await loadInstalled();
       if (ok) {
-        showToast(`Java ${ver} をダウンロードしました`, 'success');
+        showToast(t('javaManager.toast.downloadSuccess', { version: ver }), 'success');
       } else {
-        showToast('Javaのダウンロードに失敗しました', 'error');
+        showToast(t('javaManager.toast.downloadFailed'), 'error');
       }
     } catch {
-      showToast('Javaのダウンロードに失敗しました', 'error');
+      showToast(t('javaManager.toast.downloadFailed'), 'error');
     } finally {
       setDownloading(null);
       setDownloadProgress(null);
@@ -64,25 +66,30 @@ export default function JavaManagerModal({ onClose }: Props) {
   };
 
   const handleDelete = async (ver: number) => {
-    const confirmed = await ask(`Uninstall Java ${ver}?`, { title: 'Java削除', kind: 'warning' });
+    const confirmed = await ask(t('javaManager.confirm.uninstall', { version: ver }), {
+      title: t('javaManager.confirm.deleteTitle'),
+      kind: 'warning',
+    });
     if (!confirmed) return;
     await deleteJava(ver);
     loadInstalled();
-    showToast(`Java ${ver} removed`, 'info');
+    showToast(t('javaManager.toast.removed', { version: ver }), 'info');
   };
 
   return (
     <div className="java-manager-modal-overlay modal-backdrop" onClick={onClose}>
       <div className="java-manager-modal-panel modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="java-manager-modal__header">
-          <h2 className="m-0">Java Runtime Manager</h2>
+          <h2 className="m-0">{t('javaManager.title')}</h2>
           <button onClick={onClose} className="java-manager-modal__close-button">
             ×
           </button>
         </div>
 
         <div className="java-manager-modal__available-section">
-          <h3 className="java-manager-modal__section-title">Available Versions (Adoptium)</h3>
+          <h3 className="java-manager-modal__section-title">
+            {t('javaManager.availableVersions')}
+          </h3>
           <div className="java-manager-modal__version-grid">
             {availableVersions.map((v) => {
               const isInstalled = installed.some((i) => i.version === v);
@@ -90,14 +97,16 @@ export default function JavaManagerModal({ onClose }: Props) {
                 <div key={v} className="java-manager-modal__version-card">
                   <div className="java-manager-modal__version-title">Java {v}</div>
                   {isInstalled ? (
-                    <div className="text-success font-bold">Installed</div>
+                    <div className="text-success font-bold">{t('javaManager.installed')}</div>
                   ) : (
                     <button
                       className="btn-primary java-manager-modal__download-btn disabled:opacity-50"
                       onClick={() => handleDownload(v)}
                       disabled={downloading !== null}
                     >
-                      {downloading === v ? `Downloading... ${downloadProgress ?? ''}` : 'Download'}
+                      {downloading === v
+                        ? t('javaManager.downloading', { progress: downloadProgress ?? '' })
+                        : t('javaManager.download')}
                     </button>
                   )}
                 </div>
@@ -106,7 +115,7 @@ export default function JavaManagerModal({ onClose }: Props) {
           </div>
           {downloading !== null && (
             <div className="java-manager-modal__download-status">
-              {downloadStatus || 'Downloading...'}
+              {downloadStatus || t('javaManager.downloadingStatus')}
             </div>
           )}
         </div>
@@ -114,10 +123,10 @@ export default function JavaManagerModal({ onClose }: Props) {
         <div className="java-manager-modal__manual-section">
           <div className="java-manager-modal__manual-copy">
             <h3 className="java-manager-modal__section-title java-manager-modal__section-title--compact">
-              手動でJavaを指定
+              {t('javaManager.manualSelect.title')}
             </h3>
             <p className="java-manager-modal__manual-note">
-              環境変数にパスを通す場合や、既存のJavaを利用したいときに選択できます。
+              {t('javaManager.manualSelect.description')}
             </p>
           </div>
           <button
@@ -127,23 +136,25 @@ export default function JavaManagerModal({ onClose }: Props) {
               if (picked) {
                 try {
                   await navigator.clipboard.writeText(picked);
-                  showToast('パスをクリップボードにコピーしました', 'success');
+                  showToast(t('javaManager.toast.pathCopied'), 'success');
                 } catch {
-                  showToast('パス: ' + picked, 'info');
+                  showToast(t('javaManager.toast.pathInfo', { path: picked }), 'info');
                 }
               } else {
-                showToast('選択がキャンセルされました', 'info');
+                showToast(t('javaManager.toast.selectionCancelled'), 'info');
               }
             }}
           >
-            既存のJavaを選択
+            {t('javaManager.manualSelect.button')}
           </button>
         </div>
 
         <div className="java-manager-modal__installed-section">
-          <h3 className="java-manager-modal__section-title">Installed Runtimes</h3>
+          <h3 className="java-manager-modal__section-title">
+            {t('javaManager.installedRuntimes')}
+          </h3>
           {installed.length === 0 ? (
-            <div className="java-manager-modal__empty">No runtimes managed by MC-Vector.</div>
+            <div className="java-manager-modal__empty">{t('javaManager.noRuntimes')}</div>
           ) : (
             <div className="java-manager-modal__runtime-list">
               {installed.map((java) => (
@@ -156,7 +167,7 @@ export default function JavaManagerModal({ onClose }: Props) {
                     className="btn-stop java-manager-modal__delete-btn"
                     onClick={() => handleDelete(java.version)}
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               ))}

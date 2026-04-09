@@ -1,6 +1,7 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '../../i18n';
 import {
   createBackup,
   deleteBackup,
@@ -135,6 +136,7 @@ function parseTagsInput(value: string): string[] {
 }
 
 export default function BackupsView({ server }: Props) {
+  const { t } = useTranslation();
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -172,7 +174,7 @@ export default function BackupsView({ server }: Props) {
       }
 
       setSelectedPaths(new Set(payload.paths));
-      showToast(`バックアップ対象を ${payload.paths.length} 件更新しました`, 'success');
+      showToast(t('backups.toast.targetUpdated', { count: payload.paths.length }), 'success');
     }).then((dispose) => {
       unlisten = dispose;
     });
@@ -316,11 +318,11 @@ export default function BackupsView({ server }: Props) {
 
       selectorWindow.once('tauri://error', (error) => {
         console.error(error);
-        showToast('バックアップ選択ウィンドウを開けませんでした', 'error');
+        showToast(t('backups.toast.selectorOpenError'), 'error');
       });
     } catch (error) {
       console.error(error);
-      showToast('バックアップ選択ウィンドウを開けませんでした', 'error');
+      showToast(t('backups.toast.selectorOpenError'), 'error');
     }
   };
 
@@ -422,7 +424,7 @@ export default function BackupsView({ server }: Props) {
     }
 
     if (selectedPaths.size === 0) {
-      showToast('バックアップ対象を1つ以上選択してください', 'info');
+      showToast(t('backups.toast.selectAtLeastOne'), 'info');
       return;
     }
 
@@ -450,7 +452,7 @@ export default function BackupsView({ server }: Props) {
           .sort((a, b) => a.localeCompare(b));
 
         if (changed.length === 0) {
-          showToast('前回バックアップから差分がないためスキップしました', 'info');
+          showToast(t('backups.toast.noDiffSkipped'), 'info');
           return;
         }
 
@@ -480,8 +482,8 @@ export default function BackupsView({ server }: Props) {
 
       showToast(
         backupMode === 'differential'
-          ? `差分バックアップを作成しました (${sourcesForBackup.length} 件)`
-          : 'バックアップを作成しました！',
+          ? t('backups.toast.diffCreated', { count: sourcesForBackup.length })
+          : t('backups.toast.created'),
         'success',
       );
 
@@ -496,7 +498,7 @@ export default function BackupsView({ server }: Props) {
     setProcessing(true);
     try {
       await restoreBackup(server.path, backupName);
-      showToast('復元が完了しました！', 'success');
+      showToast(t('backups.toast.restored'), 'success');
     } finally {
       setProcessing(false);
     }
@@ -553,25 +555,22 @@ export default function BackupsView({ server }: Props) {
     await persistBackupCatalog(nextCatalog);
     setBackupCatalog(nextCatalog);
     setTagEditorTarget(null);
-    showToast('バックアップタグを保存しました', 'success');
+    showToast(t('backups.toast.tagSaved'), 'success');
   };
 
   const handleDeleteWorld = async (worldName: string) => {
-    const confirmed = await ask(`ワールド「${worldName}」を削除しますか？`, {
-      title: 'ワールド削除',
+    const confirmed = await ask(t('backups.world.confirmDelete', { name: worldName }), {
+      title: t('backups.world.deleteTitle'),
       kind: 'warning',
     });
     if (!confirmed) {
       return;
     }
 
-    const finalConfirm = await ask(
-      'この操作は取り消せません。バックアップがあることを確認しましたか？',
-      {
-        title: '最終確認',
-        kind: 'warning',
-      },
-    );
+    const finalConfirm = await ask(t('backups.world.finalConfirm'), {
+      title: t('backups.world.finalConfirmTitle'),
+      kind: 'warning',
+    });
     if (!finalConfirm) {
       return;
     }
@@ -579,11 +578,11 @@ export default function BackupsView({ server }: Props) {
     setProcessing(true);
     try {
       await deleteItem(`${server.path}/${worldName}`);
-      showToast(`ワールド ${worldName} を削除しました`, 'success');
+      showToast(t('backups.world.deleted', { name: worldName }), 'success');
       await loadWorlds();
     } catch (error) {
       console.error(error);
-      showToast('ワールド削除に失敗しました', 'error');
+      showToast(t('backups.world.deleteFailed'), 'error');
     } finally {
       setProcessing(false);
     }
@@ -606,21 +605,21 @@ export default function BackupsView({ server }: Props) {
   return (
     <div className="backups-view">
       <div className="backups-view__header">
-        <h3>バックアップ管理</h3>
+        <h3>{t('backups.title')}</h3>
         <button
           className="btn-primary disabled:opacity-70"
           onClick={openCreateModal}
           disabled={processing}
         >
-          {processing ? '処理中...' : '+ バックアップ作成'}
+          {processing ? t('backups.processing') : t('backups.createButton')}
         </button>
       </div>
 
       <div className="backups-view__list-panel">
-        {loading && <div className="p-5 text-center">読み込み中...</div>}
+        {loading && <div className="p-5 text-center">{t('common.loading')}</div>}
 
         {!loading && backups.length === 0 && (
-          <div className="backups-view__empty">バックアップはまだありません</div>
+          <div className="backups-view__empty">{t('backups.empty')}</div>
         )}
 
         {!loading &&
@@ -637,12 +636,14 @@ export default function BackupsView({ server }: Props) {
                       getBackupMeta(backup.name).mode === 'differential' ? 'is-diff' : ''
                     }`}
                   >
-                    {getBackupMeta(backup.name).mode === 'differential' ? '差分' : 'フル'}
+                    {getBackupMeta(backup.name).mode === 'differential'
+                      ? t('backups.mode.differential')
+                      : t('backups.mode.full')}
                   </span>
 
                   {getBackupMeta(backup.name).parent && (
                     <span className="backups-view__parent-label">
-                      親: {getBackupMeta(backup.name).parent}
+                      {t('backups.parent')}: {getBackupMeta(backup.name).parent}
                     </span>
                   )}
 
@@ -670,21 +671,21 @@ export default function BackupsView({ server }: Props) {
                   onClick={() => handleRestore(backup.name)}
                   disabled={processing}
                 >
-                  復元
+                  {t('backups.actions.restore')}
                 </button>
                 <button
                   className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-70"
                   onClick={() => openTagEditor(backup.name)}
                   disabled={processing}
                 >
-                  タグ
+                  {t('backups.actions.tag')}
                 </button>
                 <button
                   className="btn-stop text-sm px-3 py-1.5 disabled:opacity-70"
                   onClick={() => handleDelete(backup.name)}
                   disabled={processing}
                 >
-                  削除
+                  {t('common.delete')}
                 </button>
               </div>
             </div>
@@ -693,12 +694,12 @@ export default function BackupsView({ server }: Props) {
 
       <div className="backups-view__world-panel">
         <div className="backups-view__world-header">
-          <h4 className="backups-view__world-title">ワールド管理</h4>
-          <span className="backups-view__world-help">レベルデータ検出済みワールド</span>
+          <h4 className="backups-view__world-title">{t('backups.world.title')}</h4>
+          <span className="backups-view__world-help">{t('backups.world.detected')}</span>
         </div>
 
         {worlds.length === 0 ? (
-          <div className="backups-view__world-empty">削除可能なワールドが見つかりません</div>
+          <div className="backups-view__world-empty">{t('backups.world.empty')}</div>
         ) : (
           worlds.map((worldName) => (
             <div key={worldName} className="backups-view__world-row">
@@ -709,7 +710,7 @@ export default function BackupsView({ server }: Props) {
                 onClick={() => void handleDeleteWorld(worldName)}
                 disabled={processing}
               >
-                ワールド削除
+                {t('backups.world.deleteButton')}
               </button>
             </div>
           ))
@@ -726,16 +727,16 @@ export default function BackupsView({ server }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="backups-view__create-header">
-              <div className="text-lg font-bold">バックアップを作成</div>
+              <div className="text-lg font-bold">{t('backups.modal.createTitle')}</div>
               <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>
-                閉じる
+                {t('common.close')}
               </button>
             </div>
 
             <div className="backups-view__create-body">
               <div className="backups-view__form-grid">
                 <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">ZIPファイル名（省略可）</label>
+                  <label className="backups-view__form-label">{t('backups.modal.fileName')}</label>
                   <input
                     className="input-field"
                     placeholder={defaultName()}
@@ -743,12 +744,14 @@ export default function BackupsView({ server }: Props) {
                     onChange={(e) => setCustomName(e.target.value)}
                   />
                   <div className="backups-view__form-help">
-                    未指定の場合は「{defaultName()}」が使われます
+                    {t('backups.modal.fileNameHelp', { default: defaultName() })}
                   </div>
                 </div>
 
                 <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">圧縮レベル (1-9)</label>
+                  <label className="backups-view__form-label">
+                    {t('backups.modal.compressionLevel')}
+                  </label>
                   <select
                     className="input-field w-[120px]"
                     value={compressionLevel}
@@ -760,49 +763,47 @@ export default function BackupsView({ server }: Props) {
                       </option>
                     ))}
                   </select>
-                  <div className="backups-view__form-help">1: 低圧縮 / 9: 高圧縮</div>
+                  <div className="backups-view__form-help">
+                    {t('backups.modal.compressionHelp')}
+                  </div>
                 </div>
 
                 <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">バックアップモード</label>
+                  <label className="backups-view__form-label">{t('backups.modal.modeLabel')}</label>
                   <select
                     className="input-field"
                     value={backupMode}
                     onChange={(event) => setBackupMode(event.target.value as BackupMode)}
                   >
-                    <option value="full">フルバックアップ</option>
-                    <option value="differential">差分バックアップ（前回との差分）</option>
+                    <option value="full">{t('backups.modal.modeFull')}</option>
+                    <option value="differential">{t('backups.modal.modeDiff')}</option>
                   </select>
-                  <div className="backups-view__form-help">
-                    差分モードは前回バックアップ以降に変更されたファイルのみを対象にします。
-                  </div>
+                  <div className="backups-view__form-help">{t('backups.modal.modeHelp')}</div>
                 </div>
               </div>
 
               <div className="backups-view__selection-header">
-                <div className="font-semibold">バックアップ対象を選択</div>
+                <div className="font-semibold">{t('backups.modal.selectTarget')}</div>
                 <div className="flex gap-2">
                   <button
                     className="btn-secondary text-sm"
                     onClick={() => void openSelectorWindow()}
                   >
-                    別ウィンドウで選択
+                    {t('backups.modal.openSelector')}
                   </button>
                   <button className="btn-secondary text-sm" onClick={clearAll}>
-                    全解除
+                    {t('backups.modal.clearAll')}
                   </button>
                 </div>
               </div>
 
               <div className="backups-view__tree-panel">
                 {selectedPaths.size === 0 ? (
-                  <div className="backups-view__tree-loading">
-                    対象が未選択です。別ウィンドウで選択してください。
-                  </div>
+                  <div className="backups-view__tree-loading">{t('backups.modal.noSelection')}</div>
                 ) : (
                   <div className="backups-view__selected-summary">
                     <div className="backups-view__selected-count">
-                      選択中: {selectedPaths.size} 件
+                      {t('backups.modal.selectedCount', { count: selectedPaths.size })}
                     </div>
                     <div className="backups-view__selected-list">
                       {Array.from(selectedPaths)
@@ -815,7 +816,7 @@ export default function BackupsView({ server }: Props) {
                         ))}
                       {selectedPaths.size > 14 && (
                         <div className="backups-view__selected-item">
-                          ...他 {selectedPaths.size - 14} 件
+                          {t('backups.modal.andMore', { count: selectedPaths.size - 14 })}
                         </div>
                       )}
                     </div>
@@ -829,14 +830,14 @@ export default function BackupsView({ server }: Props) {
                   onClick={() => setShowCreateModal(false)}
                   disabled={processing}
                 >
-                  キャンセル
+                  {t('common.cancel')}
                 </button>
                 <button
                   className="btn-primary"
                   onClick={handleCreateBackup}
                   disabled={processing || selectedPaths.size === 0}
                 >
-                  {processing ? '作成中...' : 'バックアップを作成'}
+                  {processing ? t('backups.modal.creating') : t('backups.modal.create')}
                 </button>
               </div>
             </div>
@@ -854,34 +855,36 @@ export default function BackupsView({ server }: Props) {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="backups-view__tag-header">
-              <h4 className="backups-view__tag-title">バックアップタグ編集</h4>
+              <h4 className="backups-view__tag-title">{t('backups.tagEditor.title')}</h4>
               <div className="backups-view__tag-target">{tagEditorTarget}</div>
             </div>
 
             <div className="backups-view__tag-body">
-              <label className="backups-view__form-label">タグ（カンマ区切り）</label>
+              <label className="backups-view__form-label">{t('backups.tagEditor.tagsLabel')}</label>
               <input
                 className="input-field"
                 value={tagInput}
                 onChange={(event) => setTagInput(event.target.value)}
-                placeholder="例: release, before-update"
+                placeholder={t('backups.tagEditor.tagsPlaceholder')}
               />
 
-              <label className="backups-view__form-label mt-3">メモ</label>
+              <label className="backups-view__form-label mt-3">
+                {t('backups.tagEditor.noteLabel')}
+              </label>
               <textarea
                 className="input-field backups-view__tag-note"
                 value={noteInput}
                 onChange={(event) => setNoteInput(event.target.value)}
-                placeholder="このバックアップの用途を記録"
+                placeholder={t('backups.tagEditor.notePlaceholder')}
               />
             </div>
 
             <div className="backups-view__tag-actions">
               <button className="btn-secondary" onClick={() => setTagEditorTarget(null)}>
-                キャンセル
+                {t('common.cancel')}
               </button>
               <button className="btn-primary" onClick={() => void handleSaveTagEditor()}>
-                保存
+                {t('common.save')}
               </button>
             </div>
           </div>
