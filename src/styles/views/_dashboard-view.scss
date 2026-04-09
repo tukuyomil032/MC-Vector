@@ -54,6 +54,14 @@
     @apply text-[1.45rem];
   }
 
+  .dashboard-view__kpi-card--cpu .kpi-tile__value {
+    color: var(--mv-dashboard-kpi-cpu-value-color);
+  }
+
+  .dashboard-view__kpi-card--memory .kpi-tile__value {
+    color: var(--mv-dashboard-kpi-memory-value-color);
+  }
+
   .dashboard-view__software-value {
     @apply break-words;
   }

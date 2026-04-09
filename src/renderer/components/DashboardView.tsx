@@ -300,18 +300,14 @@ export default function DashboardView({ server }: Props) {
           </div>
         </article>
 
-        <article className="dashboard-view__kpi-card kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--cpu kpi-tile">
           <div className="kpi-tile__label">{t('dashboard.stats.currentCpu')}</div>
-          <div className="kpi-tile__value" style={{ color: '#38bdf8' }}>
-            {currentCpu}%
-          </div>
+          <div className="kpi-tile__value">{currentCpu}%</div>
         </article>
 
-        <article className="dashboard-view__kpi-card kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--memory kpi-tile">
           <div className="kpi-tile__label">{t('dashboard.stats.currentMemory')}</div>
-          <div className="kpi-tile__value" style={{ color: '#34d399' }}>
-            {currentMem} MB
-          </div>
+          <div className="kpi-tile__value">{currentMem} MB</div>
         </article>
 
         <article className="dashboard-view__kpi-card dashboard-view__kpi-card--software kpi-tile">
