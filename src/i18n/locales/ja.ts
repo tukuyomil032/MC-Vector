@@ -97,6 +97,7 @@ export const ja: TranslationDictionary = {
       running: '稼働中',
       stopped: '停止中',
       selectOrCreate: 'サーバーを選択するか、作成してください',
+      ungrouped: '未分類',
     },
     actions: {
       start: '起動',
@@ -145,6 +146,34 @@ export const ja: TranslationDictionary = {
     },
   },
 
+  dashboard: {
+    title: 'ダッシュボード: {name}',
+    stats: {
+      status: 'ステータス',
+      software: 'ソフトウェア',
+      currentCpu: '現在のCPU',
+      currentMemory: '現在のメモリ',
+      currentTps: '現在のTPS',
+      tpsAutoSampled: 'Paper / LeafMC: 自動計測',
+      tpsLogBased: 'ログベース検出',
+      statusValues: {
+        online: '稼働中',
+        offline: '停止中',
+        starting: '起動中',
+        stopping: '停止中',
+        restarting: '再起動中',
+        crashed: 'クラッシュ',
+        unknown: '不明',
+      },
+    },
+    charts: {
+      cpuLast60s: 'CPU使用率（%） - 直近60秒',
+      memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
+      tpsLast60s: 'TPS - 直近60秒',
+      tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
+    },
+  },
+
   console: {
     actions: {
       find: '検索',
@@ -160,6 +189,7 @@ export const ja: TranslationDictionary = {
     },
     filter: {
       label: 'レベル',
+      ariaLabel: 'ログレベルフィルター',
     },
     historyHint: '↑ / ↓ 履歴',
     search: {
@@ -201,6 +231,7 @@ export const ja: TranslationDictionary = {
       saving: '保存中...',
     },
     emptyFolder: 'フォルダは空です',
+    loading: '読み込み中...',
     modal: {
       createImportTitle: '新規作成 / インポート',
       file: 'ファイル',
@@ -358,6 +389,7 @@ export const ja: TranslationDictionary = {
       playerName: 'プレイヤー名',
       ipAddress: 'IPアドレス',
     },
+    level: '権限レベル: {level}',
     toast: {
       alreadyExists: '既に存在します',
       listUpdated: 'リストを更新しました',
@@ -399,7 +431,10 @@ export const ja: TranslationDictionary = {
       pageLabel: 'ページ {{current}}',
       pageLabelWithTotal: 'ページ {{current}} / {{total}}',
       go: '移動',
+      pageNumberAriaLabel: 'ページ番号',
       details: '詳細',
+      closeDetailsAriaLabel: '詳細を閉じる',
+      byAuthor: '作成者',
       installing: 'インストール中...',
       update: 'アップデート',
       open: '開く',
@@ -521,6 +556,7 @@ export const ja: TranslationDictionary = {
     portHint: 'プレイヤーが最初に接続するポートです (デフォルト: 25577)',
     backendServers: 'バックエンドサーバー (接続先)',
     noBackendServers: '接続可能なサーバーがありません',
+    backendDetail: '{software} {version} (ポート: {port})',
     building: '実行中...',
     buildNetwork: 'ネットワーク構築を実行',
     viewHelp: '設定方法の詳細を見る',
@@ -537,6 +573,7 @@ export const ja: TranslationDictionary = {
     recommendedPort: '推奨ポート例',
     recommendedPortNote: '既存のサーバー用ポートと重複しない値を選んでください。',
     minConfig: '最小構成',
+    minConfigValue: 'Proxy + バックエンド x2',
     minConfigNote: '移動体験を作るなら2台以上の接続を推奨します。',
     checklistTitle: '開始前チェック',
     checklistItem1: '接続するバックエンドサーバーを2台以上作成済み',

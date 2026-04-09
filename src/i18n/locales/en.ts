@@ -97,6 +97,7 @@ export const en: TranslationDictionary = {
       running: 'Running',
       stopped: 'Stopped',
       selectOrCreate: 'Select a server or create one.',
+      ungrouped: 'Ungrouped',
     },
     actions: {
       start: 'Start',
@@ -146,6 +147,34 @@ export const en: TranslationDictionary = {
     },
   },
 
+  dashboard: {
+    title: 'Dashboard: {name}',
+    stats: {
+      status: 'Status',
+      software: 'Software',
+      currentCpu: 'Current CPU',
+      currentMemory: 'Current Memory',
+      currentTps: 'Current TPS',
+      tpsAutoSampled: 'Paper / LeafMC: auto sampled',
+      tpsLogBased: 'Log-based detection',
+      statusValues: {
+        online: 'ONLINE',
+        offline: 'OFFLINE',
+        starting: 'STARTING',
+        stopping: 'STOPPING',
+        restarting: 'RESTARTING',
+        crashed: 'CRASHED',
+        unknown: 'UNKNOWN',
+      },
+    },
+    charts: {
+      cpuLast60s: 'CPU Usage (%) - Last 60s',
+      memoryLast60s: 'Memory Usage (MB) - Last 60s',
+      tpsLast60s: 'TPS - Last 60s',
+      tpsNoData: 'TPS data is not available yet. Keep the server online and wait for log sampling.',
+    },
+  },
+
   console: {
     actions: {
       find: 'Find',
@@ -161,6 +190,7 @@ export const en: TranslationDictionary = {
     },
     filter: {
       label: 'Level',
+      ariaLabel: 'Log level filter',
     },
     historyHint: '↑ / ↓ History',
     search: {
@@ -202,6 +232,7 @@ export const en: TranslationDictionary = {
       saving: 'Saving...',
     },
     emptyFolder: 'Folder is empty',
+    loading: 'Loading...',
     modal: {
       createImportTitle: 'Create / Import',
       file: 'File',
@@ -360,6 +391,7 @@ export const en: TranslationDictionary = {
       playerName: 'Player Name',
       ipAddress: 'IP Address',
     },
+    level: 'Level: {level}',
     toast: {
       alreadyExists: 'Already exists',
       listUpdated: 'List updated',
@@ -401,7 +433,10 @@ export const en: TranslationDictionary = {
       pageLabel: 'Page {{current}}',
       pageLabelWithTotal: 'Page {{current}} / {{total}}',
       go: 'Go',
+      pageNumberAriaLabel: 'Page number',
       details: 'Details',
+      closeDetailsAriaLabel: 'Close details',
+      byAuthor: 'by',
       installing: 'Installing...',
       update: 'Update',
       open: 'Open',
@@ -524,6 +559,7 @@ export const en: TranslationDictionary = {
     portHint: 'The port players initially connect to (default: 25577)',
     backendServers: 'Backend Servers',
     noBackendServers: 'No available backend servers',
+    backendDetail: '{software} {version} (Port: {port})',
     building: 'Building...',
     buildNetwork: 'Build Network',
     viewHelp: 'View Setup Guide',
@@ -541,6 +577,7 @@ export const en: TranslationDictionary = {
     recommendedPort: 'Recommended Port',
     recommendedPortNote: 'Choose a port that does not conflict with existing server ports.',
     minConfig: 'Minimum Config',
+    minConfigValue: 'Proxy + Backend x2',
     minConfigNote: 'For a proper cross-server experience, connect 2+ backend servers.',
     checklistTitle: 'Pre-Setup Checklist',
     checklistItem1: 'You have created 2+ backend servers to connect',

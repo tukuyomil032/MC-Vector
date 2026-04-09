@@ -140,7 +140,7 @@ export default function FilesView({ server }: Props) {
 
   const renderBreadcrumbs = () => {
     if (!serversRootAbsPath) {
-      return <span className="font-mono">Loading...</span>;
+      return <span className="font-mono">{t('files.loading')}</span>;
     }
 
     const normalizedCurrent = currentPath.replace(/\\/g, '/');
@@ -161,7 +161,7 @@ export default function FilesView({ server }: Props) {
           className="files-view__breadcrumb-link"
           onClick={() => setCurrentPath(normalizedRoot)}
         >
-          servers
+          {t('nav.servers')}
         </span>
 
         {segments.map((seg, index) => {
@@ -505,7 +505,7 @@ export default function FilesView({ server }: Props) {
           onClick={handleOpenExplorer}
           title={t('files.toolbar.openExplorer')}
         >
-          <img src={iconOpenFolder} className="w-4" alt="Open" />
+          <img src={iconOpenFolder} className="w-4" alt="" />
         </button>
         {selectedFiles.length > 0 && (
           <>
@@ -515,28 +515,28 @@ export default function FilesView({ server }: Props) {
               onClick={() => openMoveModal(false)}
               title={t('files.toolbar.move')}
             >
-              <img src={iconMove} className="w-4" alt="Move" />
+              <img src={iconMove} className="w-4" alt="" />
             </button>
             <button
               className="files-view__toolbar-btn"
               onClick={handleZip}
               title={t('files.toolbar.compress')}
             >
-              <img src={iconZip} className="w-4" alt="Zip" />
+              <img src={iconZip} className="w-4" alt="" />
             </button>
             <button
               className="files-view__toolbar-btn"
               onClick={handleUnzip}
               title={t('files.toolbar.extract')}
             >
-              <img src={iconUnzip} className="w-4" alt="Unzip" />
+              <img src={iconUnzip} className="w-4" alt="" />
             </button>
             <button
               className="files-view__toolbar-btn files-view__toolbar-btn--danger"
               onClick={handleDelete}
               title={t('files.toolbar.delete')}
             >
-              <img src={iconTrash} className="w-4" alt="Delete" />
+              <img src={iconTrash} className="w-4" alt="" />
             </button>
           </>
         )}
@@ -580,7 +580,7 @@ export default function FilesView({ server }: Props) {
               />
               <img
                 src={file.isDirectory ? iconFolder : iconFile}
-                alt={file.isDirectory ? 'Folder' : 'File'}
+                alt=""
                 className="w-5 h-5 object-contain mr-2.5"
               />
               <span
@@ -648,7 +648,7 @@ export default function FilesView({ server }: Props) {
                 className={`files-view__create-option ${createMode === 'folder' ? 'is-active' : ''}`}
                 onClick={() => setCreateMode('folder')}
               >
-                <img src={iconFiles} alt="Folder" className="w-8 h-8 object-contain" />
+                <img src={iconFiles} alt="" className="w-8 h-8 object-contain" />
                 <span
                   className={`files-view__create-option-label ${createMode === 'folder' ? 'is-active' : 'is-idle'}`}
                 >
@@ -660,7 +660,7 @@ export default function FilesView({ server }: Props) {
                 className={`files-view__create-option ${createMode === 'file' ? 'is-active' : ''}`}
                 onClick={() => setCreateMode('file')}
               >
-                <img src={iconFile} alt="File" className="w-8 h-8 object-contain" />
+                <img src={iconFile} alt="" className="w-8 h-8 object-contain" />
                 <span
                   className={`files-view__create-option-label ${createMode === 'file' ? 'is-active' : 'is-idle'}`}
                 >
@@ -672,7 +672,7 @@ export default function FilesView({ server }: Props) {
                 className="files-view__create-option files-view__create-option--import"
                 onClick={handleImport}
               >
-                <img src={iconImport} alt="Import" className="w-8 h-8 object-contain" />
+                <img src={iconImport} alt="" className="w-8 h-8 object-contain" />
                 <span className="files-view__create-option-label is-idle">
                   {t('files.modal.import')}
                 </span>

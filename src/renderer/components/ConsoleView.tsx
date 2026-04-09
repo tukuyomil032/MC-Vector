@@ -647,7 +647,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
         <div className="console-view__filter-wrap">
           <span className="console-view__filter-label">{t('console.filter.label')}</span>
-          <div className="console-view__filter-pills" role="tablist" aria-label="Log level filter">
+          <div
+            className="console-view__filter-pills"
+            role="tablist"
+            aria-label={t('console.filter.ariaLabel')}
+          >
             {LOG_FILTER_OPTIONS.map((level) => (
               <button
                 key={level}

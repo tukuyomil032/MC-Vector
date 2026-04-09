@@ -1544,7 +1544,7 @@ export default function PluginBrowser({ server }: Props) {
                   }
                 }}
                 className="plugin-browser__pager-input"
-                aria-label="page number"
+                aria-label={t('plugins.browser.pageNumberAriaLabel')}
               />
               <button
                 type="button"
@@ -1583,7 +1583,9 @@ export default function PluginBrowser({ server }: Props) {
                 <h3 className="plugin-browser__detail-title">{detailItem.title}</h3>
                 <div className="plugin-browser__detail-subtitle">
                   <span>{detailItem.platform}</span>
-                  <span>by {detailItem.author}</span>
+                  <span>
+                    {t('plugins.browser.byAuthor')} {detailItem.author}
+                  </span>
                   <span className={`plugin-browser__compat-badge is-${detailCompatibility}`}>
                     {compatibilityLabel(detailCompatibility)}
                   </span>
@@ -1594,7 +1596,7 @@ export default function PluginBrowser({ server }: Props) {
                 type="button"
                 className="plugin-browser__detail-close"
                 onClick={closeDetailModal}
-                aria-label="close details"
+                aria-label={t('plugins.browser.closeDetailsAriaLabel')}
               >
                 <X size={16} />
               </button>

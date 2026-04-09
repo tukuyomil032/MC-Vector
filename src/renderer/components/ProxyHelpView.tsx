@@ -35,7 +35,7 @@ const ProxyHelpView: FC = () => {
         </div>
         <div className="proxy-help-view__summary-card">
           <div className="proxy-help-view__summary-label">{t('proxyHelp.minConfig')}</div>
-          <div className="proxy-help-view__summary-value">Proxy + Backend x2</div>
+          <div className="proxy-help-view__summary-value">{t('proxyHelp.minConfigValue')}</div>
           <div className="proxy-help-view__summary-note">{t('proxyHelp.minConfigNote')}</div>
         </div>
       </div>

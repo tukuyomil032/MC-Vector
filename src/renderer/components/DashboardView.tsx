@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from '../../i18n';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
@@ -84,6 +85,7 @@ const extractTpsFromLogLine = (line: string): number | null => {
 };
 
 export default function DashboardView({ server }: Props) {
+  const { t } = useTranslation();
   const [resourceStats, setResourceStats] = useState<ResourcePoint[]>([]);
   const [tpsStats, setTpsStats] = useState<TpsPoint[]>([]);
   const [currentCpu, setCurrentCpu] = useState(0);
@@ -220,51 +222,72 @@ export default function DashboardView({ server }: Props) {
     return '#ef4444';
   };
 
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'online':
+        return t('dashboard.stats.statusValues.online');
+      case 'offline':
+        return t('dashboard.stats.statusValues.offline');
+      case 'starting':
+        return t('dashboard.stats.statusValues.starting');
+      case 'stopping':
+        return t('dashboard.stats.statusValues.stopping');
+      case 'restarting':
+        return t('dashboard.stats.statusValues.restarting');
+      case 'crashed':
+        return t('dashboard.stats.statusValues.crashed');
+      default:
+        return t('dashboard.stats.statusValues.unknown');
+    }
+  };
+
   return (
     <div className="dashboard-view">
-      <h2 className="dashboard-view__title">Dashboard: {server.name}</h2>
+      <h2 className="dashboard-view__title">{t('dashboard.title', { name: server.name })}</h2>
 
       <div className="dashboard-view__stats-grid">
         <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">Status</div>
+          <div className="dashboard-view__stat-label">{t('dashboard.stats.status')}</div>
           <div
             className="dashboard-view__stat-value"
             style={{ color: getStatusColor(server.status) }}
           >
-            {server.status.toUpperCase()}
+            {getStatusLabel(server.status)}
           </div>
         </div>
         <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">Software</div>
+          <div className="dashboard-view__stat-label">{t('dashboard.stats.software')}</div>
           <div className="dashboard-view__stat-value">{server.software}</div>
           <div className="dashboard-view__stat-sub">{server.version}</div>
         </div>
         <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">Current CPU</div>
+          <div className="dashboard-view__stat-label">{t('dashboard.stats.currentCpu')}</div>
           <div className="dashboard-view__stat-value" style={{ color: '#38bdf8' }}>
             {currentCpu}%
           </div>
         </div>
         <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">Current Memory</div>
+          <div className="dashboard-view__stat-label">{t('dashboard.stats.currentMemory')}</div>
           <div className="dashboard-view__stat-value" style={{ color: '#34d399' }}>
             {currentMem} MB
           </div>
         </div>
         <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">Current TPS</div>
+          <div className="dashboard-view__stat-label">{t('dashboard.stats.currentTps')}</div>
           <div className="dashboard-view__stat-value" style={{ color: getTpsColor(currentTps) }}>
             {currentTps === null ? '--' : currentTps.toFixed(2)}
           </div>
           <div className="dashboard-view__stat-sub">
-            {supportsTpsPolling ? 'Paper / LeafMC: auto sampled' : 'Log-based detection'}
+            {supportsTpsPolling
+              ? t('dashboard.stats.tpsAutoSampled')
+              : t('dashboard.stats.tpsLogBased')}
           </div>
         </div>
       </div>
 
       <div className="dashboard-view__chart-grid">
         <div className="dashboard-view__chart-card">
-          <h3 className="dashboard-view__chart-title">CPU Usage (%) - Last 60s</h3>
+          <h3 className="dashboard-view__chart-title">{t('dashboard.charts.cpuLast60s')}</h3>
           <div className="dashboard-view__chart-body">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={resourceStats}>
@@ -295,7 +318,7 @@ export default function DashboardView({ server }: Props) {
         </div>
 
         <div className="dashboard-view__chart-card">
-          <h3 className="dashboard-view__chart-title">Memory Usage (MB) - Last 60s</h3>
+          <h3 className="dashboard-view__chart-title">{t('dashboard.charts.memoryLast60s')}</h3>
           <div className="dashboard-view__chart-body">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={resourceStats}>
@@ -326,12 +349,10 @@ export default function DashboardView({ server }: Props) {
         </div>
 
         <div className="dashboard-view__chart-card">
-          <h3 className="dashboard-view__chart-title">TPS - Last 60s</h3>
+          <h3 className="dashboard-view__chart-title">{t('dashboard.charts.tpsLast60s')}</h3>
           <div className="dashboard-view__chart-body">
             {tpsStats.length === 0 ? (
-              <div className="dashboard-view__chart-empty">
-                TPS data is not available yet. Keep the server online and wait for log sampling.
-              </div>
+              <div className="dashboard-view__chart-empty">{t('dashboard.charts.tpsNoData')}</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={tpsStats}>

@@ -119,6 +119,7 @@ export interface TranslationDictionary {
       running: string;
       stopped: string;
       selectOrCreate: string;
+      ungrouped: string;
     };
     actions: {
       start: string;
@@ -167,6 +168,35 @@ export interface TranslationDictionary {
     };
   };
 
+  /** Dashboard view translations */
+  dashboard: {
+    title: string;
+    stats: {
+      status: string;
+      software: string;
+      currentCpu: string;
+      currentMemory: string;
+      currentTps: string;
+      tpsAutoSampled: string;
+      tpsLogBased: string;
+      statusValues: {
+        online: string;
+        offline: string;
+        starting: string;
+        stopping: string;
+        restarting: string;
+        crashed: string;
+        unknown: string;
+      };
+    };
+    charts: {
+      cpuLast60s: string;
+      memoryLast60s: string;
+      tpsLast60s: string;
+      tpsNoData: string;
+    };
+  };
+
   /** Console view translations */
   console: {
     actions: {
@@ -183,6 +213,7 @@ export interface TranslationDictionary {
     };
     filter: {
       label: string;
+      ariaLabel: string;
     };
     historyHint: string;
     search: {
@@ -225,6 +256,7 @@ export interface TranslationDictionary {
       saving: string;
     };
     emptyFolder: string;
+    loading: string;
     modal: {
       createImportTitle: string;
       file: string;
@@ -385,6 +417,7 @@ export interface TranslationDictionary {
       playerName: string;
       ipAddress: string;
     };
+    level: string;
     toast: {
       alreadyExists: string;
       listUpdated: string;
@@ -427,7 +460,10 @@ export interface TranslationDictionary {
       pageLabel: string;
       pageLabelWithTotal: string;
       go: string;
+      pageNumberAriaLabel: string;
       details: string;
+      closeDetailsAriaLabel: string;
+      byAuthor: string;
       installing: string;
       update: string;
       open: string;
@@ -545,6 +581,7 @@ export interface TranslationDictionary {
     portHint: string;
     backendServers: string;
     noBackendServers: string;
+    backendDetail: string;
     building: string;
     buildNetwork: string;
     viewHelp: string;
@@ -562,6 +599,7 @@ export interface TranslationDictionary {
     recommendedPort: string;
     recommendedPortNote: string;
     minConfig: string;
+    minConfigValue: string;
     minConfigNote: string;
     checklistTitle: string;
     checklistItem1: string;

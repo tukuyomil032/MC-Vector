@@ -82,6 +82,7 @@ type FabricLoader = Array<{ version: string }>;
 
 type NavItemProps = {
   label: string;
+  tooltip: string;
   view: AppView;
   current: AppView;
   set: (view: AppView) => void;
@@ -1346,7 +1347,7 @@ function App() {
   const groupedServers = useMemo(() => {
     const grouped = new Map<string, MinecraftServer[]>();
     for (const server of servers) {
-      const groupName = server.groupName?.trim() || 'Ungrouped';
+      const groupName = server.groupName?.trim() || t('server.list.ungrouped');
       const bucket = grouped.get(groupName) ?? [];
       bucket.push(server);
       grouped.set(groupName, bucket);
@@ -1358,7 +1359,49 @@ function App() {
         groupName,
         servers: [...entries].sort((left, right) => left.name.localeCompare(right.name)),
       }));
-  }, [servers]);
+  }, [servers, t]);
+
+  const getViewLabel = (view: AppView): string => {
+    switch (view) {
+      case 'dashboard':
+        return t('nav.dashboard');
+      case 'console':
+        return t('nav.console');
+      case 'users':
+        return t('nav.users');
+      case 'files':
+        return t('nav.files');
+      case 'plugins':
+        return t('nav.pluginsMods');
+      case 'backups':
+        return t('nav.backups');
+      case 'properties':
+        return t('nav.properties');
+      case 'general-settings':
+        return t('nav.generalSettings');
+      case 'proxy':
+        return t('nav.proxyNetwork');
+      case 'app-settings':
+        return t('settings.title');
+      case 'proxy-help':
+        return t('proxyHelp.title');
+      case 'ngrok-guide':
+        return t('ngrokGuide.title');
+      default:
+        return view;
+    }
+  };
+
+  const headerTitle =
+    currentView === 'proxy'
+      ? t('nav.proxyNetwork')
+      : currentView === 'app-settings'
+        ? t('settings.title')
+        : currentView === 'proxy-help'
+          ? t('proxyHelp.title')
+          : currentView === 'ngrok-guide'
+            ? t('ngrokGuide.title')
+            : activeServer?.name || t('nav.servers');
 
   const getReleaseNotesText = () => {
     const notes: unknown = updatePrompt?.releaseNotes;
@@ -1496,13 +1539,14 @@ function App() {
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="app-sidebar__menu-button"
           >
-            <img src={iconMenu} alt="Menu" className="app-sidebar__menu-icon" />
+            <img src={iconMenu} alt="" className="app-sidebar__menu-icon" />
           </button>
         </div>
 
         <div className="app-sidebar__nav" style={{ background: themeColors.sidebarPanelBg }}>
           <NavItem
             label={isSidebarOpen ? t('nav.dashboard') : ''}
+            tooltip={t('nav.dashboard')}
             view="dashboard"
             current={currentView}
             set={setCurrentView}
@@ -1510,6 +1554,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.console') : ''}
+            tooltip={t('nav.console')}
             view="console"
             current={currentView}
             set={setCurrentView}
@@ -1517,6 +1562,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.users') : ''}
+            tooltip={t('nav.users')}
             view="users"
             current={currentView}
             set={setCurrentView}
@@ -1524,6 +1570,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.files') : ''}
+            tooltip={t('nav.files')}
             view="files"
             current={currentView}
             set={setCurrentView}
@@ -1531,6 +1578,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.pluginsMods') : ''}
+            tooltip={t('nav.pluginsMods')}
             view="plugins"
             current={currentView}
             set={setCurrentView}
@@ -1538,6 +1586,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.backups') : ''}
+            tooltip={t('nav.backups')}
             view="backups"
             current={currentView}
             set={setCurrentView}
@@ -1545,6 +1594,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.properties') : ''}
+            tooltip={t('nav.properties')}
             view="properties"
             current={currentView}
             set={setCurrentView}
@@ -1552,6 +1602,7 @@ function App() {
           />
           <NavItem
             label={isSidebarOpen ? t('nav.generalSettings') : ''}
+            tooltip={t('nav.generalSettings')}
             view="general-settings"
             current={currentView}
             set={setCurrentView}
@@ -1562,6 +1613,7 @@ function App() {
 
           <NavItem
             label={isSidebarOpen ? t('nav.proxyNetwork') : ''}
+            tooltip={t('nav.proxyNetwork')}
             view="proxy"
             current={currentView}
             set={setCurrentView}
@@ -1628,11 +1680,11 @@ function App() {
         >
           <div className="flex items-center gap-2.5">
             <h2 className="text-xl font-bold" style={{ color: themeColors.text }}>
-              {currentView === 'proxy' ? 'Network' : activeServer?.name}
+              {headerTitle}
             </h2>
             <span className="text-sm" style={{ color: themeColors.text, opacity: 0.7 }}>
               {' '}
-              / {currentView}
+              / {getViewLabel(currentView)}
             </span>
           </div>
           <div className="flex items-center gap-2.5 ml-auto">
@@ -1641,29 +1693,29 @@ function App() {
                 <button
                   className="btn-start"
                   onClick={handleStart}
-                  title="Start Server"
+                  title={t('server.actions.start')}
                   disabled={
                     !activeServer ||
                     (activeServer.status !== 'offline' && activeServer.status !== 'crashed')
                   }
                 >
-                  ▶ Start
+                  ▶ {t('server.actions.start')}
                 </button>
                 <button
                   className="btn-restart btn-secondary"
                   onClick={handleRestart}
-                  title="Restart Server"
+                  title={t('server.actions.restart')}
                   disabled={!activeServer || activeServer.status !== 'online'}
                 >
-                  ↻ Restart
+                  ↻ {t('server.actions.restart')}
                 </button>
                 <button
                   className="btn-stop"
                   onClick={handleStop}
-                  title="Stop Server"
+                  title={t('server.actions.stop')}
                   disabled={!activeServer || activeServer.status !== 'online'}
                 >
-                  ■ Stop
+                  ■ {t('server.actions.stop')}
                 </button>
               </>
             )}
@@ -1803,7 +1855,7 @@ function App() {
   );
 }
 
-function NavItem({ label, view, current, set, iconSrc }: NavItemProps) {
+function NavItem({ label, tooltip, view, current, set, iconSrc }: NavItemProps) {
   const isOpen = !!label;
   const isActive = current === view;
 
@@ -1811,11 +1863,11 @@ function NavItem({ label, view, current, set, iconSrc }: NavItemProps) {
     <div
       className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
       onClick={() => set(view)}
-      title={isOpen ? '' : view}
+      title={isOpen ? '' : tooltip}
     >
       <img
         src={iconSrc}
-        alt={view}
+        alt={tooltip}
         className={`app-nav-item__icon ${isOpen ? 'app-nav-item__icon--open' : 'app-nav-item__icon--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
       />
       {isOpen && <span className="app-nav-item__label">{label}</span>}

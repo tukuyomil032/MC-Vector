@@ -330,7 +330,11 @@ function UserListCard({
                     {type === 'banned-ips' ? item.ip : item.name}
                   </div>
                   {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
-                  {item.level && <div className="text-xs text-yellow-500">Level: {item.level}</div>}
+                  {item.level && (
+                    <div className="text-xs text-yellow-500">
+                      {t('users.level', { level: item.level })}
+                    </div>
+                  )}
                 </div>
               </div>
               <button

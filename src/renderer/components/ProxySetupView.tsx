@@ -112,7 +112,11 @@ export default function ProxySetupView({
                 <div className="proxy-setup-view__backend-meta">
                   <div className="proxy-setup-view__backend-name">{server.name}</div>
                   <div className="proxy-setup-view__backend-detail">
-                    {server.software} {server.version} (Port: {server.port})
+                    {t('proxySetup.backendDetail', {
+                      software: server.software,
+                      version: server.version,
+                      port: server.port,
+                    })}
                   </div>
                 </div>
               </div>
