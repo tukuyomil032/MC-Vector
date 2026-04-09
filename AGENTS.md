@@ -111,15 +111,80 @@ Before finishing a refactor:
 2. Do not revert user changes outside the requested scope.
 3. If unexpected modifications are detected, pause and ask for confirmation before proceeding.
 
-### 共通
+## Shared Rules
 
-- コミットメッセージは英語で feat:, fix:, refactor:, docs: のプレフィックスを使う
-- 実装や編集、1プロンプトの作業が終わったあと、同Phase内での未実装ポイント、あるいは今のPhaseでのすべての実装が終わった場合は次のPhaseで実装すべき点があるか確認し、ある場合はどこから実装を進めていくかユーザーに質問モードで選択肢で質問をすること。これは全てのPhaseの全ての実装を終えるまで、つまりリリースできる段階になるまで実装後に毎回質問をすること。また、その質問の後、その実装ごとの変更内容にふさわしいコミットメッセージを含めたコマンドを生成し、実際にそのコマンドを実行するかしないかユーザーに質問モードで質問をすること。同Phase内での変更や実装ごとにはコミットコマンドの生成は質問はしないこと。ただし、同フェーズ内での変更や実装の場合でも、1つ1つの実装の規模が大きい場合は例外とする。更に、コミットコマンドを実行しないを選んだ場合にも、まだ実装すべき同フェーズ内の作業や、次のフェーズが残っている場合は、実装を続け、実装を完了するまで半永久的に質問→実装→質問を繰り返すこと。ここで言う質問とは、あなたが出力する文章で聞くのではなく、Planモードで要件定義をするときに使用する選択式の質問のこと。コミットコマンドのフォーマットは、git commit -m "message" -m "message" -m "message"のように、実装した内容を大まかにまとめて、-mオプションでそれぞれ改行すること。
-- git操作には、VSCode内のターミナルからコマンドで行うこと。MCPなどを通さず、直接コマンドを叩くこと。
-  - ファイルの追加：git add .
-  - コミット：↑1つ上の箇条書きで述べている通り、その実装ごとの変更内容にふさわしいコミットメッセージを含めた形式にすること。git commit -m "message" -m "message" -m "message"
-  - プッシュ：git push origin main
-    - 何らかの事象によりgit reset --soft HEAD^などのリセットコマンドを打った場合には私がそう伝えるので、その場合はforce pushをしないとコンフリクトが出て拒否されるので、git push -f -u origin mainを実行してください
-- 当該プロンプトで実装や編集を終えたあと、ビルドをする前にバックグラウンドから全ファイル(.java / .ts / .json / .ymlなど)を読み取り、エラーや警告がある場合、エラーの内容と原因を調査し、それも修正すること。1度の修正で直らない場合もあるため、修正後にもう一度バックグラウンドからエラーを取得し、エラー及び警告が0件になるまで処理を続行すること。
-- 複数の更新・追加作業内容がある場合、段階ごとに1,2,3と番号をつけて振り分けること。また、この番号付きの作業内容は1度のプロンプトで全て実装すること。段階ごとに実装を進め、段階ごとに実装内容をユーザに逐一報告しながら進めること。
-- 例えば、1.バイナリIPC化（Base64撤廃, 2.適応FPS制御, 3.Java側の矩形差分描画拡張の3つのタスクがある場合、1〜3のタスクをこなしてくださいと命令されたら、その1回のプロンプトで全て実装を終えてください。
+### Commit Message Conventions
+
+Use English commit message prefixes:
+
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `ref:` - Refactoring
+- `docs:` - Documentation changes
+- `chore:` - Maintenance tasks
+
+Examples:
+
+```bash
+git commit -m "feat: add system logs scanner" -m "Scan /var/log and ~/Library/Logs for old log files" -m "Adds new scanner category with configurable age threshold"
+
+git commit -m "fix: optimize command timeout on Intel Macs" -m "Add 30s timeout to DNS flush task" -m "Prevents indefinite hanging on certain hardware"
+
+git commit -m "ref: extract scanner directory tracking" -m "Add scannedDirectories property to base scanner" -m "Enables post-scan directory summary display"
+```
+
+### Phase-Based Development Workflow
+
+After each implementation/editing prompt is completed, confirm whether there are unfinished points in the current phase, or if the phase is complete, whether there are tasks in the next phase.
+
+If there are remaining tasks, ask the user in **selection mode** where to continue next using `ask_user` tool (not plain text questions). Repeat this after every implementation step until all phases are complete and the project is release-ready.
+
+After that question, generate a commit command with a message format appropriate to the implementation and ask the user in selection mode whether to execute it.
+
+**Commit Timing Rules:**
+
+- Do NOT ask for commit command generation for every tiny change within the same phase
+- However, if a change inside the same phase is large, this rule can be treated as an exception
+- Even if the user chooses not to run the commit command, continue implementation if there is still work in the current phase or next phases
+- Keep iterating with question → implementation → question until completion
+
+The "question" here refers to selection-style planning questions using `ask_user` tool, not plain text questions.
+
+**Commit Command Format:**
+
+```bash
+git commit -m "message" -m "message" -m "message"
+```
+
+Use multiple `-m` flags for detailed commit messages with:
+
+1. First message: Brief summary of changes
+2. Second message: Detailed description
+3. Third message: Technical notes or impacts
+
+### Git Operations
+
+Use VS Code terminal commands directly for git operations. Do not use MCP for git operations.
+
+**Standard Git Workflow:**
+
+```bash
+# Stage all changes
+git add .
+
+# Commit with multi-line message
+git commit -m "feat: add new scanner" -m "Detailed description" -m "Technical notes"
+
+# Push to main branch
+git push origin main
+
+# Force push (only after reset)
+git push -f -u origin main
+```
+
+**After Reset:**
+If a reset command such as `git reset --soft HEAD^` is performed and the user informs you, force push is required:
+
+```bash
+git push -f -u origin main
+```

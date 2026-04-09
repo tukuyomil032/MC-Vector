@@ -28,19 +28,43 @@ export async function onConfigChange(
   return store.onKeyChange(key, callback);
 }
 
-export async function getAppSettings(): Promise<{
+/**
+ * Application settings interface.
+ */
+export interface AppSettings {
+  /** UI theme preference */
   theme?: string;
+  /** Locale/language preference (e.g., 'en', 'ja') */
+  locale?: string;
+  /** Allow additional dynamic settings */
   [key: string]: unknown;
-}> {
-  const store = await load(STORE_NAME);
-  const theme = await store.get<string>('theme');
-  return { theme: theme ?? undefined };
 }
 
-export async function saveAppSettings(settings: Record<string, unknown>): Promise<void> {
+/**
+ * Get all application settings from the config store.
+ * @returns Promise resolving to AppSettings object
+ */
+export async function getAppSettings(): Promise<AppSettings> {
+  const store = await load(STORE_NAME);
+  const theme = await store.get<string>('theme');
+  const locale = await store.get<string>('locale');
+  return {
+    theme: theme ?? undefined,
+    locale: locale ?? undefined,
+  };
+}
+
+/**
+ * Save application settings to the config store.
+ * Only saves non-undefined values to avoid overwriting existing settings.
+ * @param settings - Partial AppSettings to save
+ */
+export async function saveAppSettings(settings: Partial<AppSettings>): Promise<void> {
   const store = await load(STORE_NAME);
   for (const [key, value] of Object.entries(settings)) {
-    await store.set(key, value);
+    if (value !== undefined) {
+      await store.set(key, value);
+    }
   }
   await store.save();
 }

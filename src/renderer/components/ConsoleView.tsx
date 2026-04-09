@@ -2,6 +2,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
@@ -173,6 +174,7 @@ interface ConsoleViewProps {
 }
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -393,7 +395,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
   const handleExportLogs = async () => {
     if (visibleLogs.length === 0) {
-      showToast('保存対象のログがありません', 'info');
+      showToast(t('console.toast.noLogsToSave'), 'info');
       return;
     }
 
@@ -424,10 +426,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         .join('\n');
 
       await writeTextFile(targetPath, output);
-      showToast('ログを保存しました', 'success');
+      showToast(t('console.toast.logsSaved'), 'success');
     } catch (error) {
       console.error(error);
-      showToast('ログの保存に失敗しました', 'error');
+      showToast(t('console.toast.logsSaveFailed'), 'error');
     }
   };
 
@@ -440,11 +442,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
     <div className="console-view">
       <div className="console-view__status-bar">
         <div className="console-view__status-col console-view__status-col--with-divider">
-          <div className="console-view__status-label">ADDRESS</div>
+          <div className="console-view__status-label">{t('console.status.address')}</div>
           <div
             key={currentAddressIndex}
             onClick={handleCopyAddress}
-            title="Click to Copy"
+            title={t('console.status.clickToCopy')}
             className={`console-view__address ${ngrokUrl && currentAddressIndex === 1 ? 'is-public' : 'is-local'}`}
           >
             {displayAddress}
@@ -452,7 +454,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         </div>
 
         <div className="console-view__status-col console-view__status-col--with-divider">
-          <div className="console-view__status-label">STATUS</div>
+          <div className="console-view__status-label">{t('console.status.status')}</div>
           <div
             className={`console-view__status-value console-view__status-value--${server.status}`}
           >
@@ -461,7 +463,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         </div>
 
         <div className="console-view__status-col">
-          <div className="console-view__status-label">MEMORY</div>
+          <div className="console-view__status-label">{t('console.status.memory')}</div>
           <div className="console-view__memory-value">
             {server.status === 'online'
               ? formatMemoryDetailed(memoryUsage, server.memory)
@@ -472,7 +474,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
       {isSearchOpen && (
         <div className="console-view__search-bar">
-          <span className="console-view__search-label">Find</span>
+          <span className="console-view__search-label">{t('console.search.label')}</span>
           <input
             ref={searchInputRef}
             type="text"
@@ -491,7 +493,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
                 closeSearch();
               }
             }}
-            placeholder="Search logs..."
+            placeholder={t('console.search.placeholder')}
             className="console-view__search-input"
           />
 
@@ -505,7 +507,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
             onClick={() => jumpToMatch(-1)}
             disabled={totalMatches === 0}
           >
-            Prev
+            {t('console.search.prev')}
           </button>
 
           <button
@@ -514,11 +516,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
             onClick={() => jumpToMatch(1)}
             disabled={totalMatches === 0}
           >
-            Next
+            {t('console.search.next')}
           </button>
 
           <button type="button" className="console-view__search-close-btn" onClick={closeSearch}>
-            Close
+            {t('common.close')}
           </button>
         </div>
       )}
@@ -605,21 +607,23 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
 
         {visibleLogs.length === 0 && (
           <div className="console-view__empty-log">
-            {logFilter === 'ALL' ? 'Waiting for logs...' : `${logFilter} logs not found.`}
+            {logFilter === 'ALL'
+              ? t('console.emptyLog.waiting')
+              : t('console.emptyLog.notFound', { level: logFilter })}
           </div>
         )}
       </div>
 
       <div className="console-view__command-bar">
         <button type="button" className="console-view__find-button" onClick={openSearch}>
-          Find
+          {t('console.actions.find')}
         </button>
         <button
           type="button"
           className="console-view__save-button"
           onClick={() => void handleExportLogs()}
         >
-          Save Logs
+          {t('console.actions.saveLogs')}
         </button>
         <span className="console-view__command-prefix">&gt;</span>
         <input
@@ -632,18 +636,22 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
             }
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Type a command..."
+          placeholder={t('console.command.placeholder')}
           className="console-view__command-input"
         />
         <button onClick={handleSend} className="console-view__send-button">
-          Send
+          {t('console.actions.send')}
         </button>
 
-        <div className="console-view__history-hint">↑ / ↓ History</div>
+        <div className="console-view__history-hint">{t('console.historyHint')}</div>
 
         <div className="console-view__filter-wrap">
-          <span className="console-view__filter-label">Level</span>
-          <div className="console-view__filter-pills" role="tablist" aria-label="Log level filter">
+          <span className="console-view__filter-label">{t('console.filter.label')}</span>
+          <div
+            className="console-view__filter-pills"
+            role="tablist"
+            aria-label={t('console.filter.ariaLabel')}
+          >
             {LOG_FILTER_OPTIONS.map((level) => (
               <button
                 key={level}

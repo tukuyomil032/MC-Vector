@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '../../i18n';
+import type { LocaleCode } from '../../i18n';
 import { getAppSettings, saveAppSettings } from '../../lib/config-commands';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
 
@@ -56,6 +58,7 @@ function normalizeReleaseNotes(notes: unknown): string {
 }
 
 const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
+  const { t, locale, setLocale } = useTranslation();
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
   const [theme, setTheme] = useState<AppTheme>('system');
 
@@ -141,22 +144,26 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
     await saveAppSettings({ theme: value });
   };
 
+  const handleLanguageChange = async (value: LocaleCode) => {
+    await setLocale(value);
+  };
+
   return (
     <div className="settings-window">
       <div className="settings-window__header">
         {onClose && (
           <button className="btn-secondary text-sm" onClick={onClose}>
-            ← 戻る
+            {t('settings.backButton')}
           </button>
         )}
-        <h1 className="text-2xl font-semibold m-0">Application Preferences</h1>
+        <h1 className="text-2xl font-semibold m-0">{t('settings.title')}</h1>
       </div>
 
       <section className="settings-window__section">
         <div className="settings-window__section-head">
           <div>
-            <h2 className="text-lg m-0">アップデート</h2>
-            <p className="text-sm text-zinc-400 m-0">最新バージョンの確認と適用を行います。</p>
+            <h2 className="text-lg m-0">{t('settings.update.title')}</h2>
+            <p className="text-sm text-zinc-400 m-0">{t('settings.update.description')}</p>
           </div>
           <div className="flex gap-2">
             {['idle', 'not-available', 'error'].includes(updateState.status) && (
@@ -165,34 +172,38 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
                 onClick={handleCheck}
                 disabled={updateState.status === 'checking'}
               >
-                {updateState.status === 'checking' ? '確認中...' : 'アップデートを確認'}
+                {updateState.status === 'checking'
+                  ? t('settings.update.checking')
+                  : t('settings.update.checkButton')}
               </button>
             )}
             {updateState.status === 'available' && (
               <button className="btn-secondary" onClick={handleDownload}>
-                ダウンロード
+                {t('settings.update.download')}
               </button>
             )}
             {updateState.status === 'downloaded' && (
               <button className="btn-primary" onClick={handleInstall}>
-                再起動して適用
+                {t('settings.update.restart')}
               </button>
             )}
           </div>
         </div>
 
         <div className="settings-window__status-body">
-          {updateState.status === 'idle' && <div>まだ確認していません。</div>}
-          {updateState.status === 'checking' && <div>更新を確認しています...</div>}
+          {updateState.status === 'idle' && <div>{t('settings.update.idle')}</div>}
+          {updateState.status === 'checking' && <div>{t('settings.update.checkingStatus')}</div>}
           {updateState.status === 'available' && (
             <div className="text-accent font-semibold">
-              アップデートを検知しました！ v{updateState.version || 'unknown'}
+              {t('settings.update.available', { version: updateState.version || 'unknown' })}
             </div>
           )}
-          {updateState.status === 'not-available' && <div>最新の状態です。</div>}
+          {updateState.status === 'not-available' && <div>{t('settings.update.notAvailable')}</div>}
           {updateState.status === 'downloading' && (
             <div>
-              ダウンロード中... {Math.round(updateState.progress || 0)}%
+              {t('settings.update.downloading', {
+                progress: Math.round(updateState.progress || 0),
+              })}
               <div className="settings-window__progress-track">
                 <div
                   className="settings-window__progress-bar"
@@ -201,17 +212,19 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
               </div>
             </div>
           )}
-          {updateState.status === 'downloaded' && (
-            <div>ダウンロード完了。再起動して適用できます。</div>
-          )}
+          {updateState.status === 'downloaded' && <div>{t('settings.update.downloaded')}</div>}
           {updateState.status === 'error' && (
-            <div className="text-red-400">エラー: {updateState.error}</div>
+            <div className="text-red-400">
+              {t('settings.update.error', { message: updateState.error || '' })}
+            </div>
           )}
         </div>
 
         {releaseNotesText && (
           <div className="settings-window__release-notes">
-            <div className="settings-window__release-notes-label">リリースノート:</div>
+            <div className="settings-window__release-notes-label">
+              {t('settings.update.releaseNotes')}
+            </div>
             <pre className="settings-window__release-notes-body">{releaseNotesText}</pre>
           </div>
         )}
@@ -220,15 +233,13 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
       <section className="settings-window__section">
         <div className="settings-window__section-head">
           <div>
-            <h2 className="text-lg m-0">テーマ</h2>
-            <p className="text-sm text-zinc-400 m-0">
-              アプリ全体に適用される背景テーマを選択します。
-            </p>
+            <h2 className="text-lg m-0">{t('settings.theme.title')}</h2>
+            <p className="text-sm text-zinc-400 m-0">{t('settings.theme.description')}</p>
           </div>
         </div>
 
         <label className="text-sm text-zinc-300 block mb-2" htmlFor="theme-select">
-          配色
+          {t('settings.theme.label')}
         </label>
         <select
           id="theme-select"
@@ -236,15 +247,37 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
           value={theme}
           onChange={(e) => handleThemeChange(e.target.value as AppTheme)}
         >
-          <option value="dark">Dark</option>
-          <option value="darkBlue">DarkBlue</option>
-          <option value="grey">Grey</option>
-          <option value="forest">Forest</option>
-          <option value="sunset">Sunset</option>
-          <option value="neon">Neon</option>
-          <option value="coffee">Coffee</option>
-          <option value="ocean">Ocean</option>
-          <option value="system">System</option>
+          <option value="dark">{t('settings.theme.options.dark')}</option>
+          <option value="darkBlue">{t('settings.theme.options.darkBlue')}</option>
+          <option value="grey">{t('settings.theme.options.grey')}</option>
+          <option value="forest">{t('settings.theme.options.forest')}</option>
+          <option value="sunset">{t('settings.theme.options.sunset')}</option>
+          <option value="neon">{t('settings.theme.options.neon')}</option>
+          <option value="coffee">{t('settings.theme.options.coffee')}</option>
+          <option value="ocean">{t('settings.theme.options.ocean')}</option>
+          <option value="system">{t('settings.theme.options.system')}</option>
+        </select>
+      </section>
+
+      <section className="settings-window__section">
+        <div className="settings-window__section-head">
+          <div>
+            <h2 className="text-lg m-0">{t('settings.language.title')}</h2>
+            <p className="text-sm text-zinc-400 m-0">{t('settings.language.description')}</p>
+          </div>
+        </div>
+
+        <label className="text-sm text-zinc-300 block mb-2" htmlFor="language-select">
+          {t('settings.language.label')}
+        </label>
+        <select
+          id="language-select"
+          className="settings-window__theme-select"
+          value={locale}
+          onChange={(e) => handleLanguageChange(e.target.value as LocaleCode)}
+        >
+          <option value="en">{t('settings.language.options.en')}</option>
+          <option value="ja">{t('settings.language.options.ja')}</option>
         </select>
       </section>
     </div>

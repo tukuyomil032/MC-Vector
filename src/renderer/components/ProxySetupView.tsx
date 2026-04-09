@@ -1,5 +1,6 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 
 interface ProxySetupViewProps {
@@ -19,6 +20,7 @@ export default function ProxySetupView({
   onBuildNetwork,
   onOpenHelp,
 }: ProxySetupViewProps) {
+  const { t } = useTranslation();
   const [proxySoftware, setProxySoftware] = useState('Velocity');
   const [proxyPort, setProxyPort] = useState(25577);
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
@@ -41,8 +43,8 @@ export default function ProxySetupView({
       return;
     }
     if (selectedBackendIds.length < 2) {
-      const confirmed = await ask('接続するサーバーが1つ以下です。ネットワークを構築しますか？', {
-        title: 'プロキシ構成',
+      const confirmed = await ask(t('proxySetup.confirmFewServers'), {
+        title: t('proxySetup.dialogTitle'),
         kind: 'warning',
       });
       if (!confirmed) return;
@@ -61,42 +63,42 @@ export default function ProxySetupView({
 
   return (
     <div className="proxy-setup-view">
-      <h2 className="proxy-setup-view__title">Proxy Network Setup</h2>
+      <h2 className="proxy-setup-view__title">{t('proxySetup.title')}</h2>
 
       <div className="proxy-setup-view__panel">
         <div className="proxy-setup-view__field">
-          <label className="proxy-setup-view__label">Proxy Software</label>
+          <label className="proxy-setup-view__label">{t('proxySetup.proxySoftware')}</label>
           <select
             className="input-field"
             value={proxySoftware}
             onChange={(e) => setProxySoftware(e.target.value)}
           >
-            <option value="Velocity">Velocity (Recommended)</option>
-            <option value="Waterfall">Waterfall</option>
-            <option value="BungeeCord">BungeeCord</option>
+            <option value="Velocity">{t('proxySetup.velocityRecommended')}</option>
+            <option value="Waterfall">{t('proxySetup.waterfall')}</option>
+            <option value="BungeeCord">{t('proxySetup.bungeecord')}</option>
           </select>
         </div>
 
         <div className="proxy-setup-view__field">
-          <label className="proxy-setup-view__label">Proxy Port</label>
+          <label className="proxy-setup-view__label">{t('proxySetup.proxyPort')}</label>
           <input
             type="number"
             className="input-field"
             value={proxyPort}
             onChange={(e) => setProxyPort(Number(e.target.value))}
           />
-          <div className="proxy-setup-view__hint">
-            プレイヤーが最初に接続するポートです (デフォルト: 25577)
-          </div>
+          <div className="proxy-setup-view__hint">{t('proxySetup.portHint')}</div>
         </div>
 
         <div className="proxy-setup-view__field proxy-setup-view__field--large-gap">
           <label className="proxy-setup-view__label proxy-setup-view__label--spaced">
-            Backend Servers (接続先)
+            {t('proxySetup.backendServers')}
           </label>
           <div className="proxy-setup-view__backend-list">
             {backendCandidates.length === 0 && (
-              <div className="proxy-setup-view__backend-empty">接続可能なサーバーがありません</div>
+              <div className="proxy-setup-view__backend-empty">
+                {t('proxySetup.noBackendServers')}
+              </div>
             )}
 
             {backendCandidates.map((server) => (
@@ -110,7 +112,11 @@ export default function ProxySetupView({
                 <div className="proxy-setup-view__backend-meta">
                   <div className="proxy-setup-view__backend-name">{server.name}</div>
                   <div className="proxy-setup-view__backend-detail">
-                    {server.software} {server.version} (Port: {server.port})
+                    {t('proxySetup.backendDetail', {
+                      software: server.software,
+                      version: server.version,
+                      port: server.port,
+                    })}
                   </div>
                 </div>
               </div>
@@ -124,11 +130,11 @@ export default function ProxySetupView({
             onClick={handleBuild}
             disabled={isBuilding}
           >
-            {isBuilding ? '実行中...' : 'ネットワーク構築を実行'}
+            {isBuilding ? t('proxySetup.building') : t('proxySetup.buildNetwork')}
           </button>
 
           <button className="btn-secondary proxy-setup-view__help-btn" onClick={onOpenHelp}>
-            設定方法の詳細を見る
+            {t('proxySetup.viewHelp')}
           </button>
         </div>
       </div>
