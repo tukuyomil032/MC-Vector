@@ -465,14 +465,15 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       <section className="console-view__status-strip surface-card">
         <div className="console-view__status-col console-view__status-col--with-divider">
           <div className="console-view__status-label">{t('console.status.address')}</div>
-          <div
+          <button
+            type="button"
             key={currentAddressIndex}
             onClick={handleCopyAddress}
             title={t('console.status.clickToCopy')}
             className={`console-view__address ${ngrokUrl && currentAddressIndex === 1 ? 'is-public' : 'is-local'}`}
           >
             {displayAddress}
-          </div>
+          </button>
         </div>
 
         <div className="console-view__status-col console-view__status-col--with-divider">

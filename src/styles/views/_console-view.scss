@@ -27,9 +27,14 @@
   }
 
   .console-view__address {
-    @apply inline-flex max-w-full cursor-pointer items-center justify-center truncate rounded-md border px-2 py-1 text-sm font-semibold transition-colors;
+    @apply inline-flex max-w-full cursor-pointer appearance-none items-center justify-center truncate rounded-md border px-2 py-1 text-sm font-semibold transition-colors;
     border-color: var(--mv-control-chip-border);
     background: var(--mv-control-chip-bg);
+  }
+
+  .console-view__address:focus-visible {
+    outline: 2px solid rgba(56, 189, 248, 0.7);
+    outline-offset: 2px;
   }
 
   .console-view__address.is-public {
