@@ -2,6 +2,7 @@
 /dist
 /release
 /dist-electron
+.worktrees/
 .DS_Store
 # Logs
 logs
