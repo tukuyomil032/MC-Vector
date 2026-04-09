@@ -1,70 +1,107 @@
 @layer components {
   .dashboard-view {
-    @apply h-full p-5 overflow-y-auto flex flex-col gap-5;
+    @apply h-full overflow-y-auto flex flex-col gap-4 p-5;
     font-family: var(--mv-font-display);
     background: var(--mv-view-bg);
   }
 
+  .dashboard-view__header {
+    @apply p-5 flex flex-wrap items-end justify-between gap-4;
+  }
+
+  .dashboard-view__header-main {
+    @apply min-w-0;
+  }
+
   .dashboard-view__title {
-    @apply m-0 px-5 py-4 rounded-2xl border text-[1.4rem] font-semibold tracking-wide text-zinc-100;
-    background: var(--mv-panel-bg);
-    border-color: var(--mv-border-soft);
-    box-shadow: var(--mv-shadow-panel);
+    @apply m-0 text-[1.35rem] font-semibold tracking-wide;
+    color: var(--mv-surface-text-primary);
   }
 
-  .dashboard-view__stats-grid {
-    @apply grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4;
+  .dashboard-view__header-meta {
+    @apply mt-2;
   }
 
-  .dashboard-view__stat-card {
-    @apply p-4 text-left rounded-xl border;
-    border-color: var(--mv-border-soft);
-    background: var(--mv-panel-bg-alt);
-    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.2);
-    transition:
-      transform 0.15s ease,
-      border-color 0.2s ease;
+  .dashboard-view__header-status {
+    @apply flex flex-col gap-1.5 text-right;
   }
 
-  .dashboard-view__stat-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--mv-border-strong);
+  .dashboard-view__header-status-value {
+    @apply text-[1.05rem] font-semibold;
   }
 
-  .dashboard-view__stat-label {
-    @apply text-[0.72rem] uppercase tracking-[0.12em] text-zinc-500 mb-1.5;
+  .dashboard-view__kpi-grid {
+    @apply grid gap-3;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 
-  .dashboard-view__stat-value {
-    @apply text-2xl font-bold;
+  .dashboard-view__kpi-card {
+    @apply min-h-[112px];
+    grid-column: span 4 / span 4;
   }
 
-  .dashboard-view__stat-sub {
-    @apply text-xs text-zinc-500 mt-1;
+  .dashboard-view__kpi-card--status,
+  .dashboard-view__kpi-card--tps {
+    grid-column: span 6 / span 6;
+  }
+
+  .dashboard-view__kpi-card--status .kpi-tile__value,
+  .dashboard-view__kpi-card--tps .kpi-tile__value {
+    @apply text-[1.9rem] leading-none;
+  }
+
+  .dashboard-view__kpi-card--software .kpi-tile__value {
+    @apply text-[1.45rem];
+  }
+
+  .dashboard-view__software-value {
+    @apply break-words;
   }
 
   .dashboard-view__chart-grid {
     @apply grid gap-4;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dashboard-view__chart-card {
-    @apply p-4 rounded-xl border flex flex-col min-h-[300px];
-    border-color: var(--mv-border-soft);
-    background: linear-gradient(145deg, rgba(17, 24, 39, 0.94), rgba(24, 24, 27, 0.88));
-    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.24);
+    @apply p-4 flex flex-col min-h-[280px];
+  }
+
+  .dashboard-view__chart-card--tps {
+    min-height: 300px;
+    grid-column: 1 / -1;
   }
 
   .dashboard-view__chart-title {
-    @apply m-0 mb-2.5 text-sm uppercase tracking-[0.1em] text-cyan-200;
+    @apply mb-3;
   }
 
   .dashboard-view__chart-body {
-    @apply flex-1;
+    @apply flex-1 min-h-[220px];
   }
 
   .dashboard-view__chart-empty {
-    @apply h-full flex items-center justify-center text-center text-sm text-zinc-400 px-4 leading-relaxed;
+    @apply h-full flex items-center justify-center text-center text-sm px-4 leading-relaxed;
+    color: var(--mv-surface-text-muted);
+  }
+}
+
+@media (max-width: 1120px) {
+  .dashboard-view__kpi-card {
+    grid-column: span 6 / span 6;
+  }
+
+  .dashboard-view__kpi-card--status,
+  .dashboard-view__kpi-card--tps {
+    grid-column: span 6 / span 6;
+  }
+
+  .dashboard-view__chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-view__chart-card--tps {
+    grid-column: auto;
   }
 }
 
@@ -73,7 +110,39 @@
     @apply p-4;
   }
 
+  .dashboard-view__header {
+    @apply px-4 py-3.5;
+  }
+
   .dashboard-view__title {
-    @apply text-[1.1rem] px-4 py-3;
+    @apply text-[1.14rem];
+  }
+
+  .dashboard-view__header-status {
+    @apply text-left w-full;
+  }
+
+  .dashboard-view__kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-view__kpi-card,
+  .dashboard-view__kpi-card--status,
+  .dashboard-view__kpi-card--tps {
+    grid-column: span 1 / span 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-view__kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-view__chart-card {
+    min-height: 260px;
+  }
+
+  .dashboard-view__chart-body {
+    min-height: 200px;
   }
 }

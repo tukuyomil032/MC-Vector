@@ -259,51 +259,73 @@ export default function DashboardView({ server }: Props) {
 
   return (
     <div className="dashboard-view">
-      <h2 className="dashboard-view__title">{t('dashboard.title', { name: server.name })}</h2>
-
-      <div className="dashboard-view__stats-grid">
-        <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">{t('dashboard.stats.status')}</div>
-          <div
-            className="dashboard-view__stat-value"
+      <header className="dashboard-view__header surface-card">
+        <div className="dashboard-view__header-main">
+          <h2 className="dashboard-view__title">{t('dashboard.title', { name: server.name })}</h2>
+          <p className="dashboard-view__header-meta section-title">
+            {t('dashboard.stats.software')}: {server.software} {server.version}
+          </p>
+        </div>
+        <div className="dashboard-view__header-status">
+          <span className="section-title">{t('dashboard.stats.status')}</span>
+          <span
+            className="dashboard-view__header-status-value"
             style={{ color: getStatusColor(server.status) }}
           >
             {getStatusLabel(server.status)}
+          </span>
+        </div>
+      </header>
+
+      <section className="dashboard-view__kpi-grid">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--status kpi-tile">
+          <div className="kpi-tile__label">{t('dashboard.stats.status')}</div>
+          <div className="kpi-tile__value" style={{ color: getStatusColor(server.status) }}>
+            {getStatusLabel(server.status)}
           </div>
-        </div>
-        <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">{t('dashboard.stats.software')}</div>
-          <div className="dashboard-view__stat-value">{server.software}</div>
-          <div className="dashboard-view__stat-sub">{server.version}</div>
-        </div>
-        <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">{t('dashboard.stats.currentCpu')}</div>
-          <div className="dashboard-view__stat-value" style={{ color: '#38bdf8' }}>
-            {currentCpu}%
+          <div className="kpi-tile__meta">
+            {t('dashboard.stats.software')}: {server.software}
           </div>
-        </div>
-        <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">{t('dashboard.stats.currentMemory')}</div>
-          <div className="dashboard-view__stat-value" style={{ color: '#34d399' }}>
-            {currentMem} MB
-          </div>
-        </div>
-        <div className="dashboard-view__stat-card">
-          <div className="dashboard-view__stat-label">{t('dashboard.stats.currentTps')}</div>
-          <div className="dashboard-view__stat-value" style={{ color: getTpsColor(currentTps) }}>
+        </article>
+
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--tps kpi-tile">
+          <div className="kpi-tile__label">{t('dashboard.stats.currentTps')}</div>
+          <div className="kpi-tile__value" style={{ color: getTpsColor(currentTps) }}>
             {currentTps === null ? '--' : currentTps.toFixed(2)}
           </div>
-          <div className="dashboard-view__stat-sub">
+          <div className="kpi-tile__meta">
             {supportsTpsPolling
               ? t('dashboard.stats.tpsAutoSampled')
               : t('dashboard.stats.tpsLogBased')}
           </div>
-        </div>
-      </div>
+        </article>
 
-      <div className="dashboard-view__chart-grid">
-        <div className="dashboard-view__chart-card">
-          <h3 className="dashboard-view__chart-title">{t('dashboard.charts.cpuLast60s')}</h3>
+        <article className="dashboard-view__kpi-card kpi-tile">
+          <div className="kpi-tile__label">{t('dashboard.stats.currentCpu')}</div>
+          <div className="kpi-tile__value" style={{ color: '#38bdf8' }}>
+            {currentCpu}%
+          </div>
+        </article>
+
+        <article className="dashboard-view__kpi-card kpi-tile">
+          <div className="kpi-tile__label">{t('dashboard.stats.currentMemory')}</div>
+          <div className="kpi-tile__value" style={{ color: '#34d399' }}>
+            {currentMem} MB
+          </div>
+        </article>
+
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--software kpi-tile">
+          <div className="kpi-tile__label">{t('dashboard.stats.software')}</div>
+          <div className="kpi-tile__value dashboard-view__software-value">{server.software}</div>
+          <div className="kpi-tile__meta">{server.version}</div>
+        </article>
+      </section>
+
+      <section className="dashboard-view__chart-grid">
+        <article className="dashboard-view__chart-card surface-card">
+          <h3 className="dashboard-view__chart-title section-title">
+            {t('dashboard.charts.cpuLast60s')}
+          </h3>
           <div className="dashboard-view__chart-body">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={resourceStats}>
@@ -331,10 +353,12 @@ export default function DashboardView({ server }: Props) {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </article>
 
-        <div className="dashboard-view__chart-card">
-          <h3 className="dashboard-view__chart-title">{t('dashboard.charts.memoryLast60s')}</h3>
+        <article className="dashboard-view__chart-card surface-card">
+          <h3 className="dashboard-view__chart-title section-title">
+            {t('dashboard.charts.memoryLast60s')}
+          </h3>
           <div className="dashboard-view__chart-body">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={resourceStats}>
@@ -362,10 +386,12 @@ export default function DashboardView({ server }: Props) {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </article>
 
-        <div className="dashboard-view__chart-card">
-          <h3 className="dashboard-view__chart-title">{t('dashboard.charts.tpsLast60s')}</h3>
+        <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card">
+          <h3 className="dashboard-view__chart-title section-title">
+            {t('dashboard.charts.tpsLast60s')}
+          </h3>
           <div className="dashboard-view__chart-body">
             {tpsStats.length === 0 ? (
               <div className="dashboard-view__chart-empty">{t('dashboard.charts.tpsNoData')}</div>
@@ -398,8 +424,8 @@ export default function DashboardView({ server }: Props) {
               </ResponsiveContainer>
             )}
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
     </div>
   );
 }
