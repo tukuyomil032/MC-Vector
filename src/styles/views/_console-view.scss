@@ -1,45 +1,49 @@
 @layer components {
   .console-view {
-    @apply flex flex-col h-full p-5 gap-4;
+    @apply flex h-full min-h-0 flex-col gap-3 p-5;
     font-family: var(--mv-font-display);
     background: var(--mv-view-bg);
   }
 
-  .console-view__status-bar {
-    @apply grid grid-cols-3 py-3 rounded-2xl border shrink-0;
+  .console-view__status-strip {
+    @apply grid shrink-0 grid-cols-3 gap-0 px-2 py-2;
     background: var(--mv-panel-bg);
     border-color: var(--mv-border-soft);
     box-shadow: var(--mv-shadow-panel);
   }
 
   .console-view__status-col {
-    @apply text-center;
+    @apply px-3 py-1 text-center;
   }
 
   .console-view__status-col--with-divider {
-    @apply border-r overflow-hidden;
-    border-color: rgba(82, 82, 91, 0.58);
+    @apply border-r;
+    border-color: rgba(82, 82, 91, 0.42);
   }
 
   .console-view__status-label {
-    @apply text-[0.66rem] mb-1 font-bold tracking-[0.14em] uppercase;
+    @apply mb-1 text-[0.64rem] font-bold uppercase tracking-[0.14em];
     color: #9ca3af;
   }
 
   .console-view__address {
-    @apply font-bold cursor-pointer text-sm transition-all;
+    @apply inline-flex max-w-full cursor-pointer items-center justify-center truncate rounded-md border px-2 py-1 text-sm font-semibold transition-colors;
+    border-color: var(--mv-control-chip-border);
+    background: var(--mv-control-chip-bg);
   }
 
   .console-view__address.is-public {
-    @apply text-accent;
+    color: var(--mv-accent-end);
+    border-color: rgba(56, 189, 248, 0.42);
+    background: rgba(14, 165, 233, 0.12);
   }
 
   .console-view__address.is-local {
-    color: #f0f0f0;
+    color: #e5e7eb;
   }
 
   .console-view__status-value {
-    @apply font-bold text-sm;
+    @apply text-sm font-bold;
     color: #f59e0b;
   }
 
@@ -60,22 +64,78 @@
   }
 
   .console-view__memory-value {
-    @apply font-bold text-sm;
+    @apply text-sm font-bold;
     color: #e5e7eb;
   }
 
-  .console-view__log-pane {
-    @apply flex-1 p-4 overflow-y-auto font-mono text-[13px] whitespace-pre-wrap leading-relaxed rounded-2xl border;
+  .console-view__search-strip {
+    @apply flex shrink-0 items-center gap-2 px-3 py-2;
+    background: var(--mv-panel-bg-alt);
+    border-color: var(--mv-border-soft);
+    box-shadow: var(--mv-shadow-panel);
+  }
+
+  .console-view__search-strip.is-closed {
+    @apply justify-between;
+  }
+
+  .console-view__search-label {
+    @apply text-[0.64rem] font-semibold uppercase tracking-[0.13em];
+    color: #8b9bb4;
+  }
+
+  .console-view__search-placeholder {
+    @apply flex-1 truncate text-xs;
+    color: #94a3b8;
+  }
+
+  .console-view__search-input {
+    @apply min-w-0 flex-1 rounded-md border px-2.5 py-1.5 text-[13px] outline-none;
+    background-color: rgba(17, 24, 39, 0.82);
+    border-color: rgba(82, 82, 91, 0.85);
+    color: #f3f4f6;
+  }
+
+  .console-view__search-count {
+    @apply min-w-[72px] text-center text-xs font-semibold;
+    color: #9ca3af;
+  }
+
+  .console-view__search-open-btn,
+  .console-view__search-nav-btn,
+  .console-view__search-close-btn {
+    @apply shrink-0;
+  }
+
+  .console-view__search-nav-btn:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .console-view__search-hit {
+    @apply rounded px-[1px];
+    background-color: rgba(250, 204, 21, 0.35);
+  }
+
+  .console-view__search-hit.is-active {
+    background-color: rgba(251, 146, 60, 0.6);
+  }
+
+  .console-view__log-viewport {
+    @apply relative min-h-0 flex-1 overflow-hidden p-0;
     background:
       linear-gradient(145deg, rgba(15, 23, 42, 0.88), rgba(23, 23, 29, 0.9)),
       radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.1), transparent 45%);
     border-color: var(--mv-border-soft);
-    color: #d4d4d8;
     box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
   }
 
+  .console-view__log-pane {
+    @apply h-full overflow-y-auto px-4 py-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap;
+    color: #d4d4d8;
+  }
+
   .console-view__log-line {
-    @apply pl-2.5 border-l-2 mb-0.5 rounded-r-sm;
+    @apply mb-0.5 rounded-r-sm border-l-2 pl-2.5;
     border-left-color: transparent;
   }
 
@@ -98,64 +158,60 @@
     background-color: rgba(136, 19, 55, 0.2);
   }
 
-  .console-view__search-bar {
-    @apply h-[46px] border rounded-xl flex items-center gap-2 px-4;
-    background: rgba(15, 23, 42, 0.78);
-    border-color: var(--mv-border-soft);
-  }
-
-  .console-view__search-label {
-    @apply text-[11px] uppercase tracking-wider font-semibold;
-    color: #8b9bb4;
-  }
-
-  .console-view__search-input {
-    @apply flex-1 rounded-md border text-[13px] px-2.5 py-1.5 outline-none;
-    background-color: rgba(17, 24, 39, 0.82);
-    border-color: rgba(82, 82, 91, 0.85);
-    color: #f3f4f6;
-  }
-
-  .console-view__search-count {
-    @apply text-xs font-semibold min-w-[64px] text-center;
-    color: #9ca3af;
-  }
-
-  .console-view__search-nav-btn,
-  .console-view__search-close-btn {
-    @apply rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors;
-    background-color: rgba(30, 41, 59, 0.75);
-    border-color: rgba(71, 85, 105, 0.82);
-    color: #e5e7eb;
-  }
-
-  .console-view__search-nav-btn:hover,
-  .console-view__search-close-btn:hover {
-    background-color: rgba(51, 65, 85, 0.8);
-  }
-
-  .console-view__search-nav-btn:disabled {
-    @apply opacity-50 cursor-not-allowed;
-  }
-
-  .console-view__search-hit {
-    @apply rounded px-[1px];
-    background-color: rgba(250, 204, 21, 0.35);
-  }
-
-  .console-view__search-hit.is-active {
-    background-color: rgba(251, 146, 60, 0.6);
-  }
-
   .console-view__empty-log {
-    @apply text-zinc-500 italic text-center mt-5;
+    @apply mt-5 text-center text-zinc-500 italic;
   }
 
-  .console-view__command-bar {
-    @apply border rounded-2xl flex items-center px-4 py-3 gap-2 shrink-0;
+  .console-view__command-strip {
+    @apply grid shrink-0 items-center gap-3 px-3 py-3;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     background: var(--mv-panel-bg-alt);
     border-color: var(--mv-border-soft);
     box-shadow: var(--mv-shadow-panel);
+  }
+
+  .console-view__command-actions {
+    @apply flex items-center gap-2;
+  }
+
+  .console-view__save-button {
+    border-color: rgba(16, 185, 129, 0.55);
+    background: rgba(6, 95, 70, 0.48);
+    color: #d1fae5;
+  }
+
+  .console-view__save-button:hover {
+    background: rgba(6, 120, 87, 0.56);
+  }
+
+  .console-view__filter-wrap {
+    @apply flex items-center gap-2;
+  }
+
+  .console-view__filter-label {
+    @apply text-[11px] font-semibold uppercase tracking-wider;
+    color: #8b9bb4;
+  }
+
+  .console-view__filter-pills {
+    @apply inline-flex items-center gap-1 rounded-lg border p-1;
+    border-color: rgba(82, 82, 91, 0.72);
+    background: rgba(17, 24, 39, 0.68);
+  }
+
+  .console-view__filter-pill {
+    @apply min-w-[2.25rem] px-2 py-1 text-[0.68rem];
+    letter-spacing: 0.02em;
+  }
+
+  .console-view__filter-pill.is-active {
+    border-color: rgba(56, 189, 248, 0.52);
+    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
+    color: #ffffff;
+  }
+
+  .console-view__command-entry {
+    @apply flex min-w-0 items-center gap-2;
   }
 
   .console-view__command-prefix {
@@ -163,68 +219,14 @@
     color: #8b9bb4;
   }
 
-  .console-view__find-button {
-    @apply rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors;
-    background-color: rgba(30, 41, 59, 0.72);
-    border-color: rgba(71, 85, 105, 0.82);
-    color: #e5e7eb;
-  }
-
-  .console-view__find-button:hover {
-    background-color: rgba(51, 65, 85, 0.8);
-  }
-
-  .console-view__save-button {
-    @apply rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors;
-    background-color: rgba(6, 95, 70, 0.48);
-    border-color: rgba(16, 185, 129, 0.55);
-    color: #d1fae5;
-  }
-
-  .console-view__save-button:hover {
-    background-color: rgba(6, 120, 87, 0.56);
-  }
-
-  .console-view__filter-wrap {
-    @apply ml-2 flex items-center gap-2;
-  }
-
-  .console-view__filter-label {
-    @apply text-[11px] uppercase tracking-wider font-semibold;
-    color: #8b9bb4;
-  }
-
-  .console-view__filter-pills {
-    @apply inline-flex rounded-lg border p-1 gap-1;
-    border-color: rgba(82, 82, 91, 0.85);
-    background: rgba(17, 24, 39, 0.82);
-  }
-
-  .console-view__filter-pill {
-    @apply rounded-md border border-transparent px-2 py-1 text-[0.68rem] font-semibold text-zinc-300 transition-all;
-    background: transparent;
-    letter-spacing: 0.02em;
-  }
-
-  .console-view__filter-pill:hover {
-    @apply text-zinc-100;
-    background: rgba(51, 65, 85, 0.75);
-  }
-
-  .console-view__filter-pill.is-active {
-    @apply text-white;
-    border-color: rgba(56, 189, 248, 0.52);
-    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
-  }
-
   .console-view__command-input {
-    @apply flex-1 rounded-md text-white text-sm py-2.5 px-3 outline-none font-mono border min-w-0;
+    @apply min-w-0 flex-1 rounded-md border px-3 py-2.5 font-mono text-sm text-white outline-none;
     background-color: rgba(17, 24, 39, 0.82);
     border-color: rgba(82, 82, 91, 0.82);
   }
 
   .console-view__send-button {
-    @apply text-white border-none py-2.5 px-5 rounded-md font-bold text-sm transition-all;
+    @apply rounded-md border-none px-5 py-2.5 text-sm font-bold text-white transition-all;
     background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
     box-shadow: 0 8px 20px rgba(14, 165, 233, 0.22);
   }
@@ -235,7 +237,7 @@
   }
 
   .console-view__history-hint {
-    @apply text-[11px] font-semibold ml-3;
+    @apply text-right text-[11px] font-semibold;
     color: #8b9bb4;
   }
 }
@@ -245,18 +247,22 @@
     @apply p-4;
   }
 
-  .console-view__command-bar {
+  .console-view__command-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .console-view__command-actions {
     @apply flex-wrap;
   }
 
   .console-view__history-hint {
-    @apply hidden;
+    @apply text-left;
   }
 }
 
 @media (max-width: 760px) {
-  .console-view__status-bar {
-    @apply grid-cols-1 gap-2 px-2;
+  .console-view__status-strip {
+    @apply grid-cols-1 gap-2;
   }
 
   .console-view__status-col--with-divider {
@@ -264,11 +270,23 @@
     border-color: rgba(82, 82, 91, 0.58);
   }
 
-  .console-view__search-bar {
-    @apply flex-wrap h-auto py-2.5;
+  .console-view__search-strip {
+    @apply flex-wrap;
+  }
+
+  .console-view__search-label {
+    @apply w-full;
+  }
+
+  .console-view__search-placeholder {
+    @apply basis-full;
   }
 
   .console-view__filter-wrap {
-    @apply ml-0;
+    @apply w-full flex-wrap;
+  }
+
+  .console-view__history-hint {
+    @apply hidden;
   }
 }

@@ -462,7 +462,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
   return (
     <div className="console-view">
-      <div className="console-view__status-bar">
+      <section className="console-view__status-strip surface-card">
         <div className="console-view__status-col console-view__status-col--with-divider">
           <div className="console-view__status-label">{t('console.status.address')}</div>
           <div
@@ -492,205 +492,230 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               : '- / - MB'}
           </div>
         </div>
-      </div>
+      </section>
 
-      {isSearchOpen && (
-        <div className="console-view__search-bar">
-          <span className="console-view__search-label">{t('console.search.label')}</span>
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(event) => {
-              setSearchQuery(event.target.value);
-              setActiveMatchIndex(0);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                jumpToMatch(event.shiftKey ? -1 : 1);
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                closeSearch();
-              }
-            }}
-            placeholder={t('console.search.placeholder')}
-            className="console-view__search-input"
-          />
-
-          <div className="console-view__search-count">
-            {totalMatches === 0 ? '0 / 0' : `${activeMatchIndex + 1} / ${totalMatches}`}
-          </div>
-
-          <button
-            type="button"
-            className="console-view__search-nav-btn"
-            onClick={() => jumpToMatch(-1)}
-            disabled={totalMatches === 0}
-          >
-            {t('console.search.prev')}
-          </button>
-
-          <button
-            type="button"
-            className="console-view__search-nav-btn"
-            onClick={() => jumpToMatch(1)}
-            disabled={totalMatches === 0}
-          >
-            {t('console.search.next')}
-          </button>
-
-          <button type="button" className="console-view__search-close-btn" onClick={closeSearch}>
-            {t('common.close')}
-          </button>
-        </div>
-      )}
-
-      <div
-        ref={logContainerRef}
-        className="console-view__log-pane"
-        onScroll={() => {
-          const el = logContainerRef.current;
-          if (!el) return;
-          const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-          setAutoScroll(distanceFromBottom < 120);
-        }}
+      <section
+        className={`console-view__search-strip surface-card ${isSearchOpen ? 'is-open' : 'is-closed'}`}
       >
-        {(() => {
-          let renderedMatchIndex = -1;
+        <span className="console-view__search-label">{t('console.search.label')}</span>
+        {isSearchOpen ? (
+          <>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setActiveMatchIndex(0);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  jumpToMatch(event.shiftKey ? -1 : 1);
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  closeSearch();
+                }
+              }}
+              placeholder={t('console.search.placeholder')}
+              className="console-view__search-input"
+            />
 
-          return visibleLogs.map((entry) => (
-            <div
-              key={entry.originalIndex}
-              className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()} break-words`}
+            <div className="console-view__search-count">
+              {totalMatches === 0 ? '0 / 0' : `${activeMatchIndex + 1} / ${totalMatches}`}
+            </div>
+
+            <button
+              type="button"
+              className="console-view__search-nav-btn control-chip"
+              onClick={() => jumpToMatch(-1)}
+              disabled={totalMatches === 0}
             >
-              {(() => {
-                const severityStyle = getSeverityStyle(entry.level);
-                return entry.segments.map((seg, i) => {
-                  const style = { ...seg.style } as AnsiStyle;
-                  if (severityStyle) {
-                    if (!style.color) {
-                      style.color = severityStyle.color;
-                    }
-                    if (!style.fontWeight) style.fontWeight = severityStyle.fontWeight;
-                  }
+              {t('console.search.prev')}
+            </button>
 
-                  if (!normalizedSearchQuery) {
+            <button
+              type="button"
+              className="console-view__search-nav-btn control-chip"
+              onClick={() => jumpToMatch(1)}
+              disabled={totalMatches === 0}
+            >
+              {t('console.search.next')}
+            </button>
+
+            <button
+              type="button"
+              className="console-view__search-close-btn control-chip"
+              onClick={closeSearch}
+            >
+              {t('common.close')}
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="console-view__search-placeholder">
+              {t('console.search.placeholder')}
+            </span>
+            <button
+              type="button"
+              className="console-view__search-open-btn control-chip"
+              onClick={openSearch}
+            >
+              {t('console.actions.find')}
+            </button>
+          </>
+        )}
+      </section>
+
+      <section className="console-view__log-viewport surface-card">
+        <div
+          ref={logContainerRef}
+          className="console-view__log-pane"
+          onScroll={() => {
+            const el = logContainerRef.current;
+            if (!el) return;
+            const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            setAutoScroll(distanceFromBottom < 120);
+          }}
+        >
+          {(() => {
+            let renderedMatchIndex = -1;
+
+            return visibleLogs.map((entry) => (
+              <div
+                key={entry.originalIndex}
+                className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()} break-words`}
+              >
+                {(() => {
+                  const severityStyle = getSeverityStyle(entry.level);
+                  return entry.segments.map((seg, i) => {
+                    const style = { ...seg.style } as AnsiStyle;
+                    if (severityStyle) {
+                      if (!style.color) {
+                        style.color = severityStyle.color;
+                      }
+                      if (!style.fontWeight) style.fontWeight = severityStyle.fontWeight;
+                    }
+
+                    if (!normalizedSearchQuery) {
+                      return (
+                        <span key={i} style={style}>
+                          {seg.text}
+                        </span>
+                      );
+                    }
+
+                    const parts = seg.text.split(
+                      new RegExp(`(${escapeRegExp(normalizedSearchQuery)})`, 'gi'),
+                    );
+
                     return (
                       <span key={i} style={style}>
-                        {seg.text}
+                        {parts.map((part, partIndex) => {
+                          if (!part) {
+                            return null;
+                          }
+
+                          if (part.toLowerCase() === lowerSearchQuery) {
+                            renderedMatchIndex += 1;
+                            const currentMatchIndex = renderedMatchIndex;
+                            const refKey = `m-${currentMatchIndex}`;
+                            const isActive = currentMatchIndex === activeMatchIndex;
+
+                            return (
+                              <mark
+                                key={`${i}-${partIndex}-match`}
+                                ref={(element) => {
+                                  matchRefs.current[refKey] = element;
+                                }}
+                                className={`console-view__search-hit ${isActive ? 'is-active' : ''}`}
+                              >
+                                {part}
+                              </mark>
+                            );
+                          }
+
+                          return <span key={`${i}-${partIndex}`}>{part}</span>;
+                        })}
                       </span>
                     );
-                  }
+                  });
+                })()}
+              </div>
+            ));
+          })()}
 
-                  const parts = seg.text.split(
-                    new RegExp(`(${escapeRegExp(normalizedSearchQuery)})`, 'gi'),
-                  );
+          <div ref={logEndRef} />
 
-                  return (
-                    <span key={i} style={style}>
-                      {parts.map((part, partIndex) => {
-                        if (!part) {
-                          return null;
-                        }
-
-                        if (part.toLowerCase() === lowerSearchQuery) {
-                          renderedMatchIndex += 1;
-                          const currentMatchIndex = renderedMatchIndex;
-                          const refKey = `m-${currentMatchIndex}`;
-                          const isActive = currentMatchIndex === activeMatchIndex;
-
-                          return (
-                            <mark
-                              key={`${i}-${partIndex}-match`}
-                              ref={(element) => {
-                                matchRefs.current[refKey] = element;
-                              }}
-                              className={`console-view__search-hit ${isActive ? 'is-active' : ''}`}
-                            >
-                              {part}
-                            </mark>
-                          );
-                        }
-
-                        return <span key={`${i}-${partIndex}`}>{part}</span>;
-                      })}
-                    </span>
-                  );
-                });
-              })()}
+          {visibleLogs.length === 0 && (
+            <div className="console-view__empty-log">
+              {logFilter === 'ALL'
+                ? t('console.emptyLog.waiting')
+                : t('console.emptyLog.notFound', { level: logFilter })}
             </div>
-          ));
-        })()}
+          )}
+        </div>
+      </section>
 
-        <div ref={logEndRef} />
-
-        {visibleLogs.length === 0 && (
-          <div className="console-view__empty-log">
-            {logFilter === 'ALL'
-              ? t('console.emptyLog.waiting')
-              : t('console.emptyLog.notFound', { level: logFilter })}
-          </div>
-        )}
-      </div>
-
-      <div className="console-view__command-bar">
-        <button type="button" className="console-view__find-button" onClick={openSearch}>
-          {t('console.actions.find')}
-        </button>
-        <button
-          type="button"
-          className="console-view__save-button"
-          onClick={() => void handleExportLogs()}
-        >
-          {t('console.actions.saveLogs')}
-        </button>
-        <span className="console-view__command-prefix">&gt;</span>
-        <input
-          type="text"
-          value={command}
-          onChange={(e) => {
-            setCommand(e.target.value);
-            if (historyCursor !== -1) {
-              setHistoryCursor(-1);
-            }
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder={t('console.command.placeholder')}
-          className="console-view__command-input"
-        />
-        <button onClick={handleSend} className="console-view__send-button">
-          {t('console.actions.send')}
-        </button>
-
-        <div className="console-view__history-hint">{t('console.historyHint')}</div>
-
-        <div className="console-view__filter-wrap">
-          <span className="console-view__filter-label">{t('console.filter.label')}</span>
-          <div
-            className="console-view__filter-pills"
-            role="tablist"
-            aria-label={t('console.filter.ariaLabel')}
+      <section className="console-view__command-strip surface-card">
+        <div className="console-view__command-actions">
+          <button
+            type="button"
+            className="console-view__save-button control-chip"
+            onClick={() => void handleExportLogs()}
           >
-            {LOG_FILTER_OPTIONS.map((level) => (
-              <button
-                key={level}
-                type="button"
-                role="tab"
-                aria-selected={logFilter === level}
-                className={`console-view__filter-pill ${logFilter === level ? 'is-active' : ''}`}
-                onClick={() => {
-                  setLogFilter(level);
-                  setActiveMatchIndex(0);
-                }}
-              >
-                {level}
-              </button>
-            ))}
+            {t('console.actions.saveLogs')}
+          </button>
+
+          <div className="console-view__filter-wrap">
+            <span className="console-view__filter-label">{t('console.filter.label')}</span>
+            <div
+              className="console-view__filter-pills"
+              role="tablist"
+              aria-label={t('console.filter.ariaLabel')}
+            >
+              {LOG_FILTER_OPTIONS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  role="tab"
+                  aria-selected={logFilter === level}
+                  className={`console-view__filter-pill control-chip ${logFilter === level ? 'is-active' : ''}`}
+                  onClick={() => {
+                    setLogFilter(level);
+                    setActiveMatchIndex(0);
+                  }}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+
+        <div className="console-view__command-entry">
+          <span className="console-view__command-prefix">&gt;</span>
+          <input
+            type="text"
+            value={command}
+            onChange={(e) => {
+              setCommand(e.target.value);
+              if (historyCursor !== -1) {
+                setHistoryCursor(-1);
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={t('console.command.placeholder')}
+            className="console-view__command-input"
+          />
+          <button type="button" onClick={handleSend} className="console-view__send-button">
+            {t('console.actions.send')}
+          </button>
+        </div>
+
+        <div className="console-view__history-hint">{t('console.historyHint')}</div>
+      </section>
     </div>
   );
 };
