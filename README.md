@@ -12,6 +12,7 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 
 ## Features
 
+- 🗣 **Multi-Language Support** - Select either English or Japanese as the language to use within the app
 - 🖥️ **Multi-Platform Support** - Works on macOS, Windows, and Linux
 - 🎮 **Multiple Server Management** - Create and manage multiple Minecraft servers
 - 🔌 **Plugin/Mod Browser** - Install plugins and mods directly from Modrinth, Hangar, and SpigotMC with one click
