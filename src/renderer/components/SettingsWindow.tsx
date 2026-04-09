@@ -3,17 +3,7 @@ import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { getAppSettings, saveAppSettings } from '../../lib/config-commands';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
-
-type AppTheme =
-  | 'dark'
-  | 'darkBlue'
-  | 'grey'
-  | 'forest'
-  | 'sunset'
-  | 'neon'
-  | 'coffee'
-  | 'ocean'
-  | 'system';
+import { normalizeAppTheme, type AppTheme } from '../../store/settingsStore';
 
 interface UpdateState {
   status:
@@ -60,22 +50,7 @@ function normalizeReleaseNotes(notes: unknown): string {
 const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
-  const [theme, setTheme] = useState<AppTheme>('system');
-
-  const normalizeTheme = (value: unknown): AppTheme => {
-    const allowed: AppTheme[] = [
-      'dark',
-      'darkBlue',
-      'grey',
-      'forest',
-      'sunset',
-      'neon',
-      'coffee',
-      'ocean',
-      'system',
-    ];
-    return allowed.includes(value as AppTheme) ? (value as AppTheme) : 'dark';
-  };
+  const [theme, setTheme] = useState<AppTheme>('light');
 
   const releaseNotesText = useMemo(
     () => normalizeReleaseNotes(updateState.releaseNotes),
@@ -87,7 +62,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
       try {
         const settings = await getAppSettings();
         if (settings?.theme) {
-          setTheme(normalizeTheme(settings.theme));
+          setTheme(normalizeAppTheme(settings.theme));
         }
       } catch (e) {
         console.error('Failed to load settings', e);
@@ -245,16 +220,10 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
           id="theme-select"
           className="settings-window__theme-select"
           value={theme}
-          onChange={(e) => handleThemeChange(e.target.value as AppTheme)}
+          onChange={(e) => handleThemeChange(normalizeAppTheme(e.target.value))}
         >
+          <option value="light">{t('settings.theme.options.light')}</option>
           <option value="dark">{t('settings.theme.options.dark')}</option>
-          <option value="darkBlue">{t('settings.theme.options.darkBlue')}</option>
-          <option value="grey">{t('settings.theme.options.grey')}</option>
-          <option value="forest">{t('settings.theme.options.forest')}</option>
-          <option value="sunset">{t('settings.theme.options.sunset')}</option>
-          <option value="neon">{t('settings.theme.options.neon')}</option>
-          <option value="coffee">{t('settings.theme.options.coffee')}</option>
-          <option value="ocean">{t('settings.theme.options.ocean')}</option>
           <option value="system">{t('settings.theme.options.system')}</option>
         </select>
       </section>

@@ -82,14 +82,8 @@ export interface TranslationDictionary {
       description: string;
       label: string;
       options: {
+        light: string;
         dark: string;
-        darkBlue: string;
-        grey: string;
-        forest: string;
-        sunset: string;
-        neon: string;
-        coffee: string;
-        ocean: string;
         system: string;
       };
     };

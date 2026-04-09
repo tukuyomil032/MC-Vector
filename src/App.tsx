@@ -53,7 +53,7 @@ import UsersView from './renderer/components/UsersView';
 import { type AppView, type MinecraftServer } from './renderer/shared/server declaration';
 import { useConsoleStore } from './store/consoleStore';
 import { useServerStore } from './store/serverStore';
-import { type AppTheme, useSettingsStore } from './store/settingsStore';
+import { normalizeAppTheme, type AppTheme, useSettingsStore } from './store/settingsStore';
 import { useUiStore } from './store/uiStore';
 
 const TAB_CYCLE: AppView[] = [
@@ -135,21 +135,6 @@ function App() {
   const systemPrefersDark = useSettingsStore((state) => state.systemPrefersDark);
   const setSystemPrefersDark = useSettingsStore((state) => state.setSystemPrefersDark);
 
-  const normalizeTheme = (value: unknown): AppTheme => {
-    const allowed: AppTheme[] = [
-      'dark',
-      'darkBlue',
-      'grey',
-      'forest',
-      'sunset',
-      'neon',
-      'coffee',
-      'ocean',
-      'system',
-    ];
-    return allowed.includes(value as AppTheme) ? (value as AppTheme) : 'dark';
-  };
-
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Tab' && (e.ctrlKey || e.metaKey)) {
@@ -187,7 +172,7 @@ function App() {
       try {
         const settings = await getAppSettings();
         if (settings?.theme) {
-          setAppTheme(normalizeTheme(settings.theme));
+          setAppTheme(normalizeAppTheme(settings.theme));
         }
       } catch (e) {
         console.error('Failed to load app settings', e);
@@ -198,7 +183,7 @@ function App() {
     let disposeThemeWatch: (() => void) | undefined;
     void (async () => {
       disposeThemeWatch = await onConfigChange('theme', (value) => {
-        setAppTheme(normalizeTheme(value));
+        setAppTheme(normalizeAppTheme(value));
       });
     })();
 
@@ -1100,10 +1085,19 @@ function App() {
     }
   };
 
-  const resolvedTheme: AppTheme =
-    appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'darkBlue') : appTheme;
+  const resolvedTheme: Exclude<AppTheme, 'system'> =
+    appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : appTheme;
+  type ThemePaletteKey =
+    | Exclude<AppTheme, 'system'>
+    | 'darkBlue'
+    | 'grey'
+    | 'forest'
+    | 'sunset'
+    | 'neon'
+    | 'coffee'
+    | 'ocean';
   const themePalette: Record<
-    Exclude<AppTheme, 'system'>,
+    ThemePaletteKey,
     {
       mainBg: string;
       headerBg: string;
@@ -1150,6 +1144,30 @@ function App() {
       successEnd: '#10b981',
       warnStart: '#f59e0b',
       warnEnd: '#f97316',
+    },
+    light: {
+      mainBg:
+        'radial-gradient(circle at 20% 0%, rgba(59,130,246,0.14), transparent 45%), radial-gradient(circle at 90% 0%, rgba(16,185,129,0.12), transparent 35%), #f4f7fb',
+      headerBg: 'rgba(255,255,255,0.95)',
+      text: '#0f172a',
+      sidebarBg: '#e8eef6',
+      sidebarPanelBg: '#f8fafc',
+      panelBg: '#ffffff',
+      border: '#cbd5e1',
+      viewGlowA: 'rgba(59, 130, 246, 0.12)',
+      viewGlowB: 'rgba(16, 185, 129, 0.1)',
+      panelStart: 'rgba(255, 255, 255, 0.95)',
+      panelEnd: 'rgba(241, 245, 249, 0.88)',
+      panelAltStart: 'rgba(248, 250, 252, 0.96)',
+      panelAltEnd: 'rgba(226, 232, 240, 0.88)',
+      borderSoft: 'rgba(148, 163, 184, 0.45)',
+      borderStrong: 'rgba(14, 165, 233, 0.35)',
+      accentStart: '#2563eb',
+      accentEnd: '#0891b2',
+      successStart: '#16a34a',
+      successEnd: '#059669',
+      warnStart: '#d97706',
+      warnEnd: '#ea580c',
     },
     darkBlue: {
       mainBg:
@@ -1315,8 +1333,7 @@ function App() {
       warnEnd: '#f97316',
     },
   };
-  const themeColors =
-    themePalette[resolvedTheme as Exclude<AppTheme, 'system'>] || themePalette.dark;
+  const themeColors = themePalette[resolvedTheme] || themePalette.dark;
 
   const appShellCssVars: Record<`--${string}`, string> = {
     '--mv-view-glow-a': themeColors.viewGlowA,

@@ -1,15 +1,13 @@
 import { create } from 'zustand';
 
-export type AppTheme =
-  | 'dark'
-  | 'darkBlue'
-  | 'grey'
-  | 'forest'
-  | 'sunset'
-  | 'neon'
-  | 'coffee'
-  | 'ocean'
-  | 'system';
+export type AppTheme = 'light' | 'dark' | 'system';
+
+export function normalizeAppTheme(value: unknown): AppTheme {
+  if (value === 'light' || value === 'dark' || value === 'system') {
+    return value;
+  }
+  return 'dark';
+}
 
 interface SettingsStoreState {
   appTheme: AppTheme;
@@ -19,7 +17,7 @@ interface SettingsStoreState {
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
-  appTheme: 'system',
+  appTheme: 'light',
   systemPrefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
   setAppTheme: (theme) => set({ appTheme: theme }),
   setSystemPrefersDark: (value) => set({ systemPrefersDark: value }),
