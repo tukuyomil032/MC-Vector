@@ -82,9 +82,10 @@ export default function FilesView({ server }: Props) {
   }, [currentPath]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
 
-    getCurrentWindow()
+    void getCurrentWindow()
       .onDragDropEvent(async (event) => {
         const payload = event.payload;
 
@@ -120,14 +121,19 @@ export default function FilesView({ server }: Props) {
         }
       })
       .then((dispose) => {
+        if (cancelled) {
+          dispose();
+          return;
+        }
         unlisten = dispose;
       });
 
     return () => {
+      cancelled = true;
       setIsExternalDropActive(false);
       unlisten?.();
     };
-  }, [currentPath, showToast]);
+  }, [currentPath, showToast, t]);
 
   const loadFiles = async (path: string) => {
     try {

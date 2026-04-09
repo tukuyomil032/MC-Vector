@@ -95,8 +95,9 @@ export default function DashboardView({ server }: Props) {
   const supportsTpsPolling = server.software === 'Paper' || server.software === 'LeafMC';
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    tauriListen<{ serverId: string; cpu: number; memory: number }>('server-stats', (data) => {
+    void tauriListen<{ serverId: string; cpu: number; memory: number }>('server-stats', (data) => {
       if (data.serverId !== server.id) {
         return;
       }
@@ -124,15 +125,23 @@ export default function DashboardView({ server }: Props) {
         return pruneMetricWindow(next, now);
       });
     }).then((u) => {
+      if (cancelled) {
+        u();
+        return;
+      }
       unlisten = u;
     });
 
-    return () => unlisten?.();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, [server.id]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    tauriListen<{ serverId: string; line: string }>('server-log', (data) => {
+    void tauriListen<{ serverId: string; line: string }>('server-log', (data) => {
       if (data.serverId !== server.id) {
         return;
       }
@@ -161,10 +170,17 @@ export default function DashboardView({ server }: Props) {
         return pruneMetricWindow(next, now);
       });
     }).then((u) => {
+      if (cancelled) {
+        u();
+        return;
+      }
       unlisten = u;
     });
 
-    return () => unlisten?.();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, [server.id]);
 
   useEffect(() => {

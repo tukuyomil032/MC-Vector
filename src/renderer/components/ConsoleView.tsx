@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import { useConsoleStore } from '../../store/consoleStore';
 import { useToast } from './ToastProvider';
 
 type AnsiStyle = {
@@ -169,13 +170,23 @@ const getSeverityStyle = (level: Exclude<LogLevelFilter, 'ALL'>): AnsiStyle => {
 
 interface ConsoleViewProps {
   server: MinecraftServer;
-  logs: string[];
   ngrokUrl: string | null;
 }
 
-const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
+type ParsedLogEntry = {
+  line: string;
+  plainLine: string;
+  originalIndex: number;
+  level: Exclude<LogLevelFilter, 'ALL'>;
+  segments: AnsiSegment[];
+};
+
+const EMPTY_LOGS: string[] = [];
+
+const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const logs = useConsoleStore((state) => state.serverLogs[server.id] ?? EMPTY_LOGS);
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyCursor, setHistoryCursor] = useState(-1);
@@ -192,19 +203,26 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const matchRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
-  const visibleLogs = useMemo(() => {
-    const parsedLogs = logs.map((line, originalIndex) => ({
-      line,
-      originalIndex,
-      level: detectLogLevel(stripAnsiCodes(line)),
-    }));
+  const parsedLogs = useMemo<ParsedLogEntry[]>(() => {
+    return logs.map((line, originalIndex) => {
+      const plainLine = stripAnsiCodes(line);
+      return {
+        line,
+        plainLine,
+        originalIndex,
+        level: detectLogLevel(plainLine),
+        segments: ansiToSegments(line),
+      };
+    });
+  }, [logs]);
 
+  const visibleLogs = useMemo(() => {
     if (logFilter === 'ALL') {
       return parsedLogs;
     }
 
     return parsedLogs.filter((entry) => entry.level === logFilter);
-  }, [logs, logFilter]);
+  }, [parsedLogs, logFilter]);
 
   const normalizedSearchQuery = searchQuery.trim();
   const lowerSearchQuery = normalizedSearchQuery.toLowerCase();
@@ -214,7 +232,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
     }
 
     return visibleLogs.reduce((total, entry) => {
-      return total + countMatches(stripAnsiCodes(entry.line), normalizedSearchQuery);
+      return total + countMatches(entry.plainLine, normalizedSearchQuery);
     }, 0);
   }, [visibleLogs, normalizedSearchQuery]);
 
@@ -289,15 +307,21 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
   }, [activeMatchIndex, totalMatches, isSearchOpen, normalizedSearchQuery, visibleLogs.length]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    tauriListen<{ serverId: string; memory: number }>('server-stats', (data) => {
+    void tauriListen<{ serverId: string; memory: number }>('server-stats', (data) => {
       if (data.serverId === server.id) {
         setMemoryUsage(data.memory);
       }
     }).then((fn) => {
+      if (cancelled) {
+        fn();
+        return;
+      }
       unlisten = fn;
     });
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, [server.id]);
@@ -421,9 +445,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         return;
       }
 
-      const output = visibleLogs
-        .map((entry) => stripAnsiCodes(entry.line).replace(/\r\n/g, '\n'))
-        .join('\n');
+      const output = visibleLogs.map((entry) => entry.plainLine.replace(/\r\n/g, '\n')).join('\n');
 
       await writeTextFile(targetPath, output);
       showToast(t('console.toast.logsSaved'), 'success');
@@ -538,15 +560,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, logs, ngrokUrl }) => {
         {(() => {
           let renderedMatchIndex = -1;
 
-          return visibleLogs.map((entry, index: number) => (
+          return visibleLogs.map((entry) => (
             <div
-              key={`${entry.originalIndex}-${index}`}
+              key={entry.originalIndex}
               className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()} break-words`}
             >
               {(() => {
-                const log = entry.line;
                 const severityStyle = getSeverityStyle(entry.level);
-                return ansiToSegments(log).map((seg, i) => {
+                return entry.segments.map((seg, i) => {
                   const style = { ...seg.style } as AnsiStyle;
                   if (severityStyle) {
                     if (!style.color) {

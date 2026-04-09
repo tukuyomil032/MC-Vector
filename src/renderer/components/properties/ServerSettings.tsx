@@ -106,8 +106,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   };
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    onNgrokStatusChange((data) => {
+    void onNgrokStatusChange((data) => {
       if (data.serverId === server.id) {
         if (data.status === 'connecting' || data.status === 'connected') {
           setIsTunneling(true);
@@ -121,10 +122,15 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         }
       }
     }).then((u) => {
+      if (cancelled) {
+        u();
+        return;
+      }
       unlisten = u;
     });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, [server.id]);

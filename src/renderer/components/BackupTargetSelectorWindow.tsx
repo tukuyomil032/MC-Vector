@@ -150,17 +150,23 @@ export default function BackupTargetSelectorWindow() {
   }, [initial.selected, initial.serverPath]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    tauriListen<IncomingPayload>('backup-selector:load', (payload) => {
+    void tauriListen<IncomingPayload>('backup-selector:load', (payload) => {
       const nextSelected = new Set(payload.selected);
       setServerPath(payload.serverPath);
       setSelected(nextSelected);
       void loadTree(payload.serverPath, nextSelected);
     }).then((dispose) => {
+      if (cancelled) {
+        dispose();
+        return;
+      }
       unlisten = dispose;
     });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, []);

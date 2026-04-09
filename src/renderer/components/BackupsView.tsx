@@ -166,23 +166,32 @@ export default function BackupsView({ server }: Props) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
 
-    tauriListen<{ serverPath: string; paths: string[] }>('backup-selector:apply', (payload) => {
-      if (payload.serverPath !== server.path) {
+    void tauriListen<{ serverPath: string; paths: string[] }>(
+      'backup-selector:apply',
+      (payload) => {
+        if (payload.serverPath !== server.path) {
+          return;
+        }
+
+        setSelectedPaths(new Set(payload.paths));
+        showToast(t('backups.toast.targetUpdated', { count: payload.paths.length }), 'success');
+      },
+    ).then((dispose) => {
+      if (cancelled) {
+        dispose();
         return;
       }
-
-      setSelectedPaths(new Set(payload.paths));
-      showToast(t('backups.toast.targetUpdated', { count: payload.paths.length }), 'success');
-    }).then((dispose) => {
       unlisten = dispose;
     });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
-  }, [server.path, showToast]);
+  }, [server.path, showToast, t]);
 
   useEffect(() => {
     void (async () => {

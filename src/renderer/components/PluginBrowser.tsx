@@ -1,6 +1,6 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
@@ -71,6 +71,7 @@ interface PlatformOption {
 }
 
 const LIMIT = 25;
+const ASYNC_CHECK_CONCURRENCY = 4;
 
 type CompatibilityStatus = 'checking' | 'compatible' | 'incompatible' | 'unknown';
 type UpdateStatus = 'checking' | 'update-available' | 'up-to-date' | 'unknown';
@@ -224,8 +225,37 @@ function projectPageUrl(item: ProjectItem): string {
   return `https://www.spigotmc.org/resources/${item.id}/`;
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+  const results: R[] = [];
+  let cursor = 0;
+
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= items.length) {
+        return;
+      }
+      results[index] = await mapper(items[index], index);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 export default function PluginBrowser({ server }: Props) {
   const { t } = useTranslation();
+  const prefersReducedMotion = useReducedMotion();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -261,6 +291,8 @@ export default function PluginBrowser({ server }: Props) {
     Record<string, { status: UpdateStatus; latestFileName: string | null }>
   >({});
   const detailRequestIdRef = useRef(0);
+  const compatibilityRequestIdRef = useRef(0);
+  const updateStatusRequestIdRef = useRef(0);
 
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
@@ -360,6 +392,8 @@ export default function PluginBrowser({ server }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    const requestId = compatibilityRequestIdRef.current + 1;
+    compatibilityRequestIdRef.current = requestId;
 
     if (!isInAppSearch || results.length === 0) {
       setCompatibilityByItemId({});
@@ -389,8 +423,14 @@ export default function PluginBrowser({ server }: Props) {
     setCompatibilityDetailByItemId(initialDetails);
 
     const run = async () => {
-      const updates = await Promise.all(
-        results.map(async (item): Promise<[string, CompatibilityStatus, CompatibilityDetail]> => {
+      const updates = await mapWithConcurrency(
+        results,
+        ASYNC_CHECK_CONCURRENCY,
+        async (item): Promise<[string, CompatibilityStatus, CompatibilityDetail]> => {
+          if (cancelled || compatibilityRequestIdRef.current !== requestId) {
+            return [item.id, initial[item.id] ?? 'unknown', initialDetails[item.id]];
+          }
+
           if (item.platform !== 'Hangar') {
             return [item.id, initial[item.id] ?? 'unknown', initialDetails[item.id]];
           }
@@ -418,10 +458,10 @@ export default function PluginBrowser({ server }: Props) {
             console.error(error);
             return [item.id, 'unknown', { supportedVersions: [] }];
           }
-        }),
+        },
       );
 
-      if (cancelled) {
+      if (cancelled || compatibilityRequestIdRef.current !== requestId) {
         return;
       }
 
@@ -439,11 +479,16 @@ export default function PluginBrowser({ server }: Props) {
 
     return () => {
       cancelled = true;
+      if (compatibilityRequestIdRef.current === requestId) {
+        compatibilityRequestIdRef.current += 1;
+      }
     };
   }, [isInAppSearch, results, server.software, server.version]);
 
   useEffect(() => {
     let cancelled = false;
+    const requestId = updateStatusRequestIdRef.current + 1;
+    updateStatusRequestIdRef.current = requestId;
 
     if (!isInAppSearch || results.length === 0) {
       setUpdateStatusByItemId({});
@@ -471,64 +516,68 @@ export default function PluginBrowser({ server }: Props) {
     }
 
     const run = async () => {
-      const updates = await Promise.all(
-        installedTargets.map(
-          async ({ item, installedMatch }): Promise<[string, UpdateStatus, string | null]> => {
-            if (item.platform === 'Spigot') {
-              return [item.id, 'unknown', null];
+      const updates = await mapWithConcurrency(
+        installedTargets,
+        ASYNC_CHECK_CONCURRENCY,
+        async ({ item, installedMatch }): Promise<[string, UpdateStatus, string | null]> => {
+          if (cancelled || updateStatusRequestIdRef.current !== requestId) {
+            return [item.id, initialStatus[item.id] ?? 'unknown', null];
+          }
+
+          if (item.platform === 'Spigot') {
+            return [item.id, 'unknown', null];
+          }
+
+          const normalizedInstalled = normalizeInstalledPluginFileName(installedMatch);
+          const cacheKey = `${item.platform}:${item.id}:${server.software}:${server.version}:${normalizedInstalled}`;
+          const cached = updateStatusCacheRef.current[cacheKey];
+          if (cached) {
+            return [item.id, cached.status, cached.latestFileName];
+          }
+
+          try {
+            let latestFileName: string | null = null;
+
+            if (item.platform === 'Modrinth') {
+              const loader = (server.software || '').toLowerCase();
+              const resolved = await getCompatibleModrinthVersion({
+                projectId: item.id,
+                loader,
+                minecraftVersion: server.version,
+              });
+              latestFileName = resolved?.fileName ?? null;
+            } else {
+              const owner = item.author;
+              const slug = item.slug || item.title;
+              const resolved = await resolveHangarDownload({
+                owner,
+                slug,
+                software: server.software || 'Paper',
+                minecraftVersion: server.version || '',
+              });
+              latestFileName = resolved?.fileName ?? null;
             }
 
-            const normalizedInstalled = normalizeInstalledPluginFileName(installedMatch);
-            const cacheKey = `${item.platform}:${item.id}:${server.software}:${server.version}:${normalizedInstalled}`;
-            const cached = updateStatusCacheRef.current[cacheKey];
-            if (cached) {
-              return [item.id, cached.status, cached.latestFileName];
-            }
+            const status: UpdateStatus = latestFileName
+              ? normalizedInstalled === latestFileName.toLowerCase()
+                ? 'up-to-date'
+                : 'update-available'
+              : 'unknown';
 
-            try {
-              let latestFileName: string | null = null;
+            updateStatusCacheRef.current[cacheKey] = {
+              status,
+              latestFileName,
+            };
 
-              if (item.platform === 'Modrinth') {
-                const loader = (server.software || '').toLowerCase();
-                const resolved = await getCompatibleModrinthVersion({
-                  projectId: item.id,
-                  loader,
-                  minecraftVersion: server.version,
-                });
-                latestFileName = resolved?.fileName ?? null;
-              } else {
-                const owner = item.author;
-                const slug = item.slug || item.title;
-                const resolved = await resolveHangarDownload({
-                  owner,
-                  slug,
-                  software: server.software || 'Paper',
-                  minecraftVersion: server.version || '',
-                });
-                latestFileName = resolved?.fileName ?? null;
-              }
-
-              const status: UpdateStatus = latestFileName
-                ? normalizedInstalled === latestFileName.toLowerCase()
-                  ? 'up-to-date'
-                  : 'update-available'
-                : 'unknown';
-
-              updateStatusCacheRef.current[cacheKey] = {
-                status,
-                latestFileName,
-              };
-
-              return [item.id, status, latestFileName];
-            } catch (error) {
-              console.error(error);
-              return [item.id, 'unknown', null];
-            }
-          },
-        ),
+            return [item.id, status, latestFileName];
+          } catch (error) {
+            console.error(error);
+            return [item.id, 'unknown', null];
+          }
+        },
       );
 
-      if (cancelled) {
+      if (cancelled || updateStatusRequestIdRef.current !== requestId) {
         return;
       }
 
@@ -550,6 +599,9 @@ export default function PluginBrowser({ server }: Props) {
 
     return () => {
       cancelled = true;
+      if (updateStatusRequestIdRef.current === requestId) {
+        updateStatusRequestIdRef.current += 1;
+      }
     };
   }, [isInAppSearch, results, installedFiles, server.software, server.version]);
 
@@ -1234,8 +1286,8 @@ export default function PluginBrowser({ server }: Props) {
             <motion.button
               key={option.key}
               type="button"
-              whileTap={{ scale: 0.97 }}
-              whileHover={{ y: -1 }}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              whileHover={prefersReducedMotion ? undefined : { y: -1 }}
               className={`plugin-browser__platform-chip ${active ? 'is-active' : ''}`}
               onClick={() => {
                 setPlatform(option.key);
@@ -1372,11 +1424,21 @@ export default function PluginBrowser({ server }: Props) {
                 return (
                   <motion.div
                     key={`${item.platform}-${item.id}`}
-                    layout
-                    initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                    layout={!prefersReducedMotion}
+                    initial={
+                      prefersReducedMotion
+                        ? { opacity: 1, y: 0, scale: 1 }
+                        : { opacity: 0, y: 14, scale: 0.98 }
+                    }
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.18, delay: Math.min(index * 0.02, 0.16) }}
+                    exit={
+                      prefersReducedMotion ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -10 }
+                    }
+                    transition={
+                      prefersReducedMotion
+                        ? { duration: 0 }
+                        : { duration: 0.18, delay: Math.min(index * 0.02, 0.16) }
+                    }
                     className="plugin-browser__result-card"
                   >
                     <div
@@ -1504,8 +1566,9 @@ export default function PluginBrowser({ server }: Props) {
               {sortedResults.length === 0 && !loading && (
                 <motion.div
                   key="empty"
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
+                  transition={prefersReducedMotion ? { duration: 0 } : undefined}
                   className="plugin-browser__result-empty"
                 >
                   {t('plugins.browser.noResults')}

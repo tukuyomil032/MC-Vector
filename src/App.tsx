@@ -1,7 +1,7 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   iconBackups,
@@ -45,6 +45,7 @@ import ConsoleView from './renderer/components/ConsoleView';
 import NgrokGuideView from './renderer/components/NgrokGuideView';
 import ProxyHelpView from './renderer/components/ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/ProxySetupView';
+import ViewErrorBoundary from './renderer/components/ViewErrorBoundary';
 import PropertiesView from './renderer/components/properties/PropertiesView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
 import { useToast } from './renderer/components/ToastProvider';
@@ -126,6 +127,7 @@ function App() {
   } | null>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
   const appTheme = useSettingsStore((state) => state.appTheme);
@@ -210,7 +212,6 @@ function App() {
     };
   }, []);
 
-  const serverLogs = useConsoleStore((state) => state.serverLogs);
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);
   const selectedServerIdRef = useRef(selectedServerId);
@@ -674,17 +675,13 @@ function App() {
       }
     };
 
-    setupListeners();
+    void setupListeners();
 
     return () => {
       cancelled = true;
       unlisteners.forEach((u) => u());
     };
   }, []);
-
-  useEffect(() => {
-    // Ngrok status is now tracked via events; no poll needed
-  }, [selectedServerId]);
 
   const activeServer = servers.find((s) => s.id === selectedServerId);
 
@@ -1479,7 +1476,6 @@ function App() {
           <ConsoleView
             key={contentKey}
             server={activeServer}
-            logs={serverLogs[activeServer.id] || []}
             ngrokUrl={ngrokData[activeServer.id] || null}
           />
         );
@@ -1725,13 +1721,23 @@ function App() {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`${selectedServerId || 'none'}-${currentView}`}
-              initial={{ opacity: 0, y: 10 }}
+              initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
+              transition={
+                prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }
+              }
               className="h-full"
             >
-              <Suspense fallback={lazyViewFallback}>{renderContent()}</Suspense>
+              <ViewErrorBoundary
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm text-red-400">
+                    {t('errors.generic')}
+                  </div>
+                }
+              >
+                <Suspense fallback={lazyViewFallback}>{renderContent()}</Suspense>
+              </ViewErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -1863,7 +1869,17 @@ function NavItem({ label, tooltip, view, current, set, iconSrc }: NavItemProps) 
     <div
       className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
       onClick={() => set(view)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          set(view);
+        }
+      }}
       title={isOpen ? '' : tooltip}
+      role="button"
+      tabIndex={0}
+      aria-label={tooltip}
+      aria-current={isActive ? 'page' : undefined}
     >
       <img
         src={iconSrc}
@@ -1876,5 +1892,3 @@ function NavItem({ label, tooltip, view, current, set, iconSrc }: NavItemProps) 
 }
 
 export default App;
-// test
-// test lint error

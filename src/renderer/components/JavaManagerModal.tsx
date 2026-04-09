@@ -27,14 +27,20 @@ export default function JavaManagerModal({ onClose }: Props) {
   useEffect(() => {
     loadInstalled();
 
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    onJavaDownloadProgress((data) => {
+    void onJavaDownloadProgress((data) => {
       setDownloadProgress(typeof data.progress === 'number' ? data.progress : null);
     }).then((u) => {
+      if (cancelled) {
+        u();
+        return;
+      }
       unlisten = u;
     });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, []);

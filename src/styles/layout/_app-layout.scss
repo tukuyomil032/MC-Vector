@@ -102,6 +102,10 @@
     @apply border-l-transparent hover:bg-bg-hover hover:text-text-primary hover:translate-x-1;
   }
 
+  .app-nav-item:focus-visible {
+    @apply outline-none ring-2 ring-accent/40;
+  }
+
   .app-nav-item__icon {
     @apply w-5 h-5 shrink-0 block;
   }
