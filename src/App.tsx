@@ -2,7 +2,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { mkdir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { type JSX, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   iconBackups,
   iconConsole,
@@ -503,24 +503,26 @@ function App() {
   }, []);
 
   const renderContent = () => {
-    if (currentView === 'app-settings') {
-      return <SettingsWindow onClose={() => setCurrentView('dashboard')} />;
-    }
-    if (currentView === 'proxy-help') {
-      return <ProxyHelpView />;
-    }
-    if (currentView === 'ngrok-guide') {
-      return <NgrokGuideView />;
-    }
-    if (currentView === 'proxy') {
-      return (
+    type ViewRenderer = () => JSX.Element;
+
+    const staticViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
+      'app-settings': () => <SettingsWindow onClose={() => setCurrentView('dashboard')} />,
+      'proxy-help': () => <ProxyHelpView />,
+      'ngrok-guide': () => <NgrokGuideView />,
+      proxy: () => (
         <ProxySetupView
           servers={servers}
           onBuildNetwork={handleBuildProxyNetwork}
           onOpenHelp={() => setCurrentView('proxy-help')}
         />
-      );
+      ),
+    };
+
+    const staticRenderer = staticViewRenderers[currentView];
+    if (staticRenderer) {
+      return staticRenderer();
     }
+
     if (!activeServer) {
       return (
         <div className="p-10 text-center text-zinc-500 text-xl">
@@ -531,39 +533,36 @@ function App() {
 
     const contentKey = `${activeServer.id}-${currentView}`;
 
-    switch (currentView) {
-      case 'dashboard':
-        return <DashboardView key={contentKey} server={activeServer} />;
-      case 'console':
-        return (
-          <ConsoleView
-            key={contentKey}
-            server={activeServer}
-            ngrokUrl={ngrokData[activeServer.id] || null}
-          />
-        );
-      case 'properties':
-        return <PropertiesView key={contentKey} server={activeServer} />;
-      case 'files':
-        return <FilesView key={contentKey} server={activeServer} />;
-      case 'plugins':
-        return <PluginBrowser key={contentKey} server={activeServer} />;
-      case 'backups':
-        return <BackupsView key={contentKey} server={activeServer} />;
-      case 'general-settings':
-        return (
-          <ServerSettings
-            key={contentKey}
-            server={activeServer}
-            onSave={handleUpdateServer}
-            onOpenNgrokGuide={() => setCurrentView('ngrok-guide')}
-          />
-        );
-      case 'users':
-        return <UsersView key={contentKey} server={activeServer} />;
-      default:
-        return <div>{t('errors.notFound')}</div>;
+    const serverViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
+      dashboard: () => <DashboardView key={contentKey} server={activeServer} />,
+      console: () => (
+        <ConsoleView
+          key={contentKey}
+          server={activeServer}
+          ngrokUrl={ngrokData[activeServer.id] || null}
+        />
+      ),
+      properties: () => <PropertiesView key={contentKey} server={activeServer} />,
+      files: () => <FilesView key={contentKey} server={activeServer} />,
+      plugins: () => <PluginBrowser key={contentKey} server={activeServer} />,
+      backups: () => <BackupsView key={contentKey} server={activeServer} />,
+      'general-settings': () => (
+        <ServerSettings
+          key={contentKey}
+          server={activeServer}
+          onSave={handleUpdateServer}
+          onOpenNgrokGuide={() => setCurrentView('ngrok-guide')}
+        />
+      ),
+      users: () => <UsersView key={contentKey} server={activeServer} />,
+    };
+
+    const serverRenderer = serverViewRenderers[currentView];
+    if (serverRenderer) {
+      return serverRenderer();
     }
+
+    return <div>{t('errors.notFound')}</div>;
   };
 
   if (isBackupSelectorWindow) {
