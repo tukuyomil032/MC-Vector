@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { type JSX, lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import {
   iconBackups,
   iconConsole,
@@ -21,22 +21,15 @@ import {
   updateServer as updateServerApi,
 } from './lib/server-commands';
 import AddServerModal from './renderer/components/AddServerModal';
+import AppContentRouter from './renderer/components/AppContentRouter';
 import AppContextMenu from './renderer/components/AppContextMenu';
 import AppDownloadToast from './renderer/components/AppDownloadToast';
 import AppNavItem from './renderer/components/AppNavItem';
 import AppServerSidebar from './renderer/components/AppServerSidebar';
 import AppUpdateModal from './renderer/components/AppUpdateModal';
-import BackupsView from './renderer/components/BackupsView';
 import BackupTargetSelectorWindow from './renderer/components/BackupTargetSelectorWindow';
-import ConsoleView from './renderer/components/ConsoleView';
-import NgrokGuideView from './renderer/components/NgrokGuideView';
-import ProxyHelpView from './renderer/components/ProxyHelpView';
-import ProxySetupView from './renderer/components/ProxySetupView';
 import ViewErrorBoundary from './renderer/components/ViewErrorBoundary';
-import PropertiesView from './renderer/components/properties/PropertiesView';
-import ServerSettings from './renderer/components/properties/ServerSettings';
 import { useToast } from './renderer/components/ToastProvider';
-import UsersView from './renderer/components/UsersView';
 import { useAppUpdater } from './renderer/hooks/use-app-updater';
 import { useServerContextActions } from './renderer/hooks/use-server-context-actions';
 import { useServerAutomation } from './renderer/hooks/use-server-automation';
@@ -63,11 +56,6 @@ const TAB_CYCLE: AppView[] = [
   'general-settings',
   'proxy',
 ];
-
-const DashboardView = lazy(() => import('./renderer/components/DashboardView'));
-const FilesView = lazy(() => import('./renderer/components/FilesView'));
-const PluginBrowser = lazy(() => import('./renderer/components/PluginBrowser'));
-const SettingsWindow = lazy(() => import('./renderer/components/SettingsWindow'));
 
 function App() {
   const { t } = useTranslation();
@@ -296,69 +284,6 @@ function App() {
     return params.get('backupSelector') === '1';
   }, []);
 
-  const renderContent = () => {
-    type ViewRenderer = () => JSX.Element;
-
-    const staticViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
-      'app-settings': () => <SettingsWindow onClose={() => setCurrentView('dashboard')} />,
-      'proxy-help': () => <ProxyHelpView />,
-      'ngrok-guide': () => <NgrokGuideView />,
-      proxy: () => (
-        <ProxySetupView
-          servers={servers}
-          onBuildNetwork={handleBuildProxyNetwork}
-          onOpenHelp={() => setCurrentView('proxy-help')}
-        />
-      ),
-    };
-
-    const staticRenderer = staticViewRenderers[currentView];
-    if (staticRenderer) {
-      return staticRenderer();
-    }
-
-    if (!activeServer) {
-      return (
-        <div className="p-10 text-center text-zinc-500 text-xl">
-          {t('server.list.selectOrCreate')}
-        </div>
-      );
-    }
-
-    const contentKey = `${activeServer.id}-${currentView}`;
-
-    const serverViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
-      dashboard: () => <DashboardView key={contentKey} server={activeServer} />,
-      console: () => (
-        <ConsoleView
-          key={contentKey}
-          server={activeServer}
-          ngrokUrl={ngrokData[activeServer.id] || null}
-        />
-      ),
-      properties: () => <PropertiesView key={contentKey} server={activeServer} />,
-      files: () => <FilesView key={contentKey} server={activeServer} />,
-      plugins: () => <PluginBrowser key={contentKey} server={activeServer} />,
-      backups: () => <BackupsView key={contentKey} server={activeServer} />,
-      'general-settings': () => (
-        <ServerSettings
-          key={contentKey}
-          server={activeServer}
-          onSave={handleUpdateServer}
-          onOpenNgrokGuide={() => setCurrentView('ngrok-guide')}
-        />
-      ),
-      users: () => <UsersView key={contentKey} server={activeServer} />,
-    };
-
-    const serverRenderer = serverViewRenderers[currentView];
-    if (serverRenderer) {
-      return serverRenderer();
-    }
-
-    return <div>{t('errors.notFound')}</div>;
-  };
-
   if (isBackupSelectorWindow) {
     return <BackupTargetSelectorWindow />;
   }
@@ -545,7 +470,18 @@ function App() {
                   </div>
                 }
               >
-                <Suspense fallback={lazyViewFallback}>{renderContent()}</Suspense>
+                <Suspense fallback={lazyViewFallback}>
+                  <AppContentRouter
+                    currentView={currentView}
+                    setCurrentView={setCurrentView}
+                    activeServer={activeServer}
+                    servers={servers}
+                    ngrokData={ngrokData}
+                    onBuildProxyNetwork={handleBuildProxyNetwork}
+                    onUpdateServer={handleUpdateServer}
+                    t={t}
+                  />
+                </Suspense>
               </ViewErrorBoundary>
             </motion.div>
           </AnimatePresence>
