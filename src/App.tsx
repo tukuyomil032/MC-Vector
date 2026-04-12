@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { iconMenu } from './assets/icons';
 import { useTranslation } from './i18n';
 // Tauri API ラッパー
 import {
@@ -12,6 +11,7 @@ import AppContextMenu from './renderer/components/AppContextMenu';
 import AppDownloadToast from './renderer/components/AppDownloadToast';
 import AppMainContent from './renderer/components/AppMainContent';
 import AppMainHeader from './renderer/components/AppMainHeader';
+import AppSidebarHeader from './renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from './renderer/components/AppSidebarNavigation';
 import AppServerSidebar from './renderer/components/AppServerSidebar';
 import AppUpdateModal from './renderer/components/AppUpdateModal';
@@ -238,28 +238,12 @@ function App() {
       <aside
         className={`app-sidebar app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'app-sidebar--open' : 'app-sidebar--collapsed'}`}
       >
-        <div
-          className={`app-sidebar__header ${isSidebarOpen ? 'app-sidebar__header--open' : 'app-sidebar__header--collapsed'}`}
-        >
-          {isSidebarOpen && (
-            <button
-              type="button"
-              className="app-sidebar__brand"
-              onClick={handleOpenSettingsWindow}
-              aria-label={t('nav.openSettings')}
-              title={t('nav.openSettings')}
-            >
-              MC-Vector
-            </button>
-          )}
-
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="app-sidebar__menu-button"
-          >
-            <img src={iconMenu} alt="" className="app-sidebar__menu-icon" />
-          </button>
-        </div>
+        <AppSidebarHeader
+          isSidebarOpen={isSidebarOpen}
+          onOpenSettings={handleOpenSettingsWindow}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          openSettingsLabel={t('nav.openSettings')}
+        />
 
         <AppSidebarNavigation
           isSidebarOpen={isSidebarOpen}
