@@ -1,6 +1,3 @@
-import { ask } from '@tauri-apps/plugin-dialog';
-import { mkdir } from '@tauri-apps/plugin-fs';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { type JSX, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
@@ -17,12 +14,8 @@ import {
 } from './assets/icons';
 import { useTranslation } from './i18n';
 import { getAppSettings, onConfigChange, saveAppSettings } from './lib/config-commands';
-import { readFileContent, saveFileContent } from './lib/file-commands';
 // Tauri API ラッパー
 import {
-  addServer as addServerApi,
-  downloadServerJar,
-  getServers,
   getServerTemplates,
   type ServerTemplate,
   updateServer as updateServerApi,
@@ -38,7 +31,7 @@ import BackupTargetSelectorWindow from './renderer/components/BackupTargetSelect
 import ConsoleView from './renderer/components/ConsoleView';
 import NgrokGuideView from './renderer/components/NgrokGuideView';
 import ProxyHelpView from './renderer/components/ProxyHelpView';
-import ProxySetupView, { type ProxyNetworkConfig } from './renderer/components/ProxySetupView';
+import ProxySetupView from './renderer/components/ProxySetupView';
 import ViewErrorBoundary from './renderer/components/ViewErrorBoundary';
 import PropertiesView from './renderer/components/properties/PropertiesView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
@@ -47,6 +40,8 @@ import UsersView from './renderer/components/UsersView';
 import { useAppUpdater } from './renderer/hooks/use-app-updater';
 import { useServerContextActions } from './renderer/hooks/use-server-context-actions';
 import { useServerAutomation } from './renderer/hooks/use-server-automation';
+import { useProxyNetworkAction } from './renderer/hooks/use-proxy-network-action';
+import { useServerCreateAction } from './renderer/hooks/use-server-create-action';
 import { useServerProcessActions } from './renderer/hooks/use-server-process-actions';
 import { useServerRuntimeListeners } from './renderer/hooks/use-server-runtime-listeners';
 import { buildAppShellStyle, resolveAppTheme } from './renderer/shared/app-shell-theme';
@@ -73,14 +68,6 @@ const DashboardView = lazy(() => import('./renderer/components/DashboardView'));
 const FilesView = lazy(() => import('./renderer/components/FilesView'));
 const PluginBrowser = lazy(() => import('./renderer/components/PluginBrowser'));
 const SettingsWindow = lazy(() => import('./renderer/components/SettingsWindow'));
-
-// 外部APIの簡易レスポンスタイプ
-type PaperBuildsResponse = {
-  builds?: Array<{ build: number; downloads?: { application?: { name?: string } } }>;
-};
-type MojangManifest = { versions?: Array<{ id: string; url: string }> };
-type VerDetail = { downloads?: { server?: { url?: string } } };
-type FabricLoader = Array<{ version: string }>;
 
 function App() {
   const { t } = useTranslation();
@@ -263,175 +250,20 @@ function App() {
     await updateServerApi(updatedServer);
     showToast(t('server.toast.settingsSaved'), 'success');
   };
-
-  const handleAddServer = async (serverData: unknown) => {
-    try {
-      const sd = serverData as Record<string, unknown>;
-      const id = crypto.randomUUID();
-      const serverPath = typeof sd.path === 'string' ? sd.path : '';
-      if (!serverPath) {
-        showToast(t('server.toast.pathEmpty'), 'error');
-        return;
-      }
-
-      // サーバーディレクトリを作成
-      await mkdir(serverPath, { recursive: true });
-
-      const newServer: MinecraftServer = {
-        id,
-        name: (sd.name as string) || 'New Server',
-        profileName: typeof sd.profileName === 'string' ? sd.profileName || undefined : undefined,
-        groupName: typeof sd.groupName === 'string' ? sd.groupName || undefined : undefined,
-        version: (sd.version as string) || '',
-        software: (sd.software as string) || 'Vanilla',
-        port: (sd.port as number) || 25565,
-        memory: ((sd.memory as number) || 4) * 1024,
-        path: serverPath,
-        status: 'offline',
-        javaPath: (sd.javaPath as string) || undefined,
-        autoRestartOnCrash:
-          typeof sd.autoRestartOnCrash === 'boolean' ? sd.autoRestartOnCrash : false,
-        maxAutoRestarts: typeof sd.maxAutoRestarts === 'number' ? sd.maxAutoRestarts : 3,
-        autoRestartDelaySec:
-          typeof sd.autoRestartDelaySec === 'number' ? sd.autoRestartDelaySec : 5,
-        autoBackupEnabled: typeof sd.autoBackupEnabled === 'boolean' ? sd.autoBackupEnabled : false,
-        autoBackupIntervalMin:
-          typeof sd.autoBackupIntervalMin === 'number' ? sd.autoBackupIntervalMin : 60,
-        autoBackupScheduleType:
-          sd.autoBackupScheduleType === 'daily' || sd.autoBackupScheduleType === 'weekly'
-            ? sd.autoBackupScheduleType
-            : 'interval',
-        autoBackupTime: typeof sd.autoBackupTime === 'string' ? sd.autoBackupTime : '03:00',
-        autoBackupWeekday:
-          typeof sd.autoBackupWeekday === 'number' ? Math.floor(sd.autoBackupWeekday) : 0,
-        createdDate: new Date().toISOString(),
-      };
-      await addServerApi(newServer);
-      setServers((prev) => [...prev, newServer]);
-      setSelectedServerId(newServer.id);
-      setShowAddServerModal(false);
-      showToast(t('server.toast.created'), 'success');
-
-      // ダウンロードURL構築 & jarダウンロード
-      const sw = (sd.software as string) || 'Vanilla';
-      const ver = (sd.version as string) || '';
-      let downloadUrl = '';
-
-      try {
-        if (sw === 'Paper' || sw === 'LeafMC') {
-          const project = sw === 'Paper' ? 'paper' : 'leafmc';
-          const buildsResp = await tauriFetch(
-            `https://api.papermc.io/v2/projects/${project}/versions/${ver}/builds`,
-          );
-          const buildsData = (await buildsResp.json()) as PaperBuildsResponse;
-          if (buildsData.builds && buildsData.builds.length > 0) {
-            const latestBuild = buildsData.builds[buildsData.builds.length - 1];
-            const buildNum = latestBuild.build;
-            const fileName =
-              latestBuild.downloads?.application?.name || `${project}-${ver}-${buildNum}.jar`;
-            downloadUrl = `https://api.papermc.io/v2/projects/${project}/versions/${ver}/builds/${buildNum}/downloads/${fileName}`;
-          }
-        } else if (sw === 'Vanilla') {
-          const manifestResp = await tauriFetch(
-            'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
-          );
-          const manifest = (await manifestResp.json()) as MojangManifest;
-          const verInfo = manifest.versions?.find((v) => v.id === ver);
-          if (verInfo) {
-            const verDetailResp = await tauriFetch(verInfo.url);
-            const verDetail = (await verDetailResp.json()) as VerDetail;
-            downloadUrl = verDetail.downloads?.server?.url || '';
-          }
-        } else if (sw === 'Fabric') {
-          const loaderResp = await tauriFetch('https://meta.fabricmc.net/v2/versions/loader');
-          const loaders = (await loaderResp.json()) as FabricLoader;
-          const latestLoader = loaders?.[0]?.version || '';
-          if (latestLoader) {
-            downloadUrl = `https://meta.fabricmc.net/v2/versions/loader/${ver}/${latestLoader}/1.0.1/server/jar`;
-          }
-        }
-      } catch (e) {
-        console.error('Failed to resolve download URL:', e);
-      }
-
-      if (downloadUrl) {
-        setDownloadStatus({
-          id: newServer.id,
-          progress: 0,
-          msg: t('server.toast.downloadStarting'),
-        });
-        try {
-          await downloadServerJar(downloadUrl, serverPath + '/server.jar', newServer.id);
-        } catch (e) {
-          console.error('Download failed:', e);
-          setDownloadStatus(null);
-          showToast(t('server.toast.jarDownloadFailed'), 'error');
-        }
-      } else {
-        showToast(t('server.toast.jarUrlFailed'), 'info');
-      }
-    } catch (e) {
-      console.error('Server creation error:', e);
-      showToast(t('server.toast.createFailed'), 'error');
-      setDownloadStatus(null);
-    }
-  };
-
-  const handleBuildProxyNetwork = async (_config: ProxyNetworkConfig) => {
-    const confirmed = await ask(t('proxy.confirmRewriteProperties'), {
-      title: t('proxy.configTitle'),
-      kind: 'info',
-    });
-    if (!confirmed) {
-      return;
-    }
-    try {
-      const backendServers = servers.filter((s) => _config.backendServerIds.includes(s.id));
-
-      // 各バックエンドサーバーの server.properties と設定反映を並列実行
-      await Promise.all(
-        backendServers.map(async (srv, i) => {
-          const propsPath = `${srv.path}/server.properties`;
-          let props = '';
-          try {
-            props = await readFileContent(propsPath);
-          } catch {
-            props = '';
-          }
-
-          if (props.includes('online-mode=')) {
-            props = props.replace(/online-mode=.*/g, 'online-mode=false');
-          } else {
-            props += '\nonline-mode=false';
-          }
-
-          const port = 25566 + i;
-          if (props.includes('server-port=')) {
-            props = props.replace(/server-port=.*/g, `server-port=${port}`);
-          } else {
-            props += `\nserver-port=${port}`;
-          }
-
-          await saveFileContent(propsPath, props);
-          await updateServerApi({ ...srv, port });
-        }),
-      );
-
-      showToast(
-        t('proxy.settingsUpdated', {
-          count: backendServers.length,
-          software: _config.proxySoftware,
-          port: _config.proxyPort,
-        }),
-        'success',
-      );
-      const loadedServers = await getServers();
-      setServers(loadedServers);
-    } catch (e) {
-      console.error('Proxy build error:', e);
-      showToast(t('proxy.configError'), 'error');
-    }
-  };
+  const { handleAddServer } = useServerCreateAction({
+    setServers,
+    setSelectedServerId,
+    setShowAddServerModal,
+    setDownloadStatus,
+    showToast,
+    t,
+  });
+  const { handleBuildProxyNetwork } = useProxyNetworkAction({
+    servers,
+    setServers,
+    showToast,
+    t,
+  });
 
   const resolvedTheme = resolveAppTheme(appTheme, systemPrefersDark);
   const appShellStyle = buildAppShellStyle(resolvedTheme);
