@@ -2,7 +2,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   iconBackups,
   iconConsole,
@@ -39,6 +39,9 @@ import {
 } from './lib/server-commands';
 import { checkForUpdates, downloadAndInstallUpdate } from './lib/update-commands';
 import AddServerModal from './renderer/components/AddServerModal';
+import AppContextMenu from './renderer/components/AppContextMenu';
+import AppNavItem from './renderer/components/AppNavItem';
+import AppServerSidebar from './renderer/components/AppServerSidebar';
 import BackupsView from './renderer/components/BackupsView';
 import BackupTargetSelectorWindow from './renderer/components/BackupTargetSelectorWindow';
 import ConsoleView from './renderer/components/ConsoleView';
@@ -50,10 +53,17 @@ import PropertiesView from './renderer/components/properties/PropertiesView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
 import { useToast } from './renderer/components/ToastProvider';
 import UsersView from './renderer/components/UsersView';
+import {
+  buildAutoBackupName,
+  buildTimeBasedAutoBackupKey,
+  resolveAutoBackupScheduleType,
+} from './renderer/shared/auto-backup';
+import { buildAppShellStyle, resolveAppTheme } from './renderer/shared/app-shell-theme';
 import { type AppView, type MinecraftServer } from './renderer/shared/server declaration';
+import { getHeaderTitle, getViewLabel } from './renderer/shared/view-labels';
 import { useConsoleStore } from './store/consoleStore';
 import { useServerStore } from './store/serverStore';
-import { normalizeAppTheme, type AppTheme, useSettingsStore } from './store/settingsStore';
+import { normalizeAppTheme, useSettingsStore } from './store/settingsStore';
 import { useUiStore } from './store/uiStore';
 
 const TAB_CYCLE: AppView[] = [
@@ -80,15 +90,6 @@ type PaperBuildsResponse = {
 type MojangManifest = { versions?: Array<{ id: string; url: string }> };
 type VerDetail = { downloads?: { server?: { url?: string } } };
 type FabricLoader = Array<{ version: string }>;
-
-type NavItemProps = {
-  label: string;
-  tooltip: string;
-  view: AppView;
-  current: AppView;
-  set: (view: AppView) => void;
-  iconSrc: string;
-};
 
 function App() {
   const { t } = useTranslation();
@@ -264,65 +265,6 @@ function App() {
     }
     delete autoBackupRunningRef.current[serverId];
     delete autoBackupLastRunKeyRef.current[serverId];
-  };
-
-  const resolveAutoBackupScheduleType = (
-    server: MinecraftServer,
-  ): 'interval' | 'daily' | 'weekly' => {
-    return server.autoBackupScheduleType === 'daily' || server.autoBackupScheduleType === 'weekly'
-      ? server.autoBackupScheduleType
-      : 'interval';
-  };
-
-  const resolveAutoBackupTime = (server: MinecraftServer): string => {
-    const raw = typeof server.autoBackupTime === 'string' ? server.autoBackupTime.trim() : '';
-    return /^([01]\d|2[0-3]):([0-5]\d)$/.test(raw) ? raw : '03:00';
-  };
-
-  const resolveAutoBackupWeekday = (server: MinecraftServer): number => {
-    const raw =
-      typeof server.autoBackupWeekday === 'number' && Number.isFinite(server.autoBackupWeekday)
-        ? Math.floor(server.autoBackupWeekday)
-        : 0;
-    return Math.min(6, Math.max(0, raw));
-  };
-
-  const buildTimeBasedAutoBackupKey = (server: MinecraftServer, now: Date): string | null => {
-    const scheduleType = resolveAutoBackupScheduleType(server);
-    if (scheduleType === 'interval') {
-      return null;
-    }
-
-    const [hourText, minuteText] = resolveAutoBackupTime(server).split(':');
-    const targetHour = Number(hourText);
-    const targetMinute = Number(minuteText);
-
-    if (now.getHours() !== targetHour || now.getMinutes() !== targetMinute) {
-      return null;
-    }
-
-    if (scheduleType === 'weekly') {
-      const targetWeekday = resolveAutoBackupWeekday(server);
-      if (now.getDay() !== targetWeekday) {
-        return null;
-      }
-    }
-
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    return `${scheduleType}-${yyyy}-${mm}-${dd}-${hourText}-${minuteText}`;
-  };
-
-  const buildAutoBackupName = (server: MinecraftServer): string => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const sec = String(now.getSeconds()).padStart(2, '0');
-    return `AutoBackup ${server.name} ${yyyy}-${mm}-${dd}-${hh}-${min}-${sec}.zip`;
   };
 
   const runAutoBackup = async (serverId: string) => {
@@ -1098,112 +1040,8 @@ function App() {
     }
   };
 
-  const resolvedTheme: Exclude<AppTheme, 'system'> =
-    appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : appTheme;
-  const themePalette: Record<
-    Exclude<AppTheme, 'system'>,
-    {
-      mainBg: string;
-      headerBg: string;
-      text: string;
-      sidebarBg: string;
-      sidebarPanelBg: string;
-      panelBg: string;
-      border: string;
-      viewGlowA: string;
-      viewGlowB: string;
-      panelStart: string;
-      panelEnd: string;
-      panelAltStart: string;
-      panelAltEnd: string;
-      borderSoft: string;
-      borderStrong: string;
-      accentStart: string;
-      accentEnd: string;
-      successStart: string;
-      successEnd: string;
-      warnStart: string;
-      warnEnd: string;
-    }
-  > = {
-    dark: {
-      mainBg: '#0f0f11',
-      headerBg: 'rgba(18,18,20,0.92)',
-      text: '#ffffff',
-      sidebarBg: '#16171d',
-      sidebarPanelBg: '#1f2027',
-      panelBg: '#1c1d23',
-      border: '#2f2f3d',
-      viewGlowA: 'rgba(74, 222, 128, 0.1)',
-      viewGlowB: 'rgba(56, 189, 248, 0.15)',
-      panelStart: 'rgba(24, 24, 27, 0.94)',
-      panelEnd: 'rgba(17, 24, 39, 0.88)',
-      panelAltStart: 'rgba(24, 24, 27, 0.95)',
-      panelAltEnd: 'rgba(31, 41, 55, 0.84)',
-      borderSoft: 'rgba(82, 82, 91, 0.72)',
-      borderStrong: 'rgba(34, 211, 238, 0.42)',
-      accentStart: '#0ea5e9',
-      accentEnd: '#06b6d4',
-      successStart: '#22c55e',
-      successEnd: '#10b981',
-      warnStart: '#f59e0b',
-      warnEnd: '#f97316',
-    },
-    light: {
-      mainBg:
-        'radial-gradient(circle at 20% 0%, rgba(59,130,246,0.14), transparent 45%), radial-gradient(circle at 90% 0%, rgba(16,185,129,0.12), transparent 35%), #f4f7fb',
-      headerBg: 'rgba(255,255,255,0.95)',
-      text: '#0f172a',
-      sidebarBg: '#e8eef6',
-      sidebarPanelBg: '#f8fafc',
-      panelBg: '#ffffff',
-      border: '#cbd5e1',
-      viewGlowA: 'rgba(59, 130, 246, 0.12)',
-      viewGlowB: 'rgba(16, 185, 129, 0.1)',
-      panelStart: 'rgba(255, 255, 255, 0.95)',
-      panelEnd: 'rgba(241, 245, 249, 0.88)',
-      panelAltStart: 'rgba(248, 250, 252, 0.96)',
-      panelAltEnd: 'rgba(226, 232, 240, 0.88)',
-      borderSoft: 'rgba(148, 163, 184, 0.45)',
-      borderStrong: 'rgba(14, 165, 233, 0.35)',
-      accentStart: '#2563eb',
-      accentEnd: '#0891b2',
-      successStart: '#16a34a',
-      successEnd: '#059669',
-      warnStart: '#d97706',
-      warnEnd: '#ea580c',
-    },
-  };
-  const themeColors = themePalette[resolvedTheme];
-
-  const appShellCssVars: Record<`--${string}`, string> = {
-    '--mv-shell-bg': themeColors.mainBg,
-    '--mv-shell-text': themeColors.text,
-    '--mv-shell-border': themeColors.border,
-    '--mv-shell-sidebar-bg': themeColors.sidebarBg,
-    '--mv-shell-sidebar-panel-bg': themeColors.sidebarPanelBg,
-    '--mv-shell-main-bg': 'transparent',
-    '--mv-shell-header-bg': themeColors.headerBg,
-    '--mv-shell-content-bg': themeColors.panelBg,
-    '--mv-view-glow-a': themeColors.viewGlowA,
-    '--mv-view-glow-b': themeColors.viewGlowB,
-    '--mv-panel-start': themeColors.panelStart,
-    '--mv-panel-end': themeColors.panelEnd,
-    '--mv-panel-alt-start': themeColors.panelAltStart,
-    '--mv-panel-alt-end': themeColors.panelAltEnd,
-    '--mv-border-soft': themeColors.borderSoft,
-    '--mv-border-strong': themeColors.borderStrong,
-    '--mv-accent-start': themeColors.accentStart,
-    '--mv-accent-end': themeColors.accentEnd,
-    '--mv-success-start': themeColors.successStart,
-    '--mv-success-end': themeColors.successEnd,
-    '--mv-warn-start': themeColors.warnStart,
-    '--mv-warn-end': themeColors.warnEnd,
-  };
-
-  const appShellStyle: CSSProperties = {
-    ...appShellCssVars,
-  };
+  const resolvedTheme = resolveAppTheme(appTheme, systemPrefersDark);
+  const appShellStyle = buildAppShellStyle(resolvedTheme);
 
   const groupedServers = useMemo(() => {
     const grouped = new Map<string, MinecraftServer[]>();
@@ -1222,47 +1060,7 @@ function App() {
       }));
   }, [servers, t]);
 
-  const getViewLabel = (view: AppView): string => {
-    switch (view) {
-      case 'dashboard':
-        return t('nav.dashboard');
-      case 'console':
-        return t('nav.console');
-      case 'users':
-        return t('nav.users');
-      case 'files':
-        return t('nav.files');
-      case 'plugins':
-        return t('nav.pluginsMods');
-      case 'backups':
-        return t('nav.backups');
-      case 'properties':
-        return t('nav.properties');
-      case 'general-settings':
-        return t('nav.generalSettings');
-      case 'proxy':
-        return t('nav.proxyNetwork');
-      case 'app-settings':
-        return t('settings.title');
-      case 'proxy-help':
-        return t('proxyHelp.title');
-      case 'ngrok-guide':
-        return t('ngrokGuide.title');
-      default:
-        return view;
-    }
-  };
-
-  const headerTitle =
-    currentView === 'proxy'
-      ? t('nav.proxyNetwork')
-      : currentView === 'app-settings'
-        ? t('settings.title')
-        : currentView === 'proxy-help'
-          ? t('proxyHelp.title')
-          : currentView === 'ngrok-guide'
-            ? t('ngrokGuide.title')
-            : activeServer?.name || t('nav.servers');
+  const headerTitle = getHeaderTitle(currentView, activeServer?.name, t);
 
   const getReleaseNotesText = () => {
     const notes: unknown = updatePrompt?.releaseNotes;
@@ -1405,7 +1203,7 @@ function App() {
         </div>
 
         <div className="app-sidebar__nav app-shell__surface app-shell__surface--sidebar-panel surface-card">
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.dashboard') : ''}
             tooltip={t('nav.dashboard')}
             view="dashboard"
@@ -1413,7 +1211,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconDashboard}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.console') : ''}
             tooltip={t('nav.console')}
             view="console"
@@ -1421,7 +1219,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconConsole}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.users') : ''}
             tooltip={t('nav.users')}
             view="users"
@@ -1429,7 +1227,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconUsers}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.files') : ''}
             tooltip={t('nav.files')}
             view="files"
@@ -1437,7 +1235,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconFiles}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.pluginsMods') : ''}
             tooltip={t('nav.pluginsMods')}
             view="plugins"
@@ -1445,7 +1243,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconPlugins}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.backups') : ''}
             tooltip={t('nav.backups')}
             view="backups"
@@ -1453,7 +1251,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconBackups}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.properties') : ''}
             tooltip={t('nav.properties')}
             view="properties"
@@ -1461,7 +1259,7 @@ function App() {
             set={setCurrentView}
             iconSrc={iconProperties}
           />
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.generalSettings') : ''}
             tooltip={t('nav.generalSettings')}
             view="general-settings"
@@ -1472,7 +1270,7 @@ function App() {
 
           <hr className="app-sidebar__divider" />
 
-          <NavItem
+          <AppNavItem
             label={isSidebarOpen ? t('nav.proxyNetwork') : ''}
             tooltip={t('nav.proxyNetwork')}
             view="proxy"
@@ -1482,48 +1280,23 @@ function App() {
           />
         </div>
 
-        {isSidebarOpen && (
-          <div className="app-sidebar__servers app-shell__surface app-shell__surface--sidebar-panel surface-card">
-            <div className="app-sidebar__servers-title">{t('nav.servers').toUpperCase()}</div>
-            <div className="app-sidebar__server-list">
-              {groupedServers.map((group) => (
-                <div key={group.groupName} className="mb-2.5">
-                  <div className="app-sidebar__group-title">{group.groupName}</div>
-
-                  {group.servers.map((server) => (
-                    <div
-                      key={server.id}
-                      className={`app-sidebar__server-item ${server.id === selectedServerId ? 'is-active' : ''}`}
-                      onClick={() => setSelectedServerId(server.id)}
-                      onContextMenu={(e) => handleContextMenu(e, server.id)}
-                    >
-                      <div className={`status-indicator ${server.status}`}></div>
-                      <div className="flex flex-col">
-                        <div className="font-semibold text-sm text-text-primary">{server.name}</div>
-                        {server.profileName && (
-                          <div className="text-[0.72rem] text-zinc-400">{server.profileName}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-            <button
-              className="app-sidebar__add-server-btn"
-              onClick={() => setShowAddServerModal(true)}
-            >
-              + {t('nav.addServer')}
-            </button>
-          </div>
-        )}
+        <AppServerSidebar
+          isSidebarOpen={isSidebarOpen}
+          groupedServers={groupedServers}
+          selectedServerId={selectedServerId}
+          onSelectServer={setSelectedServerId}
+          onServerContextMenu={handleContextMenu}
+          onAddServer={() => setShowAddServerModal(true)}
+          serversLabel={t('nav.servers').toUpperCase()}
+          addServerLabel={t('nav.addServer')}
+        />
       </aside>
 
       <main className="app-main app-shell__surface app-shell__surface--main">
         <header className="app-main__header app-shell__surface app-shell__surface--header">
           <div className="flex items-center gap-2.5">
             <h2 className="app-main__title">{headerTitle}</h2>
-            <span className="app-main__subtitle"> / {getViewLabel(currentView)}</span>
+            <span className="app-main__subtitle"> / {getViewLabel(currentView, t)}</span>
           </div>
           <div className="flex items-center gap-2.5 ml-auto">
             {currentView !== 'proxy' && (
@@ -1607,39 +1380,15 @@ function App() {
           templates={serverTemplates}
         />
       )}
-      {contextMenu && (
-        <div className="app-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
-          <div
-            onClick={(event) => {
-              event.stopPropagation();
-              void handleDuplicateServer();
-            }}
-            className="app-context-menu__item"
-          >
-            📄 {t('server.actions.clone')}
-          </div>
-
-          <div
-            onClick={(event) => {
-              event.stopPropagation();
-              void handleSaveServerTemplate();
-            }}
-            className="app-context-menu__item"
-          >
-            🧩 {t('server.actions.saveTemplate')}
-          </div>
-
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              void handleDeleteServer();
-            }}
-            className="app-context-menu__danger-item"
-          >
-            🗑️ {t('common.delete')}
-          </div>
-        </div>
-      )}
+      <AppContextMenu
+        contextMenu={contextMenu}
+        onDuplicateServer={handleDuplicateServer}
+        onSaveServerTemplate={handleSaveServerTemplate}
+        onDeleteServer={handleDeleteServer}
+        cloneLabel={t('server.actions.clone')}
+        saveTemplateLabel={t('server.actions.saveTemplate')}
+        deleteLabel={t('common.delete')}
+      />
 
       {updatePrompt && (
         <div className="app-update-overlay">
@@ -1699,36 +1448,6 @@ function App() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function NavItem({ label, tooltip, view, current, set, iconSrc }: NavItemProps) {
-  const isOpen = !!label;
-  const isActive = current === view;
-
-  return (
-    <div
-      className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
-      onClick={() => set(view)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          set(view);
-        }
-      }}
-      title={isOpen ? '' : tooltip}
-      role="button"
-      tabIndex={0}
-      aria-label={tooltip}
-      aria-current={isActive ? 'page' : undefined}
-    >
-      <img
-        src={iconSrc}
-        alt={tooltip}
-        className={`app-nav-item__icon ${isOpen ? 'app-nav-item__icon--open' : 'app-nav-item__icon--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
-      />
-      {isOpen && <span className="app-nav-item__label">{label}</span>}
     </div>
   );
 }
