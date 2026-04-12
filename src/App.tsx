@@ -27,7 +27,6 @@ import {
   type ServerTemplate,
   updateServer as updateServerApi,
 } from './lib/server-commands';
-import { checkForUpdates, downloadAndInstallUpdate } from './lib/update-commands';
 import AddServerModal from './renderer/components/AddServerModal';
 import AppContextMenu from './renderer/components/AppContextMenu';
 import AppDownloadToast from './renderer/components/AppDownloadToast';
@@ -45,6 +44,7 @@ import PropertiesView from './renderer/components/properties/PropertiesView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
 import { useToast } from './renderer/components/ToastProvider';
 import UsersView from './renderer/components/UsersView';
+import { useAppUpdater } from './renderer/hooks/use-app-updater';
 import { useServerContextActions } from './renderer/hooks/use-server-context-actions';
 import { useServerAutomation } from './renderer/hooks/use-server-automation';
 import { useServerProcessActions } from './renderer/hooks/use-server-process-actions';
@@ -112,13 +112,6 @@ function App() {
       {t('common.loadingView')}
     </div>
   );
-
-  const [updatePrompt, setUpdatePrompt] = useState<{
-    version?: string;
-    releaseNotes?: unknown;
-  } | null>(null);
-  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
-  const [updateReady, setUpdateReady] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
@@ -126,6 +119,14 @@ function App() {
   const setAppTheme = useSettingsStore((state) => state.setAppTheme);
   const systemPrefersDark = useSettingsStore((state) => state.systemPrefersDark);
   const setSystemPrefersDark = useSettingsStore((state) => state.setSystemPrefersDark);
+  const {
+    updatePrompt,
+    updateProgress,
+    updateReady,
+    handleUpdateNow,
+    handleInstallUpdate,
+    handleDismissUpdate,
+  } = useAppUpdater();
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -143,21 +144,6 @@ function App() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [currentView]);
-
-  useEffect(() => {
-    const doUpdateCheck = async () => {
-      try {
-        const result = await checkForUpdates();
-        if (result.available) {
-          setUpdatePrompt({ version: result.version, releaseNotes: result.body });
-          setUpdateReady(false);
-        }
-      } catch (e) {
-        console.error('Update check failed', e);
-      }
-    };
-    doUpdateCheck();
-  }, []);
 
   useEffect(() => {
     const applyNormalizedTheme = async (value: unknown) => {
@@ -445,30 +431,6 @@ function App() {
       console.error('Proxy build error:', e);
       showToast(t('proxy.configError'), 'error');
     }
-  };
-
-  const handleUpdateNow = async () => {
-    setUpdateProgress(0);
-    try {
-      await downloadAndInstallUpdate((downloaded, total) => {
-        const pct = total > 0 ? (downloaded / total) * 100 : 0;
-        setUpdateProgress(pct);
-      });
-    } catch (e) {
-      console.error('Update error', e);
-      setUpdateProgress(null);
-    }
-  };
-
-  const handleInstallUpdate = async () => {
-    // downloadAndInstallUpdate already relaunches the app
-    await handleUpdateNow();
-  };
-
-  const handleDismissUpdate = () => {
-    setUpdatePrompt(null);
-    setUpdateProgress(null);
-    setUpdateReady(false);
   };
 
   const resolvedTheme = resolveAppTheme(appTheme, systemPrefersDark);
