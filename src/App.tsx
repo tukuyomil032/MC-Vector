@@ -1,5 +1,5 @@
 import { ask } from '@tauri-apps/plugin-dialog';
-import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
+import { mkdir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
@@ -22,7 +22,6 @@ import { onNgrokStatusChange } from './lib/ngrok-commands';
 // Tauri API ラッパー
 import {
   addServer as addServerApi,
-  deleteServer as deleteServerApi,
   downloadServerJar,
   getServers,
   getServerTemplates,
@@ -31,7 +30,6 @@ import {
   onServerLog,
   onServerStatusChange,
   type ServerTemplate,
-  saveServerTemplate,
   startServer as startServerApi,
   stopServer as stopServerApi,
   updateServer as updateServerApi,
@@ -52,6 +50,7 @@ import PropertiesView from './renderer/components/properties/PropertiesView';
 import ServerSettings from './renderer/components/properties/ServerSettings';
 import { useToast } from './renderer/components/ToastProvider';
 import UsersView from './renderer/components/UsersView';
+import { useServerContextActions } from './renderer/hooks/use-server-context-actions';
 import { useServerAutomation } from './renderer/hooks/use-server-automation';
 import { buildAppShellStyle, resolveAppTheme } from './renderer/shared/app-shell-theme';
 import { type AppView, type MinecraftServer } from './renderer/shared/server declaration';
@@ -231,50 +230,24 @@ function App() {
     }
   };
 
-  const buildTemplateFromServer = (
-    server: MinecraftServer,
-    templateName: string,
-  ): ServerTemplate => {
-    return {
-      id: crypto.randomUUID(),
-      name: templateName,
-      profileName: server.profileName,
-      groupName: server.groupName,
-      version: server.version,
-      software: server.software,
-      port: server.port,
-      memory: server.memory,
-      javaPath: server.javaPath,
-      autoRestartOnCrash: server.autoRestartOnCrash,
-      maxAutoRestarts: server.maxAutoRestarts,
-      autoRestartDelaySec: server.autoRestartDelaySec,
-      autoBackupEnabled: server.autoBackupEnabled,
-      autoBackupIntervalMin: server.autoBackupIntervalMin,
-      autoBackupScheduleType: server.autoBackupScheduleType,
-      autoBackupTime: server.autoBackupTime,
-      autoBackupWeekday: server.autoBackupWeekday,
-    };
-  };
-
-  const cloneServerDirectory = async (sourceDir: string, targetDir: string): Promise<void> => {
-    await mkdir(targetDir, { recursive: true });
-
-    const entries = await readDir(sourceDir);
-    for (const entry of entries) {
-      const entryName = entry.name;
-      if (!entryName) {
-        continue;
-      }
-
-      const sourcePath = `${sourceDir}/${entryName}`;
-      const targetPath = `${targetDir}/${entryName}`;
-      if (entry.isDirectory) {
-        await cloneServerDirectory(sourcePath, targetPath);
-      } else {
-        await copyFile(sourcePath, targetPath);
-      }
-    }
-  };
+  const {
+    handleContextMenu,
+    handleDeleteServer,
+    handleDuplicateServer,
+    handleSaveServerTemplate,
+    handleClickOutside,
+  } = useServerContextActions({
+    servers,
+    setServers,
+    selectedServerId,
+    setSelectedServerId,
+    contextMenu,
+    setContextMenu,
+    showToast,
+    t,
+    removeServerLogs,
+    loadTemplates,
+  });
 
   useEffect(() => {
     const loadServers = async () => {
@@ -641,135 +614,6 @@ function App() {
     setUpdatePrompt(null);
     setUpdateProgress(null);
     setUpdateReady(false);
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, serverId: string) => {
-    e.preventDefault();
-    setContextMenu({ x: e.pageX, y: e.pageY, serverId });
-  };
-
-  const handleDeleteServer = async () => {
-    if (!contextMenu) {
-      return;
-    }
-    const { serverId } = contextMenu;
-    const target = servers.find((s) => s.id === serverId);
-    setContextMenu(null);
-
-    // Tauri の ask() ダイアログで確認
-    const confirmed = await ask(t('server.confirm.delete', { name: target?.name ?? '' }), {
-      title: t('common.delete'),
-      kind: 'warning',
-    });
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const success = await deleteServerApi(serverId);
-      if (success) {
-        const newServers = servers.filter((s) => s.id !== serverId);
-        setServers(newServers);
-        removeServerLogs(serverId);
-        if (selectedServerId === serverId) {
-          setSelectedServerId(newServers.length > 0 ? newServers[0].id : '');
-        }
-        showToast(t('server.toast.deleted'), 'success');
-      } else {
-        showToast(t('server.toast.deleteFailed'), 'error');
-      }
-    } catch (e) {
-      console.error('Delete server error:', e);
-      showToast(t('server.toast.deleteError'), 'error');
-    }
-  };
-
-  const handleDuplicateServer = async () => {
-    if (!contextMenu) {
-      return;
-    }
-
-    const { serverId } = contextMenu;
-    const target = servers.find((server) => server.id === serverId);
-    setContextMenu(null);
-    if (!target) {
-      return;
-    }
-
-    const confirmed = await ask(t('server.confirm.clone', { name: target.name }), {
-      title: t('common.confirm'),
-      kind: 'info',
-    });
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const basePath = `${target.path}-clone`;
-      const existingPaths = new Set(servers.map((server) => server.path));
-      let candidatePath = basePath;
-      let suffix = 1;
-      while (existingPaths.has(candidatePath)) {
-        candidatePath = `${basePath}-${suffix}`;
-        suffix += 1;
-      }
-
-      await cloneServerDirectory(target.path, candidatePath);
-
-      const duplicatedServer: MinecraftServer = {
-        ...target,
-        id: crypto.randomUUID(),
-        name: t('server.create.cloneDefaultName', { name: target.name }),
-        path: candidatePath,
-        status: 'offline',
-        createdDate: new Date().toISOString(),
-      };
-
-      await addServerApi(duplicatedServer);
-      setServers((prev) => [...prev, duplicatedServer]);
-      setSelectedServerId(duplicatedServer.id);
-      showToast(t('server.toast.cloned'), 'success');
-    } catch (error) {
-      console.error('Duplicate server error:', error);
-      showToast(t('server.toast.cloneFailed'), 'error');
-    }
-  };
-
-  const handleSaveServerTemplate = async () => {
-    if (!contextMenu) {
-      return;
-    }
-
-    const { serverId } = contextMenu;
-    const target = servers.find((server) => server.id === serverId);
-    setContextMenu(null);
-    if (!target) {
-      return;
-    }
-
-    const templateName = window.prompt(
-      t('server.create.templateNamePrompt'),
-      t('server.create.templateDefaultName', { name: target.name }),
-    );
-    if (!templateName || !templateName.trim()) {
-      return;
-    }
-
-    try {
-      const template = buildTemplateFromServer(target, templateName.trim());
-      await saveServerTemplate(template);
-      await loadTemplates();
-      showToast(t('server.toast.templateSaved'), 'success');
-    } catch (error) {
-      console.error('Save template error:', error);
-      showToast(t('server.toast.templateSaveFailed'), 'error');
-    }
-  };
-
-  const handleClickOutside = () => {
-    if (contextMenu) {
-      setContextMenu(null);
-    }
   };
 
   const resolvedTheme = resolveAppTheme(appTheme, systemPrefersDark);
