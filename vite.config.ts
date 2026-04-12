@@ -101,7 +101,7 @@ export default defineConfig({
   // Staged file checks (replaces lint-staged)
   staged: {
     'src/**/*.{ts,tsx}': 'vp check --fix',
-    'src-tauri/src/**/*.rs': 'cargo fmt --all --manifest-path src-tauri/Cargo.toml',
+    'src-tauri/src/**/*.rs': 'cargo fmt --all --manifest-path src-tauri/Cargo.toml --',
     '**/*.{yml,yaml}': 'yamllint',
   },
 });

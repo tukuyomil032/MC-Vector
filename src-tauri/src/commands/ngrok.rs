@@ -17,6 +17,41 @@ struct NgrokStatusPayload {
     server_id: Option<String>,
 }
 
+fn validate_ngrok_path(ngrok_path: &str) -> Result<String, String> {
+    let normalized = ngrok_path.trim();
+    if normalized.is_empty() {
+        return Err("ngrok path is empty".to_string());
+    }
+
+    let canonical = std::path::Path::new(normalized)
+        .canonicalize()
+        .map_err(|e| format!("Invalid ngrok path: {}", e))?;
+
+    if !canonical.is_file() {
+        return Err("ngrok path is not a file".to_string());
+    }
+
+    let file_name = canonical
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.to_ascii_lowercase())
+        .ok_or_else(|| "Invalid ngrok path".to_string())?;
+    if file_name != "ngrok" && file_name != "ngrok.exe" {
+        return Err("ngrok binary name must be ngrok".to_string());
+    }
+
+    Ok(canonical.to_string_lossy().to_string())
+}
+
+fn validate_protocol(protocol: &str) -> Result<String, String> {
+    let normalized = protocol.trim().to_ascii_lowercase();
+    if normalized == "tcp" {
+        Ok(normalized)
+    } else {
+        Err("Unsupported ngrok protocol".to_string())
+    }
+}
+
 #[tauri::command]
 pub async fn start_ngrok(
     app: AppHandle,
@@ -27,20 +62,29 @@ pub async fn start_ngrok(
     authtoken: String,
     server_id: String,
 ) -> Result<(), String> {
+    let validated_ngrok_path = validate_ngrok_path(&ngrok_path)?;
+    let validated_protocol = validate_protocol(&protocol)?;
+    let normalized_token = authtoken.trim().to_string();
+    if normalized_token.is_empty() {
+        return Err("ngrok auth token is required".to_string());
+    }
+
     // 既存プロセスがあれば停止
     {
         let mut proc = state.process.lock().await;
         if let Some(mut child) = proc.take() {
             let _ = child.kill().await;
+            let _ = child.wait().await;
         }
     }
 
-    let mut child = Command::new(&ngrok_path)
+    let port_value = port.to_string();
+    let mut child = Command::new(&validated_ngrok_path)
         .args([
-            &protocol,
-            &format!("{}", port),
+            &validated_protocol,
+            &port_value,
             "--authtoken",
-            &authtoken,
+            &normalized_token,
             "--log",
             "stdout",
         ])
@@ -139,6 +183,10 @@ pub async fn stop_ngrok(state: State<'_, NgrokManager>) -> Result<(), String> {
             .kill()
             .await
             .map_err(|e| format!("Failed to kill ngrok: {}", e))?;
+        child
+            .wait()
+            .await
+            .map_err(|e| format!("Failed to wait ngrok process: {}", e))?;
         Ok(())
     } else {
         Err("ngrok is not running".into())

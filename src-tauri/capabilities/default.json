@@ -33,28 +33,8 @@
       ]
     },
     {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "java",
-          "cmd": "java",
-          "args": true
-        },
-        {
-          "name": "ngrok",
-          "cmd": "ngrok",
-          "args": true
-        }
-      ]
-    },
-    "shell:allow-execute",
-    "shell:allow-kill",
-    "shell:allow-stdin-write",
-    {
       "identifier": "fs:scope",
       "allow": [{ "path": "$APPDATA/**" }, { "path": "$APPLOCALDATA/**" }, { "path": "$HOME/**" }]
-    },
-    "fs:read-all",
-    "fs:write-all"
+    }
   ]
 }

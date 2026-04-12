@@ -1,9 +1,16 @@
 use std::collections::HashMap;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, State};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
+
+const MAX_RUNNING_SERVERS: usize = 8;
+const MIN_MEMORY_MB: u32 = 256;
+const MAX_MEMORY_MB: u32 = 65_536;
+const COMMAND_MIN_INTERVAL: Duration = Duration::from_millis(100);
 
 /// 実行中サーバーの情報
 pub(crate) struct RunningServer {
@@ -16,6 +23,12 @@ pub(crate) struct RunningServer {
 #[derive(Default)]
 pub struct ServerManager {
     pub servers: Arc<Mutex<HashMap<String, RunningServer>>>,
+}
+
+/// サーバーごとのコマンド送信間隔を制御する State
+#[derive(Default)]
+pub struct CommandLimiter {
+    pub last_command_at: Arc<Mutex<HashMap<String, Instant>>>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -33,6 +46,76 @@ struct ServerStatusPayload {
     status: String,
 }
 
+fn validate_java_path(java_path: &str) -> Result<String, String> {
+    let normalized = java_path.trim();
+    if normalized.is_empty() {
+        return Err("Java path is empty".to_string());
+    }
+
+    let java_name = Path::new(normalized)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.to_ascii_lowercase())
+        .ok_or_else(|| "Invalid java path".to_string())?;
+
+    if java_name != "java" && java_name != "java.exe" {
+        return Err("Java path must point to java executable".to_string());
+    }
+
+    if normalized.contains('/') || normalized.contains('\\') {
+        let canonical = PathBuf::from(normalized)
+            .canonicalize()
+            .map_err(|e| format!("Invalid java path: {}", e))?;
+        if !canonical.is_file() {
+            return Err("Java path is not a file".to_string());
+        }
+        return Ok(canonical.to_string_lossy().to_string());
+    }
+
+    Ok(normalized.to_string())
+}
+
+fn validate_server_dir(server_path: &str) -> Result<PathBuf, String> {
+    let canonical = PathBuf::from(server_path)
+        .canonicalize()
+        .map_err(|e| format!("Invalid server path: {}", e))?;
+    if !canonical.is_dir() {
+        return Err("Server path is not a directory".to_string());
+    }
+    Ok(canonical)
+}
+
+fn validate_jar_file_name(jar_file: &str) -> Result<String, String> {
+    let normalized = jar_file.trim();
+    if normalized.is_empty() {
+        return Err("Jar file is empty".to_string());
+    }
+
+    let path = Path::new(normalized);
+    if path.is_absolute() || normalized.contains('/') || normalized.contains('\\') {
+        return Err("Jar file must be a file name under server directory".to_string());
+    }
+
+    let mut components = path.components();
+    match (components.next(), components.next()) {
+        (Some(Component::Normal(_)), None) => {}
+        _ => {
+            return Err("Invalid jar file name".to_string());
+        }
+    }
+
+    let is_jar = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.eq_ignore_ascii_case("jar"))
+        .unwrap_or(false);
+    if !is_jar {
+        return Err("Jar file extension must be .jar".to_string());
+    }
+
+    Ok(normalized.to_string())
+}
+
 /// サーバーを起動し、stdout/stderr をイベントストリーミングする
 #[tauri::command]
 pub async fn start_server(
@@ -44,23 +127,41 @@ pub async fn start_server(
     memory: u32,
     jar_file: String,
 ) -> Result<(), String> {
+    let validated_java_path = validate_java_path(&java_path)?;
+    let validated_server_dir = validate_server_dir(&server_path)?;
+    let validated_jar_file = validate_jar_file_name(&jar_file)?;
+    if !(MIN_MEMORY_MB..=MAX_MEMORY_MB).contains(&memory) {
+        return Err(format!(
+            "Memory must be between {}MB and {}MB",
+            MIN_MEMORY_MB, MAX_MEMORY_MB
+        ));
+    }
+
+    let jar_path = validated_server_dir.join(&validated_jar_file);
+    if !jar_path.exists() || !jar_path.is_file() {
+        return Err(format!("Jar file not found: {}", validated_jar_file));
+    }
+
     // 既に起動中か確認
     {
         let servers = state.servers.lock().await;
         if servers.contains_key(&server_id) {
             return Err("Server is already running".into());
         }
+        if servers.len() >= MAX_RUNNING_SERVERS {
+            return Err("Too many running servers".into());
+        }
     }
 
-    let mut child = Command::new(&java_path)
+    let mut child = Command::new(&validated_java_path)
         .args([
             &format!("-Xmx{}M", memory),
             &format!("-Xms{}M", memory),
             "-jar",
-            &jar_file,
+            &validated_jar_file,
             "nogui",
         ])
-        .current_dir(&server_path)
+        .current_dir(&validated_server_dir)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -226,14 +327,33 @@ pub async fn stop_server(state: State<'_, ServerManager>, server_id: String) -> 
 #[tauri::command]
 pub async fn send_command(
     state: State<'_, ServerManager>,
+    limiter: State<'_, CommandLimiter>,
     server_id: String,
     command: String,
 ) -> Result<(), String> {
+    let normalized_command = command.trim();
+    if normalized_command.is_empty() {
+        return Err("Command is empty".into());
+    }
+    if normalized_command.len() > 1024 {
+        return Err("Command is too long".into());
+    }
+
+    {
+        let mut last_map = limiter.last_command_at.lock().await;
+        if let Some(last_sent) = last_map.get(&server_id) {
+            if last_sent.elapsed() < COMMAND_MIN_INTERVAL {
+                return Err("Commands are being sent too quickly".into());
+            }
+        }
+        last_map.insert(server_id.clone(), Instant::now());
+    }
+
     let mut servers = state.servers.lock().await;
     if let Some(server) = servers.get_mut(&server_id) {
         server
             .stdin
-            .write_all(format!("{}\n", command).as_bytes())
+            .write_all(format!("{}\n", normalized_command).as_bytes())
             .await
             .map_err(|e| format!("Failed to send command: {}", e))?;
         server
@@ -243,6 +363,8 @@ pub async fn send_command(
             .map_err(|e| format!("Failed to flush stdin: {}", e))?;
         Ok(())
     } else {
+        let mut last_map = limiter.last_command_at.lock().await;
+        last_map.remove(&server_id);
         Err("Server not found or not running".into())
     }
 }
