@@ -24,8 +24,9 @@ export default function AppContextMenu({
   }
 
   return (
-    <div className="app-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
-      <div
+    <div className="app-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} role="menu">
+      <button
+        type="button"
         onClick={(event) => {
           event.stopPropagation();
           void onDuplicateServer();
@@ -33,9 +34,10 @@ export default function AppContextMenu({
         className="app-context-menu__item"
       >
         📄 {cloneLabel}
-      </div>
+      </button>
 
-      <div
+      <button
+        type="button"
         onClick={(event) => {
           event.stopPropagation();
           void onSaveServerTemplate();
@@ -43,9 +45,10 @@ export default function AppContextMenu({
         className="app-context-menu__item"
       >
         🧩 {saveTemplateLabel}
-      </div>
+      </button>
 
-      <div
+      <button
+        type="button"
         onClick={(event) => {
           event.stopPropagation();
           void onDeleteServer();
@@ -53,7 +56,7 @@ export default function AppContextMenu({
         className="app-context-menu__danger-item"
       >
         🗑️ {deleteLabel}
-      </div>
+      </button>
     </div>
   );
 }
