@@ -80,14 +80,8 @@ pub async fn start_ngrok(
 
     let port_value = port.to_string();
     let mut child = Command::new(&validated_ngrok_path)
-        .args([
-            &validated_protocol,
-            &port_value,
-            "--authtoken",
-            &normalized_token,
-            "--log",
-            "stdout",
-        ])
+        .args([&validated_protocol, &port_value, "--log", "stdout"])
+        .env("NGROK_AUTHTOKEN", &normalized_token)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
