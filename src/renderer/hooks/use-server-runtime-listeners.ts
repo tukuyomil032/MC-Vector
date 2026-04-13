@@ -50,19 +50,7 @@ export function useServerRuntimeListeners({
 }: UseServerRuntimeListenersOptions) {
   // Keep a ref that always holds the latest prop values so the subscription
   // effect can run exactly once while still reading up-to-date callbacks.
-  const propsRef = useRef({
-    selectedServerId,
-    setSelectedServerId,
-    setServers,
-    loadTemplates,
-    appendServerLog,
-    showToast,
-    t,
-    setDownloadStatus,
-    setNgrokData,
-    handleServerStatusChange,
-  });
-  propsRef.current = {
+  const latestProps: UseServerRuntimeListenersOptions = {
     selectedServerId,
     setSelectedServerId,
     setServers,
@@ -74,6 +62,8 @@ export function useServerRuntimeListeners({
     setNgrokData,
     handleServerStatusChange,
   };
+  const propsRef = useRef(latestProps);
+  propsRef.current = latestProps;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {

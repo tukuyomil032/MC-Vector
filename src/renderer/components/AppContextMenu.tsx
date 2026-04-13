@@ -27,6 +27,7 @@ export default function AppContextMenu({
     <div className="app-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} role="menu">
       <button
         type="button"
+        role="menuitem"
         onClick={(event) => {
           event.stopPropagation();
           void onDuplicateServer();
@@ -38,6 +39,7 @@ export default function AppContextMenu({
 
       <button
         type="button"
+        role="menuitem"
         onClick={(event) => {
           event.stopPropagation();
           void onSaveServerTemplate();
@@ -49,6 +51,7 @@ export default function AppContextMenu({
 
       <button
         type="button"
+        role="menuitem"
         onClick={(event) => {
           event.stopPropagation();
           void onDeleteServer();
