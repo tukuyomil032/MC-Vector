@@ -2,6 +2,8 @@
 
 This document provides a technical overview of MC-Vector's architecture, including system design, component structure, and data flow.
 
+**Document target version:** `2.0.51`
+
 ## Table of Contents
 
 - [System Architecture](#system-architecture)

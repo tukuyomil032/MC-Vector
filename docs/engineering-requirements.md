@@ -1,5 +1,7 @@
 # MC-Vector Engineering Requirements
 
+**Document target version:** `2.0.51`
+
 ## 1. Scope
 
 このドキュメントは、`docs/improvements.md` の機能群を実装する際の必須ルールとフェーズ分割を定義する。

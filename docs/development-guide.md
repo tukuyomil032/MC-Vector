@@ -2,6 +2,8 @@
 
 Welcome to the MC-Vector development guide! This document will help you set up your development environment and understand our development workflow.
 
+**Guide target version:** `2.0.51`
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)

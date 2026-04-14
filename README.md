@@ -2,11 +2,20 @@
 
 [![CI](https://github.com/tukuyomil032/MC-Vector/workflows/CI/badge.svg)](https://github.com/tukuyomil032/MC-Vector/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0.47-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
+[![Version](https://img.shields.io/badge/version-2.0.51-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
 
 **Minecraft - Multi-Function Server Management Software**
 
 MC-Vector is a powerful cross-platform desktop application for managing Minecraft servers with ease. Built with Tauri and React, it provides a modern, fast, and intuitive interface for server administration.
+
+**Current stable version:** `2.0.51`
+
+### What's New in 2.0.51
+
+- ✅ File saving flow reliability improvements in the Files view
+- ☕ Java runtime management improvements (download/select/delete flow)
+- 🔌 Plugin browser UI consistency updates and transition polish
+- 🎨 Better icon visibility and light/dark theme readability
 
 ---
 
@@ -22,7 +31,7 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 - 👥 **User Management** - Manage whitelist, operators, bans, and IP bans
 - 🌐 **Proxy Network Setup** - Easy proxy server configuration (BungeeCord, Velocity)
 - 🔗 **Port Forwarding Elimination** - Ngrok integration for public access without port forwarding
-- ☕ **Java Version Management** - Detect and select Java runtime versions
+- ☕ **Java Version Management** - Download, detect, select, and remove Java runtime versions
 - 🔄 **Auto-Updater** - Keep MC-Vector up to date automatically
 
 ---
@@ -447,7 +456,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Task Runners:** just, Make
 - **Environment:** Nix (optional)
 
-For more details, see the [Technology Stack Documentation](docs/技術スタック.md).
+For more details, see the [Architecture Documentation](docs/architecture.md) and [Development Guide](docs/development-guide.md).
 
 ---
 
