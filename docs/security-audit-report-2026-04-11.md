@@ -114,7 +114,7 @@ pub async fn start_ngrok(
 
 ## 3. Tauri権限が過剰（shell/fs）
 
-- **ファイル**: `src-tauri/capabilities/desktop.json`
+- **ファイル**: `src-tauri/capabilities/default.json`
 - **該当コード**
 
 ```json
@@ -623,7 +623,7 @@ invoke前の権限制御がない
 
 ## 24. FSサンドボックスが緩い
 
-- **ファイル**: `src-tauri/capabilities/desktop.json`
+- **ファイル**: `src-tauri/capabilities/default.json`
 - **該当コード**
 
 ```json
@@ -705,7 +705,7 @@ if full_path.exists() { files.push(full_path); }
 
 ## 29. FS権限の過大スコープ
 
-- **ファイル**: `src-tauri/capabilities/desktop.json`
+- **ファイル**: `src-tauri/capabilities/default.json`
 - **該当コード**
 
 ```json

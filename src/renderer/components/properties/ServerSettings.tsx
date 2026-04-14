@@ -18,7 +18,7 @@ import { useToast } from '../ToastProvider';
 
 interface ServerSettingsProps {
   server: MinecraftServer;
-  onSave: (updatedServer: MinecraftServer) => void;
+  onSave: (updatedServer: MinecraftServer) => Promise<void>;
   onOpenNgrokGuide: () => void;
 }
 
@@ -56,6 +56,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   >(server.autoBackupScheduleType ?? 'interval');
   const [autoBackupTime, setAutoBackupTime] = useState(server.autoBackupTime ?? '03:00');
   const [autoBackupWeekday, setAutoBackupWeekday] = useState(server.autoBackupWeekday ?? 0);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [showJavaManager, setShowJavaManager] = useState(false);
   const [installedJava, setInstalledJava] = useState<JavaVersion[]>([]);
@@ -144,7 +145,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     setInstalledJava(list);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSaving) {
+      return;
+    }
+
     const normalizedRestartLimit = Math.min(20, Math.max(0, Math.floor(maxAutoRestarts || 0)));
     const normalizedRestartDelay = Math.min(300, Math.max(1, Math.floor(autoRestartDelaySec || 1)));
     const normalizedBackupInterval = Math.min(
@@ -160,26 +165,31 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
       : '03:00';
     const normalizedBackupWeekday = Math.min(6, Math.max(0, Math.floor(autoBackupWeekday || 0)));
 
-    onSave({
-      ...server,
-      name,
-      profileName: profileName.trim() || undefined,
-      groupName: groupName.trim() || undefined,
-      version,
-      memory,
-      port,
-      path,
-      software,
-      javaPath: javaPath || undefined,
-      autoRestartOnCrash,
-      maxAutoRestarts: normalizedRestartLimit,
-      autoRestartDelaySec: normalizedRestartDelay,
-      autoBackupEnabled,
-      autoBackupIntervalMin: normalizedBackupInterval,
-      autoBackupScheduleType: normalizedScheduleType,
-      autoBackupTime: normalizedBackupTime,
-      autoBackupWeekday: normalizedBackupWeekday,
-    });
+    setIsSaving(true);
+    try {
+      await onSave({
+        ...server,
+        name,
+        profileName: profileName.trim() || undefined,
+        groupName: groupName.trim() || undefined,
+        version,
+        memory,
+        port,
+        path,
+        software,
+        javaPath: javaPath || undefined,
+        autoRestartOnCrash,
+        maxAutoRestarts: normalizedRestartLimit,
+        autoRestartDelaySec: normalizedRestartDelay,
+        autoBackupEnabled,
+        autoBackupIntervalMin: normalizedBackupInterval,
+        autoBackupScheduleType: normalizedScheduleType,
+        autoBackupTime: normalizedBackupTime,
+        autoBackupWeekday: normalizedBackupWeekday,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggleTunnel = async () => {
@@ -509,7 +519,14 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
           </div>
 
           <div className="server-settings__actions">
-            <button onClick={handleSubmit} className="btn-start server-settings__save-btn">
+            <button
+              type="button"
+              onClick={() => {
+                void handleSubmit();
+              }}
+              className="btn-start server-settings__save-btn disabled:opacity-50"
+              disabled={isSaving}
+            >
               {t('serverSettings.saveSettings')}
             </button>
           </div>

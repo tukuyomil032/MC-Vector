@@ -41,6 +41,25 @@ export function useServerProcessActions({
     await startServerApi(server.id, javaPath, server.path, server.memory, jarFile);
   }, []);
 
+  const resolveStatusAfterStopPhaseFailure = useCallback(
+    async (serverId: string): Promise<MinecraftServer['status']> => {
+      try {
+        const running = await isServerRunning(serverId);
+        if (running) {
+          clearExpectedOffline(serverId);
+          resetAutoRestartState(serverId);
+          return 'online';
+        }
+      } catch (error) {
+        console.error('Failed to verify server state after stop phase failure:', error);
+      }
+      clearExpectedOffline(serverId);
+      resetAutoRestartState(serverId);
+      return 'offline';
+    },
+    [clearExpectedOffline, resetAutoRestartState],
+  );
+
   const handleStart = useCallback(async () => {
     if (!activeServer) {
       showToast(t('server.toast.noServerSelected'), 'error');
@@ -90,20 +109,18 @@ export function useServerProcessActions({
       await stopServerApi(selectedServerId);
     } catch (error) {
       console.error('Stop failed:', error);
-      clearExpectedOffline(selectedServerId);
-      resetAutoRestartState(selectedServerId);
+      const fallbackStatus = await resolveStatusAfterStopPhaseFailure(selectedServerId);
       setServers((prev) =>
         prev.map((server) =>
-          server.id === selectedServerId ? { ...server, status: 'offline' } : server,
+          server.id === selectedServerId ? { ...server, status: fallbackStatus } : server,
         ),
       );
       showToast(t('server.toast.stopFailed'), 'error');
     }
   }, [
     clearAutoRestartTimer,
-    clearExpectedOffline,
     markExpectedOffline,
-    resetAutoRestartState,
+    resolveStatusAfterStopPhaseFailure,
     selectedServerId,
     setServers,
     showToast,
@@ -143,19 +160,19 @@ export function useServerProcessActions({
       await startServerProcess(activeServer);
     } catch (error) {
       console.error('Restart failed:', error);
-      clearExpectedOffline(serverId);
-      resetAutoRestartState(serverId);
+      const fallbackStatus = await resolveStatusAfterStopPhaseFailure(serverId);
       setServers((prev) =>
-        prev.map((server) => (server.id === serverId ? { ...server, status: 'offline' } : server)),
+        prev.map((server) =>
+          server.id === serverId ? { ...server, status: fallbackStatus } : server,
+        ),
       );
       showToast(t('server.toast.restartFailed'), 'error');
     }
   }, [
     activeServer,
     clearAutoRestartTimer,
-    clearExpectedOffline,
     markExpectedOffline,
-    resetAutoRestartState,
+    resolveStatusAfterStopPhaseFailure,
     setServers,
     showToast,
     startServerProcess,

@@ -36,6 +36,26 @@ interface UseServerRuntimeListenersOptions {
   handleServerStatusChange: (data: ServerStatusChangeData) => void;
 }
 
+const SERVER_STATUS_VALUES: readonly MinecraftServer['status'][] = [
+  'online',
+  'offline',
+  'starting',
+  'stopping',
+  'restarting',
+  'crashed',
+];
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isServerStatus(value: unknown): value is MinecraftServer['status'] {
+  return (
+    typeof value === 'string' &&
+    SERVER_STATUS_VALUES.some((allowedStatus) => allowedStatus === value)
+  );
+}
+
 export function useServerRuntimeListeners({
   selectedServerId,
   setSelectedServerId,
@@ -117,8 +137,11 @@ export function useServerRuntimeListeners({
         if (cancelled) {
           return;
         }
-        const status = data.status as MinecraftServer['status'];
-        propsRef.current.handleServerStatusChange({ serverId: data.serverId, status });
+        if (!isNonEmptyString(data.serverId) || !isServerStatus(data.status)) {
+          return;
+        }
+        const serverId = data.serverId.trim();
+        propsRef.current.handleServerStatusChange({ serverId, status: data.status });
       });
       unlisteners.push(disposeServerStatus);
 
@@ -126,10 +149,14 @@ export function useServerRuntimeListeners({
         if (cancelled) {
           return;
         }
+        if (!isNonEmptyString(data.serverId)) {
+          return;
+        }
+        const serverId = data.serverId.trim();
         if (data.status === 'stopped' || data.status === 'error') {
-          propsRef.current.setNgrokData((prev) => ({ ...prev, [data.serverId ?? '']: null }));
-        } else if (data.url && data.serverId) {
-          propsRef.current.setNgrokData((prev) => ({ ...prev, [data.serverId]: data.url }));
+          propsRef.current.setNgrokData((prev) => ({ ...prev, [serverId]: null }));
+        } else if (isNonEmptyString(data.url)) {
+          propsRef.current.setNgrokData((prev) => ({ ...prev, [serverId]: data.url.trim() }));
         }
       });
       unlisteners.push(disposeNgrokStatus);

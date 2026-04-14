@@ -78,15 +78,20 @@ export function useServerAutomation({
     delete expectedOfflineEventsRef.current[serverId];
   }, []);
 
-  const clearAutoBackupInterval = useCallback((serverId: string) => {
-    const intervalId = autoBackupIntervalRef.current[serverId];
-    if (intervalId) {
-      window.clearInterval(intervalId);
-      delete autoBackupIntervalRef.current[serverId];
-    }
-    delete autoBackupRunningRef.current[serverId];
-    delete autoBackupLastRunKeyRef.current[serverId];
-  }, []);
+  const clearAutoBackupInterval = useCallback(
+    (serverId: string, options: { resetLastRunKey?: boolean } = {}) => {
+      const intervalId = autoBackupIntervalRef.current[serverId];
+      if (intervalId) {
+        window.clearInterval(intervalId);
+        delete autoBackupIntervalRef.current[serverId];
+      }
+      delete autoBackupRunningRef.current[serverId];
+      if (options.resetLastRunKey) {
+        delete autoBackupLastRunKeyRef.current[serverId];
+      }
+    },
+    [],
+  );
 
   const runAutoBackup = useCallback(
     async (serverId: string) => {
@@ -135,18 +140,20 @@ export function useServerAutomation({
 
     for (const serverId of Object.keys(autoBackupIntervalRef.current)) {
       if (!activeServerIds.has(serverId)) {
-        clearAutoBackupInterval(serverId);
+        clearAutoBackupInterval(serverId, { resetLastRunKey: true });
       }
     }
 
     for (const server of servers) {
-      clearAutoBackupInterval(server.id);
       if (!server.autoBackupEnabled) {
+        clearAutoBackupInterval(server.id, { resetLastRunKey: true });
         continue;
       }
+      clearAutoBackupInterval(server.id);
 
       const scheduleType = resolveAutoBackupScheduleType(server);
       if (scheduleType === 'interval') {
+        delete autoBackupLastRunKeyRef.current[server.id];
         const intervalMinutes = Math.min(
           1440,
           Math.max(1, Math.floor(server.autoBackupIntervalMin ?? 60)),
@@ -200,6 +207,7 @@ export function useServerAutomation({
 
   const handleServerStatusChange = useCallback(
     ({ serverId, status }: ServerStatusChangeData) => {
+      const previousStatus = serversRef.current.find((server) => server.id === serverId)?.status;
       setServers((prev) =>
         prev.map((server) => (server.id === serverId ? { ...server, status } : server)),
       );
@@ -211,6 +219,11 @@ export function useServerAutomation({
       }
 
       if (status === 'offline' && consumeExpectedOffline(serverId)) {
+        resetAutoRestartState(serverId);
+        return;
+      }
+
+      if (status === 'offline' && previousStatus === 'offline') {
         resetAutoRestartState(serverId);
         return;
       }

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -17,7 +17,7 @@ struct NgrokStatusPayload {
     server_id: Option<String>,
 }
 
-fn validate_ngrok_path(ngrok_path: &str) -> Result<String, String> {
+fn validate_ngrok_path(ngrok_path: &str, allowed_dir: &std::path::Path) -> Result<String, String> {
     let normalized = ngrok_path.trim();
     if normalized.is_empty() {
         return Err("ngrok path is empty".to_string());
@@ -31,6 +31,10 @@ fn validate_ngrok_path(ngrok_path: &str) -> Result<String, String> {
         return Err("ngrok path is not a file".to_string());
     }
 
+    if !canonical.starts_with(allowed_dir) {
+        return Err("ngrok binary must be located in the app-managed ngrok directory.".to_string());
+    }
+
     let file_name = canonical
         .file_name()
         .and_then(|name| name.to_str())
@@ -38,6 +42,17 @@ fn validate_ngrok_path(ngrok_path: &str) -> Result<String, String> {
         .ok_or_else(|| "Invalid ngrok path".to_string())?;
     if file_name != "ngrok" && file_name != "ngrok.exe" {
         return Err("ngrok binary name must be ngrok".to_string());
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = std::fs::metadata(&canonical)
+            .map_err(|e| format!("Failed to read ngrok file metadata: {}", e))?;
+        let mode = metadata.permissions().mode();
+        if mode & 0o111 == 0 {
+            return Err("ngrok binary is not executable".to_string());
+        }
     }
 
     Ok(canonical.to_string_lossy().to_string())
@@ -62,7 +77,13 @@ pub async fn start_ngrok(
     authtoken: String,
     server_id: String,
 ) -> Result<(), String> {
-    let validated_ngrok_path = validate_ngrok_path(&ngrok_path)?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let allowed_dir = app_data_dir.join("ngrok");
+
+    let validated_ngrok_path = validate_ngrok_path(&ngrok_path, &allowed_dir)?;
     let validated_protocol = validate_protocol(&protocol)?;
     let normalized_token = authtoken.trim().to_string();
     if normalized_token.is_empty() {

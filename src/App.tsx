@@ -146,9 +146,14 @@ function App() {
   });
 
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
-    setServers((prev) => prev.map((s) => (s.id === updatedServer.id ? updatedServer : s)));
-    await updateServerApi(updatedServer);
-    showToast(t('server.toast.settingsSaved'), 'success');
+    try {
+      await updateServerApi(updatedServer);
+      setServers((prev) => prev.map((s) => (s.id === updatedServer.id ? updatedServer : s)));
+      showToast(t('server.toast.settingsSaved'), 'success');
+    } catch (error) {
+      console.error('Update server failed:', error);
+      showToast(t('server.toast.saveFailed'), 'error');
+    }
   };
   const { handleAddServer } = useServerCreateAction({
     setServers,
@@ -216,7 +221,7 @@ function App() {
           onSelectServer={setSelectedServerId}
           onServerContextMenu={handleContextMenu}
           onAddServer={() => setShowAddServerModal(true)}
-          serversLabel={t('nav.servers').toUpperCase()}
+          serversLabel={t('nav.servers')}
           addServerLabel={t('nav.addServer')}
         />
       </aside>
