@@ -1,8 +1,13 @@
 @layer components {
   .proxy-setup-view {
-    @apply h-full p-8 overflow-y-auto text-white;
+    @apply h-full overflow-y-auto p-8 box-border;
     font-family: var(--mv-font-display);
+    color: #ecf0f1;
     background: var(--mv-view-bg);
+  }
+
+  .proxy-setup-view__inner {
+    @apply max-w-5xl pb-8;
   }
 
   .proxy-setup-view__title {
@@ -12,56 +17,61 @@
     box-shadow: var(--mv-shadow-panel);
   }
 
-  .proxy-setup-view__description {
-    @apply text-zinc-300 mb-4 rounded-xl border px-4 py-3 leading-relaxed;
-    border-color: rgba(14, 165, 233, 0.28);
-    background: rgba(8, 47, 73, 0.32);
-  }
-
   .proxy-setup-view__panel {
-    @apply p-6 w-full max-w-4xl mx-auto rounded-2xl border;
+    @apply p-6 rounded-2xl border;
     border-color: var(--mv-border-soft);
     background: var(--mv-panel-bg-alt);
     box-shadow: var(--mv-shadow-panel);
   }
 
+  .proxy-setup-view__panel-title {
+    @apply mt-0 mb-5 text-cyan-200 text-sm uppercase tracking-[0.1em] font-semibold;
+  }
+
+  .proxy-setup-view__section {
+    @apply mb-5 rounded-xl border p-5;
+    border-color: rgba(63, 63, 70, 0.72);
+    background: rgba(15, 23, 42, 0.56);
+  }
+
+  .proxy-setup-view__section--large-gap {
+    @apply mb-6;
+  }
+
   .proxy-setup-view__top-grid {
-    @apply grid gap-4;
+    @apply grid gap-5;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 
   .proxy-setup-view__field {
-    @apply mb-6 flex flex-col gap-2;
-  }
-
-  .proxy-setup-view__field--large-gap {
-    @apply mb-8;
+    @apply flex flex-col gap-2;
   }
 
   .proxy-setup-view__label {
-    @apply block mb-2 text-sm font-semibold uppercase tracking-[0.08em] text-zinc-300;
-  }
-
-  .proxy-setup-view__label--spaced {
-    @apply mb-2.5;
+    @apply block mb-1.5 text-sm text-zinc-300;
   }
 
   .proxy-setup-view__hint {
-    @apply text-xs text-zinc-400 mt-1.5;
+    @apply mt-1.5 text-xs text-zinc-400;
   }
 
   .proxy-setup-view__backend-list {
-    @apply p-2.5 rounded-xl border max-h-[240px] overflow-y-auto;
-    border-color: rgba(63, 63, 70, 0.78);
-    background: rgba(15, 23, 42, 0.78);
+    @apply max-h-[270px] overflow-y-auto rounded-xl border;
+    border-color: rgba(63, 63, 70, 0.82);
+    background: rgba(15, 23, 42, 0.8);
   }
 
   .proxy-setup-view__backend-empty {
-    @apply text-zinc-500 p-2.5;
+    @apply p-3 text-sm text-zinc-500;
   }
 
   .proxy-setup-view__backend-row {
-    @apply flex items-start p-2.5 border-b border-zinc-700/65 rounded-md gap-2;
+    @apply flex items-start gap-3 border-b px-3 py-2.5;
+    border-color: rgba(63, 63, 70, 0.62);
+  }
+
+  .proxy-setup-view__backend-row:hover {
+    background: rgba(34, 211, 238, 0.08);
   }
 
   .proxy-setup-view__backend-row:last-child {
@@ -69,7 +79,7 @@
   }
 
   .proxy-setup-view__checkbox {
-    @apply cursor-pointer mt-0.5;
+    @apply mt-1 h-4 w-4 shrink-0 cursor-pointer;
     accent-color: #22d3ee;
   }
 
@@ -78,28 +88,36 @@
   }
 
   .proxy-setup-view__backend-name {
-    @apply font-semibold truncate;
+    @apply truncate font-semibold text-zinc-100;
   }
 
   .proxy-setup-view__backend-detail {
-    @apply text-xs text-zinc-400 break-words;
+    @apply break-words text-xs text-zinc-400;
   }
 
   .proxy-setup-view__actions {
-    @apply flex items-center justify-end gap-4;
+    @apply flex items-center justify-end gap-3;
   }
 
   .proxy-setup-view__build-btn {
-    @apply py-3 px-6 text-base;
+    @apply px-6 py-3 text-base;
   }
 
   .proxy-setup-view__help-btn {
-    @apply py-3 px-5 text-sm;
+    @apply px-5 py-3 text-sm;
   }
 }
 
 @media (max-width: 900px) {
   .proxy-setup-view {
+    @apply p-4;
+  }
+
+  .proxy-setup-view__panel {
+    @apply p-4;
+  }
+
+  .proxy-setup-view__section {
     @apply p-4;
   }
 

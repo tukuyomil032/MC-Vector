@@ -1273,16 +1273,16 @@ export default function PluginBrowser({ server }: Props) {
     ? (compatibilityByItemId[detailItem.id] ?? 'unknown')
     : 'unknown';
   const detailProjectUrl = detailItem ? projectPageUrl(detailItem) : '';
-  const resultCardInitial = prefersReducedMotion
-    ? { opacity: 1, y: 0, scale: 1 }
-    : { opacity: 0, y: 14, scale: 0.98 };
-  const resultCardAnimate = { opacity: 1, y: 0, scale: 1 };
-  const resultCardExit = prefersReducedMotion
-    ? { opacity: 1, y: 0, scale: 1 }
-    : { opacity: 0, y: -10, scale: 0.98 };
-  const resultCardTransition = prefersReducedMotion
+  const platformSwitchInitial = prefersReducedMotion
+    ? { opacity: 1, y: 0, filter: 'blur(0px)' }
+    : { opacity: 0, y: 6, filter: 'blur(6px)' };
+  const platformSwitchAnimate = { opacity: 1, y: 0, filter: 'blur(0px)' };
+  const platformSwitchExit = prefersReducedMotion
+    ? { opacity: 1, y: 0, filter: 'blur(0px)' }
+    : { opacity: 0, y: -4, filter: 'blur(2px)' };
+  const platformSwitchTransition = prefersReducedMotion
     ? { duration: 0 }
-    : { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const };
+    : { duration: 0.24, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <div className="plugin-browser">
@@ -1362,7 +1362,7 @@ export default function PluginBrowser({ server }: Props) {
           <div className="plugin-browser__sort-row">
             <span className="plugin-browser__sort-label">{t('plugins.browser.sortLabel')}</span>
             <select
-              className="plugin-browser__sort-select"
+              className="input-field plugin-browser__sort-select"
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
             >
@@ -1434,10 +1434,10 @@ export default function PluginBrowser({ server }: Props) {
                 return (
                   <motion.div
                     key={`${item.platform}-${item.id}`}
-                    initial={resultCardInitial}
-                    animate={resultCardAnimate}
-                    exit={resultCardExit}
-                    transition={resultCardTransition}
+                    initial={platformSwitchInitial}
+                    animate={platformSwitchAnimate}
+                    exit={platformSwitchExit}
+                    transition={platformSwitchTransition}
                     className="plugin-browser__result-card"
                   >
                     <div
@@ -1565,9 +1565,10 @@ export default function PluginBrowser({ server }: Props) {
               {sortedResults.length === 0 && !loading && (
                 <motion.div
                   key="empty"
-                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={prefersReducedMotion ? { duration: 0 } : undefined}
+                  initial={platformSwitchInitial}
+                  animate={platformSwitchAnimate}
+                  exit={platformSwitchExit}
+                  transition={platformSwitchTransition}
                   className="plugin-browser__result-empty"
                 >
                   {t('plugins.browser.noResults')}

@@ -82,7 +82,7 @@
   }
 
   .plugin-browser__sort-row {
-    @apply flex items-center justify-end gap-2;
+    @apply flex flex-wrap items-center justify-end gap-2.5;
   }
 
   .plugin-browser__sort-label {
@@ -90,8 +90,9 @@
   }
 
   .plugin-browser__sort-select {
-    @apply rounded-lg border border-zinc-700/85 px-2.5 py-1.5 text-xs text-zinc-100 outline-none;
-    background: rgba(15, 23, 42, 0.8);
+    @apply min-w-[180px] py-2 text-xs;
+    border-color: rgba(63, 63, 70, 0.82);
+    background-color: rgba(15, 23, 42, 0.8);
   }
 
   .plugin-browser__unsupported-panel {
@@ -534,6 +535,14 @@
   }
 
   .plugin-browser__search-btn {
+    @apply w-full;
+  }
+
+  .plugin-browser__sort-row {
+    @apply justify-between;
+  }
+
+  .plugin-browser__sort-select {
     @apply w-full;
   }
 

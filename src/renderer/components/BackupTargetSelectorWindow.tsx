@@ -62,17 +62,6 @@ const sortNodes = (nodes: SelectorNode[]): SelectorNode[] => {
   });
 };
 
-const flattenNodes = (nodes: SelectorNode[]): SelectorNode[] => {
-  const flattened: SelectorNode[] = [];
-  for (const node of nodes) {
-    flattened.push(node);
-    if (node.children && node.children.length > 0) {
-      flattened.push(...flattenNodes(node.children));
-    }
-  }
-  return flattened;
-};
-
 export default function BackupTargetSelectorWindow() {
   const { t } = useTranslation();
   const initial = useMemo(parseInitialPayload, []);
@@ -130,25 +119,29 @@ export default function BackupTargetSelectorWindow() {
       setTree(nextTree);
 
       const nextExpanded = new Set<string>();
-      const collectExpanded = (node: SelectorNode) => {
-        if (!node.isDirectory) {
-          return;
+      const collectExpanded = (node: SelectorNode, depth: number): boolean => {
+        const isSelected = preselected.has(node.path);
+        if (!node.isDirectory || !node.children || node.children.length === 0) {
+          return isSelected;
         }
 
-        if (node.children && node.children.length > 0) {
-          if (preselected.has(node.path)) {
-            nextExpanded.add(node.path);
+        let hasSelectedDescendant = false;
+        for (const child of node.children) {
+          if (collectExpanded(child, depth + 1)) {
+            hasSelectedDescendant = true;
           }
-          const hasSelectedChild = node.children.some((child) => preselected.has(child.path));
-          if (hasSelectedChild) {
-            nextExpanded.add(node.path);
-          }
-
-          node.children.forEach(collectExpanded);
         }
+        const shouldExpand = depth === 0 || isSelected || hasSelectedDescendant;
+        if (shouldExpand) {
+          nextExpanded.add(node.path);
+        }
+
+        return isSelected || hasSelectedDescendant;
       };
 
-      nextTree.forEach(collectExpanded);
+      nextTree.forEach((node) => {
+        collectExpanded(node, 0);
+      });
       setExpanded(nextExpanded);
     } catch (error) {
       console.error(error);
@@ -285,6 +278,7 @@ export default function BackupTargetSelectorWindow() {
             className="backup-selector-window__node-checkbox"
             checked={checked}
             onChange={(event) => handleToggleNode(node, event.target.checked)}
+            aria-label={`${node.name} (${node.path})`}
           />
 
           <span className="backup-selector-window__kind-icon">
@@ -312,55 +306,82 @@ export default function BackupTargetSelectorWindow() {
     );
   };
 
-  const renderGraphGroup = (root: SelectorNode) => {
-    const rootChecked = selected.has(root.path);
-    const descendants = root.children ? flattenNodes(root.children) : [];
+  const renderGraphNode = (node: SelectorNode) => {
+    const checked = selected.has(node.path);
+    const hasChildren = Boolean(node.children && node.children.length > 0);
+    const isExpanded = hasChildren ? expanded.has(node.path) : false;
+    const childCount = node.children?.length ?? 0;
 
     return (
-      <section key={root.path} className="backup-selector-window__graph-root">
-        <div
-          className={`backup-selector-window__graph-root-row ${rootChecked ? 'is-selected' : ''}`}
-        >
+      <li key={node.path} className="backup-selector-window__graph-item">
+        <div className={`backup-selector-window__graph-card ${checked ? 'is-selected' : ''}`}>
+          {hasChildren ? (
+            <button
+              type="button"
+              className="backup-selector-window__graph-expander"
+              onClick={() => toggleExpanded(node.path)}
+              aria-label={
+                isExpanded
+                  ? t('backupSelector.ariaCollapseDirectory')
+                  : t('backupSelector.ariaExpandDirectory')
+              }
+            >
+              <ChevronRight className={isExpanded ? 'is-open' : ''} size={14} />
+            </button>
+          ) : (
+            <span className="backup-selector-window__graph-expander-spacer" />
+          )}
+
           <input
             type="checkbox"
             className="backup-selector-window__node-checkbox"
-            checked={rootChecked}
-            onChange={(event) => handleToggleNode(root, event.target.checked)}
+            checked={checked}
+            onChange={(event) => handleToggleNode(node, event.target.checked)}
+            aria-label={`${node.name} (${node.path})`}
           />
+
           <span className="backup-selector-window__kind-icon">
-            {root.isDirectory ? <Folder size={14} /> : <File size={14} />}
+            {node.isDirectory ? (
+              isExpanded ? (
+                <FolderOpen size={14} />
+              ) : (
+                <Folder size={14} />
+              )
+            ) : (
+              <File size={14} />
+            )}
           </span>
+
           <button
             type="button"
-            className="backup-selector-window__graph-root-toggle"
-            onClick={() => handleToggleNode(root, !rootChecked)}
-            title={root.path}
+            className="backup-selector-window__graph-node-toggle"
+            onClick={() => handleToggleNode(node, !checked)}
+            title={node.path}
           >
-            {root.name}
+            <span className="backup-selector-window__graph-node-name">{node.name}</span>
+            <span className="backup-selector-window__graph-node-path">{node.path}</span>
           </button>
-          <span className="backup-selector-window__size">{formatSize(root.size)}</span>
+
+          {hasChildren && (
+            <span className="backup-selector-window__graph-node-count">{childCount}</span>
+          )}
+
+          <span className="backup-selector-window__size">{formatSize(node.size)}</span>
         </div>
 
-        {descendants.length > 0 && (
-          <div className="backup-selector-window__graph-links">
-            {descendants.map((node) => {
-              const checked = selected.has(node.path);
-
-              return (
-                <button
-                  key={node.path}
-                  type="button"
-                  className={`backup-selector-window__graph-node ${checked ? 'is-selected' : ''}`}
-                  onClick={() => handleToggleNode(node, !checked)}
-                  title={node.path}
-                >
-                  {node.isDirectory ? <Folder size={12} /> : <File size={12} />}
-                  <span className="backup-selector-window__graph-node-label">{node.path}</span>
-                </button>
-              );
-            })}
-          </div>
+        {hasChildren && isExpanded && (
+          <ul className="backup-selector-window__graph-children">
+            {node.children!.map((child) => renderGraphNode(child))}
+          </ul>
         )}
+      </li>
+    );
+  };
+
+  const renderGraphGroup = (root: SelectorNode) => {
+    return (
+      <section key={root.path} className="backup-selector-window__graph-root">
+        <ul className="backup-selector-window__graph-tree">{renderGraphNode(root)}</ul>
       </section>
     );
   };
