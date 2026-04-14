@@ -35,7 +35,10 @@
     @apply pr-10;
     cursor: pointer;
     text-overflow: ellipsis;
-    line-height: 1.35;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    padding-top: 0.58rem;
+    padding-bottom: 0.58rem;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6.5l4 4.8 4-4.8' fill='none' stroke='%23cbd5e1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-size: 0.95rem;
@@ -58,6 +61,17 @@
   select.input-field optgroup {
     background-color: #17171c;
     color: #e5e7eb;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    padding: 0.42rem 0.6rem;
+  }
+
+  .app-shell.theme-light select.input-field option,
+  .app-shell[data-theme='light'] select.input-field option,
+  .app-shell.theme-light select.input-field optgroup,
+  .app-shell[data-theme='light'] select.input-field optgroup {
+    background-color: #f8fafc;
+    color: #0f172a;
   }
 
   .btn-primary {

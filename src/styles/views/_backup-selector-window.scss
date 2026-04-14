@@ -83,12 +83,53 @@
   }
 
   .backup-selector-window__graph-panel {
-    @apply flex-1 rounded-xl border p-3 overflow-y-auto grid gap-3;
+    @apply flex-1 rounded-xl border p-3 overflow-auto;
     min-height: 0;
     border-color: var(--mv-border-soft);
     background: linear-gradient(145deg, rgba(17, 24, 39, 0.94), rgba(24, 24, 27, 0.9));
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    position: relative;
+    cursor: grab;
+    overscroll-behavior: contain;
+  }
+
+  .backup-selector-window__graph-panel.is-panning {
+    cursor: grabbing;
+  }
+
+  .backup-selector-window__graph-controls {
+    @apply sticky top-0 z-[2] ml-auto mb-2 w-fit rounded-lg border px-2 py-1 flex items-center gap-1;
+    border-color: rgba(63, 63, 70, 0.8);
+    background: rgba(9, 16, 29, 0.86);
+    backdrop-filter: blur(8px);
+  }
+
+  .backup-selector-window__graph-control-btn {
+    @apply h-7 w-7 inline-flex items-center justify-center rounded-md border text-zinc-200 transition-colors;
+    border-color: rgba(82, 82, 91, 0.78);
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  .backup-selector-window__graph-control-btn:disabled {
+    @apply cursor-not-allowed text-zinc-500;
+  }
+
+  .backup-selector-window__graph-control-btn:not(:disabled):hover {
+    border-color: rgba(34, 211, 238, 0.48);
+    background: rgba(8, 47, 73, 0.62);
+  }
+
+  .backup-selector-window__graph-zoom-value {
+    @apply min-w-[3.4rem] text-center text-[0.7rem] font-semibold text-cyan-100;
+  }
+
+  .backup-selector-window__graph-canvas {
+    @apply grid gap-3;
+    transform-origin: left top;
+    will-change: transform;
+    min-width: 100%;
+    width: max-content;
     align-content: start;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   }
 
   .backup-selector-window__empty {
@@ -182,6 +223,14 @@
     box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.06);
   }
 
+  .backup-selector-window__graph-root-header {
+    @apply mb-2 px-1 flex items-center gap-2;
+  }
+
+  .backup-selector-window__graph-root-label {
+    @apply min-w-0 flex-1 truncate text-[0.68rem] uppercase tracking-[0.08em] text-zinc-400;
+  }
+
   .backup-selector-window__graph-tree,
   .backup-selector-window__graph-children {
     @apply list-none m-0 p-0;
@@ -194,6 +243,11 @@
   .backup-selector-window__graph-item {
     @apply relative;
     min-width: 0;
+  }
+
+  .backup-selector-window__graph-item.is-rearranging,
+  .backup-selector-window__graph-root.is-rearranging {
+    z-index: 4;
   }
 
   .backup-selector-window__graph-card {
@@ -250,6 +304,24 @@
     background: rgba(34, 211, 238, 0.12);
   }
 
+  .backup-selector-window__graph-drag-handle {
+    @apply h-6 w-6 inline-flex items-center justify-center rounded-md border text-zinc-400 transition-colors;
+    border-color: rgba(82, 82, 91, 0.78);
+    background: rgba(9, 16, 29, 0.86);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .backup-selector-window__graph-drag-handle:hover {
+    border-color: rgba(34, 211, 238, 0.5);
+    color: rgb(165, 243, 252);
+    background: rgba(8, 47, 73, 0.62);
+  }
+
+  .backup-selector-window__graph-drag-handle:active {
+    cursor: grabbing;
+  }
+
   .backup-selector-window__graph-children {
     @apply mt-2 pl-5 flex flex-col gap-2;
     position: relative;
@@ -304,7 +376,7 @@
     margin-left: 0;
   }
 
-  .backup-selector-window__graph-panel {
+  .backup-selector-window__graph-canvas {
     grid-template-columns: minmax(0, 1fr);
   }
 }

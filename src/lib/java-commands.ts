@@ -6,6 +6,51 @@ import { load } from '@tauri-apps/plugin-store';
 import { tauriInvoke, tauriListen, type UnlistenFn } from './tauri-api';
 
 const STORE_NAME = 'config.json';
+const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
+
+function normalizePath(input: string): string {
+  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
+    return normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function isNotFoundError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('not found') ||
+    lower.includes('no such file') ||
+    lower.includes('does not exist')
+  );
+}
+
+function deriveDeletionCandidates(
+  appDataRoot: string,
+  majorVersion: number,
+  storedPath: string,
+): string[] {
+  const normalizedRoot = normalizePath(appDataRoot);
+  const managedJavaRoot = `${normalizedRoot}/java`;
+  const managedVersionDir = `${managedJavaRoot}/jdk-${majorVersion}`;
+  const candidates = new Set<string>([managedVersionDir]);
+
+  const normalizedStored = normalizePath(storedPath);
+  const contentsHomeMarker = '/Contents/Home';
+  if (normalizedStored.includes(contentsHomeMarker)) {
+    const stripped = normalizedStored.slice(0, normalizedStored.indexOf(contentsHomeMarker));
+    if (stripped) {
+      candidates.add(stripped);
+    }
+  } else {
+    candidates.add(normalizedStored);
+  }
+
+  return Array.from(candidates).filter(
+    (candidate) => candidate === managedVersionDir || candidate.startsWith(`${managedVersionDir}/`),
+  );
+}
 
 export interface JavaVersion {
   version: number;
@@ -80,14 +125,34 @@ function getArch(): string {
 export async function deleteJava(majorVersion: number): Promise<void> {
   const versions = await getJavaVersions();
   const target = versions.find((v) => v.version === majorVersion);
-  if (target) {
-    try {
-      await remove(target.path, { recursive: true });
-    } catch {
-      /* ignore */
-    }
-    await saveJavaVersions(versions.filter((v) => v.version !== majorVersion));
+  if (!target) {
+    return;
   }
+
+  if (target.isCustom) {
+    await saveJavaVersions(versions.filter((v) => v.version !== majorVersion));
+    return;
+  }
+
+  const dataDir = await appDataDir();
+  const deletionCandidates = deriveDeletionCandidates(dataDir, majorVersion, target.path);
+  const errors: string[] = [];
+
+  for (const candidate of deletionCandidates) {
+    try {
+      await remove(candidate, { recursive: true });
+    } catch (error) {
+      if (!isNotFoundError(error)) {
+        errors.push(`${candidate}: ${String(error)}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Failed to remove Java ${majorVersion}: ${errors.join(' | ')}`);
+  }
+
+  await saveJavaVersions(versions.filter((v) => v.version !== majorVersion));
 }
 
 export async function selectJavaBinary(): Promise<string | null> {

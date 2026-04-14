@@ -1,0 +1,137 @@
+@layer components {
+  .app-shell.theme-light,
+  .app-shell[data-theme='light'] {
+    .files-view,
+    .plugin-browser,
+    .proxy-setup-view,
+    .proxy-help-view,
+    .server-settings,
+    .settings-window,
+    .advanced-settings-window,
+    .users-view,
+    .backups-view,
+    .properties-view,
+    .ngrok-guide-view {
+      color: var(--mv-surface-text-primary);
+    }
+
+    .files-view__list-pane,
+    .files-view__context-menu,
+    .files-view__create-option,
+    .files-view__editor-header,
+    .plugin-browser__platform-chip,
+    .plugin-browser__search-input-wrap,
+    .plugin-browser__result-card,
+    .plugin-browser__unsupported-panel,
+    .plugin-browser__detail-modal,
+    .plugin-browser__detail-info-panel,
+    .plugin-browser__detail-readme-panel,
+    .proxy-setup-view__section,
+    .proxy-setup-view__backend-list,
+    .proxy-help-view__summary-card,
+    .proxy-help-view__tip-box,
+    .server-settings__address-card,
+    .server-settings__log-panel,
+    .settings-window__progress-track,
+    .settings-window__release-notes-body,
+    .advanced-settings-window__sidebar,
+    .advanced-settings-window__input,
+    .users-view__card-header,
+    .users-view__item,
+    .users-view__form,
+    .backups-view__list-panel,
+    .backups-view__tree-panel,
+    .backups-view__selected-item,
+    .backups-view__create-panel,
+    .backups-view__tag-panel,
+    .properties-view__section,
+    .ngrok-guide-view__summary-card,
+    .ngrok-guide-view__token-example,
+    .java-manager-modal-panel,
+    .java-manager-modal__version-card,
+    .java-manager-modal__runtime-row {
+      border-color: var(--mv-border-soft);
+      background: var(--mv-panel-bg-alt);
+      box-shadow: var(--mv-shadow-panel);
+    }
+
+    .files-view__editor-overlay {
+      background: linear-gradient(145deg, rgba(248, 250, 252, 0.95), rgba(226, 232, 240, 0.92));
+    }
+
+    .files-view__breadcrumb-shell,
+    .plugin-browser__sort-select,
+    .settings-window__theme-select,
+    .server-settings__path-input {
+      border-color: var(--mv-border-soft);
+      background: rgba(248, 250, 252, 0.92);
+      color: var(--mv-surface-text-primary);
+    }
+
+    .plugin-browser__platform-chip:hover,
+    .plugin-browser__details-btn,
+    .plugin-browser__detail-tab,
+    .plugin-browser__detail-close {
+      color: var(--mv-surface-text-primary);
+      border-color: rgba(148, 163, 184, 0.6);
+      background: rgba(241, 245, 249, 0.9);
+    }
+
+    .plugin-browser__result-source,
+    .plugin-browser__platform-hint,
+    .plugin-browser__result-description,
+    .plugin-browser__unsupported-note,
+    .proxy-setup-view__hint,
+    .proxy-setup-view__backend-detail,
+    .proxy-help-view__summary-note,
+    .proxy-help-view__muted,
+    .server-settings__label,
+    .server-settings__ngrok-description,
+    .users-view__count,
+    .users-view__empty,
+    .backups-view__empty,
+    .backups-view__note,
+    .backups-view__world-help,
+    .properties-view__row-description,
+    .ngrok-guide-view__intro-text,
+    .ngrok-guide-view__summary-note,
+    .ngrok-guide-view__note,
+    .java-manager-modal__manual-note,
+    .java-manager-modal__runtime-path {
+      color: var(--mv-surface-text-secondary);
+    }
+
+    .plugin-browser__result-title,
+    .plugin-browser__detail-title,
+    .proxy-setup-view__backend-name,
+    .server-settings__ngrok-title,
+    .users-view__title,
+    .backups-view__world-name,
+    .properties-view__section-title,
+    .ngrok-guide-view__title,
+    .proxy-help-view__title,
+    .java-manager-modal__section-title,
+    .java-manager-modal__runtime-name {
+      color: var(--mv-surface-text-primary);
+    }
+
+    .advanced-settings-window {
+      background: linear-gradient(145deg, rgba(241, 245, 249, 0.96), rgba(226, 232, 240, 0.95));
+    }
+
+    .advanced-settings-window__tab.is-idle {
+      color: var(--mv-surface-text-secondary);
+    }
+
+    .advanced-settings-window__tab.is-idle:hover {
+      color: var(--mv-surface-text-primary);
+      background: rgba(148, 163, 184, 0.2);
+    }
+
+    .advanced-settings-window__tooltip {
+      color: var(--mv-surface-text-primary);
+      border-color: rgba(148, 163, 184, 0.6);
+      background: rgba(248, 250, 252, 0.96);
+    }
+  }
+}

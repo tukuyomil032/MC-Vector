@@ -6,7 +6,7 @@
 
   .java-manager-modal-panel {
     @apply p-6 rounded-xl border shadow-[0_20px_50px_rgba(0,0,0,0.5)];
-    width: 600px;
+    width: min(680px, calc(100vw - 2rem));
     font-family: var(--mv-font-display);
     border-color: var(--mv-border-soft);
     background: linear-gradient(150deg, rgba(17, 24, 39, 0.96), rgba(24, 24, 27, 0.95));
@@ -29,11 +29,16 @@
   }
 
   .java-manager-modal__version-grid {
-    @apply grid grid-cols-3 gap-4;
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 
   .java-manager-modal__download-btn {
     @apply w-full;
+    min-height: 2.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .java-manager-modal__download-status {
@@ -41,7 +46,7 @@
   }
 
   .java-manager-modal__manual-section {
-    @apply mb-6 flex items-center justify-between;
+    @apply mb-6 flex items-start justify-between gap-4;
   }
 
   .java-manager-modal__manual-note {
@@ -84,8 +89,22 @@
   }
 
   .java-manager-modal__runtime-row {
-    @apply flex items-center justify-between px-4 py-2.5 rounded-md;
+    @apply flex items-start justify-between gap-3 px-4 py-2.5 rounded-md;
     background: rgba(15, 23, 42, 0.72);
     border: 1px solid rgba(63, 63, 70, 0.72);
+  }
+}
+
+@media (max-width: 760px) {
+  .java-manager-modal-panel {
+    @apply p-4;
+  }
+
+  .java-manager-modal__manual-section {
+    @apply flex-col items-stretch;
+  }
+
+  .java-manager-modal__runtime-row {
+    @apply flex-col items-stretch;
   }
 }

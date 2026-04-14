@@ -148,7 +148,7 @@
   }
 
   .plugin-browser__result-flags {
-    @apply mt-1.5 flex flex-wrap gap-1.5;
+    @apply mt-1.5 flex items-center gap-1.5 overflow-x-auto;
   }
 
   .plugin-browser__compat-badge {

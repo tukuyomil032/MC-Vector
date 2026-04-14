@@ -13,8 +13,20 @@
   }
 
   .files-view__toolbar-btn {
-    @apply bg-transparent border border-transparent text-zinc-400 p-1.5 rounded-md transition-all;
-    @apply hover:bg-zinc-800/60 hover:text-white hover:border-zinc-600;
+    @apply border p-1.5 rounded-md transition-all;
+    color: var(--mv-surface-text-secondary);
+    border-color: rgba(100, 116, 139, 0.3);
+    background: rgba(15, 23, 42, 0.28);
+  }
+
+  .files-view__toolbar-btn:hover {
+    color: var(--mv-surface-text-primary);
+    border-color: rgba(56, 189, 248, 0.45);
+    background: rgba(51, 65, 85, 0.5);
+  }
+
+  .files-view__toolbar-btn img {
+    @apply w-4 h-4 object-contain;
   }
 
   .files-view__toolbar-btn:disabled {
@@ -22,11 +34,28 @@
   }
 
   .files-view__toolbar-btn--danger {
-    @apply hover:bg-red-500/20 hover:text-red-400;
+    @apply hover:text-red-300;
+  }
+
+  .files-view__toolbar-btn--danger:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(248, 113, 113, 0.42);
   }
 
   .files-view__toolbar-divider {
     @apply w-px h-5 bg-zinc-700/70 mx-1.5;
+  }
+
+  .app-shell.theme-light .files-view__toolbar-btn,
+  .app-shell[data-theme='light'] .files-view__toolbar-btn {
+    border-color: rgba(148, 163, 184, 0.55);
+    background: rgba(248, 250, 252, 0.92);
+  }
+
+  .app-shell.theme-light .files-view__toolbar-btn:hover,
+  .app-shell[data-theme='light'] .files-view__toolbar-btn:hover {
+    border-color: rgba(14, 165, 233, 0.45);
+    background: rgba(226, 232, 240, 0.9);
   }
 
   .files-view__breadcrumb-shell {

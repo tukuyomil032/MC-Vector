@@ -88,11 +88,12 @@
   }
 
   .proxy-setup-view__backend-name {
-    @apply truncate font-semibold text-zinc-100;
+    @apply block truncate font-semibold text-zinc-100;
   }
 
   .proxy-setup-view__backend-detail {
-    @apply break-words text-xs text-zinc-400;
+    @apply block mt-1 break-words text-xs text-zinc-400;
+    line-height: 1.45;
   }
 
   .proxy-setup-view__actions {

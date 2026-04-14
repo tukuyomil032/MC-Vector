@@ -386,6 +386,7 @@ export interface TranslationDictionary {
       downloadSuccess: string;
       downloadFailed: string;
       removed: string;
+      removeFailed: string;
       pathCopied: string;
       pathInfo: string;
       selectionCancelled: string;

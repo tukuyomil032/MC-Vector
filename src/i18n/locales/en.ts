@@ -361,6 +361,7 @@ export const en: TranslationDictionary = {
       downloadSuccess: 'Downloaded Java {version}',
       downloadFailed: 'Failed to download Java',
       removed: 'Removed Java {version}',
+      removeFailed: 'Failed to remove Java {version}',
       pathCopied: 'Copied path to clipboard',
       pathInfo: 'Path: {path}',
       selectionCancelled: 'Selection was cancelled',

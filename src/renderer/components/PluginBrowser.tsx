@@ -20,6 +20,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
 import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
 import {
@@ -319,7 +320,7 @@ export default function PluginBrowser({ server }: Props) {
         hint: 'Paper ecosystem',
         inApp: true,
         icon: Server,
-        logoUrl: 'https://hangar.papermc.io/favicon.ico',
+        logoUrl: paperLogoUrl,
       });
     }
 
@@ -358,6 +359,8 @@ export default function PluginBrowser({ server }: Props) {
   const selectedPlatform =
     platformOptions.find((option) => option.key === platform) ?? platformOptions[0];
   const isInAppSearch = selectedPlatform?.inApp ?? false;
+  const searchPlatformLabel =
+    (selectedPlatform?.label || platform || 'Modrinth').trim() || 'Modrinth';
 
   const refreshInstalled = async () => {
     try {
@@ -1273,16 +1276,12 @@ export default function PluginBrowser({ server }: Props) {
     ? (compatibilityByItemId[detailItem.id] ?? 'unknown')
     : 'unknown';
   const detailProjectUrl = detailItem ? projectPageUrl(detailItem) : '';
-  const platformSwitchInitial = prefersReducedMotion
-    ? { opacity: 1, y: 0, filter: 'blur(0px)' }
-    : { opacity: 0, y: 6, filter: 'blur(6px)' };
-  const platformSwitchAnimate = { opacity: 1, y: 0, filter: 'blur(0px)' };
-  const platformSwitchExit = prefersReducedMotion
-    ? { opacity: 1, y: 0, filter: 'blur(0px)' }
-    : { opacity: 0, y: -4, filter: 'blur(2px)' };
+  const platformSwitchInitial = prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 };
+  const platformSwitchAnimate = { opacity: 1, y: 0 };
+  const platformSwitchExit = prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 };
   const platformSwitchTransition = prefersReducedMotion
     ? { duration: 0 }
-    : { duration: 0.24, ease: [0.22, 1, 0.36, 1] as const };
+    : { duration: 0.2, ease: 'easeOut' as const };
 
   return (
     <div className="plugin-browser">
@@ -1342,7 +1341,7 @@ export default function PluginBrowser({ server }: Props) {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('plugins.browser.searchOn', {
-                  platform: selectedPlatform?.label || platform,
+                  platform: searchPlatformLabel,
                 })}
                 onKeyDown={(event) => event.key === 'Enter' && void search()}
               />

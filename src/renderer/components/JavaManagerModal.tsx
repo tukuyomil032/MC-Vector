@@ -77,9 +77,14 @@ export default function JavaManagerModal({ onClose }: Props) {
       kind: 'warning',
     });
     if (!confirmed) return;
-    await deleteJava(ver);
-    loadInstalled();
-    showToast(t('javaManager.toast.removed', { version: ver }), 'info');
+    try {
+      await deleteJava(ver);
+      await loadInstalled();
+      showToast(t('javaManager.toast.removed', { version: ver }), 'info');
+    } catch (error) {
+      console.error(error);
+      showToast(t('javaManager.toast.removeFailed', { version: ver }), 'error');
+    }
   };
 
   return (

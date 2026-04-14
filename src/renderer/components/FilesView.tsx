@@ -42,13 +42,32 @@ interface FileEntry {
   size?: number;
 }
 
+interface EditingFileState {
+  name: string;
+  path: string;
+}
+
+const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
+
+function normalizeManagedPath(path: string): string {
+  const normalized = path.replace(/\\/g, '/');
+  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
+    return normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function joinManagedPath(...segments: string[]): string {
+  return normalizeManagedPath(segments.filter(Boolean).join('/'));
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [serversRootAbsPath, setServersRootAbsPath] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
-  const [editingFile, setEditingFile] = useState<string | null>(null);
+  const [editingFile, setEditingFile] = useState<EditingFileState | null>(null);
   const [fileContent, setFileContent] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -241,8 +260,9 @@ export default function FilesView({ server }: Props) {
       }
     } else {
       try {
-        const content = await readFileContent(`${currentPath}/${fileName}`);
-        setEditingFile(fileName);
+        const filePath = joinManagedPath(currentPath, fileName);
+        const content = await readFileContent(filePath);
+        setEditingFile({ name: fileName, path: filePath });
         setFileContent(content);
         setIsEditorOpen(true);
       } catch (e) {
@@ -272,7 +292,7 @@ export default function FilesView({ server }: Props) {
     }
     setIsSaving(true);
     try {
-      await saveFileContent(`${currentPath}/${editingFile}`, fileContent);
+      await saveFileContent(editingFile.path, fileContent);
       showToast(t('files.toast.saved'), 'success');
       setIsEditorOpen(false);
       setEditingFile(null);
@@ -282,7 +302,7 @@ export default function FilesView({ server }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [currentPath, editingFile, fileContent, isSaving, showToast, t]);
+  }, [editingFile, fileContent, isSaving, showToast, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -612,9 +632,15 @@ export default function FilesView({ server }: Props) {
       {isEditorOpen && (
         <div className="files-view__editor-overlay">
           <div className="files-view__editor-header">
-            <span>{editingFile}</span>
+            <span>{editingFile?.name}</span>
             <div className="files-view__editor-actions">
-              <button className="btn-secondary mr-2.5" onClick={() => setIsEditorOpen(false)}>
+              <button
+                className="btn-secondary mr-2.5"
+                onClick={() => {
+                  setIsEditorOpen(false);
+                  setEditingFile(null);
+                }}
+              >
                 {t('common.close')}
               </button>
               <button
@@ -629,11 +655,11 @@ export default function FilesView({ server }: Props) {
           <Editor
             height="100%"
             defaultLanguage={
-              editingFile?.endsWith('.json')
+              editingFile?.name.endsWith('.json')
                 ? 'json'
-                : editingFile?.endsWith('.yml') || editingFile?.endsWith('.yaml')
+                : editingFile?.name.endsWith('.yml') || editingFile?.name.endsWith('.yaml')
                   ? 'yaml'
-                  : editingFile?.endsWith('.properties')
+                  : editingFile?.name.endsWith('.properties')
                     ? 'ini'
                     : 'plaintext'
             }

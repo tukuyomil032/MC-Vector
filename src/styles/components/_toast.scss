@@ -5,20 +5,25 @@
   }
 
   .toast {
-    @apply min-w-[300px] p-4 text-white rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] flex items-center gap-3;
+    @apply min-w-[300px] p-4 text-white rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] flex items-center gap-3 border;
     @apply transition-all duration-300 ease-out font-sans font-medium;
+    border-color: rgba(226, 232, 240, 0.22);
+    backdrop-filter: blur(8px);
   }
 
   .toast--success {
-    @apply bg-gradient-to-br from-green-500 to-green-600;
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.96), rgba(5, 150, 105, 0.96));
+    border-color: rgba(110, 231, 183, 0.42);
   }
 
   .toast--error {
-    @apply bg-gradient-to-br from-red-500 to-red-600;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.97), rgba(185, 28, 28, 0.97));
+    border-color: rgba(252, 165, 165, 0.48);
   }
 
   .toast--info {
-    @apply bg-gradient-to-br from-blue-500 to-blue-600;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(8, 145, 178, 0.96));
+    border-color: rgba(125, 211, 252, 0.45);
   }
 
   .toast.is-visible {

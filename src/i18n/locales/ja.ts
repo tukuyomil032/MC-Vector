@@ -359,6 +359,7 @@ export const ja: TranslationDictionary = {
       downloadSuccess: 'Java {version} をダウンロードしました',
       downloadFailed: 'Javaのダウンロードに失敗しました',
       removed: 'Java {version} を削除しました',
+      removeFailed: 'Java {version} の削除に失敗しました',
       pathCopied: 'パスをクリップボードにコピーしました',
       pathInfo: 'パス: {path}',
       selectionCancelled: '選択がキャンセルされました',
