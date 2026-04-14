@@ -1,4 +1,5 @@
 import { iconMenu } from '../../assets/icons';
+import SvgMaskIcon from './SvgMaskIcon';
 
 interface AppSidebarHeaderProps {
   isSidebarOpen: boolean;
@@ -35,7 +36,7 @@ export default function AppSidebarHeader({
         className="app-sidebar__menu-button"
         aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
       >
-        <img src={iconMenu} alt="" className="app-sidebar__menu-icon" />
+        <SvgMaskIcon src={iconMenu} className="app-sidebar__menu-icon" />
       </button>
     </div>
   );

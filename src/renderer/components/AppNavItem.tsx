@@ -1,4 +1,5 @@
 import { type AppView } from '../shared/server declaration';
+import SvgMaskIcon from './SvgMaskIcon';
 
 interface AppNavItemProps {
   label: string;
@@ -36,9 +37,8 @@ export default function AppNavItem({
       aria-label={tooltip}
       aria-current={isActive ? 'page' : undefined}
     >
-      <img
+      <SvgMaskIcon
         src={iconSrc}
-        alt={tooltip}
         className={`app-nav-item__icon ${isOpen ? 'app-nav-item__icon--open' : 'app-nav-item__icon--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
       />
       {isOpen && <span className="app-nav-item__label">{label}</span>}

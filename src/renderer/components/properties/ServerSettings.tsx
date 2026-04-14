@@ -332,11 +332,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
 
           <div className="server-settings__field-block">
             <label className="server-settings__label">{t('serverSettings.javaRuntime')}</label>
-            <div className="server-settings__java-row">
+            <div className="server-settings__java-row server-settings__java-row--runtime">
               <select
                 value={javaPath}
                 onChange={(e) => setJavaPath(e.target.value)}
-                className="input-field flex-1"
+                className="input-field server-settings__java-runtime-select"
               >
                 <option value="">{t('serverSettings.javaSystemDefault')}</option>
                 {installedJava.map((j) => (
@@ -346,7 +346,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 ))}
               </select>
               <button
-                className="btn-secondary whitespace-nowrap"
+                className="btn-secondary whitespace-nowrap server-settings__java-manage-btn"
                 onClick={() => {
                   setShowJavaManager(true);
                   loadJavaList();

@@ -68,9 +68,11 @@
 
   .app-sidebar__menu-button {
     @apply bg-transparent border-none p-1 rounded-md transition-colors;
+    color: var(--mv-surface-text-secondary);
   }
 
   .app-sidebar__menu-button:hover {
+    color: var(--mv-surface-text-primary);
     background-color: rgb(255 255 255 / 0.07);
   }
 
@@ -80,7 +82,7 @@
   }
 
   .app-sidebar__menu-icon {
-    @apply w-5 h-5 opacity-80;
+    @apply w-5 h-5 opacity-85;
   }
 
   .app-sidebar__nav {
@@ -200,11 +202,11 @@
   }
 
   .app-nav-item__icon.is-active {
-    @apply invert;
+    @apply opacity-100;
   }
 
   .app-nav-item__icon.is-idle {
-    @apply opacity-70;
+    @apply opacity-80;
   }
 
   .app-nav-item__label {

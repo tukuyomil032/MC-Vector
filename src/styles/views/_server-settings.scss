@@ -52,6 +52,19 @@
     @apply flex gap-2.5;
   }
 
+  .server-settings__java-row--runtime {
+    @apply flex-wrap items-center;
+  }
+
+  .server-settings__java-runtime-select {
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
+
+  .server-settings__java-manage-btn {
+    @apply shrink-0;
+  }
+
   .server-settings__path-input {
     @apply flex-1 text-zinc-500;
     background-color: rgba(15, 23, 42, 0.78);
@@ -231,5 +244,15 @@
 
   .server-settings__address-code {
     @apply text-sm break-all;
+  }
+}
+
+@media (max-width: 640px) {
+  .server-settings__java-row--runtime {
+    @apply flex-col items-stretch;
+  }
+
+  .server-settings__java-manage-btn {
+    @apply self-start;
   }
 }

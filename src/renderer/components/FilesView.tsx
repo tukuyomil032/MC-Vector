@@ -30,6 +30,7 @@ import {
   saveFileContent,
 } from '../../lib/file-commands';
 import { type MinecraftServer } from '../components/../shared/server declaration';
+import SvgMaskIcon from './SvgMaskIcon';
 import { useToast } from './ToastProvider';
 
 interface Props {
@@ -532,7 +533,7 @@ export default function FilesView({ server }: Props) {
           onClick={handleOpenExplorer}
           title={t('files.toolbar.openExplorer')}
         >
-          <img src={iconOpenFolder} className="w-4" alt="" />
+          <SvgMaskIcon src={iconOpenFolder} className="files-view__toolbar-icon" />
         </button>
         {selectedFiles.length > 0 && (
           <>
@@ -542,28 +543,28 @@ export default function FilesView({ server }: Props) {
               onClick={() => openMoveModal(false)}
               title={t('files.toolbar.move')}
             >
-              <img src={iconMove} className="w-4" alt="" />
+              <SvgMaskIcon src={iconMove} className="files-view__toolbar-icon" />
             </button>
             <button
               className="files-view__toolbar-btn"
               onClick={handleZip}
               title={t('files.toolbar.compress')}
             >
-              <img src={iconZip} className="w-4" alt="" />
+              <SvgMaskIcon src={iconZip} className="files-view__toolbar-icon" />
             </button>
             <button
               className="files-view__toolbar-btn"
               onClick={handleUnzip}
               title={t('files.toolbar.extract')}
             >
-              <img src={iconUnzip} className="w-4" alt="" />
+              <SvgMaskIcon src={iconUnzip} className="files-view__toolbar-icon" />
             </button>
             <button
               className="files-view__toolbar-btn files-view__toolbar-btn--danger"
               onClick={handleDelete}
               title={t('files.toolbar.delete')}
             >
-              <img src={iconTrash} className="w-4" alt="" />
+              <SvgMaskIcon src={iconTrash} className="files-view__toolbar-icon" />
             </button>
           </>
         )}
@@ -605,10 +606,9 @@ export default function FilesView({ server }: Props) {
                 onClick={(e) => handleCheckboxClick(file.name, e)}
                 className="cursor-pointer mr-2.5 ml-2.5"
               />
-              <img
+              <SvgMaskIcon
                 src={file.isDirectory ? iconFolder : iconFile}
-                alt=""
-                className="w-5 h-5 object-contain mr-2.5"
+                className={`files-view__row-icon ${file.isDirectory ? 'files-view__row-icon--dir' : 'files-view__row-icon--file'}`}
               />
               <span
                 className={`files-view__name ${file.isDirectory ? 'files-view__name--dir' : 'files-view__name--file'}`}
@@ -681,7 +681,7 @@ export default function FilesView({ server }: Props) {
                 className={`files-view__create-option ${createMode === 'folder' ? 'is-active' : ''}`}
                 onClick={() => setCreateMode('folder')}
               >
-                <img src={iconFiles} alt="" className="w-8 h-8 object-contain" />
+                <SvgMaskIcon src={iconFiles} className="w-8 h-8" />
                 <span
                   className={`files-view__create-option-label ${createMode === 'folder' ? 'is-active' : 'is-idle'}`}
                 >
@@ -693,7 +693,7 @@ export default function FilesView({ server }: Props) {
                 className={`files-view__create-option ${createMode === 'file' ? 'is-active' : ''}`}
                 onClick={() => setCreateMode('file')}
               >
-                <img src={iconFile} alt="" className="w-8 h-8 object-contain" />
+                <SvgMaskIcon src={iconFile} className="w-8 h-8" />
                 <span
                   className={`files-view__create-option-label ${createMode === 'file' ? 'is-active' : 'is-idle'}`}
                 >
@@ -705,7 +705,7 @@ export default function FilesView({ server }: Props) {
                 className="files-view__create-option files-view__create-option--import"
                 onClick={handleImport}
               >
-                <img src={iconImport} alt="" className="w-8 h-8 object-contain" />
+                <SvgMaskIcon src={iconImport} className="w-8 h-8" />
                 <span className="files-view__create-option-label is-idle">
                   {t('files.modal.import')}
                 </span>
@@ -831,7 +831,7 @@ export default function FilesView({ server }: Props) {
                   setContextMenu(null);
                 }}
               >
-                <img src={iconMove} className="files-view__context-icon" alt="" />
+                <SvgMaskIcon src={iconMove} className="files-view__context-icon" />
                 {t('files.contextMenu.moveItem')}
               </div>
 
@@ -843,7 +843,7 @@ export default function FilesView({ server }: Props) {
                   setContextMenu(null);
                 }}
               >
-                <img src={iconZip} className="files-view__context-icon" alt="" />
+                <SvgMaskIcon src={iconZip} className="files-view__context-icon" />
                 {t('files.contextMenu.compressItem')}
               </div>
 
@@ -855,7 +855,7 @@ export default function FilesView({ server }: Props) {
                   setContextMenu(null);
                 }}
               >
-                <img src={iconUnzip} className="files-view__context-icon" alt="" />
+                <SvgMaskIcon src={iconUnzip} className="files-view__context-icon" />
                 {t('files.contextMenu.extractItem')}
               </div>
 
@@ -864,7 +864,7 @@ export default function FilesView({ server }: Props) {
                 className="files-view__context-item files-view__context-item--danger"
                 onClick={handleDelete}
               >
-                <img src={iconTrash} className="files-view__context-icon" alt="" />
+                <SvgMaskIcon src={iconTrash} className="files-view__context-icon" />
                 {t('files.contextMenu.deleteItem')}
               </div>
             </>
@@ -897,7 +897,7 @@ export default function FilesView({ server }: Props) {
                   setContextMenu(null);
                 }}
               >
-                <img src={iconMove} className="files-view__context-icon" alt="" />
+                <SvgMaskIcon src={iconMove} className="files-view__context-icon" />
                 {t('files.contextMenu.move')}
               </div>
             </>
