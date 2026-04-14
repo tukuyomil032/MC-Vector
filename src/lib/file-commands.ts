@@ -8,7 +8,6 @@ import {
   readTextFile,
   remove,
   rename,
-  writeTextFile,
 } from '@tauri-apps/plugin-fs';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { tauriInvoke } from './tauri-api';
@@ -106,6 +105,13 @@ function isJsonContainer(value: unknown): value is Record<string, unknown> | unk
   return Array.isArray(value) || (typeof value === 'object' && value !== null);
 }
 
+async function writeManagedTextFile(path: string, content: string): Promise<void> {
+  return tauriInvoke('write_managed_text_file', {
+    path,
+    content,
+  });
+}
+
 export async function listFiles(dirPath: string): Promise<DirEntry[]> {
   const safeDirPath = await assertAllowedPath(dirPath);
   return readDir(safeDirPath);
@@ -125,7 +131,7 @@ export async function readFileContent(filePath: string): Promise<string> {
 
 export async function saveFileContent(filePath: string, content: string): Promise<void> {
   const safeFilePath = await assertAllowedPath(filePath);
-  return writeTextFile(safeFilePath, content);
+  return writeManagedTextFile(safeFilePath, content);
 }
 
 export async function importFile(destDir: string): Promise<string | null> {
@@ -166,7 +172,7 @@ export async function importFilesDialog(destDir: string): Promise<string[]> {
 export async function createFile(dirPath: string, name: string): Promise<void> {
   const safeDirPath = await assertAllowedPath(dirPath);
   const safeName = assertSafeName(name);
-  await writeTextFile(`${safeDirPath}/${safeName}`, '');
+  await writeManagedTextFile(`${safeDirPath}/${safeName}`, '');
 }
 
 export async function createFolder(dirPath: string, name: string): Promise<void> {
@@ -220,5 +226,5 @@ export async function readJsonFile(filePath: string): Promise<unknown> {
 
 export async function writeJsonFile(filePath: string, data: unknown): Promise<void> {
   const safeFilePath = await assertAllowedPath(filePath);
-  await writeTextFile(safeFilePath, JSON.stringify(data, null, 2));
+  await writeManagedTextFile(safeFilePath, JSON.stringify(data, null, 2));
 }

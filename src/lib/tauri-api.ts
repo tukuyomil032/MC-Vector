@@ -21,6 +21,7 @@ const ALLOWED_TAURI_COMMANDS = new Set([
   'download_file',
   'list_dir_with_metadata',
   'resolve_managed_path',
+  'write_managed_text_file',
   'can_update_app',
   'get_app_location',
 ]);
@@ -39,7 +40,8 @@ export async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>
     return await invoke<T>(safeCmd, args ?? {});
   } catch (e) {
     console.error(`[Tauri] invoke ${safeCmd} failed`, e);
-    throw new Error(`[Tauri] ${safeCmd} failed`);
+    const detail = e instanceof Error ? e.message : String(e);
+    throw new Error(`[Tauri] ${safeCmd} failed: ${detail}`);
   }
 }
 

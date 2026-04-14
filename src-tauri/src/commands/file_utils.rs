@@ -85,6 +85,16 @@ pub async fn resolve_managed_path(app: AppHandle, path: String) -> Result<String
     Ok(canonical_target.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+pub async fn write_managed_text_file(
+    app: AppHandle,
+    path: String,
+    content: String,
+) -> Result<(), String> {
+    let resolved = resolve_managed_path(app, path).await?;
+    std::fs::write(&resolved, content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
 /// ディレクトリの内容をメタデータ付きで一括取得
 #[tauri::command]
 pub async fn list_dir_with_metadata(path: String) -> Result<Vec<FileEntryInfo>, String> {

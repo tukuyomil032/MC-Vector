@@ -298,12 +298,16 @@ export default function FilesView({ server }: Props) {
       setIsEditorOpen(false);
       setEditingFile(null);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to save file content', {
+        currentPath,
+        filePath: editingFile.path,
+        error: err,
+      });
       showToast(t('files.toast.saveFailed'), 'error');
     } finally {
       setIsSaving(false);
     }
-  }, [editingFile, fileContent, isSaving, showToast, t]);
+  }, [currentPath, editingFile, fileContent, isSaving, showToast, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
