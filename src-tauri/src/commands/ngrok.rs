@@ -67,6 +67,22 @@ fn validate_protocol(protocol: &str) -> Result<String, String> {
     }
 }
 
+fn extract_ngrok_url(log_line: &str) -> Option<String> {
+    let marker = "url=";
+    let start = log_line.find(marker)? + marker.len();
+    let candidate = log_line[start..]
+        .split_whitespace()
+        .next()
+        .map(|value| value.trim().trim_matches('"'))?;
+    if candidate.is_empty() || candidate.len() > 2048 {
+        return None;
+    }
+    if !candidate.starts_with("tcp://") {
+        return None;
+    }
+    Some(candidate.to_string())
+}
+
 #[tauri::command]
 pub async fn start_ngrok(
     app: AppHandle,
@@ -146,8 +162,7 @@ pub async fn start_ngrok(
 
             // トンネル URL を検出 (ngrok の stdout ログ形式)
             if line.contains("url=") {
-                if let Some(url_start) = line.find("url=") {
-                    let url = line[url_start + 4..].trim().to_string();
+                if let Some(url) = extract_ngrok_url(&line) {
                     let _ = app_clone.emit(
                         "ngrok-status-change",
                         NgrokStatusPayload {
@@ -331,4 +346,29 @@ fn get_ngrok_download_url() -> Option<(String, String)> {
     let file_name = format!("ngrok-v3-stable-{}.zip", platform);
 
     Some((url, file_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_ngrok_url;
+
+    #[test]
+    fn extract_ngrok_url_accepts_tcp_url() {
+        let line = "lvl=info msg=tunnel url=tcp://1.tcp.ngrok.io:12345";
+        assert_eq!(
+            extract_ngrok_url(line).as_deref(),
+            Some("tcp://1.tcp.ngrok.io:12345")
+        );
+    }
+
+    #[test]
+    fn extract_ngrok_url_rejects_non_tcp_scheme() {
+        let line = "lvl=info msg=tunnel url=https://example.ngrok.io";
+        assert!(extract_ngrok_url(line).is_none());
+    }
+
+    #[test]
+    fn extract_ngrok_url_rejects_missing_marker() {
+        assert!(extract_ngrok_url("lvl=info msg=no-url").is_none());
+    }
 }
