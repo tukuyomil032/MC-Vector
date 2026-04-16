@@ -2,7 +2,7 @@
 
 Welcome to the MC-Vector development guide! This document will help you set up your development environment and understand our development workflow.
 
-**Guide target version:** `2.0.51`
+**Guide target version:** `2.0.52`
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Welcome to the MC-Vector development guide! This document will help you set up y
 ### Required Tools (Manual Setup)
 
 - **Node.js** v18 or later (v22 recommended)
-- **pnpm** v10.26.2 or later
+- **pnpm** v10.33.0 or later
 - **Rust** v1.77.2 or later
 - **Cargo** (included with Rust)
 - **Python** 3.x (for yamllint)
@@ -114,13 +114,13 @@ brew install node@22 pnpm
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 nvm install 22
-npm install -g pnpm@10.26.2
+npm install -g pnpm@10.33.0
 ```
 
 **Windows:**
 
 - Download Node.js from [nodejs.org](https://nodejs.org/)
-- Install pnpm: `npm install -g pnpm@10.26.2`
+- Install pnpm: `npm install -g pnpm@10.33.0`
 
 #### 2. Install Rust
 
@@ -387,13 +387,13 @@ See the main [README.md](../README.md#project-structure) for the detailed projec
 
 ## Testing
 
-Currently, there are no automated tests. Testing is done manually during development.
+Automated checks and tests are available and should be run before opening a PR:
 
-**Future Testing Plans:**
+- Frontend quality gate: `pnpm check && pnpm build`
+- Rust quality gate: `cd src-tauri && cargo check -q`
+- Rust unit tests: `cd src-tauri && cargo test -q`
 
-- Unit tests for critical business logic
-- Integration tests for Tauri commands
-- E2E tests for user workflows
+Command-level Rust tests currently cover critical paths such as security gateway validation and ANSI/log parsing behavior.
 
 ---
 
@@ -403,7 +403,7 @@ Currently, there are no automated tests. Testing is done manually during develop
 
 **Issue: `pnpm install` fails**
 
-- **Solution:** Ensure you're using pnpm v10.26.2 or later. Run `pnpm --version` to check.
+- **Solution:** Ensure you're using pnpm v10.33.0 or later. Run `pnpm --version` to check.
 
 **Issue: Tauri build fails on macOS**
 

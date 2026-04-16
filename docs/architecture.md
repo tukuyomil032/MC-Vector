@@ -2,7 +2,7 @@
 
 This document provides a technical overview of MC-Vector's architecture, including system design, component structure, and data flow.
 
-**Document target version:** `2.0.51`
+**Document target version:** `2.0.52`
 
 ## Table of Contents
 
@@ -151,7 +151,10 @@ src-tauri/src/
     ├── process_stats.rs       # System monitoring
     ├── backup.rs              # Backup/restore
     ├── java.rs                # Java runtime detection
-    └── ngrok.rs               # Ngrok integration
+    ├── ngrok.rs               # Ngrok integration
+    ├── updater_utils.rs       # Updater utilities
+    ├── security.rs            # Security gateway
+    └── perf.rs                # ANSI parse acceleration
 ```
 
 ### Command Categories
@@ -160,66 +163,50 @@ src-tauri/src/
 
 - `start_server` - Start a Minecraft server process
 - `stop_server` - Stop a running server
-- `get_server_status` - Check if server is running
-- `send_command` - Execute console command
+- `send_command` - Execute console command (queued + rate-limited)
+- `is_server_running` - Check running state
+- `get_server_pid` - Read current process id
 
 #### 2. File System (`file_utils.rs`)
 
-- `read_file` - Read file contents
-- `write_file` - Write to file
-- `list_directory` - List files/folders
-- `create_directory` - Create folder
-- `delete_file` - Delete file/folder
+- `resolve_managed_path` - Resolve/validate managed app path
+- `read_managed_text_file` - Read text file contents
+- `write_managed_text_file` - Write text file contents
+- `list_dir_with_metadata` - List files/folders with metadata
 
-#### 3. Downloads (`download.rs`)
+#### 3. Download / Runtime (`download.rs`, `java.rs`)
 
-- `download_server_software` - Download server JAR
-- `download_plugin` - Download plugin/mod
+- `download_file` - Generic file download
+- `download_server_jar` - Download Minecraft server JAR
+- `download_java` - Download Java runtime
 
-#### 4. System Monitoring (`process_stats.rs`)
-
-- `get_cpu_usage` - Get CPU usage percentage
-- `get_memory_usage` - Get RAM usage
-
-#### 5. Backup (`backup.rs`)
+#### 4. Backup / Archive (`backup.rs`)
 
 - `create_backup` - Create server backup (ZIP)
-- `restore_backup` - Restore from backup
-- `list_backups` - List available backups
+- `restore_backup` - Restore backup
+- `compress_item` - Compress file/folder(s)
+- `extract_item` - Extract archive
 
-#### 6. Java Management (`java.rs`)
+#### 5. Network / Update (`ngrok.rs`, `updater_utils.rs`)
 
-- `detect_java_versions` - Find installed Java versions
-- `get_java_path` - Get path to specific Java version
+- `start_ngrok` / `stop_ngrok` / `download_ngrok` / `is_ngrok_installed`
+- `can_update_app` / `get_app_location`
 
-#### 7. Ngrok Integration (`ngrok.rs`)
+#### 6. Observability / Security / Performance Extensions
 
-- `start_ngrok_tunnel` - Create public tunnel
-- `stop_ngrok_tunnel` - Stop tunnel
+- `get_server_stats` (`process_stats.rs`) - CPU + memory telemetry
+- `security_gateway` (`security.rs`) - authorization, validation, rate-limit, audit entry
+- `parse_ansi_lines` (`perf.rs`) - Rust-side ANSI parsing for console rendering
 
 ### Process Management
 
-MC-Vector manages Minecraft server processes using Tokio's async runtime:
+MC-Vector manages Minecraft server processes on Tokio with a queue-first pipeline:
 
-```rust
-use tokio::process::Command;
-use std::process::Stdio;
-
-pub async fn start_server(server_id: &str) -> Result<(), String> {
-    let server_path = get_server_path(server_id)?;
-
-    Command::new("java")
-        .arg("-jar")
-        .arg("server.jar")
-        .current_dir(&server_path)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-```
+1. `start_server` validates `server_id`, java path, memory, and jar path before spawn.
+2. Commands are sent through a bounded `mpsc` queue (`command_tx`) instead of direct stdin writes from multiple paths.
+3. stdout/stderr are buffered and streamed to frontend via bounded log channels with drop notices under pressure.
+4. `CommandLimiter` enforces a minimum command interval per server.
+5. Server/limiter state is cleaned up when the process exits.
 
 ---
 
@@ -258,7 +245,7 @@ API Wrapper (installPlugin)
     ↓
 Tauri IPC
     ↓
-Rust Command (download_plugin)
+Rust Command (download_file)
     ↓
 HTTP Request to Plugin API
     ↓
@@ -278,11 +265,11 @@ User opens file in File Browser
     ↓
 React Component (FilesView)
     ↓
-API Wrapper (readFile)
+API Wrapper (readFileContent)
     ↓
 Tauri IPC
     ↓
-Rust Command (read_file)
+Rust Command (read_managed_text_file)
     ↓
 Read File from Disk
     ↓
@@ -292,11 +279,11 @@ Display in Monaco Editor
     ↓
 User edits and saves
     ↓
-API Wrapper (writeFile)
+API Wrapper (saveFileContent)
     ↓
 Tauri IPC
     ↓
-Rust Command (write_file)
+Rust Command (write_managed_text_file)
     ↓
 Write to Disk
 ```
@@ -344,25 +331,13 @@ Write to Disk
 3. **Sandboxing:** Frontend runs in a WebView sandbox
 4. **No Node.js:** Backend is pure Rust, no Node.js runtime
 
-### Input Validation
+### Input Validation and Command Safety
 
-All user input is validated on the backend:
+Validation is performed at frontend wrapper and Rust command boundaries:
 
-```rust
-pub fn validate_server_name(name: &str) -> Result<(), String> {
-    if name.is_empty() {
-        return Err("Server name cannot be empty".to_string());
-    }
-    if name.len() > 50 {
-        return Err("Server name too long".to_string());
-    }
-    // Prevent directory traversal
-    if name.contains("..") || name.contains("/") || name.contains("\\") {
-        return Err("Invalid server name".to_string());
-    }
-    Ok(())
-}
-```
+- `security_gateway` centralizes role checks (`admin`/`user`/`viewer`), rate-limit checks, safe command validation, path safety checks, and audit logging.
+- `server.rs` validates `server_id`, command payloads, and command timing before queueing.
+- `file_utils.rs` enforces managed-root path resolution before file read/write/list operations.
 
 ### File System Access
 

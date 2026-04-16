@@ -2,7 +2,7 @@
 
 Complete guide to using MC-Vector for Minecraft server management.
 
-**Guide target version:** `2.0.51`
+**Guide target version:** `2.0.52`
 
 ## Table of Contents
 
@@ -238,15 +238,34 @@ The Plugins / Mods tab allows you to easily install plugins (for Bukkit/Spigot/P
 
 #### Remove a Plugin/Mod
 
+1. Open the installed list in the **Plugins / Mods** tab
+2. Select the plugin/mod you want to remove
+3. Click **"Delete"**
+4. Confirm the deletion
+
+---
+
+### Backups
+
+The Backups tab lets you create and restore server snapshots safely.
+
+**Features:**
+
+- Create a backup archive for the selected server
+- Restore a server from an existing backup
+- Delete outdated backups to free disk space
+
 **Backup Location:**
 
 - **macOS:** `/Users/<username>/Library/Application Support/MC-Vector/servers/<servername>/backups`
 - **Windows:** `C:\Users\<username>\AppData\Roaming\MC-Vector\servers\<servername>\backups`
-- **Linux:** `~/.local/share/MC-Vector/servers/<servername>/backups` または `$XDG_DATA_HOME/MC-Vector/servers/<servername>/backups`
+- **Linux:** `~/.local/share/MC-Vector/servers/<servername>/backups` or `$XDG_DATA_HOME/MC-Vector/servers/<servername>/backups`
 
-1. Select a backup from the list
-2. Click **"Delete"**
-3. Confirm the deletion
+**How to Use:**
+
+1. Navigate to the **Backups** tab
+2. Click **"Create Backup"** before major updates
+3. Use **"Restore"** on a selected backup when rollback is needed
 
 ---
 
