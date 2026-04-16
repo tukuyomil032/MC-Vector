@@ -335,7 +335,15 @@ mod tests {
     };
     use serde_json::{json, Value};
     use std::collections::HashMap;
-    use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+    fn unique_user_id(label: &str) -> String {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after unix epoch")
+            .as_nanos();
+        format!("contract-test-{}-{}", label, nonce)
+    }
 
     #[test]
     fn escapes_html_angle_brackets() {
@@ -454,5 +462,220 @@ mod tests {
             "commandPayload": { "program": "java", "args": [] }
         });
         assert!(super::handle_command_gateway(&payload).is_err());
+    }
+
+    #[test]
+    fn ipc_contract_sanitize_log_response_shape() {
+        let result = super::execute_security_action("sanitize_log", &json!({ "input": "<b>ok</b>" }))
+            .expect("sanitize_log should succeed");
+        assert_eq!(result.get("sanitized").and_then(Value::as_str), Some("&lt;b&gt;ok&lt;/b&gt;"));
+    }
+
+    #[test]
+    fn ipc_contract_sanitize_log_missing_field_error() {
+        let error =
+            super::execute_security_action("sanitize_log", &json!({})).expect_err("missing input should fail");
+        assert_eq!(
+            error,
+            "security_gateway sanitize_log requires string payload.input"
+        );
+    }
+
+    #[test]
+    fn ipc_contract_authorize_action_response_shape() {
+        let result = super::execute_security_action(
+            "authorize_action",
+            &json!({
+                "role": "user",
+                "action": "start_server"
+            }),
+        )
+        .expect("authorize_action should succeed");
+        assert_eq!(result.get("allowed").and_then(Value::as_bool), Some(true));
+    }
+
+    #[test]
+    fn ipc_contract_authorize_action_missing_fields_error() {
+        let role_error = super::execute_security_action("authorize_action", &json!({ "action": "start_server" }))
+            .expect_err("missing role should fail");
+        assert_eq!(
+            role_error,
+            "security_gateway authorize_action requires string payload.role"
+        );
+
+        let action_error = super::execute_security_action("authorize_action", &json!({ "role": "admin" }))
+            .expect_err("missing action should fail");
+        assert_eq!(
+            action_error,
+            "security_gateway authorize_action requires string payload.action"
+        );
+    }
+
+    #[test]
+    fn ipc_contract_rate_limit_check_response_shape() {
+        let result = super::execute_security_action(
+            "rate_limit_check",
+            &json!({ "userId": unique_user_id("rate-limit-ok") }),
+        )
+        .expect("rate_limit_check should succeed");
+        assert_eq!(result.get("allowed").and_then(Value::as_bool), Some(true));
+    }
+
+    #[test]
+    fn ipc_contract_rate_limit_check_missing_field_error() {
+        let error =
+            super::execute_security_action("rate_limit_check", &json!({})).expect_err("missing userId should fail");
+        assert_eq!(
+            error,
+            "security_gateway rate_limit_check requires string payload.userId"
+        );
+    }
+
+    #[test]
+    fn ipc_contract_validate_safe_command_response_shape() {
+        let result = super::execute_security_action(
+            "validate_safe_command",
+            &json!({
+                "program": "java",
+                "args": ["foo;bar", "x&y"]
+            }),
+        )
+        .expect("validate_safe_command should succeed");
+        assert_eq!(result.get("allowed").and_then(Value::as_bool), Some(true));
+        assert_eq!(result.get("program").and_then(Value::as_str), Some("java"));
+
+        let args = result
+            .get("args")
+            .and_then(Value::as_array)
+            .expect("args should be an array");
+        assert_eq!(args.len(), 2);
+        assert_eq!(args[0].as_str(), Some("foobar"));
+        assert_eq!(args[1].as_str(), Some("xy"));
+    }
+
+    #[test]
+    fn ipc_contract_validate_safe_command_missing_program_error() {
+        let error = super::execute_security_action("validate_safe_command", &json!({ "args": [] }))
+            .expect_err("missing program should fail");
+        assert_eq!(
+            error,
+            "security_gateway validate_safe_command requires string payload.program"
+        );
+    }
+
+    #[test]
+    fn ipc_contract_resolve_safe_path_response_shape() {
+        let result = super::execute_security_action(
+            "resolve_safe_path",
+            &json!({
+                "base": "/app/data",
+                "input": "servers/a"
+            }),
+        )
+        .expect("resolve_safe_path should succeed");
+        assert_eq!(
+            result.get("resolvedPath").and_then(Value::as_str),
+            Some("/app/data/servers/a")
+        );
+    }
+
+    #[test]
+    fn ipc_contract_resolve_safe_path_missing_fields_error() {
+        let base_error = super::execute_security_action("resolve_safe_path", &json!({ "input": "servers/a" }))
+            .expect_err("missing base should fail");
+        assert_eq!(
+            base_error,
+            "security_gateway resolve_safe_path requires string payload.base"
+        );
+
+        let input_error = super::execute_security_action("resolve_safe_path", &json!({ "base": "/app/data" }))
+            .expect_err("missing input should fail");
+        assert_eq!(
+            input_error,
+            "security_gateway resolve_safe_path requires string payload.input"
+        );
+    }
+
+    #[test]
+    fn ipc_contract_audit_log_response_shape() {
+        let result = super::execute_security_action(
+            "audit_log",
+            &json!({
+                "user": "audit-user",
+                "action": "read_logs"
+            }),
+        )
+        .expect("audit_log should succeed");
+        assert_eq!(result.get("logged").and_then(Value::as_bool), Some(true));
+
+        let entry = result
+            .get("entry")
+            .and_then(Value::as_object)
+            .expect("entry should be an object");
+        assert_eq!(entry.get("user").and_then(Value::as_str), Some("audit-user"));
+        assert_eq!(entry.get("action").and_then(Value::as_str), Some("read_logs"));
+        assert!(entry.get("timestamp").and_then(Value::as_u64).is_some());
+    }
+
+    #[test]
+    fn ipc_contract_audit_log_missing_fields_error() {
+        let user_error = super::execute_security_action("audit_log", &json!({ "action": "read_logs" }))
+            .expect_err("missing user should fail");
+        assert_eq!(user_error, "security_gateway audit_log requires string payload.user");
+
+        let action_error = super::execute_security_action("audit_log", &json!({ "user": "audit-user" }))
+            .expect_err("missing action should fail");
+        assert_eq!(
+            action_error,
+            "security_gateway audit_log requires string payload.action"
+        );
+    }
+
+    #[test]
+    fn ipc_contract_handle_command_response_shape() {
+        let payload = json!({
+            "userId": unique_user_id("handle-command-ok"),
+            "role": "admin",
+            "commandAction": "sanitize_log",
+            "commandPayload": { "input": "<ok>" }
+        });
+        let result = super::handle_command_gateway(&payload).expect("handle_command should succeed");
+        assert_eq!(result.get("sanitized").and_then(Value::as_str), Some("&lt;ok&gt;"));
+    }
+
+    #[test]
+    fn ipc_contract_handle_command_missing_fields_error() {
+        let user_error = super::handle_command_gateway(&json!({
+            "role": "admin",
+            "commandAction": "sanitize_log",
+            "commandPayload": { "input": "<ok>" }
+        }))
+        .expect_err("missing userId should fail");
+        assert_eq!(
+            user_error,
+            "security_gateway handle_command requires string payload.userId"
+        );
+
+        let role_error = super::handle_command_gateway(&json!({
+            "userId": unique_user_id("handle-command-missing-role"),
+            "commandAction": "sanitize_log",
+            "commandPayload": { "input": "<ok>" }
+        }))
+        .expect_err("missing role should fail");
+        assert_eq!(
+            role_error,
+            "security_gateway handle_command requires string payload.role"
+        );
+
+        let action_error = super::handle_command_gateway(&json!({
+            "userId": unique_user_id("handle-command-missing-action"),
+            "role": "admin",
+            "commandPayload": { "input": "<ok>" }
+        }))
+        .expect_err("missing commandAction should fail");
+        assert_eq!(
+            action_error,
+            "security_gateway handle_command requires string payload.commandAction"
+        );
     }
 }
