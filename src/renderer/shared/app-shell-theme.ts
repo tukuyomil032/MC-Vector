@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { AppTheme } from '../../store/settingsStore';
 
-export type ResolvedAppTheme = Exclude<AppTheme, 'system'>;
+export type ResolvedAppTheme = AppTheme;
 
 interface AppShellThemeColors {
   mainBg: string;
@@ -51,37 +51,10 @@ const THEME_PALETTE: Record<ResolvedAppTheme, AppShellThemeColors> = {
     warnStart: '#f59e0b',
     warnEnd: '#f97316',
   },
-  light: {
-    mainBg:
-      'radial-gradient(circle at 20% 0%, rgba(59,130,246,0.14), transparent 45%), radial-gradient(circle at 90% 0%, rgba(16,185,129,0.12), transparent 35%), #f4f7fb',
-    headerBg: 'rgba(255,255,255,0.95)',
-    text: '#0f172a',
-    sidebarBg: '#e8eef6',
-    sidebarPanelBg: '#f8fafc',
-    panelBg: '#ffffff',
-    border: '#cbd5e1',
-    viewGlowA: 'rgba(59, 130, 246, 0.12)',
-    viewGlowB: 'rgba(16, 185, 129, 0.1)',
-    panelStart: 'rgba(255, 255, 255, 0.95)',
-    panelEnd: 'rgba(241, 245, 249, 0.88)',
-    panelAltStart: 'rgba(248, 250, 252, 0.96)',
-    panelAltEnd: 'rgba(226, 232, 240, 0.88)',
-    borderSoft: 'rgba(148, 163, 184, 0.45)',
-    borderStrong: 'rgba(14, 165, 233, 0.35)',
-    accentStart: '#2563eb',
-    accentEnd: '#0891b2',
-    successStart: '#16a34a',
-    successEnd: '#059669',
-    warnStart: '#d97706',
-    warnEnd: '#ea580c',
-  },
 };
 
-export function resolveAppTheme(
-  appTheme: AppTheme,
-  systemPrefersDark: boolean,
-): Exclude<AppTheme, 'system'> {
-  return appTheme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : appTheme;
+export function resolveAppTheme(appTheme: AppTheme): ResolvedAppTheme {
+  return appTheme;
 }
 
 export function buildAppShellStyle(resolvedTheme: ResolvedAppTheme): CSSProperties {

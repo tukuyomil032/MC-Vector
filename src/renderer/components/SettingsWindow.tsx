@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
-import { getAppSettings, saveAppSettings } from '../../lib/config-commands';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
-import { normalizeAppTheme, type AppTheme } from '../../store/settingsStore';
 
 interface UpdateState {
   status:
@@ -50,26 +48,11 @@ function normalizeReleaseNotes(notes: unknown): string {
 const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
-  const [theme, setTheme] = useState<AppTheme>('light');
 
   const releaseNotesText = useMemo(
     () => normalizeReleaseNotes(updateState.releaseNotes),
     [updateState.releaseNotes],
   );
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const settings = await getAppSettings();
-        if (settings?.theme) {
-          setTheme(normalizeAppTheme(settings.theme));
-        }
-      } catch (e) {
-        console.error('Failed to load settings', e);
-      }
-    };
-    void loadSettings();
-  }, []);
 
   const handleCheck = async () => {
     setUpdateState({ status: 'checking' });
@@ -112,11 +95,6 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
 
   const handleInstall = async () => {
     await handleDownload();
-  };
-
-  const handleThemeChange = async (value: AppTheme) => {
-    setTheme(value);
-    await saveAppSettings({ theme: value });
   };
 
   const handleLanguageChange = async (value: LocaleCode) => {
@@ -203,29 +181,6 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
             <pre className="settings-window__release-notes-body">{releaseNotesText}</pre>
           </div>
         )}
-      </section>
-
-      <section className="settings-window__section">
-        <div className="settings-window__section-head">
-          <div>
-            <h2 className="text-lg m-0">{t('settings.theme.title')}</h2>
-            <p className="text-sm text-zinc-400 m-0">{t('settings.theme.description')}</p>
-          </div>
-        </div>
-
-        <label className="text-sm text-zinc-300 block mb-2" htmlFor="theme-select">
-          {t('settings.theme.label')}
-        </label>
-        <select
-          id="theme-select"
-          className="settings-window__theme-select"
-          value={theme}
-          onChange={(e) => handleThemeChange(normalizeAppTheme(e.target.value))}
-        >
-          <option value="light">{t('settings.theme.options.light')}</option>
-          <option value="dark">{t('settings.theme.options.dark')}</option>
-          <option value="system">{t('settings.theme.options.system')}</option>
-        </select>
       </section>
 
       <section className="settings-window__section">

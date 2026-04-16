@@ -60,8 +60,6 @@ function App() {
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
   const appTheme = useSettingsStore((state) => state.appTheme);
   const setAppTheme = useSettingsStore((state) => state.setAppTheme);
-  const systemPrefersDark = useSettingsStore((state) => state.systemPrefersDark);
-  const setSystemPrefersDark = useSettingsStore((state) => state.setSystemPrefersDark);
   const {
     updatePrompt,
     updateProgress,
@@ -73,7 +71,7 @@ function App() {
 
   useViewCycleShortcut({ currentView, setCurrentView });
 
-  useAppThemeSync({ setAppTheme, setSystemPrefersDark });
+  useAppThemeSync({ setAppTheme });
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);
@@ -170,7 +168,7 @@ function App() {
     t,
   });
 
-  const resolvedTheme = resolveAppTheme(appTheme, systemPrefersDark);
+  const resolvedTheme = resolveAppTheme(appTheme);
   const appShellStyle = buildAppShellStyle(resolvedTheme);
 
   const groupedServers = useGroupedServers({ servers, t });

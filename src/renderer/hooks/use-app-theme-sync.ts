@@ -4,10 +4,9 @@ import { type AppTheme, normalizeAppTheme } from '../../store/settingsStore';
 
 interface UseAppThemeSyncOptions {
   setAppTheme: (theme: AppTheme) => void;
-  setSystemPrefersDark: (value: boolean) => void;
 }
 
-export function useAppThemeSync({ setAppTheme, setSystemPrefersDark }: UseAppThemeSyncOptions) {
+export function useAppThemeSync({ setAppTheme }: UseAppThemeSyncOptions) {
   useEffect(() => {
     const applyNormalizedTheme = async (value: unknown) => {
       const normalizedTheme = normalizeAppTheme(value);
@@ -41,13 +40,8 @@ export function useAppThemeSync({ setAppTheme, setSystemPrefersDark }: UseAppThe
       });
     })();
 
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleMedia = (event: MediaQueryListEvent) => setSystemPrefersDark(event.matches);
-    media.addEventListener('change', handleMedia);
-
     return () => {
       disposeThemeWatch?.();
-      media.removeEventListener('change', handleMedia);
     };
-  }, [setAppTheme, setSystemPrefersDark]);
+  }, [setAppTheme]);
 }
