@@ -11,7 +11,6 @@ const MAX_RUNNING_SERVERS: usize = 8;
 const MIN_MEMORY_MB: u32 = 256;
 const MAX_MEMORY_MB: u32 = 65_536;
 const COMMAND_MIN_INTERVAL: Duration = Duration::from_millis(100);
-const MAX_SERVER_ID_LENGTH: usize = 128;
 const COMMAND_QUEUE_CAPACITY: usize = 256;
 const LOG_BUFFER_CAPACITY: usize = 4096;
 const LOG_EMIT_INTERVAL: Duration = Duration::from_millis(50);
@@ -121,42 +120,17 @@ fn validate_jar_file_name(jar_file: &str) -> Result<String, String> {
     Ok(normalized.to_string())
 }
 
-fn validate_server_id(server_id: &str) -> Result<String, String> {
-    let normalized = server_id.trim();
-    if normalized.is_empty() {
-        return Err("Server ID is empty".to_string());
-    }
-    if normalized.len() > MAX_SERVER_ID_LENGTH {
-        return Err("Server ID is too long".to_string());
-    }
-    if normalized.chars().any(char::is_control) {
-        return Err("Server ID contains control characters".to_string());
-    }
-    Ok(normalized.to_string())
-}
-
-fn audit_server_action(action: &str, server_id: &str) {
-    log::info!(
-        target: "security.audit",
-        "[AUDIT] action={} server_id={}",
-        action,
-        server_id
-    );
-}
-
 /// サーバーを起動し、stdout/stderr をイベントストリーミングする
 #[tauri::command]
 pub async fn start_server(
     app: AppHandle,
     state: State<'_, ServerManager>,
-    limiter: State<'_, CommandLimiter>,
     server_id: String,
     java_path: String,
     server_path: String,
     memory: u32,
     jar_file: String,
 ) -> Result<(), String> {
-    let validated_server_id = validate_server_id(&server_id)?;
     let validated_java_path = validate_java_path(&java_path)?;
     let validated_server_dir = validate_server_dir(&server_path)?;
     let validated_jar_file = validate_jar_file_name(&jar_file)?;
@@ -175,7 +149,7 @@ pub async fn start_server(
     // 既に起動中か確認
     {
         let servers = state.servers.lock().await;
-        if servers.contains_key(&validated_server_id) {
+        if servers.contains_key(&server_id) {
             return Err("Server is already running".into());
         }
         if servers.len() >= MAX_RUNNING_SERVERS {
@@ -240,23 +214,22 @@ pub async fn start_server(
     // サーバーを管理マップに登録
     {
         let mut servers = state.servers.lock().await;
-        servers.insert(validated_server_id.clone(), RunningServer { command_tx, pid });
+        servers.insert(server_id.clone(), RunningServer { command_tx, pid });
     }
 
     // ステータス通知: online
     let _ = app.emit(
         "server-status-change",
         ServerStatusPayload {
-            server_id: validated_server_id.clone(),
+            server_id: server_id.clone(),
             status: "online".to_string(),
         },
     );
-    audit_server_action("start_server", &validated_server_id);
 
     // stdout ストリーミング (Rust 側でバッファ上限・送信レートを制御)
     let (stdout_log_tx, mut stdout_log_rx) = mpsc::channel::<String>(LOG_BUFFER_CAPACITY);
     let app_stdout_emit = app.clone();
-    let sid_stdout_emit = validated_server_id.clone();
+    let sid_stdout_emit = server_id.clone();
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(LOG_EMIT_INTERVAL);
         loop {
@@ -281,6 +254,7 @@ pub async fn start_server(
             }
         }
     });
+
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
@@ -317,7 +291,7 @@ pub async fn start_server(
 
     // stderr ストリーミング (エラーのみを別イベント名で)
     let _app_stderr = app.clone();
-    let _sid_stderr = validated_server_id.clone();
+    let _sid_stderr = server_id.clone();
     tokio::spawn(async move {
         let reader = BufReader::new(stderr);
         let mut lines = reader.lines();
@@ -329,7 +303,7 @@ pub async fn start_server(
 
     // プロセス統計を定期的に emit (CPU / メモリ)
     let app_stats = app.clone();
-    let sid_stats = validated_server_id.clone();
+    let sid_stats = server_id.clone();
     let servers_stats_ref = state.servers.clone();
     tokio::spawn(async move {
         let mut sys = sysinfo::System::new_all();
@@ -370,19 +344,14 @@ pub async fn start_server(
 
     // プロセス終了監視
     let app_exit = app.clone();
-    let sid_exit = validated_server_id;
+    let sid_exit = server_id.clone();
     let servers_ref = state.servers.clone();
-    let limiter_ref = limiter.last_command_at.clone();
     tokio::spawn(async move {
         let status = child.wait().await;
         // 管理マップから削除
         {
             let mut servers = servers_ref.lock().await;
             servers.remove(&sid_exit);
-        }
-        {
-            let mut last_map = limiter_ref.lock().await;
-            last_map.remove(&sid_exit);
         }
         let exit_status = match status {
             Ok(s) => {
@@ -409,11 +378,10 @@ pub async fn start_server(
 /// stdin に "stop\n" を送信してサーバーを停止
 #[tauri::command]
 pub async fn stop_server(state: State<'_, ServerManager>, server_id: String) -> Result<(), String> {
-    let validated_server_id = validate_server_id(&server_id)?;
     let command_tx = {
         let servers = state.servers.lock().await;
         servers
-            .get(&validated_server_id)
+            .get(&server_id)
             .map(|server| server.command_tx.clone())
             .ok_or_else(|| "Server not found or not running".to_string())?
     };
@@ -423,7 +391,6 @@ pub async fn stop_server(state: State<'_, ServerManager>, server_id: String) -> 
         .await
         .map_err(|_| "Server not found or not running".to_string())?;
 
-    audit_server_action("stop_server", &validated_server_id);
     Ok(())
 }
 
@@ -435,7 +402,6 @@ pub async fn send_command(
     server_id: String,
     command: String,
 ) -> Result<(), String> {
-    let validated_server_id = validate_server_id(&server_id)?;
     let normalized_command = command.trim();
     if normalized_command.is_empty() {
         return Err("Command is empty".into());
@@ -443,16 +409,10 @@ pub async fn send_command(
     if normalized_command.len() > 1024 {
         return Err("Command is too long".into());
     }
-    if normalized_command.contains('\n')
-        || normalized_command.contains('\r')
-        || normalized_command.contains('\0')
-    {
-        return Err("Command contains invalid control characters".into());
-    }
 
     {
         let last_map = limiter.last_command_at.lock().await;
-        if let Some(last_sent) = last_map.get(&validated_server_id) {
+        if let Some(last_sent) = last_map.get(&server_id) {
             if last_sent.elapsed() < COMMAND_MIN_INTERVAL {
                 return Err("Commands are being sent too quickly".into());
             }
@@ -461,9 +421,9 @@ pub async fn send_command(
 
     let command_tx = {
         let servers = state.servers.lock().await;
-        let Some(server) = servers.get(&validated_server_id) else {
+        let Some(server) = servers.get(&server_id) else {
             let mut last_map = limiter.last_command_at.lock().await;
-            last_map.remove(&validated_server_id);
+            last_map.remove(&server_id);
             return Err("Server not found or not running".to_string());
         };
         server.command_tx.clone()
@@ -475,13 +435,13 @@ pub async fn send_command(
         .is_err()
     {
         let mut last_map = limiter.last_command_at.lock().await;
-        last_map.remove(&validated_server_id);
+        last_map.remove(&server_id);
         return Err("Server not found or not running".to_string());
     }
 
     let mut last_map = limiter.last_command_at.lock().await;
-    last_map.insert(validated_server_id.clone(), Instant::now());
-    audit_server_action("send_command", &validated_server_id);
+    last_map.insert(server_id, Instant::now());
+
     Ok(())
 }
 
@@ -491,9 +451,8 @@ pub async fn is_server_running(
     state: State<'_, ServerManager>,
     server_id: String,
 ) -> Result<bool, String> {
-    let validated_server_id = validate_server_id(&server_id)?;
     let servers = state.servers.lock().await;
-    Ok(servers.contains_key(&validated_server_id))
+    Ok(servers.contains_key(&server_id))
 }
 
 /// サーバーの PID を返す
@@ -502,10 +461,9 @@ pub async fn get_server_pid(
     state: State<'_, ServerManager>,
     server_id: String,
 ) -> Result<u32, String> {
-    let validated_server_id = validate_server_id(&server_id)?;
     let servers = state.servers.lock().await;
     servers
-        .get(&validated_server_id)
+        .get(&server_id)
         .map(|s| s.pid)
         .ok_or_else(|| "Server not found or not running".into())
 }
