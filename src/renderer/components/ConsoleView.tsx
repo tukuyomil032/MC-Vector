@@ -262,6 +262,8 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const [logFilter, setLogFilter] = useState<LogLevelFilter>('ALL');
   const [rustParsedSegments, setRustParsedSegments] = useState<RustAnsiSegmentDto[][] | null>(null);
+  const prevLogsRef = useRef<string[]>([]);
+  const prevParsedRef = useRef<RustAnsiSegmentDto[][] | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const matchRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
@@ -270,13 +272,44 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
     const loadParsedSegments = async () => {
       try {
-        const parsed = await parseAnsiLines(logs);
+        const prevLogs = prevLogsRef.current;
+        const prevParsed = prevParsedRef.current;
+        const appendOnly =
+          Array.isArray(prevParsed) &&
+          logs.length >= prevLogs.length &&
+          prevLogs.every((line, index) => logs[index] === line);
+
+        if (appendOnly) {
+          const newLines = logs.slice(prevLogs.length);
+          if (newLines.length === 0) {
+            if (!cancelled) {
+              setRustParsedSegments(prevParsed);
+            }
+            return;
+          }
+          const parsedTail = await parseAnsiLines(newLines);
+          const normalizedTail = Array.isArray(parsedTail) ? parsedTail : null;
+          if (!cancelled) {
+            const merged = normalizedTail ? [...prevParsed, ...normalizedTail] : null;
+            setRustParsedSegments(merged);
+            prevParsedRef.current = merged;
+            prevLogsRef.current = logs;
+          }
+          return;
+        }
+
+        const parsedAll = await parseAnsiLines(logs);
+        const normalizedAll = Array.isArray(parsedAll) ? parsedAll : null;
         if (!cancelled) {
-          setRustParsedSegments(Array.isArray(parsed) ? parsed : null);
+          setRustParsedSegments(normalizedAll);
+          prevParsedRef.current = normalizedAll;
+          prevLogsRef.current = logs;
         }
       } catch {
         if (!cancelled) {
           setRustParsedSegments(null);
+          prevParsedRef.current = null;
+          prevLogsRef.current = logs;
         }
       }
     };

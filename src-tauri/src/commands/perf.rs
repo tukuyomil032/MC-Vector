@@ -139,3 +139,49 @@ fn parse_ansi_line(line: String) -> Vec<AnsiSegmentDto> {
 pub async fn parse_ansi_lines(lines: Vec<String>) -> Result<Vec<Vec<AnsiSegmentDto>>, String> {
     Ok(lines.into_iter().map(parse_ansi_line).collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_ansi_line;
+
+    #[test]
+    fn keeps_plain_line_as_single_segment() {
+        let segments = parse_ansi_line("server started".to_string());
+        assert_eq!(segments.len(), 1);
+        assert_eq!(segments[0].text, "server started");
+        assert!(segments[0].color.is_none());
+    }
+
+    #[test]
+    fn parses_color_and_reset_codes() {
+        let line = "\u{1b}[31merror\u{1b}[0m ok".to_string();
+        let segments = parse_ansi_line(line);
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].text, "error");
+        assert_eq!(segments[0].color.as_deref(), Some("#ef4444"));
+        assert_eq!(segments[1].text, " ok");
+        assert!(segments[1].color.is_none());
+    }
+
+    #[test]
+    fn parses_bold_and_background_codes() {
+        let line = "\u{1b}[1;44mwarn\u{1b}[22m plain".to_string();
+        let segments = parse_ansi_line(line);
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].text, "warn");
+        assert_eq!(segments[0].background_color.as_deref(), Some("#1e3a8a"));
+        assert_eq!(segments[0].font_weight, Some(700));
+        assert_eq!(segments[1].text, " plain");
+        assert_eq!(segments[1].font_weight, None);
+    }
+
+    #[test]
+    fn handles_utf8_text_with_ansi_codes() {
+        let line = "日本語 \u{1b}[32m成功\u{1b}[0m".to_string();
+        let segments = parse_ansi_line(line);
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].text, "日本語 ");
+        assert_eq!(segments[1].text, "成功");
+        assert_eq!(segments[1].color.as_deref(), Some("#22c55e"));
+    }
+}
