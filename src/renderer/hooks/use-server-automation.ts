@@ -44,6 +44,8 @@ interface AutoBackupTimeParts {
   minute: number;
 }
 
+const AUTO_BACKUP_RETRY_DELAY_MS = 60_000;
+
 function resolveAutoBackupTimeParts(server: MinecraftServer): AutoBackupTimeParts {
   const raw = typeof server.autoBackupTime === 'string' ? server.autoBackupTime.trim() : '';
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(raw);
@@ -157,6 +159,8 @@ export function useServerAutomation({
   const autoBackupScheduleRef = useRef<Record<string, AutoBackupScheduleEntry>>({});
   const autoBackupRunningRef = useRef<Record<string, boolean>>({});
   const automationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const automationTickInFlightRef = useRef(false);
+  const automationTickRerunRequestedRef = useRef(false);
   const runAutomationTickRef = useRef<() => Promise<void>>(async () => {});
 
   const clearAutomationTimer = useCallback(() => {
@@ -167,6 +171,11 @@ export function useServerAutomation({
   }, []);
 
   const scheduleAutomationTick = useCallback(() => {
+    if (automationTickInFlightRef.current) {
+      automationTickRerunRequestedRef.current = true;
+      return;
+    }
+
     clearAutomationTimer();
 
     let nextDue = Number.POSITIVE_INFINITY;
@@ -239,23 +248,25 @@ export function useServerAutomation({
   );
 
   const runAutoBackup = useCallback(
-    async (serverId: string) => {
+    async (serverId: string): Promise<boolean> => {
       if (autoBackupRunningRef.current[serverId]) {
-        return;
+        return false;
       }
 
       const targetServer = serversRef.current.find((server) => server.id === serverId);
       if (!targetServer?.autoBackupEnabled || targetServer.status !== 'online') {
-        return;
+        return false;
       }
 
       autoBackupRunningRef.current[serverId] = true;
       try {
         await createBackup(targetServer.path, buildAutoBackupName(targetServer));
         showToast(t('server.toast.autoBackupCreated', { name: targetServer.name }), 'success');
+        return true;
       } catch (error) {
         console.error('Auto backup failed:', error);
         showToast(t('server.toast.autoBackupFailed', { name: targetServer.name }), 'error');
+        return false;
       } finally {
         autoBackupRunningRef.current[serverId] = false;
       }
@@ -264,89 +275,119 @@ export function useServerAutomation({
   );
 
   const runAutomationTick = useCallback(async () => {
+    if (automationTickInFlightRef.current) {
+      automationTickRerunRequestedRef.current = true;
+      return;
+    }
+
+    automationTickInFlightRef.current = true;
+    automationTickRerunRequestedRef.current = false;
     clearAutomationTimer();
     const nowMs = Date.now();
+    let shouldRunImmediately = false;
 
-    for (const [serverId, restartEntry] of Object.entries(autoRestartScheduleRef.current)) {
-      if (restartEntry.dueAt > nowMs) {
-        continue;
-      }
+    try {
+      for (const [serverId, restartEntry] of Object.entries(autoRestartScheduleRef.current)) {
+        if (restartEntry.dueAt > nowMs) {
+          continue;
+        }
 
-      delete autoRestartScheduleRef.current[serverId];
+        delete autoRestartScheduleRef.current[serverId];
 
-      const latestServer = serversRef.current.find((server) => server.id === serverId);
-      if (!latestServer?.autoRestartOnCrash) {
-        resetAutoRestartState(serverId);
-        continue;
-      }
-
-      try {
-        const running = await isServerRunning(serverId);
-        if (running) {
+        const latestServer = serversRef.current.find((server) => server.id === serverId);
+        if (!latestServer?.autoRestartOnCrash) {
           resetAutoRestartState(serverId);
           continue;
         }
 
-        setServers((prev) =>
-          prev.map((server) =>
-            server.id === serverId ? { ...server, status: 'starting' } : server,
-          ),
-        );
+        try {
+          const running = await isServerRunning(serverId);
+          if (running) {
+            resetAutoRestartState(serverId);
+            continue;
+          }
 
-        const javaPath = latestServer.javaPath || 'java';
-        const jarFile = latestServer.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-        await startServerApi(
-          latestServer.id,
-          javaPath,
-          latestServer.path,
-          latestServer.memory,
-          jarFile,
-        );
-      } catch (error) {
-        console.error('Auto restart failed:', error);
-        setServers((prev) =>
-          prev.map((server) =>
-            server.id === serverId ? { ...server, status: 'offline' } : server,
-          ),
-        );
-        showToast(
-          t('server.toast.autoRestartTriggered', {
-            name: latestServer.name,
-            attempt: restartEntry.attempt,
-            max: restartEntry.maxAutoRestarts,
-          }),
-          'error',
-        );
+          setServers((prev) =>
+            prev.map((server) =>
+              server.id === serverId ? { ...server, status: 'starting' } : server,
+            ),
+          );
+
+          const javaPath = latestServer.javaPath || 'java';
+          const jarFile = latestServer.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
+          await startServerApi(
+            latestServer.id,
+            javaPath,
+            latestServer.path,
+            latestServer.memory,
+            jarFile,
+          );
+        } catch (error) {
+          console.error('Auto restart failed:', error);
+          setServers((prev) =>
+            prev.map((server) =>
+              server.id === serverId ? { ...server, status: 'offline' } : server,
+            ),
+          );
+          showToast(
+            t('server.toast.autoRestartTriggered', {
+              name: latestServer.name,
+              attempt: restartEntry.attempt,
+              max: restartEntry.maxAutoRestarts,
+            }),
+            'error',
+          );
+        }
+      }
+
+      for (const [serverId, backupEntry] of Object.entries(autoBackupScheduleRef.current)) {
+        if (backupEntry.nextRunAt > nowMs) {
+          continue;
+        }
+
+        const latestServer = serversRef.current.find((server) => server.id === serverId);
+        if (!latestServer?.autoBackupEnabled) {
+          clearAutoBackupSchedule(serverId);
+          continue;
+        }
+
+        const backupCompleted = await runAutoBackup(serverId);
+
+        const refreshedServer = serversRef.current.find((server) => server.id === serverId);
+        if (!refreshedServer?.autoBackupEnabled) {
+          clearAutoBackupSchedule(serverId);
+          continue;
+        }
+
+        if (!backupCompleted) {
+          autoBackupScheduleRef.current[serverId] = {
+            signature: buildAutoBackupScheduleSignature(refreshedServer),
+            scheduleType: resolveAutoBackupScheduleType(refreshedServer),
+            intervalMinutes: resolveAutoBackupIntervalMinutes(refreshedServer),
+            nextRunAt: Date.now() + AUTO_BACKUP_RETRY_DELAY_MS,
+          };
+          continue;
+        }
+
+        const nextRunNowMs = Date.now();
+        autoBackupScheduleRef.current[serverId] = {
+          signature: buildAutoBackupScheduleSignature(refreshedServer),
+          scheduleType: resolveAutoBackupScheduleType(refreshedServer),
+          intervalMinutes: resolveAutoBackupIntervalMinutes(refreshedServer),
+          nextRunAt: computeNextAutoBackupRunAt(refreshedServer, nextRunNowMs),
+        };
+      }
+    } finally {
+      automationTickInFlightRef.current = false;
+      if (automationTickRerunRequestedRef.current) {
+        automationTickRerunRequestedRef.current = false;
+        shouldRunImmediately = true;
       }
     }
-
-    for (const [serverId, backupEntry] of Object.entries(autoBackupScheduleRef.current)) {
-      if (backupEntry.nextRunAt > nowMs) {
-        continue;
-      }
-
-      const latestServer = serversRef.current.find((server) => server.id === serverId);
-      if (!latestServer?.autoBackupEnabled) {
-        clearAutoBackupSchedule(serverId);
-        continue;
-      }
-
-      await runAutoBackup(serverId);
-
-      const refreshedServer = serversRef.current.find((server) => server.id === serverId);
-      if (!refreshedServer?.autoBackupEnabled) {
-        clearAutoBackupSchedule(serverId);
-        continue;
-      }
-
-      autoBackupScheduleRef.current[serverId] = {
-        signature: buildAutoBackupScheduleSignature(refreshedServer),
-        scheduleType: resolveAutoBackupScheduleType(refreshedServer),
-        intervalMinutes: resolveAutoBackupIntervalMinutes(refreshedServer),
-        nextRunAt: computeNextAutoBackupRunAt(refreshedServer, nowMs),
-      };
+    if (shouldRunImmediately) {
+      void runAutomationTickRef.current();
+      return;
     }
-
     scheduleAutomationTick();
   }, [
     clearAutoBackupSchedule,
@@ -413,6 +454,8 @@ export function useServerAutomation({
       autoRestartScheduleRef.current = {};
       autoBackupScheduleRef.current = {};
       autoBackupRunningRef.current = {};
+      automationTickInFlightRef.current = false;
+      automationTickRerunRequestedRef.current = false;
     };
   }, [clearAutomationTimer]);
 

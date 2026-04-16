@@ -413,6 +413,16 @@ pub async fn send_command(
         return Err("Command is too long".into());
     }
 
+    {
+        let mut last_map = limiter.last_command_at.lock().await;
+        if let Some(last_sent) = last_map.get(&server_id) {
+            if last_sent.elapsed() < COMMAND_MIN_INTERVAL {
+                return Err("Commands are being sent too quickly".into());
+            }
+        }
+        last_map.insert(server_id.clone(), Instant::now());
+    }
+
     let command_tx = {
         let servers = state.servers.lock().await;
         let Some(server) = servers.get(&server_id) else {
@@ -423,13 +433,16 @@ pub async fn send_command(
         server.command_tx.clone()
     };
 
-    command_tx
+    if command_tx
         .send(format!("{}\n", normalized_command))
         .await
-        .map_err(|_| "Server not found or not running".to_string())?;
+        .is_err()
+    {
+        let mut last_map = limiter.last_command_at.lock().await;
+        last_map.remove(&server_id);
+        return Err("Server not found or not running".to_string());
+    }
 
-    let mut last_map = limiter.last_command_at.lock().await;
-    last_map.insert(server_id, Instant::now());
     Ok(())
 }
 

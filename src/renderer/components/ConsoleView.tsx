@@ -244,6 +244,28 @@ type ParsedLogEntry = {
 
 const EMPTY_LOGS: string[] = [];
 
+const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): number => {
+  if (previousLogs.length === 0 || nextLogs.length === 0) {
+    return 0;
+  }
+
+  const maxOverlap = Math.min(previousLogs.length, nextLogs.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    const previousStart = previousLogs.length - overlap;
+    let matched = true;
+    for (let index = 0; index < overlap; index += 1) {
+      if (previousLogs[previousStart + index] !== nextLogs[index]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      return overlap;
+    }
+  }
+  return 0;
+};
+
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -274,23 +296,24 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       try {
         const prevLogs = prevLogsRef.current;
         const prevParsed = prevParsedRef.current;
-        const appendOnly =
-          Array.isArray(prevParsed) &&
-          logs.length >= prevLogs.length &&
-          prevLogs.every((line, index) => logs[index] === line);
+        const canReuseParsed = Array.isArray(prevParsed) && prevParsed.length === prevLogs.length;
+        const overlapLength = canReuseParsed ? findLogOverlapLength(prevLogs, logs) : 0;
 
-        if (appendOnly) {
-          const newLines = logs.slice(prevLogs.length);
+        if (canReuseParsed && overlapLength > 0) {
+          const preservedParsed = prevParsed.slice(prevParsed.length - overlapLength);
+          const newLines = logs.slice(overlapLength);
           if (newLines.length === 0) {
             if (!cancelled) {
-              setRustParsedSegments(prevParsed);
+              setRustParsedSegments(preservedParsed);
+              prevParsedRef.current = preservedParsed;
+              prevLogsRef.current = logs;
             }
             return;
           }
           const parsedTail = await parseAnsiLines(newLines);
           const normalizedTail = Array.isArray(parsedTail) ? parsedTail : null;
           if (!cancelled) {
-            const merged = normalizedTail ? [...prevParsed, ...normalizedTail] : null;
+            const merged = normalizedTail ? [...preservedParsed, ...normalizedTail] : null;
             setRustParsedSegments(merged);
             prevParsedRef.current = merged;
             prevLogsRef.current = logs;
