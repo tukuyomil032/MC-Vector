@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const RATE_LIMIT_WINDOW: Duration = Duration::from_secs(1);
+const RATE_LIMIT_MAX_ENTRIES: usize = 4096;
 
 static RATE_LIMITER: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
 
@@ -109,6 +110,12 @@ fn check_rate_limit_with_state(
         return Err("security_gateway rate_limit_check requires non-empty payload.userId".to_string());
     }
 
+    state.retain(|_, last_call| now.duration_since(*last_call) < RATE_LIMIT_WINDOW);
+
+    if !state.contains_key(normalized_user_id) && state.len() >= RATE_LIMIT_MAX_ENTRIES {
+        return Err("Forbidden: rate limit state is saturated".to_string());
+    }
+
     if let Some(last_call) = state.get(normalized_user_id) {
         if now.duration_since(*last_call) < RATE_LIMIT_WINDOW {
             return Err(format!(
@@ -122,8 +129,13 @@ fn check_rate_limit_with_state(
     Ok(())
 }
 
-fn sanitize_command_arg(arg: &str) -> String {
-    arg.replace(';', "").replace('&', "")
+fn validate_command_arg(arg: &str) -> Result<(), String> {
+    if arg.contains(';') || arg.contains('&') {
+        return Err(
+            "Forbidden: payload.args contains disallowed characters (;, &)".to_string(),
+        );
+    }
+    Ok(())
 }
 
 fn validate_safe_command(program: &str, args: &[String]) -> Result<(String, Vec<String>), String> {
@@ -142,8 +154,11 @@ fn validate_safe_command(program: &str, args: &[String]) -> Result<(String, Vec<
         return Err("Forbidden: program is not in allowlist".to_string());
     }
 
-    let sanitized_args = args.iter().map(|arg| sanitize_command_arg(arg)).collect();
-    Ok((normalized_program.to_string(), sanitized_args))
+    for arg in args {
+        validate_command_arg(arg)?;
+    }
+
+    Ok((normalized_program.to_string(), args.to_vec()))
 }
 
 fn resolve_safe_path(base: &str, input: &str) -> Result<String, String> {
@@ -159,6 +174,13 @@ fn resolve_safe_path(base: &str, input: &str) -> Result<String, String> {
     }
 
     let input_path = PathBuf::from(normalized_input);
+    if normalized_input.len() >= 2 {
+        let bytes = normalized_input.as_bytes();
+        if bytes[0].is_ascii_alphabetic() && bytes[1] == b':' {
+            return Err("Path traversal detected".to_string());
+        }
+    }
+
     if input_path.is_absolute() {
         return Err("Path traversal detected".to_string());
     }
@@ -335,6 +357,7 @@ mod tests {
     };
     use serde_json::{json, Value};
     use std::collections::HashMap;
+    use std::path::{Path, PathBuf};
     use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     fn unique_user_id(label: &str) -> String {
@@ -407,12 +430,29 @@ mod tests {
     }
 
     #[test]
-    fn validate_safe_command_allows_java_and_sanitizes_args() {
-        let args = vec!["foo;bar".to_string(), "x&y".to_string()];
+    fn rate_limit_prunes_expired_entries() {
+        let now = Instant::now();
+        let mut state = HashMap::new();
+        let stale = now - (RATE_LIMIT_WINDOW + Duration::from_millis(10));
+        state.insert("stale-user".to_string(), stale);
+
+        assert!(check_rate_limit_with_state(&mut state, "fresh-user", now).is_ok());
+        assert!(!state.contains_key("stale-user"));
+        assert!(state.contains_key("fresh-user"));
+    }
+
+    #[test]
+    fn validate_safe_command_allows_java_and_keeps_args() {
+        let args = vec!["foo_bar".to_string(), "x-y".to_string()];
         let (program, sanitized_args) = validate_safe_command("java", &args).expect("should pass");
         assert_eq!(program, "java");
-        assert_eq!(sanitized_args[0], "foobar");
-        assert_eq!(sanitized_args[1], "xy");
+        assert_eq!(sanitized_args, args);
+    }
+
+    #[test]
+    fn validate_safe_command_rejects_disallowed_arg_characters() {
+        let args = vec!["foo;bar".to_string()];
+        assert!(validate_safe_command("java", &args).is_err());
     }
 
     #[test]
@@ -423,14 +463,33 @@ mod tests {
 
     #[test]
     fn resolve_safe_path_rejects_traversal() {
-        let result = resolve_safe_path("/app/data", "../etc/passwd");
+        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let traversal = Path::new("..").join("etc").join("passwd");
+        let result = resolve_safe_path(
+            base.to_string_lossy().as_ref(),
+            traversal.to_string_lossy().as_ref(),
+        );
         assert!(result.is_err());
     }
 
     #[test]
     fn resolve_safe_path_builds_absolute_path() {
-        let resolved = resolve_safe_path("/app/data", "servers/a").expect("should resolve");
-        assert_eq!(resolved, "/app/data/servers/a");
+        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let input = Path::new("servers").join("a");
+        let resolved = resolve_safe_path(
+            base.to_string_lossy().as_ref(),
+            input.to_string_lossy().as_ref(),
+        )
+        .expect("should resolve");
+        let expected = base.join("servers").join("a");
+        assert_eq!(PathBuf::from(resolved), expected);
+    }
+
+    #[test]
+    fn resolve_safe_path_rejects_windows_drive_relative_prefix() {
+        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let result = resolve_safe_path(base.to_string_lossy().as_ref(), "C:windows\\temp");
+        assert!(result.is_err());
     }
 
     #[test]
@@ -537,7 +596,7 @@ mod tests {
             "validate_safe_command",
             &json!({
                 "program": "java",
-                "args": ["foo;bar", "x&y"]
+                "args": ["foo_bar", "x-y"]
             }),
         )
         .expect("validate_safe_command should succeed");
@@ -549,8 +608,8 @@ mod tests {
             .and_then(Value::as_array)
             .expect("args should be an array");
         assert_eq!(args.len(), 2);
-        assert_eq!(args[0].as_str(), Some("foobar"));
-        assert_eq!(args[1].as_str(), Some("xy"));
+        assert_eq!(args[0].as_str(), Some("foo_bar"));
+        assert_eq!(args[1].as_str(), Some("x-y"));
     }
 
     #[test]
@@ -565,18 +624,22 @@ mod tests {
 
     #[test]
     fn ipc_contract_resolve_safe_path_response_shape() {
+        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let input = Path::new("servers").join("a");
         let result = super::execute_security_action(
             "resolve_safe_path",
             &json!({
-                "base": "/app/data",
-                "input": "servers/a"
+                "base": base.to_string_lossy(),
+                "input": input.to_string_lossy()
             }),
         )
         .expect("resolve_safe_path should succeed");
-        assert_eq!(
-            result.get("resolvedPath").and_then(Value::as_str),
-            Some("/app/data/servers/a")
-        );
+        let resolved = result
+            .get("resolvedPath")
+            .and_then(Value::as_str)
+            .expect("resolvedPath should be present");
+        let expected = base.join("servers").join("a");
+        assert_eq!(PathBuf::from(resolved), expected);
     }
 
     #[test]

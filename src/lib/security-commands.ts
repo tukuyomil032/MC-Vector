@@ -66,7 +66,8 @@ export async function validateSafeCommand(
   if (
     response.allowed !== true ||
     typeof response.program !== 'string' ||
-    !Array.isArray(response.args)
+    !Array.isArray(response.args) ||
+    !response.args.every((arg) => typeof arg === 'string')
   ) {
     throw new Error('security_gateway validate_safe_command returned invalid payload');
   }
