@@ -19,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset: data: blob:; img-src 'self' asset: data: blob: https:; style-src 'self'; script-src 'self'; connect-src 'self' https: http://localhost:* ws://localhost:*; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self';"
+      "csp": "default-src 'self' asset: data: blob:; img-src 'self' asset: data: blob: https:; style-src 'self'; script-src 'self'; connect-src 'self' https: http://localhost:* ws://localhost:*; font-src 'self' data:;"
     }
   },
   "bundle": {
