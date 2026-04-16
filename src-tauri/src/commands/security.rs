@@ -335,8 +335,8 @@ fn handle_command_gateway(payload: &Value) -> Result<Value, String> {
         .cloned()
         .unwrap_or_else(|| json!({}));
 
-    check_rate_limit(user_id)?;
     authorize(Role::parse(role_raw)?, action)?;
+    check_rate_limit(user_id)?;
     execute_security_action(action, &command_payload)
 }
 

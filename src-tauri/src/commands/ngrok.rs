@@ -362,6 +362,22 @@ mod tests {
     }
 
     #[test]
+    fn extract_ngrok_url_trims_surrounding_quotes() {
+        let line = "lvl=info msg=tunnel url=\"tcp://1.tcp.ngrok.io:12345\"";
+        assert_eq!(
+            extract_ngrok_url(line).as_deref(),
+            Some("tcp://1.tcp.ngrok.io:12345")
+        );
+    }
+
+    #[test]
+    fn extract_ngrok_url_rejects_url_over_2048_characters() {
+        let oversized = format!("tcp://{}", "a".repeat(2050));
+        let line = format!("lvl=info msg=tunnel url={oversized}");
+        assert!(extract_ngrok_url(&line).is_none());
+    }
+
+    #[test]
     fn extract_ngrok_url_rejects_non_tcp_scheme() {
         let line = "lvl=info msg=tunnel url=https://example.ngrok.io";
         assert!(extract_ngrok_url(line).is_none());
