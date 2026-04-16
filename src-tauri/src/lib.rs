@@ -59,6 +59,7 @@ pub fn run() {
             // ファイルユーティリティ
             commands::file_utils::list_dir_with_metadata,
             commands::file_utils::resolve_managed_path,
+            commands::file_utils::read_managed_text_file,
             commands::file_utils::write_managed_text_file,
             // アップデートユーティリティ
             commands::updater_utils::can_update_app,

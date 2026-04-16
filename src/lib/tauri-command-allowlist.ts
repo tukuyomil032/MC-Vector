@@ -18,6 +18,7 @@ const CORE_COMMANDS = [
   'download_file',
   'list_dir_with_metadata',
   'resolve_managed_path',
+  'read_managed_text_file',
   'write_managed_text_file',
   'can_update_app',
   'get_app_location',

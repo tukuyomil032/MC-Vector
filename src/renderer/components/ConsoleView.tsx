@@ -3,7 +3,10 @@ import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
-import { parseAnsiLines } from '../../lib/performance-commands';
+import {
+  type AnsiSegment as RustAnsiSegmentDto,
+  parseAnsiLines,
+} from '../../lib/performance-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
@@ -169,6 +172,63 @@ const getSeverityStyle = (level: Exclude<LogLevelFilter, 'ALL'>): AnsiStyle => {
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const toLocalAnsiSegments = (segments: unknown): AnsiSegment[] | null => {
+  if (!Array.isArray(segments) || segments.length === 0) {
+    return null;
+  }
+
+  const mapped: AnsiSegment[] = [];
+  for (const segment of segments) {
+    if (!isRecord(segment) || typeof segment.text !== 'string') {
+      return null;
+    }
+
+    const color = segment.color;
+    if (color !== null && color !== undefined && typeof color !== 'string') {
+      return null;
+    }
+
+    const backgroundColor = segment.backgroundColor;
+    if (
+      backgroundColor !== null &&
+      backgroundColor !== undefined &&
+      typeof backgroundColor !== 'string'
+    ) {
+      return null;
+    }
+
+    const fontWeight = segment.fontWeight;
+    if (
+      fontWeight !== null &&
+      fontWeight !== undefined &&
+      (typeof fontWeight !== 'number' || !Number.isFinite(fontWeight))
+    ) {
+      return null;
+    }
+
+    const style: AnsiStyle = {};
+    if (typeof color === 'string') {
+      style.color = color;
+    }
+    if (typeof backgroundColor === 'string') {
+      style.backgroundColor = backgroundColor;
+    }
+    if (typeof fontWeight === 'number') {
+      style.fontWeight = fontWeight;
+    }
+
+    mapped.push({
+      text: segment.text,
+      style,
+    });
+  }
+
+  return mapped;
+};
+
 interface ConsoleViewProps {
   server: MinecraftServer;
   ngrokUrl: string | null;
@@ -183,6 +243,28 @@ type ParsedLogEntry = {
 };
 
 const EMPTY_LOGS: string[] = [];
+
+const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): number => {
+  if (previousLogs.length === 0 || nextLogs.length === 0) {
+    return 0;
+  }
+
+  const maxOverlap = Math.min(previousLogs.length, nextLogs.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    const previousStart = previousLogs.length - overlap;
+    let matched = true;
+    for (let index = 0; index < overlap; index += 1) {
+      if (previousLogs[previousStart + index] !== nextLogs[index]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      return overlap;
+    }
+  }
+  return 0;
+};
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const { t } = useTranslation();
@@ -201,7 +283,9 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const [logFilter, setLogFilter] = useState<LogLevelFilter>('ALL');
-  const [rustParsedSegments, setRustParsedSegments] = useState<AnsiSegment[][] | null>(null);
+  const [rustParsedSegments, setRustParsedSegments] = useState<RustAnsiSegmentDto[][] | null>(null);
+  const prevLogsRef = useRef<string[]>([]);
+  const prevParsedRef = useRef<RustAnsiSegmentDto[][] | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const matchRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
@@ -210,13 +294,45 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
     const loadParsedSegments = async () => {
       try {
-        const parsed = await parseAnsiLines(logs);
+        const prevLogs = prevLogsRef.current;
+        const prevParsed = prevParsedRef.current;
+        const canReuseParsed = Array.isArray(prevParsed) && prevParsed.length === prevLogs.length;
+        const overlapLength = canReuseParsed ? findLogOverlapLength(prevLogs, logs) : 0;
+
+        if (canReuseParsed && overlapLength > 0) {
+          const preservedParsed = prevParsed.slice(prevParsed.length - overlapLength);
+          const newLines = logs.slice(overlapLength);
+          if (newLines.length === 0) {
+            if (!cancelled) {
+              setRustParsedSegments(preservedParsed);
+              prevParsedRef.current = preservedParsed;
+              prevLogsRef.current = logs;
+            }
+            return;
+          }
+          const parsedTail = await parseAnsiLines(newLines);
+          const normalizedTail = Array.isArray(parsedTail) ? parsedTail : null;
+          if (!cancelled) {
+            const merged = normalizedTail ? [...preservedParsed, ...normalizedTail] : null;
+            setRustParsedSegments(merged);
+            prevParsedRef.current = merged;
+            prevLogsRef.current = logs;
+          }
+          return;
+        }
+
+        const parsedAll = await parseAnsiLines(logs);
+        const normalizedAll = Array.isArray(parsedAll) ? parsedAll : null;
         if (!cancelled) {
-          setRustParsedSegments(parsed);
+          setRustParsedSegments(normalizedAll);
+          prevParsedRef.current = normalizedAll;
+          prevLogsRef.current = logs;
         }
       } catch {
         if (!cancelled) {
           setRustParsedSegments(null);
+          prevParsedRef.current = null;
+          prevLogsRef.current = logs;
         }
       }
     };
@@ -230,13 +346,13 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const parsedLogs = useMemo<ParsedLogEntry[]>(() => {
     return logs.map((line, originalIndex) => {
       const plainLine = stripAnsiCodes(line);
-      const rustSegments = rustParsedSegments?.[originalIndex];
+      const rustSegments = toLocalAnsiSegments(rustParsedSegments?.[originalIndex]);
       return {
         line,
         plainLine,
         originalIndex,
         level: detectLogLevel(plainLine),
-        segments: rustSegments && rustSegments.length > 0 ? rustSegments : ansiToSegments(line),
+        segments: rustSegments ?? ansiToSegments(line),
       };
     });
   }, [logs, rustParsedSegments]);

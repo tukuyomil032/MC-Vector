@@ -1,14 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { appDataDir } from '@tauri-apps/api/path';
-import {
-  copyFile,
-  type DirEntry,
-  mkdir,
-  readDir,
-  readTextFile,
-  remove,
-  rename,
-} from '@tauri-apps/plugin-fs';
+import { copyFile, type DirEntry, mkdir, readDir, remove, rename } from '@tauri-apps/plugin-fs';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { tauriInvoke } from './tauri-api';
 
@@ -19,73 +10,13 @@ export interface FileEntryWithMeta {
   modified: number; // unix timestamp in seconds
 }
 
-function normalizePath(input: string): string {
-  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
-  if (normalized.length > 1 && normalized.endsWith('/') && !/^[A-Za-z]:\/$/.test(normalized)) {
-    return normalized.slice(0, -1);
-  }
-  return normalized;
-}
-
-const MANAGED_ROOT_SEGMENTS = ['servers', 'java', 'ngrok'] as const;
-const WINDOWS_ABSOLUTE_PATH = /^[A-Za-z]:\//;
-let cachedAppDataRoot: string | null = null;
-
-function hasTraversalSegment(path: string): boolean {
-  return path === '..' || path.startsWith('../') || path.includes('/../') || path.endsWith('/..');
-}
-
-function isAbsolutePath(path: string): boolean {
-  return path.startsWith('/') || WINDOWS_ABSOLUTE_PATH.test(path);
-}
-
-async function getAppDataRoot(): Promise<string> {
-  if (cachedAppDataRoot) {
-    return cachedAppDataRoot;
-  }
-  const root = normalizePath(await appDataDir());
-  cachedAppDataRoot = root;
-  return root;
-}
-
-async function normalizeManagedInputPath(path: string): Promise<string> {
-  if (isAbsolutePath(path)) {
-    return path;
-  }
-
-  const relativePath = normalizePath(path)
-    .replace(/^\.\/+/, '')
-    .replace(/^\/+/, '');
-  if (!relativePath) {
-    throw new Error('Invalid path');
-  }
-  if (hasTraversalSegment(relativePath)) {
-    throw new Error('Path traversal is not allowed');
-  }
-
-  const appDataRoot = await getAppDataRoot();
-  const managedRelative = MANAGED_ROOT_SEGMENTS.some(
-    (segment) => relativePath === segment || relativePath.startsWith(`${segment}/`),
-  )
-    ? relativePath
-    : `servers/${relativePath}`;
-  return normalizePath(`${appDataRoot}/${managedRelative}`);
-}
-
 async function assertAllowedPath(path: string): Promise<string> {
-  const normalizedPath = normalizePath(path);
-  if (!normalizedPath || normalizedPath.includes('\0')) {
+  if (!path.trim() || path.includes('\0')) {
     throw new Error('Invalid path');
   }
-  if (hasTraversalSegment(normalizedPath)) {
-    throw new Error('Path traversal is not allowed');
-  }
-
-  const managedInputPath = await normalizeManagedInputPath(normalizedPath);
-  const resolvedPath = await tauriInvoke<string>('resolve_managed_path', {
-    path: managedInputPath,
+  return tauriInvoke<string>('resolve_managed_path', {
+    path,
   });
-  return normalizePath(resolvedPath);
 }
 
 function assertSafeName(name: string): string {
@@ -125,8 +56,9 @@ export async function listFilesWithMetadata(dirPath: string): Promise<FileEntryW
 }
 
 export async function readFileContent(filePath: string): Promise<string> {
-  const safeFilePath = await assertAllowedPath(filePath);
-  return readTextFile(safeFilePath);
+  return tauriInvoke<string>('read_managed_text_file', {
+    path: filePath,
+  });
 }
 
 export async function saveFileContent(filePath: string, content: string): Promise<void> {
@@ -215,8 +147,7 @@ export async function openInFinder(path: string): Promise<void> {
 
 export async function readJsonFile(filePath: string): Promise<unknown> {
   try {
-    const safeFilePath = await assertAllowedPath(filePath);
-    const content = await readTextFile(safeFilePath);
+    const content = await readFileContent(filePath);
     const parsed = JSON.parse(content);
     return isJsonContainer(parsed) ? parsed : null;
   } catch {
