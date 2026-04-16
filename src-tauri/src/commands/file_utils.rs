@@ -14,6 +14,94 @@ pub struct FileEntryInfo {
 
 const ALLOWED_APPDATA_SUBDIRS: [&str; 3] = ["servers", "java", "ngrok"];
 
+fn is_windows_drive_root(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() == 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && bytes[2] == b'/'
+}
+
+fn is_absolute_path(path: &str) -> bool {
+    if path.starts_with('/') {
+        return true;
+    }
+    let bytes = path.as_bytes();
+    bytes.len() >= 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && bytes[2] == b'/'
+}
+
+fn has_traversal_segment(path: &str) -> bool {
+    path == ".." || path.starts_with("../") || path.contains("/../") || path.ends_with("/..")
+}
+
+fn normalize_path_string(input: &str) -> String {
+    let mut normalized = String::with_capacity(input.len());
+    let mut previous_was_slash = false;
+    for ch in input.chars() {
+        let current = if ch == '\\' { '/' } else { ch };
+        if current == '/' {
+            if previous_was_slash {
+                continue;
+            }
+            previous_was_slash = true;
+        } else {
+            previous_was_slash = false;
+        }
+        normalized.push(current);
+    }
+
+    if normalized.len() > 1 && normalized.ends_with('/') && !is_windows_drive_root(&normalized) {
+        normalized.pop();
+    }
+
+    normalized
+}
+
+fn normalize_managed_input_path(app: &AppHandle, path: &str) -> Result<String, String> {
+    let normalized = normalize_path_string(path.trim());
+    if normalized.is_empty() || normalized.contains('\0') {
+        return Err("Invalid path".to_string());
+    }
+    if has_traversal_segment(&normalized) {
+        return Err("Path traversal is not allowed".to_string());
+    }
+
+    if is_absolute_path(&normalized) {
+        return Ok(normalized);
+    }
+
+    let mut relative_path = normalized.as_str();
+    if let Some(rest) = relative_path.strip_prefix('.') {
+        if rest.starts_with('/') {
+            relative_path = rest.trim_start_matches('/');
+        }
+    }
+    relative_path = relative_path.trim_start_matches('/');
+
+    if relative_path.is_empty() {
+        return Err("Invalid path".to_string());
+    }
+    if has_traversal_segment(relative_path) {
+        return Err("Path traversal is not allowed".to_string());
+    }
+
+    let managed_relative = if ALLOWED_APPDATA_SUBDIRS.iter().any(|segment| {
+        relative_path == *segment || relative_path.starts_with(&format!("{}/", segment))
+    }) {
+        relative_path.to_string()
+    } else {
+        format!("servers/{}", relative_path)
+    };
+
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+
+    Ok(normalize_path_string(&format!(
+        "{}/{}",
+        app_data_dir.to_string_lossy(),
+        managed_relative
+    )))
+}
+
 fn canonicalize_with_existing_ancestor(path: &Path) -> Result<PathBuf, String> {
     if path.exists() {
         return std::fs::canonicalize(path).map_err(|e| format!("Failed to resolve path: {}", e));
@@ -47,12 +135,8 @@ fn is_within_root(target_path: &Path, root_path: &Path) -> bool {
 
 #[tauri::command]
 pub async fn resolve_managed_path(app: AppHandle, path: String) -> Result<String, String> {
-    let normalized = path.trim();
-    if normalized.is_empty() || normalized.contains('\0') {
-        return Err("Invalid path".to_string());
-    }
-
-    let target_path = PathBuf::from(normalized);
+    let normalized_input = normalize_managed_input_path(&app, &path)?;
+    let target_path = PathBuf::from(&normalized_input);
     if !target_path.is_absolute() {
         return Err("Path must be absolute".to_string());
     }
@@ -82,7 +166,7 @@ pub async fn resolve_managed_path(app: AppHandle, path: String) -> Result<String
         return Err("Path is outside allowed scope".to_string());
     }
 
-    Ok(canonical_target.to_string_lossy().to_string())
+    Ok(normalize_path_string(&canonical_target.to_string_lossy()))
 }
 
 #[tauri::command]
@@ -93,6 +177,14 @@ pub async fn write_managed_text_file(
 ) -> Result<(), String> {
     let resolved = resolve_managed_path(app, path).await?;
     std::fs::write(&resolved, content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[tauri::command]
+pub async fn read_managed_text_file(app: AppHandle, path: String) -> Result<String, String> {
+    let resolved = resolve_managed_path(app, path).await?;
+    tokio::fs::read_to_string(&resolved)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))
 }
 
 /// ディレクトリの内容をメタデータ付きで一括取得

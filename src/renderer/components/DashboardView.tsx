@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -11,7 +11,10 @@ import {
 import { useTranslation } from '../../i18n';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
-import { type MinecraftServer } from '../components/../shared/server declaration';
+import {
+  type MinecraftServer,
+  type ServerStatus,
+} from '../components/../shared/server declaration';
 
 interface Props {
   server: MinecraftServer;
@@ -30,9 +33,55 @@ type TpsPoint = {
   tps: number;
 };
 
+type Translate = (key: string, values?: Record<string, unknown>) => string;
+
+interface ResourceChartCardProps {
+  title: string;
+  data: ResourcePoint[];
+  dataKey: 'cpu' | 'memory';
+  stroke: string;
+  fill: string;
+  yDomain?: [number, number];
+}
+
+interface TpsChartCardProps {
+  title: string;
+  data: TpsPoint[];
+  emptyLabel: string;
+}
+
 const METRIC_WINDOW_MS = 60_000;
 const TPS_POLL_INTERVAL_MS = 5_000;
+const STATS_DEDUPE_WINDOW_MS = 1_000;
 const ANSI_ESCAPE_REGEX = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+
+const AXIS_STROKE_COLOR = '#94a3b8';
+const GRID_STROKE_COLOR = '#334155';
+const TOOLTIP_STYLE = {
+  backgroundColor: '#111827',
+  border: '1px solid rgba(82, 82, 91, 0.7)',
+};
+const TICK_STYLE = { fontSize: 10 };
+const CPU_Y_DOMAIN: [number, number] = [0, 100];
+const TPS_Y_DOMAIN: [number, number] = [0, 22];
+
+const STATUS_COLORS: Record<ServerStatus, string> = {
+  online: '#10b981',
+  offline: '#ef4444',
+  starting: '#eab308',
+  stopping: '#f97316',
+  restarting: '#3b82f6',
+  crashed: '#f43f5e',
+};
+
+const STATUS_LABEL_KEYS: Record<ServerStatus, string> = {
+  online: 'dashboard.stats.statusValues.online',
+  offline: 'dashboard.stats.statusValues.offline',
+  starting: 'dashboard.stats.statusValues.starting',
+  stopping: 'dashboard.stats.statusValues.stopping',
+  restarting: 'dashboard.stats.statusValues.restarting',
+  crashed: 'dashboard.stats.statusValues.crashed',
+};
 
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
@@ -84,15 +133,143 @@ const extractTpsFromLogLine = (line: string): number | null => {
   return null;
 };
 
+const getStatusColor = (status: ServerStatus): string => {
+  return STATUS_COLORS[status] ?? '#aaa';
+};
+
+const getStatusLabel = (status: ServerStatus, t: Translate): string => {
+  const translationKey = STATUS_LABEL_KEYS[status] ?? 'dashboard.stats.statusValues.unknown';
+  return t(translationKey);
+};
+
+const getTpsColor = (tps: number | null): string => {
+  if (tps === null) {
+    return '#a1a1aa';
+  }
+  if (tps >= 18) {
+    return '#22c55e';
+  }
+  if (tps >= 15) {
+    return '#eab308';
+  }
+  return '#ef4444';
+};
+
+const ResourceChartCard = memo(function ResourceChartCard({
+  title,
+  data,
+  dataKey,
+  stroke,
+  fill,
+  yDomain,
+}: ResourceChartCardProps) {
+  return (
+    <article className="dashboard-view__chart-card surface-card">
+      <h3 className="dashboard-view__chart-title section-title">{title}</h3>
+      <div className="dashboard-view__chart-body">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
+            <XAxis
+              dataKey="timeLabel"
+              stroke={AXIS_STROKE_COLOR}
+              tick={TICK_STYLE}
+              minTickGap={24}
+            />
+            <YAxis stroke={AXIS_STROKE_COLOR} tick={TICK_STYLE} domain={yDomain} />
+            <Tooltip contentStyle={TOOLTIP_STYLE} />
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              stroke={stroke}
+              fill={fill}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </article>
+  );
+});
+
+const TpsChartCard = memo(function TpsChartCard({ title, data, emptyLabel }: TpsChartCardProps) {
+  return (
+    <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card">
+      <h3 className="dashboard-view__chart-title section-title">{title}</h3>
+      <div className="dashboard-view__chart-body">
+        {data.length === 0 ? (
+          <div className="dashboard-view__chart-empty">{emptyLabel}</div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
+              <XAxis
+                dataKey="timeLabel"
+                stroke={AXIS_STROKE_COLOR}
+                tick={TICK_STYLE}
+                minTickGap={24}
+              />
+              <YAxis stroke={AXIS_STROKE_COLOR} tick={TICK_STYLE} domain={TPS_Y_DOMAIN} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Area
+                type="monotone"
+                dataKey="tps"
+                stroke="#22c55e"
+                fill="rgba(34, 197, 94, 0.24)"
+                isAnimationActive={false}
+                connectNulls
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </article>
+  );
+});
+
 export default function DashboardView({ server }: Props) {
   const { t } = useTranslation();
   const [resourceStats, setResourceStats] = useState<ResourcePoint[]>([]);
   const [tpsStats, setTpsStats] = useState<TpsPoint[]>([]);
-  const [currentCpu, setCurrentCpu] = useState(0);
-  const [currentMem, setCurrentMem] = useState(0);
-  const [currentTps, setCurrentTps] = useState<number | null>(null);
 
-  const supportsTpsPolling = server.software === 'Paper' || server.software === 'LeafMC';
+  useEffect(() => {
+    setResourceStats([]);
+    setTpsStats([]);
+  }, [server.id, server.software]);
+
+  const supportsTpsPolling = useMemo(() => {
+    return server.software === 'Paper' || server.software === 'LeafMC';
+  }, [server.software]);
+
+  const currentCpu = useMemo(() => {
+    return resourceStats[resourceStats.length - 1]?.cpu ?? 0;
+  }, [resourceStats]);
+
+  const currentMem = useMemo(() => {
+    return resourceStats[resourceStats.length - 1]?.memory ?? 0;
+  }, [resourceStats]);
+
+  const currentTps = useMemo(() => {
+    return tpsStats[tpsStats.length - 1]?.tps ?? null;
+  }, [tpsStats]);
+
+  const statusColor = useMemo(() => {
+    return getStatusColor(server.status);
+  }, [server.status]);
+
+  const statusLabel = useMemo(() => {
+    return getStatusLabel(server.status, t);
+  }, [server.status, t]);
+
+  const tpsColor = useMemo(() => {
+    return getTpsColor(currentTps);
+  }, [currentTps]);
+
+  const tpsSamplingLabel = useMemo(() => {
+    return supportsTpsPolling
+      ? t('dashboard.stats.tpsAutoSampled')
+      : t('dashboard.stats.tpsLogBased');
+  }, [supportsTpsPolling, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,10 +286,17 @@ export default function DashboardView({ server }: Props) {
       const cpuVal = normalizeMetric(clamp(rawCpu, 0, 100), 1);
       const memVal = Math.max(0, Math.round(rawMemory / 1024 / 1024));
 
-      setCurrentCpu(cpuVal);
-      setCurrentMem(memVal);
-
       setResourceStats((prev) => {
+        const latest = prev[prev.length - 1];
+        if (
+          latest &&
+          now - latest.timestamp < STATS_DEDUPE_WINDOW_MS &&
+          latest.cpu === cpuVal &&
+          latest.memory === memVal
+        ) {
+          return prev;
+        }
+
         const next = [
           ...prev,
           {
@@ -152,10 +336,9 @@ export default function DashboardView({ server }: Props) {
       }
 
       const now = Date.now();
-      setCurrentTps(tpsValue);
       setTpsStats((prev) => {
         const latest = prev[prev.length - 1];
-        if (latest && now - latest.timestamp < 1000 && latest.tps === tpsValue) {
+        if (latest && now - latest.timestamp < STATS_DEDUPE_WINDOW_MS && latest.tps === tpsValue) {
           return prev;
         }
 
@@ -206,57 +389,6 @@ export default function DashboardView({ server }: Props) {
     };
   }, [server.id, server.status, supportsTpsPolling]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return '#10b981';
-      case 'offline':
-        return '#ef4444';
-      case 'starting':
-        return '#eab308';
-      case 'stopping':
-        return '#f97316';
-      case 'restarting':
-        return '#3b82f6';
-      case 'crashed':
-        return '#f43f5e';
-      default:
-        return '#aaa';
-    }
-  };
-
-  const getTpsColor = (tps: number | null): string => {
-    if (tps === null) {
-      return '#a1a1aa';
-    }
-    if (tps >= 18) {
-      return '#22c55e';
-    }
-    if (tps >= 15) {
-      return '#eab308';
-    }
-    return '#ef4444';
-  };
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'online':
-        return t('dashboard.stats.statusValues.online');
-      case 'offline':
-        return t('dashboard.stats.statusValues.offline');
-      case 'starting':
-        return t('dashboard.stats.statusValues.starting');
-      case 'stopping':
-        return t('dashboard.stats.statusValues.stopping');
-      case 'restarting':
-        return t('dashboard.stats.statusValues.restarting');
-      case 'crashed':
-        return t('dashboard.stats.statusValues.crashed');
-      default:
-        return t('dashboard.stats.statusValues.unknown');
-    }
-  };
-
   return (
     <div className="dashboard-view">
       <header className="dashboard-view__header surface-card">
@@ -268,11 +400,8 @@ export default function DashboardView({ server }: Props) {
         </div>
         <div className="dashboard-view__header-status">
           <span className="section-title">{t('dashboard.stats.status')}</span>
-          <span
-            className="dashboard-view__header-status-value"
-            style={{ color: getStatusColor(server.status) }}
-          >
-            {getStatusLabel(server.status)}
+          <span className="dashboard-view__header-status-value" style={{ color: statusColor }}>
+            {statusLabel}
           </span>
         </div>
       </header>
@@ -280,8 +409,8 @@ export default function DashboardView({ server }: Props) {
       <section className="dashboard-view__kpi-grid">
         <article className="dashboard-view__kpi-card dashboard-view__kpi-card--status kpi-tile">
           <div className="kpi-tile__label">{t('dashboard.stats.status')}</div>
-          <div className="kpi-tile__value" style={{ color: getStatusColor(server.status) }}>
-            {getStatusLabel(server.status)}
+          <div className="kpi-tile__value" style={{ color: statusColor }}>
+            {statusLabel}
           </div>
           <div className="kpi-tile__meta">
             {t('dashboard.stats.software')}: {server.software}
@@ -290,14 +419,10 @@ export default function DashboardView({ server }: Props) {
 
         <article className="dashboard-view__kpi-card dashboard-view__kpi-card--tps kpi-tile">
           <div className="kpi-tile__label">{t('dashboard.stats.currentTps')}</div>
-          <div className="kpi-tile__value" style={{ color: getTpsColor(currentTps) }}>
+          <div className="kpi-tile__value" style={{ color: tpsColor }}>
             {currentTps === null ? '--' : currentTps.toFixed(2)}
           </div>
-          <div className="kpi-tile__meta">
-            {supportsTpsPolling
-              ? t('dashboard.stats.tpsAutoSampled')
-              : t('dashboard.stats.tpsLogBased')}
-          </div>
+          <div className="kpi-tile__meta">{tpsSamplingLabel}</div>
         </article>
 
         <article className="dashboard-view__kpi-card dashboard-view__kpi-card--cpu kpi-tile">
@@ -318,109 +443,28 @@ export default function DashboardView({ server }: Props) {
       </section>
 
       <section className="dashboard-view__chart-grid">
-        <article className="dashboard-view__chart-card surface-card">
-          <h3 className="dashboard-view__chart-title section-title">
-            {t('dashboard.charts.cpuLast60s')}
-          </h3>
-          <div className="dashboard-view__chart-body">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={resourceStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="timeLabel"
-                  stroke="#94a3b8"
-                  tick={{ fontSize: 10 }}
-                  minTickGap={24}
-                />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111827',
-                    border: '1px solid rgba(82, 82, 91, 0.7)',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cpu"
-                  stroke="#38bdf8"
-                  fill="rgba(56, 189, 248, 0.28)"
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </article>
+        <ResourceChartCard
+          title={t('dashboard.charts.cpuLast60s')}
+          data={resourceStats}
+          dataKey="cpu"
+          stroke="#38bdf8"
+          fill="rgba(56, 189, 248, 0.28)"
+          yDomain={CPU_Y_DOMAIN}
+        />
 
-        <article className="dashboard-view__chart-card surface-card">
-          <h3 className="dashboard-view__chart-title section-title">
-            {t('dashboard.charts.memoryLast60s')}
-          </h3>
-          <div className="dashboard-view__chart-body">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={resourceStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="timeLabel"
-                  stroke="#94a3b8"
-                  tick={{ fontSize: 10 }}
-                  minTickGap={24}
-                />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111827',
-                    border: '1px solid rgba(82, 82, 91, 0.7)',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="memory"
-                  stroke="#34d399"
-                  fill="rgba(52, 211, 153, 0.24)"
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </article>
+        <ResourceChartCard
+          title={t('dashboard.charts.memoryLast60s')}
+          data={resourceStats}
+          dataKey="memory"
+          stroke="#34d399"
+          fill="rgba(52, 211, 153, 0.24)"
+        />
 
-        <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card">
-          <h3 className="dashboard-view__chart-title section-title">
-            {t('dashboard.charts.tpsLast60s')}
-          </h3>
-          <div className="dashboard-view__chart-body">
-            {tpsStats.length === 0 ? (
-              <div className="dashboard-view__chart-empty">{t('dashboard.charts.tpsNoData')}</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={tpsStats}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis
-                    dataKey="timeLabel"
-                    stroke="#94a3b8"
-                    tick={{ fontSize: 10 }}
-                    minTickGap={24}
-                  />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} domain={[0, 22]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#111827',
-                      border: '1px solid rgba(82, 82, 91, 0.7)',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="tps"
-                    stroke="#22c55e"
-                    fill="rgba(34, 197, 94, 0.24)"
-                    isAnimationActive={false}
-                    connectNulls
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </article>
+        <TpsChartCard
+          title={t('dashboard.charts.tpsLast60s')}
+          data={tpsStats}
+          emptyLabel={t('dashboard.charts.tpsNoData')}
+        />
       </section>
     </div>
   );
