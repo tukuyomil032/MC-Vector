@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: vp install --frozen-lockfile
       - name: YAML Check (Prettier)
-        run: pnpm yamllint
+        run: vp exec prettier --check "**/*.{yml,yaml}"
       - name: Vite+ Check (lint & format)
         run: |
           vp check --fix
@@ -43,12 +43,8 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> target
-      - name: Install just (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: brew install just
-      - name: Install just (Windows)
-        if: matrix.platform == 'windows-latest'
-        run: choco install just
+      - name: Install just
+        uses: taiki-e/install-action@just
       - run: vp install --frozen-lockfile
       - name: Build (debug mode)
         run: vp exec tauri build --debug --no-bundle
