@@ -86,7 +86,6 @@ cd MC-Vector
 pnpm install
 
 # Install development tools
-pip install 'yamllint==1.35.1'
 cargo install just  # Optional but recommended
 
 # Run quality checks
@@ -257,7 +256,7 @@ pnpm check
 # Format Rust
 just rustfmt
 
-# Lint YAML
+# Check/format YAML (Prettier-based)
 just yamllint
 ```
 

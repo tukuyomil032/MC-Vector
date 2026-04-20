@@ -30,8 +30,7 @@ Welcome to the MC-Vector development guide! This document will help you set up y
 - **pnpm** v10.33.0 or later
 - **Rust** v1.77.2 or later
 - **Cargo** (included with Rust)
-- **Python** 3.x (for yamllint)
-- **yamllint** v1.35.1
+- **Prettier** (YAML checks via project script, installed with `pnpm install`)
 
 ### Optional Tools
 
@@ -131,10 +130,12 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup default 1.77.2
 ```
 
-#### 3. Install yamllint
+#### 3. YAML check tool (Prettier)
 
 ```bash
-pip install 'yamllint==1.35.1'
+# No separate install needed.
+# Prettier is installed automatically with project dependencies.
+pnpm install
 ```
 
 #### 4. (Optional) Install just
@@ -319,7 +320,7 @@ Built artifacts will be in `src-tauri/target/release/bundle/`.
 | Lint        | `just lint`      | `make lint`     | Run oxlint (via vite+)                  |
 | Format      | `just format`    | `make format`   | Format with oxfmt and biome (via vite+) |
 | Check       | `just check`     | `make check`    | Run lint & format checks                |
-| YAML lint   | `just yamllint`  | `make yamllint` | Lint YAML files                         |
+| YAML lint   | `just yamllint`  | `make yamllint` | Check/format YAML files with Prettier   |
 | Rust format | `just rustfmt`   | `make rustfmt`  | Format Rust code                        |
 | All checks  | `just check-all` | N/A             | Run all quality checks                  |
 
@@ -412,9 +413,9 @@ Command-level Rust tests currently cover critical paths such as security gateway
 
 - **Solution:** Ensure Xcode Command Line Tools are installed: `xcode-select --install`
 
-**Issue: yamllint not found**
+**Issue: `pnpm yamllint` fails**
 
-- **Solution:** Install yamllint: `pip install 'yamllint==1.35.1'`
+- **Solution:** Run `pnpm install` to install project dev dependencies (including Prettier).
 
 **Issue: Nix commands not found**
 

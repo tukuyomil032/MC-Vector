@@ -20,16 +20,8 @@ jobs:
           cache: true
       - name: Install dependencies
         run: vp install --frozen-lockfile
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-      - name: Install yamllint
-        run: pip install 'yamllint==1.35.1'
-      - name: Install just
-        uses: extractions/setup-just@v4
-      - name: YAML Lint
-        run: just yamllint
+      - name: YAML Check (Prettier)
+        run: pnpm yamllint
       - name: Vite+ Check (lint & format)
         run: |
           vp check --fix

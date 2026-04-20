@@ -56,8 +56,7 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 - **Node.js** v18 or later (v22 recommended)
 - **pnpm** v10.26.2 or later
 - **Rust** v1.77.2 or later
-- **Python** 3.x (for yamllint)
-- **yamllint** v1.35.1
+- **Prettier** (YAML checks via project script, installed with `pnpm install`)
 
 Optional:
 
@@ -100,7 +99,7 @@ just tauri-dev  # Start Tauri app with dev server
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
 
-# Install dependencies (Node.js 18+; 22 recommended, pnpm 10.26.2+, Rust, yamllint required)
+# Install dependencies (Node.js 18+; 22 recommended, pnpm 10.26.2+, Rust required)
 pnpm install
 
 # Optional but recommended: Run full setup with portless
@@ -119,7 +118,7 @@ pnpm tauri:dev
 Both `just setup` and `make setup` automate your development environment setup:
 
 1. 📦 Installs all project dependencies via `pnpm install`
-2. ✅ Runs all quality checks (lint, format, yamllint, rustfmt)
+2. ✅ Runs all quality checks (lint, format, YAML check via Prettier, rustfmt)
 3. 🔒 Configures portless CA certificate for HTTPS development (may require system password)
 4. 🌐 Adds `mc-vector.localhost` to your hosts file for local HTTPS access
    - Windows: `C:\Windows\System32\drivers\etc\hosts` (**requires Administrator**)
@@ -206,7 +205,7 @@ just setup
 Install dependencies manually:
 
 ```bash
-# Install Node.js, pnpm, Rust, yamllint
+# Install Node.js, pnpm, Rust (Prettier is installed via pnpm dependencies)
 # (See Development Guide for detailed instructions)
 
 # Install project dependencies and configure environment
@@ -386,7 +385,7 @@ For a detailed architecture overview, see [Architecture Documentation](docs/arch
 | Lint code   | `just lint`      | `make lint`     | Run oxlint (via vite+)                  |
 | Format code | `just format`    | `make format`   | Format with oxfmt and biome (via vite+) |
 | Check all   | `just check`     | `make check`    | Run lint & format checks                |
-| Lint YAML   | `just yamllint`  | `make yamllint` | Lint YAML files                         |
+| Lint YAML   | `just yamllint`  | `make yamllint` | Check/format YAML files with Prettier   |
 | Format Rust | `just rustfmt`   | `make rustfmt`  | Format Rust code                        |
 | All checks  | `just check-all` | N/A             | Run all quality checks                  |
 
