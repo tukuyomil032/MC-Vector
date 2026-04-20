@@ -347,11 +347,27 @@ function formatInstalledTitle(fileName: string): string {
 }
 
 function isLikelyVersionSuffix(value: string): boolean {
-  const normalized = value.replace(/^[-_.\s]+/, '');
-  if (!normalized) {
+  const trimmed = value.trim();
+  if (!trimmed) {
     return true;
   }
-  return /^v?\d/.test(normalized);
+
+  // Direct version suffixes (e.g. "-1.2.3", "v2.0", "1.20.4")
+  if (/^[-_.\s]*v?\d/i.test(trimmed)) {
+    return true;
+  }
+
+  // Classifier + version suffixes (e.g. "-bukkit-7.4.3-beta-01")
+  if (!/^[-_.\s]+/.test(trimmed)) {
+    return false;
+  }
+
+  const withoutLeadingSeparator = trimmed.replace(/^[-_.\s]+/, '');
+  if (!withoutLeadingSeparator) {
+    return true;
+  }
+
+  return /^(?:[a-z][a-z0-9]{1,31}[-_.\s]+){1,3}v?\d[\w.+-]*$/i.test(withoutLeadingSeparator);
 }
 
 function buildInstalledMetadataLookupCandidates(fileName: string): string[] {
@@ -365,6 +381,15 @@ function buildInstalledMetadataLookupCandidates(fileName: string): string[] {
 
   if (versionStrippedBase && versionStrippedBase.toLowerCase() !== baseName.toLowerCase()) {
     candidates.push(versionStrippedBase);
+
+    // "name-classifier-version" -> include "name" as a broader lookup fallback.
+    const classifierParts = versionStrippedBase.split(/[-_.\s]+/).filter(Boolean);
+    if (classifierParts.length >= 2) {
+      const classifierStrippedBase = classifierParts.slice(0, -1).join('-').trim();
+      if (classifierStrippedBase) {
+        candidates.push(classifierStrippedBase);
+      }
+    }
   }
 
   return Array.from(
