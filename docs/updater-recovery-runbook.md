@@ -73,7 +73,10 @@ pnpm tauri build
 Expected updater artifacts:
 
 - macOS: `*.app.tar.gz` and `*.app.tar.gz.sig`
-- Windows: `*.nsis.zip` (or `*.zip`) and matching `.sig`
+- Windows: `*-setup.exe` and `*-setup.exe.sig`
+
+This repository currently uses `bundle.createUpdaterArtifacts: true` in `src-tauri/tauri.conf.json`, so Windows updater artifacts are expected as `setup.exe` + `.sig`.
+If you switch to `bundle.createUpdaterArtifacts: "v1Compatible"`, align the workflow and docs with the legacy zip-style updater artifacts.
 
 ## Phase 5: CI release execution and validation
 
@@ -99,7 +102,14 @@ Check URLs:
 ```bash
 curl -fsSL https://tukuyomil032.github.io/MC-Vector/latest.json \
   | jq -r '.platforms | to_entries[] | .value.url' \
-  | while read -r u; do curl -fsIL "$u" >/dev/null && echo "OK $u"; done
+  | while read -r u; do
+      if curl -fsIL "$u" >/dev/null; then
+        echo "OK $u"
+      else
+        echo "NG $u" >&2
+        exit 1
+      fi
+    done
 ```
 
 ## Legacy-client migration notice (required)
