@@ -341,6 +341,7 @@ jobs:
             WIN_X64_FILE="${WIN_X64_OUT:-MC-Vector_${VERSION}_windows-x86_64.nsis.zip}"
             if [ -f "release-assets/${WIN_X64_FILE}.sig" ] && [ -f "release-assets/${WIN_X64_FILE}" ]; then
               WIN_X64_SIG=$(tr -d '\r\n' < "release-assets/${WIN_X64_FILE}.sig")
+              printf '%s' "$WIN_X64_SIG" | base64 --decode >/dev/null
               jq \
                 --arg win_x64_sig "$WIN_X64_SIG" \
                 --arg base_url "$BASE_URL" \
@@ -362,7 +363,11 @@ jobs:
             (.platforms["darwin-aarch64"].url | type == "string") and
             (.platforms["darwin-aarch64"].signature | type == "string") and
             (.platforms["darwin-x86_64"].url | type == "string") and
-            (.platforms["darwin-x86_64"].signature | type == "string")
+            (.platforms["darwin-x86_64"].signature | type == "string") and
+            (if .platforms["windows-x86_64"] then
+              (.platforms["windows-x86_64"].url | type == "string") and
+              (.platforms["windows-x86_64"].signature | type == "string")
+            else true end)
           ' gh-pages-deploy/latest.json >/dev/null
 
           echo "Generated latest.json:"
