@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import {
   isServerRunning,
   startServer as startServerApi,
@@ -50,7 +51,7 @@ export function useServerProcessActions({
           return 'online';
         }
       } catch (error) {
-        console.error('Failed to verify server state after stop phase failure:', error);
+        logError('Failed to verify server state after stop phase failure', error, { serverId });
       }
       clearExpectedOffline(serverId);
       resetAutoRestartState(serverId);
@@ -75,7 +76,7 @@ export function useServerProcessActions({
     try {
       await startServerProcess(activeServer);
     } catch (error) {
-      console.error('Start failed:', error);
+      logError('Start server failed', error, { serverId });
       setServers((prev) =>
         prev.map((server) => (server.id === serverId ? { ...server, status: 'offline' } : server)),
       );
@@ -107,7 +108,7 @@ export function useServerProcessActions({
     try {
       await stopServerApi(selectedServerId);
     } catch (error) {
-      console.error('Stop failed:', error);
+      logError('Stop server failed', error, { serverId: selectedServerId });
       const fallbackStatus = await resolveStatusAfterStopPhaseFailure(selectedServerId);
       setServers((prev) =>
         prev.map((server) =>
@@ -158,7 +159,7 @@ export function useServerProcessActions({
 
       await startServerProcess(activeServer);
     } catch (error) {
-      console.error('Restart failed:', error);
+      logError('Restart server failed', error, { serverId });
       const fallbackStatus = await resolveStatusAfterStopPhaseFailure(serverId);
       setServers((prev) =>
         prev.map((server) =>

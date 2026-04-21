@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { logError, toErrorMessage } from '../../lib/error-utils';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
 
 export interface UpdatePromptState {
@@ -9,6 +10,7 @@ export interface UpdatePromptState {
 export function useAppUpdater() {
   const [updatePrompt, setUpdatePrompt] = useState<UpdatePromptState | null>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const isUpdatingRef = useRef(false);
   const updateReady = false;
 
@@ -18,9 +20,17 @@ export function useAppUpdater() {
         const result = await checkForUpdates();
         if (result.available) {
           setUpdatePrompt({ version: result.version, releaseNotes: result.body });
+          setUpdateError(null);
+          return;
         }
+        if (result.error) {
+          setUpdateError(result.error);
+          return;
+        }
+        setUpdateError(null);
       } catch (error) {
-        console.error('Update check failed', error);
+        logError('Update check failed', error);
+        setUpdateError(toErrorMessage(error));
       }
     };
     void doUpdateCheck();
@@ -37,8 +47,10 @@ export function useAppUpdater() {
         const percentage = total > 0 ? (downloaded / total) * 100 : 0;
         setUpdateProgress(percentage);
       });
+      setUpdateError(null);
     } catch (error) {
-      console.error('Update error', error);
+      logError('Update installation failed', error);
+      setUpdateError(toErrorMessage(error));
       setUpdateProgress(null);
     } finally {
       isUpdatingRef.current = false;
@@ -50,11 +62,13 @@ export function useAppUpdater() {
   const handleDismissUpdate = useCallback(() => {
     setUpdatePrompt(null);
     setUpdateProgress(null);
+    setUpdateError(null);
   }, []);
 
   return {
     updatePrompt,
     updateProgress,
+    updateError,
     updateReady,
     handleUpdateNow,
     handleInstallUpdate,

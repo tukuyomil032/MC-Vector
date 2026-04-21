@@ -2,6 +2,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { type MouseEvent, useCallback } from 'react';
 import type { Translate } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import {
   addServer as addServerApi,
   deleteServer as deleteServerApi,
@@ -120,7 +121,7 @@ export function useServerContextActions({
         showToast(t('server.toast.deleteFailed'), 'error');
       }
     } catch (error) {
-      console.error('Delete server error:', error);
+      logError('Delete server failed', error, { serverId });
       showToast(t('server.toast.deleteError'), 'error');
     }
   }, [
@@ -181,7 +182,10 @@ export function useServerContextActions({
       setSelectedServerId(duplicatedServer.id);
       showToast(t('server.toast.cloned'), 'success');
     } catch (error) {
-      console.error('Duplicate server error:', error);
+      logError('Duplicate server failed', error, {
+        sourceServerId: target.id,
+        sourcePath: target.path,
+      });
       showToast(t('server.toast.cloneFailed'), 'error');
     }
   }, [contextMenu, servers, setContextMenu, setSelectedServerId, setServers, showToast, t]);
@@ -212,7 +216,10 @@ export function useServerContextActions({
       await loadTemplates();
       showToast(t('server.toast.templateSaved'), 'success');
     } catch (error) {
-      console.error('Save template error:', error);
+      logError('Save server template failed', error, {
+        serverId: target.id,
+        templateName: templateName.trim(),
+      });
       showToast(t('server.toast.templateSaveFailed'), 'error');
     }
   }, [contextMenu, loadTemplates, servers, setContextMenu, showToast, t]);

@@ -16,6 +16,7 @@ import {
 } from '../../assets/icons';
 import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
+import { logError } from '../../lib/error-utils';
 import {
   compressItem,
   createFolder,
@@ -136,7 +137,10 @@ export default function FilesView({ server }: Props) {
             await loadFiles(currentPath);
           }
         } catch (error) {
-          console.error(error);
+          logError('Failed to import dropped files', error, {
+            currentPath,
+            pathCount: payload.paths.length,
+          });
           showToast(t('files.toast.uploadFailed'), 'error');
         }
       })
@@ -160,7 +164,8 @@ export default function FilesView({ server }: Props) {
       const entries = await listFilesWithMetadata(path);
       setFiles(entries);
     } catch (e) {
-      console.error('Failed to list files', e);
+      logError('Failed to list files', e, { path });
+      showToast(t('files.toast.loadFailed'), 'error');
     }
   };
 
@@ -267,7 +272,11 @@ export default function FilesView({ server }: Props) {
         setFileContent(content);
         setIsEditorOpen(true);
       } catch (e) {
-        console.error('Failed to read file', e);
+        logError('Failed to read file', e, {
+          currentPath,
+          fileName,
+        });
+        showToast(t('files.toast.readFailed'), 'error');
       }
     }
   };
@@ -354,7 +363,10 @@ export default function FilesView({ server }: Props) {
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
-      console.error(e);
+      logError('Failed to delete selected files', e, {
+        currentPath,
+        selectedFiles,
+      });
       showToast(t('files.toast.deleteFailed'), 'error');
     }
   };
@@ -376,7 +388,10 @@ export default function FilesView({ server }: Props) {
       setNewFileName('');
       loadFiles(currentPath);
     } catch (e) {
-      console.error(e);
+      logError('Failed to create filesystem entry', e, {
+        target,
+        createMode,
+      });
       showToast(t('files.toast.createFailed'), 'error');
     }
   };
@@ -420,7 +435,12 @@ export default function FilesView({ server }: Props) {
       showToast(t('files.toast.moved'), 'success');
       setModalType(null);
     } catch (e) {
-      console.error(e);
+      logError('Failed to move filesystem entries', e, {
+        currentPath,
+        destination: realDest,
+        selectedFiles,
+        modalType,
+      });
       showToast(t('files.toast.moveFailed'), 'error');
     }
   };
@@ -444,7 +464,10 @@ export default function FilesView({ server }: Props) {
       setRenameFileName('');
       loadFiles(currentPath);
     } catch (e) {
-      console.error(e);
+      logError('Failed to rename filesystem entry', e, {
+        sourcePath: src,
+        targetPath: dest,
+      });
       showToast(t('files.toast.renameFailed'), 'error');
     }
   };
@@ -461,7 +484,11 @@ export default function FilesView({ server }: Props) {
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
-      console.error(e);
+      logError('Failed to compress selected entries', e, {
+        currentPath,
+        targets,
+        destination: dest,
+      });
       showToast(t('files.toast.compressFailed'), 'error');
     }
   };
@@ -480,7 +507,10 @@ export default function FilesView({ server }: Props) {
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
-      console.error(e);
+      logError('Failed to extract selected archives', e, {
+        currentPath,
+        selectedFiles,
+      });
       showToast(t('files.toast.extractFailed'), 'error');
     }
   };
@@ -505,7 +535,11 @@ export default function FilesView({ server }: Props) {
         loadFiles(currentPath);
       }
     } catch (e) {
-      console.error(e);
+      logError('Failed to move entry via drag and drop', e, {
+        currentPath,
+        folderName,
+      });
+      showToast(t('files.toast.moveFailed'), 'error');
     }
   };
 

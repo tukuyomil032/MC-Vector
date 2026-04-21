@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getAppSettings, onConfigChange, saveAppSettings } from '../../lib/config-commands';
+import { logError } from '../../lib/error-utils';
 import { type AppTheme, normalizeAppTheme } from '../../store/settingsStore';
 
 interface UseAppThemeSyncOptions {
@@ -16,7 +17,9 @@ export function useAppThemeSync({ setAppTheme }: UseAppThemeSyncOptions) {
         try {
           await saveAppSettings({ theme: normalizedTheme });
         } catch (persistError) {
-          console.error('Failed to persist normalized app theme', persistError);
+          logError('Failed to persist normalized app theme', persistError, {
+            normalizedTheme,
+          });
         }
       }
     };
@@ -28,7 +31,7 @@ export function useAppThemeSync({ setAppTheme }: UseAppThemeSyncOptions) {
           await applyNormalizedTheme(settings.theme);
         }
       } catch (error) {
-        console.error('Failed to load app settings', error);
+        logError('Failed to load app settings for theme sync', error);
       }
     };
     void loadAppSettings();

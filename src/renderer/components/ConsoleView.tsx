@@ -3,6 +3,7 @@ import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import {
   type AnsiSegment as RustAnsiSegmentDto,
   parseAnsiLines,
@@ -591,7 +592,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       await writeTextFile(targetPath, output);
       showToast(t('console.toast.logsSaved'), 'success');
     } catch (error) {
-      console.error(error);
+      logError('Failed to export console logs', error, {
+        serverId: server.id,
+        serverName: server.name,
+      });
       showToast(t('console.toast.logsSaveFailed'), 'error');
     }
   };

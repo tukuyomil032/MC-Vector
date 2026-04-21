@@ -2,6 +2,7 @@ import { getVersion } from '@tauri-apps/api/app';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check, type Update } from '@tauri-apps/plugin-updater';
 import { getTranslation } from '../i18n';
+import { logError } from './error-utils';
 import { tauriInvoke } from './tauri-api';
 
 let currentUpdate: Update | null = null;
@@ -85,7 +86,7 @@ export async function checkForUpdates(): Promise<{
     }
     return { available: false };
   } catch (e) {
-    console.error('Update check failed:', e);
+    logError('Update check failed', e);
     return { available: false, error: normalizeUpdaterError(e) };
   }
 }
@@ -94,10 +95,8 @@ export async function canUpdateApp(): Promise<UpdateCheckResult> {
   try {
     return await tauriInvoke<UpdateCheckResult>('can_update_app');
   } catch (e) {
-    console.error('Failed to check if app can update:', e);
-    // Return a safe default when the check itself fails, allowing the update
-    // to proceed and potentially fail with a more specific error later
-    return { can_update: true };
+    logError('Failed to check if app can update', e);
+    return { can_update: false, reason: 'check_failed' };
   }
 }
 
@@ -105,7 +104,7 @@ export async function getAppLocation(): Promise<string> {
   try {
     return await tauriInvoke<string>('get_app_location');
   } catch (e) {
-    console.error('Failed to get app location:', e);
+    logError('Failed to get app location', e);
     return 'Unknown';
   }
 }

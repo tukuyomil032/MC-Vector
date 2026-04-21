@@ -8,6 +8,7 @@ interface UpdatePromptState {
 interface AppUpdateModalProps {
   updatePrompt: UpdatePromptState | null;
   updateProgress: number | null;
+  updateError: string | null;
   updateReady: boolean;
   t: Translate;
   onDismiss: () => void;
@@ -47,33 +48,40 @@ function getReleaseNotesText(releaseNotes: unknown): string {
 export default function AppUpdateModal({
   updatePrompt,
   updateProgress,
+  updateError,
   updateReady,
   t,
   onDismiss,
   onUpdateNow,
   onInstall,
 }: AppUpdateModalProps) {
-  if (!updatePrompt) {
+  if (!updatePrompt && !updateError) {
     return null;
   }
 
-  const releaseNotesText = getReleaseNotesText(updatePrompt.releaseNotes);
+  const releaseNotesText = getReleaseNotesText(updatePrompt?.releaseNotes);
 
   return (
     <div className="app-update-overlay">
       <div className="app-update-modal">
         <h3 className="app-update-modal__title">
-          {t('settings.update.available', { version: updatePrompt.version || '?' })}
+          {updatePrompt
+            ? t('settings.update.available', { version: updatePrompt.version || '?' })
+            : t('settings.update.title')}
         </h3>
 
-        {releaseNotesText && (
+        {releaseNotesText && updatePrompt && (
           <div className="mb-4">
             <div className="app-update-modal__notes-label">{t('settings.update.releaseNotes')}</div>
             <pre className="app-update-modal__notes">{releaseNotesText}</pre>
           </div>
         )}
 
-        {updateProgress !== null && !updateReady && (
+        {updateError && (
+          <div className="mb-4 text-sm text-red-400">{t('settings.update.error', { message: updateError })}</div>
+        )}
+
+        {updatePrompt && updateProgress !== null && !updateReady && (
           <div className="mb-4">
             <div className="app-update-modal__progress-label">
               {t('settings.update.downloading', { progress: Math.round(updateProgress) })}
@@ -89,7 +97,7 @@ export default function AppUpdateModal({
           </div>
         )}
 
-        {updateReady && (
+        {updatePrompt && updateReady && (
           <div className="mb-4 text-sm text-green-400">{t('settings.update.downloaded')}</div>
         )}
 
@@ -97,7 +105,7 @@ export default function AppUpdateModal({
           <button className="btn-secondary" onClick={onDismiss}>
             {t('common.cancel')}
           </button>
-          {!updateReady && (
+          {updatePrompt && !updateReady && (
             <button
               className="btn-primary"
               onClick={onUpdateNow}
@@ -106,7 +114,7 @@ export default function AppUpdateModal({
               {t('settings.update.download')}
             </button>
           )}
-          {updateReady && (
+          {updatePrompt && updateReady && (
             <button className="btn-primary" onClick={onInstall}>
               {t('settings.update.restart')}
             </button>

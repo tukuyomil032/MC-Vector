@@ -1,6 +1,7 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../lib/file-commands';
 import { getServers, updateServer as updateServerApi } from '../../lib/server-commands';
 import type { ToastKind } from '../components/ToastProvider';
@@ -78,7 +79,10 @@ export function useProxyNetworkAction({
         const loadedServers = await getServers();
         setServers(loadedServers);
       } catch (error) {
-        console.error('Proxy build error:', error);
+        logError('Proxy build failed', error, {
+          proxySoftware: config.proxySoftware,
+          backendCount: config.backendServerIds.length,
+        });
         showToast(t('proxy.configError'), 'error');
       }
     },

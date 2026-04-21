@@ -22,6 +22,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
 import {
   checkHangarCompatibility,
@@ -637,7 +638,10 @@ export default function PluginBrowser({ server }: Props) {
       const nextInstalledFiles = collectPluginFileNames(entries);
       setInstalledFiles(nextInstalledFiles);
     } catch (error) {
-      console.error(error);
+      logError('Failed to refresh installed plugin list', error, {
+        serverId: server.id,
+        pluginDir: `${server.path}/${folderName}`,
+      });
       setInstalledFiles([]);
     }
   };
@@ -734,7 +738,10 @@ export default function PluginBrowser({ server }: Props) {
               },
             ];
           } catch (error) {
-            console.error(error);
+            logError('Failed to check Hangar compatibility', error, {
+              itemId: item.id,
+              itemTitle: item.title,
+            });
             return [item.id, 'unknown', { supportedVersions: [] }];
           }
         },
@@ -850,7 +857,10 @@ export default function PluginBrowser({ server }: Props) {
 
             return [item.id, status, latestFileName];
           } catch (error) {
-            console.error(error);
+            logError('Failed to resolve plugin update status', error, {
+              itemId: item.id,
+              cacheKey,
+            });
             return [item.id, 'unknown', null];
           }
         },
@@ -1312,7 +1322,7 @@ export default function PluginBrowser({ server }: Props) {
     try {
       identity = await getModrinthProjectIdentity(projectId);
     } catch (error) {
-      console.error(error);
+      logError('Failed to resolve Modrinth dependency identity', error, { projectId });
     }
 
     const resolved: DependencyIdentity = {
@@ -1374,7 +1384,11 @@ export default function PluginBrowser({ server }: Props) {
 
       setResults(items);
     } catch (error) {
-      console.error(error);
+      logError('Plugin search failed', error, {
+        platform,
+        query,
+        page,
+      });
       setHasNextPage(false);
       setTotalPages(null);
       const message = toErrorMessage(error);
@@ -1581,7 +1595,10 @@ export default function PluginBrowser({ server }: Props) {
                   );
                   installedDependencyCount += 1;
                 } catch (error) {
-                  console.error(error);
+                  logError('Failed to install dependency plugin', error, {
+                    dependencyTitle: dependency.identity.title,
+                    dependencyProjectId: dependency.identity.projectId,
+                  });
                   showToast(
                     tSafe(
                       'plugins.browser.dependencyInstallFailed',
@@ -1637,7 +1654,13 @@ export default function PluginBrowser({ server }: Props) {
         await installModrinthProject(resolvedVersion.id, tempFileName, pluginDir);
 
         if (!(await replaceExistingFileIfNeeded(tempFileName))) {
-          await deleteItem(`${pluginDir}/${tempFileName}`).catch(() => {});
+          await deleteItem(`${pluginDir}/${tempFileName}`).catch((cleanupError) => {
+            console.error('Failed to clean up temporary plugin file after replace cancellation', {
+              pluginDir,
+              tempFileName,
+              error: toErrorMessage(cleanupError),
+            });
+          });
           return;
         }
 
@@ -1683,7 +1706,13 @@ export default function PluginBrowser({ server }: Props) {
         await installHangarProject(resolved.downloadUrl, tempFileNameHangar, pluginDir);
 
         if (!(await replaceExistingFileIfNeeded(tempFileNameHangar))) {
-          await deleteItem(`${pluginDir}/${tempFileNameHangar}`).catch(() => {});
+          await deleteItem(`${pluginDir}/${tempFileNameHangar}`).catch((cleanupError) => {
+            console.error('Failed to clean up temporary Hangar plugin file after replace cancellation', {
+              pluginDir,
+              tempFileName: tempFileNameHangar,
+              error: toErrorMessage(cleanupError),
+            });
+          });
           return;
         }
 
@@ -1720,7 +1749,13 @@ export default function PluginBrowser({ server }: Props) {
         await installSpigotProject(resourceId, tempFileNameSpigot, pluginDir, versionId);
 
         if (!(await replaceExistingFileIfNeeded(tempFileNameSpigot))) {
-          await deleteItem(`${pluginDir}/${tempFileNameSpigot}`).catch(() => {});
+          await deleteItem(`${pluginDir}/${tempFileNameSpigot}`).catch((cleanupError) => {
+            console.error('Failed to clean up temporary Spigot plugin file after replace cancellation', {
+              pluginDir,
+              tempFileName: tempFileNameSpigot,
+              error: toErrorMessage(cleanupError),
+            });
+          });
           return;
         }
 
@@ -1743,7 +1778,11 @@ export default function PluginBrowser({ server }: Props) {
             : t('plugins.browser.updateSuccess', { title: item.title });
       showToast(successLabel, 'success');
     } catch (error) {
-      console.error(error);
+      logError('Plugin installation flow failed', error, {
+        itemId: item.id,
+        itemTitle: item.title,
+        mode,
+      });
       showToast(t('plugins.browser.installError'), 'error');
     } finally {
       await refreshInstalled();
@@ -1775,7 +1814,7 @@ export default function PluginBrowser({ server }: Props) {
     try {
       await openUrl(url);
     } catch (error) {
-      console.error(error);
+      logError('Failed to open external plugin URL', error, { url });
       showToast(t('plugins.browser.browserOpenError'), 'error');
     }
   };
@@ -2172,7 +2211,10 @@ export default function PluginBrowser({ server }: Props) {
 
         setDetailReadme(normalized);
       } catch (error) {
-        console.error(error);
+        logError('Failed to load plugin README', error, {
+          itemId: item.id,
+          cacheKey,
+        });
         if (detailRequestIdRef.current !== requestId) {
           return;
         }

@@ -3,6 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import { listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
 
@@ -165,7 +166,7 @@ export default function BackupTargetSelectorWindow() {
       });
       setExpanded(nextExpanded);
     } catch (error) {
-      console.error(error);
+      logError('Failed to load backup selector tree', error, { basePath });
       setTree([]);
     } finally {
       setLoading(false);
@@ -232,13 +233,13 @@ export default function BackupTargetSelectorWindow() {
     try {
       await currentWindow.close();
     } catch (error) {
-      console.error('Failed to close backup selector window directly', error);
+      logError('Failed to close backup selector window directly', error, { serverPath });
       try {
         await emit('backup-selector:close-request', {
           serverPath,
         });
       } catch (emitError) {
-        console.error('Failed to emit backup selector close request', emitError);
+        logError('Failed to emit backup selector close request', emitError, { serverPath });
       }
     }
   }, [currentWindow, serverPath]);

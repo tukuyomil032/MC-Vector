@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../../i18n';
+import { logError } from '../../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../../lib/file-commands';
 import { type MinecraftServer } from '../../shared/server declaration';
 import { useToast } from '../ToastProvider';
@@ -68,7 +69,10 @@ export default function PropertiesView({ server }: Props) {
         }));
         setHasChanges(false);
       } catch (e) {
-        console.error('Failed to load properties:', e);
+        logError('Failed to load server properties', e, {
+          propertyFilePath: propFilePath,
+        });
+        showToast(t('properties.loadFailed'), 'error');
       } finally {
         setLoading(false);
       }
@@ -97,7 +101,9 @@ export default function PropertiesView({ server }: Props) {
       setHasChanges(false);
       showToast(t('properties.saveSuccess'), 'success');
     } catch (e) {
-      console.error(e);
+      logError('Failed to save server properties', e, {
+        propertyFilePath: propFilePath,
+      });
       showToast(t('properties.saveFailed'), 'error');
     }
   };
@@ -127,7 +133,9 @@ export default function PropertiesView({ server }: Props) {
       setHasChanges(false);
       showToast(t('properties.advancedSaveSuccess'), 'success');
     } catch (e) {
-      console.error(e);
+      logError('Failed to save advanced server properties', e, {
+        propertyFilePath: propFilePath,
+      });
       showToast(t('properties.saveFailed'), 'error');
     }
   };

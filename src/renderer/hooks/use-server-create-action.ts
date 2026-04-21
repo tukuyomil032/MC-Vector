@@ -2,6 +2,7 @@ import { mkdir } from '@tauri-apps/plugin-fs';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import { addServer as addServerApi, downloadServerJar } from '../../lib/server-commands';
 import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
@@ -125,7 +126,11 @@ export function useServerCreateAction({
             }
           }
         } catch (error) {
-          console.error('Failed to resolve download URL:', error);
+          logError('Failed to resolve server jar download URL', error, {
+            software,
+            version,
+            serverId: newServer.id,
+          });
         }
 
         if (downloadUrl) {
@@ -137,7 +142,11 @@ export function useServerCreateAction({
           try {
             await downloadServerJar(downloadUrl, `${serverPath}/server.jar`, newServer.id);
           } catch (error) {
-            console.error('Download failed:', error);
+            logError('Server jar download failed', error, {
+              serverId: newServer.id,
+              serverPath,
+              downloadUrl,
+            });
             setDownloadStatus(null);
             showToast(t('server.toast.jarDownloadFailed'), 'error');
           }
@@ -145,7 +154,9 @@ export function useServerCreateAction({
           showToast(t('server.toast.jarUrlFailed'), 'info');
         }
       } catch (error) {
-        console.error('Server creation error:', error);
+        logError('Server creation failed', error, {
+          serverDataType: typeof serverData,
+        });
         showToast(t('server.toast.createFailed'), 'error');
         setDownloadStatus(null);
       }

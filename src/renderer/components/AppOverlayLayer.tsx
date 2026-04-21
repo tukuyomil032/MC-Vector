@@ -25,6 +25,7 @@ interface AppOverlayLayerProps {
   onDeleteServer: () => Promise<void>;
   updatePrompt: UpdatePromptState | null;
   updateProgress: number | null;
+  updateError: string | null;
   updateReady: boolean;
   onDismissUpdate: () => void;
   onUpdateNow: () => void;
@@ -44,6 +45,7 @@ export default function AppOverlayLayer({
   onDeleteServer,
   updatePrompt,
   updateProgress,
+  updateError,
   updateReady,
   onDismissUpdate,
   onUpdateNow,
@@ -79,6 +81,7 @@ export default function AppOverlayLayer({
       <AppUpdateModal
         updatePrompt={updatePrompt}
         updateProgress={updateProgress}
+        updateError={updateError}
         updateReady={updateReady}
         t={t}
         onDismiss={onDismissUpdate}

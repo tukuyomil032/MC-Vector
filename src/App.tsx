@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
+import { logError } from '@/lib/error-utils';
 // Tauri API ラッパー
 import {
   getServerTemplates,
@@ -63,6 +64,7 @@ function App() {
   const {
     updatePrompt,
     updateProgress,
+    updateError,
     updateReady,
     handleUpdateNow,
     handleInstallUpdate,
@@ -93,8 +95,9 @@ function App() {
       const templates = await getServerTemplates();
       setServerTemplates(templates);
     } catch (error) {
-      console.error('Failed to load server templates:', error);
+      logError('Failed to load server templates', error);
       setServerTemplates([]);
+      showToast(t('server.toast.loadError'), 'error');
     }
   };
 
@@ -149,7 +152,9 @@ function App() {
       setServers((prev) => prev.map((s) => (s.id === updatedServer.id ? updatedServer : s)));
       showToast(t('server.toast.settingsSaved'), 'success');
     } catch (error) {
-      console.error('Update server failed:', error);
+      logError('Failed to update server settings', error, {
+        serverId: updatedServer.id,
+      });
       showToast(t('server.toast.saveFailed'), 'error');
     }
   };
@@ -259,6 +264,7 @@ function App() {
         onDeleteServer={handleDeleteServer}
         updatePrompt={updatePrompt}
         updateProgress={updateProgress}
+        updateError={updateError}
         updateReady={updateReady}
         onDismissUpdate={handleDismissUpdate}
         onUpdateNow={handleUpdateNow}

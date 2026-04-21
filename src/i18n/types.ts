@@ -272,6 +272,8 @@ export interface TranslationDictionary {
     toast: {
       uploadSuccess: string;
       uploadFailed: string;
+      loadFailed: string;
+      readFailed: string;
       saved: string;
       saveFailed: string;
       deleted: string;
@@ -343,12 +345,19 @@ export interface TranslationDictionary {
     toast: {
       targetUpdated: string;
       selectorOpenError: string;
+      targetInitFailed: string;
+      loadFailed: string;
+      worldLoadFailed: string;
       selectAtLeastOne: string;
       noDiffSkipped: string;
       diffCreated: string;
       created: string;
+      createFailed: string;
       restored: string;
+      restoreFailed: string;
+      deleteFailed: string;
       tagSaved: string;
+      tagSaveFailed: string;
     };
     world: {
       title: string;
@@ -812,6 +821,7 @@ export interface TranslationDictionary {
     title: string;
     openAdvanced: string;
     saveChanges: string;
+    loadFailed: string;
     saveSuccess: string;
     saveFailed: string;
     advancedSaveSuccess: string;

@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { remove } from '@tauri-apps/plugin-fs';
 import { arch, platform } from '@tauri-apps/plugin-os';
 import { load } from '@tauri-apps/plugin-store';
+import { logError } from './error-utils';
 import { tauriInvoke, tauriListen, type UnlistenFn } from './tauri-api';
 
 const STORE_NAME = 'config.json';
@@ -101,7 +102,7 @@ export async function downloadJava(majorVersion: number): Promise<boolean> {
     await saveJavaVersions(versions);
     return true;
   } catch (e) {
-    console.error('downloadJava failed:', e);
+    logError('downloadJava failed', e, { majorVersion });
     return false;
   }
 }

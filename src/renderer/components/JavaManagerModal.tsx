@@ -1,6 +1,7 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import {
   deleteJava,
   downloadJava,
@@ -62,7 +63,8 @@ export default function JavaManagerModal({ onClose }: Props) {
       } else {
         showToast(t('javaManager.toast.downloadFailed'), 'error');
       }
-    } catch {
+    } catch (error) {
+      logError('Java download failed', error, { version: ver });
       showToast(t('javaManager.toast.downloadFailed'), 'error');
     } finally {
       setDownloading(null);

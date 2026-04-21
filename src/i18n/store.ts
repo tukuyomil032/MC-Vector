@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand';
 import { getAppSettings, saveAppSettings } from '../lib/config-commands';
+import { logError } from '../lib/error-utils';
 import { DEFAULT_LOCALE, isValidLocaleCode } from './types';
 import type { LocaleCode } from './types';
 
@@ -39,7 +40,7 @@ export const useI18nStore = create<I18nStoreState>((set, get) => ({
     try {
       await saveAppSettings({ locale });
     } catch (error) {
-      console.error('[i18n] Failed to save locale to config:', error);
+      logError('[i18n] Failed to save locale to config', error, { locale });
     }
   },
 
@@ -60,7 +61,7 @@ export const useI18nStore = create<I18nStoreState>((set, get) => ({
         set({ initialized: true });
       }
     } catch (error) {
-      console.error('[i18n] Failed to load locale from config:', error);
+      logError('[i18n] Failed to load locale from config', error);
       set({ initialized: true });
     }
   },

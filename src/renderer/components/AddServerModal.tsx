@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { logError } from '../../lib/error-utils';
 import { getServerRoot } from '../../lib/config-commands';
 import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
@@ -29,7 +30,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
         const path = await getServerRoot();
         setRootPath(path);
       } catch (e) {
-        console.error(e);
+        logError('Failed to resolve server root for AddServerModal', e);
       }
     };
     fetchRoot();

@@ -15,6 +15,7 @@ import {
   readJsonFile,
   writeJsonFile,
 } from '../../lib/file-commands';
+import { logError } from '../../lib/error-utils';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../shared/server declaration';
 import { useToast } from './ToastProvider';
@@ -211,7 +212,9 @@ export default function BackupsView({ server }: Props) {
         }
         await selectorWindow.close();
       } catch (error) {
-        console.error(error);
+        logError('Failed to close backup selector window', error, {
+          serverPath: server.path,
+        });
       }
     }).then((dispose) => {
       if (cancelled) {
@@ -250,7 +253,8 @@ export default function BackupsView({ server }: Props) {
       const list = await listBackupsWithMetadata(server.path);
       setBackups(list);
     } catch (e) {
-      console.error(e);
+      logError('Failed to load backups', e, { serverPath: server.path });
+      showToast(t('backups.toast.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -279,8 +283,11 @@ export default function BackupsView({ server }: Props) {
         .sort((left, right) => left.localeCompare(right));
       setSelectedPaths(new Set(initial));
     } catch (error) {
-      console.error(error);
+      logError('Failed to initialize backup target selection', error, {
+        serverPath: server.path,
+      });
       setSelectedPaths(new Set());
+      showToast(t('backups.toast.targetInitFailed'), 'error');
     }
   };
 
@@ -301,7 +308,10 @@ export default function BackupsView({ server }: Props) {
               worldNames.push(candidate.name);
             }
           } catch (error) {
-            console.error(error);
+            logError('Failed to inspect world directory candidate', error, {
+              serverPath: server.path,
+              candidate: candidate.name,
+            });
           }
         }),
       );
@@ -309,8 +319,9 @@ export default function BackupsView({ server }: Props) {
       const unique = Array.from(new Set(worldNames)).sort((a, b) => a.localeCompare(b));
       setWorlds(unique);
     } catch (error) {
-      console.error(error);
+      logError('Failed to load world candidates', error, { serverPath: server.path });
       setWorlds([]);
+      showToast(t('backups.toast.worldLoadFailed'), 'error');
     }
   };
 
@@ -331,7 +342,9 @@ export default function BackupsView({ server }: Props) {
         try {
           await existing.setFocus();
         } catch (focusError) {
-          console.error(focusError);
+          logError('Failed to focus backup selector window', focusError, {
+            serverPath: server.path,
+          });
         }
         return;
       }
@@ -360,11 +373,13 @@ export default function BackupsView({ server }: Props) {
       });
 
       selectorWindow.once('tauri://error', (error) => {
-        console.error(error);
+        logError('Backup selector window emitted tauri error event', error, {
+          serverPath: server.path,
+        });
         showToast(t('backups.toast.selectorOpenError'), 'error');
       });
     } catch (error) {
-      console.error(error);
+      logError('Failed to open backup selector window', error, { serverPath: server.path });
       showToast(t('backups.toast.selectorOpenError'), 'error');
     }
   };
@@ -439,7 +454,10 @@ export default function BackupsView({ server }: Props) {
           };
         }
       } catch (error) {
-        console.error(error);
+        logError('Failed to capture backup snapshot entry', error, {
+          serverPath: server.path,
+          relativePath: normalizedPath,
+        });
       }
     }
 
@@ -532,6 +550,13 @@ export default function BackupsView({ server }: Props) {
 
       setShowCreateModal(false);
       await loadBackups();
+    } catch (error) {
+      logError('Failed to create backup', error, {
+        serverPath: server.path,
+        backupMode,
+        selectedCount: selectedPaths.size,
+      });
+      showToast(t('backups.toast.createFailed'), 'error');
     } finally {
       setProcessing(false);
     }
@@ -542,6 +567,12 @@ export default function BackupsView({ server }: Props) {
     try {
       await restoreBackup(server.path, backupName);
       showToast(t('backups.toast.restored'), 'success');
+    } catch (error) {
+      logError('Failed to restore backup', error, {
+        serverPath: server.path,
+        backupName,
+      });
+      showToast(t('backups.toast.restoreFailed'), 'error');
     } finally {
       setProcessing(false);
     }
@@ -564,7 +595,11 @@ export default function BackupsView({ server }: Props) {
       setBackupCatalog(nextCatalog);
       await loadBackups();
     } catch (e) {
-      console.error(e);
+      logError('Failed to delete backup', e, {
+        serverPath: server.path,
+        backupName,
+      });
+      showToast(t('backups.toast.deleteFailed'), 'error');
     }
   };
 
@@ -579,26 +614,33 @@ export default function BackupsView({ server }: Props) {
     if (!tagEditorTarget) {
       return;
     }
-
-    const tags = parseTagsInput(tagInput);
-    const current = getBackupMeta(tagEditorTarget);
-    const nextCatalog: BackupCatalog = {
-      ...backupCatalog,
-      entries: {
-        ...backupCatalog.entries,
-        [tagEditorTarget]: {
-          ...current,
-          tags,
-          note: noteInput.trim(),
-          createdAt: current.createdAt || new Date().toISOString(),
+    try {
+      const tags = parseTagsInput(tagInput);
+      const current = getBackupMeta(tagEditorTarget);
+      const nextCatalog: BackupCatalog = {
+        ...backupCatalog,
+        entries: {
+          ...backupCatalog.entries,
+          [tagEditorTarget]: {
+            ...current,
+            tags,
+            note: noteInput.trim(),
+            createdAt: current.createdAt || new Date().toISOString(),
+          },
         },
-      },
-    };
+      };
 
-    await persistBackupCatalog(nextCatalog);
-    setBackupCatalog(nextCatalog);
-    setTagEditorTarget(null);
-    showToast(t('backups.toast.tagSaved'), 'success');
+      await persistBackupCatalog(nextCatalog);
+      setBackupCatalog(nextCatalog);
+      setTagEditorTarget(null);
+      showToast(t('backups.toast.tagSaved'), 'success');
+    } catch (error) {
+      logError('Failed to save backup tags', error, {
+        serverPath: server.path,
+        backupName: tagEditorTarget,
+      });
+      showToast(t('backups.toast.tagSaveFailed'), 'error');
+    }
   };
 
   const handleDeleteWorld = async (worldName: string) => {
@@ -624,7 +666,10 @@ export default function BackupsView({ server }: Props) {
       showToast(t('backups.world.deleted', { name: worldName }), 'success');
       await loadWorlds();
     } catch (error) {
-      console.error(error);
+      logError('Failed to delete world data', error, {
+        serverPath: server.path,
+        worldName,
+      });
       showToast(t('backups.world.deleteFailed'), 'error');
     } finally {
       setProcessing(false);
