@@ -5,11 +5,7 @@ export function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
-export function logError(
-  context: string,
-  error: unknown,
-  extra?: Record<string, unknown>,
-): void {
+export function logError(context: string, error: unknown, extra?: Record<string, unknown>): void {
   if (extra) {
     console.error(context, {
       ...extra,

@@ -78,7 +78,9 @@ export default function AppUpdateModal({
         )}
 
         {updateError && (
-          <div className="mb-4 text-sm text-red-400">{t('settings.update.error', { message: updateError })}</div>
+          <div className="mb-4 text-sm text-red-400">
+            {t('settings.update.error', { message: updateError })}
+          </div>
         )}
 
         {updatePrompt && updateProgress !== null && !updateReady && (

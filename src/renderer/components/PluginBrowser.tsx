@@ -1707,11 +1707,14 @@ export default function PluginBrowser({ server }: Props) {
 
         if (!(await replaceExistingFileIfNeeded(tempFileNameHangar))) {
           await deleteItem(`${pluginDir}/${tempFileNameHangar}`).catch((cleanupError) => {
-            console.error('Failed to clean up temporary Hangar plugin file after replace cancellation', {
-              pluginDir,
-              tempFileName: tempFileNameHangar,
-              error: toErrorMessage(cleanupError),
-            });
+            console.error(
+              'Failed to clean up temporary Hangar plugin file after replace cancellation',
+              {
+                pluginDir,
+                tempFileName: tempFileNameHangar,
+                error: toErrorMessage(cleanupError),
+              },
+            );
           });
           return;
         }
@@ -1750,11 +1753,14 @@ export default function PluginBrowser({ server }: Props) {
 
         if (!(await replaceExistingFileIfNeeded(tempFileNameSpigot))) {
           await deleteItem(`${pluginDir}/${tempFileNameSpigot}`).catch((cleanupError) => {
-            console.error('Failed to clean up temporary Spigot plugin file after replace cancellation', {
-              pluginDir,
-              tempFileName: tempFileNameSpigot,
-              error: toErrorMessage(cleanupError),
-            });
+            console.error(
+              'Failed to clean up temporary Spigot plugin file after replace cancellation',
+              {
+                pluginDir,
+                tempFileName: tempFileNameSpigot,
+                error: toErrorMessage(cleanupError),
+              },
+            );
           });
           return;
         }
