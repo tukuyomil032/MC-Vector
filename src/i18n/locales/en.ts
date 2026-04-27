@@ -173,6 +173,7 @@ export const en: TranslationDictionary = {
   console: {
     actions: {
       find: 'Find',
+      jumpLatest: 'Jump to latest',
       saveLogs: 'Save Logs',
       send: 'Send',
     },
@@ -191,8 +192,15 @@ export const en: TranslationDictionary = {
     search: {
       label: 'Find',
       placeholder: 'Search logs...',
+      regex: 'Regex',
+      invalidRegex: 'Invalid regular expression',
       prev: 'Prev',
       next: 'Next',
+    },
+    pinned: {
+      title: 'Pinned logs',
+      pin: 'Pin this line',
+      unpin: 'Unpin',
     },
     status: {
       address: 'ADDRESS',
@@ -204,6 +212,7 @@ export const en: TranslationDictionary = {
       noLogsToSave: 'No logs to save',
       logsSaved: 'Logs saved',
       logsSaveFailed: 'Failed to save logs',
+      pinLimitReached: 'You can pin up to {{max}} lines',
     },
   },
 

@@ -107,9 +107,15 @@
   }
 
   .console-view__search-open-btn,
+  .console-view__search-mode-btn,
   .console-view__search-nav-btn,
   .console-view__search-close-btn {
     @apply shrink-0;
+  }
+
+  .console-view__search-error {
+    @apply text-xs font-semibold;
+    color: #f87171;
   }
 
   .console-view__search-nav-btn:disabled {
@@ -126,20 +132,96 @@
   }
 
   .console-view__log-viewport {
-    @apply relative min-h-0 flex-1 overflow-hidden p-0;
+    @apply relative flex min-h-0 flex-1 flex-col overflow-hidden p-0;
     background: var(--mv-console-log-bg);
     border-color: var(--mv-border-soft);
     box-shadow: var(--mv-console-log-shadow);
   }
 
+  .console-view__pinned-area {
+    @apply shrink-0 border-b px-3 py-2;
+    border-color: rgba(82, 82, 91, 0.58);
+    background: rgba(17, 24, 39, 0.55);
+  }
+
+  .console-view__pinned-title {
+    @apply mb-1 text-[0.64rem] font-semibold uppercase tracking-[0.12em];
+    color: #fbbf24;
+  }
+
+  .console-view__pinned-list {
+    @apply flex max-h-28 flex-col gap-1 overflow-y-auto pr-1;
+  }
+
+  .console-view__pinned-item {
+    @apply flex items-start gap-2 rounded border-l-2 px-2 py-1;
+    border-color: rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.4);
+  }
+
+  .console-view__pinned-item--warn {
+    border-color: rgba(245, 158, 11, 0.6);
+  }
+
+  .console-view__pinned-item--error,
+  .console-view__pinned-item--fatal {
+    border-color: rgba(239, 68, 68, 0.65);
+  }
+
+  .console-view__pinned-text {
+    @apply min-w-0 flex-1 text-xs leading-relaxed break-words;
+    color: #e2e8f0;
+  }
+
+  .console-view__pinned-remove-btn {
+    @apply shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-semibold transition-colors;
+    border-color: rgba(148, 163, 184, 0.42);
+    background: rgba(30, 41, 59, 0.6);
+    color: #cbd5e1;
+  }
+
+  .console-view__pinned-remove-btn:hover {
+    background: rgba(51, 65, 85, 0.7);
+    color: #f8fafc;
+  }
+
   .console-view__log-pane {
-    @apply h-full overflow-y-auto px-4 py-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap;
+    @apply min-h-0 flex-1 overflow-y-auto px-4 py-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap;
     color: var(--mv-console-log-text);
   }
 
   .console-view__log-line {
-    @apply mb-0.5 rounded-r-sm border-l-2 pl-2.5;
+    @apply mb-0.5 flex items-start gap-2 rounded-r-sm border-l-2 pl-2.5;
     border-left-color: transparent;
+  }
+
+  .console-view__log-line-content {
+    @apply min-w-0 flex-1;
+  }
+
+  .console-view__pin-btn {
+    @apply shrink-0 rounded px-1.5 py-0.5 text-xs opacity-0 transition-all;
+    color: #94a3b8;
+    background: transparent;
+  }
+
+  .console-view__log-line:hover .console-view__pin-btn,
+  .console-view__pin-btn.is-pinned {
+    @apply opacity-100;
+  }
+
+  .console-view__pin-btn.is-pinned {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.12);
+  }
+
+  .console-view__pin-btn:hover {
+    color: #f8fafc;
+    background: rgba(71, 85, 105, 0.35);
+  }
+
+  .console-view__jump-latest {
+    @apply absolute bottom-3 right-3 z-10;
   }
 
   .console-view__log-line--info {

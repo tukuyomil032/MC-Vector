@@ -1,6 +1,6 @@
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
@@ -28,6 +28,7 @@ type AnsiSegment = {
 type LogLevelFilter = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 
 const LOG_FILTER_OPTIONS: LogLevelFilter[] = ['ALL', 'INFO', 'WARN', 'ERROR', 'FATAL'];
+const MAX_PINNED_LOGS = 5;
 
 const ANSI_COLOR_MAP: Record<string, string> = {
   '30': '#000000',
@@ -126,19 +127,19 @@ const stripAnsiCodes = (text: string): string =>
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const countMatches = (text: string, query: string): number => {
-  if (!query) {
+const countMatches = (text: string, regex: RegExp | null): number => {
+  if (!regex) {
     return 0;
   }
 
-  const regex = new RegExp(escapeRegExp(query), 'gi');
+  const matcher = new RegExp(regex.source, regex.flags);
   let count = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = matcher.exec(text)) !== null) {
     count += 1;
     if (match[0].length === 0) {
-      regex.lastIndex += 1;
+      matcher.lastIndex += 1;
     }
   }
 
@@ -243,6 +244,12 @@ type ParsedLogEntry = {
   segments: AnsiSegment[];
 };
 
+type PinnedLogEntry = {
+  key: string;
+  text: string;
+  level: Exclude<LogLevelFilter, 'ALL'>;
+};
+
 const EMPTY_LOGS: string[] = [];
 
 const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): number => {
@@ -282,9 +289,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const [autoScroll, setAutoScroll] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRegexSearchMode, setIsRegexSearchMode] = useState(false);
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const [logFilter, setLogFilter] = useState<LogLevelFilter>('ALL');
   const [rustParsedSegments, setRustParsedSegments] = useState<RustAnsiSegmentDto[][] | null>(null);
+  const [pinnedLogs, setPinnedLogs] = useState<PinnedLogEntry[]>([]);
   const prevLogsRef = useRef<string[]>([]);
   const prevParsedRef = useRef<RustAnsiSegmentDto[][] | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -367,16 +376,34 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   }, [parsedLogs, logFilter]);
 
   const normalizedSearchQuery = searchQuery.trim();
-  const lowerSearchQuery = normalizedSearchQuery.toLowerCase();
+  const activeSearchRegex = useMemo(() => {
+    if (!normalizedSearchQuery) {
+      return null;
+    }
+    try {
+      const pattern = isRegexSearchMode
+        ? normalizedSearchQuery
+        : escapeRegExp(normalizedSearchQuery);
+      return new RegExp(`(${pattern})`, 'gi');
+    } catch {
+      return null;
+    }
+  }, [normalizedSearchQuery, isRegexSearchMode]);
+  const isRegexInvalid =
+    isRegexSearchMode && normalizedSearchQuery.length > 0 && activeSearchRegex === null;
   const totalMatches = useMemo(() => {
     if (!normalizedSearchQuery) {
       return 0;
     }
 
     return visibleLogs.reduce((total, entry) => {
-      return total + countMatches(entry.plainLine, normalizedSearchQuery);
+      return total + countMatches(entry.plainLine, activeSearchRegex);
     }, 0);
-  }, [visibleLogs, normalizedSearchQuery]);
+  }, [visibleLogs, normalizedSearchQuery, activeSearchRegex]);
+  const pinnedLogKeySet = useMemo(
+    () => new Set(pinnedLogs.map((entry) => entry.key)),
+    [pinnedLogs],
+  );
 
   const openSearch = () => {
     setIsSearchOpen(true);
@@ -387,6 +414,21 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     setIsSearchOpen(false);
     setSearchQuery('');
     setActiveMatchIndex(0);
+  };
+
+  const togglePinnedLog = (entry: ParsedLogEntry) => {
+    const pinKey = String(entry.originalIndex);
+    setPinnedLogs((prev) => {
+      const exists = prev.some((item) => item.key === pinKey);
+      if (exists) {
+        return prev.filter((item) => item.key !== pinKey);
+      }
+      if (prev.length >= MAX_PINNED_LOGS) {
+        showToast(t('console.toast.pinLimitReached', { max: MAX_PINNED_LOGS }), 'info');
+        return prev;
+      }
+      return [...prev, { key: pinKey, text: entry.plainLine, level: entry.level }];
+    });
   };
 
   const jumpToMatch = (direction: 1 | -1) => {
@@ -673,6 +715,17 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
             <button
               type="button"
+              className={`console-view__search-mode-btn control-chip ${isRegexSearchMode ? 'is-active' : ''}`}
+              onClick={() => {
+                setIsRegexSearchMode((prev) => !prev);
+                setActiveMatchIndex(0);
+              }}
+            >
+              {t('console.search.regex')}
+            </button>
+
+            <button
+              type="button"
               className="console-view__search-nav-btn control-chip"
               onClick={() => jumpToMatch(-1)}
               disabled={totalMatches === 0}
@@ -696,6 +749,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             >
               {t('common.close')}
             </button>
+
+            {isRegexInvalid && (
+              <span className="console-view__search-error">{t('console.search.invalidRegex')}</span>
+            )}
           </>
         ) : (
           <>
@@ -714,6 +771,31 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       </section>
 
       <section className="console-view__log-viewport surface-card">
+        {pinnedLogs.length > 0 && (
+          <div className="console-view__pinned-area">
+            <div className="console-view__pinned-title">{t('console.pinned.title')}</div>
+            <div className="console-view__pinned-list">
+              {pinnedLogs.map((entry) => (
+                <div
+                  key={entry.key}
+                  className={`console-view__pinned-item console-view__pinned-item--${entry.level.toLowerCase()}`}
+                >
+                  <span className="console-view__pinned-text">{entry.text}</span>
+                  <button
+                    type="button"
+                    className="console-view__pinned-remove-btn"
+                    onClick={() =>
+                      setPinnedLogs((prev) => prev.filter((item) => item.key !== entry.key))
+                    }
+                  >
+                    {t('console.pinned.unpin')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div
           ref={logContainerRef}
           className="console-view__log-pane"
@@ -730,63 +812,101 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             return visibleLogs.map((entry) => (
               <div
                 key={entry.originalIndex}
-                className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()} break-words`}
+                className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()}`}
               >
-                {(() => {
-                  const severityStyle = getSeverityStyle(entry.level);
-                  return entry.segments.map((seg, i) => {
-                    const style = { ...seg.style } as AnsiStyle;
-                    if (severityStyle) {
-                      if (!style.color) {
-                        style.color = severityStyle.color;
+                <div className="console-view__log-line-content break-words">
+                  {(() => {
+                    const severityStyle = getSeverityStyle(entry.level);
+                    return entry.segments.map((seg, i) => {
+                      const style = { ...seg.style } as AnsiStyle;
+                      if (severityStyle) {
+                        if (!style.color) {
+                          style.color = severityStyle.color;
+                        }
+                        if (!style.fontWeight) style.fontWeight = severityStyle.fontWeight;
                       }
-                      if (!style.fontWeight) style.fontWeight = severityStyle.fontWeight;
-                    }
 
-                    if (!normalizedSearchQuery) {
+                      if (!normalizedSearchQuery || !activeSearchRegex) {
+                        return (
+                          <span key={i} style={style}>
+                            {seg.text}
+                          </span>
+                        );
+                      }
+
+                      const regexForSegment = new RegExp(
+                        activeSearchRegex.source,
+                        activeSearchRegex.flags,
+                      );
+                      const renderedParts: ReactNode[] = [];
+                      let cursor = 0;
+                      let match: RegExpExecArray | null;
+                      let sequence = 0;
+
+                      while ((match = regexForSegment.exec(seg.text)) !== null) {
+                        const matchedText = match[0];
+                        if (matchedText.length === 0) {
+                          regexForSegment.lastIndex += 1;
+                          continue;
+                        }
+
+                        const start = match.index;
+                        const end = start + matchedText.length;
+                        if (start > cursor) {
+                          renderedParts.push(
+                            <span key={`${i}-${sequence}-text`}>
+                              {seg.text.slice(cursor, start)}
+                            </span>,
+                          );
+                          sequence += 1;
+                        }
+
+                        renderedMatchIndex += 1;
+                        const currentMatchIndex = renderedMatchIndex;
+                        const refKey = `m-${currentMatchIndex}`;
+                        const isActive = currentMatchIndex === activeMatchIndex;
+                        renderedParts.push(
+                          <mark
+                            key={`${i}-${sequence}-match`}
+                            ref={(element) => {
+                              matchRefs.current[refKey] = element;
+                            }}
+                            className={`console-view__search-hit ${isActive ? 'is-active' : ''}`}
+                          >
+                            {matchedText}
+                          </mark>,
+                        );
+                        sequence += 1;
+                        cursor = end;
+                      }
+
+                      if (cursor < seg.text.length) {
+                        renderedParts.push(
+                          <span key={`${i}-${sequence}-tail`}>{seg.text.slice(cursor)}</span>,
+                        );
+                      }
+
                       return (
                         <span key={i} style={style}>
-                          {seg.text}
+                          {renderedParts}
                         </span>
                       );
-                    }
+                    });
+                  })()}
+                </div>
 
-                    const parts = seg.text.split(
-                      new RegExp(`(${escapeRegExp(normalizedSearchQuery)})`, 'gi'),
-                    );
-
-                    return (
-                      <span key={i} style={style}>
-                        {parts.map((part, partIndex) => {
-                          if (!part) {
-                            return null;
-                          }
-
-                          if (part.toLowerCase() === lowerSearchQuery) {
-                            renderedMatchIndex += 1;
-                            const currentMatchIndex = renderedMatchIndex;
-                            const refKey = `m-${currentMatchIndex}`;
-                            const isActive = currentMatchIndex === activeMatchIndex;
-
-                            return (
-                              <mark
-                                key={`${i}-${partIndex}-match`}
-                                ref={(element) => {
-                                  matchRefs.current[refKey] = element;
-                                }}
-                                className={`console-view__search-hit ${isActive ? 'is-active' : ''}`}
-                              >
-                                {part}
-                              </mark>
-                            );
-                          }
-
-                          return <span key={`${i}-${partIndex}`}>{part}</span>;
-                        })}
-                      </span>
-                    );
-                  });
-                })()}
+                <button
+                  type="button"
+                  className={`console-view__pin-btn ${pinnedLogKeySet.has(String(entry.originalIndex)) ? 'is-pinned' : ''}`}
+                  onClick={() => togglePinnedLog(entry)}
+                  title={
+                    pinnedLogKeySet.has(String(entry.originalIndex))
+                      ? t('console.pinned.unpin')
+                      : t('console.pinned.pin')
+                  }
+                >
+                  📌
+                </button>
               </div>
             ));
           })()}
@@ -801,6 +921,19 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             </div>
           )}
         </div>
+
+        {!autoScroll && visibleLogs.length > 0 && (
+          <button
+            type="button"
+            className="console-view__jump-latest control-chip"
+            onClick={() => {
+              setAutoScroll(true);
+              logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }}
+          >
+            {t('console.actions.jumpLatest')}
+          </button>
+        )}
       </section>
 
       <section className="console-view__command-strip surface-card">

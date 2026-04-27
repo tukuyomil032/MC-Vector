@@ -172,6 +172,7 @@ export const ja: TranslationDictionary = {
   console: {
     actions: {
       find: '検索',
+      jumpLatest: '最新へ',
       saveLogs: 'ログ保存',
       send: '送信',
     },
@@ -190,8 +191,15 @@ export const ja: TranslationDictionary = {
     search: {
       label: '検索',
       placeholder: 'ログを検索...',
+      regex: '正規表現',
+      invalidRegex: '正規表現が不正です',
       prev: '前へ',
       next: '次へ',
+    },
+    pinned: {
+      title: 'ピン留めログ',
+      pin: 'この行をピン留め',
+      unpin: '解除',
     },
     status: {
       address: 'アドレス',
@@ -203,6 +211,7 @@ export const ja: TranslationDictionary = {
       noLogsToSave: '保存対象のログがありません',
       logsSaved: 'ログを保存しました',
       logsSaveFailed: 'ログの保存に失敗しました',
+      pinLimitReached: 'ピン留めできるのは最大{{max}}件です',
     },
   },
 
