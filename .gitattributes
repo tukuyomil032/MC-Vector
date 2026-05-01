@@ -14,6 +14,9 @@ Makefile linguist-language=Makefile linguist-detectable=true
 # js files
 *.js linguist-language=JavaScript linguist-detectable=true
 
+# python files
+*.py linguist-language=Python linguist-detectable=true
+
 # Exclude documentation from language statistics
 docs/** linguist-documentation=true
 
