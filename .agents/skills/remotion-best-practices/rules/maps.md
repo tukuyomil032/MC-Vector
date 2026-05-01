@@ -51,9 +51,9 @@ REMOTION_MAPBOX_TOKEN==pk.your-mapbox-access-token
 Here is a basic example of a map in Remotion.
 
 ```tsx
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AbsoluteFill, useDelayRender, useVideoConfig } from "remotion";
-import mapboxgl, { Map } from "mapbox-gl";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AbsoluteFill, useDelayRender, useVideoConfig } from 'remotion';
+import mapboxgl, { Map } from 'mapbox-gl';
 
 export const lineCoordinates = [
   [6.56158447265625, 46.059891147620725],
@@ -72,7 +72,7 @@ export const MyComposition = () => {
   const { delayRender, continueRender } = useDelayRender();
 
   const { width, height } = useVideoConfig();
-  const [handle] = useState(() => delayRender("Loading map..."));
+  const [handle] = useState(() => delayRender('Loading map...'));
   const [map, setMap] = useState<Map | null>(null);
 
   useEffect(() => {
@@ -82,72 +82,72 @@ export const MyComposition = () => {
       center: [6.5615, 46.0598],
       pitch: 65,
       bearing: 0,
-      style: "⁠mapbox://styles/mapbox/standard",
+      style: '⁠mapbox://styles/mapbox/standard',
       interactive: false,
       fadeDuration: 0,
     });
 
-    _map.on("style.load", () => {
+    _map.on('style.load', () => {
       // Hide all features from the Mapbox Standard style
       const hideFeatures = [
-        "showRoadsAndTransit",
-        "showRoads",
-        "showTransit",
-        "showPedestrianRoads",
-        "showRoadLabels",
-        "showTransitLabels",
-        "showPlaceLabels",
-        "showPointOfInterestLabels",
-        "showPointsOfInterest",
-        "showAdminBoundaries",
-        "showLandmarkIcons",
-        "showLandmarkIconLabels",
-        "show3dObjects",
-        "show3dBuildings",
-        "show3dTrees",
-        "show3dLandmarks",
-        "show3dFacades",
+        'showRoadsAndTransit',
+        'showRoads',
+        'showTransit',
+        'showPedestrianRoads',
+        'showRoadLabels',
+        'showTransitLabels',
+        'showPlaceLabels',
+        'showPointOfInterestLabels',
+        'showPointsOfInterest',
+        'showAdminBoundaries',
+        'showLandmarkIcons',
+        'showLandmarkIconLabels',
+        'show3dObjects',
+        'show3dBuildings',
+        'show3dTrees',
+        'show3dLandmarks',
+        'show3dFacades',
       ];
       for (const feature of hideFeatures) {
-        _map.setConfigProperty("basemap", feature, false);
+        _map.setConfigProperty('basemap', feature, false);
       }
 
-      _map.setConfigProperty("basemap", "colorTrunks", "rgba(0, 0, 0, 0)");
+      _map.setConfigProperty('basemap', 'colorTrunks', 'rgba(0, 0, 0, 0)');
 
-      _map.addSource("trace", {
-        type: "geojson",
+      _map.addSource('trace', {
+        type: 'geojson',
         data: {
-          type: "Feature",
+          type: 'Feature',
           properties: {},
           geometry: {
-            type: "LineString",
+            type: 'LineString',
             coordinates: lineCoordinates,
           },
         },
       });
       _map.addLayer({
-        type: "line",
-        source: "trace",
-        id: "line",
+        type: 'line',
+        source: 'trace',
+        id: 'line',
         paint: {
-          "line-color": "black",
-          "line-width": 5,
+          'line-color': 'black',
+          'line-width': 5,
         },
         layout: {
-          "line-cap": "round",
-          "line-join": "round",
+          'line-cap': 'round',
+          'line-join': 'round',
         },
       });
     });
 
-    _map.on("load", () => {
+    _map.on('load', () => {
       continueRender(handle);
       setMap(_map);
     });
   }, [handle, lineCoordinates]);
 
   const style: React.CSSProperties = useMemo(
-    () => ({ width, height, position: "absolute" }),
+    () => ({ width, height, position: 'absolute' }),
     [width, height],
   );
 
@@ -177,31 +177,31 @@ Unless I request otherwise, remove all features from the Mapbox Standard style.
 ```tsx
 // Hide all features from the Mapbox Standard style
 const hideFeatures = [
-  "showRoadsAndTransit",
-  "showRoads",
-  "showTransit",
-  "showPedestrianRoads",
-  "showRoadLabels",
-  "showTransitLabels",
-  "showPlaceLabels",
-  "showPointOfInterestLabels",
-  "showPointsOfInterest",
-  "showAdminBoundaries",
-  "showLandmarkIcons",
-  "showLandmarkIconLabels",
-  "show3dObjects",
-  "show3dBuildings",
-  "show3dTrees",
-  "show3dLandmarks",
-  "show3dFacades",
+  'showRoadsAndTransit',
+  'showRoads',
+  'showTransit',
+  'showPedestrianRoads',
+  'showRoadLabels',
+  'showTransitLabels',
+  'showPlaceLabels',
+  'showPointOfInterestLabels',
+  'showPointsOfInterest',
+  'showAdminBoundaries',
+  'showLandmarkIcons',
+  'showLandmarkIconLabels',
+  'show3dObjects',
+  'show3dBuildings',
+  'show3dTrees',
+  'show3dLandmarks',
+  'show3dFacades',
 ];
 for (const feature of hideFeatures) {
-  _map.setConfigProperty("basemap", feature, false);
+  _map.setConfigProperty('basemap', feature, false);
 }
 
-_map.setConfigProperty("basemap", "colorMotorways", "transparent");
-_map.setConfigProperty("basemap", "colorRoads", "transparent");
-_map.setConfigProperty("basemap", "colorTrunks", "transparent");
+_map.setConfigProperty('basemap', 'colorMotorways', 'transparent');
+_map.setConfigProperty('basemap', 'colorRoads', 'transparent');
+_map.setConfigProperty('basemap', 'colorTrunks', 'transparent');
 ```
 
 ## Animating the camera
@@ -211,10 +211,10 @@ You can animate the camera along the line by adding a `useEffect` hook that upda
 Unless I ask for it, do not jump between camera angles.
 
 ```tsx
-import * as turf from "@turf/turf";
-import { interpolate } from "remotion";
-import { Easing } from "remotion";
-import { useCurrentFrame, useVideoConfig, useDelayRender } from "remotion";
+import * as turf from '@turf/turf';
+import { interpolate } from 'remotion';
+import { Easing } from 'remotion';
+import { useCurrentFrame, useVideoConfig, useDelayRender } from 'remotion';
 
 const animationDuration = 20;
 const cameraAltitude = 4000;
@@ -229,27 +229,20 @@ useEffect(() => {
   if (!map) {
     return;
   }
-  const handle = delayRender("Moving point...");
+  const handle = delayRender('Moving point...');
 
   const routeDistance = turf.length(turf.lineString(lineCoordinates));
 
-  const progress = interpolate(
-    frame / fps,
-    [0.00001, animationDuration],
-    [0, 1],
-    {
-      easing: Easing.inOut(Easing.sin),
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
-  );
+  const progress = interpolate(frame / fps, [0.00001, animationDuration], [0, 1], {
+    easing: Easing.inOut(Easing.sin),
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
 
   const camera = map.getFreeCameraOptions();
 
-  const alongRoute = turf.along(
-    turf.lineString(lineCoordinates),
-    routeDistance * progress,
-  ).geometry.coordinates;
+  const alongRoute = turf.along(turf.lineString(lineCoordinates), routeDistance * progress).geometry
+    .coordinates;
 
   camera.lookAtPoint({
     lng: alongRoute[0],
@@ -257,7 +250,7 @@ useEffect(() => {
   });
 
   map.setFreeCameraOptions(camera);
-  map.once("idle", () => continueRender(handle));
+  map.once('idle', () => continueRender(handle));
 }, [lineCoordinates, fps, frame, handle, map]);
 ```
 
@@ -283,11 +276,11 @@ const { durationInFrames } = useVideoConfig();
 useEffect(() => {
   if (!map) return;
 
-  const animationHandle = delayRender("Animating line...");
+  const animationHandle = delayRender('Animating line...');
 
   const progress = interpolate(frame, [0, durationInFrames - 1], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
     easing: Easing.inOut(Easing.cubic),
   });
 
@@ -298,20 +291,20 @@ useEffect(() => {
   const currentLat = start[1] + (end[1] - start[1]) * progress;
 
   const lineData: GeoJSON.Feature<GeoJSON.LineString> = {
-    type: "Feature",
+    type: 'Feature',
     properties: {},
     geometry: {
-      type: "LineString",
+      type: 'LineString',
       coordinates: [start, [currentLng, currentLat]],
     },
   };
 
-  const source = map.getSource("trace") as mapboxgl.GeoJSONSource;
+  const source = map.getSource('trace') as mapboxgl.GeoJSONSource;
   if (source) {
     source.setData(lineData);
   }
 
-  map.once("idle", () => continueRender(animationHandle));
+  map.once('idle', () => continueRender(animationHandle));
 }, [frame, map, durationInFrames]);
 ```
 
@@ -320,7 +313,7 @@ useEffect(() => {
 To animate a line that follows the geodesic (great circle) path between two points, use turf's `lineSliceAlong`. This is useful for showing flight paths or the actual shortest distance on Earth.
 
 ```tsx
-import * as turf from "@turf/turf";
+import * as turf from '@turf/turf';
 
 const routeLine = turf.lineString(lineCoordinates);
 const routeDistance = turf.length(routeLine);
@@ -328,7 +321,7 @@ const routeDistance = turf.length(routeLine);
 const currentDistance = Math.max(0.001, routeDistance * progress);
 const slicedLine = turf.lineSliceAlong(routeLine, 0, currentDistance);
 
-const source = map.getSource("route") as mapboxgl.GeoJSONSource;
+const source = map.getSource('route') as mapboxgl.GeoJSONSource;
 if (source) {
   source.setData(slicedLine);
 }
@@ -339,47 +332,47 @@ if (source) {
 Add labels, and markers where appropriate.
 
 ```tsx
-_map.addSource("markers", {
-  type: "geojson",
+_map.addSource('markers', {
+  type: 'geojson',
   data: {
-    type: "FeatureCollection",
+    type: 'FeatureCollection',
     features: [
       {
-        type: "Feature",
-        properties: { name: "Point 1" },
-        geometry: { type: "Point", coordinates: [-118.2437, 34.0522] },
+        type: 'Feature',
+        properties: { name: 'Point 1' },
+        geometry: { type: 'Point', coordinates: [-118.2437, 34.0522] },
       },
     ],
   },
 });
 
 _map.addLayer({
-  id: "city-markers",
-  type: "circle",
-  source: "markers",
+  id: 'city-markers',
+  type: 'circle',
+  source: 'markers',
   paint: {
-    "circle-radius": 40,
-    "circle-color": "#FF4444",
-    "circle-stroke-width": 4,
-    "circle-stroke-color": "#FFFFFF",
+    'circle-radius': 40,
+    'circle-color': '#FF4444',
+    'circle-stroke-width': 4,
+    'circle-stroke-color': '#FFFFFF',
   },
 });
 
 _map.addLayer({
-  id: "labels",
-  type: "symbol",
-  source: "markers",
+  id: 'labels',
+  type: 'symbol',
+  source: 'markers',
   layout: {
-    "text-field": ["get", "name"],
-    "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
-    "text-size": 50,
-    "text-offset": [0, 0.5],
-    "text-anchor": "top",
+    'text-field': ['get', 'name'],
+    'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+    'text-size': 50,
+    'text-offset': [0, 0.5],
+    'text-anchor': 'top',
   },
   paint: {
-    "text-color": "#FFFFFF",
-    "text-halo-color": "#000000",
-    "text-halo-width": 2,
+    'text-color': '#FFFFFF',
+    'text-halo-color': '#000000',
+    'text-halo-width': 2,
   },
 });
 ```
@@ -398,9 +391,9 @@ IMPORTANT: Keep the `text-offset` small enough so it is close to the marker. Con
 To enable 3D buildings, use the following code:
 
 ```tsx
-_map.setConfigProperty("basemap", "show3dObjects", true);
-_map.setConfigProperty("basemap", "show3dLandmarks", true);
-_map.setConfigProperty("basemap", "show3dBuildings", true);
+_map.setConfigProperty('basemap', 'show3dObjects', true);
+_map.setConfigProperty('basemap', 'show3dLandmarks', true);
+_map.setConfigProperty('basemap', 'show3dBuildings', true);
 ```
 
 ## Rendering

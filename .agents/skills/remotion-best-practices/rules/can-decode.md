@@ -20,7 +20,7 @@ npx remotion add mediabunny
 This function can be copy-pasted into any project.
 
 ```tsx
-import { Input, ALL_FORMATS, UrlSource } from "mediabunny";
+import { Input, ALL_FORMATS, UrlSource } from 'mediabunny';
 
 export const canDecode = async (src: string) => {
   const input = new Input({
@@ -53,13 +53,13 @@ export const canDecode = async (src: string) => {
 ## Usage
 
 ```tsx
-const src = "https://remotion.media/video.mp4";
+const src = 'https://remotion.media/video.mp4';
 const isDecodable = await canDecode(src);
 
 if (isDecodable) {
-  console.log("Video can be decoded");
+  console.log('Video can be decoded');
 } else {
-  console.log("Video cannot be decoded by this browser");
+  console.log('Video cannot be decoded by this browser');
 }
 ```
 
@@ -68,7 +68,7 @@ if (isDecodable) {
 For file uploads or drag-and-drop, use `BlobSource`:
 
 ```tsx
-import { Input, ALL_FORMATS, BlobSource } from "mediabunny";
+import { Input, ALL_FORMATS, BlobSource } from 'mediabunny';
 
 export const canDecodeBlob = async (blob: Blob) => {
   const input = new Input({

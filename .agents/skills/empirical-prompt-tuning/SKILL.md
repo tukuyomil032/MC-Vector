@@ -14,6 +14,7 @@ The author of a prompt cannot judge its quality. The clearer the writer thinks s
 - When hardening high-importance instructions (frequently used skills, automation-core prompts)
 
 When not to use:
+
 - One-off throwaway prompts (evaluation cost does not pay off)
 - When the goal is not to improve success rate but merely to reflect the writer's subjective preferences
 
@@ -51,15 +52,15 @@ When not to use:
 
 ## Evaluation axes
 
-| Axis | How to capture | Meaning |
-|---|---|---|
-| Success/failure | Did the executor produce the intended deliverable (binary) | Minimum bar |
-| Accuracy | What % of requirements the deliverable satisfies | Degree of partial success |
-| Step count | Tool-call / decision-step count used by the executor | Indicator of instruction waste |
-| Duration | Executor's duration_ms | Proxy indicator of cognitive load |
-| Retry count | How many times the same decision was redone | Signal of instruction ambiguity |
-| Unclear points (self-report) | Executor enumerates as bullets | Qualitative improvement material |
-| Discretionary fill-ins (self-report) | Decisions not fixed by the instruction | Surfaces implicit specification |
+| Axis                                 | How to capture                                             | Meaning                           |
+| ------------------------------------ | ---------------------------------------------------------- | --------------------------------- |
+| Success/failure                      | Did the executor produce the intended deliverable (binary) | Minimum bar                       |
+| Accuracy                             | What % of requirements the deliverable satisfies           | Degree of partial success         |
+| Step count                           | Tool-call / decision-step count used by the executor       | Indicator of instruction waste    |
+| Duration                             | Executor's duration_ms                                     | Proxy indicator of cognitive load |
+| Retry count                          | How many times the same decision was redone                | Signal of instruction ambiguity   |
+| Unclear points (self-report)         | Executor enumerates as bullets                             | Qualitative improvement material  |
+| Discretionary fill-ins (self-report) | Decisions not fixed by the instruction                     | Surfaces implicit specification   |
 
 **Weighting**: Qualitative (unclear points / discretionary fill-ins) is primary, quantitative (time / step count) is auxiliary. Chasing only time reduction makes the prompt too thin.
 
@@ -129,6 +130,7 @@ The caller extracts the self-report portion from the report and fills the evalua
 ## Environment constraints
 
 In environments where dispatching a new subagent is not possible (already running as a subagent, Task tool is disabled, etc.), **do not apply** this skill.
+
 - Alternative 1: ask the parent session's user to start a separate Claude Code session and delegate the evaluation there
 - Alternative 2: give up on evaluation and explicitly report to the user "empirical evaluation skipped: dispatch unavailable"
 - **NG**: substitute with a self-reread (bias enters, so you must not trust the evaluation result)
@@ -160,6 +162,7 @@ Entry format:
 ```
 
 Rules:
+
 - Before generating a fix in Workflow step 5, scan the ledger. If the current `General Fix Rule` matches an existing entry, update `Seen in` and investigate why the existing fix did not prevent recurrence (wording ambiguity? position too late in the prompt? missing example?) before creating a new entry.
 - A pattern that recurs 3+ times despite targeted fixes is a structural signal — escalate to the "Divergence" criterion above rather than continuing to patch.
 - The ledger is per-target-prompt, not global across all empirical-prompt-tuning runs.
@@ -174,6 +177,7 @@ When iterations approach a plateau but convergence criteria (2 consecutive clear
 Dispatch fresh subagents on the same scenarios in parallel (one message with multiple Agent tool calls). Keep the variant with higher accuracy; on tie, prefer fewer unclear points; on further tie, prefer lower `tool_uses`.
 
 Pairwise-comparison caveats:
+
 - Do **not** ask a subagent to rate "A vs B" directly. LLM position bias and self-preference bias make such judgments noisy at small n.
 - Compare on the objective axes only (accuracy, step count, unclear-points count, phase-weakness counts). Those are reproducible; "which prompt felt better" is not.
 - If qualitative comparison is genuinely needed, counterbalance: run both orderings (A,B) and (B,A) and accept a verdict only if both orderings agree.
@@ -219,16 +223,16 @@ Record and present to the user with the following form at each iteration:
 
 ## Red flags (beware of rationalization)
 
-| Rationalization that surfaces | Reality |
-|---|---|
-| "Rereading it myself has the same effect" | You cannot view text you just wrote "objectively". Always dispatch a new subagent. |
-| "One scenario is enough" | One scenario overfits. Minimum 2, ideally 3. |
-| "Zero unclear points once, so we're done" | Could be coincidence. Finalize with 2 consecutive rounds. |
-| "Let's knock out multiple unclear points at once" | You lose track of what worked. One theme per iteration. |
+| Rationalization that surfaces                             | Reality                                                                                                                                                        |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Rereading it myself has the same effect"                 | You cannot view text you just wrote "objectively". Always dispatch a new subagent.                                                                             |
+| "One scenario is enough"                                  | One scenario overfits. Minimum 2, ideally 3.                                                                                                                   |
+| "Zero unclear points once, so we're done"                 | Could be coincidence. Finalize with 2 consecutive rounds.                                                                                                      |
+| "Let's knock out multiple unclear points at once"         | You lose track of what worked. One theme per iteration.                                                                                                        |
 | "Split each related micro-fix strictly into its own iter" | Trap in the opposite direction. "One theme" is a semantic unit. 2-3 related micro-fixes can be bundled into 1 iter. Splitting too far explodes the iter count. |
-| "Metrics are good, so ignore qualitative feedback" | Time reduction can also be a sign of being too thin. Keep qualitative primary. |
-| "Rewriting from scratch is faster" | Correct if unclear points do not decrease across 3+ iterations. Before that stage, it is escape. |
-| "Let's reuse the same subagent" | It has learned the previous improvements. Always dispatch a new one. |
+| "Metrics are good, so ignore qualitative feedback"        | Time reduction can also be a sign of being too thin. Keep qualitative primary.                                                                                 |
+| "Rewriting from scratch is faster"                        | Correct if unclear points do not decrease across 3+ iterations. Before that stage, it is escape.                                                               |
+| "Let's reuse the same subagent"                           | It has learned the previous improvements. Always dispatch a new one.                                                                                           |
 
 ## Common failures
 
