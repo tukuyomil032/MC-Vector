@@ -144,7 +144,6 @@ fn audit_server_action(action: &str, server_id: &str) {
     );
 }
 
-/// サーバーを起動し、stdout/stderr をイベントストリーミングする
 #[tauri::command]
 fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
     let args: Vec<String> = raw.split_whitespace().map(|s| s.to_string()).collect();
@@ -164,6 +163,8 @@ fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
     Ok(args)
 }
 
+/// サーバーを起動し、stdout/stderr をイベントストリーミングする
+#[tauri::command]
 pub async fn start_server(
     app: AppHandle,
     state: State<'_, ServerManager>,
