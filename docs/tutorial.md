@@ -2,7 +2,7 @@
 
 Complete guide to using MC-Vector for Minecraft server management.
 
-**Guide target version:** `2.0.52`
+**Guide target version:** `2.0.54`
 
 ## Table of Contents
 
