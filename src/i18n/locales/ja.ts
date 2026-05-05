@@ -274,6 +274,9 @@ export const ja: TranslationDictionary = {
       compressFailed: '圧縮に失敗しました',
       extracted: '解凍しました',
       extractFailed: '解凍に失敗しました',
+      binaryNoDiff: 'バイナリファイルは差分表示できません',
+      diffSelectOriginal: '比較元ファイルをクリックしてください',
+      diffSelectModified: '比較先ファイルをクリックしてください',
     },
     toolbar: {
       goUp: '上の階層へ',
@@ -283,6 +286,8 @@ export const ja: TranslationDictionary = {
       compress: '圧縮',
       extract: '解凍',
       delete: '削除',
+      diffOpen: '差分表示',
+      diffClose: '差分を閉じる',
     },
   },
 

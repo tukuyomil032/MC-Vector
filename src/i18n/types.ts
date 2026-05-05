@@ -289,6 +289,9 @@ export interface TranslationDictionary {
       compressFailed: string;
       extracted: string;
       extractFailed: string;
+      binaryNoDiff: string;
+      diffSelectOriginal: string;
+      diffSelectModified: string;
     };
     toolbar: {
       goUp: string;
@@ -298,6 +301,8 @@ export interface TranslationDictionary {
       compress: string;
       extract: string;
       delete: string;
+      diffOpen: string;
+      diffClose: string;
     };
   };
 

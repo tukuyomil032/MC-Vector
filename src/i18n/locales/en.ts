@@ -275,6 +275,9 @@ export const en: TranslationDictionary = {
       compressFailed: 'Failed to compress',
       extracted: 'Extracted',
       extractFailed: 'Failed to extract',
+      binaryNoDiff: 'Binary files cannot be diffed',
+      diffSelectOriginal: 'Click the original file to compare',
+      diffSelectModified: 'Click the modified file to compare',
     },
     toolbar: {
       goUp: 'Go Up',
@@ -284,6 +287,8 @@ export const en: TranslationDictionary = {
       compress: 'Compress',
       extract: 'Extract',
       delete: 'Delete',
+      diffOpen: 'Diff View',
+      diffClose: 'Close Diff',
     },
   },
 
