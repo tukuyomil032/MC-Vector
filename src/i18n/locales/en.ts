@@ -521,6 +521,8 @@ export const en: TranslationDictionary = {
         '{{count}} missing dependencies found.\n{{preview}}{{suffix}}\nInstall them first?',
       dependencyVersionNotFound: 'No compatible version found for dependency {{title}}',
       dependencyInstallFailed: 'Failed to install dependency {{title}}',
+      dependencyInstallIncomplete:
+        'Not all required dependencies were installed. Main plugin installation aborted.',
       dependencyInstallSuccess: 'Installed {{count}} dependencies',
       dependencyCheckOnly:
         'Only ran dependency check. Please install dependencies first if needed.',

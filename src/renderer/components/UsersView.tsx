@@ -396,6 +396,7 @@ function UserListCard({
   placeholderIp: string;
 }) {
   const [input, setInput] = useState('');
+  const { t } = useTranslation();
 
   const handleAddClick = () => {
     if (!input) return;

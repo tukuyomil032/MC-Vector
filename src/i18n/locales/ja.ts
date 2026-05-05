@@ -520,6 +520,8 @@ export const ja: TranslationDictionary = {
         '不足依存プラグインが {{count}} 件あります。\n{{preview}}{{suffix}}\n先に一括インストールしますか？',
       dependencyVersionNotFound: '依存プラグイン {{title}} の対応バージョンが見つかりません',
       dependencyInstallFailed: '依存プラグイン {{title}} の導入に失敗しました',
+      dependencyInstallIncomplete:
+        '必要な依存プラグインがすべてインストールされませんでした。メインプラグインの導入を中止しました。',
       dependencyInstallSuccess: '依存プラグインを {{count}} 件インストールしました',
       dependencyCheckOnly:
         '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',

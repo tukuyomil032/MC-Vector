@@ -181,6 +181,7 @@ export interface TranslationDictionary {
       currentTps: string;
       tpsAutoSampled: string;
       tpsLogBased: string;
+      uptime: string;
       statusValues: {
         online: string;
         offline: string;
@@ -212,6 +213,7 @@ export interface TranslationDictionary {
   console: {
     actions: {
       find: string;
+      jumpLatest: string;
       saveLogs: string;
       send: string;
     };
@@ -230,8 +232,15 @@ export interface TranslationDictionary {
     search: {
       label: string;
       placeholder: string;
+      regex: string;
+      invalidRegex: string;
       prev: string;
       next: string;
+    };
+    pinned: {
+      title: string;
+      pin: string;
+      unpin: string;
     };
     status: {
       address: string;
@@ -243,6 +252,7 @@ export interface TranslationDictionary {
       noLogsToSave: string;
       logsSaved: string;
       logsSaveFailed: string;
+      pinLimitReached: string;
     };
   };
 
@@ -430,6 +440,7 @@ export interface TranslationDictionary {
     entriesCount: string;
     empty: string;
     lists: {
+      online: string;
       whitelist: string;
       operators: string;
       bannedPlayers: string;
@@ -438,7 +449,10 @@ export interface TranslationDictionary {
     actions: {
       add: string;
       remove: string;
+      kick: string;
+      ban: string;
     };
+    offlineNotice: string;
     placeholder: {
       playerName: string;
       ipAddress: string;
@@ -531,6 +545,7 @@ export interface TranslationDictionary {
       dependencyMissing: string;
       dependencyVersionNotFound: string;
       dependencyInstallFailed: string;
+      dependencyInstallIncomplete: string;
       dependencyInstallSuccess: string;
       dependencyCheckOnly: string;
       incompatibilityWarning: string;
@@ -572,6 +587,8 @@ export interface TranslationDictionary {
       installedVersion: string;
       installedGameVersions: string;
       uninstall: string;
+      uninstallTitle: string;
+      confirmUninstall: string;
       reinstall: string;
       uninstallSuccess: string;
       uninstallError: string;
@@ -774,6 +791,16 @@ export interface TranslationDictionary {
       saturday: string;
     };
     saveSettings: string;
+    jvmArgs: {
+      label: string;
+      placeholder: string;
+      help: string;
+      clear: string;
+      presets: {
+        aikar: string;
+        zgc: string;
+      };
+    };
     ngrok: {
       title: string;
       onlineBadge: string;
@@ -885,6 +912,9 @@ export interface TranslationDictionary {
   /** Server properties view translations */
   properties: {
     title: string;
+    search: {
+      placeholder: string;
+    };
     openAdvanced: string;
     saveChanges: string;
     loadFailed: string;

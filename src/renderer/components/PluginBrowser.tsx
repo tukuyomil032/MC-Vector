@@ -1973,15 +1973,20 @@ export default function PluginBrowser({ server }: Props) {
       resolvedInstalledFile = resolvedMatch.fileName;
       sourceResolution = resolvedMatch.resolution;
 
-      nextFile = togglePluginFileName(resolvedInstalledFile);
+      const resolvedNextFile = togglePluginFileName(resolvedInstalledFile);
+      if (!resolvedNextFile) {
+        throw new Error(`Failed to resolve next file for toggle: ${resolvedInstalledFile}`);
+      }
+      nextFile = resolvedNextFile;
       const sourcePath = `${pluginDir}/${resolvedInstalledFile}`;
-      const targetPath = `${pluginDir}/${nextFile}`;
+      const targetPath = `${pluginDir}/${resolvedNextFile}`;
 
       stage = 'resolve-target';
 
       const targetMatches = files.filter(
         (candidate) =>
-          candidate !== resolvedInstalledFile && candidate.toLowerCase() === nextFile.toLowerCase(),
+          candidate !== resolvedInstalledFile &&
+          candidate.toLowerCase() === resolvedNextFile.toLowerCase(),
       );
       if (targetMatches.length > 1) {
         throw new Error(
