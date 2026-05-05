@@ -46,7 +46,9 @@ fn sanitize_log_input(input: &str) -> String {
 fn authorize(role: Role, action: &str) -> Result<(), String> {
     let normalized_action = action.trim();
     if normalized_action.is_empty() {
-        return Err("security_gateway authorize_action requires non-empty payload.action".to_string());
+        return Err(
+            "security_gateway authorize_action requires non-empty payload.action".to_string(),
+        );
     }
 
     let role_name = role.as_str();
@@ -107,7 +109,9 @@ fn check_rate_limit_with_state(
 ) -> Result<(), String> {
     let normalized_user_id = user_id.trim();
     if normalized_user_id.is_empty() {
-        return Err("security_gateway rate_limit_check requires non-empty payload.userId".to_string());
+        return Err(
+            "security_gateway rate_limit_check requires non-empty payload.userId".to_string(),
+        );
     }
 
     state.retain(|_, last_call| now.duration_since(*last_call) < RATE_LIMIT_WINDOW);
@@ -131,9 +135,7 @@ fn check_rate_limit_with_state(
 
 fn validate_command_arg(arg: &str) -> Result<(), String> {
     if arg.contains(';') || arg.contains('&') {
-        return Err(
-            "Forbidden: payload.args contains disallowed characters (;, &)".to_string(),
-        );
+        return Err("Forbidden: payload.args contains disallowed characters (;, &)".to_string());
     }
     Ok(())
 }
@@ -141,7 +143,9 @@ fn validate_command_arg(arg: &str) -> Result<(), String> {
 fn validate_safe_command(program: &str, args: &[String]) -> Result<(String, Vec<String>), String> {
     let normalized_program = program.trim();
     if normalized_program.is_empty() {
-        return Err("security_gateway validate_safe_command requires non-empty payload.program".to_string());
+        return Err(
+            "security_gateway validate_safe_command requires non-empty payload.program".to_string(),
+        );
     }
 
     let file_name = Path::new(normalized_program)
@@ -165,7 +169,10 @@ fn resolve_safe_path(base: &str, input: &str) -> Result<String, String> {
     let normalized_base = base.trim();
     let normalized_input = input.trim();
     if normalized_base.is_empty() || normalized_input.is_empty() {
-        return Err("security_gateway resolve_safe_path requires non-empty payload.base and payload.input".to_string());
+        return Err(
+            "security_gateway resolve_safe_path requires non-empty payload.base and payload.input"
+                .to_string(),
+        );
     }
 
     let base_path = PathBuf::from(normalized_base);
@@ -199,7 +206,10 @@ fn build_audit_entry(user: &str, action: &str) -> Result<Value, String> {
     let normalized_user = user.trim();
     let normalized_action = action.trim();
     if normalized_user.is_empty() || normalized_action.is_empty() {
-        return Err("security_gateway audit_log requires non-empty payload.user and payload.action".to_string());
+        return Err(
+            "security_gateway audit_log requires non-empty payload.user and payload.action"
+                .to_string(),
+        );
     }
 
     let timestamp = SystemTime::now()
@@ -228,20 +238,23 @@ fn execute_security_action(action: &str, payload: &Value) -> Result<Value, Strin
             let input = payload
                 .get("input")
                 .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway sanitize_log requires string payload.input".to_string())?;
+                .ok_or_else(|| {
+                    "security_gateway sanitize_log requires string payload.input".to_string()
+                })?;
             Ok(json!({
                 "sanitized": sanitize_log_input(input),
             }))
         }
         "authorize_action" => {
-            let role_raw = payload
-                .get("role")
-                .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway authorize_action requires string payload.role".to_string())?;
+            let role_raw = payload.get("role").and_then(Value::as_str).ok_or_else(|| {
+                "security_gateway authorize_action requires string payload.role".to_string()
+            })?;
             let action = payload
                 .get("action")
                 .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway authorize_action requires string payload.action".to_string())?;
+                .ok_or_else(|| {
+                    "security_gateway authorize_action requires string payload.action".to_string()
+                })?;
             authorize(Role::parse(role_raw)?, action)?;
             Ok(json!({
                 "allowed": true,
@@ -251,7 +264,9 @@ fn execute_security_action(action: &str, payload: &Value) -> Result<Value, Strin
             let user_id = payload
                 .get("userId")
                 .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway rate_limit_check requires string payload.userId".to_string())?;
+                .ok_or_else(|| {
+                    "security_gateway rate_limit_check requires string payload.userId".to_string()
+                })?;
             check_rate_limit(user_id)?;
             Ok(json!({
                 "allowed": true,
@@ -261,7 +276,10 @@ fn execute_security_action(action: &str, payload: &Value) -> Result<Value, Strin
             let program = payload
                 .get("program")
                 .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway validate_safe_command requires string payload.program".to_string())?;
+                .ok_or_else(|| {
+                    "security_gateway validate_safe_command requires string payload.program"
+                        .to_string()
+                })?;
             let args = payload
                 .get("args")
                 .and_then(Value::as_array)
@@ -285,28 +303,30 @@ fn execute_security_action(action: &str, payload: &Value) -> Result<Value, Strin
             }))
         }
         "resolve_safe_path" => {
-            let base = payload
-                .get("base")
-                .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway resolve_safe_path requires string payload.base".to_string())?;
+            let base = payload.get("base").and_then(Value::as_str).ok_or_else(|| {
+                "security_gateway resolve_safe_path requires string payload.base".to_string()
+            })?;
             let input = payload
                 .get("input")
                 .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway resolve_safe_path requires string payload.input".to_string())?;
+                .ok_or_else(|| {
+                    "security_gateway resolve_safe_path requires string payload.input".to_string()
+                })?;
             let resolved = resolve_safe_path(base, input)?;
             Ok(json!({
                 "resolvedPath": resolved,
             }))
         }
         "audit_log" => {
-            let user = payload
-                .get("user")
-                .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway audit_log requires string payload.user".to_string())?;
+            let user = payload.get("user").and_then(Value::as_str).ok_or_else(|| {
+                "security_gateway audit_log requires string payload.user".to_string()
+            })?;
             let action = payload
                 .get("action")
                 .and_then(Value::as_str)
-                .ok_or_else(|| "security_gateway audit_log requires string payload.action".to_string())?;
+                .ok_or_else(|| {
+                    "security_gateway audit_log requires string payload.action".to_string()
+                })?;
             let entry = build_audit_entry(user, action)?;
             Ok(json!({
                 "logged": true,
@@ -321,15 +341,18 @@ fn handle_command_gateway(payload: &Value) -> Result<Value, String> {
     let user_id = payload
         .get("userId")
         .and_then(Value::as_str)
-        .ok_or_else(|| "security_gateway handle_command requires string payload.userId".to_string())?;
-    let role_raw = payload
-        .get("role")
-        .and_then(Value::as_str)
-        .ok_or_else(|| "security_gateway handle_command requires string payload.role".to_string())?;
+        .ok_or_else(|| {
+            "security_gateway handle_command requires string payload.userId".to_string()
+        })?;
+    let role_raw = payload.get("role").and_then(Value::as_str).ok_or_else(|| {
+        "security_gateway handle_command requires string payload.role".to_string()
+    })?;
     let action = payload
         .get("commandAction")
         .and_then(Value::as_str)
-        .ok_or_else(|| "security_gateway handle_command requires string payload.commandAction".to_string())?;
+        .ok_or_else(|| {
+            "security_gateway handle_command requires string payload.commandAction".to_string()
+        })?;
     let command_payload = payload
         .get("commandPayload")
         .cloned()
@@ -352,8 +375,8 @@ pub async fn security_gateway(action: String, payload: Value) -> Result<Value, S
 #[cfg(test)]
 mod tests {
     use super::{
-        authorize, build_audit_entry, check_rate_limit_with_state, resolve_safe_path, sanitize_log_input,
-        validate_safe_command, Role, RATE_LIMIT_WINDOW,
+        authorize, build_audit_entry, check_rate_limit_with_state, resolve_safe_path,
+        sanitize_log_input, validate_safe_command, Role, RATE_LIMIT_WINDOW,
     };
     use serde_json::{json, Value};
     use std::collections::HashMap;
@@ -463,7 +486,9 @@ mod tests {
 
     #[test]
     fn resolve_safe_path_rejects_traversal() {
-        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let base = std::env::temp_dir()
+            .join("mc-vector-security")
+            .join("app-data");
         let traversal = Path::new("..").join("etc").join("passwd");
         let result = resolve_safe_path(
             base.to_string_lossy().as_ref(),
@@ -474,7 +499,9 @@ mod tests {
 
     #[test]
     fn resolve_safe_path_builds_absolute_path() {
-        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let base = std::env::temp_dir()
+            .join("mc-vector-security")
+            .join("app-data");
         let input = Path::new("servers").join("a");
         let resolved = resolve_safe_path(
             base.to_string_lossy().as_ref(),
@@ -487,7 +514,9 @@ mod tests {
 
     #[test]
     fn resolve_safe_path_rejects_windows_drive_relative_prefix() {
-        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let base = std::env::temp_dir()
+            .join("mc-vector-security")
+            .join("app-data");
         let result = resolve_safe_path(base.to_string_lossy().as_ref(), "C:windows\\temp");
         assert!(result.is_err());
     }
@@ -496,7 +525,10 @@ mod tests {
     fn build_audit_entry_contains_required_fields() {
         let entry = build_audit_entry("user-1", "start_server").expect("should build");
         assert_eq!(entry.get("user").and_then(Value::as_str), Some("user-1"));
-        assert_eq!(entry.get("action").and_then(Value::as_str), Some("start_server"));
+        assert_eq!(
+            entry.get("action").and_then(Value::as_str),
+            Some("start_server")
+        );
         assert!(entry.get("timestamp").and_then(Value::as_u64).is_some());
     }
 
@@ -509,7 +541,10 @@ mod tests {
             "commandPayload": { "input": "<b>ok</b>" }
         });
         let result = super::handle_command_gateway(&payload).expect("should pass");
-        assert_eq!(result.get("sanitized").and_then(Value::as_str), Some("&lt;b&gt;ok&lt;/b&gt;"));
+        assert_eq!(
+            result.get("sanitized").and_then(Value::as_str),
+            Some("&lt;b&gt;ok&lt;/b&gt;")
+        );
     }
 
     #[test]
@@ -525,15 +560,19 @@ mod tests {
 
     #[test]
     fn ipc_contract_sanitize_log_response_shape() {
-        let result = super::execute_security_action("sanitize_log", &json!({ "input": "<b>ok</b>" }))
-            .expect("sanitize_log should succeed");
-        assert_eq!(result.get("sanitized").and_then(Value::as_str), Some("&lt;b&gt;ok&lt;/b&gt;"));
+        let result =
+            super::execute_security_action("sanitize_log", &json!({ "input": "<b>ok</b>" }))
+                .expect("sanitize_log should succeed");
+        assert_eq!(
+            result.get("sanitized").and_then(Value::as_str),
+            Some("&lt;b&gt;ok&lt;/b&gt;")
+        );
     }
 
     #[test]
     fn ipc_contract_sanitize_log_missing_field_error() {
-        let error =
-            super::execute_security_action("sanitize_log", &json!({})).expect_err("missing input should fail");
+        let error = super::execute_security_action("sanitize_log", &json!({}))
+            .expect_err("missing input should fail");
         assert_eq!(
             error,
             "security_gateway sanitize_log requires string payload.input"
@@ -555,15 +594,19 @@ mod tests {
 
     #[test]
     fn ipc_contract_authorize_action_missing_fields_error() {
-        let role_error = super::execute_security_action("authorize_action", &json!({ "action": "start_server" }))
-            .expect_err("missing role should fail");
+        let role_error = super::execute_security_action(
+            "authorize_action",
+            &json!({ "action": "start_server" }),
+        )
+        .expect_err("missing role should fail");
         assert_eq!(
             role_error,
             "security_gateway authorize_action requires string payload.role"
         );
 
-        let action_error = super::execute_security_action("authorize_action", &json!({ "role": "admin" }))
-            .expect_err("missing action should fail");
+        let action_error =
+            super::execute_security_action("authorize_action", &json!({ "role": "admin" }))
+                .expect_err("missing action should fail");
         assert_eq!(
             action_error,
             "security_gateway authorize_action requires string payload.action"
@@ -582,8 +625,8 @@ mod tests {
 
     #[test]
     fn ipc_contract_rate_limit_check_missing_field_error() {
-        let error =
-            super::execute_security_action("rate_limit_check", &json!({})).expect_err("missing userId should fail");
+        let error = super::execute_security_action("rate_limit_check", &json!({}))
+            .expect_err("missing userId should fail");
         assert_eq!(
             error,
             "security_gateway rate_limit_check requires string payload.userId"
@@ -624,7 +667,9 @@ mod tests {
 
     #[test]
     fn ipc_contract_resolve_safe_path_response_shape() {
-        let base = std::env::temp_dir().join("mc-vector-security").join("app-data");
+        let base = std::env::temp_dir()
+            .join("mc-vector-security")
+            .join("app-data");
         let input = Path::new("servers").join("a");
         let result = super::execute_security_action(
             "resolve_safe_path",
@@ -644,15 +689,17 @@ mod tests {
 
     #[test]
     fn ipc_contract_resolve_safe_path_missing_fields_error() {
-        let base_error = super::execute_security_action("resolve_safe_path", &json!({ "input": "servers/a" }))
-            .expect_err("missing base should fail");
+        let base_error =
+            super::execute_security_action("resolve_safe_path", &json!({ "input": "servers/a" }))
+                .expect_err("missing base should fail");
         assert_eq!(
             base_error,
             "security_gateway resolve_safe_path requires string payload.base"
         );
 
-        let input_error = super::execute_security_action("resolve_safe_path", &json!({ "base": "/app/data" }))
-            .expect_err("missing input should fail");
+        let input_error =
+            super::execute_security_action("resolve_safe_path", &json!({ "base": "/app/data" }))
+                .expect_err("missing input should fail");
         assert_eq!(
             input_error,
             "security_gateway resolve_safe_path requires string payload.input"
@@ -675,19 +722,30 @@ mod tests {
             .get("entry")
             .and_then(Value::as_object)
             .expect("entry should be an object");
-        assert_eq!(entry.get("user").and_then(Value::as_str), Some("audit-user"));
-        assert_eq!(entry.get("action").and_then(Value::as_str), Some("read_logs"));
+        assert_eq!(
+            entry.get("user").and_then(Value::as_str),
+            Some("audit-user")
+        );
+        assert_eq!(
+            entry.get("action").and_then(Value::as_str),
+            Some("read_logs")
+        );
         assert!(entry.get("timestamp").and_then(Value::as_u64).is_some());
     }
 
     #[test]
     fn ipc_contract_audit_log_missing_fields_error() {
-        let user_error = super::execute_security_action("audit_log", &json!({ "action": "read_logs" }))
-            .expect_err("missing user should fail");
-        assert_eq!(user_error, "security_gateway audit_log requires string payload.user");
+        let user_error =
+            super::execute_security_action("audit_log", &json!({ "action": "read_logs" }))
+                .expect_err("missing user should fail");
+        assert_eq!(
+            user_error,
+            "security_gateway audit_log requires string payload.user"
+        );
 
-        let action_error = super::execute_security_action("audit_log", &json!({ "user": "audit-user" }))
-            .expect_err("missing action should fail");
+        let action_error =
+            super::execute_security_action("audit_log", &json!({ "user": "audit-user" }))
+                .expect_err("missing action should fail");
         assert_eq!(
             action_error,
             "security_gateway audit_log requires string payload.action"
@@ -702,8 +760,12 @@ mod tests {
             "commandAction": "sanitize_log",
             "commandPayload": { "input": "<ok>" }
         });
-        let result = super::handle_command_gateway(&payload).expect("handle_command should succeed");
-        assert_eq!(result.get("sanitized").and_then(Value::as_str), Some("&lt;ok&gt;"));
+        let result =
+            super::handle_command_gateway(&payload).expect("handle_command should succeed");
+        assert_eq!(
+            result.get("sanitized").and_then(Value::as_str),
+            Some("&lt;ok&gt;")
+        );
     }
 
     #[test]
