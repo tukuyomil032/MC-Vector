@@ -894,135 +894,6 @@ export default function PluginBrowser({ server }: Props) {
     };
   }, [isInAppSearch, results, installedFiles, server.software, server.version]);
 
-  const installedEntries = useMemo<InstalledPluginEntry[]>(() => {
-    return installedFiles.map((fileName) => {
-      const normalizedFileName = normalizeInstalledPluginFileName(fileName);
-      const sourceItem =
-        currentResultMatchesByInstalledFile[normalizedFileName] ??
-        knownItemsByInstalledFile[normalizedFileName] ??
-        null;
-      const displayName = sourceItem?.title || formatInstalledTitle(fileName) || fileName;
-      const description = sourceItem?.description?.trim() || t('plugins.browser.noDescription');
-
-      const extractedVersions = sourceItem
-        ? [
-            ...(compatibilityDetailByItemId[sourceItem.id]?.supportedVersions ?? []),
-            ...extractVersionHints(
-              `${sourceItem.description} ${typeof sourceItem.source_obj.tag === 'string' ? sourceItem.source_obj.tag : ''}`,
-            ),
-          ]
-        : [];
-      const minecraftVersions = Array.from(
-        new Set(extractedVersions.map((version) => version.trim()).filter(Boolean)),
-      );
-      if (minecraftVersions.length === 0 && server.version.trim()) {
-        minecraftVersions.push(server.version.trim());
-      }
-
-      const actionItem =
-        sourceItem ??
-        ({
-          id: `installed:${normalizedFileName}`,
-          title: displayName,
-          description,
-          author: 'Local',
-          platform: 'Modrinth',
-          source_obj: {},
-        } satisfies ProjectItem);
-
-      return {
-        fileName,
-        normalizedFileName,
-        displayName,
-        description,
-        iconUrl: sourceItem?.icon_url,
-        state: isDisabledPluginFile(fileName) ? 'disabled' : 'enabled',
-        fileVersion: inferInstalledFileVersion(fileName) || t('plugins.browser.na'),
-        minecraftVersions,
-        sourceItem,
-        actionItem,
-      };
-    });
-  }, [
-    compatibilityDetailByItemId,
-    currentResultMatchesByInstalledFile,
-    installedFiles,
-    knownItemsByInstalledFile,
-    server.version,
-    t,
-  ]);
-
-  useEffect(() => {
-    if (activeSection !== 'installed') return;
-    let cancelled = false;
-
-    const targets = installedEntries.filter(
-      (e) => e.sourceItem && e.sourceItem.platform !== 'Spigot',
-    );
-    if (targets.length === 0) return;
-
-    const needsCheck = targets.filter(
-      (e) => !e.sourceItem || !updateStatusByItemId[e.sourceItem.id],
-    );
-    if (needsCheck.length === 0) return;
-
-    for (const entry of needsCheck) {
-      if (entry.sourceItem) {
-        setUpdateStatusByItemId((prev) => ({ ...prev, [entry.sourceItem!.id]: 'checking' }));
-      }
-    }
-
-    const run = async () => {
-      await mapWithConcurrency(needsCheck, ASYNC_CHECK_CONCURRENCY, async (entry) => {
-        if (cancelled || !entry.sourceItem) return;
-        const item = entry.sourceItem;
-        try {
-          let latestFileName: string | null = null;
-          if (item.platform === 'Modrinth') {
-            const resolved = await getCompatibleModrinthVersion({
-              projectId: item.id,
-              loader: (server.software || '').toLowerCase(),
-              minecraftVersion: server.version,
-            });
-            latestFileName = resolved?.fileName ?? null;
-          } else if (item.platform === 'Hangar') {
-            const resolved = await resolveHangarDownload({
-              owner: item.author,
-              slug: item.slug || item.title,
-              software: server.software || 'Paper',
-              minecraftVersion: server.version || '',
-            });
-            latestFileName = resolved?.fileName ?? null;
-          }
-
-          const normalizedInstalled = normalizeInstalledPluginFileName(entry.fileName);
-          const status: UpdateStatus = latestFileName
-            ? normalizedInstalled === latestFileName.toLowerCase()
-              ? 'up-to-date'
-              : 'update-available'
-            : 'unknown';
-
-          if (!cancelled) {
-            setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: status }));
-            if (latestFileName) {
-              setLatestFileByItemId((prev) => ({ ...prev, [item.id]: latestFileName! }));
-            }
-          }
-        } catch (error) {
-          logError('Failed to check installed plugin update', error, { itemId: item.id });
-          if (!cancelled) {
-            setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: 'unknown' }));
-          }
-        }
-      });
-    };
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSection, installedEntries, server.software, server.version]);
-
   const normalize = (text?: unknown) =>
     String(text ?? '')
       .toLowerCase()
@@ -1199,6 +1070,135 @@ export default function PluginBrowser({ server }: Props) {
 
     return next;
   }, [results, installedFiles]);
+
+  const installedEntries = useMemo<InstalledPluginEntry[]>(() => {
+    return installedFiles.map((fileName) => {
+      const normalizedFileName = normalizeInstalledPluginFileName(fileName);
+      const sourceItem =
+        currentResultMatchesByInstalledFile[normalizedFileName] ??
+        knownItemsByInstalledFile[normalizedFileName] ??
+        null;
+      const displayName = sourceItem?.title || formatInstalledTitle(fileName) || fileName;
+      const description = sourceItem?.description?.trim() || t('plugins.browser.noDescription');
+
+      const extractedVersions = sourceItem
+        ? [
+            ...(compatibilityDetailByItemId[sourceItem.id]?.supportedVersions ?? []),
+            ...extractVersionHints(
+              `${sourceItem.description} ${typeof sourceItem.source_obj.tag === 'string' ? sourceItem.source_obj.tag : ''}`,
+            ),
+          ]
+        : [];
+      const minecraftVersions = Array.from(
+        new Set(extractedVersions.map((version) => version.trim()).filter(Boolean)),
+      );
+      if (minecraftVersions.length === 0 && server.version.trim()) {
+        minecraftVersions.push(server.version.trim());
+      }
+
+      const actionItem =
+        sourceItem ??
+        ({
+          id: `installed:${normalizedFileName}`,
+          title: displayName,
+          description,
+          author: 'Local',
+          platform: 'Modrinth',
+          source_obj: {},
+        } satisfies ProjectItem);
+
+      return {
+        fileName,
+        normalizedFileName,
+        displayName,
+        description,
+        iconUrl: sourceItem?.icon_url,
+        state: isDisabledPluginFile(fileName) ? 'disabled' : 'enabled',
+        fileVersion: inferInstalledFileVersion(fileName) || t('plugins.browser.na'),
+        minecraftVersions,
+        sourceItem,
+        actionItem,
+      };
+    });
+  }, [
+    compatibilityDetailByItemId,
+    currentResultMatchesByInstalledFile,
+    installedFiles,
+    knownItemsByInstalledFile,
+    server.version,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (activeSection !== 'installed') return;
+    let cancelled = false;
+
+    const targets = installedEntries.filter(
+      (e) => e.sourceItem && e.sourceItem.platform !== 'Spigot',
+    );
+    if (targets.length === 0) return;
+
+    const needsCheck = targets.filter(
+      (e) => !e.sourceItem || !updateStatusByItemId[e.sourceItem.id],
+    );
+    if (needsCheck.length === 0) return;
+
+    for (const entry of needsCheck) {
+      if (entry.sourceItem) {
+        setUpdateStatusByItemId((prev) => ({ ...prev, [entry.sourceItem!.id]: 'checking' }));
+      }
+    }
+
+    const run = async () => {
+      await mapWithConcurrency(needsCheck, ASYNC_CHECK_CONCURRENCY, async (entry) => {
+        if (cancelled || !entry.sourceItem) return;
+        const item = entry.sourceItem;
+        try {
+          let latestFileName: string | null = null;
+          if (item.platform === 'Modrinth') {
+            const resolved = await getCompatibleModrinthVersion({
+              projectId: item.id,
+              loader: (server.software || '').toLowerCase(),
+              minecraftVersion: server.version,
+            });
+            latestFileName = resolved?.fileName ?? null;
+          } else if (item.platform === 'Hangar') {
+            const resolved = await resolveHangarDownload({
+              owner: item.author,
+              slug: item.slug || item.title,
+              software: server.software || 'Paper',
+              minecraftVersion: server.version || '',
+            });
+            latestFileName = resolved?.fileName ?? null;
+          }
+
+          const normalizedInstalled = normalizeInstalledPluginFileName(entry.fileName);
+          const status: UpdateStatus = latestFileName
+            ? normalizedInstalled === latestFileName.toLowerCase()
+              ? 'up-to-date'
+              : 'update-available'
+            : 'unknown';
+
+          if (!cancelled) {
+            setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: status }));
+            if (latestFileName) {
+              setLatestFileByItemId((prev) => ({ ...prev, [item.id]: latestFileName! }));
+            }
+          }
+        } catch (error) {
+          logError('Failed to check installed plugin update', error, { itemId: item.id });
+          if (!cancelled) {
+            setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: 'unknown' }));
+          }
+        }
+      });
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, installedEntries, server.software, server.version]);
 
   useEffect(() => {
     const nextKeys = Object.keys(currentResultMatchesByInstalledFile);
