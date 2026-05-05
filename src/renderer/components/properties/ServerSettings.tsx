@@ -15,6 +15,7 @@ import { type MinecraftServer } from '../../components/../shared/server declarat
 import { VERSION_OPTIONS } from '../../constants/versionOptions';
 import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
+import VersionUpgradeWizard from '../VersionUpgradeWizard';
 import { useToast } from '../ToastProvider';
 
 interface ServerSettingsProps {
@@ -67,6 +68,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   const [isSaving, setIsSaving] = useState(false);
 
   const [showJavaManager, setShowJavaManager] = useState(false);
+  const [showVersionWizard, setShowVersionWizard] = useState(false);
   const [installedJava, setInstalledJava] = useState<JavaVersion[]>([]);
 
   const [isTunneling, setIsTunneling] = useState(false);
@@ -341,6 +343,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="server-settings__col server-settings__col--auto">
+              <label className="server-settings__label">&nbsp;</label>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowVersionWizard(true)}
+              >
+                {t('serverSettings.versionUpgrade.buttonLabel')}
+              </button>
             </div>
           </div>
 
@@ -737,6 +750,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
             </div>
           </div>
         </div>
+      )}
+
+      {showVersionWizard && (
+        <VersionUpgradeWizard
+          server={server}
+          onClose={() => setShowVersionWizard(false)}
+          onServerUpdate={async (updated) => {
+            await onSave(updated);
+            setShowVersionWizard(false);
+          }}
+        />
       )}
     </div>
   );
