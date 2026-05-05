@@ -146,6 +146,8 @@ vite.config.ts.timestamp-*
 .vite/
 
 # documents
+docs/development-environment-research.md
+docs/engineering-requirements.md
 docs/enhance-idea/**
 
 # update-version
