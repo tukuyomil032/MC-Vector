@@ -894,6 +894,77 @@ export default function PluginBrowser({ server }: Props) {
     };
   }, [isInAppSearch, results, installedFiles, server.software, server.version]);
 
+  useEffect(() => {
+    if (activeSection !== 'installed') return;
+    let cancelled = false;
+
+    const targets = installedEntries.filter(
+      (e) => e.sourceItem && e.sourceItem.platform !== 'Spigot',
+    );
+    if (targets.length === 0) return;
+
+    const needsCheck = targets.filter(
+      (e) => !e.sourceItem || !updateStatusByItemId[e.sourceItem.id],
+    );
+    if (needsCheck.length === 0) return;
+
+    for (const entry of needsCheck) {
+      if (entry.sourceItem) {
+        setUpdateStatusByItemId((prev) => ({ ...prev, [entry.sourceItem!.id]: 'checking' }));
+      }
+    }
+
+    const run = async () => {
+      await mapWithConcurrency(needsCheck, ASYNC_CHECK_CONCURRENCY, async (entry) => {
+        if (cancelled || !entry.sourceItem) return;
+        const item = entry.sourceItem;
+        try {
+          let latestFileName: string | null = null;
+          if (item.platform === 'Modrinth') {
+            const resolved = await getCompatibleModrinthVersion({
+              projectId: item.id,
+              loader: (server.software || '').toLowerCase(),
+              minecraftVersion: server.version,
+            });
+            latestFileName = resolved?.fileName ?? null;
+          } else if (item.platform === 'Hangar') {
+            const resolved = await resolveHangarDownload({
+              owner: item.author,
+              slug: item.slug || item.title,
+              software: server.software || 'Paper',
+              minecraftVersion: server.version || '',
+            });
+            latestFileName = resolved?.fileName ?? null;
+          }
+
+          const normalizedInstalled = normalizeInstalledPluginFileName(entry.fileName);
+          const status: UpdateStatus = latestFileName
+            ? normalizedInstalled === latestFileName.toLowerCase()
+              ? 'up-to-date'
+              : 'update-available'
+            : 'unknown';
+
+          if (!cancelled) {
+            setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: status }));
+            if (latestFileName) {
+              setLatestFileByItemId((prev) => ({ ...prev, [item.id]: latestFileName! }));
+            }
+          }
+        } catch (error) {
+          logError('Failed to check installed plugin update', error, { itemId: item.id });
+          if (!cancelled) {
+            setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: 'unknown' }));
+          }
+        }
+      });
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, installedEntries, server.software, server.version]);
+
   const normalize = (text?: unknown) =>
     String(text ?? '')
       .toLowerCase()
