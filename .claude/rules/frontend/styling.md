@@ -1,5 +1,5 @@
 ---
-paths: ["src/**/*.tsx", "src/styles/**/*.{scss,css}"]
+paths: ['src/**/*.tsx', 'src/styles/**/*.{scss,css}']
 ---
 
 - Short, one-off Tailwind utilities can stay inline in TSX.
