@@ -734,6 +734,8 @@ export const en: TranslationDictionary = {
       intervalMinutes: 'Interval (minutes)',
       executionTime: 'Execution Time',
       weekday: 'Day of Week',
+      retainCount: 'Max backups to keep (0 = unlimited)',
+      retainDays: 'Retention days (0 = disabled)',
     },
     weekdays: {
       sunday: 'Sunday',

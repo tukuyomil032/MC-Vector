@@ -57,6 +57,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   >(server.autoBackupScheduleType ?? 'interval');
   const [autoBackupTime, setAutoBackupTime] = useState(server.autoBackupTime ?? '03:00');
   const [autoBackupWeekday, setAutoBackupWeekday] = useState(server.autoBackupWeekday ?? 0);
+  const [autoBackupRetainCount, setAutoBackupRetainCount] = useState(
+    server.autoBackupRetainCount ?? 0,
+  );
+  const [autoBackupRetainDays, setAutoBackupRetainDays] = useState(
+    server.autoBackupRetainDays ?? 0,
+  );
   const [jvmArgs, setJvmArgs] = useState(server.jvmArgs ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -98,6 +104,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     setAutoBackupScheduleType(server.autoBackupScheduleType ?? 'interval');
     setAutoBackupTime(server.autoBackupTime ?? '03:00');
     setAutoBackupWeekday(server.autoBackupWeekday ?? 0);
+    setAutoBackupRetainCount(server.autoBackupRetainCount ?? 0);
+    setAutoBackupRetainDays(server.autoBackupRetainDays ?? 0);
     setJvmArgs(server.jvmArgs ?? '');
 
     loadJavaList();
@@ -189,6 +197,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         autoBackupScheduleType: normalizedScheduleType,
         autoBackupTime: normalizedBackupTime,
         autoBackupWeekday: normalizedBackupWeekday,
+        autoBackupRetainCount,
+        autoBackupRetainDays,
         jvmArgs: jvmArgs.trim() || undefined,
       });
     } finally {
@@ -552,6 +562,35 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   </select>
                 </div>
               )}
+
+              <div className="server-settings__row">
+                <div className="server-settings__col">
+                  <label className="server-settings__label">
+                    {t('serverSettings.autoBackup.retainCount')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={999}
+                    value={autoBackupRetainCount}
+                    onChange={(event) => setAutoBackupRetainCount(Number(event.target.value))}
+                    className="input-field"
+                  />
+                </div>
+                <div className="server-settings__col">
+                  <label className="server-settings__label">
+                    {t('serverSettings.autoBackup.retainDays')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={autoBackupRetainDays}
+                    onChange={(event) => setAutoBackupRetainDays(Number(event.target.value))}
+                    className="input-field"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

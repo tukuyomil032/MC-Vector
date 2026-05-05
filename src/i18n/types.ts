@@ -733,6 +733,8 @@ export interface TranslationDictionary {
       intervalMinutes: string;
       executionTime: string;
       weekday: string;
+      retainCount: string;
+      retainDays: string;
     };
     weekdays: {
       sunday: string;

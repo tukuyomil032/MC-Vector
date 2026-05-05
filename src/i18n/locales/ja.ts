@@ -732,6 +732,8 @@ export const ja: TranslationDictionary = {
       intervalMinutes: '実行間隔（分）',
       executionTime: '実行時刻',
       weekday: '曜日',
+      retainCount: '最大保持件数（0=無制限）',
+      retainDays: '保持日数（0=無効）',
     },
     weekdays: {
       sunday: '日曜',
