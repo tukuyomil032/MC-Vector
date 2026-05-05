@@ -94,6 +94,7 @@ export default defineConfig({
       '.github/workflows/**',
       'scripts/**',
       '.agents/**/*',
+      '.claude/**/*',
     ],
   },
 
