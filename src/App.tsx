@@ -15,6 +15,7 @@ import AppMainHeader from '@/renderer/components/AppMainHeader';
 import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
 import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
+import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { useToast } from '@/renderer/components/ToastProvider';
@@ -48,6 +49,7 @@ function App() {
   const showAddServerModal = useUiStore((state) => state.showAddServerModal);
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
   const [showImportServerModal, setShowImportServerModal] = useState(false);
+  const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
   const contextMenu = useUiStore((state) => state.contextMenu);
   const setContextMenu = useUiStore((state) => state.setContextMenu);
 
@@ -269,11 +271,9 @@ function App() {
           selectedServerId={selectedServerId}
           onSelectServer={setSelectedServerId}
           onServerContextMenu={handleContextMenu}
-          onAddServer={() => setShowAddServerModal(true)}
-          onImportServer={() => setShowImportServerModal(true)}
+          onAddServer={() => setShowAddServerChoiceModal(true)}
           serversLabel={t('nav.servers')}
           addServerLabel={t('nav.addServer')}
-          importServerLabel={t('nav.importServer')}
           bulkSelectLabel={t('nav.bulkSelect')}
           bulkStartLabel={t('nav.bulkStartSelected')}
           bulkStopLabel={t('nav.bulkStopSelected')}
@@ -308,6 +308,20 @@ function App() {
           t={t}
         />
       </main>
+
+      {showAddServerChoiceModal && (
+        <AddServerChoiceModal
+          onClose={() => setShowAddServerChoiceModal(false)}
+          onNewServer={() => {
+            setShowAddServerChoiceModal(false);
+            setShowAddServerModal(true);
+          }}
+          onImportServer={() => {
+            setShowAddServerChoiceModal(false);
+            setShowImportServerModal(true);
+          }}
+        />
+      )}
 
       <AppOverlayLayer
         downloadStatus={downloadStatus}

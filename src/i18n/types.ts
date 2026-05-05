@@ -873,6 +873,13 @@ export interface TranslationDictionary {
     memory: {
       label: string;
     };
+    choice: {
+      title: string;
+      newServer: string;
+      newServerHint: string;
+      importServer: string;
+      importServerHint: string;
+    };
   };
 
   /** Server properties view translations */

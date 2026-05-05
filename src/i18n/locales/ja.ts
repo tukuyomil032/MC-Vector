@@ -882,6 +882,13 @@ export const ja: TranslationDictionary = {
     memory: {
       label: 'メモリ(GB)',
     },
+    choice: {
+      title: 'サーバーを追加',
+      newServer: '新規作成',
+      newServerHint: '新しいサーバーをセットアップする',
+      importServer: '既存フォルダからインポート',
+      importServerHint: '既に存在するサーバーフォルダを登録する',
+    },
   },
 
   properties: {

@@ -884,6 +884,13 @@ export const en: TranslationDictionary = {
     memory: {
       label: 'Memory (GB)',
     },
+    choice: {
+      title: 'Add Server',
+      newServer: 'New Server',
+      newServerHint: 'Set up a new server',
+      importServer: 'Import from Existing Folder',
+      importServerHint: 'Register an existing server folder',
+    },
   },
 
   properties: {
