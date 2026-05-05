@@ -9,6 +9,8 @@ import {
   YAxis,
 } from 'recharts';
 import { useTranslation, type Translate, type TranslationKey } from '../../i18n';
+import { type PingResult, pingServer } from '../../lib/health-check-commands';
+import { sendServerNotification } from '../../lib/notification-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import {
@@ -48,6 +50,7 @@ interface TpsChartCardProps {
   emptyLabel: string;
 }
 
+const HEALTH_CHECK_INTERVAL_MS = 30_000;
 const METRIC_WINDOW_MS = 60_000;
 const TPS_POLL_INTERVAL_MS = 5_000;
 const STATS_DEDUPE_WINDOW_MS = 1_000;
@@ -226,15 +229,90 @@ const TpsChartCard = memo(function TpsChartCard({ title, data, emptyLabel }: Tps
   );
 });
 
+function formatUptime(startedAt: number): string {
+  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export default function DashboardView({ server }: Props) {
   const { t } = useTranslation();
   const [resourceStats, setResourceStats] = useState<ResourcePoint[]>([]);
   const [tpsStats, setTpsStats] = useState<TpsPoint[]>([]);
+  const [startedAt, setStartedAt] = useState<number | null>(
+    server.status === 'online' ? Date.now() : null,
+  );
+  const [uptime, setUptime] = useState<string>('--:--:--');
+  const [pingResult, setPingResult] = useState<PingResult | null>(null);
+  const [pingLoading, setPingLoading] = useState(false);
 
   useEffect(() => {
     setResourceStats([]);
     setTpsStats([]);
   }, [server.id, server.software]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+    void tauriListen<{ serverId: string; status: string }>('server-status-change', (data) => {
+      if (data.serverId !== server.id) return;
+      if (data.status === 'online') {
+        setStartedAt(Date.now());
+      } else {
+        setStartedAt(null);
+        setUptime('--:--:--');
+      }
+    }).then((u) => {
+      if (cancelled) {
+        u();
+        return;
+      }
+      unlisten = u;
+    });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [server.id]);
+
+  useEffect(() => {
+    if (startedAt === null) return;
+    setUptime(formatUptime(startedAt));
+    const id = window.setInterval(() => setUptime(formatUptime(startedAt)), 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt]);
+
+  useEffect(() => {
+    if (server.status !== 'online') {
+      setPingResult(null);
+      return;
+    }
+
+    const runPing = async () => {
+      setPingLoading(true);
+      try {
+        const result = await pingServer('127.0.0.1', server.port);
+        setPingResult(result);
+      } catch {
+        setPingResult({
+          online: false,
+          latency_ms: 0,
+          players_online: null,
+          players_max: null,
+          version: null,
+          motd: null,
+        });
+      } finally {
+        setPingLoading(false);
+      }
+    };
+
+    void runPing();
+    const id = window.setInterval(() => void runPing(), HEALTH_CHECK_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [server.status, server.port]);
 
   const supportsTpsPolling = useMemo(() => {
     return server.software === 'Paper' || server.software === 'LeafMC';
@@ -307,6 +385,18 @@ export default function DashboardView({ server }: Props) {
         ];
         return pruneMetricWindow(next, now);
       });
+
+      if (server.notifyOnHighCpu) {
+        const threshold = server.notifyHighCpuThreshold ?? 90;
+        if (cpuVal >= threshold) {
+          const cooldownKey = `cpu-notify-${server.id}`;
+          const lastNotified = Number(sessionStorage.getItem(cooldownKey) ?? '0');
+          if (now - lastNotified >= 5 * 60 * 1000) {
+            sessionStorage.setItem(cooldownKey, String(now));
+            void sendServerNotification(server.name, t('server.notification.highCpu'));
+          }
+        }
+      }
     }).then((u) => {
       if (cancelled) {
         u();
@@ -319,7 +409,7 @@ export default function DashboardView({ server }: Props) {
       cancelled = true;
       unlisten?.();
     };
-  }, [server.id]);
+  }, [server.id, server.notifyOnHighCpu, server.notifyHighCpuThreshold, server.name, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -439,7 +529,65 @@ export default function DashboardView({ server }: Props) {
           <div className="kpi-tile__value dashboard-view__software-value">{server.software}</div>
           <div className="kpi-tile__meta">{server.version}</div>
         </article>
+
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--uptime kpi-tile">
+          <div className="kpi-tile__label">{t('dashboard.stats.uptime')}</div>
+          <div className="kpi-tile__value dashboard-view__uptime-value">{uptime}</div>
+        </article>
       </section>
+
+      {server.status === 'online' && (
+        <article className="dashboard-view__health-card surface-card">
+          <h3 className="dashboard-view__chart-title section-title">
+            {t('dashboard.healthCheck.title')}
+          </h3>
+          {pingLoading && !pingResult ? (
+            <span className="text-sm text-zinc-400">{t('dashboard.healthCheck.pinging')}</span>
+          ) : pingResult ? (
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div>
+                <span className="text-zinc-400 mr-1">{t('dashboard.stats.status')}:</span>
+                <span
+                  style={{ color: pingResult.online ? '#10b981' : '#ef4444' }}
+                  className="font-semibold"
+                >
+                  {pingResult.online
+                    ? t('dashboard.healthCheck.online')
+                    : t('dashboard.healthCheck.offline')}
+                </span>
+              </div>
+              {pingResult.online && (
+                <>
+                  <div>
+                    <span className="text-zinc-400 mr-1">
+                      {t('dashboard.healthCheck.latency')}:
+                    </span>
+                    <span>{pingResult.latency_ms}ms</span>
+                  </div>
+                  {pingResult.players_online !== null && (
+                    <div>
+                      <span className="text-zinc-400 mr-1">
+                        {t('dashboard.healthCheck.players')}:
+                      </span>
+                      <span>
+                        {pingResult.players_online}/{pingResult.players_max}
+                      </span>
+                    </div>
+                  )}
+                  {pingResult.version && (
+                    <div>
+                      <span className="text-zinc-400 mr-1">
+                        {t('dashboard.healthCheck.version')}:
+                      </span>
+                      <span>{pingResult.version}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
+        </article>
+      )}
 
       <section className="dashboard-view__chart-grid">
         <ResourceChartCard

@@ -1,6 +1,7 @@
 pub mod backup;
 pub mod download;
 pub mod file_utils;
+pub mod health_check;
 pub mod java;
 pub mod ngrok;
 pub mod perf;

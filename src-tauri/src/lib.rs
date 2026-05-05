@@ -13,6 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 既存のウィンドウにフォーカス
             if let Some(window) = app.get_webview_window("main") {
@@ -72,6 +73,8 @@ pub fn run() {
             // セキュリティ/パフォーマンス拡張
             commands::security::security_gateway,
             commands::perf::parse_ansi_lines,
+            // ヘルスチェック
+            commands::health_check::ping_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

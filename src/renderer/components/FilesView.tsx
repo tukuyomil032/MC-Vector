@@ -1,4 +1,4 @@
-import Editor from '@monaco-editor/react';
+import { DiffEditor, Editor } from '@monaco-editor/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask } from '@tauri-apps/plugin-dialog';
 import type * as React from 'react';
@@ -63,6 +63,42 @@ function joinManagedPath(...segments: string[]): string {
   return normalizeManagedPath(segments.filter(Boolean).join('/'));
 }
 
+function detectLanguage(fileName: string): string {
+  const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
+  const map: Record<string, string> = {
+    '.json': 'json',
+    '.yml': 'yaml',
+    '.yaml': 'yaml',
+    '.properties': 'ini',
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.rs': 'rust',
+    '.sh': 'shell',
+    '.bash': 'shell',
+    '.toml': 'toml',
+    '.xml': 'xml',
+    '.md': 'markdown',
+    '.conf': 'ini',
+    '.cfg': 'ini',
+    '.txt': 'plaintext',
+    '.log': 'plaintext',
+    '.bat': 'bat',
+    '.cmd': 'bat',
+    '.py': 'python',
+    '.lua': 'lua',
+    '.sql': 'sql',
+    '.css': 'css',
+    '.html': 'html',
+    '.htm': 'html',
+    '.mcmeta': 'json',
+    '.nbt': 'plaintext',
+    '.dat': 'plaintext',
+  };
+  return map[ext] ?? 'plaintext';
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -87,6 +123,12 @@ export default function FilesView({ server }: Props) {
 
   const [moveDestPath, setMoveDestPath] = useState('');
   const [renameFileName, setRenameFileName] = useState('');
+
+  const [diffMode, setDiffMode] = useState(false);
+  const [diffOriginal, setDiffOriginal] = useState<{ path: string; content: string } | null>(null);
+  const [diffModified, setDiffModified] = useState<{ path: string; content: string } | null>(null);
+  const [diffSelectStep, setDiffSelectStep] = useState<'original' | 'modified' | null>(null);
+
   const { showToast } = useToast();
   const { t } = useTranslation();
 
@@ -334,6 +376,38 @@ export default function FilesView({ server }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleSaveFile, isEditorOpen]);
 
+  const BINARY_EXTENSIONS = [
+    'jar',
+    'zip',
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'ico',
+    'exe',
+    'dll',
+    'class',
+  ];
+
+  const handleDiffSelect = async (file: FileEntry, filePath: string) => {
+    if (!diffSelectStep) return;
+    const ext = file.name.split('.').at(-1)?.toLowerCase() ?? '';
+    if (BINARY_EXTENSIONS.includes(ext)) {
+      showToast(t('files.toast.binaryNoDiff'), 'error');
+      return;
+    }
+    const content = await readFileContent(filePath);
+    if (diffSelectStep === 'original') {
+      setDiffOriginal({ path: filePath, content });
+      setDiffSelectStep('modified');
+      showToast(t('files.toast.diffSelectModified'), 'info');
+    } else {
+      setDiffModified({ path: filePath, content });
+      setDiffSelectStep(null);
+      setDiffMode(true);
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent, file: FileEntry | null) => {
     e.preventDefault();
     if (file && !selectedFiles.includes(file.name)) {
@@ -573,6 +647,25 @@ export default function FilesView({ server }: Props) {
         >
           <SvgMaskIcon src={iconOpenFolder} className="files-view__toolbar-icon" />
         </button>
+        <button
+          type="button"
+          className={`files-view__toolbar-btn${diffSelectStep ? ' is-active' : ''}`}
+          onClick={() => {
+            if (diffMode) {
+              setDiffMode(false);
+              setDiffOriginal(null);
+              setDiffModified(null);
+            } else if (diffSelectStep) {
+              setDiffSelectStep(null);
+            } else {
+              setDiffSelectStep('original');
+              showToast(t('files.toast.diffSelectOriginal'), 'info');
+            }
+          }}
+          title={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
+        >
+          {diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
+        </button>
         {selectedFiles.length > 0 && (
           <>
             <div className="files-view__toolbar-divider"></div>
@@ -616,55 +709,97 @@ export default function FilesView({ server }: Props) {
         {isExternalDropActive && <div className="files-view__drop-hint">{t('files.dropHint')}</div>}
 
         <div className="flex flex-col gap-0">
-          {files.map((file) => (
-            <div
-              key={file.name}
-              className={`files-view__row ${selectedFiles.includes(file.name) ? 'is-selected' : ''}`}
-              onContextMenu={(e) => {
-                e.stopPropagation();
-                handleContextMenu(e, file);
-              }}
-              onClick={(e) => handleRowClick(file.name, e)}
-              onDoubleClick={() => handleFileDoubleClick(file.name)}
-              draggable
-              onDragStart={(e) => handleDragStart(e, file.name)}
-              onDragOver={(e) => {
-                if (file.isDirectory) {
-                  e.preventDefault();
+          {files.map((file) => {
+            const filePath = joinManagedPath(currentPath, file.name);
+            return (
+              <div
+                key={file.name}
+                className={`files-view__row ${selectedFiles.includes(file.name) ? 'is-selected' : ''}${diffSelectStep && !file.isDirectory ? ' cursor-crosshair' : ''}`}
+                onContextMenu={(e) => {
                   e.stopPropagation();
-                }
-              }}
-              onDrop={(e) => {
-                if (file.isDirectory) handleDropOnFolder(e, file.name);
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selectedFiles.includes(file.name)}
-                onClick={(e) => handleCheckboxClick(file.name, e)}
-                className="cursor-pointer mr-2.5 ml-2.5"
-              />
-              <SvgMaskIcon
-                src={file.isDirectory ? iconFolder : iconFile}
-                className={`files-view__row-icon ${file.isDirectory ? 'files-view__row-icon--dir' : 'files-view__row-icon--file'}`}
-              />
-              <span
-                className={`files-view__name ${file.isDirectory ? 'files-view__name--dir' : 'files-view__name--file'}`}
+                  handleContextMenu(e, file);
+                }}
+                onClick={(e) => {
+                  if (diffSelectStep && !file.isDirectory) {
+                    void handleDiffSelect(file, filePath);
+                  } else {
+                    handleRowClick(file.name, e);
+                  }
+                }}
+                onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, file.name)}
+                onDragOver={(e) => {
+                  if (file.isDirectory) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                }}
+                onDrop={(e) => {
+                  if (file.isDirectory) handleDropOnFolder(e, file.name);
+                }}
               >
-                {file.name}
-              </span>
-              <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">
-                {file.isDirectory
-                  ? '-'
-                  : file.size
-                    ? (file.size / 1024).toFixed(1) + ' KB'
-                    : '0 KB'}
-              </span>
-            </div>
-          ))}
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.includes(file.name)}
+                  onClick={(e) => handleCheckboxClick(file.name, e)}
+                  className="cursor-pointer mr-2.5 ml-2.5"
+                />
+                <SvgMaskIcon
+                  src={file.isDirectory ? iconFolder : iconFile}
+                  className={`files-view__row-icon ${file.isDirectory ? 'files-view__row-icon--dir' : 'files-view__row-icon--file'}`}
+                />
+                <span
+                  className={`files-view__name ${file.isDirectory ? 'files-view__name--dir' : 'files-view__name--file'}`}
+                >
+                  {file.name}
+                </span>
+                <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">
+                  {file.isDirectory
+                    ? '-'
+                    : file.size
+                      ? (file.size / 1024).toFixed(1) + ' KB'
+                      : '0 KB'}
+                </span>
+              </div>
+            );
+          })}
           {files.length === 0 && <div className="files-view__empty">{t('files.emptyFolder')}</div>}
         </div>
       </div>
+
+      {/* Diff View Overlay */}
+      {diffMode && diffOriginal && diffModified && (
+        <div className="files-view__editor-overlay">
+          <div className="files-view__editor-header">
+            <span>
+              {diffOriginal.path.split(/[\\/]/).at(-1)}
+              {' → '}
+              {diffModified.path.split(/[\\/]/).at(-1)}
+            </span>
+            <div className="files-view__editor-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setDiffMode(false);
+                  setDiffOriginal(null);
+                  setDiffModified(null);
+                }}
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+          <DiffEditor
+            height="100%"
+            original={diffOriginal.content}
+            modified={diffModified.content}
+            language={detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}
+            theme="vs-dark"
+            options={{ readOnly: true, minimap: { enabled: false }, renderSideBySide: true }}
+          />
+        </div>
+      )}
 
       {/* Editor Modal */}
       {isEditorOpen && (
@@ -692,15 +827,7 @@ export default function FilesView({ server }: Props) {
           </div>
           <Editor
             height="100%"
-            defaultLanguage={
-              editingFile?.name.endsWith('.json')
-                ? 'json'
-                : editingFile?.name.endsWith('.yml') || editingFile?.name.endsWith('.yaml')
-                  ? 'yaml'
-                  : editingFile?.name.endsWith('.properties')
-                    ? 'ini'
-                    : 'plaintext'
-            }
+            defaultLanguage={detectLanguage(editingFile?.name ?? '')}
             theme="vs-dark"
             value={fileContent}
             onChange={(val) => setFileContent(val || '')}

@@ -5,8 +5,12 @@ interface SvgMaskIconProps {
   className?: string;
 }
 
+interface MaskStyle extends CSSProperties {
+  '--mv-icon-src': string;
+}
+
 export default function SvgMaskIcon({ src, className = '' }: SvgMaskIconProps) {
-  const maskStyle: CSSProperties = {
+  const maskStyle: MaskStyle = {
     '--mv-icon-src': `url("${src}")`,
   };
 

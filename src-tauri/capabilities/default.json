@@ -14,6 +14,7 @@
     "updater:default",
     "opener:default",
     "os:default",
+    "notification:default",
     {
       "identifier": "http:default",
       "allow": [

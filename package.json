@@ -1,6 +1,6 @@
 {
   "name": "mc-vector",
-  "version": "2.0.53",
+  "version": "2.0.54",
   "private": true,
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
@@ -29,6 +29,7 @@
     "@tauri-apps/plugin-dialog": "~2.7.0",
     "@tauri-apps/plugin-fs": "~2.5.0",
     "@tauri-apps/plugin-http": "~2.5.8",
+    "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "~2.5.3",
     "@tauri-apps/plugin-os": "~2.3.2",
     "@tauri-apps/plugin-process": "~2.3.1",

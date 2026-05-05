@@ -135,6 +135,13 @@ export const en: TranslationDictionary = {
       cloneFailed: 'Failed to clone server',
       templateSaved: 'Template saved',
       templateSaveFailed: 'Failed to save template',
+      bulkBackupCreated: 'Backup created for {name}',
+      bulkBackupFailed: 'Backup failed for {name}',
+    },
+    notification: {
+      crashed: 'Server crashed',
+      started: 'Server is online',
+      highCpu: 'CPU usage is high',
     },
     confirm: {
       delete: 'Are you sure you want to delete "{name}"?',
@@ -152,6 +159,7 @@ export const en: TranslationDictionary = {
       currentTps: 'Current TPS',
       tpsAutoSampled: 'Paper / LeafMC: auto sampled',
       tpsLogBased: 'Log-based detection',
+      uptime: 'Uptime',
       statusValues: {
         online: 'ONLINE',
         offline: 'OFFLINE',
@@ -167,6 +175,15 @@ export const en: TranslationDictionary = {
       memoryLast60s: 'Memory Usage (MB) - Last 60s',
       tpsLast60s: 'TPS - Last 60s',
       tpsNoData: 'TPS data is not available yet. Keep the server online and wait for log sampling.',
+    },
+    healthCheck: {
+      title: 'Server Health (SLP Ping)',
+      pinging: 'Pinging...',
+      online: 'Responding',
+      offline: 'No Response',
+      latency: 'Latency',
+      players: 'Players',
+      version: 'Version',
     },
   },
 
@@ -274,6 +291,9 @@ export const en: TranslationDictionary = {
       compressFailed: 'Failed to compress',
       extracted: 'Extracted',
       extractFailed: 'Failed to extract',
+      binaryNoDiff: 'Binary files cannot be diffed',
+      diffSelectOriginal: 'Click the original file to compare',
+      diffSelectModified: 'Click the modified file to compare',
     },
     toolbar: {
       goUp: 'Go Up',
@@ -283,6 +303,8 @@ export const en: TranslationDictionary = {
       compress: 'Compress',
       extract: 'Extract',
       delete: 'Delete',
+      diffOpen: 'Diff View',
+      diffClose: 'Close Diff',
     },
   },
 
@@ -392,6 +414,7 @@ export const en: TranslationDictionary = {
     entriesCount: 'entries',
     empty: 'Empty',
     lists: {
+      online: 'Online Players',
       whitelist: 'Whitelist',
       operators: 'Operators (OP)',
       bannedPlayers: 'Banned Players',
@@ -400,7 +423,10 @@ export const en: TranslationDictionary = {
     actions: {
       add: 'Add',
       remove: 'Remove',
+      kick: 'Kick',
+      ban: 'Ban',
     },
+    offlineNotice: 'Server is offline',
     placeholder: {
       playerName: 'Player Name',
       ipAddress: 'IP Address',
@@ -495,6 +521,8 @@ export const en: TranslationDictionary = {
         '{{count}} missing dependencies found.\n{{preview}}{{suffix}}\nInstall them first?',
       dependencyVersionNotFound: 'No compatible version found for dependency {{title}}',
       dependencyInstallFailed: 'Failed to install dependency {{title}}',
+      dependencyInstallIncomplete:
+        'Not all required dependencies were installed. Main plugin installation aborted.',
       dependencyInstallSuccess: 'Installed {{count}} dependencies',
       dependencyCheckOnly:
         'Only ran dependency check. Please install dependencies first if needed.',
@@ -565,7 +593,14 @@ export const en: TranslationDictionary = {
     generalSettings: 'General Settings',
     proxyNetwork: 'Proxy Network',
     addServer: 'Add Server',
+    importServer: 'Import',
     openSettings: 'Open settings window',
+    bulkSelect: 'Select',
+    bulkStartSelected: 'Start',
+    bulkStopSelected: 'Stop',
+    bulkBackupSelected: 'Backup',
+    bulkClearSelection: 'Clear',
+    bulkSelectedCount: '{count} selected',
   },
 
   proxy: {
@@ -729,6 +764,8 @@ export const en: TranslationDictionary = {
       intervalMinutes: 'Interval (minutes)',
       executionTime: 'Execution Time',
       weekday: 'Day of Week',
+      retainCount: 'Max backups to keep (0 = unlimited)',
+      retainDays: 'Retention days (0 = disabled)',
     },
     weekdays: {
       sunday: 'Sunday',
@@ -740,6 +777,16 @@ export const en: TranslationDictionary = {
       saturday: 'Saturday',
     },
     saveSettings: 'Save Settings',
+    jvmArgs: {
+      label: 'JVM Arguments',
+      placeholder: '-XX:+UseG1GC ...',
+      help: 'Extra JVM flags inserted before -jar. Each flag must start with "-".',
+      clear: 'Clear',
+      presets: {
+        aikar: "Aikar's Flags",
+        zgc: 'ZGC',
+      },
+    },
     ngrok: {
       title: 'Public Access (ngrok)',
       onlineBadge: 'ONLINE',
@@ -760,6 +807,35 @@ export const en: TranslationDictionary = {
         cancel: 'Cancel',
         saveAndConnect: 'Save and Connect',
       },
+    },
+    versionUpgrade: {
+      buttonLabel: 'Upgrade Version',
+      title: 'Version Upgrade Wizard',
+      currentVersion: 'Current Version',
+      latestVersion: 'Latest Version',
+      alreadyLatest: '✅ Already up to date',
+      serverMustBeOffline: 'Please stop the server before upgrading',
+      startUpgrade: 'Start Upgrade',
+      stepBackup: 'Backup',
+      backupDescription: 'Back up your current data before upgrading',
+      runBackup: 'Run Backup',
+      stepDownload: 'Download',
+      downloadDescription: 'Download and install the new version JAR',
+      runDownload: 'Download & Update',
+      stepDone: 'Done',
+      doneDescription: 'Upgrade complete. You can now start the server',
+      close: 'Close',
+      unsupported: 'Automatic upgrade is not supported for this software',
+      fetching: 'Checking for latest version...',
+      backupFailed: 'Backup failed',
+      downloadFailed: 'Download failed',
+    },
+    notifications: {
+      title: 'Notifications',
+      onCrash: 'Notify on crash',
+      onStart: 'Notify when server starts',
+      onHighCpu: 'Notify on high CPU usage',
+      cpuThreshold: 'CPU threshold (%)',
     },
   },
 
@@ -810,10 +886,20 @@ export const en: TranslationDictionary = {
     memory: {
       label: 'Memory (GB)',
     },
+    choice: {
+      title: 'Add Server',
+      newServer: 'New Server',
+      newServerHint: 'Set up a new server',
+      importServer: 'Import from Existing Folder',
+      importServerHint: 'Register an existing server folder',
+    },
   },
 
   properties: {
     title: 'Server Properties',
+    search: {
+      placeholder: 'Search properties...',
+    },
     openAdvanced: 'Open Advanced',
     saveChanges: 'Save Changes',
     loadFailed: 'Failed to load server properties',
@@ -954,6 +1040,23 @@ export const en: TranslationDictionary = {
       addressNote:
         '※ The address changes each time. Share the new address with friends each time you play.',
       tip: "Connection Test: Copy the displayed address and test by joining directly from another PC or friend's environment. If unable to connect, check the server-side logs first.",
+    },
+  },
+
+  importServer: {
+    title: 'Import Server',
+    folderLabel: 'Server Folder',
+    folderPlaceholder: 'Select a folder',
+    selectButton: 'Select',
+    nameLabel: 'Server Name',
+    versionLabel: 'Version',
+    softwareLabel: 'Software',
+    eulaWarning: 'EULA is not accepted. Please accept it manually after importing.',
+    importButton: 'Import',
+    toast: {
+      success: 'Server imported successfully',
+      failed: 'Failed to import server',
+      noJar: 'No server JAR found in folder',
     },
   },
 };

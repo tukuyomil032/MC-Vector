@@ -26,7 +26,14 @@ export interface MinecraftServer {
   autoBackupScheduleType?: 'interval' | 'daily' | 'weekly';
   autoBackupTime?: string;
   autoBackupWeekday?: number;
+  autoBackupRetainCount?: number;
+  autoBackupRetainDays?: number;
   createdDate?: string;
+  jvmArgs?: string;
+  notifyOnCrash?: boolean;
+  notifyOnStart?: boolean;
+  notifyOnHighCpu?: boolean;
+  notifyHighCpuThreshold?: number;
 }
 
 export type AppView =

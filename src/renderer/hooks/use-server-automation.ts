@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Translate } from '../../i18n';
 import { createBackup } from '../../lib/backup-commands';
+import { sendServerNotification } from '../../lib/notification-commands';
 import { isServerRunning, startServer as startServerApi } from '../../lib/server-commands';
 import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
@@ -486,6 +487,10 @@ export function useServerAutomation({
       );
 
       if (status === 'online') {
+        const onlineServer = serversRef.current.find((s) => s.id === serverId);
+        if (onlineServer?.notifyOnStart) {
+          void sendServerNotification(onlineServer.name, t('server.notification.started'));
+        }
         clearExpectedOffline(serverId);
         resetAutoRestartState(serverId);
         return;
@@ -513,6 +518,16 @@ export function useServerAutomation({
 
       if (status !== 'crashed' && status !== 'offline') {
         return;
+      }
+
+      if (status === 'crashed') {
+        const crashedServer = serversRef.current.find((s) => s.id === serverId);
+        if (crashedServer?.notifyOnCrash !== false) {
+          void sendServerNotification(
+            crashedServer?.name ?? serverId,
+            t('server.notification.crashed'),
+          );
+        }
       }
 
       const targetServer = serversRef.current.find((server) => server.id === serverId);

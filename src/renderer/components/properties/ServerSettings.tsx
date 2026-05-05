@@ -13,7 +13,9 @@ import {
 } from '../../../lib/ngrok-commands';
 import { type MinecraftServer } from '../../components/../shared/server declaration';
 import { VERSION_OPTIONS } from '../../constants/versionOptions';
+import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
+import VersionUpgradeWizard from '../VersionUpgradeWizard';
 import { useToast } from '../ToastProvider';
 
 interface ServerSettingsProps {
@@ -56,9 +58,23 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   >(server.autoBackupScheduleType ?? 'interval');
   const [autoBackupTime, setAutoBackupTime] = useState(server.autoBackupTime ?? '03:00');
   const [autoBackupWeekday, setAutoBackupWeekday] = useState(server.autoBackupWeekday ?? 0);
+  const [autoBackupRetainCount, setAutoBackupRetainCount] = useState(
+    server.autoBackupRetainCount ?? 0,
+  );
+  const [autoBackupRetainDays, setAutoBackupRetainDays] = useState(
+    server.autoBackupRetainDays ?? 0,
+  );
+  const [jvmArgs, setJvmArgs] = useState(server.jvmArgs ?? '');
+  const [notifyOnCrash, setNotifyOnCrash] = useState(server.notifyOnCrash !== false);
+  const [notifyOnStart, setNotifyOnStart] = useState(Boolean(server.notifyOnStart));
+  const [notifyOnHighCpu, setNotifyOnHighCpu] = useState(Boolean(server.notifyOnHighCpu));
+  const [notifyHighCpuThreshold, setNotifyHighCpuThreshold] = useState(
+    server.notifyHighCpuThreshold ?? 90,
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const [showJavaManager, setShowJavaManager] = useState(false);
+  const [showVersionWizard, setShowVersionWizard] = useState(false);
   const [installedJava, setInstalledJava] = useState<JavaVersion[]>([]);
 
   const [isTunneling, setIsTunneling] = useState(false);
@@ -96,6 +112,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     setAutoBackupScheduleType(server.autoBackupScheduleType ?? 'interval');
     setAutoBackupTime(server.autoBackupTime ?? '03:00');
     setAutoBackupWeekday(server.autoBackupWeekday ?? 0);
+    setAutoBackupRetainCount(server.autoBackupRetainCount ?? 0);
+    setAutoBackupRetainDays(server.autoBackupRetainDays ?? 0);
+    setJvmArgs(server.jvmArgs ?? '');
+    setNotifyOnCrash(server.notifyOnCrash !== false);
+    setNotifyOnStart(Boolean(server.notifyOnStart));
+    setNotifyOnHighCpu(Boolean(server.notifyOnHighCpu));
+    setNotifyHighCpuThreshold(server.notifyHighCpuThreshold ?? 90);
 
     loadJavaList();
 
@@ -186,6 +209,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         autoBackupScheduleType: normalizedScheduleType,
         autoBackupTime: normalizedBackupTime,
         autoBackupWeekday: normalizedBackupWeekday,
+        autoBackupRetainCount,
+        autoBackupRetainDays,
+        jvmArgs: jvmArgs.trim() || undefined,
+        notifyOnCrash,
+        notifyOnStart,
+        notifyOnHighCpu,
+        notifyHighCpuThreshold,
       });
     } finally {
       setIsSaving(false);
@@ -328,6 +358,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 ))}
               </select>
             </div>
+
+            <div className="server-settings__col server-settings__col--auto">
+              <label className="server-settings__label">&nbsp;</label>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowVersionWizard(true)}
+              >
+                {t('serverSettings.versionUpgrade.buttonLabel')}
+              </button>
+            </div>
           </div>
 
           <div className="server-settings__field-block">
@@ -376,6 +417,39 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 className="input-field"
               />
             </div>
+          </div>
+
+          <div className="server-settings__field-block">
+            <label className="server-settings__label">{t('serverSettings.jvmArgs.label')}</label>
+            <div className="server-settings__jvm-presets">
+              {JVM_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="control-chip server-settings__jvm-preset-btn"
+                  onClick={() => setJvmArgs(preset.args)}
+                >
+                  {t(preset.labelKey)}
+                </button>
+              ))}
+              {jvmArgs && (
+                <button
+                  type="button"
+                  className="control-chip server-settings__jvm-preset-btn"
+                  onClick={() => setJvmArgs('')}
+                >
+                  {t('serverSettings.jvmArgs.clear')}
+                </button>
+              )}
+            </div>
+            <textarea
+              className="input-field server-settings__jvm-textarea"
+              value={jvmArgs}
+              onChange={(e) => setJvmArgs(e.target.value)}
+              placeholder={t('serverSettings.jvmArgs.placeholder')}
+              rows={3}
+            />
+            <div className="server-settings__form-help">{t('serverSettings.jvmArgs.help')}</div>
           </div>
 
           <div className="server-settings__field-block">
@@ -515,7 +589,90 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   </select>
                 </div>
               )}
+
+              <div className="server-settings__row">
+                <div className="server-settings__col">
+                  <label className="server-settings__label">
+                    {t('serverSettings.autoBackup.retainCount')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={999}
+                    value={autoBackupRetainCount}
+                    onChange={(event) => setAutoBackupRetainCount(Number(event.target.value))}
+                    className="input-field"
+                  />
+                </div>
+                <div className="server-settings__col">
+                  <label className="server-settings__label">
+                    {t('serverSettings.autoBackup.retainDays')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={autoBackupRetainDays}
+                    onChange={(event) => setAutoBackupRetainDays(Number(event.target.value))}
+                    className="input-field"
+                  />
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="server-settings__section">
+            <h3 className="server-settings__section-title">
+              {t('serverSettings.notifications.title')}
+            </h3>
+            <div className="server-settings__row">
+              <label className="server-settings__label">
+                <input
+                  type="checkbox"
+                  checked={notifyOnCrash}
+                  onChange={(e) => setNotifyOnCrash(e.target.checked)}
+                  className="mr-2"
+                />
+                {t('serverSettings.notifications.onCrash')}
+              </label>
+            </div>
+            <div className="server-settings__row">
+              <label className="server-settings__label">
+                <input
+                  type="checkbox"
+                  checked={notifyOnStart}
+                  onChange={(e) => setNotifyOnStart(e.target.checked)}
+                  className="mr-2"
+                />
+                {t('serverSettings.notifications.onStart')}
+              </label>
+            </div>
+            <div className="server-settings__row">
+              <label className="server-settings__label">
+                <input
+                  type="checkbox"
+                  checked={notifyOnHighCpu}
+                  onChange={(e) => setNotifyOnHighCpu(e.target.checked)}
+                  className="mr-2"
+                />
+                {t('serverSettings.notifications.onHighCpu')}
+              </label>
+            </div>
+            {notifyOnHighCpu && (
+              <div className="server-settings__row">
+                <label className="server-settings__label">
+                  {t('serverSettings.notifications.cpuThreshold')}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={notifyHighCpuThreshold}
+                  onChange={(e) => setNotifyHighCpuThreshold(Number(e.target.value))}
+                  className="input-field"
+                />
+              </div>
+            )}
           </div>
 
           <div className="server-settings__actions">
@@ -661,6 +818,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
             </div>
           </div>
         </div>
+      )}
+
+      {showVersionWizard && (
+        <VersionUpgradeWizard
+          server={server}
+          onClose={() => setShowVersionWizard(false)}
+          onServerUpdate={async (updated) => {
+            await onSave(updated);
+            setShowVersionWizard(false);
+          }}
+        />
       )}
     </div>
   );

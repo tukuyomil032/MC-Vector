@@ -134,6 +134,13 @@ export const ja: TranslationDictionary = {
       cloneFailed: 'サーバー複製に失敗しました',
       templateSaved: 'テンプレートを保存しました',
       templateSaveFailed: 'テンプレート保存に失敗しました',
+      bulkBackupCreated: '{name} のバックアップを作成しました',
+      bulkBackupFailed: '{name} のバックアップに失敗しました',
+    },
+    notification: {
+      crashed: 'サーバーがクラッシュしました',
+      started: 'サーバーがオンラインになりました',
+      highCpu: 'CPU使用率が高くなっています',
     },
     confirm: {
       delete: '本当に「{name}」を削除しますか？',
@@ -151,6 +158,7 @@ export const ja: TranslationDictionary = {
       currentTps: '現在のTPS',
       tpsAutoSampled: 'Paper / LeafMC: 自動計測',
       tpsLogBased: 'ログベース検出',
+      uptime: '稼働時間',
       statusValues: {
         online: '稼働中',
         offline: '停止中',
@@ -166,6 +174,15 @@ export const ja: TranslationDictionary = {
       memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
       tpsLast60s: 'TPS - 直近60秒',
       tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
+    },
+    healthCheck: {
+      title: 'サーバーヘルス（SLP Ping）',
+      pinging: 'Ping中...',
+      online: '応答あり',
+      offline: '応答なし',
+      latency: 'レイテンシ',
+      players: 'プレイヤー',
+      version: 'バージョン',
     },
   },
 
@@ -273,6 +290,9 @@ export const ja: TranslationDictionary = {
       compressFailed: '圧縮に失敗しました',
       extracted: '解凍しました',
       extractFailed: '解凍に失敗しました',
+      binaryNoDiff: 'バイナリファイルは差分表示できません',
+      diffSelectOriginal: '比較元ファイルをクリックしてください',
+      diffSelectModified: '比較先ファイルをクリックしてください',
     },
     toolbar: {
       goUp: '上の階層へ',
@@ -282,6 +302,8 @@ export const ja: TranslationDictionary = {
       compress: '圧縮',
       extract: '解凍',
       delete: '削除',
+      diffOpen: '差分表示',
+      diffClose: '差分を閉じる',
     },
   },
 
@@ -390,6 +412,7 @@ export const ja: TranslationDictionary = {
     entriesCount: '件',
     empty: '空',
     lists: {
+      online: '接続中プレイヤー',
       whitelist: 'ホワイトリスト',
       operators: 'OP一覧',
       bannedPlayers: 'BANプレイヤー',
@@ -398,7 +421,10 @@ export const ja: TranslationDictionary = {
     actions: {
       add: '追加',
       remove: '削除',
+      kick: 'キック',
+      ban: 'BAN',
     },
+    offlineNotice: 'サーバーがオフラインです',
     placeholder: {
       playerName: 'プレイヤー名',
       ipAddress: 'IPアドレス',
@@ -494,6 +520,8 @@ export const ja: TranslationDictionary = {
         '不足依存プラグインが {{count}} 件あります。\n{{preview}}{{suffix}}\n先に一括インストールしますか？',
       dependencyVersionNotFound: '依存プラグイン {{title}} の対応バージョンが見つかりません',
       dependencyInstallFailed: '依存プラグイン {{title}} の導入に失敗しました',
+      dependencyInstallIncomplete:
+        '必要な依存プラグインがすべてインストールされませんでした。メインプラグインの導入を中止しました。',
       dependencyInstallSuccess: '依存プラグインを {{count}} 件インストールしました',
       dependencyCheckOnly:
         '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
@@ -563,7 +591,14 @@ export const ja: TranslationDictionary = {
     generalSettings: '全般設定',
     proxyNetwork: 'プロキシネットワーク',
     addServer: 'サーバーを追加',
+    importServer: 'インポート',
     openSettings: '設定ウィンドウを開く',
+    bulkSelect: '選択',
+    bulkStartSelected: '一括起動',
+    bulkStopSelected: '一括停止',
+    bulkBackupSelected: '一括バックアップ',
+    bulkClearSelection: '解除',
+    bulkSelectedCount: '{count}件選択中',
   },
 
   proxy: {
@@ -727,6 +762,8 @@ export const ja: TranslationDictionary = {
       intervalMinutes: '実行間隔（分）',
       executionTime: '実行時刻',
       weekday: '曜日',
+      retainCount: '最大保持件数（0=無制限）',
+      retainDays: '保持日数（0=無効）',
     },
     weekdays: {
       sunday: '日曜',
@@ -738,6 +775,16 @@ export const ja: TranslationDictionary = {
       saturday: '土曜',
     },
     saveSettings: '設定を保存',
+    jvmArgs: {
+      label: 'JVM 引数',
+      placeholder: '-XX:+UseG1GC ...',
+      help: '-jar の前に挿入される追加JVMフラグです。各フラグは「-」で始まる必要があります。',
+      clear: 'クリア',
+      presets: {
+        aikar: "Aikar's Flags",
+        zgc: 'ZGC',
+      },
+    },
     ngrok: {
       title: '外部公開 (ngrok)',
       onlineBadge: 'ONLINE',
@@ -758,6 +805,35 @@ export const ja: TranslationDictionary = {
         cancel: 'キャンセル',
         saveAndConnect: '保存して接続',
       },
+    },
+    versionUpgrade: {
+      buttonLabel: 'バージョンアップ',
+      title: 'バージョンアップウィザード',
+      currentVersion: '現在のバージョン',
+      latestVersion: '最新バージョン',
+      alreadyLatest: '✅ 最新バージョンです',
+      serverMustBeOffline: 'アップグレードを開始するにはサーバーを停止してください',
+      startUpgrade: 'アップグレード開始',
+      stepBackup: 'バックアップ',
+      backupDescription: 'アップグレード前に現在のデータをバックアップします',
+      runBackup: 'バックアップ実行',
+      stepDownload: 'ダウンロード',
+      downloadDescription: '新しいバージョンのJARをダウンロードして更新します',
+      runDownload: 'ダウンロード＆更新',
+      stepDone: '完了',
+      doneDescription: 'アップグレードが完了しました。サーバーを起動してください',
+      close: '閉じる',
+      unsupported: 'このソフトウェアは自動アップグレードに対応していません',
+      fetching: '最新バージョンを確認中...',
+      backupFailed: 'バックアップに失敗しました',
+      downloadFailed: 'ダウンロードに失敗しました',
+    },
+    notifications: {
+      title: '通知',
+      onCrash: 'クラッシュ時に通知',
+      onStart: '起動時に通知',
+      onHighCpu: 'CPU高負荷時に通知',
+      cpuThreshold: 'CPU 閾値 (%)',
     },
   },
 
@@ -808,10 +884,20 @@ export const ja: TranslationDictionary = {
     memory: {
       label: 'メモリ(GB)',
     },
+    choice: {
+      title: 'サーバーを追加',
+      newServer: '新規作成',
+      newServerHint: '新しいサーバーをセットアップする',
+      importServer: '既存フォルダからインポート',
+      importServerHint: '既に存在するサーバーフォルダを登録する',
+    },
   },
 
   properties: {
     title: 'プロパティ',
+    search: {
+      placeholder: 'プロパティを検索...',
+    },
     openAdvanced: '詳細設定を開く',
     saveChanges: '変更を保存',
     loadFailed: 'サーバープロパティの読み込みに失敗しました',
@@ -954,6 +1040,23 @@ export const ja: TranslationDictionary = {
       addressNote:
         '※ アドレスは毎回変わります。遊ぶたびに新しいアドレスを友達に教えてあげてください。',
       tip: '接続テスト手順: 表示アドレスをコピーし、別PCまたは友人環境から直接参加して確認します。入れない場合はサーバー側ログを先に確認してください。',
+    },
+  },
+
+  importServer: {
+    title: 'サーバーをインポート',
+    folderLabel: 'サーバーフォルダ',
+    folderPlaceholder: 'フォルダを選択してください',
+    selectButton: '選択',
+    nameLabel: 'サーバー名',
+    versionLabel: 'バージョン',
+    softwareLabel: 'ソフトウェア',
+    eulaWarning: 'EULA が未承認です。インポート後に手動で承認してください。',
+    importButton: 'インポート',
+    toast: {
+      success: 'サーバーをインポートしました',
+      failed: 'インポートに失敗しました',
+      noJar: 'サーバー JAR が見つかりません',
     },
   },
 };

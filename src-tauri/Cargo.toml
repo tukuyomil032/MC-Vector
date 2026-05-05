@@ -1,6 +1,6 @@
 [package]
 name = "mc-vector"
-version = "2.0.53"
+version = "2.0.54"
 description = "Minecraft Server Management App"
 authors = ["tukuyomi032"]
 license = "MIT"
@@ -29,6 +29,7 @@ tauri-plugin-process = "2"
 tauri-plugin-store = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-os = "2"
+tauri-plugin-notification = "2"
 
 # カスタムコマンド用
 tokio = { version = "1", features = ["full"] }

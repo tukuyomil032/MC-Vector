@@ -144,6 +144,25 @@ fn audit_server_action(action: &str, server_id: &str) {
     );
 }
 
+#[tauri::command]
+fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
+    let args: Vec<String> = raw.split_whitespace().map(|s| s.to_string()).collect();
+    for arg in &args {
+        if !arg.starts_with('-') {
+            return Err(format!("Invalid JVM argument (must start with '-'): {arg}"));
+        }
+        if arg.contains(|c: char| {
+            matches!(
+                c,
+                ';' | '&' | '|' | '`' | '$' | '(' | ')' | '{' | '}' | '<' | '>' | '\n' | '\r'
+            )
+        }) {
+            return Err(format!("JVM argument contains forbidden characters: {arg}"));
+        }
+    }
+    Ok(args)
+}
+
 /// サーバーを起動し、stdout/stderr をイベントストリーミングする
 #[tauri::command]
 pub async fn start_server(
@@ -155,6 +174,7 @@ pub async fn start_server(
     server_path: String,
     memory: u32,
     jar_file: String,
+    jvm_extra_args: Option<String>,
 ) -> Result<(), String> {
     let validated_server_id = validate_server_id(&server_id)?;
     let validated_java_path = validate_java_path(&java_path)?;
@@ -166,6 +186,11 @@ pub async fn start_server(
             MIN_MEMORY_MB, MAX_MEMORY_MB
         ));
     }
+
+    let extra_args = match jvm_extra_args.as_deref() {
+        Some(s) if !s.trim().is_empty() => validate_jvm_extra_args(s)?,
+        _ => vec![],
+    };
 
     let jar_path = validated_server_dir.join(&validated_jar_file);
     if !jar_path.exists() || !jar_path.is_file() {
@@ -183,14 +208,16 @@ pub async fn start_server(
         }
     }
 
+    let mut jvm_args: Vec<String> = vec![format!("-Xmx{}M", memory), format!("-Xms{}M", memory)];
+    jvm_args.extend(extra_args);
+    jvm_args.extend([
+        "-jar".to_string(),
+        validated_jar_file.clone(),
+        "nogui".to_string(),
+    ]);
+
     let mut child = Command::new(&validated_java_path)
-        .args([
-            &format!("-Xmx{}M", memory),
-            &format!("-Xms{}M", memory),
-            "-jar",
-            &validated_jar_file,
-            "nogui",
-        ])
+        .args(&jvm_args)
         .current_dir(&validated_server_dir)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -240,7 +267,10 @@ pub async fn start_server(
     // サーバーを管理マップに登録
     {
         let mut servers = state.servers.lock().await;
-        servers.insert(validated_server_id.clone(), RunningServer { command_tx, pid });
+        servers.insert(
+            validated_server_id.clone(),
+            RunningServer { command_tx, pid },
+        );
     }
 
     // ステータス通知: online

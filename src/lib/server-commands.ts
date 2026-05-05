@@ -96,6 +96,7 @@ export async function startServer(
   serverPath: string,
   memory: number,
   jarFile: string,
+  jvmExtraArgs?: string,
 ): Promise<void> {
   return tauriInvoke('start_server', {
     serverId,
@@ -103,6 +104,7 @@ export async function startServer(
     serverPath,
     memory,
     jarFile,
+    jvmExtraArgs: jvmExtraArgs ?? null,
   });
 }
 

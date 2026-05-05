@@ -156,6 +156,13 @@ export interface TranslationDictionary {
       cloneFailed: string;
       templateSaved: string;
       templateSaveFailed: string;
+      bulkBackupCreated: string;
+      bulkBackupFailed: string;
+    };
+    notification: {
+      crashed: string;
+      started: string;
+      highCpu: string;
     };
     confirm: {
       delete: string;
@@ -174,6 +181,7 @@ export interface TranslationDictionary {
       currentTps: string;
       tpsAutoSampled: string;
       tpsLogBased: string;
+      uptime: string;
       statusValues: {
         online: string;
         offline: string;
@@ -190,12 +198,22 @@ export interface TranslationDictionary {
       tpsLast60s: string;
       tpsNoData: string;
     };
+    healthCheck: {
+      title: string;
+      pinging: string;
+      online: string;
+      offline: string;
+      latency: string;
+      players: string;
+      version: string;
+    };
   };
 
   /** Console view translations */
   console: {
     actions: {
       find: string;
+      jumpLatest: string;
       saveLogs: string;
       send: string;
     };
@@ -214,8 +232,15 @@ export interface TranslationDictionary {
     search: {
       label: string;
       placeholder: string;
+      regex: string;
+      invalidRegex: string;
       prev: string;
       next: string;
+    };
+    pinned: {
+      title: string;
+      pin: string;
+      unpin: string;
     };
     status: {
       address: string;
@@ -227,6 +252,7 @@ export interface TranslationDictionary {
       noLogsToSave: string;
       logsSaved: string;
       logsSaveFailed: string;
+      pinLimitReached: string;
     };
   };
 
@@ -289,6 +315,9 @@ export interface TranslationDictionary {
       compressFailed: string;
       extracted: string;
       extractFailed: string;
+      binaryNoDiff: string;
+      diffSelectOriginal: string;
+      diffSelectModified: string;
     };
     toolbar: {
       goUp: string;
@@ -298,6 +327,8 @@ export interface TranslationDictionary {
       compress: string;
       extract: string;
       delete: string;
+      diffOpen: string;
+      diffClose: string;
     };
   };
 
@@ -409,6 +440,7 @@ export interface TranslationDictionary {
     entriesCount: string;
     empty: string;
     lists: {
+      online: string;
       whitelist: string;
       operators: string;
       bannedPlayers: string;
@@ -417,7 +449,10 @@ export interface TranslationDictionary {
     actions: {
       add: string;
       remove: string;
+      kick: string;
+      ban: string;
     };
+    offlineNotice: string;
     placeholder: {
       playerName: string;
       ipAddress: string;
@@ -510,6 +545,7 @@ export interface TranslationDictionary {
       dependencyMissing: string;
       dependencyVersionNotFound: string;
       dependencyInstallFailed: string;
+      dependencyInstallIncomplete: string;
       dependencyInstallSuccess: string;
       dependencyCheckOnly: string;
       incompatibilityWarning: string;
@@ -551,6 +587,8 @@ export interface TranslationDictionary {
       installedVersion: string;
       installedGameVersions: string;
       uninstall: string;
+      uninstallTitle: string;
+      confirmUninstall: string;
       reinstall: string;
       uninstallSuccess: string;
       uninstallError: string;
@@ -576,7 +614,14 @@ export interface TranslationDictionary {
     generalSettings: string;
     proxyNetwork: string;
     addServer: string;
+    importServer: string;
     openSettings: string;
+    bulkSelect: string;
+    bulkStartSelected: string;
+    bulkStopSelected: string;
+    bulkBackupSelected: string;
+    bulkClearSelection: string;
+    bulkSelectedCount: string;
   };
 
   /** Proxy configuration translations */
@@ -733,6 +778,8 @@ export interface TranslationDictionary {
       intervalMinutes: string;
       executionTime: string;
       weekday: string;
+      retainCount: string;
+      retainDays: string;
     };
     weekdays: {
       sunday: string;
@@ -744,6 +791,16 @@ export interface TranslationDictionary {
       saturday: string;
     };
     saveSettings: string;
+    jvmArgs: {
+      label: string;
+      placeholder: string;
+      help: string;
+      clear: string;
+      presets: {
+        aikar: string;
+        zgc: string;
+      };
+    };
     ngrok: {
       title: string;
       onlineBadge: string;
@@ -763,6 +820,35 @@ export interface TranslationDictionary {
         cancel: string;
         saveAndConnect: string;
       };
+    };
+    versionUpgrade: {
+      buttonLabel: string;
+      title: string;
+      currentVersion: string;
+      latestVersion: string;
+      alreadyLatest: string;
+      serverMustBeOffline: string;
+      startUpgrade: string;
+      stepBackup: string;
+      backupDescription: string;
+      runBackup: string;
+      stepDownload: string;
+      downloadDescription: string;
+      runDownload: string;
+      stepDone: string;
+      doneDescription: string;
+      close: string;
+      unsupported: string;
+      fetching: string;
+      backupFailed: string;
+      downloadFailed: string;
+    };
+    notifications: {
+      title: string;
+      onCrash: string;
+      onStart: string;
+      onHighCpu: string;
+      cpuThreshold: string;
     };
   };
 
@@ -814,11 +900,21 @@ export interface TranslationDictionary {
     memory: {
       label: string;
     };
+    choice: {
+      title: string;
+      newServer: string;
+      newServerHint: string;
+      importServer: string;
+      importServerHint: string;
+    };
   };
 
   /** Server properties view translations */
   properties: {
     title: string;
+    search: {
+      placeholder: string;
+    };
     openAdvanced: string;
     saveChanges: string;
     loadFailed: string;
@@ -959,6 +1055,24 @@ export interface TranslationDictionary {
       description2: string;
       addressNote: string;
       tip: string;
+    };
+  };
+
+  /** Import server modal translations */
+  importServer: {
+    title: string;
+    folderLabel: string;
+    folderPlaceholder: string;
+    selectButton: string;
+    nameLabel: string;
+    versionLabel: string;
+    softwareLabel: string;
+    eulaWarning: string;
+    importButton: string;
+    toast: {
+      success: string;
+      failed: string;
+      noJar: string;
     };
   };
 }

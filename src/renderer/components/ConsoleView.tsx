@@ -3,6 +3,7 @@ import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
 import { logError } from '../../lib/error-utils';
 import {
   type AnsiSegment as RustAnsiSegmentDto,
@@ -510,6 +511,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     };
   }, [server.id]);
 
+  useEffect(() => {
+    void loadCommandHistory(server.id).then((history) => {
+      if (history.length > 0) {
+        setCommandHistory(history);
+      }
+    });
+  }, [server.id]);
+
   // Ngrok status is now event-driven; cycle the display address periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -533,6 +542,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       if (next.length > 100) {
         next.shift();
       }
+      void saveCommandHistory(server.id, next);
       return next;
     });
     setHistoryCursor(-1);

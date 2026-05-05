@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import { logError } from '../../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../../lib/file-commands';
+import { serverPropertiesList } from '../../shared/propertiesData';
 import { type MinecraftServer } from '../../shared/server declaration';
 import { useToast } from '../ToastProvider';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
@@ -30,6 +31,7 @@ export default function PropertiesView({ server }: Props) {
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const sep = server.path.includes('\\') ? '\\' : '/';
   const propFilePath = `${server.path}${sep}server.properties`;
   const { showToast } = useToast();
@@ -84,6 +86,20 @@ export default function PropertiesView({ server }: Props) {
   useEffect(() => {
     // Advanced settings changes are now handled inline, no separate window IPC needed
   }, [showToast]);
+
+  const matchesSearch = useMemo(() => {
+    if (!searchQuery.trim()) return (_key: string) => true;
+    const q = searchQuery.toLowerCase();
+    const defMap = new Map(serverPropertiesList.map((d) => [d.key, d]));
+    return (key: string) => {
+      const def = defMap.get(key);
+      return (
+        key.toLowerCase().includes(q) ||
+        (def?.label ?? '').toLowerCase().includes(q) ||
+        (def?.description ?? '').toLowerCase().includes(q)
+      );
+    };
+  }, [searchQuery]);
 
   const handleChange = (key: string, value: PropertyValue) => {
     setProps((prev) => ({ ...prev, [key]: value }));
@@ -174,119 +190,152 @@ export default function PropertiesView({ server }: Props) {
           </div>
         </div>
 
+        <div className="properties-view__search-bar">
+          <input
+            type="text"
+            className="input-field properties-view__search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('properties.search.placeholder')}
+          />
+        </div>
+
         <div className="properties-view__section">
           <div className="properties-view__section-title">{t('properties.sections.basic')}</div>
 
-          <div className="properties-view__row">
-            <div className="properties-view__row-info">
-              <span>{t('properties.motd.label')}</span>
-              <span className="properties-view__row-description">
-                {t('properties.motd.description')}
-              </span>
+          {matchesSearch('motd') && (
+            <div className="properties-view__row">
+              <div className="properties-view__row-info">
+                <span>{t('properties.motd.label')}</span>
+                <span
+                  className="properties-view__row-description"
+                  title={t('properties.motd.description')}
+                >
+                  {t('properties.motd.description')}
+                </span>
+              </div>
+              <input
+                type="text"
+                className="input-field properties-view__motd-input"
+                value={props['motd'] as string}
+                onChange={(e) => handleChange('motd', e.target.value)}
+              />
             </div>
-            <input
-              type="text"
-              className="input-field properties-view__motd-input"
-              value={props['motd'] as string}
-              onChange={(e) => handleChange('motd', e.target.value)}
-            />
-          </div>
+          )}
 
-          <div className="properties-view__row">
-            <div className="properties-view__row-info">
-              <span>{t('properties.gameMode.label')}</span>
+          {matchesSearch('gamemode') && (
+            <div className="properties-view__row">
+              <div className="properties-view__row-info">
+                <span>{t('properties.gameMode.label')}</span>
+              </div>
+              <select
+                className="input-field"
+                value={props['gamemode'] as string}
+                onChange={(e) => handleChange('gamemode', e.target.value)}
+              >
+                <option value="survival">{t('properties.gameMode.options.survival')}</option>
+                <option value="creative">{t('properties.gameMode.options.creative')}</option>
+                <option value="adventure">{t('properties.gameMode.options.adventure')}</option>
+                <option value="spectator">{t('properties.gameMode.options.spectator')}</option>
+              </select>
             </div>
-            <select
-              className="input-field"
-              value={props['gamemode'] as string}
-              onChange={(e) => handleChange('gamemode', e.target.value)}
-            >
-              <option value="survival">{t('properties.gameMode.options.survival')}</option>
-              <option value="creative">{t('properties.gameMode.options.creative')}</option>
-              <option value="adventure">{t('properties.gameMode.options.adventure')}</option>
-              <option value="spectator">{t('properties.gameMode.options.spectator')}</option>
-            </select>
-          </div>
+          )}
 
-          <div className="properties-view__row">
-            <div className="properties-view__row-info">
-              <span>{t('properties.difficulty.label')}</span>
+          {matchesSearch('difficulty') && (
+            <div className="properties-view__row">
+              <div className="properties-view__row-info">
+                <span>{t('properties.difficulty.label')}</span>
+              </div>
+              <select
+                className="input-field"
+                value={props['difficulty'] as string}
+                onChange={(e) => handleChange('difficulty', e.target.value)}
+              >
+                <option value="peaceful">{t('properties.difficulty.options.peaceful')}</option>
+                <option value="easy">{t('properties.difficulty.options.easy')}</option>
+                <option value="normal">{t('properties.difficulty.options.normal')}</option>
+                <option value="hard">{t('properties.difficulty.options.hard')}</option>
+              </select>
             </div>
-            <select
-              className="input-field"
-              value={props['difficulty'] as string}
-              onChange={(e) => handleChange('difficulty', e.target.value)}
-            >
-              <option value="peaceful">{t('properties.difficulty.options.peaceful')}</option>
-              <option value="easy">{t('properties.difficulty.options.easy')}</option>
-              <option value="normal">{t('properties.difficulty.options.normal')}</option>
-              <option value="hard">{t('properties.difficulty.options.hard')}</option>
-            </select>
-          </div>
+          )}
         </div>
 
         <div className="properties-view__section">
           <div className="properties-view__section-title">{t('properties.sections.gameplay')}</div>
-          <ToggleItem
-            label={t('properties.toggles.pvp.label')}
-            desc={t('properties.toggles.pvp.description')}
-            checked={Boolean(props['pvp'])}
-            onChange={(v) => handleChange('pvp', v)}
-          />
-          <ToggleItem
-            label={t('properties.toggles.allowFlight.label')}
-            desc={t('properties.toggles.allowFlight.description')}
-            checked={Boolean(props['allow-flight'])}
-            onChange={(v) => handleChange('allow-flight', v)}
-          />
-          <ToggleItem
-            label={t('properties.toggles.commandBlock.label')}
-            desc={t('properties.toggles.commandBlock.description')}
-            checked={Boolean(props['enable-command-block'])}
-            onChange={(v) => handleChange('enable-command-block', v)}
-          />
+          {matchesSearch('pvp') && (
+            <ToggleItem
+              label={t('properties.toggles.pvp.label')}
+              desc={t('properties.toggles.pvp.description')}
+              checked={Boolean(props['pvp'])}
+              onChange={(v) => handleChange('pvp', v)}
+            />
+          )}
+          {matchesSearch('allow-flight') && (
+            <ToggleItem
+              label={t('properties.toggles.allowFlight.label')}
+              desc={t('properties.toggles.allowFlight.description')}
+              checked={Boolean(props['allow-flight'])}
+              onChange={(v) => handleChange('allow-flight', v)}
+            />
+          )}
+          {matchesSearch('enable-command-block') && (
+            <ToggleItem
+              label={t('properties.toggles.commandBlock.label')}
+              desc={t('properties.toggles.commandBlock.description')}
+              checked={Boolean(props['enable-command-block'])}
+              onChange={(v) => handleChange('enable-command-block', v)}
+            />
+          )}
         </div>
 
         <div className="properties-view__section">
           <div className="properties-view__section-title">{t('properties.sections.network')}</div>
 
-          <div className="properties-view__row">
-            <div className="properties-view__row-info">
-              <span>{t('properties.maxPlayers')}</span>
+          {matchesSearch('max-players') && (
+            <div className="properties-view__row">
+              <div className="properties-view__row-info">
+                <span>{t('properties.maxPlayers')}</span>
+              </div>
+              <input
+                type="number"
+                className="input-field properties-view__number-input properties-view__number-input--sm"
+                value={props['max-players'] as number}
+                onChange={(e) => handleChange('max-players', Number(e.target.value))}
+              />
             </div>
-            <input
-              type="number"
-              className="input-field properties-view__number-input properties-view__number-input--sm"
-              value={props['max-players'] as number}
-              onChange={(e) => handleChange('max-players', Number(e.target.value))}
-            />
-          </div>
+          )}
 
-          <div className="properties-view__row">
-            <div className="properties-view__row-info">
-              <span>{t('properties.serverPort')}</span>
+          {matchesSearch('server-port') && (
+            <div className="properties-view__row">
+              <div className="properties-view__row-info">
+                <span>{t('properties.serverPort')}</span>
+              </div>
+              <input
+                type="number"
+                className="input-field properties-view__number-input properties-view__number-input--md"
+                value={props['server-port'] as number}
+                onChange={(e) => handleChange('server-port', Number(e.target.value))}
+              />
             </div>
-            <input
-              type="number"
-              className="input-field properties-view__number-input properties-view__number-input--md"
-              value={props['server-port'] as number}
-              onChange={(e) => handleChange('server-port', Number(e.target.value))}
+          )}
+
+          {matchesSearch('online-mode') && (
+            <ToggleItem
+              label={t('properties.toggles.onlineMode.label')}
+              desc={t('properties.toggles.onlineMode.description')}
+              checked={Boolean(props['online-mode'])}
+              onChange={(v) => handleChange('online-mode', v)}
             />
-          </div>
+          )}
 
-          <ToggleItem
-            label={t('properties.toggles.onlineMode.label')}
-            desc={t('properties.toggles.onlineMode.description')}
-            checked={Boolean(props['online-mode'])}
-            onChange={(v) => handleChange('online-mode', v)}
-          />
-
-          <ToggleItem
-            label={t('properties.toggles.whitelist.label')}
-            desc={t('properties.toggles.whitelist.description')}
-            checked={Boolean(props['white-list'])}
-            onChange={(v) => handleChange('white-list', v)}
-          />
+          {matchesSearch('white-list') && (
+            <ToggleItem
+              label={t('properties.toggles.whitelist.label')}
+              desc={t('properties.toggles.whitelist.description')}
+              checked={Boolean(props['white-list'])}
+              onChange={(v) => handleChange('white-list', v)}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -308,7 +357,9 @@ function ToggleItem({
     <div className="properties-view__row">
       <div className="properties-view__row-info">
         <span>{label}</span>
-        <span className="properties-view__row-description">{desc}</span>
+        <span className="properties-view__row-description" title={desc}>
+          {desc}
+        </span>
       </div>
       <label className="toggle-switch">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
