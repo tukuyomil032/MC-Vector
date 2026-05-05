@@ -391,6 +391,7 @@ export const ja: TranslationDictionary = {
     entriesCount: '件',
     empty: '空',
     lists: {
+      online: '接続中プレイヤー',
       whitelist: 'ホワイトリスト',
       operators: 'OP一覧',
       bannedPlayers: 'BANプレイヤー',
@@ -399,7 +400,10 @@ export const ja: TranslationDictionary = {
     actions: {
       add: '追加',
       remove: '削除',
+      kick: 'キック',
+      ban: 'BAN',
     },
+    offlineNotice: 'サーバーがオフラインです',
     placeholder: {
       playerName: 'プレイヤー名',
       ipAddress: 'IPアドレス',
@@ -823,6 +827,9 @@ export const ja: TranslationDictionary = {
 
   properties: {
     title: 'プロパティ',
+    search: {
+      placeholder: 'プロパティを検索...',
+    },
     openAdvanced: '詳細設定を開く',
     saveChanges: '変更を保存',
     loadFailed: 'サーバープロパティの読み込みに失敗しました',

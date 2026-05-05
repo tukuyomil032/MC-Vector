@@ -393,6 +393,7 @@ export const en: TranslationDictionary = {
     entriesCount: 'entries',
     empty: 'Empty',
     lists: {
+      online: 'Online Players',
       whitelist: 'Whitelist',
       operators: 'Operators (OP)',
       bannedPlayers: 'Banned Players',
@@ -401,7 +402,10 @@ export const en: TranslationDictionary = {
     actions: {
       add: 'Add',
       remove: 'Remove',
+      kick: 'Kick',
+      ban: 'Ban',
     },
+    offlineNotice: 'Server is offline',
     placeholder: {
       playerName: 'Player Name',
       ipAddress: 'IP Address',
@@ -825,6 +829,9 @@ export const en: TranslationDictionary = {
 
   properties: {
     title: 'Server Properties',
+    search: {
+      placeholder: 'Search properties...',
+    },
     openAdvanced: 'Open Advanced',
     saveChanges: 'Save Changes',
     loadFailed: 'Failed to load server properties',
