@@ -95,6 +95,7 @@ export default defineConfig({
       'scripts/**',
       '.agents/**/*',
       '.claude/**/*',
+      'CLAUDE.md',
     ],
   },
 

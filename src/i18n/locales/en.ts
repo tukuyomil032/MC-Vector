@@ -152,6 +152,7 @@ export const en: TranslationDictionary = {
       currentTps: 'Current TPS',
       tpsAutoSampled: 'Paper / LeafMC: auto sampled',
       tpsLogBased: 'Log-based detection',
+      uptime: 'Uptime',
       statusValues: {
         online: 'ONLINE',
         offline: 'OFFLINE',
@@ -740,6 +741,16 @@ export const en: TranslationDictionary = {
       saturday: 'Saturday',
     },
     saveSettings: 'Save Settings',
+    jvmArgs: {
+      label: 'JVM Arguments',
+      placeholder: '-XX:+UseG1GC ...',
+      help: 'Extra JVM flags inserted before -jar. Each flag must start with "-".',
+      clear: 'Clear',
+      presets: {
+        aikar: "Aikar's Flags",
+        zgc: 'ZGC',
+      },
+    },
     ngrok: {
       title: 'Public Access (ngrok)',
       onlineBadge: 'ONLINE',

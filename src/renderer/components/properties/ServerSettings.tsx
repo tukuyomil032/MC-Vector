@@ -13,6 +13,7 @@ import {
 } from '../../../lib/ngrok-commands';
 import { type MinecraftServer } from '../../components/../shared/server declaration';
 import { VERSION_OPTIONS } from '../../constants/versionOptions';
+import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
 import { useToast } from '../ToastProvider';
 
@@ -56,6 +57,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   >(server.autoBackupScheduleType ?? 'interval');
   const [autoBackupTime, setAutoBackupTime] = useState(server.autoBackupTime ?? '03:00');
   const [autoBackupWeekday, setAutoBackupWeekday] = useState(server.autoBackupWeekday ?? 0);
+  const [jvmArgs, setJvmArgs] = useState(server.jvmArgs ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
   const [showJavaManager, setShowJavaManager] = useState(false);
@@ -96,6 +98,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     setAutoBackupScheduleType(server.autoBackupScheduleType ?? 'interval');
     setAutoBackupTime(server.autoBackupTime ?? '03:00');
     setAutoBackupWeekday(server.autoBackupWeekday ?? 0);
+    setJvmArgs(server.jvmArgs ?? '');
 
     loadJavaList();
 
@@ -186,6 +189,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         autoBackupScheduleType: normalizedScheduleType,
         autoBackupTime: normalizedBackupTime,
         autoBackupWeekday: normalizedBackupWeekday,
+        jvmArgs: jvmArgs.trim() || undefined,
       });
     } finally {
       setIsSaving(false);
@@ -376,6 +380,39 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 className="input-field"
               />
             </div>
+          </div>
+
+          <div className="server-settings__field-block">
+            <label className="server-settings__label">{t('serverSettings.jvmArgs.label')}</label>
+            <div className="server-settings__jvm-presets">
+              {JVM_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="control-chip server-settings__jvm-preset-btn"
+                  onClick={() => setJvmArgs(preset.args)}
+                >
+                  {t(preset.labelKey)}
+                </button>
+              ))}
+              {jvmArgs && (
+                <button
+                  type="button"
+                  className="control-chip server-settings__jvm-preset-btn"
+                  onClick={() => setJvmArgs('')}
+                >
+                  {t('serverSettings.jvmArgs.clear')}
+                </button>
+              )}
+            </div>
+            <textarea
+              className="input-field server-settings__jvm-textarea"
+              value={jvmArgs}
+              onChange={(e) => setJvmArgs(e.target.value)}
+              placeholder={t('serverSettings.jvmArgs.placeholder')}
+              rows={3}
+            />
+            <div className="server-settings__form-help">{t('serverSettings.jvmArgs.help')}</div>
           </div>
 
           <div className="server-settings__field-block">

@@ -63,6 +63,30 @@ function joinManagedPath(...segments: string[]): string {
   return normalizeManagedPath(segments.filter(Boolean).join('/'));
 }
 
+function detectLanguage(fileName: string): string {
+  const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
+  const map: Record<string, string> = {
+    '.json': 'json',
+    '.yml': 'yaml',
+    '.yaml': 'yaml',
+    '.properties': 'ini',
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.rs': 'rust',
+    '.sh': 'shell',
+    '.bash': 'shell',
+    '.toml': 'toml',
+    '.xml': 'xml',
+    '.md': 'markdown',
+    '.conf': 'ini',
+    '.cfg': 'ini',
+    '.txt': 'plaintext',
+  };
+  return map[ext] ?? 'plaintext';
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -692,15 +716,7 @@ export default function FilesView({ server }: Props) {
           </div>
           <Editor
             height="100%"
-            defaultLanguage={
-              editingFile?.name.endsWith('.json')
-                ? 'json'
-                : editingFile?.name.endsWith('.yml') || editingFile?.name.endsWith('.yaml')
-                  ? 'yaml'
-                  : editingFile?.name.endsWith('.properties')
-                    ? 'ini'
-                    : 'plaintext'
-            }
+            defaultLanguage={detectLanguage(editingFile?.name ?? '')}
             theme="vs-dark"
             value={fileContent}
             onChange={(val) => setFileContent(val || '')}

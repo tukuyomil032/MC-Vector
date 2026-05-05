@@ -151,6 +151,7 @@ export const ja: TranslationDictionary = {
       currentTps: '現在のTPS',
       tpsAutoSampled: 'Paper / LeafMC: 自動計測',
       tpsLogBased: 'ログベース検出',
+      uptime: '稼働時間',
       statusValues: {
         online: '稼働中',
         offline: '停止中',
@@ -738,6 +739,16 @@ export const ja: TranslationDictionary = {
       saturday: '土曜',
     },
     saveSettings: '設定を保存',
+    jvmArgs: {
+      label: 'JVM 引数',
+      placeholder: '-XX:+UseG1GC ...',
+      help: '-jar の前に挿入される追加JVMフラグです。各フラグは「-」で始まる必要があります。',
+      clear: 'クリア',
+      presets: {
+        aikar: "Aikar's Flags",
+        zgc: 'ZGC',
+      },
+    },
     ngrok: {
       title: '外部公開 (ngrok)',
       onlineBadge: 'ONLINE',

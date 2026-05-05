@@ -27,6 +27,7 @@ export interface MinecraftServer {
   autoBackupTime?: string;
   autoBackupWeekday?: number;
   createdDate?: string;
+  jvmArgs?: string;
 }
 
 export type AppView =
