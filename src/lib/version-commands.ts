@@ -1,6 +1,17 @@
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { isRecord } from './guards/json-guards';
+import { logError } from './error-utils';
 
+/**
+ * Resolves the latest available JAR download URL for the given server software.
+ *
+ * Note: For Fabric, "latestVersion" in the return value reflects the provided
+ * `version` parameter (the game version), not a fetched latest game version.
+ * Only the loader version is fetched from the API.
+ *
+ * Returns null for unsupported software (Spigot, Forge, Velocity, etc.)
+ * or when the API call fails.
+ */
 export async function resolveLatestJarUrl(
   software: string,
   version: string,
@@ -17,7 +28,8 @@ export async function resolveLatestJarUrl(
         versData.versions.length === 0
       )
         return null;
-      const latestVersion = versData.versions[versData.versions.length - 1] as string;
+      const latestVersion = versData.versions[versData.versions.length - 1];
+      if (typeof latestVersion !== 'string') return null;
       // 最新ビルドを取得
       const buildRes = await tauriFetch(
         `https://api.papermc.io/v2/projects/${project}/versions/${latestVersion}/builds`,
@@ -72,7 +84,8 @@ export async function resolveLatestJarUrl(
     }
     // Spigot, Forge, Velocity, Waterfall, BungeeCord — 非対応
     return null;
-  } catch {
+  } catch (error) {
+    logError('Failed to resolve latest jar URL', error, { software, version });
     return null;
   }
 }
