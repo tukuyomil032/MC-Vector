@@ -485,7 +485,9 @@ export default function BackupsView({ server }: Props) {
     if (retainCount === 0 && retainDays === 0) return;
 
     const all = await listBackupsWithMetadata(serverPath);
-    const sorted = [...all].sort((a, b) => b.date.getTime() - a.date.getTime());
+    const sorted = [...all].sort(
+      (a, b) => b.date.getTime() - a.date.getTime() || a.name.localeCompare(b.name),
+    );
     const now = Date.now();
 
     const toDelete = sorted.filter((backup, idx) => {
@@ -496,6 +498,16 @@ export default function BackupsView({ server }: Props) {
     for (const backup of toDelete) {
       // 直列実行（Promise.all は NG）
       await deleteBackup(serverPath, backup.name);
+    }
+
+    if (toDelete.length > 0) {
+      const deletedNames = new Set(toDelete.map((b) => b.name));
+      const updatedEntries = Object.fromEntries(
+        Object.entries(backupCatalog.entries).filter(([name]) => !deletedNames.has(name)),
+      );
+      const updatedCatalog: BackupCatalog = { ...backupCatalog, entries: updatedEntries };
+      await persistBackupCatalog(updatedCatalog);
+      setBackupCatalog(updatedCatalog);
     }
   };
 
@@ -570,7 +582,12 @@ export default function BackupsView({ server }: Props) {
 
       setShowCreateModal(false);
       await loadBackups();
-      await applyRetentionPolicy(server.path, server);
+      // separate try-catch so retention failures don't mask backup creation success
+      try {
+        await applyRetentionPolicy(server.path, server);
+      } catch (error) {
+        logError('Failed to apply backup retention policy', error, { serverPath: server.path });
+      }
     } catch (error) {
       logError('Failed to create backup', error, {
         serverPath: server.path,
