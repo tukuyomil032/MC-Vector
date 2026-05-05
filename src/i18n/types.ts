@@ -156,6 +156,8 @@ export interface TranslationDictionary {
       cloneFailed: string;
       templateSaved: string;
       templateSaveFailed: string;
+      bulkBackupCreated: string;
+      bulkBackupFailed: string;
     };
     notification: {
       crashed: string;
@@ -194,6 +196,15 @@ export interface TranslationDictionary {
       memoryLast60s: string;
       tpsLast60s: string;
       tpsNoData: string;
+    };
+    healthCheck: {
+      title: string;
+      pinging: string;
+      online: string;
+      offline: string;
+      latency: string;
+      players: string;
+      version: string;
     };
   };
 
@@ -588,6 +599,12 @@ export interface TranslationDictionary {
     addServer: string;
     importServer: string;
     openSettings: string;
+    bulkSelect: string;
+    bulkStartSelected: string;
+    bulkStopSelected: string;
+    bulkBackupSelected: string;
+    bulkClearSelection: string;
+    bulkSelectedCount: string;
   };
 
   /** Proxy configuration translations */
@@ -855,6 +872,13 @@ export interface TranslationDictionary {
     };
     memory: {
       label: string;
+    };
+    choice: {
+      title: string;
+      newServer: string;
+      newServerHint: string;
+      importServer: string;
+      importServerHint: string;
     };
   };
 

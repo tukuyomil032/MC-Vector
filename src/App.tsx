@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
+import { createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
-// Tauri API ラッパー
 import {
   getServerTemplates,
   type ServerTemplate,
+  startServer as startServerApi,
+  stopServer as stopServerApi,
   updateServer as updateServerApi,
 } from '@/lib/server-commands';
+import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
 import AppMainContent from '@/renderer/components/AppMainContent';
 import AppMainHeader from '@/renderer/components/AppMainHeader';
 import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
 import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
+import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { useToast } from '@/renderer/components/ToastProvider';
@@ -45,6 +49,7 @@ function App() {
   const showAddServerModal = useUiStore((state) => state.showAddServerModal);
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
   const [showImportServerModal, setShowImportServerModal] = useState(false);
+  const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
   const contextMenu = useUiStore((state) => state.contextMenu);
   const setContextMenu = useUiStore((state) => state.setContextMenu);
 
@@ -147,6 +152,48 @@ function App() {
     clearAutoRestartTimer,
   });
 
+  const handleBulkStart = async (servers: MinecraftServer[]) => {
+    for (const s of servers.filter((srv) => srv.status === 'offline')) {
+      try {
+        setServers((prev) =>
+          prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'starting' } : srv)),
+        );
+        const jarFile = s.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
+        await startServerApi(s.id, s.javaPath || 'java', s.path, s.memory, jarFile, s.jvmArgs);
+      } catch (error) {
+        logError('Bulk start failed', error, { serverId: s.id });
+        setServers((prev) =>
+          prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'offline' } : srv)),
+        );
+        showToast(t('server.toast.startFailed'), 'error');
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  };
+
+  const handleBulkStop = async (serverIds: string[]) => {
+    await Promise.allSettled(
+      serverIds.map((id) =>
+        stopServerApi(id).catch((error) => {
+          logError('Bulk stop failed', error, { serverId: id });
+        }),
+      ),
+    );
+  };
+
+  const handleBulkBackup = async (servers: MinecraftServer[]) => {
+    for (const s of servers) {
+      try {
+        await createBackup(s.path, buildAutoBackupName(s, new Date()));
+        showToast(t('server.toast.bulkBackupCreated', { name: s.name }), 'success');
+      } catch (error) {
+        logError('Bulk backup failed', error, { serverId: s.id });
+        showToast(t('server.toast.bulkBackupFailed', { name: s.name }), 'error');
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  };
+
   const handleUpdateServer = async (updatedServer: MinecraftServer) => {
     try {
       await updateServerApi(updatedServer);
@@ -224,11 +271,18 @@ function App() {
           selectedServerId={selectedServerId}
           onSelectServer={setSelectedServerId}
           onServerContextMenu={handleContextMenu}
-          onAddServer={() => setShowAddServerModal(true)}
-          onImportServer={() => setShowImportServerModal(true)}
+          onAddServer={() => setShowAddServerChoiceModal(true)}
           serversLabel={t('nav.servers')}
           addServerLabel={t('nav.addServer')}
-          importServerLabel={t('nav.importServer')}
+          bulkSelectLabel={t('nav.bulkSelect')}
+          bulkStartLabel={t('nav.bulkStartSelected')}
+          bulkStopLabel={t('nav.bulkStopSelected')}
+          bulkBackupLabel={t('nav.bulkBackupSelected')}
+          bulkClearLabel={t('nav.bulkClearSelection')}
+          bulkSelectedCountLabel={(count) => t('nav.bulkSelectedCount', { count })}
+          onBulkStart={handleBulkStart}
+          onBulkStop={handleBulkStop}
+          onBulkBackup={handleBulkBackup}
         />
       </aside>
 
@@ -254,6 +308,20 @@ function App() {
           t={t}
         />
       </main>
+
+      {showAddServerChoiceModal && (
+        <AddServerChoiceModal
+          onClose={() => setShowAddServerChoiceModal(false)}
+          onNewServer={() => {
+            setShowAddServerChoiceModal(false);
+            setShowAddServerModal(true);
+          }}
+          onImportServer={() => {
+            setShowAddServerChoiceModal(false);
+            setShowImportServerModal(true);
+          }}
+        />
+      )}
 
       <AppOverlayLayer
         downloadStatus={downloadStatus}

@@ -894,6 +894,64 @@ export default function PluginBrowser({ server }: Props) {
     };
   }, [isInAppSearch, results, installedFiles, server.software, server.version]);
 
+  const installedEntries = useMemo<InstalledPluginEntry[]>(() => {
+    return installedFiles.map((fileName) => {
+      const normalizedFileName = normalizeInstalledPluginFileName(fileName);
+      const sourceItem =
+        currentResultMatchesByInstalledFile[normalizedFileName] ??
+        knownItemsByInstalledFile[normalizedFileName] ??
+        null;
+      const displayName = sourceItem?.title || formatInstalledTitle(fileName) || fileName;
+      const description = sourceItem?.description?.trim() || t('plugins.browser.noDescription');
+
+      const extractedVersions = sourceItem
+        ? [
+            ...(compatibilityDetailByItemId[sourceItem.id]?.supportedVersions ?? []),
+            ...extractVersionHints(
+              `${sourceItem.description} ${typeof sourceItem.source_obj.tag === 'string' ? sourceItem.source_obj.tag : ''}`,
+            ),
+          ]
+        : [];
+      const minecraftVersions = Array.from(
+        new Set(extractedVersions.map((version) => version.trim()).filter(Boolean)),
+      );
+      if (minecraftVersions.length === 0 && server.version.trim()) {
+        minecraftVersions.push(server.version.trim());
+      }
+
+      const actionItem =
+        sourceItem ??
+        ({
+          id: `installed:${normalizedFileName}`,
+          title: displayName,
+          description,
+          author: 'Local',
+          platform: 'Modrinth',
+          source_obj: {},
+        } satisfies ProjectItem);
+
+      return {
+        fileName,
+        normalizedFileName,
+        displayName,
+        description,
+        iconUrl: sourceItem?.icon_url,
+        state: isDisabledPluginFile(fileName) ? 'disabled' : 'enabled',
+        fileVersion: inferInstalledFileVersion(fileName) || t('plugins.browser.na'),
+        minecraftVersions,
+        sourceItem,
+        actionItem,
+      };
+    });
+  }, [
+    compatibilityDetailByItemId,
+    currentResultMatchesByInstalledFile,
+    installedFiles,
+    knownItemsByInstalledFile,
+    server.version,
+    t,
+  ]);
+
   useEffect(() => {
     if (activeSection !== 'installed') return;
     let cancelled = false;
@@ -1323,64 +1381,6 @@ export default function PluginBrowser({ server }: Props) {
     isModServer,
     isPaper,
     knownItemsByInstalledFile,
-  ]);
-
-  const installedEntries = useMemo<InstalledPluginEntry[]>(() => {
-    return installedFiles.map((fileName) => {
-      const normalizedFileName = normalizeInstalledPluginFileName(fileName);
-      const sourceItem =
-        currentResultMatchesByInstalledFile[normalizedFileName] ??
-        knownItemsByInstalledFile[normalizedFileName] ??
-        null;
-      const displayName = sourceItem?.title || formatInstalledTitle(fileName) || fileName;
-      const description = sourceItem?.description?.trim() || t('plugins.browser.noDescription');
-
-      const extractedVersions = sourceItem
-        ? [
-            ...(compatibilityDetailByItemId[sourceItem.id]?.supportedVersions ?? []),
-            ...extractVersionHints(
-              `${sourceItem.description} ${typeof sourceItem.source_obj.tag === 'string' ? sourceItem.source_obj.tag : ''}`,
-            ),
-          ]
-        : [];
-      const minecraftVersions = Array.from(
-        new Set(extractedVersions.map((version) => version.trim()).filter(Boolean)),
-      );
-      if (minecraftVersions.length === 0 && server.version.trim()) {
-        minecraftVersions.push(server.version.trim());
-      }
-
-      const actionItem =
-        sourceItem ??
-        ({
-          id: `installed:${normalizedFileName}`,
-          title: displayName,
-          description,
-          author: 'Local',
-          platform: 'Modrinth',
-          source_obj: {},
-        } satisfies ProjectItem);
-
-      return {
-        fileName,
-        normalizedFileName,
-        displayName,
-        description,
-        iconUrl: sourceItem?.icon_url,
-        state: isDisabledPluginFile(fileName) ? 'disabled' : 'enabled',
-        fileVersion: inferInstalledFileVersion(fileName) || t('plugins.browser.na'),
-        minecraftVersions,
-        sourceItem,
-        actionItem,
-      };
-    });
-  }, [
-    compatibilityDetailByItemId,
-    currentResultMatchesByInstalledFile,
-    installedFiles,
-    knownItemsByInstalledFile,
-    server.version,
-    t,
   ]);
 
   const resolveDependencyIdentity = async (projectId: string): Promise<DependencyIdentity> => {
