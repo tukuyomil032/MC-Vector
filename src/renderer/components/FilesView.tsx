@@ -83,6 +83,18 @@ function detectLanguage(fileName: string): string {
     '.conf': 'ini',
     '.cfg': 'ini',
     '.txt': 'plaintext',
+    '.log': 'plaintext',
+    '.bat': 'bat',
+    '.cmd': 'bat',
+    '.py': 'python',
+    '.lua': 'lua',
+    '.sql': 'sql',
+    '.css': 'css',
+    '.html': 'html',
+    '.htm': 'html',
+    '.mcmeta': 'json',
+    '.nbt': 'plaintext',
+    '.dat': 'plaintext',
   };
   return map[ext] ?? 'plaintext';
 }
