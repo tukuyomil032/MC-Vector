@@ -1,19 +1,19 @@
 {
-  "version": "2.0.53",
-  "notes": "MC-Vector v2.0.53",
-  "pub_date": "2026-04-20T07:39:24Z",
+  "version": "2.0.54",
+  "notes": "MC-Vector v2.0.54",
+  "pub_date": "2026-05-05T17:03:55Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRnk1MjRUZjNFcGVyYnlDVTBCU0wyL3lJUlpFVXVFTExXZ2RFeXpadEpCZFExQWRHcHlKUStySHplZnJWc3ZmMHBmcTJLUFRQYWVqU1JCTzA1VXFCTFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2NjcwNzMyCWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKQ21CYUo5MVBVbmRSajhmQlk5TEgyZTJxcktYeUNkUkZSWXpweGpadGhoZE5oeDVkVVcyOE5jSHBTd3daT05MYUc5SkwzMGtXVVdCQ3ZaYi9FT2toQkE9PQo=",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.53/MC-Vector_2.0.53_darwin-aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRi9IQ2tlYnFuVlVMYmxTa1hDWVNEU2pFdks2aGNHQ3JBOXRjLytsUkt0YTdEbzU3K2RnNTBvbVprMEtPVGxHRGZ1VStrS1lCZUJrY1ZvZGp3cjRIOUFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4MDAwMjQ0CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKWGJvMlY4cDQrckNzWHNPdVppVDZFbW1PYWlJa0wxdXZ1OHpPZHdDeHk1akJEeVIwTUkyWEVTRVRlL09PemZKS2RkVVRzUTc2eE5CY3AyVjF4WCtnQ3c9PQo=",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.54/MC-Vector_2.0.54_darwin-aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjJERGJJTWVkNy9EVEd1UE80ZTFvam96Wk4wY2ppYmUvTEJyNVRBSzdKV0pCZlRET0hRdDdPQzlvOUI5REN6V0V0ZnNFUnhpSjRiM2tCSUUrZ1BzT3dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2NjcwNTA1CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKbUkxM3pkS1draTZZNEdGL0hFSytkd2ljRW16WFJlNWphUWVJbkg0a01JQWNHdUVsM3VnRlo5T0pjSU9SRzRtV21uMXNtdGxta2E5RWNyTVJFUXVmQ3c9PQo=",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.53/MC-Vector_2.0.53_darwin-x86_64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRndHYk9ocG1hVUFiNkVpbnhESUU0eW1lQ2ZLeVl3ai8rcGI0bXNRa3JOVmo0dEkxR1h0QmRlQ2NoRGwremE0UmVUZDJhajJHdkEyWU43WFgxbTB5YUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4MDAwMTc3CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKdjR3VktROUQra0I0VkU0V1o0ZXdsMTNaVFBOa2lBSS9KeDREelFYRzE0RHpkWlVkZXpnMXhzTnVkQmkrbVJlcUxNdGtFQWd5dFBLeFlEZ1RDYTdPQlE9PQo=",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.54/MC-Vector_2.0.54_darwin-x86_64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjJGODVTUWR3b1ZTVlo5R2RPNzRrT29YMTFrRGZIaURVS3YyM0preVNVdERnSnBkM3Zab3VQNUtpNWpPU01WL3owcHErZHFLTWxWYXJMMjNJUDNpUHd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2NjcwNjkxCWZpbGU6TUMtVmVjdG9yXzIuMC41M194NjQtc2V0dXAuZXhlClBrTjJlWVM1by84cUVFMHc1cTN4QkZnUVEwOGZJMmRwOWphYWZnTmkvZkRNTGlRWFNLTFl0NXlOaVVlYXpCMGRVK3hCVFB6Q1BaczdWcGtOdUJwaUF3PT0K",
-      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.53/MC-Vector_2.0.53_windows-x86_64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRnpWdXZMeE52TXU1akNGWU9xUUl2d2Y3KzlDSHpjSUFTbldpdU9HZ2hvWWMrNStiVFpVcEJQWWNqMDVhKytWMW9FTStPM0JSVjRQcnRUQ2E0clZDUndnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4MDAwNTU4CWZpbGU6TUMtVmVjdG9yXzIuMC41NF94NjQtc2V0dXAuZXhlCm81blhzTXJ6UkFtVVlKRFdlQ0FuU29mT1pnemtrYWFaMjdEd3ZTWHR3Z1hGTXFzdURpM3ZJTnNQdko1blkwTmFrbWpJMGM0cnFDRTdWM1pXSlZsaUFnPT0K",
+      "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.54/MC-Vector_2.0.54_windows-x86_64-setup.exe"
     }
   }
 }
