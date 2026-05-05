@@ -161,9 +161,6 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
               </div>
             )}
             <div className="mc-modal-footer">
-              <button className="mc-modal-btn-secondary" onClick={onClose} disabled={processing}>
-                {t('serverSettings.versionUpgrade.close')}
-              </button>
               <button
                 className="mc-modal-btn-primary"
                 onClick={() => {
