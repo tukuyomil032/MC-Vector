@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useTranslation, type Translate, type TranslationKey } from '../../i18n';
+import { sendServerNotification } from '../../lib/notification-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import {
@@ -350,6 +351,18 @@ export default function DashboardView({ server }: Props) {
         ];
         return pruneMetricWindow(next, now);
       });
+
+      if (server.notifyOnHighCpu) {
+        const threshold = server.notifyHighCpuThreshold ?? 90;
+        if (cpuVal >= threshold) {
+          const cooldownKey = `cpu-notify-${server.id}`;
+          const lastNotified = Number(sessionStorage.getItem(cooldownKey) ?? '0');
+          if (now - lastNotified >= 5 * 60 * 1000) {
+            sessionStorage.setItem(cooldownKey, String(now));
+            void sendServerNotification(server.name, t('server.notification.highCpu'));
+          }
+        }
+      }
     }).then((u) => {
       if (cancelled) {
         u();
@@ -362,7 +375,7 @@ export default function DashboardView({ server }: Props) {
       cancelled = true;
       unlisten?.();
     };
-  }, [server.id]);
+  }, [server.id, server.notifyOnHighCpu, server.notifyHighCpuThreshold, server.name, t]);
 
   useEffect(() => {
     let cancelled = false;

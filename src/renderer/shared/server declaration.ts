@@ -30,6 +30,10 @@ export interface MinecraftServer {
   autoBackupRetainDays?: number;
   createdDate?: string;
   jvmArgs?: string;
+  notifyOnCrash?: boolean;
+  notifyOnStart?: boolean;
+  notifyOnHighCpu?: boolean;
+  notifyHighCpuThreshold?: number;
 }
 
 export type AppView =

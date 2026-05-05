@@ -65,6 +65,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     server.autoBackupRetainDays ?? 0,
   );
   const [jvmArgs, setJvmArgs] = useState(server.jvmArgs ?? '');
+  const [notifyOnCrash, setNotifyOnCrash] = useState(server.notifyOnCrash !== false);
+  const [notifyOnStart, setNotifyOnStart] = useState(Boolean(server.notifyOnStart));
+  const [notifyOnHighCpu, setNotifyOnHighCpu] = useState(Boolean(server.notifyOnHighCpu));
+  const [notifyHighCpuThreshold, setNotifyHighCpuThreshold] = useState(
+    server.notifyHighCpuThreshold ?? 90,
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const [showJavaManager, setShowJavaManager] = useState(false);
@@ -109,6 +115,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     setAutoBackupRetainCount(server.autoBackupRetainCount ?? 0);
     setAutoBackupRetainDays(server.autoBackupRetainDays ?? 0);
     setJvmArgs(server.jvmArgs ?? '');
+    setNotifyOnCrash(server.notifyOnCrash !== false);
+    setNotifyOnStart(Boolean(server.notifyOnStart));
+    setNotifyOnHighCpu(Boolean(server.notifyOnHighCpu));
+    setNotifyHighCpuThreshold(server.notifyHighCpuThreshold ?? 90);
 
     loadJavaList();
 
@@ -202,6 +212,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         autoBackupRetainCount,
         autoBackupRetainDays,
         jvmArgs: jvmArgs.trim() || undefined,
+        notifyOnCrash,
+        notifyOnStart,
+        notifyOnHighCpu,
+        notifyHighCpuThreshold,
       });
     } finally {
       setIsSaving(false);
@@ -605,6 +619,60 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="server-settings__section">
+            <h3 className="server-settings__section-title">
+              {t('serverSettings.notifications.title')}
+            </h3>
+            <div className="server-settings__row">
+              <label className="server-settings__label">
+                <input
+                  type="checkbox"
+                  checked={notifyOnCrash}
+                  onChange={(e) => setNotifyOnCrash(e.target.checked)}
+                  className="mr-2"
+                />
+                {t('serverSettings.notifications.onCrash')}
+              </label>
+            </div>
+            <div className="server-settings__row">
+              <label className="server-settings__label">
+                <input
+                  type="checkbox"
+                  checked={notifyOnStart}
+                  onChange={(e) => setNotifyOnStart(e.target.checked)}
+                  className="mr-2"
+                />
+                {t('serverSettings.notifications.onStart')}
+              </label>
+            </div>
+            <div className="server-settings__row">
+              <label className="server-settings__label">
+                <input
+                  type="checkbox"
+                  checked={notifyOnHighCpu}
+                  onChange={(e) => setNotifyOnHighCpu(e.target.checked)}
+                  className="mr-2"
+                />
+                {t('serverSettings.notifications.onHighCpu')}
+              </label>
+            </div>
+            {notifyOnHighCpu && (
+              <div className="server-settings__row">
+                <label className="server-settings__label">
+                  {t('serverSettings.notifications.cpuThreshold')}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={notifyHighCpuThreshold}
+                  onChange={(e) => setNotifyHighCpuThreshold(Number(e.target.value))}
+                  className="input-field"
+                />
+              </div>
+            )}
           </div>
 
           <div className="server-settings__actions">

@@ -157,6 +157,11 @@ export interface TranslationDictionary {
       templateSaved: string;
       templateSaveFailed: string;
     };
+    notification: {
+      crashed: string;
+      started: string;
+      highCpu: string;
+    };
     confirm: {
       delete: string;
       clone: string;
@@ -793,6 +798,13 @@ export interface TranslationDictionary {
       fetching: string;
       backupFailed: string;
       downloadFailed: string;
+    };
+    notifications: {
+      title: string;
+      onCrash: string;
+      onStart: string;
+      onHighCpu: string;
+      cpuThreshold: string;
     };
   };
 

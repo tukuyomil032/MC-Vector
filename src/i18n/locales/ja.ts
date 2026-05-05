@@ -135,6 +135,11 @@ export const ja: TranslationDictionary = {
       templateSaved: 'テンプレートを保存しました',
       templateSaveFailed: 'テンプレート保存に失敗しました',
     },
+    notification: {
+      crashed: 'サーバーがクラッシュしました',
+      started: 'サーバーがオンラインになりました',
+      highCpu: 'CPU使用率が高くなっています',
+    },
     confirm: {
       delete: '本当に「{name}」を削除しますか？',
       clone: '「{name}」を複製しますか？',
@@ -803,6 +808,13 @@ export const ja: TranslationDictionary = {
       fetching: '最新バージョンを確認中...',
       backupFailed: 'バックアップに失敗しました',
       downloadFailed: 'ダウンロードに失敗しました',
+    },
+    notifications: {
+      title: '通知',
+      onCrash: 'クラッシュ時に通知',
+      onStart: '起動時に通知',
+      onHighCpu: 'CPU高負荷時に通知',
+      cpuThreshold: 'CPU 閾値 (%)',
     },
   },
 

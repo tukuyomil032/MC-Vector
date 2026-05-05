@@ -136,6 +136,11 @@ export const en: TranslationDictionary = {
       templateSaved: 'Template saved',
       templateSaveFailed: 'Failed to save template',
     },
+    notification: {
+      crashed: 'Server crashed',
+      started: 'Server is online',
+      highCpu: 'CPU usage is high',
+    },
     confirm: {
       delete: 'Are you sure you want to delete "{name}"?',
       clone: 'Clone "{name}"?',
@@ -805,6 +810,13 @@ export const en: TranslationDictionary = {
       fetching: 'Checking for latest version...',
       backupFailed: 'Backup failed',
       downloadFailed: 'Download failed',
+    },
+    notifications: {
+      title: 'Notifications',
+      onCrash: 'Notify on crash',
+      onStart: 'Notify when server starts',
+      onHighCpu: 'Notify on high CPU usage',
+      cpuThreshold: 'CPU threshold (%)',
     },
   },
 
