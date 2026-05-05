@@ -134,6 +134,8 @@ export const ja: TranslationDictionary = {
       cloneFailed: 'サーバー複製に失敗しました',
       templateSaved: 'テンプレートを保存しました',
       templateSaveFailed: 'テンプレート保存に失敗しました',
+      bulkBackupCreated: '{name} のバックアップを作成しました',
+      bulkBackupFailed: '{name} のバックアップに失敗しました',
     },
     notification: {
       crashed: 'サーバーがクラッシュしました',
@@ -172,6 +174,15 @@ export const ja: TranslationDictionary = {
       memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
       tpsLast60s: 'TPS - 直近60秒',
       tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
+    },
+    healthCheck: {
+      title: 'サーバーヘルス（SLP Ping）',
+      pinging: 'Ping中...',
+      online: '応答あり',
+      offline: '応答なし',
+      latency: 'レイテンシ',
+      players: 'プレイヤー',
+      version: 'バージョン',
     },
   },
 
@@ -580,6 +591,12 @@ export const ja: TranslationDictionary = {
     addServer: 'サーバーを追加',
     importServer: 'インポート',
     openSettings: '設定ウィンドウを開く',
+    bulkSelect: '選択',
+    bulkStartSelected: '一括起動',
+    bulkStopSelected: '一括停止',
+    bulkBackupSelected: '一括バックアップ',
+    bulkClearSelection: '解除',
+    bulkSelectedCount: '{count}件選択中',
   },
 
   proxy: {

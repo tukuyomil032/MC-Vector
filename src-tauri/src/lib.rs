@@ -73,6 +73,8 @@ pub fn run() {
             // セキュリティ/パフォーマンス拡張
             commands::security::security_gateway,
             commands::perf::parse_ansi_lines,
+            // ヘルスチェック
+            commands::health_check::ping_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

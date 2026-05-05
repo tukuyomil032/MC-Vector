@@ -135,6 +135,8 @@ export const en: TranslationDictionary = {
       cloneFailed: 'Failed to clone server',
       templateSaved: 'Template saved',
       templateSaveFailed: 'Failed to save template',
+      bulkBackupCreated: 'Backup created for {name}',
+      bulkBackupFailed: 'Backup failed for {name}',
     },
     notification: {
       crashed: 'Server crashed',
@@ -173,6 +175,15 @@ export const en: TranslationDictionary = {
       memoryLast60s: 'Memory Usage (MB) - Last 60s',
       tpsLast60s: 'TPS - Last 60s',
       tpsNoData: 'TPS data is not available yet. Keep the server online and wait for log sampling.',
+    },
+    healthCheck: {
+      title: 'Server Health (SLP Ping)',
+      pinging: 'Pinging...',
+      online: 'Responding',
+      offline: 'No Response',
+      latency: 'Latency',
+      players: 'Players',
+      version: 'Version',
     },
   },
 
@@ -582,6 +593,12 @@ export const en: TranslationDictionary = {
     addServer: 'Add Server',
     importServer: 'Import',
     openSettings: 'Open settings window',
+    bulkSelect: 'Select',
+    bulkStartSelected: 'Start',
+    bulkStopSelected: 'Stop',
+    bulkBackupSelected: 'Backup',
+    bulkClearSelection: 'Clear',
+    bulkSelectedCount: '{count} selected',
   },
 
   proxy: {
