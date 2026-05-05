@@ -766,6 +766,26 @@ export interface TranslationDictionary {
         saveAndConnect: string;
       };
     };
+    versionUpgrade: {
+      buttonLabel: string;
+      title: string;
+      currentVersion: string;
+      latestVersion: string;
+      alreadyLatest: string;
+      serverMustBeOffline: string;
+      startUpgrade: string;
+      stepBackup: string;
+      backupDescription: string;
+      runBackup: string;
+      stepDownload: string;
+      downloadDescription: string;
+      runDownload: string;
+      stepDone: string;
+      doneDescription: string;
+      close: string;
+      unsupported: string;
+      fetching: string;
+    };
   };
 
   /** Add server modal translations */
