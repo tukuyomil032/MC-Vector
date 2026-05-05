@@ -575,6 +575,7 @@ export const en: TranslationDictionary = {
     generalSettings: 'General Settings',
     proxyNetwork: 'Proxy Network',
     addServer: 'Add Server',
+    importServer: 'Import',
     openSettings: 'Open settings window',
   },
 
@@ -1001,6 +1002,23 @@ export const en: TranslationDictionary = {
       addressNote:
         '※ The address changes each time. Share the new address with friends each time you play.',
       tip: "Connection Test: Copy the displayed address and test by joining directly from another PC or friend's environment. If unable to connect, check the server-side logs first.",
+    },
+  },
+
+  importServer: {
+    title: 'Import Server',
+    folderLabel: 'Server Folder',
+    folderPlaceholder: 'Select a folder',
+    selectButton: 'Select',
+    nameLabel: 'Server Name',
+    versionLabel: 'Version',
+    softwareLabel: 'Software',
+    eulaWarning: 'EULA is not accepted. Please accept it manually after importing.',
+    importButton: 'Import',
+    toast: {
+      success: 'Server imported successfully',
+      failed: 'Failed to import server',
+      noJar: 'No server JAR found in folder',
     },
   },
 };

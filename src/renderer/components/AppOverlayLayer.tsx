@@ -6,6 +6,7 @@ import AddServerModal from './AddServerModal';
 import AppContextMenu from './AppContextMenu';
 import AppDownloadToast from './AppDownloadToast';
 import AppUpdateModal from './AppUpdateModal';
+import ImportServerModal from './ImportServerModal';
 
 interface DownloadStatus {
   id: string;
@@ -19,6 +20,8 @@ interface AppOverlayLayerProps {
   onCloseAddServerModal: () => void;
   onAddServer: (serverData: unknown) => void;
   serverTemplates: ServerTemplate[];
+  showImportServerModal: boolean;
+  onCloseImportServerModal: () => void;
   contextMenu: ServerContextMenuState | null;
   onDuplicateServer: () => Promise<void>;
   onSaveServerTemplate: () => Promise<void>;
@@ -39,6 +42,8 @@ export default function AppOverlayLayer({
   onCloseAddServerModal,
   onAddServer,
   serverTemplates,
+  showImportServerModal,
+  onCloseImportServerModal,
   contextMenu,
   onDuplicateServer,
   onSaveServerTemplate,
@@ -67,6 +72,9 @@ export default function AppOverlayLayer({
           onAdd={onAddServer}
           templates={serverTemplates}
         />
+      )}
+      {showImportServerModal && (
+        <ImportServerModal onClose={onCloseImportServerModal} onAdd={onAddServer} />
       )}
       <AppContextMenu
         contextMenu={contextMenu}

@@ -581,6 +581,7 @@ export interface TranslationDictionary {
     generalSettings: string;
     proxyNetwork: string;
     addServer: string;
+    importServer: string;
     openSettings: string;
   };
 
@@ -988,6 +989,24 @@ export interface TranslationDictionary {
       description2: string;
       addressNote: string;
       tip: string;
+    };
+  };
+
+  /** Import server modal translations */
+  importServer: {
+    title: string;
+    folderLabel: string;
+    folderPlaceholder: string;
+    selectButton: string;
+    nameLabel: string;
+    versionLabel: string;
+    softwareLabel: string;
+    eulaWarning: string;
+    importButton: string;
+    toast: {
+      success: string;
+      failed: string;
+      noJar: string;
     };
   };
 }

@@ -573,6 +573,7 @@ export const ja: TranslationDictionary = {
     generalSettings: '全般設定',
     proxyNetwork: 'プロキシネットワーク',
     addServer: 'サーバーを追加',
+    importServer: 'インポート',
     openSettings: '設定ウィンドウを開く',
   },
 
@@ -1001,6 +1002,23 @@ export const ja: TranslationDictionary = {
       addressNote:
         '※ アドレスは毎回変わります。遊ぶたびに新しいアドレスを友達に教えてあげてください。',
       tip: '接続テスト手順: 表示アドレスをコピーし、別PCまたは友人環境から直接参加して確認します。入れない場合はサーバー側ログを先に確認してください。',
+    },
+  },
+
+  importServer: {
+    title: 'サーバーをインポート',
+    folderLabel: 'サーバーフォルダ',
+    folderPlaceholder: 'フォルダを選択してください',
+    selectButton: '選択',
+    nameLabel: 'サーバー名',
+    versionLabel: 'バージョン',
+    softwareLabel: 'ソフトウェア',
+    eulaWarning: 'EULA が未承認です。インポート後に手動で承認してください。',
+    importButton: 'インポート',
+    toast: {
+      success: 'サーバーをインポートしました',
+      failed: 'インポートに失敗しました',
+      noJar: 'サーバー JAR が見つかりません',
     },
   },
 };

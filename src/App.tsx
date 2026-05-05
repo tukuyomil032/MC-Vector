@@ -44,6 +44,7 @@ function App() {
   const setCurrentView = useUiStore((state) => state.setCurrentView);
   const showAddServerModal = useUiStore((state) => state.showAddServerModal);
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
+  const [showImportServerModal, setShowImportServerModal] = useState(false);
   const contextMenu = useUiStore((state) => state.contextMenu);
   const setContextMenu = useUiStore((state) => state.setContextMenu);
 
@@ -224,8 +225,10 @@ function App() {
           onSelectServer={setSelectedServerId}
           onServerContextMenu={handleContextMenu}
           onAddServer={() => setShowAddServerModal(true)}
+          onImportServer={() => setShowImportServerModal(true)}
           serversLabel={t('nav.servers')}
           addServerLabel={t('nav.addServer')}
+          importServerLabel={t('nav.importServer')}
         />
       </aside>
 
@@ -258,6 +261,8 @@ function App() {
         onCloseAddServerModal={() => setShowAddServerModal(false)}
         onAddServer={handleAddServer}
         serverTemplates={serverTemplates}
+        showImportServerModal={showImportServerModal}
+        onCloseImportServerModal={() => setShowImportServerModal(false)}
         contextMenu={contextMenu}
         onDuplicateServer={handleDuplicateServer}
         onSaveServerTemplate={handleSaveServerTemplate}

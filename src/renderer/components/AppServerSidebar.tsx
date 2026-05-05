@@ -13,8 +13,10 @@ interface AppServerSidebarProps {
   onSelectServer: (serverId: string) => void;
   onServerContextMenu: (event: MouseEvent, serverId: string) => void;
   onAddServer: () => void;
+  onImportServer: () => void;
   serversLabel: string;
   addServerLabel: string;
+  importServerLabel: string;
 }
 
 export default function AppServerSidebar({
@@ -24,8 +26,10 @@ export default function AppServerSidebar({
   onSelectServer,
   onServerContextMenu,
   onAddServer,
+  onImportServer,
   serversLabel,
   addServerLabel,
+  importServerLabel,
 }: AppServerSidebarProps) {
   if (!isSidebarOpen) {
     return null;
@@ -59,9 +63,18 @@ export default function AppServerSidebar({
           </div>
         ))}
       </div>
-      <button className="app-sidebar__add-server-btn" onClick={onAddServer}>
-        + {addServerLabel}
-      </button>
+      <div className="flex gap-1.5">
+        <button className="app-sidebar__add-server-btn flex-1" onClick={onAddServer}>
+          + {addServerLabel}
+        </button>
+        <button
+          className="app-sidebar__add-server-btn"
+          onClick={onImportServer}
+          title={importServerLabel}
+        >
+          ↓
+        </button>
+      </div>
     </div>
   );
 }
