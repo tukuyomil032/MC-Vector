@@ -797,6 +797,8 @@ export const en: TranslationDictionary = {
       close: 'Close',
       unsupported: 'Automatic upgrade is not supported for this software',
       fetching: 'Checking for latest version...',
+      backupFailed: 'Backup failed',
+      downloadFailed: 'Download failed',
     },
   },
 

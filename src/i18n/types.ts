@@ -785,6 +785,8 @@ export interface TranslationDictionary {
       close: string;
       unsupported: string;
       fetching: string;
+      backupFailed: string;
+      downloadFailed: string;
     };
   };
 

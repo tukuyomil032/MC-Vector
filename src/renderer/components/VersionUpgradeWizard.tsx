@@ -30,15 +30,19 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
   // Step 1: fetch latest version on mount
   useEffect(() => {
     let cancelled = false;
-    resolveLatestJarUrl(server.software ?? '', server.version).then((result) => {
-      if (cancelled) return;
-      if (result === null) {
-        setUnsupported(true);
-      } else {
-        setLatestVersion(result.latestVersion);
-        setDownloadUrl(result.downloadUrl);
-      }
-    });
+    resolveLatestJarUrl(server.software ?? '', server.version)
+      .then((result) => {
+        if (cancelled) return;
+        if (result === null) {
+          setUnsupported(true);
+        } else {
+          setLatestVersion(result.latestVersion);
+          setDownloadUrl(result.downloadUrl);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setUnsupported(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -60,7 +64,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
       await createBackup(server.path, backupName);
       setStep('download');
     } catch {
-      showToast('バックアップに失敗しました', 'error');
+      showToast(t('serverSettings.versionUpgrade.backupFailed'), 'error');
     } finally {
       unlisten?.();
       setProcessing(false);
@@ -83,7 +87,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
       await onServerUpdate(updated);
       setStep('done');
     } catch {
-      showToast('ダウンロードに失敗しました', 'error');
+      showToast(t('serverSettings.versionUpgrade.downloadFailed'), 'error');
     } finally {
       unlisten?.();
       setProcessing(false);

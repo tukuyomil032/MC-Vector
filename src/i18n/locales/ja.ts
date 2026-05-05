@@ -795,6 +795,8 @@ export const ja: TranslationDictionary = {
       close: '閉じる',
       unsupported: 'このソフトウェアは自動アップグレードに対応していません',
       fetching: '最新バージョンを確認中...',
+      backupFailed: 'バックアップに失敗しました',
+      downloadFailed: 'ダウンロードに失敗しました',
     },
   },
 
