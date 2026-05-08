@@ -153,7 +153,6 @@ docs/enhance-idea/**
 
 # update-version
 update-output.json
-skills-lock.json
 .tauri-updater-password
 
 # Nix

@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/tukuyomil032/MC-Vector/workflows/CI/badge.svg)](https://github.com/tukuyomil032/MC-Vector/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0.53-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
+[![Version](https://img.shields.io/badge/version-2.0.54-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
+[![GitHub stars](https://img.shields.io/github/stars/tukuyomil032/MC-Vector.svg?style=social)](https://github.com/tukuyomil032/MC-Vector/stargazers)
+
 
 **Minecraft - Multi-Function Server Management Software**
 
@@ -27,12 +29,56 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 
 ---
 
+## Installation
+
+### macOS
+
+#### One-liner install(recommended)
+```bash
+brew tap tukuyomil032/mcvector
+brew install mc-vector
+
+#　Remove quarantine flag to allow the app to run.
+xattr -cr /Applications/MC-Vector.app
+```
+
+### Uninstall
+```bash
+brew uninstall mc-vector
+brew untap tukuyomil032/mcvector
+
+```
+#### Manual Installation
+
+1. Download `MC-Vector.dmg` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
+2. Open the `.dmg` file
+3. Drag MC-Vector to Applications
+4. Launch MC-Vector from Applications
+
+### Windows
+
+1. Download `MC-Vector-Setup.exe` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
+2. Run the installer
+3. Follow the installation wizard
+4. Launch MC-Vector from the Start menu
+
+### Linux
+
+**AppImage:**
+
+```bash
+chmod +x MC-Vector.AppImage
+./MC-Vector.AppImage
+```
+
+---
+
 ## Table of Contents
 
 - [Features](#features)
+- [Installation](#installation)
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
-- [Installation](#installation)
 - [Development](#development)
 - [Building](#building)
 - [Project Structure](#project-structure)
@@ -131,47 +177,6 @@ Both `just setup` and `make setup` automate your development environment setup:
 - `just tauri-dev` - Full Tauri app with dev server (recommended for app development)
 
 For detailed development instructions, see the [Development Guide](docs/development-guide.md).
-
----
-
-## Installation
-
-### macOS
-
-1. Download `MC-Vector.dmg` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
-2. Open the `.dmg` file
-3. Drag MC-Vector to Applications
-4. Launch MC-Vector from Applications
-
-### Windows
-
-1. Download `MC-Vector-Setup.exe` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
-2. Run the installer
-3. Follow the installation wizard
-4. Launch MC-Vector from the Start menu
-
-### Linux
-
-**AppImage:**
-
-```bash
-chmod +x MC-Vector.AppImage
-./MC-Vector.AppImage
-```
-
-**Debian/Ubuntu (.deb):**
-
-```bash
-sudo dpkg -i MC-Vector.deb
-mc-vector
-```
-
-**Fedora/RHEL (.rpm):**
-
-```bash
-sudo rpm -i MC-Vector.rpm
-mc-vector
-```
 
 ---
 
@@ -321,13 +326,16 @@ MC-Vector/
 │           ├── server.rs             # Server process management
 │           ├── file_utils.rs         # File system utilities
 │           ├── download.rs           # HTTP downloads
+│           ├── health_check.rs       # Dashboard health checks
+│           ├── updater_utils.rs.     # Update functionals
+│           ├── perf.rs               # Console ANSI colors
+│           ├── security.rs           # Security check
 │           ├── process_stats.rs      # System monitoring
 │           ├── backup.rs             # Backup/restore operations
 │           ├── java.rs               # Java runtime detection
 │           └── ngrok.rs              # Ngrok integration
 │
 ├── docs/                             # Documentation
-│   ├── README.md                     # Documentation index
 │   ├── tutorial.md                   # User guide
 │   ├── development-guide.md          # Developer guide
 │   ├── architecture.md               # Technical architecture
@@ -336,8 +344,11 @@ MC-Vector/
 ├── .github/                          # GitHub configurations
 │   └── workflows/                    # CI/CD workflows
 │
-├── scripts/                          # Utility scripts
-│   ├── install-extensions.sh        # Install VS Code extensions
+├── scripts/
+│   ├── cargo-optional.mjs            # check Cargo dependencies
+│   ├── install-extensions.mjs.       # Install VS Code extensions
+│   ├── release-publish.mjs           # check version before publish
+│   ├── release-tag.mjs               # create tag
 │   └── update-versions.js            # Update version numbers
 │
 ├── Makefile                          # Traditional task runner
@@ -345,14 +356,16 @@ MC-Vector/
 ├── flake.nix                         # Nix Flakes definition
 ├── shell.nix                         # Nix shell environment
 ├── .envrc                            # direnv configuration
-├── CONTRIBUTING.md                   # Contribution guidelines
-├── CHANGELOG.md                      # Version history
 ├── package.json                      # Node.js project manifest
 ├── pnpm-lock.yaml                    # pnpm lock file
 ├── vite.config.ts                    # Vite build configuration
 ├── tailwind.config.js                # Tailwind CSS configuration
+├── postcss.config.js                 # postcss configuration
 ├── tsconfig.json                     # TypeScript configuration
+├── AGENTS.md                         # AI Agent rule file
+├── CLAUDE.md                         # CLAUDE rule files
 └── README.md                         # This file
+
 ```
 
 For a detailed architecture overview, see [Architecture Documentation](docs/architecture.md).
@@ -405,26 +418,18 @@ For detailed command usage, see the [Development Guide](docs/development-guide.m
 - **[User Guide](docs/tutorial.md)** - Complete guide to using MC-Vector
 - **[Development Guide](docs/development-guide.md)** - Developer setup and workflow
 - **[Architecture](docs/architecture.md)** - Technical architecture overview
-- **[CONTRIBUTING](CONTRIBUTING.md)** - Contribution guidelines
-- **[CHANGELOG](CHANGELOG.md)** - Version history
 
 ---
-
-## Contributing
-
-We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request.
 
 ### Quick Contribution Guide
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make your changes (follow [coding guidelines](CONTRIBUTING.md#coding-guidelines))
+3. Make your changes
 4. Run quality checks: `just check-all` or `make check`
 5. Commit your changes: `git commit -m "feat: your feature description"`
 6. Push to your fork: `git push origin feature/your-feature`
 7. Open a Pull Request
-
-For detailed guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -444,7 +449,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Charts:** Recharts
 - **Terminal:** xterm.js
 - **Package Manager:** pnpm
-- **Build Tool:** Vite
+- **Build Tool:** Vite+
 - **Task Runners:** just, Make
 - **Environment:** Nix (optional)
 
