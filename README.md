@@ -5,7 +5,6 @@
 [![Version](https://img.shields.io/badge/version-2.0.54-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
 [![GitHub stars](https://img.shields.io/github/stars/tukuyomil032/MC-Vector.svg?style=social)](https://github.com/tukuyomil032/MC-Vector/stargazers)
 
-
 **Minecraft - Multi-Function Server Management Software**
 
 MC-Vector is a powerful cross-platform desktop application for managing Minecraft servers with ease. Built with Tauri and React, it provides a modern, fast, and intuitive interface for server administration.
@@ -34,6 +33,7 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 ### macOS
 
 #### One-liner install(recommended)
+
 ```bash
 brew tap tukuyomil032/mcvector
 brew install mc-vector
@@ -43,11 +43,13 @@ xattr -cr /Applications/MC-Vector.app
 ```
 
 ### Uninstall
+
 ```bash
 brew uninstall mc-vector
 brew untap tukuyomil032/mcvector
 
 ```
+
 #### Manual Installation
 
 1. Download `MC-Vector.dmg` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
