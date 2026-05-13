@@ -35,8 +35,8 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 #### One-liner install(recommended)
 
 ```bash
-brew tap tukuyomil032/mcvector
-brew install mc-vector
+brew tap tukuyomil032/tap
+brew install --cask mc-vector
 
 #　Remove quarantine flag to allow the app to run.
 xattr -cr /Applications/MC-Vector.app
