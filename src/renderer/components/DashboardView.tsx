@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Area,
@@ -245,8 +246,6 @@ export default function DashboardView({ server }: Props) {
     server.status === 'online' ? Date.now() : null,
   );
   const [uptime, setUptime] = useState<string>('--:--:--');
-  const [pingResult, setPingResult] = useState<PingResult | null>(null);
-  const [pingLoading, setPingLoading] = useState(false);
 
   useEffect(() => {
     setResourceStats([]);
@@ -284,35 +283,23 @@ export default function DashboardView({ server }: Props) {
     return () => window.clearInterval(id);
   }, [startedAt]);
 
-  useEffect(() => {
-    if (server.status !== 'online') {
-      setPingResult(null);
-      return;
-    }
-
-    const runPing = async () => {
-      setPingLoading(true);
+  const pingQuery = useQuery({
+    queryKey: ['server-ping', server.id, server.port] as const,
+    queryFn: async (): Promise<PingResult> => {
       try {
-        const result = await pingServer('127.0.0.1', server.port);
-        setPingResult(result);
+        return await pingServer('127.0.0.1', server.port);
       } catch {
-        setPingResult({
-          online: false,
-          latency_ms: 0,
-          players_online: null,
-          players_max: null,
-          version: null,
-          motd: null,
-        });
-      } finally {
-        setPingLoading(false);
+        return { online: false, latency_ms: 0, players_online: null, players_max: null, version: null, motd: null };
       }
-    };
+    },
+    refetchInterval: HEALTH_CHECK_INTERVAL_MS,
+    enabled: server.status === 'online',
+    staleTime: HEALTH_CHECK_INTERVAL_MS - 1000,
+    retry: false,
+  });
 
-    void runPing();
-    const id = window.setInterval(() => void runPing(), HEALTH_CHECK_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [server.status, server.port]);
+  const pingResult = server.status === 'online' ? (pingQuery.data ?? null) : null;
+  const pingLoading = pingQuery.isFetching && !pingQuery.data;
 
   const supportsTpsPolling = useMemo(() => {
     return server.software === 'Paper' || server.software === 'LeafMC';
