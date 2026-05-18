@@ -1,3 +1,5 @@
+import * as Dialog from '@radix-ui/react-dialog'
+import { cn } from '@/lib/ui'
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
@@ -7,12 +9,13 @@ import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
 
 interface AddServerModalProps {
+  open: boolean;
   onClose: () => void;
   onAdd: (serverData: unknown) => void;
   templates: ServerTemplate[];
 }
 
-const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) => {
+const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd, templates }) => {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [profileName, setProfileName] = useState('');
@@ -85,144 +88,155 @@ const AddServerModal: FC<AddServerModalProps> = ({ onClose, onAdd, templates }) 
   };
 
   return (
-    <div className="add-server-modal-backdrop modal-backdrop">
-      <div className="add-server-modal-panel modal-panel">
-        <h3 className="add-server-modal__title">{t('addServer.title')}</h3>
-
-        <form onSubmit={handleSubmit}>
-          {templates.length > 0 && (
-            <div className="add-server-modal__section">
-              <label className="add-server-modal__label">{t('addServer.template.label')}</label>
-              <select
-                value={selectedTemplateId}
-                onChange={(event) => setSelectedTemplateId(event.target.value)}
-                className="add-server-modal__field"
-              >
-                <option value="">{t('addServer.template.none')}</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="add-server-modal-backdrop" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          className={cn(
+            'add-server-modal-panel',
+            'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
           )}
+        >
+          <Dialog.Title className="add-server-modal__title">{t('addServer.title')}</Dialog.Title>
 
-          <div className="add-server-modal__section">
-            <label className="add-server-modal__label">{t('addServer.name.label')}</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('addServer.name.placeholder')}
-              className="add-server-modal__field add-server-modal__field--text"
-            />
-            <div className="add-server-modal__path-preview">
-              {t('addServer.savePath')} {previewPath}
-            </div>
-          </div>
+          <form onSubmit={handleSubmit}>
+            {templates.length > 0 && (
+              <div className="add-server-modal__section">
+                <label className="add-server-modal__label">{t('addServer.template.label')}</label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(event) => setSelectedTemplateId(event.target.value)}
+                  className="add-server-modal__field"
+                >
+                  <option value="">{t('addServer.template.none')}</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          <div className="add-server-modal__row">
-            <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">{t('addServer.profileName.label')}</label>
+            <div className="add-server-modal__section">
+              <label className="add-server-modal__label">{t('addServer.name.label')}</label>
               <input
                 type="text"
-                value={profileName}
-                onChange={(event) => setProfileName(event.target.value)}
-                placeholder={t('addServer.profileName.placeholder')}
-                className="add-server-modal__field"
-              />
-            </div>
-
-            <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">{t('addServer.groupName.label')}</label>
-              <input
-                type="text"
-                value={groupName}
-                onChange={(event) => setGroupName(event.target.value)}
-                placeholder={t('addServer.groupName.placeholder')}
-                className="add-server-modal__field"
-              />
-            </div>
-          </div>
-
-          <div className="add-server-modal__row">
-            <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">{t('addServer.software.label')}</label>
-              <select
-                value={software}
-                onChange={(e) => setSoftware(e.target.value)}
-                className="add-server-modal__field"
-              >
-                <optgroup label={t('addServer.software.groups.standard')}>
-                  <option value="Vanilla">{t('addServer.software.options.vanilla')}</option>
-                  <option value="Paper">{t('addServer.software.options.paper')}</option>
-                  <option value="LeafMC">{t('addServer.software.options.leafmc')}</option>
-                  <option value="Spigot">{t('addServer.software.options.spigot')}</option>
-                </optgroup>
-                <optgroup label={t('addServer.software.groups.modded')}>
-                  <option value="Fabric">{t('addServer.software.options.fabric')}</option>
-                  <option value="Forge">{t('addServer.software.options.forge')}</option>
-                </optgroup>
-                <optgroup label={t('addServer.software.groups.proxy')}>
-                  <option value="Velocity">{t('addServer.software.options.velocity')}</option>
-                  <option value="Waterfall">{t('addServer.software.options.waterfall')}</option>
-                  <option value="BungeeCord">{t('addServer.software.options.bungeecord')}</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">{t('addServer.version.label')}</label>
-              <select
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                className="add-server-modal__field"
-              >
-                {VERSION_OPTIONS.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="add-server-modal__row add-server-modal__row--spaced">
-            <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">{t('addServer.port.label')}</label>
-              <input
-                type="number"
                 required
-                value={port}
-                onChange={(e) => setPort(Number(e.target.value))}
-                className="add-server-modal__field"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('addServer.name.placeholder')}
+                className="add-server-modal__field add-server-modal__field--text"
               />
+              <div className="add-server-modal__path-preview">
+                {t('addServer.savePath')} {previewPath}
+              </div>
             </div>
-            <div className="add-server-modal__field-group">
-              <label className="add-server-modal__label">{t('addServer.memory.label')}</label>
-              <input
-                type="number"
-                required
-                value={memory}
-                onChange={(e) => setMemory(Number(e.target.value))}
-                className="add-server-modal__field"
-              />
-            </div>
-          </div>
 
-          <div className="add-server-modal__footer">
-            <button type="button" onClick={onClose} className="add-server-modal__cancel-btn">
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="add-server-modal__submit-btn">
-              {t('common.create')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <div className="add-server-modal__row">
+              <div className="add-server-modal__field-group">
+                <label className="add-server-modal__label">{t('addServer.profileName.label')}</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  placeholder={t('addServer.profileName.placeholder')}
+                  className="add-server-modal__field"
+                />
+              </div>
+
+              <div className="add-server-modal__field-group">
+                <label className="add-server-modal__label">{t('addServer.groupName.label')}</label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(event) => setGroupName(event.target.value)}
+                  placeholder={t('addServer.groupName.placeholder')}
+                  className="add-server-modal__field"
+                />
+              </div>
+            </div>
+
+            <div className="add-server-modal__row">
+              <div className="add-server-modal__field-group">
+                <label className="add-server-modal__label">{t('addServer.software.label')}</label>
+                <select
+                  value={software}
+                  onChange={(e) => setSoftware(e.target.value)}
+                  className="add-server-modal__field"
+                >
+                  <optgroup label={t('addServer.software.groups.standard')}>
+                    <option value="Vanilla">{t('addServer.software.options.vanilla')}</option>
+                    <option value="Paper">{t('addServer.software.options.paper')}</option>
+                    <option value="LeafMC">{t('addServer.software.options.leafmc')}</option>
+                    <option value="Spigot">{t('addServer.software.options.spigot')}</option>
+                  </optgroup>
+                  <optgroup label={t('addServer.software.groups.modded')}>
+                    <option value="Fabric">{t('addServer.software.options.fabric')}</option>
+                    <option value="Forge">{t('addServer.software.options.forge')}</option>
+                  </optgroup>
+                  <optgroup label={t('addServer.software.groups.proxy')}>
+                    <option value="Velocity">{t('addServer.software.options.velocity')}</option>
+                    <option value="Waterfall">{t('addServer.software.options.waterfall')}</option>
+                    <option value="BungeeCord">{t('addServer.software.options.bungeecord')}</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="add-server-modal__field-group">
+                <label className="add-server-modal__label">{t('addServer.version.label')}</label>
+                <select
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  className="add-server-modal__field"
+                >
+                  {VERSION_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="add-server-modal__row add-server-modal__row--spaced">
+              <div className="add-server-modal__field-group">
+                <label className="add-server-modal__label">{t('addServer.port.label')}</label>
+                <input
+                  type="number"
+                  required
+                  value={port}
+                  onChange={(e) => setPort(Number(e.target.value))}
+                  className="add-server-modal__field"
+                />
+              </div>
+              <div className="add-server-modal__field-group">
+                <label className="add-server-modal__label">{t('addServer.memory.label')}</label>
+                <input
+                  type="number"
+                  required
+                  value={memory}
+                  onChange={(e) => setMemory(Number(e.target.value))}
+                  className="add-server-modal__field"
+                />
+              </div>
+            </div>
+
+            <div className="add-server-modal__footer">
+              <Dialog.Close asChild>
+                <button type="button" className="add-server-modal__cancel-btn">
+                  {t('common.cancel')}
+                </button>
+              </Dialog.Close>
+              <button type="submit" className="add-server-modal__submit-btn">
+                {t('common.create')}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 };
 

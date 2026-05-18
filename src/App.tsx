@@ -50,8 +50,6 @@ function App() {
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
   const [showImportServerModal, setShowImportServerModal] = useState(false);
   const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
-  const contextMenu = useUiStore((state) => state.contextMenu);
-  const setContextMenu = useUiStore((state) => state.setContextMenu);
 
   const [downloadStatus, setDownloadStatus] = useState<{
     id: string;
@@ -108,18 +106,14 @@ function App() {
   };
 
   const {
-    handleContextMenu,
     handleDeleteServer,
     handleDuplicateServer,
     handleSaveServerTemplate,
-    handleClickOutside,
   } = useServerContextActions({
     servers,
     setServers,
     selectedServerId,
     setSelectedServerId,
-    contextMenu,
-    setContextMenu,
     showToast,
     t,
     removeServerLogs,
@@ -245,7 +239,6 @@ function App() {
     <div
       className={`app-shell theme-${resolvedTheme}`}
       data-theme={resolvedTheme}
-      onClick={handleClickOutside}
       style={appShellStyle}
     >
       <aside
@@ -270,8 +263,10 @@ function App() {
           groupedServers={groupedServers}
           selectedServerId={selectedServerId}
           onSelectServer={setSelectedServerId}
-          onServerContextMenu={handleContextMenu}
           onAddServer={() => setShowAddServerChoiceModal(true)}
+          onDuplicateServer={handleDuplicateServer}
+          onSaveServerTemplate={handleSaveServerTemplate}
+          onDeleteServer={handleDeleteServer}
           serversLabel={t('nav.servers')}
           addServerLabel={t('nav.addServer')}
           bulkSelectLabel={t('nav.bulkSelect')}
@@ -280,6 +275,9 @@ function App() {
           bulkBackupLabel={t('nav.bulkBackupSelected')}
           bulkClearLabel={t('nav.bulkClearSelection')}
           bulkSelectedCountLabel={(count) => t('nav.bulkSelectedCount', { count })}
+          duplicateLabel={t('server.actions.clone')}
+          saveTemplateLabel={t('server.actions.saveTemplate')}
+          deleteLabel={t('common.delete')}
           onBulkStart={handleBulkStart}
           onBulkStop={handleBulkStop}
           onBulkBackup={handleBulkBackup}
@@ -309,19 +307,12 @@ function App() {
         />
       </main>
 
-      {showAddServerChoiceModal && (
-        <AddServerChoiceModal
-          onClose={() => setShowAddServerChoiceModal(false)}
-          onNewServer={() => {
-            setShowAddServerChoiceModal(false);
-            setShowAddServerModal(true);
-          }}
-          onImportServer={() => {
-            setShowAddServerChoiceModal(false);
-            setShowImportServerModal(true);
-          }}
-        />
-      )}
+      <AddServerChoiceModal
+        open={showAddServerChoiceModal}
+        onClose={() => setShowAddServerChoiceModal(false)}
+        onNewServer={() => setShowAddServerModal(true)}
+        onImportServer={() => setShowImportServerModal(true)}
+      />
 
       <AppOverlayLayer
         downloadStatus={downloadStatus}
@@ -331,10 +322,6 @@ function App() {
         serverTemplates={serverTemplates}
         showImportServerModal={showImportServerModal}
         onCloseImportServerModal={() => setShowImportServerModal(false)}
-        contextMenu={contextMenu}
-        onDuplicateServer={handleDuplicateServer}
-        onSaveServerTemplate={handleSaveServerTemplate}
-        onDeleteServer={handleDeleteServer}
         updatePrompt={updatePrompt}
         updateProgress={updateProgress}
         updateError={updateError}
