@@ -263,8 +263,6 @@ export default function UsersView({ server }: Props) {
 
   return (
     <div className="users-view">
-      <h2 className="users-view__title">{t('users.title')}</h2>
-
       <div className="users-view__card users-view__online-card">
         <div className="users-view__card-header">
           {t('users.lists.online')}
