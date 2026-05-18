@@ -17,7 +17,7 @@
 | Phase 5   | 複数サーバー一括操作・SLP Ping ヘルスチェック                                    | ✅ 完了                   |
 | **Infra** | **パッケージ追加・スタイリング基盤整備**                                         | **✅ 完了（2026-05-18）** |
 | Phase 6   | スタイリング移行（Tailwind + CVA + Radix UI）                                    | ✅ 完了（2026-05-18）     |
-| Phase 7   | React Query 移行・フォーム強化                                                   | 🔲 未着手                 |
+| Phase 7   | React Query 移行・フォーム強化                                                   | ✅ 完了（2026-05-18）     |
 | Phase 8   | UX強化（cmdk・sonner統合・Tauriプラグイン活用）                                  | 🔲 未着手                 |
 
 ---
@@ -150,17 +150,17 @@
 
 ---
 
-## Phase 7：React Query 移行・フォーム強化 🔲
+## Phase 7：React Query 移行・フォーム強化 ✅ 完了（2026-05-18）
 
 ### タスク一覧
 
-| タスク | 内容                                                    | 対象                 |
-| ------ | ------------------------------------------------------- | -------------------- |
-| 7-1    | Modrinth/Hangar API呼び出しを React Query に移行        | `PluginBrowser.tsx`  |
-| 7-2    | サーバー状態ポーリングを React Query に移行             | `DashboardView.tsx`  |
-| 7-3    | サーバー作成フォームを react-hook-form + zod に移行     | `AddServerModal.tsx` |
-| 7-4    | 設定フォームを react-hook-form + zod に移行             | `SettingsWindow.tsx` |
-| 7-5    | プラグイン一覧・バックアップ一覧に React Virtual を適用 | 各Viewコンポーネント |
+| タスク | 内容                                                    | 対象                 | 状態          |
+| ------ | ------------------------------------------------------- | -------------------- | ------------- |
+| 7-1    | Modrinth/Hangar API呼び出しを React Query に移行        | `PluginBrowser.tsx`  | ✅ 完了       |
+| 7-2    | サーバー状態ポーリングを React Query に移行             | `DashboardView.tsx`  | ✅ 完了（ping のみ）|
+| 7-3    | サーバー作成フォームを react-hook-form + zod に移行     | `AddServerModal.tsx` | ✅ 完了       |
+| 7-4    | 設定フォームを react-hook-form + zod に移行             | `SettingsWindow.tsx` | ⏭️ スキップ（対象なし）|
+| 7-5    | プラグイン一覧・バックアップ一覧に React Virtual を適用 | `BackupsView.tsx`    | ✅ 完了       |
 
 ---
 
