@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog'
-import { cn } from '@/lib/ui'
+import * as Dialog from '@radix-ui/react-dialog';
+import { cn } from '@/lib/ui';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
@@ -88,7 +88,12 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="add-server-modal-backdrop" />
         <Dialog.Content
@@ -136,7 +141,9 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
 
             <div className="add-server-modal__row">
               <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">{t('addServer.profileName.label')}</label>
+                <label className="add-server-modal__label">
+                  {t('addServer.profileName.label')}
+                </label>
                 <input
                   type="text"
                   value={profileName}

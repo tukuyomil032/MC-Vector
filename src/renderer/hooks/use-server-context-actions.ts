@@ -78,119 +78,120 @@ export function useServerContextActions({
   removeServerLogs,
   loadTemplates,
 }: UseServerContextActionsOptions) {
-  const handleDeleteServer = useCallback(async (serverId: string) => {
-    const target = servers.find((server) => server.id === serverId);
+  const handleDeleteServer = useCallback(
+    async (serverId: string) => {
+      const target = servers.find((server) => server.id === serverId);
 
-    const confirmed = await ask(t('server.confirm.delete', { name: target?.name ?? '' }), {
-      title: t('common.delete'),
-      kind: 'warning',
-    });
-    if (!confirmed) {
-      return;
-    }
+      const confirmed = await ask(t('server.confirm.delete', { name: target?.name ?? '' }), {
+        title: t('common.delete'),
+        kind: 'warning',
+      });
+      if (!confirmed) {
+        return;
+      }
 
-    try {
-      const success = await deleteServerApi(serverId);
-      if (success) {
-        const nextServers = servers.filter((server) => server.id !== serverId);
-        setServers(nextServers);
-        removeServerLogs(serverId);
-        if (selectedServerId === serverId) {
-          setSelectedServerId(nextServers.length > 0 ? nextServers[0].id : '');
+      try {
+        const success = await deleteServerApi(serverId);
+        if (success) {
+          const nextServers = servers.filter((server) => server.id !== serverId);
+          setServers(nextServers);
+          removeServerLogs(serverId);
+          if (selectedServerId === serverId) {
+            setSelectedServerId(nextServers.length > 0 ? nextServers[0].id : '');
+          }
+          showToast(t('server.toast.deleted'), 'success');
+        } else {
+          showToast(t('server.toast.deleteFailed'), 'error');
         }
-        showToast(t('server.toast.deleted'), 'success');
-      } else {
-        showToast(t('server.toast.deleteFailed'), 'error');
+      } catch (error) {
+        logError('Delete server failed', error, { serverId });
+        showToast(t('server.toast.deleteError'), 'error');
       }
-    } catch (error) {
-      logError('Delete server failed', error, { serverId });
-      showToast(t('server.toast.deleteError'), 'error');
-    }
-  }, [
-    removeServerLogs,
-    selectedServerId,
-    servers,
-    setSelectedServerId,
-    setServers,
-    showToast,
-    t,
-  ]);
+    },
+    [removeServerLogs, selectedServerId, servers, setSelectedServerId, setServers, showToast, t],
+  );
 
-  const handleDuplicateServer = useCallback(async (serverId: string) => {
-    const target = servers.find((server) => server.id === serverId);
-    if (!target) {
-      return;
-    }
-
-    const confirmed = await ask(t('server.confirm.clone', { name: target.name }), {
-      title: t('common.confirm'),
-      kind: 'info',
-    });
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const basePath = `${target.path}-clone`;
-      const existingPaths = new Set(servers.map((server) => server.path));
-      let candidatePath = basePath;
-      let suffix = 1;
-      while (existingPaths.has(candidatePath)) {
-        candidatePath = `${basePath}-${suffix}`;
-        suffix += 1;
+  const handleDuplicateServer = useCallback(
+    async (serverId: string) => {
+      const target = servers.find((server) => server.id === serverId);
+      if (!target) {
+        return;
       }
 
-      await cloneServerDirectory(target.path, candidatePath);
-
-      const duplicatedServer: MinecraftServer = {
-        ...target,
-        id: crypto.randomUUID(),
-        name: t('server.create.cloneDefaultName', { name: target.name }),
-        path: candidatePath,
-        status: 'offline',
-        createdDate: new Date().toISOString(),
-      };
-
-      await addServerApi(duplicatedServer);
-      setServers((prev) => [...prev, duplicatedServer]);
-      setSelectedServerId(duplicatedServer.id);
-      showToast(t('server.toast.cloned'), 'success');
-    } catch (error) {
-      logError('Duplicate server failed', error, {
-        sourceServerId: target.id,
-        sourcePath: target.path,
+      const confirmed = await ask(t('server.confirm.clone', { name: target.name }), {
+        title: t('common.confirm'),
+        kind: 'info',
       });
-      showToast(t('server.toast.cloneFailed'), 'error');
-    }
-  }, [servers, setSelectedServerId, setServers, showToast, t]);
+      if (!confirmed) {
+        return;
+      }
 
-  const handleSaveServerTemplate = useCallback(async (serverId: string) => {
-    const target = servers.find((server) => server.id === serverId);
-    if (!target) {
-      return;
-    }
+      try {
+        const basePath = `${target.path}-clone`;
+        const existingPaths = new Set(servers.map((server) => server.path));
+        let candidatePath = basePath;
+        let suffix = 1;
+        while (existingPaths.has(candidatePath)) {
+          candidatePath = `${basePath}-${suffix}`;
+          suffix += 1;
+        }
 
-    const templateName = window.prompt(
-      t('server.create.templateNamePrompt'),
-      t('server.create.templateDefaultName', { name: target.name }),
-    );
-    if (!templateName || !templateName.trim()) {
-      return;
-    }
+        await cloneServerDirectory(target.path, candidatePath);
 
-    try {
-      const template = buildTemplateFromServer(target, templateName.trim());
-      await saveServerTemplate(template);
-      await loadTemplates();
-      showToast(t('server.toast.templateSaved'), 'success');
-    } catch (error) {
-      logError('Save server template failed', error, {
-        serverId: target.id,
-        templateName: templateName.trim(),
-      });
-      showToast(t('server.toast.templateSaveFailed'), 'error');
-    }
-  }, [loadTemplates, servers, showToast, t]);
+        const duplicatedServer: MinecraftServer = {
+          ...target,
+          id: crypto.randomUUID(),
+          name: t('server.create.cloneDefaultName', { name: target.name }),
+          path: candidatePath,
+          status: 'offline',
+          createdDate: new Date().toISOString(),
+        };
+
+        await addServerApi(duplicatedServer);
+        setServers((prev) => [...prev, duplicatedServer]);
+        setSelectedServerId(duplicatedServer.id);
+        showToast(t('server.toast.cloned'), 'success');
+      } catch (error) {
+        logError('Duplicate server failed', error, {
+          sourceServerId: target.id,
+          sourcePath: target.path,
+        });
+        showToast(t('server.toast.cloneFailed'), 'error');
+      }
+    },
+    [servers, setSelectedServerId, setServers, showToast, t],
+  );
+
+  const handleSaveServerTemplate = useCallback(
+    async (serverId: string) => {
+      const target = servers.find((server) => server.id === serverId);
+      if (!target) {
+        return;
+      }
+
+      const templateName = window.prompt(
+        t('server.create.templateNamePrompt'),
+        t('server.create.templateDefaultName', { name: target.name }),
+      );
+      if (!templateName || !templateName.trim()) {
+        return;
+      }
+
+      try {
+        const template = buildTemplateFromServer(target, templateName.trim());
+        await saveServerTemplate(template);
+        await loadTemplates();
+        showToast(t('server.toast.templateSaved'), 'success');
+      } catch (error) {
+        logError('Save server template failed', error, {
+          serverId: target.id,
+          templateName: templateName.trim(),
+        });
+        showToast(t('server.toast.templateSaveFailed'), 'error');
+      }
+    },
+    [loadTemplates, servers, showToast, t],
+  );
 
   return {
     handleDeleteServer,

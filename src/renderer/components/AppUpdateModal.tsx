@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog'
-import { cn } from '@/lib/ui'
+import * as Dialog from '@radix-ui/react-dialog';
+import { cn } from '@/lib/ui';
 import type { Translate } from '../../i18n';
 import { Progress } from './ui/Progress';
 
@@ -65,7 +65,9 @@ export default function AppUpdateModal({
   return (
     <Dialog.Root
       open={isOpen}
-      onOpenChange={(o) => { if (!o) onDismiss(); }}
+      onOpenChange={(o) => {
+        if (!o) onDismiss();
+      }}
     >
       <Dialog.Portal>
         <Dialog.Overlay className="app-update-overlay" />
@@ -87,7 +89,9 @@ export default function AppUpdateModal({
 
           {releaseNotesText && updatePrompt && (
             <div className="mb-4">
-              <div className="app-update-modal__notes-label">{t('settings.update.releaseNotes')}</div>
+              <div className="app-update-modal__notes-label">
+                {t('settings.update.releaseNotes')}
+              </div>
               <pre className="app-update-modal__notes">{releaseNotesText}</pre>
             </div>
           )}
@@ -116,11 +120,7 @@ export default function AppUpdateModal({
               {t('common.cancel')}
             </button>
             {updatePrompt && !updateReady && (
-              <button
-                className="btn-primary"
-                onClick={onUpdateNow}
-                disabled={isDownloading}
-              >
+              <button className="btn-primary" onClick={onUpdateNow} disabled={isDownloading}>
                 {t('settings.update.download')}
               </button>
             )}

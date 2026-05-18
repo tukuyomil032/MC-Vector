@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog'
-import { cn } from '@/lib/ui'
+import * as Dialog from '@radix-ui/react-dialog';
+import { cn } from '@/lib/ui';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
@@ -12,7 +12,11 @@ interface ImportServerModalProps {
   onAdd: (serverData: unknown) => void;
 }
 
-export default function ImportServerModal({ open: isOpen, onClose, onAdd }: ImportServerModalProps) {
+export default function ImportServerModal({
+  open: isOpen,
+  onClose,
+  onAdd,
+}: ImportServerModalProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
 
@@ -67,7 +71,12 @@ export default function ImportServerModal({ open: isOpen, onClose, onAdd }: Impo
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="mc-modal-overlay" />
         <Dialog.Content

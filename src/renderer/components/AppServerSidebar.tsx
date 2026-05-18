@@ -148,7 +148,9 @@ export default function AppServerSidebar({
                     >
                       <span className={`status-indicator ${server.status}`}></span>
                       <span className="flex flex-col">
-                        <span className="font-semibold text-sm text-text-primary">{server.name}</span>
+                        <span className="font-semibold text-sm text-text-primary">
+                          {server.name}
+                        </span>
                         {server.profileName && (
                           <span className="text-[0.72rem] text-zinc-400">{server.profileName}</span>
                         )}

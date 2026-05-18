@@ -105,20 +105,17 @@ function App() {
     }
   };
 
-  const {
-    handleDeleteServer,
-    handleDuplicateServer,
-    handleSaveServerTemplate,
-  } = useServerContextActions({
-    servers,
-    setServers,
-    selectedServerId,
-    setSelectedServerId,
-    showToast,
-    t,
-    removeServerLogs,
-    loadTemplates,
-  });
+  const { handleDeleteServer, handleDuplicateServer, handleSaveServerTemplate } =
+    useServerContextActions({
+      servers,
+      setServers,
+      selectedServerId,
+      setSelectedServerId,
+      showToast,
+      t,
+      removeServerLogs,
+      loadTemplates,
+    });
 
   useServerRuntimeListeners({
     selectedServerId,

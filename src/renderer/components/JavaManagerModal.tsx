@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog'
-import { cn } from '@/lib/ui'
+import * as Dialog from '@radix-ui/react-dialog';
+import { cn } from '@/lib/ui';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
@@ -95,7 +95,12 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
   const isDownloading = downloading !== null;
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="java-manager-modal-overlay" />
         <Dialog.Content

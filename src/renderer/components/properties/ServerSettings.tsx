@@ -345,7 +345,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                     options: [
                       { value: 'Velocity', label: t('serverSettings.softwareOptions.velocity') },
                       { value: 'Waterfall', label: t('serverSettings.softwareOptions.waterfall') },
-                      { value: 'BungeeCord', label: t('serverSettings.softwareOptions.bungeecord') },
+                      {
+                        value: 'BungeeCord',
+                        label: t('serverSettings.softwareOptions.bungeecord'),
+                      },
                     ],
                   },
                 ]}
@@ -525,11 +528,19 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 </label>
                 <Select
                   value={autoBackupScheduleType}
-                  onValueChange={(v) => setAutoBackupScheduleType(v as 'interval' | 'daily' | 'weekly')}
+                  onValueChange={(v) =>
+                    setAutoBackupScheduleType(v as 'interval' | 'daily' | 'weekly')
+                  }
                   options={[
-                    { value: 'interval', label: t('serverSettings.autoBackup.scheduleOptions.interval') },
+                    {
+                      value: 'interval',
+                      label: t('serverSettings.autoBackup.scheduleOptions.interval'),
+                    },
                     { value: 'daily', label: t('serverSettings.autoBackup.scheduleOptions.daily') },
-                    { value: 'weekly', label: t('serverSettings.autoBackup.scheduleOptions.weekly') },
+                    {
+                      value: 'weekly',
+                      label: t('serverSettings.autoBackup.scheduleOptions.weekly'),
+                    },
                   ]}
                 />
               </div>
@@ -570,7 +581,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   <Select
                     value={String(autoBackupWeekday)}
                     onValueChange={(v) => setAutoBackupWeekday(Number(v))}
-                    options={WEEKDAY_OPTIONS.map((w) => ({ value: String(w.value), label: w.label }))}
+                    options={WEEKDAY_OPTIONS.map((w) => ({
+                      value: String(w.value),
+                      label: w.label,
+                    }))}
                   />
                 </div>
               )}
