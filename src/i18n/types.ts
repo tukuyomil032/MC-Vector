@@ -1078,6 +1078,13 @@ export interface TranslationDictionary {
       noJar: string;
     };
   };
+
+  commandPalette: {
+    placeholder: string;
+    noResults: string;
+    navigate: string;
+    serverActions: string;
+  };
 }
 
 /**

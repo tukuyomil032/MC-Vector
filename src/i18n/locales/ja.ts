@@ -1062,4 +1062,11 @@ export const ja: TranslationDictionary = {
       noJar: 'サーバー JAR が見つかりません',
     },
   },
+
+  commandPalette: {
+    placeholder: 'コマンドを検索...',
+    noResults: '一致するコマンドが見つかりません',
+    navigate: 'ナビゲーション',
+    serverActions: 'サーバー操作',
+  },
 };

@@ -1062,4 +1062,11 @@ export const en: TranslationDictionary = {
       noJar: 'No server JAR found in folder',
     },
   },
+
+  commandPalette: {
+    placeholder: 'Search commands...',
+    noResults: 'No matching commands found',
+    navigate: 'Navigate',
+    serverActions: 'Server Actions',
+  },
 };

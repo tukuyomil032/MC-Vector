@@ -18,6 +18,7 @@ import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
 import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
+import { CommandPalette } from '@/renderer/components/CommandPalette';
 import { useToast } from '@/renderer/components/ToastProvider';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
@@ -309,6 +310,14 @@ function App() {
         onClose={() => setShowAddServerChoiceModal(false)}
         onNewServer={() => setShowAddServerModal(true)}
         onImportServer={() => setShowImportServerModal(true)}
+      />
+
+      <CommandPalette
+        activeServer={activeServer}
+        setCurrentView={setCurrentView}
+        onStart={handleStart}
+        onStop={handleStop}
+        onRestart={handleRestart}
       />
 
       <AppOverlayLayer
