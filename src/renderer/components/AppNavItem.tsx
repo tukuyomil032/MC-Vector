@@ -1,4 +1,5 @@
 import { type AppView } from '../shared/server declaration';
+import { Tooltip } from './ui/Tooltip';
 import SvgMaskIcon from './SvgMaskIcon';
 
 interface AppNavItemProps {
@@ -22,26 +23,27 @@ export default function AppNavItem({
   const isActive = current === view;
 
   return (
-    <div
-      className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
-      onClick={() => set(view)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          set(view);
-        }
-      }}
-      title={isOpen ? '' : tooltip}
-      role="button"
-      tabIndex={0}
-      aria-label={tooltip}
-      aria-current={isActive ? 'page' : undefined}
-    >
-      <SvgMaskIcon
-        src={iconSrc}
-        className={`app-nav-item__icon ${isOpen ? 'app-nav-item__icon--open' : 'app-nav-item__icon--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
-      />
-      {isOpen && <span className="app-nav-item__label">{label}</span>}
-    </div>
+    <Tooltip content={tooltip} disabled={isOpen} side="right">
+      <div
+        className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
+        onClick={() => set(view)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            set(view);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={tooltip}
+        aria-current={isActive ? 'page' : undefined}
+      >
+        <SvgMaskIcon
+          src={iconSrc}
+          className={`app-nav-item__icon ${isOpen ? 'app-nav-item__icon--open' : 'app-nav-item__icon--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
+        />
+        {isOpen && <span className="app-nav-item__label">{label}</span>}
+      </div>
+    </Tooltip>
   );
 }
