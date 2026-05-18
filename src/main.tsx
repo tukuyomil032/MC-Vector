@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'sonner';
+import { restoreStateCurrent } from '@tauri-apps/plugin-window-state';
 import App from './App';
 import { useI18nStore } from './i18n';
 import './styles/index.scss';
@@ -22,6 +23,7 @@ loader.config({ monaco });
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
 async function bootstrap() {
+  await restoreStateCurrent();
   await useI18nStore.getState().initLocale();
 
   root.render(
