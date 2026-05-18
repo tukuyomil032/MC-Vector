@@ -16,7 +16,7 @@
 | Phase 4 | ファイル差分ビュー・プラグイン更新チェック・サーバーインポート・デスクトップ通知 | ✅ 完了 |
 | Phase 5 | 複数サーバー一括操作・SLP Ping ヘルスチェック | ✅ 完了 |
 | **Infra** | **パッケージ追加・スタイリング基盤整備** | **✅ 完了（2026-05-18）** |
-| Phase 6 | スタイリング移行（Tailwind + CVA + Radix UI） | 🔲 未着手 |
+| Phase 6 | スタイリング移行（Tailwind + CVA + Radix UI） | 🔶 進行中（2026-05-18） |
 | Phase 7 | React Query 移行・フォーム強化 | 🔲 未着手 |
 | Phase 8 | UX強化（cmdk・sonner統合・Tauriプラグイン活用） | 🔲 未着手 |
 
@@ -124,15 +124,15 @@
 
 ### タスク一覧
 
-| タスク | 内容 | 優先度 |
-|-------|------|-------|
-| 6-1 | `Button` コンポーネント CVA化 | 高 |
-| 6-2 | `Modal / Dialog` を Radix `Dialog` ベースに置き換え | 高 |
-| 6-3 | `Dropdown / ContextMenu` を Radix ベースに置き換え | 高 |
-| 6-4 | `Tabs` を Radix `Tabs` ベースに置き換え | 中 |
-| 6-5 | `Tooltip` を Radix `Tooltip` ベースに置き換え | 中 |
-| 6-6 | `Select / Switch / Progress` を Radix ベースに置き換え | 中 |
-| 6-7 | 既存SCSSの中で重複・未使用クラスを整理（部分削除） | 低 |
+| タスク | 内容 | 優先度 | 状態 |
+|-------|------|-------|------|
+| 6-1 | `Button` コンポーネント CVA化 | 高 | ✅ 完了 |
+| 6-2 | 全モーダルを Radix `Dialog` ベースに置き換え | 高 | ✅ 完了（AddServerChoice/AddServer/ImportServer/AppUpdate/JavaManager） |
+| 6-3 | `Dropdown / ContextMenu` を Radix ベースに置き換え | 高 | 🔲 未着手 |
+| 6-4 | `Tabs` を Radix `Tabs` ベースに置き換え | 中 | 🔲 未着手 |
+| 6-5 | `Tooltip` を Radix `Tooltip` ベースに置き換え | 中 | 🔲 未着手 |
+| 6-6 | `Select / Switch / Progress` を Radix ベースに置き換え | 中 | 🔲 未着手 |
+| 6-7 | 既存SCSSの中で重複・未使用クラスを整理（部分削除） | 低 | 🔲 未着手 |
 
 ### 進め方
 
