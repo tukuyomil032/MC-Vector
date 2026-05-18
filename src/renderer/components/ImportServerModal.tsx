@@ -1,3 +1,5 @@
+import * as Dialog from '@radix-ui/react-dialog'
+import { cn } from '@/lib/ui'
 import { open } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
@@ -5,11 +7,12 @@ import { analyzeServerFolder } from '../../lib/server-import-commands';
 import { useToast } from './ToastProvider';
 
 interface ImportServerModalProps {
+  open: boolean;
   onClose: () => void;
   onAdd: (serverData: unknown) => void;
 }
 
-export default function ImportServerModal({ onClose, onAdd }: ImportServerModalProps) {
+export default function ImportServerModal({ open: isOpen, onClose, onAdd }: ImportServerModalProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
 
@@ -64,75 +67,87 @@ export default function ImportServerModal({ onClose, onAdd }: ImportServerModalP
   };
 
   return (
-    <div className="mc-modal-overlay modal-backdrop">
-      <div className="mc-modal-panel modal-panel" style={{ minWidth: 420 }}>
-        <h3 className="mc-modal-title">{t('importServer.title')}</h3>
+    <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="mc-modal-overlay" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          className={cn(
+            'mc-modal-panel',
+            'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
+          )}
+          style={{ minWidth: 420 }}
+        >
+          <Dialog.Title className="mc-modal-title">{t('importServer.title')}</Dialog.Title>
 
-        <label className="mc-modal-label">{t('importServer.folderLabel')}</label>
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            readOnly
-            value={folderPath}
-            placeholder={t('importServer.folderPlaceholder')}
-            className="mc-modal-input flex-1"
-          />
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleSelectFolder}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? '...' : t('importServer.selectButton')}
-          </button>
-        </div>
-
-        {analyzed && hasServerJar && (
-          <>
-            {!eulaAccepted && (
-              <p className="text-yellow-400 text-sm mb-3">{t('importServer.eulaWarning')}</p>
-            )}
-
-            <label className="mc-modal-label">{t('importServer.nameLabel')}</label>
+          <label className="mc-modal-label">{t('importServer.folderLabel')}</label>
+          <div className="flex gap-2 mb-3">
             <input
               type="text"
-              value={serverName}
-              onChange={(e) => setServerName(e.target.value)}
-              className="mc-modal-input mb-3"
+              readOnly
+              value={folderPath}
+              placeholder={t('importServer.folderPlaceholder')}
+              className="mc-modal-input flex-1"
             />
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleSelectFolder}
+              disabled={isAnalyzing}
+            >
+              {isAnalyzing ? '...' : t('importServer.selectButton')}
+            </button>
+          </div>
 
-            <label className="mc-modal-label">{t('importServer.versionLabel')}</label>
-            <input
-              type="text"
-              value={version}
-              onChange={(e) => setVersion(e.target.value)}
-              className="mc-modal-input mb-3"
-            />
+          {analyzed && hasServerJar && (
+            <>
+              {!eulaAccepted && (
+                <p className="text-yellow-400 text-sm mb-3">{t('importServer.eulaWarning')}</p>
+              )}
 
-            <label className="mc-modal-label">{t('importServer.softwareLabel')}</label>
-            <input
-              type="text"
-              value={software}
-              onChange={(e) => setSoftware(e.target.value)}
-              className="mc-modal-input mb-3"
-            />
-          </>
-        )}
+              <label className="mc-modal-label">{t('importServer.nameLabel')}</label>
+              <input
+                type="text"
+                value={serverName}
+                onChange={(e) => setServerName(e.target.value)}
+                className="mc-modal-input mb-3"
+              />
 
-        <div className="mc-modal-footer">
-          <button type="button" className="mc-modal-btn-secondary" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="mc-modal-btn-primary"
-            onClick={handleImport}
-            disabled={!analyzed || !hasServerJar || !serverName}
-          >
-            {t('importServer.importButton')}
-          </button>
-        </div>
-      </div>
-    </div>
+              <label className="mc-modal-label">{t('importServer.versionLabel')}</label>
+              <input
+                type="text"
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                className="mc-modal-input mb-3"
+              />
+
+              <label className="mc-modal-label">{t('importServer.softwareLabel')}</label>
+              <input
+                type="text"
+                value={software}
+                onChange={(e) => setSoftware(e.target.value)}
+                className="mc-modal-input mb-3"
+              />
+            </>
+          )}
+
+          <div className="mc-modal-footer">
+            <Dialog.Close asChild>
+              <button type="button" className="mc-modal-btn-secondary">
+                {t('common.cancel')}
+              </button>
+            </Dialog.Close>
+            <button
+              type="button"
+              className="mc-modal-btn-primary"
+              onClick={handleImport}
+              disabled={!analyzed || !hasServerJar || !serverName}
+            >
+              {t('importServer.importButton')}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

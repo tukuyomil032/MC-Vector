@@ -66,16 +66,17 @@ export default function AppOverlayLayer({
           message={downloadStatus.msg}
         />
       )}
-      {showAddServerModal && (
-        <AddServerModal
-          onClose={onCloseAddServerModal}
-          onAdd={onAddServer}
-          templates={serverTemplates}
-        />
-      )}
-      {showImportServerModal && (
-        <ImportServerModal onClose={onCloseImportServerModal} onAdd={onAddServer} />
-      )}
+      <AddServerModal
+        open={showAddServerModal}
+        onClose={onCloseAddServerModal}
+        onAdd={onAddServer}
+        templates={serverTemplates}
+      />
+      <ImportServerModal
+        open={showImportServerModal}
+        onClose={onCloseImportServerModal}
+        onAdd={onAddServer}
+      />
       <AppContextMenu
         contextMenu={contextMenu}
         onDuplicateServer={onDuplicateServer}
