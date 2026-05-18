@@ -17,6 +17,7 @@ import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
 import { useToast } from '../ToastProvider';
+import { Select } from '../ui/Select';
 
 interface ServerSettingsProps {
   server: MinecraftServer;
@@ -319,44 +320,45 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
           <div className="server-settings__row">
             <div className="server-settings__col">
               <label className="server-settings__label">{t('serverSettings.serverSoftware')}</label>
-              <select
+              <Select
                 value={software}
-                onChange={(e) => setSoftware(e.target.value)}
-                className="input-field"
-              >
-                <optgroup label={t('serverSettings.softwareGroups.standard')}>
-                  <option value="Vanilla">{t('serverSettings.softwareOptions.vanilla')}</option>
-                  <option value="Paper">{t('serverSettings.softwareOptions.paper')}</option>
-                  <option value="LeafMC">{t('serverSettings.softwareOptions.leafmc')}</option>
-                  <option value="Spigot">{t('serverSettings.softwareOptions.spigot')}</option>
-                </optgroup>
-                <optgroup label={t('serverSettings.softwareGroups.modded')}>
-                  <option value="Fabric">{t('serverSettings.softwareOptions.fabric')}</option>
-                  <option value="Forge">{t('serverSettings.softwareOptions.forge')}</option>
-                </optgroup>
-                <optgroup label={t('serverSettings.softwareGroups.proxy')}>
-                  <option value="Velocity">{t('serverSettings.softwareOptions.velocity')}</option>
-                  <option value="Waterfall">{t('serverSettings.softwareOptions.waterfall')}</option>
-                  <option value="BungeeCord">
-                    {t('serverSettings.softwareOptions.bungeecord')}
-                  </option>
-                </optgroup>
-              </select>
+                onValueChange={setSoftware}
+                groups={[
+                  {
+                    label: t('serverSettings.softwareGroups.standard'),
+                    options: [
+                      { value: 'Vanilla', label: t('serverSettings.softwareOptions.vanilla') },
+                      { value: 'Paper', label: t('serverSettings.softwareOptions.paper') },
+                      { value: 'LeafMC', label: t('serverSettings.softwareOptions.leafmc') },
+                      { value: 'Spigot', label: t('serverSettings.softwareOptions.spigot') },
+                    ],
+                  },
+                  {
+                    label: t('serverSettings.softwareGroups.modded'),
+                    options: [
+                      { value: 'Fabric', label: t('serverSettings.softwareOptions.fabric') },
+                      { value: 'Forge', label: t('serverSettings.softwareOptions.forge') },
+                    ],
+                  },
+                  {
+                    label: t('serverSettings.softwareGroups.proxy'),
+                    options: [
+                      { value: 'Velocity', label: t('serverSettings.softwareOptions.velocity') },
+                      { value: 'Waterfall', label: t('serverSettings.softwareOptions.waterfall') },
+                      { value: 'BungeeCord', label: t('serverSettings.softwareOptions.bungeecord') },
+                    ],
+                  },
+                ]}
+              />
             </div>
 
             <div className="server-settings__col">
               <label className="server-settings__label">{t('serverSettings.version')}</label>
-              <select
+              <Select
                 value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                className="input-field"
-              >
-                {VERSION_OPTIONS.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setVersion}
+                options={VERSION_OPTIONS.map((v) => ({ value: v, label: v }))}
+              />
             </div>
 
             <div className="server-settings__col server-settings__col--auto">
@@ -374,18 +376,15 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
           <div className="server-settings__field-block">
             <label className="server-settings__label">{t('serverSettings.javaRuntime')}</label>
             <div className="server-settings__java-row server-settings__java-row--runtime">
-              <select
+              <Select
                 value={javaPath}
-                onChange={(e) => setJavaPath(e.target.value)}
-                className="input-field server-settings__java-runtime-select"
-              >
-                <option value="">{t('serverSettings.javaSystemDefault')}</option>
-                {installedJava.map((j) => (
-                  <option key={j.path} value={j.path}>
-                    {j.name} ({j.path})
-                  </option>
-                ))}
-              </select>
+                onValueChange={setJavaPath}
+                className="server-settings__java-runtime-select"
+                options={[
+                  { value: '', label: t('serverSettings.javaSystemDefault') },
+                  ...installedJava.map((j) => ({ value: j.path, label: `${j.name} (${j.path})` })),
+                ]}
+              />
               <button
                 className="btn-secondary whitespace-nowrap server-settings__java-manage-btn"
                 onClick={() => {
@@ -524,23 +523,15 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 <label className="server-settings__label">
                   {t('serverSettings.autoBackup.scheduleType')}
                 </label>
-                <select
+                <Select
                   value={autoBackupScheduleType}
-                  onChange={(event) =>
-                    setAutoBackupScheduleType(event.target.value as 'interval' | 'daily' | 'weekly')
-                  }
-                  className="input-field"
-                >
-                  <option value="interval">
-                    {t('serverSettings.autoBackup.scheduleOptions.interval')}
-                  </option>
-                  <option value="daily">
-                    {t('serverSettings.autoBackup.scheduleOptions.daily')}
-                  </option>
-                  <option value="weekly">
-                    {t('serverSettings.autoBackup.scheduleOptions.weekly')}
-                  </option>
-                </select>
+                  onValueChange={(v) => setAutoBackupScheduleType(v as 'interval' | 'daily' | 'weekly')}
+                  options={[
+                    { value: 'interval', label: t('serverSettings.autoBackup.scheduleOptions.interval') },
+                    { value: 'daily', label: t('serverSettings.autoBackup.scheduleOptions.daily') },
+                    { value: 'weekly', label: t('serverSettings.autoBackup.scheduleOptions.weekly') },
+                  ]}
+                />
               </div>
 
               {autoBackupScheduleType === 'interval' ? (
@@ -576,17 +567,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   <label className="server-settings__label">
                     {t('serverSettings.autoBackup.weekday')}
                   </label>
-                  <select
-                    value={autoBackupWeekday}
-                    onChange={(event) => setAutoBackupWeekday(Number(event.target.value))}
-                    className="input-field"
-                  >
-                    {WEEKDAY_OPTIONS.map((weekday) => (
-                      <option key={weekday.value} value={weekday.value}>
-                        {weekday.label}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    value={String(autoBackupWeekday)}
+                    onValueChange={(v) => setAutoBackupWeekday(Number(v))}
+                    options={WEEKDAY_OPTIONS.map((w) => ({ value: String(w.value), label: w.label }))}
+                  />
                 </div>
               )}
 
