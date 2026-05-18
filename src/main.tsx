@@ -23,7 +23,11 @@ loader.config({ monaco });
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
 async function bootstrap() {
-  await restoreStateCurrent();
+  try {
+    await restoreStateCurrent();
+  } catch {
+    // window-state の復元失敗はアプリ起動を妨げない
+  }
   await useI18nStore.getState().initLocale();
 
   root.render(
