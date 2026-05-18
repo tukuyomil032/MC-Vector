@@ -46,7 +46,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   const [memory, setMemory] = useState(server.memory);
   const [port, setPort] = useState(server.port);
   const [path, setPath] = useState(server.path);
-  const [javaPath, setJavaPath] = useState(server.javaPath || '');
+  const [javaPath, setJavaPath] = useState(server.javaPath || '__system_default__');
   const [autoRestartOnCrash, setAutoRestartOnCrash] = useState(Boolean(server.autoRestartOnCrash));
   const [maxAutoRestarts, setMaxAutoRestarts] = useState(server.maxAutoRestarts ?? 3);
   const [autoRestartDelaySec, setAutoRestartDelaySec] = useState(server.autoRestartDelaySec ?? 5);
@@ -103,7 +103,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     if (server.javaPath) {
       setJavaPath(server.javaPath);
     } else {
-      setJavaPath('');
+      setJavaPath('__system_default__');
     }
     setAutoRestartOnCrash(Boolean(server.autoRestartOnCrash));
     setMaxAutoRestarts(server.maxAutoRestarts ?? 3);
@@ -201,7 +201,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         port,
         path,
         software,
-        javaPath: javaPath || undefined,
+        javaPath: javaPath === '__system_default__' ? undefined : javaPath,
         autoRestartOnCrash,
         maxAutoRestarts: normalizedRestartLimit,
         autoRestartDelaySec: normalizedRestartDelay,
@@ -384,7 +384,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 onValueChange={setJavaPath}
                 className="server-settings__java-runtime-select"
                 options={[
-                  { value: '', label: t('serverSettings.javaSystemDefault') },
+                  { value: '__system_default__', label: t('serverSettings.javaSystemDefault') },
                   ...installedJava.map((j) => ({ value: j.path, label: `${j.name} (${j.path})` })),
                 ]}
               />
