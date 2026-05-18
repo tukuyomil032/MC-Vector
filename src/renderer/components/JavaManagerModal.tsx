@@ -3,6 +3,7 @@ import { cn } from '@/lib/ui';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { copyToClipboard } from '../../lib/clipboard-commands';
 import { logError } from '../../lib/error-utils';
 import {
   deleteJava,
@@ -168,7 +169,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                 const picked = await selectJavaBinary();
                 if (picked) {
                   try {
-                    await navigator.clipboard.writeText(picked);
+                    await copyToClipboard(picked);
                     showToast(t('javaManager.toast.pathCopied'), 'success');
                   } catch {
                     showToast(t('javaManager.toast.pathInfo', { path: picked }), 'info');

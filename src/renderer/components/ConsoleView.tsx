@@ -3,6 +3,7 @@ import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
 import { logError } from '../../lib/error-utils';
 import {
@@ -608,7 +609,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       : publicAddress;
 
   const handleCopyAddress = () => {
-    navigator.clipboard.writeText(displayAddress);
+    void copyToClipboard(displayAddress);
   };
 
   const handleExportLogs = async () => {

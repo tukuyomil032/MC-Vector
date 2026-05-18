@@ -1,5 +1,6 @@
 import { appDataDir } from '@tauri-apps/api/path';
 import React, { useEffect, useRef, useState } from 'react';
+import { copyToClipboard } from '../../../lib/clipboard-commands';
 import { useTranslation } from '../../../i18n';
 import { getJavaVersions, type JavaVersion } from '../../../lib/java-commands';
 import {
@@ -266,7 +267,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
 
   const handleCopyUrl = () => {
     if (tunnelUrl) {
-      navigator.clipboard.writeText(tunnelUrl);
+      void copyToClipboard(tunnelUrl);
       showToast(t('serverSettings.ngrok.addressCopied'), 'success');
     }
   };
