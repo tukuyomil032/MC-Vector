@@ -610,6 +610,7 @@ export default function PluginBrowser({ server }: Props) {
     if (!platformOptions.some((option) => option.key === platform)) {
       setPlatform(platformOptions[0]?.key ?? 'Modrinth');
       setPage(0);
+      setCommittedQuery(query);
     }
   }, [platform, platformOptions]);
 
@@ -688,10 +689,11 @@ export default function PluginBrowser({ server }: Props) {
   const hasNextPage = searchQuery.data?.hasNextPage ?? false;
   const totalPages = searchQuery.data?.totalPages ?? null;
 
-  // Show toast on search error
+  // Show toast on search error (searchError is stable per React Query - only changes identity on new error)
+  const searchError = searchQuery.error;
   useEffect(() => {
-    if (!searchQuery.error) return;
-    const message = toErrorMessage(searchQuery.error);
+    if (!searchError) return;
+    const message = toErrorMessage(searchError);
     if (platform === 'Hangar') {
       showToast(t('plugins.browser.fetchHangarError', { message }), 'error');
     } else if (platform === 'Spigot') {
@@ -699,8 +701,7 @@ export default function PluginBrowser({ server }: Props) {
     } else {
       showToast(t('plugins.browser.fetchError'), 'error');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery.error]);
+  }, [searchError, platform, showToast, t]);
 
   // React Query: Hangar compatibility checks (parallel, auto-cached)
   const hangarItems = useMemo(
@@ -2317,6 +2318,7 @@ export default function PluginBrowser({ server }: Props) {
                   onClick={() => {
                     setPlatform(option.key);
                     setPage(0);
+                    setCommittedQuery(query);
                   }}
                 >
                   <div className="plugin-browser__platform-logo-wrap">

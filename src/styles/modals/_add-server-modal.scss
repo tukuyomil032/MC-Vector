@@ -47,6 +47,10 @@
     background-color: #1a1a1a;
   }
 
+  .add-server-modal__error {
+    @apply text-xs text-red-400 mt-1;
+  }
+
   .add-server-modal__footer {
     @apply flex justify-end gap-2.5 border-t border-zinc-700 pt-4;
   }
