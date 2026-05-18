@@ -15,6 +15,7 @@ import {
   Star,
   X,
 } from 'lucide-react';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -514,10 +515,7 @@ export default function PluginBrowser({ server }: Props) {
   const prefersReducedMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState<BrowserSection>('browse');
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ProjectItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [totalPages, setTotalPages] = useState<number | null>(null);
+  const [committedQuery, setCommittedQuery] = useState('');
   const [pageInput, setPageInput] = useState('1');
   const [sortMode, setSortMode] = useState<SortMode>('relevance');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
@@ -536,24 +534,14 @@ export default function PluginBrowser({ server }: Props) {
     null,
   );
   const [page, setPage] = useState(0);
-  const [compatibilityByItemId, setCompatibilityByItemId] = useState<
-    Record<string, CompatibilityStatus>
-  >({});
-  const [compatibilityDetailByItemId, setCompatibilityDetailByItemId] = useState<
-    Record<string, CompatibilityDetail>
-  >({});
   const [updateStatusByItemId, setUpdateStatusByItemId] = useState<Record<string, UpdateStatus>>(
     {},
   );
   const [latestFileByItemId, setLatestFileByItemId] = useState<Record<string, string>>({});
   const dependencyIdentityCacheRef = useRef<Record<string, DependencyIdentity>>({});
   const detailReadmeCacheRef = useRef<Record<string, string | null>>({});
-  const updateStatusCacheRef = useRef<
-    Record<string, { status: UpdateStatus; latestFileName: string | null }>
-  >({});
   const installedMetadataLookupStateRef = useRef<Record<string, 'resolved' | 'miss'>>({});
   const detailRequestIdRef = useRef(0);
-  const compatibilityRequestIdRef = useRef(0);
   const updateStatusRequestIdRef = useRef(0);
 
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
@@ -647,23 +635,6 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   useEffect(() => {
-    if (activeSection !== 'browse') {
-      setLoading(false);
-      return;
-    }
-
-    if (isInAppSearch) {
-      void search();
-      return;
-    }
-
-    setLoading(false);
-    setHasNextPage(false);
-    setTotalPages(null);
-    setResults([]);
-  }, [activeSection, page, platform, isInAppSearch]);
-
-  useEffect(() => {
     setPageInput(String(page + 1));
   }, [page]);
 
@@ -673,103 +644,124 @@ export default function PluginBrowser({ server }: Props) {
     installedMetadataLookupStateRef.current = {};
   }, [server.id, server.path, isModServer]);
 
+  // React Query: search results
+  const searchQuery = useQuery({
+    queryKey: [
+      'plugin-search',
+      platform,
+      committedQuery,
+      page,
+      server.version,
+      isModServer,
+    ] as const,
+    queryFn: async () => {
+      const offset = page * LIMIT;
+      if (platform === 'Modrinth') {
+        const searchType = isModServer ? 'mod' : 'plugin';
+        const facets = `[["project_type:${searchType}"],["versions:${server.version}"]]`;
+        const result = await searchModrinth(committedQuery, facets, offset, LIMIT);
+        const items = result.hits
+          .map(mapModrinthProject)
+          .filter((item): item is ProjectItem => item !== null);
+        return {
+          items,
+          hasNextPage: result.total_hits > offset + items.length,
+          totalPages: Math.max(1, Math.ceil(result.total_hits / LIMIT)) as number | null,
+        };
+      }
+      if (platform === 'Hangar') {
+        const data = await searchHangar(committedQuery, offset);
+        const items = data.result.map(mapHangarProject);
+        return { items, hasNextPage: items.length === LIMIT, totalPages: null as number | null };
+      }
+      const resources = await searchSpigot(committedQuery, page + 1, LIMIT);
+      const items = resources.map(mapSpigotResource);
+      return { items, hasNextPage: items.length === LIMIT, totalPages: null as number | null };
+    },
+    enabled: isInAppSearch && activeSection === 'browse',
+    staleTime: 5 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
+
+  const results = searchQuery.data?.items ?? [];
+  const loading = searchQuery.isFetching;
+  const hasNextPage = searchQuery.data?.hasNextPage ?? false;
+  const totalPages = searchQuery.data?.totalPages ?? null;
+
+  // Show toast on search error
   useEffect(() => {
-    let cancelled = false;
-    const requestId = compatibilityRequestIdRef.current + 1;
-    compatibilityRequestIdRef.current = requestId;
-
-    if (!isInAppSearch || results.length === 0) {
-      setCompatibilityByItemId({});
-      setCompatibilityDetailByItemId({});
-      return;
+    if (!searchQuery.error) return;
+    const message = toErrorMessage(searchQuery.error);
+    if (platform === 'Hangar') {
+      showToast(t('plugins.browser.fetchHangarError', { message }), 'error');
+    } else if (platform === 'Spigot') {
+      showToast(t('plugins.browser.fetchSpigotError', { message }), 'error');
+    } else {
+      showToast(t('plugins.browser.fetchError'), 'error');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery.error]);
 
-    const initial: Record<string, CompatibilityStatus> = {};
-    const initialDetails: Record<string, CompatibilityDetail> = {};
+  // React Query: Hangar compatibility checks (parallel, auto-cached)
+  const hangarItems = useMemo(
+    () => results.filter((item) => item.platform === 'Hangar'),
+    [results],
+  );
+
+  const compatibilityQueries = useQueries({
+    queries: hangarItems.map((item) => ({
+      queryKey: ['hangar-compat', item.id, server.software, server.version] as const,
+      queryFn: () =>
+        checkHangarCompatibility({
+          owner: item.author,
+          slug: item.slug || item.title,
+          software: server.software || 'Paper',
+          minecraftVersion: server.version || '',
+        }),
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
+  const { compatibilityByItemId, compatibilityDetailByItemId } = useMemo(() => {
+    const byId: Record<string, CompatibilityStatus> = {};
+    const detailById: Record<string, CompatibilityDetail> = {};
+
     for (const item of results) {
       if (item.platform === 'Modrinth') {
-        initial[item.id] = 'compatible';
-        initialDetails[item.id] = { supportedVersions: [server.version] };
+        byId[item.id] = 'compatible';
+        detailById[item.id] = { supportedVersions: [server.version] };
       } else if (item.platform === 'Spigot') {
-        initial[item.id] = inferSpigotCompatibility(item);
-        initialDetails[item.id] = {
+        byId[item.id] = inferSpigotCompatibility(item);
+        detailById[item.id] = {
           supportedVersions: extractVersionHints(
             `${item.description} ${typeof item.source_obj.tag === 'string' ? item.source_obj.tag : ''}`,
           ),
         };
-      } else {
-        initial[item.id] = 'checking';
-        initialDetails[item.id] = { supportedVersions: [] };
       }
     }
-    setCompatibilityByItemId(initial);
-    setCompatibilityDetailByItemId(initialDetails);
 
-    const run = async () => {
-      const updates = await mapWithConcurrency(
-        results,
-        ASYNC_CHECK_CONCURRENCY,
-        async (item): Promise<[string, CompatibilityStatus, CompatibilityDetail]> => {
-          if (cancelled || compatibilityRequestIdRef.current !== requestId) {
-            return [item.id, initial[item.id] ?? 'unknown', initialDetails[item.id]];
-          }
-
-          if (item.platform !== 'Hangar') {
-            return [item.id, initial[item.id] ?? 'unknown', initialDetails[item.id]];
-          }
-
-          try {
-            const compatibility = await checkHangarCompatibility({
-              owner: item.author,
-              slug: item.slug || item.title,
-              software: server.software || 'Paper',
-              minecraftVersion: server.version || '',
-            });
-
-            if (compatibility.supportedVersions.length === 0) {
-              return [item.id, 'unknown', { supportedVersions: [] }];
-            }
-
-            return [
-              item.id,
-              compatibility.compatible ? 'compatible' : 'incompatible',
-              {
-                supportedVersions: compatibility.supportedVersions,
-              },
-            ];
-          } catch (error) {
-            logError('Failed to check Hangar compatibility', error, {
-              itemId: item.id,
-              itemTitle: item.title,
-            });
-            return [item.id, 'unknown', { supportedVersions: [] }];
-          }
-        },
-      );
-
-      if (cancelled || compatibilityRequestIdRef.current !== requestId) {
-        return;
+    hangarItems.forEach((item, i) => {
+      const q = compatibilityQueries[i];
+      if (!q || q.isPending) {
+        byId[item.id] = 'checking';
+        detailById[item.id] = { supportedVersions: [] };
+      } else if (q.isError || !q.data) {
+        byId[item.id] = 'unknown';
+        detailById[item.id] = { supportedVersions: [] };
+      } else {
+        const compat = q.data;
+        byId[item.id] =
+          compat.supportedVersions.length === 0
+            ? 'unknown'
+            : compat.compatible
+              ? 'compatible'
+              : 'incompatible';
+        detailById[item.id] = { supportedVersions: compat.supportedVersions };
       }
+    });
 
-      const next: Record<string, CompatibilityStatus> = { ...initial };
-      const nextDetails: Record<string, CompatibilityDetail> = { ...initialDetails };
-      for (const [id, status, detail] of updates) {
-        next[id] = status;
-        nextDetails[id] = detail;
-      }
-      setCompatibilityByItemId(next);
-      setCompatibilityDetailByItemId(nextDetails);
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-      if (compatibilityRequestIdRef.current === requestId) {
-        compatibilityRequestIdRef.current += 1;
-      }
-    };
-  }, [isInAppSearch, results, server.software, server.version]);
+    return { compatibilityByItemId: byId, compatibilityDetailByItemId: detailById };
+  }, [results, hangarItems, compatibilityQueries, server.version]);
 
   useEffect(() => {
     let cancelled = false;
@@ -815,11 +807,6 @@ export default function PluginBrowser({ server }: Props) {
           }
 
           const normalizedInstalled = normalizeInstalledPluginFileName(installedMatch);
-          const cacheKey = `${item.platform}:${item.id}:${server.software}:${server.version}:${normalizedInstalled}`;
-          const cached = updateStatusCacheRef.current[cacheKey];
-          if (cached) {
-            return [item.id, cached.status, cached.latestFileName];
-          }
 
           try {
             let latestFileName: string | null = null;
@@ -850,16 +837,11 @@ export default function PluginBrowser({ server }: Props) {
                 : 'update-available'
               : 'unknown';
 
-            updateStatusCacheRef.current[cacheKey] = {
-              status,
-              latestFileName,
-            };
-
             return [item.id, status, latestFileName];
           } catch (error) {
             logError('Failed to resolve plugin update status', error, {
               itemId: item.id,
-              cacheKey,
+              itemTitle: item.title,
             });
             return [item.id, 'unknown', null];
           }
@@ -1414,65 +1396,6 @@ export default function PluginBrowser({ server }: Props) {
     }
 
     return isCompatibleVersion(hints, server.version) ? 'compatible' : 'incompatible';
-  }
-
-  async function search() {
-    if (!isInAppSearch) {
-      return;
-    }
-
-    setLoading(true);
-    setResults([]);
-
-    try {
-      const offset = page * LIMIT;
-      let items: ProjectItem[] = [];
-
-      if (platform === 'Modrinth') {
-        const searchType = isModServer ? 'mod' : 'plugin';
-        const facets = `[["project_type:${searchType}"],["versions:${server.version}"]]`;
-        const result = await searchModrinth(query, facets, offset, LIMIT);
-
-        items = result.hits
-          .map(mapModrinthProject)
-          .filter((item): item is ProjectItem => item !== null);
-
-        setHasNextPage(result.total_hits > offset + items.length);
-        setTotalPages(Math.max(1, Math.ceil(result.total_hits / LIMIT)));
-      } else if (platform === 'Hangar') {
-        const data = await searchHangar(query, offset);
-
-        items = data.result.map(mapHangarProject);
-
-        setHasNextPage(items.length === LIMIT);
-        setTotalPages(null);
-      } else if (platform === 'Spigot') {
-        const resources = await searchSpigot(query, page + 1, LIMIT);
-        items = resources.map(mapSpigotResource);
-        setHasNextPage(items.length === LIMIT);
-        setTotalPages(null);
-      }
-
-      setResults(items);
-    } catch (error) {
-      logError('Plugin search failed', error, {
-        platform,
-        query,
-        page,
-      });
-      setHasNextPage(false);
-      setTotalPages(null);
-      const message = toErrorMessage(error);
-      if (platform === 'Hangar') {
-        showToast(t('plugins.browser.fetchHangarError', { message }), 'error');
-      } else if (platform === 'Spigot') {
-        showToast(t('plugins.browser.fetchSpigotError', { message }), 'error');
-      } else {
-        showToast(t('plugins.browser.fetchError'), 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
   }
 
   const performInstall = async (
@@ -2436,14 +2359,22 @@ export default function PluginBrowser({ server }: Props) {
                     placeholder={t('plugins.browser.searchOn', {
                       platform: searchPlatformLabel,
                     })}
-                    onKeyDown={(event) => event.key === 'Enter' && void search()}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        setCommittedQuery(query);
+                        setPage(0);
+                      }
+                    }}
                   />
                 </div>
 
                 <button
                   type="button"
                   className="plugin-browser__search-btn"
-                  onClick={() => void search()}
+                  onClick={() => {
+                    setCommittedQuery(query);
+                    setPage(0);
+                  }}
                   disabled={loading}
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
