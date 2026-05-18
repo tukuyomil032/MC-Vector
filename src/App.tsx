@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
@@ -20,6 +20,10 @@ import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
 import { useToast } from '@/renderer/components/ToastProvider';
+import {
+  registerGlobalShortcuts,
+  unregisterGlobalShortcuts,
+} from '@/lib/global-shortcut-commands';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
@@ -77,6 +81,33 @@ function App() {
   } = useAppUpdater();
 
   useViewCycleShortcut({ currentView, setCurrentView });
+
+  const serverActionsRef = useRef({ handleStart, handleStop, handleRestart, activeServer });
+  serverActionsRef.current = { handleStart, handleStop, handleRestart, activeServer };
+
+  useEffect(() => {
+    void registerGlobalShortcuts({
+      onStartStop: () => {
+        const { activeServer: srv, handleStart: start, handleStop: stop } = serverActionsRef.current;
+        if (!srv) return;
+        if (srv.status === 'online') {
+          void stop();
+        } else if (srv.status === 'offline') {
+          void start();
+        }
+      },
+      onRestart: () => {
+        const { activeServer: srv, handleRestart: restart } = serverActionsRef.current;
+        if (srv?.status === 'online') {
+          void restart();
+        }
+      },
+    });
+
+    return () => {
+      void unregisterGlobalShortcuts();
+    };
+  }, []);
 
   useAppThemeSync({ setAppTheme });
 
