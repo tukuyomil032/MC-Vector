@@ -309,19 +309,12 @@ function App() {
         />
       </main>
 
-      {showAddServerChoiceModal && (
-        <AddServerChoiceModal
-          onClose={() => setShowAddServerChoiceModal(false)}
-          onNewServer={() => {
-            setShowAddServerChoiceModal(false);
-            setShowAddServerModal(true);
-          }}
-          onImportServer={() => {
-            setShowAddServerChoiceModal(false);
-            setShowImportServerModal(true);
-          }}
-        />
-      )}
+      <AddServerChoiceModal
+        open={showAddServerChoiceModal}
+        onClose={() => setShowAddServerChoiceModal(false)}
+        onNewServer={() => setShowAddServerModal(true)}
+        onImportServer={() => setShowImportServerModal(true)}
+      />
 
       <AppOverlayLayer
         downloadStatus={downloadStatus}
