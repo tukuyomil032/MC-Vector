@@ -846,6 +846,7 @@ export const ja: TranslationDictionary = {
     name: {
       label: 'サーバー名',
       placeholder: '例: Survival Server',
+      invalid: '英数字・ハイフン・アンダースコアのみ使用できます。',
     },
     savePath: '保存先:',
     profileName: {
@@ -880,9 +881,11 @@ export const ja: TranslationDictionary = {
     },
     port: {
       label: 'ポート',
+      invalid: 'ポートは1〜65535の範囲で入力してください。',
     },
     memory: {
       label: 'メモリ(GB)',
+      invalid: 'メモリは1GB以上を指定してください。',
     },
     choice: {
       title: 'サーバーを追加',

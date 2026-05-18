@@ -862,6 +862,7 @@ export interface TranslationDictionary {
     name: {
       label: string;
       placeholder: string;
+      invalid: string;
     };
     savePath: string;
     profileName: {
@@ -896,9 +897,11 @@ export interface TranslationDictionary {
     };
     port: {
       label: string;
+      invalid: string;
     };
     memory: {
       label: string;
+      invalid: string;
     };
     choice: {
       title: string;

@@ -848,6 +848,7 @@ export const en: TranslationDictionary = {
     name: {
       label: 'Server Name',
       placeholder: 'e.g. Survival Server',
+      invalid: 'Only letters, numbers, hyphens, and underscores are allowed.',
     },
     savePath: 'Save to:',
     profileName: {
@@ -882,9 +883,11 @@ export const en: TranslationDictionary = {
     },
     port: {
       label: 'Port',
+      invalid: 'Port must be between 1 and 65535.',
     },
     memory: {
       label: 'Memory (GB)',
+      invalid: 'Memory must be at least 1 GB.',
     },
     choice: {
       title: 'Add Server',
