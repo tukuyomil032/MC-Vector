@@ -1,4 +1,6 @@
-import { useState, type MouseEvent } from 'react';
+import * as ContextMenu from '@radix-ui/react-context-menu';
+import { useState } from 'react';
+import { cn } from '@/lib/ui';
 import type { MinecraftServer } from '../shared/server declaration';
 
 export interface AppServerGroup {
@@ -11,8 +13,10 @@ interface AppServerSidebarProps {
   groupedServers: AppServerGroup[];
   selectedServerId: string;
   onSelectServer: (serverId: string) => void;
-  onServerContextMenu: (event: MouseEvent, serverId: string) => void;
   onAddServer: () => void;
+  onDuplicateServer: (serverId: string) => Promise<void>;
+  onSaveServerTemplate: (serverId: string) => Promise<void>;
+  onDeleteServer: (serverId: string) => Promise<void>;
   serversLabel: string;
   addServerLabel: string;
   bulkSelectLabel: string;
@@ -21,18 +25,32 @@ interface AppServerSidebarProps {
   bulkBackupLabel: string;
   bulkClearLabel: string;
   bulkSelectedCountLabel: (count: number) => string;
+  duplicateLabel: string;
+  saveTemplateLabel: string;
+  deleteLabel: string;
   onBulkStart: (servers: MinecraftServer[]) => Promise<void>;
   onBulkStop: (serverIds: string[]) => Promise<void>;
   onBulkBackup: (servers: MinecraftServer[]) => Promise<void>;
 }
+
+const contextMenuContentClass =
+  'z-50 min-w-[9rem] overflow-hidden rounded-md border border-zinc-700 bg-[#1e1e20] py-1 shadow-xl animate-in fade-in-0 zoom-in-95';
+
+const contextMenuItemClass =
+  'relative flex cursor-default select-none items-center gap-2 rounded px-3 py-1.5 text-sm text-zinc-200 outline-none transition-colors data-[highlighted]:bg-white/10';
+
+const contextMenuDangerItemClass =
+  'relative flex cursor-default select-none items-center gap-2 rounded px-3 py-1.5 text-sm text-red-400 outline-none transition-colors data-[highlighted]:bg-red-500/20';
 
 export default function AppServerSidebar({
   isSidebarOpen,
   groupedServers,
   selectedServerId,
   onSelectServer,
-  onServerContextMenu,
   onAddServer,
+  onDuplicateServer,
+  onSaveServerTemplate,
+  onDeleteServer,
   serversLabel,
   addServerLabel,
   bulkSelectLabel,
@@ -41,6 +59,9 @@ export default function AppServerSidebar({
   bulkBackupLabel,
   bulkClearLabel,
   bulkSelectedCountLabel,
+  duplicateLabel,
+  saveTemplateLabel,
+  deleteLabel,
   onBulkStart,
   onBulkStop,
   onBulkBackup,
@@ -112,26 +133,52 @@ export default function AppServerSidebar({
                     onClick={(e) => e.stopPropagation()}
                   />
                 )}
-                <button
-                  type="button"
-                  className={`app-sidebar__server-item flex-1 ${server.id === selectedServerId ? 'is-active' : ''}`}
-                  onClick={() => {
-                    if (isBulkMode) {
-                      toggleSelect(server.id);
-                    } else {
-                      onSelectServer(server.id);
-                    }
-                  }}
-                  onContextMenu={(event) => onServerContextMenu(event, server.id)}
-                >
-                  <span className={`status-indicator ${server.status}`}></span>
-                  <span className="flex flex-col">
-                    <span className="font-semibold text-sm text-text-primary">{server.name}</span>
-                    {server.profileName && (
-                      <span className="text-[0.72rem] text-zinc-400">{server.profileName}</span>
-                    )}
-                  </span>
-                </button>
+                <ContextMenu.Root>
+                  <ContextMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      className={`app-sidebar__server-item flex-1 ${server.id === selectedServerId ? 'is-active' : ''}`}
+                      onClick={() => {
+                        if (isBulkMode) {
+                          toggleSelect(server.id);
+                        } else {
+                          onSelectServer(server.id);
+                        }
+                      }}
+                    >
+                      <span className={`status-indicator ${server.status}`}></span>
+                      <span className="flex flex-col">
+                        <span className="font-semibold text-sm text-text-primary">{server.name}</span>
+                        {server.profileName && (
+                          <span className="text-[0.72rem] text-zinc-400">{server.profileName}</span>
+                        )}
+                      </span>
+                    </button>
+                  </ContextMenu.Trigger>
+                  <ContextMenu.Portal>
+                    <ContextMenu.Content className={contextMenuContentClass}>
+                      <ContextMenu.Item
+                        className={contextMenuItemClass}
+                        onSelect={() => void onDuplicateServer(server.id)}
+                      >
+                        📄 {duplicateLabel}
+                      </ContextMenu.Item>
+                      <ContextMenu.Item
+                        className={contextMenuItemClass}
+                        onSelect={() => void onSaveServerTemplate(server.id)}
+                      >
+                        🧩 {saveTemplateLabel}
+                      </ContextMenu.Item>
+                      <ContextMenu.Separator className="my-1 h-px bg-zinc-700" />
+                      <ContextMenu.Item
+                        className={cn(contextMenuDangerItemClass)}
+                        onSelect={() => void onDeleteServer(server.id)}
+                      >
+                        🗑️ {deleteLabel}
+                      </ContextMenu.Item>
+                    </ContextMenu.Content>
+                  </ContextMenu.Portal>
+                </ContextMenu.Root>
               </div>
             ))}
           </div>

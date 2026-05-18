@@ -1,6 +1,6 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
-import { type MouseEvent, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import {
@@ -9,7 +9,6 @@ import {
   saveServerTemplate,
   type ServerTemplate,
 } from '../../lib/server-commands';
-import type { ServerContextMenuState } from '../../store/uiStore';
 import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
 type SetServers = (
@@ -21,8 +20,6 @@ interface UseServerContextActionsOptions {
   setServers: SetServers;
   selectedServerId: string;
   setSelectedServerId: (serverId: string) => void;
-  contextMenu: ServerContextMenuState | null;
-  setContextMenu: (menu: ServerContextMenuState | null) => void;
   showToast: (message: string, type?: ToastKind) => void;
   t: Translate;
   removeServerLogs: (serverId: string) => void;
@@ -76,28 +73,13 @@ export function useServerContextActions({
   setServers,
   selectedServerId,
   setSelectedServerId,
-  contextMenu,
-  setContextMenu,
   showToast,
   t,
   removeServerLogs,
   loadTemplates,
 }: UseServerContextActionsOptions) {
-  const handleContextMenu = useCallback(
-    (event: MouseEvent, serverId: string) => {
-      event.preventDefault();
-      setContextMenu({ x: event.pageX, y: event.pageY, serverId });
-    },
-    [setContextMenu],
-  );
-
-  const handleDeleteServer = useCallback(async () => {
-    if (!contextMenu) {
-      return;
-    }
-    const { serverId } = contextMenu;
+  const handleDeleteServer = useCallback(async (serverId: string) => {
     const target = servers.find((server) => server.id === serverId);
-    setContextMenu(null);
 
     const confirmed = await ask(t('server.confirm.delete', { name: target?.name ?? '' }), {
       title: t('common.delete'),
@@ -125,25 +107,17 @@ export function useServerContextActions({
       showToast(t('server.toast.deleteError'), 'error');
     }
   }, [
-    contextMenu,
     removeServerLogs,
     selectedServerId,
     servers,
-    setContextMenu,
     setSelectedServerId,
     setServers,
     showToast,
     t,
   ]);
 
-  const handleDuplicateServer = useCallback(async () => {
-    if (!contextMenu) {
-      return;
-    }
-
-    const { serverId } = contextMenu;
+  const handleDuplicateServer = useCallback(async (serverId: string) => {
     const target = servers.find((server) => server.id === serverId);
-    setContextMenu(null);
     if (!target) {
       return;
     }
@@ -188,16 +162,10 @@ export function useServerContextActions({
       });
       showToast(t('server.toast.cloneFailed'), 'error');
     }
-  }, [contextMenu, servers, setContextMenu, setSelectedServerId, setServers, showToast, t]);
+  }, [servers, setSelectedServerId, setServers, showToast, t]);
 
-  const handleSaveServerTemplate = useCallback(async () => {
-    if (!contextMenu) {
-      return;
-    }
-
-    const { serverId } = contextMenu;
+  const handleSaveServerTemplate = useCallback(async (serverId: string) => {
     const target = servers.find((server) => server.id === serverId);
-    setContextMenu(null);
     if (!target) {
       return;
     }
@@ -222,19 +190,11 @@ export function useServerContextActions({
       });
       showToast(t('server.toast.templateSaveFailed'), 'error');
     }
-  }, [contextMenu, loadTemplates, servers, setContextMenu, showToast, t]);
-
-  const handleClickOutside = useCallback(() => {
-    if (contextMenu) {
-      setContextMenu(null);
-    }
-  }, [contextMenu, setContextMenu]);
+  }, [loadTemplates, servers, showToast, t]);
 
   return {
-    handleContextMenu,
     handleDeleteServer,
     handleDuplicateServer,
     handleSaveServerTemplate,
-    handleClickOutside,
   };
 }
