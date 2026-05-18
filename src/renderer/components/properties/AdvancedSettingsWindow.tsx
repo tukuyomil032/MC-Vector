@@ -1,3 +1,4 @@
+import * as Tabs from '@radix-ui/react-tabs';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import {
@@ -111,8 +112,6 @@ export default function AdvancedSettingsWindow({
     );
   }, [allDefinitions]);
 
-  const filteredProps = allDefinitions.filter((p) => p.category === activeTab);
-
   const getCategoryLabel = (category: PropertyCategory): string => {
     switch (category) {
       case 'General':
@@ -212,60 +211,72 @@ export default function AdvancedSettingsWindow({
         </div>
       </header>
 
-      <div className="advanced-settings-window__body">
-        <aside className="advanced-settings-window__sidebar">
-          {categories.map((cat) => (
-            <div
-              key={cat}
-              className={`advanced-settings-window__tab ${activeTab === cat ? 'is-active' : 'is-idle'}`}
-              onClick={() => setActiveTab(cat)}
-            >
-              {getCategoryLabel(cat)}
-            </div>
-          ))}
-        </aside>
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as PropertyCategory)}
+        orientation="vertical"
+        className="advanced-settings-window__body"
+      >
+        <Tabs.List asChild>
+          <aside className="advanced-settings-window__sidebar">
+            {categories.map((cat) => (
+              <Tabs.Trigger
+                key={cat}
+                value={cat}
+                className={`advanced-settings-window__tab ${activeTab === cat ? 'is-active' : 'is-idle'}`}
+              >
+                {getCategoryLabel(cat)}
+              </Tabs.Trigger>
+            ))}
+          </aside>
+        </Tabs.List>
 
-        <div className="advanced-settings-window__content">
-          <h3 className="advanced-settings-window__section-title">{getCategoryLabel(activeTab)}</h3>
+        {categories.map((cat) => {
+          const catProps = allDefinitions.filter((p) => p.category === cat);
+          return (
+            <Tabs.Content key={cat} value={cat} className="advanced-settings-window__content">
+              <h3 className="advanced-settings-window__section-title">{getCategoryLabel(cat)}</h3>
 
-          <div className="advanced-settings-window__grid">
-            {filteredProps.map((prop) => {
-              const currentValue = formData[prop.key] ?? prop.default;
-              const label = getPropertyLabel(prop);
-              const description = getPropertyDescription(prop);
+              <div className="advanced-settings-window__grid">
+                {catProps.map((prop) => {
+                  const currentValue = formData[prop.key] ?? prop.default;
+                  const label = getPropertyLabel(prop);
+                  const description = getPropertyDescription(prop);
 
-              return (
-                <div key={prop.key} className="advanced-settings-window__card">
-                  <div className="advanced-settings-window__card-head">
-                    <div className="advanced-settings-window__card-info group">
-                      <div className="advanced-settings-window__card-label">
-                        <span>{label}</span>
-                        <span className="advanced-settings-window__card-key">({prop.key})</span>
+                  return (
+                    <div key={prop.key} className="advanced-settings-window__card">
+                      <div className="advanced-settings-window__card-head">
+                        <div className="advanced-settings-window__card-info group">
+                          <div className="advanced-settings-window__card-label">
+                            <span>{label}</span>
+                            <span className="advanced-settings-window__card-key">({prop.key})</span>
+                          </div>
+                          <div className="advanced-settings-window__card-description">
+                            {description}
+                          </div>
+                          <div className="advanced-settings-window__tooltip">{description}</div>
+                        </div>
+
+                        {prop.type === 'boolean' && (
+                          <div className="advanced-settings-window__toggle-wrap">
+                            {renderInput(prop, currentValue)}
+                          </div>
+                        )}
                       </div>
-                      <div className="advanced-settings-window__card-description">
-                        {description}
-                      </div>
-                      <div className="advanced-settings-window__tooltip">{description}</div>
+
+                      {prop.type !== 'boolean' && (
+                        <div className="advanced-settings-window__input-wrap">
+                          {renderInput(prop, currentValue)}
+                        </div>
+                      )}
                     </div>
-
-                    {prop.type === 'boolean' && (
-                      <div className="advanced-settings-window__toggle-wrap">
-                        {renderInput(prop, currentValue)}
-                      </div>
-                    )}
-                  </div>
-
-                  {prop.type !== 'boolean' && (
-                    <div className="advanced-settings-window__input-wrap">
-                      {renderInput(prop, currentValue)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+                  );
+                })}
+              </div>
+            </Tabs.Content>
+          );
+        })}
+      </Tabs.Root>
     </div>
   );
 }
