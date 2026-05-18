@@ -19,10 +19,7 @@ import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
-import {
-  registerGlobalShortcuts,
-  unregisterGlobalShortcuts,
-} from '@/lib/global-shortcut-commands';
+import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
 import { toast } from 'sonner';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
@@ -86,13 +83,26 @@ function App() {
 
   useViewCycleShortcut({ currentView, setCurrentView });
 
-  const serverActionsRef = useRef({ handleStart, handleStop, handleRestart, activeServer });
-  serverActionsRef.current = { handleStart, handleStop, handleRestart, activeServer };
+  const serverActionsRef = useRef<{
+    handleStart: () => void;
+    handleStop: () => void;
+    handleRestart: () => void;
+    activeServer: MinecraftServer | undefined;
+  }>({
+    handleStart: () => {},
+    handleStop: () => {},
+    handleRestart: () => {},
+    activeServer: undefined,
+  });
 
   useEffect(() => {
     void registerGlobalShortcuts({
       onStartStop: () => {
-        const { activeServer: srv, handleStart: start, handleStop: stop } = serverActionsRef.current;
+        const {
+          activeServer: srv,
+          handleStart: start,
+          handleStop: stop,
+        } = serverActionsRef.current;
         if (!srv) return;
         if (srv.status === 'online') {
           void stop();
@@ -178,6 +188,7 @@ function App() {
     markExpectedOffline,
     clearAutoRestartTimer,
   });
+  serverActionsRef.current = { handleStart, handleStop, handleRestart, activeServer };
 
   const handleBulkStart = async (servers: MinecraftServer[]) => {
     for (const s of servers.filter((srv) => srv.status === 'offline')) {
