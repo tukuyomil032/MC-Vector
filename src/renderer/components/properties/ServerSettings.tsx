@@ -776,14 +776,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         </div>
       </div>
 
-      {showJavaManager && (
-        <JavaManagerModal
-          onClose={() => {
-            setShowJavaManager(false);
-            loadJavaList();
-          }}
-        />
-      )}
+      <JavaManagerModal
+        open={showJavaManager}
+        onClose={() => {
+          setShowJavaManager(false);
+          loadJavaList();
+        }}
+      />
 
       {showTokenModal && (
         <div className="server-settings__token-overlay modal-backdrop">
