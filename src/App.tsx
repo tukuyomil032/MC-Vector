@@ -19,11 +19,11 @@ import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
-import { useToast } from '@/renderer/components/ToastProvider';
 import {
   registerGlobalShortcuts,
   unregisterGlobalShortcuts,
 } from '@/lib/global-shortcut-commands';
+import { toast } from 'sonner';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
@@ -62,7 +62,11 @@ function App() {
     msg: string;
   } | null>(null);
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
 
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);
   const setIsSidebarOpen = useUiStore((state) => state.setIsSidebarOpen);

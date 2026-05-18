@@ -6,7 +6,6 @@ import ReactDOM from 'react-dom/client';
 import { Toaster } from 'sonner';
 import App from './App';
 import { useI18nStore } from './i18n';
-import { ToastProvider } from './renderer/components/ToastProvider';
 import './styles/index.scss';
 
 const queryClient = new QueryClient({
@@ -28,10 +27,8 @@ async function bootstrap() {
   root.render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <App />
-          <Toaster position="bottom-right" richColors />
-        </ToastProvider>
+        <App />
+        <Toaster position="bottom-right" richColors />
       </QueryClientProvider>
     </React.StrictMode>,
   );

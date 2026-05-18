@@ -5,7 +5,7 @@ import { resolveLatestJarUrl } from '../../lib/version-commands';
 import { useTranslation } from '../../i18n';
 import type { UnlistenFn } from '../../lib/tauri-api';
 import type { MinecraftServer } from '../shared/server declaration';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 type WizardStep = 'check' | 'backup' | 'download' | 'done';
 
@@ -17,7 +17,11 @@ interface Props {
 
 export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }: Props) {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
 
   const [step, setStep] = useState<WizardStep>('check');
   const [latestVersion, setLatestVersion] = useState<string | null>(null);

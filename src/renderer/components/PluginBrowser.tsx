@@ -46,7 +46,7 @@ import {
   searchSpigot,
 } from '../../lib/plugin-commands';
 import { type MinecraftServer } from '../components/../shared/server declaration';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 interface Props {
   server: MinecraftServer;
@@ -547,7 +547,11 @@ export default function PluginBrowser({ server }: Props) {
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
   const folderName = isModServer ? 'mods' : 'plugins';
   const tSafe = (
     key: Parameters<typeof t>[0],
@@ -701,7 +705,7 @@ export default function PluginBrowser({ server }: Props) {
     } else {
       showToast(t('plugins.browser.fetchError'), 'error');
     }
-  }, [searchError, platform, showToast, t]);
+  }, [searchError, platform, t]);
 
   // React Query: Hangar compatibility checks (parallel, auto-cached)
   const hangarItems = useMemo(

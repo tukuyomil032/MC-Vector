@@ -19,7 +19,7 @@ import {
 import { logError } from '../../lib/error-utils';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../shared/server declaration';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 interface Props {
   server: MinecraftServer;
@@ -152,7 +152,11 @@ export default function BackupsView({ server }: Props) {
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
   const backupMetaPath = useMemo(() => `${server.path}/backups/${BACKUP_META_FILE}`, [server.path]);
   const listParentRef = useRef<HTMLDivElement>(null);
   const backupVirtualizer = useVirtualizer({
@@ -200,7 +204,7 @@ export default function BackupsView({ server }: Props) {
       cancelled = true;
       unlisten?.();
     };
-  }, [server.path, showToast, t]);
+  }, [server.path, t]);
 
   useEffect(() => {
     let cancelled = false;

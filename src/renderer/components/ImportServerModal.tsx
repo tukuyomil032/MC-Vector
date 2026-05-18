@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { analyzeServerFolder } from '../../lib/server-import-commands';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 interface ImportServerModalProps {
   open: boolean;
@@ -18,7 +18,11 @@ export default function ImportServerModal({
   onAdd,
 }: ImportServerModalProps) {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
 
   const [folderPath, setFolderPath] = useState('');
   const [serverName, setServerName] = useState('');

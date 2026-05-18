@@ -14,7 +14,7 @@ import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import { useConsoleStore } from '../../store/consoleStore';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 type AnsiStyle = {
   color?: string;
@@ -278,7 +278,11 @@ const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): numbe
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
   const logs = useConsoleStore((state) => state.serverLogs[server.id] ?? EMPTY_LOGS);
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);

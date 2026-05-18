@@ -32,7 +32,7 @@ import {
 } from '../../lib/file-commands';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import SvgMaskIcon from './SvgMaskIcon';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 interface Props {
   server: MinecraftServer;
@@ -129,7 +129,11 @@ export default function FilesView({ server }: Props) {
   const [diffModified, setDiffModified] = useState<{ path: string; content: string } | null>(null);
   const [diffSelectStep, setDiffSelectStep] = useState<'original' | 'modified' | null>(null);
 
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -199,7 +203,7 @@ export default function FilesView({ server }: Props) {
       setIsExternalDropActive(false);
       unlisten?.();
     };
-  }, [currentPath, showToast, t]);
+  }, [currentPath, t]);
 
   const loadFiles = async (path: string) => {
     try {
@@ -358,7 +362,7 @@ export default function FilesView({ server }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [currentPath, editingFile, fileContent, isSaving, showToast, t]);
+  }, [currentPath, editingFile, fileContent, isSaving, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

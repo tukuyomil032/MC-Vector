@@ -4,7 +4,7 @@ import { logError } from '../../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../../lib/file-commands';
 import { serverPropertiesList } from '../../shared/propertiesData';
 import { type MinecraftServer } from '../../shared/server declaration';
-import { useToast } from '../ToastProvider';
+import { toast } from 'sonner';
 import { Switch } from '../ui/Switch';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 
@@ -35,7 +35,11 @@ export default function PropertiesView({ server }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const sep = server.path.includes('\\') ? '\\' : '/';
   const propFilePath = `${server.path}${sep}server.properties`;
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
 
   useEffect(() => {
     const loadProperties = async () => {

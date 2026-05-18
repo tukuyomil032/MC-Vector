@@ -13,7 +13,7 @@ import {
   onJavaDownloadProgress,
   selectJavaBinary,
 } from '../../lib/java-commands';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 interface Props {
   open: boolean;
@@ -26,7 +26,11 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const availableVersions = [8, 17, 21];
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
   const { t } = useTranslation();
 
   useEffect(() => {

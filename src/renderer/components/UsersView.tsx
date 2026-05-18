@@ -4,7 +4,7 @@ import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
-import { useToast } from './ToastProvider';
+import { toast } from 'sonner';
 
 interface Props {
   server: MinecraftServer;
@@ -27,7 +27,11 @@ type ListType = 'whitelist' | 'ops' | 'banned-players' | 'banned-ips';
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
   const sep = server.path.includes('\\') ? '\\' : '/';
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
 
   const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
   const [ops, setOps] = useState<PlayerEntry[]>([]);

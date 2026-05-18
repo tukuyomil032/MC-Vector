@@ -17,7 +17,7 @@ import { VERSION_OPTIONS } from '../../constants/versionOptions';
 import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
-import { useToast } from '../ToastProvider';
+import { toast } from 'sonner';
 import { Select } from '../ui/Select';
 
 interface ServerSettingsProps {
@@ -86,7 +86,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [inputToken, setInputToken] = useState('');
 
-  const { showToast } = useToast();
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (type === 'success') toast.success(msg);
+    else if (type === 'error') toast.error(msg);
+    else toast(msg);
+  };
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
