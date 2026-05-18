@@ -130,31 +130,6 @@
     @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
   }
 
-  .toggle-switch {
-    @apply relative inline-block w-11 h-6;
-  }
-
-  .toggle-switch input {
-    @apply opacity-0 w-0 h-0;
-  }
-
-  .slider {
-    @apply absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-bg-tertiary transition-all rounded-full border border-border-color;
-  }
-
-  .slider:before {
-    content: '';
-    @apply absolute h-4 w-4 left-1 top-1 bg-text-secondary transition-all rounded-full;
-  }
-
-  .toggle-switch input:checked + .slider {
-    @apply bg-accent border-accent;
-  }
-
-  .toggle-switch input:checked + .slider:before {
-    @apply translate-x-5 bg-white;
-  }
-
   .status-indicator {
     @apply w-2 h-2 rounded-full bg-bg-tertiary shrink-0;
   }
