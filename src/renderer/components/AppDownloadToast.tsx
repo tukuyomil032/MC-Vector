@@ -1,3 +1,5 @@
+import { Progress } from './ui/Progress';
+
 interface AppDownloadToastProps {
   title: string;
   progress: number;
@@ -14,18 +16,7 @@ export default function AppDownloadToast({ title, progress, message }: AppDownlo
         <span className="text-accent">{clampedProgress}%</span>
       </div>
       <div className="download-toast__message">{message}</div>
-      <div
-        className="download-toast__progress-track"
-        role="progressbar"
-        aria-valuenow={clampedProgress}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="download-toast__progress-bar"
-          style={{ width: `${clampedProgress}%` }}
-        ></div>
-      </div>
+      <Progress value={clampedProgress} className="mt-1" />
     </div>
   );
 }

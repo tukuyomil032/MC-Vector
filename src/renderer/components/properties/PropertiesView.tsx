@@ -5,6 +5,7 @@ import { readFileContent, saveFileContent } from '../../../lib/file-commands';
 import { serverPropertiesList } from '../../shared/propertiesData';
 import { type MinecraftServer } from '../../shared/server declaration';
 import { useToast } from '../ToastProvider';
+import { Switch } from '../ui/Switch';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 
 interface Props {
@@ -361,10 +362,7 @@ function ToggleItem({
           {desc}
         </span>
       </div>
-      <label className="toggle-switch">
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className="slider"></span>
-      </label>
+      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
