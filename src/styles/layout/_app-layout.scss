@@ -227,30 +227,6 @@
     @apply text-sm mb-2 text-zinc-300;
   }
 
-  .download-toast__progress-track {
-    @apply w-full h-1 bg-zinc-700 rounded-sm overflow-hidden;
-  }
-
-  .download-toast__progress-bar {
-    @apply h-full bg-accent rounded-sm transition-all duration-200;
-  }
-
-  .app-context-menu {
-    @apply fixed border border-border-color rounded-md shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-1 min-w-[140px];
-    z-index: 9999;
-    background-color: #252526;
-  }
-
-  .app-context-menu__danger-item {
-    @apply px-3 py-2 text-red-400 text-sm rounded transition-colors flex items-center gap-2;
-    @apply hover:bg-red-500/10;
-  }
-
-  .app-context-menu__item {
-    @apply px-3 py-2 text-zinc-200 text-sm rounded transition-colors flex items-center gap-2;
-    @apply hover:bg-white/10;
-  }
-
   .app-update-overlay {
     @apply fixed inset-0 bg-black/70 flex items-center justify-center p-4;
     z-index: 10000;

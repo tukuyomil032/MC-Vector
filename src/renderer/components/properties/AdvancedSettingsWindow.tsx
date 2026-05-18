@@ -6,6 +6,7 @@ import {
   type PropertyDefinition,
   serverPropertiesList,
 } from '../../shared/propertiesData';
+import { Switch } from '../ui/Switch';
 
 const CATEGORY_ORDER: PropertyCategory[] = [
   'General',
@@ -146,14 +147,10 @@ export default function AdvancedSettingsWindow({
   const renderInput = (prop: PropertyDefinition, currentValue: unknown) => {
     if (prop.type === 'boolean') {
       return (
-        <label className="toggle-switch">
-          <input
-            type="checkbox"
-            checked={Boolean(currentValue)}
-            onChange={(e) => handleChange(prop.key, e.target.checked)}
-          />
-          <span className="slider"></span>
-        </label>
+        <Switch
+          checked={Boolean(currentValue)}
+          onCheckedChange={(checked) => handleChange(prop.key, checked)}
+        />
       );
     }
     if (prop.type === 'number') {

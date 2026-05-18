@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { cn } from '@/lib/ui'
 import type { Translate } from '../../i18n';
+import { Progress } from './ui/Progress';
 
 interface UpdatePromptState {
   version?: string;
@@ -102,12 +103,7 @@ export default function AppUpdateModal({
               <div className="app-update-modal__progress-label">
                 {t('settings.update.downloading', { progress: Math.round(updateProgress) })}
               </div>
-              <div className="app-update-modal__progress-track">
-                <div
-                  className="app-update-modal__progress-bar"
-                  style={{ width: `${Math.min(100, Math.round(updateProgress))}%` }}
-                />
-              </div>
+              <Progress value={Math.min(100, Math.round(updateProgress))} className="mt-2" />
             </div>
           )}
 
