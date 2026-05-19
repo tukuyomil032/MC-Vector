@@ -8,21 +8,21 @@
 
 ## 全体ステータス
 
-| フェーズ  | 内容                                                                             | 状態                      |
-| --------- | -------------------------------------------------------------------------------- | ------------------------- |
-| Phase 1   | コマンド履歴・稼働時間・JVM・シンタックス強化                                    | ✅ 完了                   |
-| Phase 2   | 正規表現検索・プロパティ検索・プレイヤー管理                                     | ✅ 完了                   |
-| Phase 3   | バックアップ保持ポリシー・バージョンアップウィザード                             | ✅ 完了                   |
-| Phase 4   | ファイル差分ビュー・プラグイン更新チェック・サーバーインポート・デスクトップ通知 | ✅ 完了                   |
-| Phase 5   | 複数サーバー一括操作・SLP Ping ヘルスチェック                                    | ✅ 完了                   |
-| **Infra** | **パッケージ追加・スタイリング基盤整備**                                         | **✅ 完了（2026-05-18）** |
-| Phase 6   | スタイリング移行（Tailwind + CVA + Radix UI）                                    | ✅ 完了（2026-05-18）     |
-| Phase 7   | React Query 移行・フォーム強化                                                   | ✅ 完了（2026-05-18）     |
-| Phase 8           | UX強化（cmdk・sonner統合・Tauriプラグイン活用）                                  | ✅ 完了（2026-05-19）     |
-| **Design Refactor** | **デザインリファクタ（Zinc系パレット・グラデーション除去・全面刷新）**          |                           |
-| ↳ DR Phase 1      | デザインファンデーション（トークン・Tailwind・グラデーション完全除去）            | ✅ 完了（2026-05-19）     |
-| ↳ DR Phase 2      | コンポーネント別修正（警告バナー・server.properties・モーダル）                  | 🔲 未着手                 |
-| ↳ DR Phase 3      | ビュー別ポリッシュ（Dashboard・Console・Sidebar・全ビュー仕上げ）                | 🔲 未着手                 |
+| フェーズ            | 内容                                                                             | 状態                      |
+| ------------------- | -------------------------------------------------------------------------------- | ------------------------- |
+| Phase 1             | コマンド履歴・稼働時間・JVM・シンタックス強化                                    | ✅ 完了                   |
+| Phase 2             | 正規表現検索・プロパティ検索・プレイヤー管理                                     | ✅ 完了                   |
+| Phase 3             | バックアップ保持ポリシー・バージョンアップウィザード                             | ✅ 完了                   |
+| Phase 4             | ファイル差分ビュー・プラグイン更新チェック・サーバーインポート・デスクトップ通知 | ✅ 完了                   |
+| Phase 5             | 複数サーバー一括操作・SLP Ping ヘルスチェック                                    | ✅ 完了                   |
+| **Infra**           | **パッケージ追加・スタイリング基盤整備**                                         | **✅ 完了（2026-05-18）** |
+| Phase 6             | スタイリング移行（Tailwind + CVA + Radix UI）                                    | ✅ 完了（2026-05-18）     |
+| Phase 7             | React Query 移行・フォーム強化                                                   | ✅ 完了（2026-05-18）     |
+| Phase 8             | UX強化（cmdk・sonner統合・Tauriプラグイン活用）                                  | ✅ 完了（2026-05-19）     |
+| **Design Refactor** | **デザインリファクタ（Zinc系パレット・グラデーション除去・全面刷新）**           |                           |
+| ↳ DR Phase 1        | デザインファンデーション（トークン・Tailwind・グラデーション完全除去）           | ✅ 完了（2026-05-19）     |
+| ↳ DR Phase 2        | コンポーネント別修正（警告バナー・server.properties・モーダル）                  | ✅ 完了（2026-05-19）     |
+| ↳ DR Phase 3        | ビュー別ポリッシュ（Dashboard・Console・Sidebar・全ビュー仕上げ）                | 🔲 未着手                 |
 
 ---
 
@@ -172,13 +172,13 @@
 
 ### タスク一覧
 
-| タスク | 内容                                                 | パッケージ                             | 状態        | コミット              |
-| ------ | ---------------------------------------------------- | -------------------------------------- | ----------- | --------------------- |
-| 8-1    | コマンドパレット実装（Cmd+K）                        | `cmdk`                                 | ✅ 完了     | `edd9711`             |
-| 8-2    | サーバーIP/ポートのワンクリックコピー                | `@tauri-apps/plugin-clipboard-manager` | ✅ 完了     | `79a1fd4`・`af4c126`  |
-| 8-3    | グローバルショートカット設定（起動/停止/コンソール） | `@tauri-apps/plugin-global-shortcut`   | ✅ 完了     | `b4f6b7b`・`968b99f`  |
-| 8-4    | 既存ToastProviderをsonnerに統合                      | `sonner`                               | ✅ 完了     | `208461c`             |
-| 8-5    | window-state の動作確認・初期化                      | `@tauri-apps/plugin-window-state`      | ✅ 完了     | `3b9f434`・`99cbe76`  |
+| タスク | 内容                                                 | パッケージ                             | 状態    | コミット             |
+| ------ | ---------------------------------------------------- | -------------------------------------- | ------- | -------------------- |
+| 8-1    | コマンドパレット実装（Cmd+K）                        | `cmdk`                                 | ✅ 完了 | `edd9711`            |
+| 8-2    | サーバーIP/ポートのワンクリックコピー                | `@tauri-apps/plugin-clipboard-manager` | ✅ 完了 | `79a1fd4`・`af4c126` |
+| 8-3    | グローバルショートカット設定（起動/停止/コンソール） | `@tauri-apps/plugin-global-shortcut`   | ✅ 完了 | `b4f6b7b`・`968b99f` |
+| 8-4    | 既存ToastProviderをsonnerに統合                      | `sonner`                               | ✅ 完了 | `208461c`            |
+| 8-5    | window-state の動作確認・初期化                      | `@tauri-apps/plugin-window-state`      | ✅ 完了 | `3b9f434`・`99cbe76` |
 
 ---
 
@@ -191,48 +191,48 @@
 
 ### ターゲットデザイントークン（Zinc系）
 
-| トークン | 値 | 用途 |
-|---------|-----|------|
-| Background base | `#09090b`（zinc-950） | アプリ背景 |
-| Card / Surface | `#18181b`（zinc-900） | カード・パネル |
-| Elevated surface | `#1c1c1f`（zinc-900 lighter） | モーダル・ドロワー |
-| Border | `#27272a`（zinc-800） | 通常ボーダー |
-| Border hover | `#3f3f46`（zinc-700） | ホバーボーダー |
-| Foreground | `#fafafa` | メインテキスト |
-| Text secondary | `#a1a1aa`（zinc-400） | サブテキスト |
-| Text muted | `#71717a`（zinc-500） | ミュートテキスト |
-| Primary button | `#ffffff` bg + `#000000` text | プライマリCTA |
-| Status running | `#10b981`（green） | 稼働中ステータス（意味的色） |
-| Status stopped | `#ef4444`（red） | 停止中ステータス（意味的色） |
-| Status warning | `#f59e0b`（amber） | 警告ステータス（意味的色） |
+| トークン         | 値                            | 用途                         |
+| ---------------- | ----------------------------- | ---------------------------- |
+| Background base  | `#09090b`（zinc-950）         | アプリ背景                   |
+| Card / Surface   | `#18181b`（zinc-900）         | カード・パネル               |
+| Elevated surface | `#1c1c1f`（zinc-900 lighter） | モーダル・ドロワー           |
+| Border           | `#27272a`（zinc-800）         | 通常ボーダー                 |
+| Border hover     | `#3f3f46`（zinc-700）         | ホバーボーダー               |
+| Foreground       | `#fafafa`                     | メインテキスト               |
+| Text secondary   | `#a1a1aa`（zinc-400）         | サブテキスト                 |
+| Text muted       | `#71717a`（zinc-500）         | ミュートテキスト             |
+| Primary button   | `#ffffff` bg + `#000000` text | プライマリCTA                |
+| Status running   | `#10b981`（green）            | 稼働中ステータス（意味的色） |
+| Status stopped   | `#ef4444`（red）              | 停止中ステータス（意味的色） |
+| Status warning   | `#f59e0b`（amber）            | 警告ステータス（意味的色）   |
 
 ### DR Phase 1：デザインファンデーション ✅ 完了（2026-05-19）
 
-| タスク | 変更ファイル | 内容 | コミット |
-|-------|------------|------|---------|
-| DR1-1 | `tailwind.config.js` | zinc-950/900/800 パレット・accent を白に変更 | `e7b8aa6` |
-| DR1-2 | `src/styles/components/_ui-components.scss` | 全グラデーション除去・ボタン刷新 | `2c0fe92` |
-| DR1-3 | `src/styles/base/_design-tokens.scss` | 全 CSS 変数を zinc 系に置換・cyan 参照撤廃 | `fddcacd` |
+| タスク | 変更ファイル                                | 内容                                         | コミット  |
+| ------ | ------------------------------------------- | -------------------------------------------- | --------- |
+| DR1-1  | `tailwind.config.js`                        | zinc-950/900/800 パレット・accent を白に変更 | `e7b8aa6` |
+| DR1-2  | `src/styles/components/_ui-components.scss` | 全グラデーション除去・ボタン刷新             | `2c0fe92` |
+| DR1-3  | `src/styles/base/_design-tokens.scss`       | 全 CSS 変数を zinc 系に置換・cyan 参照撤廃   | `fddcacd` |
 
 ### DR Phase 2：コンポーネント別修正 🔲 未着手
 
-| タスク | 変更ファイル | 内容 |
-|-------|------------|------|
-| DR2-1 | `src/styles/components/_surface-primitives.scss` | `.surface-card`・`.control-chip.active` をフラット化 |
-| DR2-2 | `src/styles/components/_modal-primitives.scss` | モーダルパネル色を zinc 系に統一 |
-| DR2-3 | `src/styles/views/_plugin-browser.scss` + `PluginBrowser.tsx` | 赤い警告バナーをコンパクトなインラインノートに改善 |
-| DR2-4 | `src/styles/views/_advanced-settings-window.scss` | server.properties カード・フォーカスリングの cyan 除去 |
+| タスク | 変更ファイル                                                  | 内容                                                   |
+| ------ | ------------------------------------------------------------- | ------------------------------------------------------ |
+| DR2-1  | `src/styles/components/_surface-primitives.scss`              | `.surface-card`・`.control-chip.active` をフラット化   |
+| DR2-2  | `src/styles/components/_modal-primitives.scss`                | モーダルパネル色を zinc 系に統一                       |
+| DR2-3  | `src/styles/views/_plugin-browser.scss` + `PluginBrowser.tsx` | 赤い警告バナーをコンパクトなインラインノートに改善     |
+| DR2-4  | `src/styles/views/_advanced-settings-window.scss`             | server.properties カード・フォーカスリングの cyan 除去 |
 
 ### DR Phase 3：ビュー別ポリッシュ 🔲 未着手
 
-| タスク | 変更ファイル | 内容 |
-|-------|------------|------|
-| DR3-1 | `src/styles/views/_dashboard-view.scss` | KPI カードの洗練 |
-| DR3-2 | `src/styles/views/_console-view.scss` | コンソールの背景・ボーダー整合 |
-| DR3-3 | `src/styles/layout/_app-layout.scss` | サイドバー・ヘッダー全体 |
-| DR3-4 | `src/styles/views/_server-settings.scss` | サーバー設定ビュー |
-| DR3-5 | `src/styles/views/_users-view.scss` | ユーザー管理ビュー |
-| DR3-6 | `src/styles/modals/_add-server-modal.scss` | モーダル最終仕上げ |
+| タスク | 変更ファイル                               | 内容                           |
+| ------ | ------------------------------------------ | ------------------------------ |
+| DR3-1  | `src/styles/views/_dashboard-view.scss`    | KPI カードの洗練               |
+| DR3-2  | `src/styles/views/_console-view.scss`      | コンソールの背景・ボーダー整合 |
+| DR3-3  | `src/styles/layout/_app-layout.scss`       | サイドバー・ヘッダー全体       |
+| DR3-4  | `src/styles/views/_server-settings.scss`   | サーバー設定ビュー             |
+| DR3-5  | `src/styles/views/_users-view.scss`        | ユーザー管理ビュー             |
+| DR3-6  | `src/styles/modals/_add-server-modal.scss` | モーダル最終仕上げ             |
 
 ---
 
