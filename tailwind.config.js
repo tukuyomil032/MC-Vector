@@ -4,20 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        'bg-primary': '#121214',
-        'bg-secondary': '#1e1e24',
-        'bg-tertiary': '#2a2a30',
-        'bg-hover': '#32323c',
+        'bg-primary': '#09090b',
+        'bg-secondary': '#18181b',
+        'bg-tertiary': '#27272a',
+        'bg-hover': '#3f3f46',
         'text-primary': '#ffffff',
         'text-secondary': '#a1a1aa',
         'text-muted': '#71717a',
-        accent: '#5865F2',
-        'accent-hover': '#4752c4',
+        accent: '#ffffff',
+        'accent-hover': '#e4e4e7',
         success: '#10b981',
         danger: '#ef4444',
         warning: '#f59e0b',
         info: '#3b82f6',
-        'border-color': '#2f2f3d',
+        'border-color': '#27272a',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
