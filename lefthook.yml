@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    lint-format-ts:
+      glob: "src/**/*.{ts,tsx}"
+      run: pnpm check:fix
+      stage_fixed: true
+    fmt-rust:
+      glob: "src-tauri/src/**/*.rs"
+      run: cargo fmt --all --manifest-path src-tauri/Cargo.toml
+      stage_fixed: true

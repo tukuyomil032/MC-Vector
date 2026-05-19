@@ -1,6 +1,6 @@
 {
   "name": "mc-vector",
-  "version": "2.0.54",
+  "version": "2.0.55",
   "private": true,
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
@@ -21,7 +21,8 @@
     "release:tag": "node scripts/release-tag.mjs",
     "release:publish": "node scripts/release-publish.mjs",
     "rustfmt": "cargo fmt --all",
-    "install:extensions": "node scripts/install-extensions.mjs"
+    "install:extensions": "node scripts/install-extensions.mjs",
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -80,6 +81,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@voidzero-dev/vite-plus-core": "latest",
     "autoprefixer": "^10.5.0",
+    "lefthook": "^2.1.6",
     "portless": "^0.12.0",
     "postcss": "^8.5.13",
     "rimraf": "^6.1.3",
