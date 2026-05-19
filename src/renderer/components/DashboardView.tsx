@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Area,

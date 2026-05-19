@@ -2424,7 +2424,6 @@ export default function PluginBrowser({ server }: Props) {
             </div>
           )}
 
-
           {isInAppSearch && updateAvailableCount > 0 && (
             <div className="plugin-browser__update-summary">
               <Info size={12} className="shrink-0 opacity-70" />
