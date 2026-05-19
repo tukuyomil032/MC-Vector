@@ -1,26 +1,24 @@
 @layer components {
   :root {
     --mv-font-display: 'Avenir Next', 'Noto Sans JP', 'Segoe UI', sans-serif;
-    --mv-view-glow-a: rgba(74, 222, 128, 0.1);
-    --mv-view-glow-b: rgba(56, 189, 248, 0.15);
-    --mv-panel-start: rgba(24, 24, 27, 0.94);
-    --mv-panel-end: rgba(17, 24, 39, 0.88);
-    --mv-panel-alt-start: rgba(24, 24, 27, 0.95);
-    --mv-panel-alt-end: rgba(31, 41, 55, 0.84);
-    --mv-accent-start: #0ea5e9;
-    --mv-accent-end: #06b6d4;
+    --mv-view-glow-a: transparent;
+    --mv-view-glow-b: transparent;
+    --mv-panel-start: #18181b;
+    --mv-panel-end: #18181b;
+    --mv-panel-alt-start: #1c1c1f;
+    --mv-panel-alt-end: #1c1c1f;
+    --mv-accent-start: #ffffff;
+    --mv-accent-end: #ffffff;
     --mv-success-start: #22c55e;
     --mv-success-end: #10b981;
     --mv-warn-start: #f59e0b;
     --mv-warn-end: #f97316;
-    --mv-view-bg:
-      radial-gradient(circle at 0% 0%, var(--mv-view-glow-a), transparent 42%),
-      radial-gradient(circle at 95% 100%, var(--mv-view-glow-b), transparent 50%);
-    --mv-panel-bg: linear-gradient(135deg, var(--mv-panel-start), var(--mv-panel-end));
-    --mv-panel-bg-alt: linear-gradient(140deg, var(--mv-panel-alt-start), var(--mv-panel-alt-end));
-    --mv-border-soft: rgba(82, 82, 91, 0.72);
-    --mv-border-strong: rgba(34, 211, 238, 0.42);
-    --mv-shadow-panel: 0 18px 45px rgba(2, 6, 23, 0.25);
+    --mv-view-bg: transparent;
+    --mv-panel-bg: #18181b;
+    --mv-panel-bg-alt: #1c1c1f;
+    --mv-border-soft: #27272a;
+    --mv-border-strong: #3f3f46;
+    --mv-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.4);
   }
 
   .app-svg-icon {
@@ -41,7 +39,7 @@
 
   .input-field {
     @apply px-3 py-2.5 bg-bg-primary border border-border-color rounded-md text-text-primary text-[0.95rem] transition-all;
-    @apply focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20;
+    @apply focus:outline-none focus:border-zinc-600 focus:ring-2 focus:ring-accent/20;
   }
 
   select.input-field {
@@ -62,7 +60,7 @@
   }
 
   select.input-field:hover {
-    border-color: rgba(56, 189, 248, 0.45);
+    border-color: #3f3f46;
   }
 
   select.input-field:disabled {
@@ -91,13 +89,13 @@
   }
 
   .btn-primary {
-    @apply text-white px-4 py-2 rounded-md font-bold transition-all;
-    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
-    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.22);
+    @apply px-4 py-2 rounded-md font-bold transition-all;
+    background: #ffffff;
+    color: #000000;
   }
 
   .btn-primary:hover {
-    filter: brightness(1.05);
+    background: #e4e4e7;
     transform: translateY(-1px);
   }
 
@@ -114,20 +112,17 @@
 
   .btn-start {
     @apply px-5 py-2 rounded-md font-semibold text-white flex items-center justify-center gap-1.5 min-w-[100px];
-    @apply bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25;
-    @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
+    @apply bg-green-600 hover:bg-green-700 hover:-translate-y-0.5 transition-all;
   }
 
   .btn-stop {
     @apply px-5 py-2 rounded-md font-semibold text-white flex items-center justify-center gap-1.5 min-w-[100px];
-    @apply bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/25;
-    @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
+    @apply bg-red-600 hover:bg-red-700 hover:-translate-y-0.5 transition-all;
   }
 
   .btn-restart {
     @apply px-5 py-2 rounded-md font-semibold text-white flex items-center justify-center gap-1.5 min-w-[100px];
-    @apply bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25;
-    @apply hover:brightness-110 hover:-translate-y-0.5 transition-all;
+    @apply bg-zinc-700 hover:bg-zinc-600 hover:-translate-y-0.5 transition-all;
   }
 
   .status-indicator {
