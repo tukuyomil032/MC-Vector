@@ -1,15 +1,14 @@
 @layer components {
   .users-view {
     @apply h-full p-5 flex flex-col gap-4;
-    font-family: var(--mv-font-display);
-    background: var(--mv-view-bg);
+    background: var(--mv-surface-base);
   }
 
   .users-view__title {
     @apply m-0 px-5 py-4 rounded-2xl border text-[1.35rem] font-semibold tracking-wide text-zinc-100;
-    background: var(--mv-panel-bg);
-    border-color: var(--mv-border-soft);
-    box-shadow: var(--mv-shadow-panel);
+    background: var(--mv-surface-muted);
+    border-color: var(--mv-surface-border);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .users-view__grid {
@@ -18,14 +17,14 @@
 
   .users-view__card {
     @apply rounded-xl border flex flex-col overflow-hidden;
-    border-color: var(--mv-border-soft);
-    background: var(--mv-panel-bg-alt);
-    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.2);
+    border-color: var(--mv-surface-border);
+    background: var(--mv-surface-card-alt-bg);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .users-view__card-header {
     @apply px-4 py-3 font-bold border-b border-zinc-700/75 flex justify-between items-center;
-    background: rgba(15, 23, 42, 0.7);
+    background: rgba(24, 24, 27, 0.7);
   }
 
   .users-view__count {
@@ -45,7 +44,7 @@
   .users-view__item {
     @apply flex items-center justify-between p-2.5 mb-2 rounded-lg border;
     border-color: rgba(63, 63, 70, 0.72);
-    background: rgba(15, 23, 42, 0.58);
+    background: rgba(24, 24, 27, 0.55);
   }
 
   .users-view__item-main {
@@ -70,7 +69,7 @@
 
   .users-view__form {
     @apply p-2.5 border-t border-zinc-700/75 flex gap-1.5;
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(24, 24, 27, 0.45);
   }
 
   .users-view__input {
