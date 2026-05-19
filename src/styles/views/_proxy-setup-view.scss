@@ -25,13 +25,13 @@
   }
 
   .proxy-setup-view__panel-title {
-    @apply mt-0 mb-5 text-cyan-200 text-sm uppercase tracking-[0.1em] font-semibold;
+    @apply mt-0 mb-5 text-zinc-300 text-sm uppercase tracking-[0.1em] font-semibold;
   }
 
   .proxy-setup-view__section {
     @apply mb-5 rounded-xl border p-5;
-    border-color: rgba(63, 63, 70, 0.72);
-    background: rgba(15, 23, 42, 0.56);
+    border-color: #27272a;
+    background: rgba(24, 24, 27, 0.6);
   }
 
   .proxy-setup-view__section--large-gap {
@@ -57,8 +57,8 @@
 
   .proxy-setup-view__backend-list {
     @apply max-h-[270px] overflow-y-auto rounded-xl border;
-    border-color: rgba(63, 63, 70, 0.82);
-    background: rgba(15, 23, 42, 0.8);
+    border-color: #27272a;
+    background: #18181b;
   }
 
   .proxy-setup-view__backend-empty {
@@ -71,7 +71,7 @@
   }
 
   .proxy-setup-view__backend-row:hover {
-    background: rgba(34, 211, 238, 0.08);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .proxy-setup-view__backend-row:last-child {
@@ -80,7 +80,7 @@
 
   .proxy-setup-view__checkbox {
     @apply mt-1 h-4 w-4 shrink-0 cursor-pointer;
-    accent-color: #22d3ee;
+    accent-color: #ffffff;
   }
 
   .proxy-setup-view__backend-meta {
