@@ -22,7 +22,7 @@
 | **Design Refactor** | **デザインリファクタ（Zinc系パレット・グラデーション除去・全面刷新）**           |                           |
 | ↳ DR Phase 1        | デザインファンデーション（トークン・Tailwind・グラデーション完全除去）           | ✅ 完了（2026-05-19）     |
 | ↳ DR Phase 2        | コンポーネント別修正（警告バナー・server.properties・モーダル）                  | ✅ 完了（2026-05-19）     |
-| ↳ DR Phase 3        | ビュー別ポリッシュ（Dashboard・Console・Sidebar・全ビュー仕上げ）                | 🔲 未着手                 |
+| ↳ DR Phase 3        | ビュー別ポリッシュ（Dashboard・Console・Sidebar・全ビュー仕上げ）                | ✅ 完了（2026-05-19）     |
 
 ---
 
@@ -223,7 +223,7 @@
 | DR2-3  | `src/styles/views/_plugin-browser.scss` + `PluginBrowser.tsx` | 赤い警告バナーをコンパクトなインラインノートに改善     |
 | DR2-4  | `src/styles/views/_advanced-settings-window.scss`             | server.properties カード・フォーカスリングの cyan 除去 |
 
-### DR Phase 3：ビュー別ポリッシュ 🔲 未着手
+### DR Phase 3：ビュー別ポリッシュ ✅ 完了（2026-05-19）
 
 | タスク | 変更ファイル                               | 内容                           |
 | ------ | ------------------------------------------ | ------------------------------ |
