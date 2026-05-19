@@ -2424,13 +2424,6 @@ export default function PluginBrowser({ server }: Props) {
             </div>
           )}
 
-          {isInAppSearch && platform === 'Spigot' && (
-            <div className="plugin-browser__platform-note">{t('plugins.browser.spigotNote')}</div>
-          )}
-
-          {isInAppSearch && platform === 'Hangar' && (
-            <div className="plugin-browser__platform-note">{t('plugins.browser.hangarNote')}</div>
-          )}
 
           {isInAppSearch && updateAvailableCount > 0 && (
             <div className="plugin-browser__update-summary">

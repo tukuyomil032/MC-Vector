@@ -25,9 +25,9 @@
   }
 
   .plugin-browser__section-tab.is-active {
-    @apply text-black;
+    @apply text-zinc-900;
 
-    background: #ffffff;
+    background: #e4e4e7;
     box-shadow: none;
   }
 
@@ -50,9 +50,9 @@
   }
 
   .plugin-browser__platform-chip.is-active {
-    @apply text-black border-zinc-600;
+    @apply text-zinc-900 border-zinc-500;
 
-    background: #ffffff;
+    background: #e4e4e7;
     box-shadow: none;
   }
 
