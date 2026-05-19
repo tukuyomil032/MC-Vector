@@ -1,9 +1,7 @@
 @layer components {
   .server-settings {
     @apply h-full overflow-y-auto p-8 box-border block;
-    font-family: var(--mv-font-display);
-    color: #ecf0f1;
-    background: var(--mv-view-bg);
+    background: var(--mv-surface-base);
   }
 
   .server-settings__inner {
@@ -12,20 +10,20 @@
 
   .server-settings__title {
     @apply m-0 mb-4 rounded-2xl border px-5 py-4 text-[1.35rem] font-semibold tracking-wide;
-    border-color: var(--mv-border-soft);
-    background: var(--mv-panel-bg);
-    box-shadow: var(--mv-shadow-panel);
+    border-color: var(--mv-surface-border);
+    background: var(--mv-surface-muted);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .server-settings__panel {
     @apply mb-4 p-6 rounded-2xl border;
-    border-color: var(--mv-border-soft);
-    background: var(--mv-panel-bg-alt);
-    box-shadow: var(--mv-shadow-panel);
+    border-color: var(--mv-surface-border);
+    background: var(--mv-surface-card-alt-bg);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .server-settings__panel-title {
-    @apply mt-0 mb-5 text-cyan-200 text-sm uppercase tracking-[0.1em] font-semibold;
+    @apply mt-0 mb-5 text-zinc-400 text-sm uppercase tracking-[0.1em] font-semibold;
   }
 
   .server-settings__field-block {
@@ -80,13 +78,13 @@
 
   .server-settings__ngrok-panel {
     @apply p-6 rounded-2xl border;
-    border-color: var(--mv-border-soft);
-    background: var(--mv-panel-bg-alt);
-    box-shadow: var(--mv-shadow-panel);
+    border-color: var(--mv-surface-border);
+    background: var(--mv-surface-card-alt-bg);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .server-settings__ngrok-panel.is-active {
-    border-color: rgba(34, 211, 238, 0.54);
+    border-color: rgba(16, 185, 129, 0.5);
   }
 
   .server-settings__ngrok-header {
@@ -102,8 +100,10 @@
   }
 
   .server-settings__online-badge {
-    @apply text-xs text-white px-2 py-0.5 rounded-full;
-    background: linear-gradient(120deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.8));
+    @apply text-xs px-2 py-0.5 rounded-full;
+    background: rgba(16, 185, 129, 0.18);
+    color: #a7f3d0;
+    border: 1px solid rgba(16, 185, 129, 0.3);
   }
 
   .server-settings__ngrok-description {
@@ -135,7 +135,7 @@
   }
 
   .server-settings__ngrok-switch-track.is-on {
-    background: linear-gradient(120deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.85));
+    background: #10b981;
   }
 
   .server-settings__ngrok-switch-track.is-off {
@@ -152,8 +152,8 @@
 
   .server-settings__address-card {
     @apply p-4 rounded-xl mb-4 border;
-    border-color: rgba(14, 165, 233, 0.25);
-    background: rgba(8, 47, 73, 0.34);
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(6, 78, 59, 0.2);
   }
 
   .server-settings__address-label {
@@ -192,8 +192,8 @@
   .server-settings__token-panel {
     width: min(560px, calc(100vw - 2rem));
     padding: 1.25rem 1.25rem 1rem;
-    border-color: var(--mv-border-soft);
-    background: linear-gradient(145deg, rgba(17, 24, 39, 0.96), rgba(24, 24, 27, 0.95));
+    border-color: var(--mv-surface-border);
+    background: #18181b;
   }
 
   .server-settings__token-title {
