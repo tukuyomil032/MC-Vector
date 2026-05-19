@@ -7,8 +7,8 @@
   .mc-modal-panel {
     @apply p-6 rounded-xl border text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)];
     width: 450px;
-    background-color: #252526;
-    border-color: #3e3e42;
+    background-color: #18181b;
+    border-color: #27272a;
   }
 
   .mc-modal-title {
@@ -17,7 +17,7 @@
 
   .mc-modal-input {
     @apply w-full p-2.5 mt-4 mb-5 border border-zinc-700 text-white rounded-md text-base box-border;
-    background-color: #1e1e1e;
+    background-color: #09090b;
   }
 
   .mc-modal-footer {
