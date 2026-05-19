@@ -7,6 +7,7 @@ import {
   Download,
   ExternalLink,
   Flame,
+  Info,
   Loader2,
   type LucideIcon,
   Package,
@@ -2433,6 +2434,7 @@ export default function PluginBrowser({ server }: Props) {
 
           {isInAppSearch && updateAvailableCount > 0 && (
             <div className="plugin-browser__update-summary">
+              <Info size={12} className="shrink-0 opacity-70" />
               <span>{t('plugins.browser.updateSummary', { count: updateAvailableCount })}</span>
               <span className="plugin-browser__update-summary-note">
                 {t('plugins.browser.updateSummaryNote')}
