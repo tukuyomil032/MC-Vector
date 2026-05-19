@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
 import { sendCommand } from '../../lib/server-commands';
-import { tauriListen } from '../../lib/tauri-api';
 import { type MinecraftServer } from '../components/../shared/server declaration';
 import { toast } from 'sonner';
 
@@ -37,7 +36,6 @@ export default function UsersView({ server }: Props) {
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
   const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
-  const [onlinePlayers, setOnlinePlayers] = useState<string[]>([]);
 
   const resolvePlayerIdentity = async (name: string): Promise<{ name: string; uuid?: string }> => {
     try {
@@ -78,51 +76,6 @@ export default function UsersView({ server }: Props) {
   useEffect(() => {
     loadAllLists();
   }, [server.path]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let unlistenLog: (() => void) | undefined;
-    let unlistenStatus: (() => void) | undefined;
-
-    void tauriListen<{ serverId: string; line: string }>('server-log', (data) => {
-      if (cancelled || data.serverId !== server.id) return;
-      const match = /There are \d+ of a max of \d+ players online: (.*)/.exec(data.line);
-      if (match) {
-        const raw = match[1].trim();
-        setOnlinePlayers(
-          raw
-            ? raw
-                .split(', ')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : [],
-        );
-      }
-    }).then((fn) => {
-      if (cancelled) {
-        fn();
-        return;
-      }
-      unlistenLog = fn;
-    });
-
-    void tauriListen<{ serverId: string; status: string }>('server-status-change', (data) => {
-      if (cancelled || data.serverId !== server.id) return;
-      if (data.status !== 'online') setOnlinePlayers([]);
-    }).then((fn) => {
-      if (cancelled) {
-        fn();
-        return;
-      }
-      unlistenStatus = fn;
-    });
-
-    return () => {
-      cancelled = true;
-      unlistenLog?.();
-      unlistenStatus?.();
-    };
-  }, [server.id]);
 
   const loadAllLists = async () => {
     const [whitelistData, opsData, bannedPlayersData, bannedIpsData] = await Promise.all([
@@ -254,66 +207,8 @@ export default function UsersView({ server }: Props) {
     return '';
   };
 
-  const handleKick = async (name: string) => {
-    await sendCommand(server.id, `kick ${name}`);
-    setOnlinePlayers((prev) => prev.filter((p) => p !== name));
-  };
-
-  const handleBan = async (name: string) => {
-    await sendCommand(server.id, `ban ${name}`);
-    setOnlinePlayers((prev) => prev.filter((p) => p !== name));
-    setTimeout(() => loadAllLists(), 500);
-  };
-
   return (
     <div className="users-view">
-      <div className="users-view__card users-view__online-card">
-        <div className="users-view__card-header">
-          {t('users.lists.online')}
-          <span className="users-view__count">
-            {onlinePlayers.length} {t('users.entriesCount')}
-          </span>
-        </div>
-        <div className="users-view__list">
-          {server.status !== 'online' ? (
-            <div className="users-view__empty">{t('users.offlineNotice')}</div>
-          ) : onlinePlayers.length === 0 ? (
-            <div className="users-view__empty">{t('users.empty')}</div>
-          ) : (
-            onlinePlayers.map((name) => (
-              <div key={name} className="users-view__item">
-                <div className="users-view__item-main">
-                  <img
-                    src={`https://minotar.net/avatar/${encodeURIComponent(name)}/24`}
-                    alt=""
-                    className="users-view__avatar"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://minotar.net/avatar/MHF_Steve/24';
-                    }}
-                  />
-                  <div className="users-view__item-name">{name}</div>
-                </div>
-                <div className="users-view__item-actions">
-                  <button
-                    className="btn-secondary users-view__action-btn"
-                    onClick={() => handleKick(name)}
-                  >
-                    {t('users.actions.kick')}
-                  </button>
-                  <button
-                    className="btn-stop users-view__action-btn"
-                    onClick={() => handleBan(name)}
-                  >
-                    {t('users.actions.ban')}
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
       <div className="users-view__grid">
         <UserListCard
           title={t('users.lists.whitelist')}
