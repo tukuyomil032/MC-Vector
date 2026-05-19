@@ -1,8 +1,7 @@
 @layer components {
   .dashboard-view {
     @apply h-full overflow-y-auto flex flex-col gap-4 p-5;
-    font-family: var(--mv-font-display);
-    background: var(--mv-view-bg);
+    background: var(--mv-surface-base);
   }
 
   .dashboard-view__header {
