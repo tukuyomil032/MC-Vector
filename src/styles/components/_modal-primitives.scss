@@ -30,7 +30,7 @@
   }
 
   .mc-modal-btn-primary {
-    @apply px-4 py-2 rounded-lg border-none bg-accent text-white text-sm font-bold;
+    @apply px-4 py-2 rounded-lg border-none bg-accent text-black text-sm font-bold;
     @apply hover:bg-accent-hover disabled:opacity-50;
   }
 }
