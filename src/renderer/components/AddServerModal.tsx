@@ -12,7 +12,10 @@ import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
 
 const addServerSchema = z.object({
-  name: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
+  name: z
+    .string()
+    .min(1)
+    .regex(/^[a-zA-Z0-9_-]+$/),
   profileName: z.string().optional(),
   groupName: z.string().optional(),
   software: z.string().min(1),
@@ -231,22 +234,14 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
             <div className="add-server-modal__row add-server-modal__row--spaced">
               <div className="add-server-modal__field-group">
                 <label className="add-server-modal__label">{t('addServer.port.label')}</label>
-                <input
-                  type="number"
-                  {...register('port')}
-                  className="add-server-modal__field"
-                />
+                <input type="number" {...register('port')} className="add-server-modal__field" />
                 {errors.port && (
                   <div className="add-server-modal__error">{t('addServer.port.invalid')}</div>
                 )}
               </div>
               <div className="add-server-modal__field-group">
                 <label className="add-server-modal__label">{t('addServer.memory.label')}</label>
-                <input
-                  type="number"
-                  {...register('memory')}
-                  className="add-server-modal__field"
-                />
+                <input type="number" {...register('memory')} className="add-server-modal__field" />
                 {errors.memory && (
                   <div className="add-server-modal__error">{t('addServer.memory.invalid')}</div>
                 )}

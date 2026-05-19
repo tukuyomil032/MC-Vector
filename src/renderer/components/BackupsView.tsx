@@ -761,9 +761,7 @@ export default function BackupsView({ server }: Props) {
         )}
 
         {!loading && backups.length > 0 && (
-          <div
-            style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}
-          >
+          <div style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}>
             {backupVirtualizer.getVirtualItems().map((virtualRow) => {
               const backup = backups[virtualRow.index];
               return (
@@ -778,7 +776,9 @@ export default function BackupsView({ server }: Props) {
 
                   <div className="flex-1">
                     <div className="font-bold text-base text-text-primary">{backup.name}</div>
-                    <div className="text-sm text-text-secondary mt-1">{formatDate(backup.date)}</div>
+                    <div className="text-sm text-text-secondary mt-1">
+                      {formatDate(backup.date)}
+                    </div>
                     <div className="backups-view__item-meta mt-2">
                       <span
                         className={`backups-view__mode-badge ${

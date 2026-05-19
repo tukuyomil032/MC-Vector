@@ -75,7 +75,9 @@ export function CommandPalette({
           </Command.Empty>
 
           <Command.Group
-            heading={<span className="cmd-palette__group-label">{t('commandPalette.navigate')}</span>}
+            heading={
+              <span className="cmd-palette__group-label">{t('commandPalette.navigate')}</span>
+            }
           >
             <Command.Item
               className="cmd-palette__item"
@@ -137,10 +139,7 @@ export function CommandPalette({
               }
             >
               {isOffline && (
-                <Command.Item
-                  className="cmd-palette__item"
-                  onSelect={() => runAndClose(onStart)}
-                >
+                <Command.Item className="cmd-palette__item" onSelect={() => runAndClose(onStart)}>
                   <span className="cmd-palette__item-icon">▶</span>
                   <span className="cmd-palette__item-label">{t('server.actions.start')}</span>
                   <span className="cmd-palette__item-badge">{activeServer.name}</span>
@@ -148,10 +147,7 @@ export function CommandPalette({
               )}
               {isOnline && (
                 <>
-                  <Command.Item
-                    className="cmd-palette__item"
-                    onSelect={() => runAndClose(onStop)}
-                  >
+                  <Command.Item className="cmd-palette__item" onSelect={() => runAndClose(onStop)}>
                     <span className="cmd-palette__item-icon">⏹</span>
                     <span className="cmd-palette__item-label">{t('server.actions.stop')}</span>
                     <span className="cmd-palette__item-badge">{activeServer.name}</span>

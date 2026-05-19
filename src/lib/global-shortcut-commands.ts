@@ -1,8 +1,4 @@
-import {
-  isRegistered,
-  register,
-  unregisterAll,
-} from '@tauri-apps/plugin-global-shortcut';
+import { isRegistered, register, unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 
 export type GlobalShortcutHandler = {
   onStartStop: () => void;
