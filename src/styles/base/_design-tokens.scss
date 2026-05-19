@@ -2,29 +2,21 @@
   :root {
     --mv-color-scheme: dark;
 
-    --mv-surface-base: #0f0f11;
+    --mv-surface-base: #09090b;
     --mv-surface-muted: #f8fafc;
-    --mv-surface-elevated-start: var(--mv-panel-start, rgba(255, 255, 255, 0.95));
-    --mv-surface-elevated-end: var(--mv-panel-end, rgba(241, 245, 249, 0.88));
-    --mv-surface-alt-start: var(--mv-panel-alt-start, rgba(248, 250, 252, 0.96));
-    --mv-surface-alt-end: var(--mv-panel-alt-end, rgba(226, 232, 240, 0.88));
+    --mv-surface-elevated-start: var(--mv-panel-start, #ffffff);
+    --mv-surface-elevated-end: var(--mv-panel-end, #f4f4f5);
+    --mv-surface-alt-start: var(--mv-panel-alt-start, #f4f4f5);
+    --mv-surface-alt-end: var(--mv-panel-alt-end, #e4e4e7);
 
     --mv-surface-border: var(--mv-border-soft, rgba(148, 163, 184, 0.45));
-    --mv-surface-border-strong: var(--mv-border-strong, rgba(14, 165, 233, 0.35));
+    --mv-surface-border-strong: var(--mv-border-strong, #d4d4d8);
 
-    --mv-surface-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
-    --mv-surface-shadow-soft: 0 12px 28px rgba(15, 23, 42, 0.14);
+    --mv-surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    --mv-surface-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.14);
 
-    --mv-surface-card-bg: linear-gradient(
-      135deg,
-      var(--mv-surface-elevated-start),
-      var(--mv-surface-elevated-end)
-    );
-    --mv-surface-card-alt-bg: linear-gradient(
-      140deg,
-      var(--mv-surface-alt-start),
-      var(--mv-surface-alt-end)
-    );
+    --mv-surface-card-bg: #ffffff;
+    --mv-surface-card-alt-bg: #f4f4f5;
 
     --mv-surface-text-primary: #f4f4f5;
     --mv-surface-text-secondary: #d4d4d8;
@@ -33,19 +25,15 @@
     --mv-kpi-label-color: #64748b;
     --mv-kpi-value-color: #0f172a;
     --mv-kpi-meta-color: #64748b;
-    --mv-dashboard-kpi-cpu-value-color: #38bdf8;
-    --mv-dashboard-kpi-memory-value-color: #34d399;
+    --mv-dashboard-kpi-cpu-value-color: #0f172a;
+    --mv-dashboard-kpi-memory-value-color: #475569;
 
     --mv-control-chip-bg: rgba(148, 163, 184, 0.14);
     --mv-control-chip-bg-hover: rgba(148, 163, 184, 0.22);
     --mv-control-chip-border: rgba(148, 163, 184, 0.42);
     --mv-control-chip-text: #334155;
-    --mv-control-chip-active-bg: linear-gradient(
-      125deg,
-      var(--mv-accent-start, #2563eb),
-      var(--mv-accent-end, #0891b2)
-    );
-    --mv-control-chip-active-border: rgba(14, 165, 233, 0.4);
+    --mv-control-chip-active-bg: #000000;
+    --mv-control-chip-active-border: #000000;
     --mv-control-chip-active-text: #ffffff;
 
     --mv-console-status-divider: rgba(148, 163, 184, 0.5);
@@ -58,10 +46,8 @@
     --mv-console-input-bg: rgba(248, 250, 252, 0.92);
     --mv-console-input-border: rgba(148, 163, 184, 0.72);
     --mv-console-input-text: var(--mv-surface-text-primary);
-    --mv-console-log-bg:
-      linear-gradient(145deg, rgba(248, 250, 252, 0.92), rgba(226, 232, 240, 0.88)),
-      radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.08), transparent 45%);
-    --mv-console-log-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+    --mv-console-log-bg: #f8fafc;
+    --mv-console-log-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
     --mv-console-log-text: #334155;
     --mv-console-save-button-border: rgba(16, 185, 129, 0.48);
     --mv-console-save-button-bg: rgba(16, 185, 129, 0.14);
@@ -81,62 +67,65 @@
   .app-shell[data-theme='dark'] {
     --mv-color-scheme: dark;
 
-    --mv-surface-base: #0f0f11;
-    --mv-surface-muted: #1c1d23;
-    --mv-surface-elevated-start: var(--mv-panel-start, rgba(24, 24, 27, 0.94));
-    --mv-surface-elevated-end: var(--mv-panel-end, rgba(17, 24, 39, 0.88));
-    --mv-surface-alt-start: var(--mv-panel-alt-start, rgba(24, 24, 27, 0.95));
-    --mv-surface-alt-end: var(--mv-panel-alt-end, rgba(31, 41, 55, 0.84));
+    --mv-surface-base: #09090b;
+    --mv-surface-muted: #18181b;
+    --mv-surface-elevated-start: var(--mv-panel-start, #18181b);
+    --mv-surface-elevated-end: var(--mv-panel-end, #18181b);
+    --mv-surface-alt-start: var(--mv-panel-alt-start, #1c1c1f);
+    --mv-surface-alt-end: var(--mv-panel-alt-end, #1c1c1f);
 
-    --mv-surface-border: var(--mv-border-soft, rgba(82, 82, 91, 0.72));
-    --mv-surface-border-strong: var(--mv-border-strong, rgba(34, 211, 238, 0.42));
+    --mv-surface-border: var(--mv-border-soft, #27272a);
+    --mv-surface-border-strong: var(--mv-border-strong, #3f3f46);
 
-    --mv-surface-shadow: 0 18px 45px rgba(2, 6, 23, 0.25);
-    --mv-surface-shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.22);
+    --mv-surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --mv-surface-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    --mv-surface-card-bg: #18181b;
+    --mv-surface-card-alt-bg: #1c1c1f;
 
     --mv-surface-text-primary: #f4f4f5;
     --mv-surface-text-secondary: #d4d4d8;
     --mv-surface-text-muted: #a1a1aa;
-    --mv-section-title-color: #9ca3af;
-    --mv-kpi-label-color: #9ca3af;
-    --mv-kpi-value-color: #f9fafb;
-    --mv-kpi-meta-color: #a1a1aa;
-    --mv-dashboard-kpi-cpu-value-color: #38bdf8;
-    --mv-dashboard-kpi-memory-value-color: #34d399;
+    --mv-section-title-color: #71717a;
+    --mv-kpi-label-color: #71717a;
+    --mv-kpi-value-color: #fafafa;
+    --mv-kpi-meta-color: #71717a;
+    --mv-dashboard-kpi-cpu-value-color: #fafafa;
+    --mv-dashboard-kpi-memory-value-color: #a1a1aa;
 
-    --mv-control-chip-bg: rgba(30, 41, 59, 0.72);
-    --mv-control-chip-bg-hover: rgba(51, 65, 85, 0.8);
-    --mv-control-chip-border: rgba(71, 85, 105, 0.82);
-    --mv-control-chip-text: #e5e7eb;
-    --mv-control-chip-active-border: rgba(56, 189, 248, 0.52);
+    --mv-control-chip-bg: rgba(39, 39, 42, 0.72);
+    --mv-control-chip-bg-hover: rgba(63, 63, 70, 0.8);
+    --mv-control-chip-border: #3f3f46;
+    --mv-control-chip-text: #e4e4e7;
+    --mv-control-chip-active-bg: #ffffff;
+    --mv-control-chip-active-border: rgba(255, 255, 255, 0.7);
+    --mv-control-chip-active-text: #000000;
 
-    --mv-console-status-divider: rgba(82, 82, 91, 0.42);
-    --mv-console-status-label: #9ca3af;
-    --mv-console-address-local: #e5e7eb;
-    --mv-console-memory-value: #e5e7eb;
-    --mv-console-search-label: #8b9bb4;
-    --mv-console-search-placeholder: #94a3b8;
-    --mv-console-search-count: #9ca3af;
-    --mv-console-input-bg: rgba(17, 24, 39, 0.82);
-    --mv-console-input-border: rgba(82, 82, 91, 0.85);
-    --mv-console-input-text: #f3f4f6;
-    --mv-console-log-bg:
-      linear-gradient(145deg, rgba(15, 23, 42, 0.88), rgba(23, 23, 29, 0.9)),
-      radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.1), transparent 45%);
-    --mv-console-log-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+    --mv-console-status-divider: #27272a;
+    --mv-console-status-label: #71717a;
+    --mv-console-address-local: #e4e4e7;
+    --mv-console-memory-value: #e4e4e7;
+    --mv-console-search-label: #71717a;
+    --mv-console-search-placeholder: #71717a;
+    --mv-console-search-count: #71717a;
+    --mv-console-input-bg: #18181b;
+    --mv-console-input-border: #27272a;
+    --mv-console-input-text: #f4f4f5;
+    --mv-console-log-bg: #18181b;
+    --mv-console-log-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     --mv-console-log-text: #d4d4d8;
     --mv-console-save-button-border: rgba(16, 185, 129, 0.55);
     --mv-console-save-button-bg: rgba(6, 95, 70, 0.48);
     --mv-console-save-button-bg-hover: rgba(6, 120, 87, 0.56);
     --mv-console-save-button-text: #d1fae5;
-    --mv-console-filter-label: #8b9bb4;
-    --mv-console-filter-pills-border: rgba(82, 82, 91, 0.72);
-    --mv-console-filter-pills-bg: rgba(17, 24, 39, 0.68);
-    --mv-console-command-prefix: #8b9bb4;
-    --mv-console-history-hint: #8b9bb4;
+    --mv-console-filter-label: #71717a;
+    --mv-console-filter-pills-border: #27272a;
+    --mv-console-filter-pills-bg: rgba(24, 24, 27, 0.68);
+    --mv-console-command-prefix: #71717a;
+    --mv-console-history-hint: #71717a;
 
-    --mv-scrollbar-thumb: rgba(82, 82, 91, 0.85);
-    --mv-scrollbar-thumb-hover: rgba(113, 113, 122, 0.92);
+    --mv-scrollbar-thumb: #3f3f46;
+    --mv-scrollbar-thumb-hover: #52525b;
   }
 
   .app-shell {
@@ -148,10 +137,5 @@
     --mv-surface-alt-end: var(--mv-panel-alt-end);
     --mv-surface-border: var(--mv-border-soft);
     --mv-surface-border-strong: var(--mv-border-strong);
-    --mv-control-chip-active-bg: linear-gradient(
-      125deg,
-      var(--mv-accent-start),
-      var(--mv-accent-end)
-    );
   }
 }
