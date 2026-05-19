@@ -7,7 +7,7 @@
     @apply fixed inset-0 z-[2000] flex flex-col;
     @apply animate-fadeIn;
     font-family: var(--mv-font-display);
-    background: linear-gradient(145deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.95));
+    background: #09090b;
   }
 
   .advanced-settings-window__header {
@@ -31,7 +31,7 @@
   .advanced-settings-window__sidebar {
     width: 220px;
     @apply border-r py-5 flex flex-col;
-    background: rgba(15, 23, 42, 0.75);
+    background: rgba(24, 24, 27, 0.75);
     border-color: rgba(63, 63, 70, 0.8);
   }
 
@@ -40,12 +40,15 @@
   }
 
   .advanced-settings-window__tab.is-active {
-    @apply text-cyan-100 border-l-cyan-300 font-bold;
-    background: linear-gradient(120deg, rgba(6, 182, 212, 0.22), rgba(16, 185, 129, 0.15));
+    @apply text-zinc-100 border-l-white font-bold;
+    background: rgba(39, 39, 42, 0.6);
   }
 
   .advanced-settings-window__tab.is-idle {
-    @apply border-l-transparent hover:bg-white/5 hover:text-text-primary;
+    @apply border-l-transparent hover:text-text-primary;
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
   }
 
   .advanced-settings-window__content {
@@ -87,7 +90,7 @@
   }
 
   .advanced-settings-window__card-key {
-    @apply text-xs text-cyan-200;
+    @apply text-xs text-zinc-300;
   }
 
   .advanced-settings-window__card-description {
@@ -99,8 +102,8 @@
     @apply absolute top-full left-0 mt-2 text-xs whitespace-normal break-words transition-opacity;
     width: min(320px, 90vw);
     z-index: 20;
-    border-color: rgba(34, 211, 238, 0.45);
-    background: rgba(15, 23, 42, 0.95);
+    border-color: #3f3f46;
+    background: rgba(24, 24, 27, 0.95);
   }
 
   .advanced-settings-window__card-info:hover .advanced-settings-window__tooltip {
@@ -118,11 +121,11 @@
   .advanced-settings-window__input {
     @apply w-full px-2 py-2 border text-text-primary rounded;
     @apply focus:outline-none;
-    background: rgba(15, 23, 42, 0.78);
+    background: rgba(24, 24, 27, 0.78);
     border-color: rgba(63, 63, 70, 0.82);
   }
 
   .advanced-settings-window__input:focus {
-    border-color: rgba(34, 211, 238, 0.55);
+    border-color: #3f3f46;
   }
 }
