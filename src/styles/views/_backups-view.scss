@@ -15,8 +15,8 @@
   .backups-view__list-panel {
     @apply flex-1 rounded-2xl border overflow-y-auto;
     border-color: var(--mv-border-soft);
-    background: linear-gradient(145deg, rgba(17, 24, 39, 0.94), rgba(24, 24, 27, 0.9));
-    box-shadow: 0 16px 38px rgba(2, 6, 23, 0.24);
+    background: #18181b;
+    box-shadow: var(--mv-shadow-panel);
   }
 
   .backups-view__empty {
@@ -32,7 +32,7 @@
   }
 
   .backups-view__mode-badge {
-    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-semibold border border-cyan-400/40 text-cyan-200 bg-cyan-500/10;
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-semibold border border-zinc-700 text-zinc-300 bg-zinc-800/50;
   }
 
   .backups-view__mode-badge.is-diff {
@@ -53,8 +53,8 @@
 
   .backups-view__note {
     @apply text-xs text-zinc-400 rounded-xl border px-3 py-2;
-    border-color: rgba(14, 165, 233, 0.28);
-    background: rgba(8, 47, 73, 0.32);
+    border-color: #27272a;
+    background: rgba(39, 39, 42, 0.4);
   }
 
   .backups-view__world-panel {
@@ -146,7 +146,7 @@
   }
 
   .backups-view__selected-count {
-    @apply text-xs font-semibold uppercase tracking-[0.08em] text-cyan-200;
+    @apply text-xs font-semibold uppercase tracking-[0.08em] text-zinc-300;
   }
 
   .backups-view__selected-list {
