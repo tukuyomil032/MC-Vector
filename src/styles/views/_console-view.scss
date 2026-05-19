@@ -1,15 +1,14 @@
 @layer components {
   .console-view {
     @apply flex h-full min-h-0 flex-col gap-3 p-5;
-    font-family: var(--mv-font-display);
-    background: var(--mv-view-bg);
+    background: var(--mv-surface-base);
   }
 
   .console-view__status-strip {
     @apply grid shrink-0 grid-cols-3 gap-0 px-2 py-2;
-    background: var(--mv-panel-bg);
-    border-color: var(--mv-border-soft);
-    box-shadow: var(--mv-shadow-panel);
+    background: var(--mv-surface-muted);
+    border-color: var(--mv-surface-border);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .console-view__status-col {
@@ -33,14 +32,14 @@
   }
 
   .console-view__address:focus-visible {
-    outline: 2px solid rgba(56, 189, 248, 0.7);
+    outline: 2px solid rgba(255, 255, 255, 0.4);
     outline-offset: 2px;
   }
 
   .console-view__address.is-public {
-    color: var(--mv-accent-end);
-    border-color: rgba(56, 189, 248, 0.42);
-    background: rgba(14, 165, 233, 0.12);
+    color: #a7f3d0;
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(6, 78, 59, 0.3);
   }
 
   .console-view__address.is-local {
@@ -61,7 +60,7 @@
   }
 
   .console-view__status-value--restarting {
-    color: #38bdf8;
+    color: #f59e0b;
   }
 
   .console-view__status-value--crashed {
@@ -75,9 +74,9 @@
 
   .console-view__search-strip {
     @apply flex shrink-0 items-center gap-2 px-3 py-2;
-    background: var(--mv-panel-bg-alt);
-    border-color: var(--mv-border-soft);
-    box-shadow: var(--mv-shadow-panel);
+    background: var(--mv-surface-card-alt-bg);
+    border-color: var(--mv-surface-border);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .console-view__search-strip.is-closed {
@@ -134,14 +133,14 @@
   .console-view__log-viewport {
     @apply relative flex min-h-0 flex-1 flex-col overflow-hidden p-0;
     background: var(--mv-console-log-bg);
-    border-color: var(--mv-border-soft);
+    border-color: var(--mv-surface-border);
     box-shadow: var(--mv-console-log-shadow);
   }
 
   .console-view__pinned-area {
     @apply shrink-0 border-b px-3 py-2;
-    border-color: rgba(82, 82, 91, 0.58);
-    background: rgba(17, 24, 39, 0.55);
+    border-color: rgba(63, 63, 70, 0.6);
+    background: rgba(24, 24, 27, 0.65);
   }
 
   .console-view__pinned-title {
@@ -155,8 +154,8 @@
 
   .console-view__pinned-item {
     @apply flex items-start gap-2 rounded border-l-2 px-2 py-1;
-    border-color: rgba(148, 163, 184, 0.45);
-    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(63, 63, 70, 0.5);
+    background: rgba(9, 9, 11, 0.35);
   }
 
   .console-view__pinned-item--warn {
@@ -175,14 +174,14 @@
 
   .console-view__pinned-remove-btn {
     @apply shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-semibold transition-colors;
-    border-color: rgba(148, 163, 184, 0.42);
-    background: rgba(30, 41, 59, 0.6);
-    color: #cbd5e1;
+    border-color: rgba(63, 63, 70, 0.5);
+    background: rgba(24, 24, 27, 0.7);
+    color: #a1a1aa;
   }
 
   .console-view__pinned-remove-btn:hover {
-    background: rgba(51, 65, 85, 0.7);
-    color: #f8fafc;
+    background: rgba(39, 39, 42, 0.85);
+    color: #f4f4f5;
   }
 
   .console-view__log-pane {
@@ -250,9 +249,9 @@
   .console-view__command-strip {
     @apply grid shrink-0 items-center gap-3 px-3 py-3;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    background: var(--mv-panel-bg-alt);
-    border-color: var(--mv-border-soft);
-    box-shadow: var(--mv-shadow-panel);
+    background: var(--mv-surface-card-alt-bg);
+    border-color: var(--mv-surface-border);
+    box-shadow: var(--mv-surface-shadow-soft);
   }
 
   .console-view__command-actions {
@@ -290,9 +289,9 @@
   }
 
   .console-view__filter-pill.is-active {
-    border-color: rgba(56, 189, 248, 0.52);
-    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
-    color: #ffffff;
+    background: var(--mv-control-chip-active-bg);
+    border-color: var(--mv-control-chip-active-border);
+    color: var(--mv-control-chip-active-text);
   }
 
   .console-view__command-entry {
@@ -312,14 +311,13 @@
   }
 
   .console-view__send-button {
-    @apply rounded-md border-none px-5 py-2.5 text-sm font-bold text-white transition-all;
-    background: linear-gradient(125deg, var(--mv-accent-start), var(--mv-accent-end));
-    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.22);
+    @apply rounded-md border-none px-5 py-2.5 text-sm font-bold transition-colors;
+    background: #ffffff;
+    color: #000000;
   }
 
   .console-view__send-button:hover {
-    filter: brightness(1.05);
-    transform: translateY(-1px);
+    background: #e4e4e7;
   }
 
   .console-view__history-hint {
