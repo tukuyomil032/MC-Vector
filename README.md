@@ -2,14 +2,14 @@
 
 [![CI](https://github.com/tukuyomil032/MC-Vector/workflows/CI/badge.svg)](https://github.com/tukuyomil032/MC-Vector/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0.54-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
+[![Version](https://img.shields.io/badge/version-2.0.55-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
 [![GitHub stars](https://img.shields.io/github/stars/tukuyomil032/MC-Vector.svg?style=social)](https://github.com/tukuyomil032/MC-Vector/stargazers)
 
 **Minecraft - Multi-Function Server Management Software**
 
 MC-Vector is a powerful cross-platform desktop application for managing Minecraft servers with ease. Built with Tauri and React, it provides a modern, fast, and intuitive interface for server administration.
 
-## **Current stable version:** `2.0.54`
+## **Current stable version:** `2.0.55`
 
 ## Features
 
