@@ -51,7 +51,7 @@ The **Properties** tab provides a form-based editor for `server.properties` — 
 
 | Property | Description |
 |----------|-------------|
-| **Whitelist** | Restrict who can join (configure players in [Users](/guide/features/server-lifecycle)) |
+| **Whitelist** | Restrict who can join — use `/whitelist add <player>` in the [Console](/guide/features/console-logs) to add players |
 | **Enable Command Block** | Allow command blocks to run commands |
 | **Enforce Secure Chat** | Require signed chat messages (Minecraft 1.19.1+) |
 
