@@ -16,3 +16,5 @@ overrides:
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite@>=8.0.0 <=8.0.4: '>=8.0.3'
   vitest: npm:@voidzero-dev/vite-plus-test@latest
+  '@mc-vector/docs>vite': 'npm:vite@^8.0.3'
+  'astro>vite': 'npm:vite@^6.4.1'
