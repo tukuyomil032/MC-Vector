@@ -153,9 +153,13 @@ export default function BackupsView({ server }: Props) {
   const [tagInput, setTagInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
   const backupMetaPath = useMemo(() => `${server.path}/backups/${BACKUP_META_FILE}`, [server.path]);
   const listParentRef = useRef<HTMLDivElement>(null);
@@ -494,7 +498,9 @@ export default function BackupsView({ server }: Props) {
   const applyRetentionPolicy = async (serverPath: string, srv: MinecraftServer) => {
     const retainCount = srv.autoBackupRetainCount ?? 0;
     const retainDays = srv.autoBackupRetainDays ?? 0;
-    if (retainCount === 0 && retainDays === 0) return;
+    if (retainCount === 0 && retainDays === 0) {
+      return;
+    }
 
     const all = await listBackupsWithMetadata(serverPath);
     const sorted = [...all].sort(
@@ -503,8 +509,12 @@ export default function BackupsView({ server }: Props) {
     const now = Date.now();
 
     const toDelete = sorted.filter((backup, idx) => {
-      if (retainCount > 0 && idx >= retainCount) return true;
-      if (retainDays > 0 && now - backup.date.getTime() > retainDays * 86_400_000) return true;
+      if (retainCount > 0 && idx >= retainCount) {
+        return true;
+      }
+      if (retainDays > 0 && now - backup.date.getTime() > retainDays * 86_400_000) {
+        return true;
+      }
       return false;
     });
     for (const backup of toDelete) {

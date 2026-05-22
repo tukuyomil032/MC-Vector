@@ -130,9 +130,13 @@ export default function FilesView({ server }: Props) {
   const [diffSelectStep, setDiffSelectStep] = useState<'original' | 'modified' | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
   const { t } = useTranslation();
 
@@ -394,7 +398,9 @@ export default function FilesView({ server }: Props) {
   ];
 
   const handleDiffSelect = async (file: FileEntry, filePath: string) => {
-    if (!diffSelectStep) return;
+    if (!diffSelectStep) {
+      return;
+    }
     const ext = file.name.split('.').at(-1)?.toLowerCase() ?? '';
     if (BINARY_EXTENSIONS.includes(ext)) {
       showToast(t('files.toast.binaryNoDiff'), 'error');

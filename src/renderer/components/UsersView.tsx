@@ -27,9 +27,13 @@ export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
   const sep = server.path.includes('\\') ? '\\' : '/';
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
 
   const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
@@ -42,7 +46,9 @@ export default function UsersView({ server }: Props) {
       const res = await fetch(
         `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`,
       );
-      if (!res.ok) return { name };
+      if (!res.ok) {
+        return { name };
+      }
       const data = await res.json();
       if (data?.id) {
         return { name: data.name || name, uuid: data.id };
@@ -59,16 +65,27 @@ export default function UsersView({ server }: Props) {
     nameOrIp: string,
     rawInput: string,
   ) => {
-    if (server.status !== 'online') return;
+    if (server.status !== 'online') {
+      return;
+    }
     const command = (() => {
-      if (type === 'whitelist')
+      if (type === 'whitelist') {
         return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${nameOrIp}`;
-      if (type === 'ops') return `${action === 'add' ? 'op' : 'deop'} ${nameOrIp}`;
-      if (type === 'banned-players') return `${action === 'add' ? 'ban' : 'pardon'} ${nameOrIp}`;
-      if (type === 'banned-ips') return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${rawInput}`;
+      }
+      if (type === 'ops') {
+        return `${action === 'add' ? 'op' : 'deop'} ${nameOrIp}`;
+      }
+      if (type === 'banned-players') {
+        return `${action === 'add' ? 'ban' : 'pardon'} ${nameOrIp}`;
+      }
+      if (type === 'banned-ips') {
+        return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${rawInput}`;
+      }
       return '';
     })();
-    if (!command) return;
+    if (!command) {
+      return;
+    }
     await sendCommand(server.id, command);
     setTimeout(() => loadAllLists(), 500);
   };
@@ -92,7 +109,9 @@ export default function UsersView({ server }: Props) {
   };
 
   const handleAdd = async (type: ListType, nameOrIp: string) => {
-    if (!nameOrIp) return;
+    if (!nameOrIp) {
+      return;
+    }
     const identity = await resolvePlayerIdentity(nameOrIp);
     const filePath = `${server.path}${sep}${getFileName(type)}`;
     let currentList: PlayerEntry[] = [];
@@ -200,10 +219,18 @@ export default function UsersView({ server }: Props) {
   };
 
   const getFileName = (type: ListType) => {
-    if (type === 'whitelist') return 'whitelist.json';
-    if (type === 'ops') return 'ops.json';
-    if (type === 'banned-players') return 'banned-players.json';
-    if (type === 'banned-ips') return 'banned-ips.json';
+    if (type === 'whitelist') {
+      return 'whitelist.json';
+    }
+    if (type === 'ops') {
+      return 'ops.json';
+    }
+    if (type === 'banned-players') {
+      return 'banned-players.json';
+    }
+    if (type === 'banned-ips') {
+      return 'banned-ips.json';
+    }
     return '';
   };
 
@@ -296,7 +323,9 @@ function UserListCard({
   const { t } = useTranslation();
 
   const handleAddClick = () => {
-    if (!input) return;
+    if (!input) {
+      return;
+    }
     onAdd(input);
     setInput('');
   };

@@ -50,7 +50,9 @@ export function CommandPalette({
   const isOnline = activeServer?.status === 'online';
   const isOffline = activeServer?.status === 'offline';
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   return (
     <div

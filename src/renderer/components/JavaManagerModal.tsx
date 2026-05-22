@@ -27,9 +27,13 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const availableVersions = [8, 17, 21];
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
   const { t } = useTranslation();
 
@@ -86,7 +90,9 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
       title: t('javaManager.confirm.deleteTitle'),
       kind: 'warning',
     });
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
     try {
       await deleteJava(ver);
       await loadInstalled();
@@ -103,7 +109,9 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
     <Dialog.Root
       open={isOpen}
       onOpenChange={(o) => {
-        if (!o) onClose();
+        if (!o) {
+          onClose();
+        }
       }}
     >
       <Dialog.Portal>

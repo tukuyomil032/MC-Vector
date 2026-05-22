@@ -66,7 +66,9 @@ export default function AppUpdateModal({
     <Dialog.Root
       open={isOpen}
       onOpenChange={(o) => {
-        if (!o) onDismiss();
+        if (!o) {
+          onDismiss();
+        }
       }}
     >
       <Dialog.Portal>

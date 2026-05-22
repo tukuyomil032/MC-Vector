@@ -19,9 +19,13 @@ export default function ImportServerModal({
 }: ImportServerModalProps) {
   const { t } = useTranslation();
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
 
   const [folderPath, setFolderPath] = useState('');
@@ -35,7 +39,9 @@ export default function ImportServerModal({
 
   const handleSelectFolder = async () => {
     const selected = await open({ directory: true, multiple: false });
-    if (!selected || typeof selected !== 'string') return;
+    if (!selected || typeof selected !== 'string') {
+      return;
+    }
 
     setIsAnalyzing(true);
     try {
@@ -61,7 +67,9 @@ export default function ImportServerModal({
   };
 
   const handleImport = () => {
-    if (!folderPath || !serverName) return;
+    if (!folderPath || !serverName) {
+      return;
+    }
     onAdd({
       name: serverName,
       version,

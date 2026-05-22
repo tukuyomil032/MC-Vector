@@ -60,9 +60,13 @@ function App() {
   } | null>(null);
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
 
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);
@@ -103,7 +107,9 @@ function App() {
           handleStart: start,
           handleStop: stop,
         } = serverActionsRef.current;
-        if (!srv) return;
+        if (!srv) {
+          return;
+        }
         if (srv.status === 'online') {
           void stop();
         } else if (srv.status === 'offline') {

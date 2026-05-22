@@ -18,9 +18,13 @@ interface Props {
 export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }: Props) {
   const { t } = useTranslation();
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    if (type === 'success') {
+      toast.success(msg);
+    } else if (type === 'error') {
+      toast.error(msg);
+    } else {
+      toast(msg);
+    }
   };
 
   const [step, setStep] = useState<WizardStep>('check');
@@ -36,7 +40,9 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
     let cancelled = false;
     resolveLatestJarUrl(server.software ?? '', server.version)
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         if (result === null) {
           setUnsupported(true);
         } else {
@@ -62,7 +68,9 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
     let unlisten: UnlistenFn | null = null;
     try {
       unlisten = await onBackupProgress(({ serverId, progress }) => {
-        if (serverId === server.id) setBackupProgress(Math.round(progress * 100));
+        if (serverId === server.id) {
+          setBackupProgress(Math.round(progress * 100));
+        }
       });
       const backupName = `pre-upgrade-${Date.now()}`;
       await createBackup(server.path, backupName);
@@ -77,13 +85,17 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
 
   // Step 3: download
   const handleDownload = async () => {
-    if (!downloadUrl || !latestVersion) return;
+    if (!downloadUrl || !latestVersion) {
+      return;
+    }
     setProcessing(true);
     setDlProgress(0);
     let unlisten: UnlistenFn | null = null;
     try {
       unlisten = await onDownloadProgress(({ serverId, progress }) => {
-        if (serverId === server.id) setDlProgress(Math.round(progress));
+        if (serverId === server.id) {
+          setDlProgress(Math.round(progress));
+        }
       });
       await downloadServerJar(downloadUrl, `${server.path}/server.jar`, server.id);
       const updated: MinecraftServer = { ...server, version: latestVersion };

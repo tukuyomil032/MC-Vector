@@ -253,7 +253,9 @@ export default function DashboardView({ server }: Props) {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
     void tauriListen<{ serverId: string; status: string }>('server-status-change', (data) => {
-      if (data.serverId !== server.id) return;
+      if (data.serverId !== server.id) {
+        return;
+      }
       if (data.status === 'online') {
         setStartedAt(Date.now());
       } else {
@@ -274,7 +276,9 @@ export default function DashboardView({ server }: Props) {
   }, [server.id]);
 
   useEffect(() => {
-    if (startedAt === null) return;
+    if (startedAt === null) {
+      return;
+    }
     setUptime(formatUptime(startedAt));
     const id = window.setInterval(() => setUptime(formatUptime(startedAt)), 1000);
     return () => window.clearInterval(id);
