@@ -14,3 +14,7 @@ skills-lock.json linguist-generated=true
 # Exclude build artifacts (Tauri/Rust)
 src-tauri/target/** linguist-vendored=true
 src-tauri/Cargo.lock linguist-generated=true
+
+Makefile linguist-detectable=false
+
+scripts/**/*.js linguist-detectable=false

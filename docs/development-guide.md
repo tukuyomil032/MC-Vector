@@ -19,12 +19,12 @@ Setup guide and development workflow for MC-Vector contributors.
 
 ## Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| **Node.js** | v22+ (v20 minimum) | [nodejs.org](https://nodejs.org/) |
-| **pnpm** | v10.33.0+ | `npm install -g pnpm` |
-| **Rust** | stable (1.77+) | [rustup.rs](https://rustup.rs/) |
-| **Cargo** | (included with Rust) | — |
+| Tool        | Version              | Notes                             |
+| ----------- | -------------------- | --------------------------------- |
+| **Node.js** | v22+ (v20 minimum)   | [nodejs.org](https://nodejs.org/) |
+| **pnpm**    | v10.33.0+            | `npm install -g pnpm`             |
+| **Rust**    | stable (1.77+)       | [rustup.rs](https://rustup.rs/)   |
+| **Cargo**   | (included with Rust) | —                                 |
 
 **macOS only:** Xcode Command Line Tools are required for Tauri builds:
 
@@ -129,19 +129,19 @@ Artifacts are written to `src-tauri/target/release/bundle/`.
 
 ## Commands Reference
 
-| Command | Description |
-|---------|-------------|
-| `pnpm install` | Install all dependencies |
-| `pnpm dev` | Frontend dev server (HTTPS via portless) |
-| `pnpm dev:plain` | Raw Vite dev server at localhost:5173 |
-| `pnpm tauri:dev` | Full desktop app in dev mode |
-| `pnpm build` | Build frontend for production |
-| `pnpm tauri:build` | Build production Tauri binary |
-| `pnpm check` | Run lint + format checks |
-| `pnpm check:fix` | Run checks and auto-fix |
-| `pnpm lint` | Run oxlint |
-| `pnpm format` | Run formatter (biome / oxfmt) |
-| `pnpm rustfmt` | Format Rust code (`cargo fmt`) |
+| Command                | Description                                        |
+| ---------------------- | -------------------------------------------------- |
+| `pnpm install`         | Install all dependencies                           |
+| `pnpm dev`             | Frontend dev server (HTTPS via portless)           |
+| `pnpm dev:plain`       | Raw Vite dev server at localhost:5173              |
+| `pnpm tauri:dev`       | Full desktop app in dev mode                       |
+| `pnpm build`           | Build frontend for production                      |
+| `pnpm tauri:build`     | Build production Tauri binary                      |
+| `pnpm check`           | Run lint + format checks                           |
+| `pnpm check:fix`       | Run checks and auto-fix                            |
+| `pnpm lint`            | Run oxlint                                         |
+| `pnpm format`          | Run formatter (biome / oxfmt)                      |
+| `pnpm rustfmt`         | Format Rust code (`cargo fmt`)                     |
 | `pnpm clean:artifacts` | Delete `dist/`, build output, `node_modules/.vite` |
 
 ---
@@ -150,10 +150,10 @@ Artifacts are written to `src-tauri/target/release/bundle/`.
 
 MC-Vector uses [Lefthook](https://github.com/evilmartians/lefthook) for Git hooks. Hooks run automatically on `git commit`.
 
-| Hook | Glob | Action |
-|------|------|--------|
-| `lint-format-ts` | `src/**/*.{ts,tsx}` | `pnpm check:fix` |
-| `fmt-rust` | `src-tauri/src/**/*.rs` | `cargo fmt --all` |
+| Hook             | Glob                    | Action            |
+| ---------------- | ----------------------- | ----------------- |
+| `lint-format-ts` | `src/**/*.{ts,tsx}`     | `pnpm check:fix`  |
+| `fmt-rust`       | `src-tauri/src/**/*.rs` | `cargo fmt --all` |
 
 Both hooks use `stage_fixed: true` — auto-formatted files are re-staged automatically.
 

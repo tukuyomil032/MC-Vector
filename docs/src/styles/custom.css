@@ -1,0 +1,21 @@
+/* MC-Vector brand: zinc-based dark theme */
+:root {
+  --sl-color-accent-low: #27272a; /* zinc-800 */
+  --sl-color-accent: #71717a; /* zinc-500 */
+  --sl-color-accent-high: #e4e4e7; /* zinc-200 */
+}
+
+:root[data-theme="dark"] {
+  --sl-color-bg: #09090b; /* zinc-950 */
+  --sl-color-bg-nav: #09090b;
+  --sl-color-bg-sidebar: #0c0c0e;
+  --sl-color-hairline: #27272a; /* zinc-800 */
+  --sl-color-text: #f4f4f5; /* zinc-100 */
+  --sl-color-text-accent: #e4e4e7; /* zinc-200 */
+  --sl-color-gray-1: #f4f4f5;
+  --sl-color-gray-2: #d4d4d8; /* zinc-300 */
+  --sl-color-gray-3: #a1a1aa; /* zinc-400 */
+  --sl-color-gray-4: #52525b; /* zinc-600 */
+  --sl-color-gray-5: #27272a; /* zinc-800 */
+  --sl-color-gray-6: #18181b; /* zinc-900 */
+}
