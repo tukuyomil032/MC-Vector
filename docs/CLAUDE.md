@@ -33,3 +33,7 @@ pnpm --filter @mc-vector/docs typedoc      # Regenerate TypeScript API docs
 ## After changes
 
 Run `pnpm --filter @mc-vector/docs build` — catches broken links and build errors.
+
+## Deployment
+
+Merged to `main` → GitHub Actions (`docs.yml`) auto-runs TypeDoc + Astro build and deploys to Vercel.
