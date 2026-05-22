@@ -9,11 +9,11 @@ The **Plugins / Mods** tab lets you search, preview, and install content from th
 
 ## Supported Sources
 
-| Source | Best for |
-|--------|----------|
-| **Modrinth** | Fabric and Forge mods; Paper plugins |
-| **Hangar** | Paper and Velocity plugins (official Paper ecosystem) |
-| **SpigotMC** | Bukkit, Spigot, and Paper plugins |
+| Source       | Best for                                              |
+| ------------ | ----------------------------------------------------- |
+| **Modrinth** | Fabric and Forge mods; Paper plugins                  |
+| **Hangar**   | Paper and Velocity plugins (official Paper ecosystem) |
+| **SpigotMC** | Bukkit, Spigot, and Paper plugins                     |
 
 ## Installing a Plugin or Mod
 

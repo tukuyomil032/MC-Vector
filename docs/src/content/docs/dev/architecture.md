@@ -12,7 +12,7 @@ sidebar:
 
 MC-Vector is a cross-platform desktop application built with **Tauri v2** (Rust backend) and **React 19** (TypeScript frontend).
 
-```
+```mermaid
 ┌──────────────────────────────────────────────────────────┐
 │                      MC-Vector App                        │
 ├──────────────────────────────────────────────────────────┤
@@ -69,14 +69,15 @@ src/
 
 ### State Management (Zustand)
 
-| Store | Responsibility |
-|-------|---------------|
-| `useServerStore` | Server list, selected server, status |
-| `useUiStore` | Current view, modal open/close, sidebar state |
-| `useSettingsStore` | Theme, language, update preferences |
-| `useConsoleStore` | Console log buffer (2,000 lines/server), command history |
+| Store              | Responsibility                                           |
+| ------------------ | -------------------------------------------------------- |
+| `useServerStore`   | Server list, selected server, status                     |
+| `useUiStore`       | Current view, modal open/close, sidebar state            |
+| `useSettingsStore` | Theme, language, update preferences                      |
+| `useConsoleStore`  | Console log buffer (2,000 lines/server), command history |
 
 **Persistent storage** uses Tauri Store plugin (not localStorage):
+
 - `servers.json` — server definitions
 - `config.json` — Ngrok token, app config
 - `console-history` — per-server command history
@@ -120,24 +121,24 @@ src-tauri/src/commands/
 
 Three Mutex-protected state objects are available to all commands via Tauri's managed state:
 
-| State | Purpose |
-|-------|---------|
-| `ServerManager` | Running server processes and command channels |
+| State            | Purpose                                                    |
+| ---------------- | ---------------------------------------------------------- |
+| `ServerManager`  | Running server processes and command channels              |
 | `CommandLimiter` | Per-server command rate limiting (100 ms minimum interval) |
-| `NgrokManager` | Active Ngrok process handle |
+| `NgrokManager`   | Active Ngrok process handle                                |
 
 ### Event Bus
 
 The backend emits Tauri events that the frontend listens to:
 
-| Event | Payload | Emitted by |
-|-------|---------|-----------|
-| `server-log` | `{ line, stream }` | server.rs stdout/stderr |
-| `server-status-change` | `{ status }` | server.rs on spawn/exit |
-| `server-stats` | `{ cpu, memory }` | process_stats.rs (2 s interval) |
-| `ngrok-status-change` | `{ status, url }` | ngrok.rs |
-| `download-progress` | `{ downloaded, total }` | download.rs |
-| `backup-progress` | `{ serverId, progress }` | backup.rs |
+| Event                  | Payload                  | Emitted by                      |
+| ---------------------- | ------------------------ | ------------------------------- |
+| `server-log`           | `{ line, stream }`       | server.rs stdout/stderr         |
+| `server-status-change` | `{ status }`             | server.rs on spawn/exit         |
+| `server-stats`         | `{ cpu, memory }`        | process_stats.rs (2 s interval) |
+| `ngrok-status-change`  | `{ status, url }`        | ngrok.rs                        |
+| `download-progress`    | `{ downloaded, total }`  | download.rs                     |
+| `backup-progress`      | `{ serverId, progress }` | backup.rs                       |
 
 ### Process Management
 
@@ -183,10 +184,10 @@ User clicks "Install"
 
 ## Technology Choices
 
-| Technology | Why |
-|-----------|-----|
+| Technology   | Why                                                                           |
+| ------------ | ----------------------------------------------------------------------------- |
 | **Tauri v2** | Native performance, ~10–20 MB bundle vs Electron's ~100 MB, sandboxed WebView |
-| **Rust** | Memory safety, zero data races, Tokio async for concurrent process management |
-| **React 19** | Concurrent rendering, modern hooks, large ecosystem (Radix UI, React Query) |
-| **Zustand** | Minimal boilerplate, fine-grained subscriptions, no provider nesting |
-| **pnpm** | Strict phantom-dependency prevention, workspace support for `docs/` package |
+| **Rust**     | Memory safety, zero data races, Tokio async for concurrent process management |
+| **React 19** | Concurrent rendering, modern hooks, large ecosystem (Radix UI, React Query)   |
+| **Zustand**  | Minimal boilerplate, fine-grained subscriptions, no provider nesting          |
+| **pnpm**     | Strict phantom-dependency prevention, workspace support for `docs/` package   |

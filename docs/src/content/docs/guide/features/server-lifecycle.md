@@ -36,14 +36,14 @@ You can also restart via the **Command Palette** (`Cmd/Ctrl+K` → type "restart
 
 The Dashboard displays live KPIs updated every 2 seconds:
 
-| Tile | Description |
-|------|-------------|
-| **Status** | Running (green) / Stopped (gray) |
-| **TPS** | Ticks Per Second — 20 is ideal; below 18 indicates lag |
-| **CPU** | CPU usage of the Minecraft process |
-| **Memory** | RAM used vs. allocated (e.g., 1.2 GB / 4 GB) |
+| Tile         | Description                                            |
+| ------------ | ------------------------------------------------------ |
+| **Status**   | Running (green) / Stopped (gray)                       |
+| **TPS**      | Ticks Per Second — 20 is ideal; below 18 indicates lag |
+| **CPU**      | CPU usage of the Minecraft process                     |
+| **Memory**   | RAM used vs. allocated (e.g., 1.2 GB / 4 GB)           |
 | **Software** | Server type and Minecraft version (e.g., Paper 1.21.1) |
-| **Uptime** | Time elapsed since last start |
+| **Uptime**   | Time elapsed since last start                          |
 
 ## Real-Time Charts
 
@@ -55,11 +55,11 @@ The Dashboard also shows three 60-second rolling charts:
 
 Use TPS as the primary health indicator:
 
-| TPS range | Meaning |
-|-----------|---------|
-| 18–20 | Healthy — no action needed |
-| 15–17 | Minor lag — check for heavy plugins or large farms |
-| Below 15 | Significant lag — reduce view distance, restart, or investigate plugins |
+| TPS range | Meaning                                                                 |
+| --------- | ----------------------------------------------------------------------- |
+| 18–20     | Healthy — no action needed                                              |
+| 15–17     | Minor lag — check for heavy plugins or large farms                      |
+| Below 15  | Significant lag — reduce view distance, restart, or investigate plugins |
 
 ## Version Upgrade Wizard
 

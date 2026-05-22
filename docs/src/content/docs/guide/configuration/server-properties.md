@@ -11,49 +11,49 @@ The **Properties** tab provides a form-based editor for `server.properties` — 
 
 ### General
 
-| Property | Description |
-|----------|-------------|
-| **MOTD** | Message shown in the Minecraft server list |
-| **Spawn Protection** | Radius around spawn that non-operators cannot break (default: 16) |
-| **OP Permission Level** | Permission level for operators (1–4, default: 4) |
+| Property                | Description                                                       |
+| ----------------------- | ----------------------------------------------------------------- |
+| **MOTD**                | Message shown in the Minecraft server list                        |
+| **Spawn Protection**    | Radius around spawn that non-operators cannot break (default: 16) |
+| **OP Permission Level** | Permission level for operators (1–4, default: 4)                  |
 
 ### Gameplay
 
-| Property | Description |
-|----------|-------------|
-| **Difficulty** | Peaceful / Easy / Normal / Hard |
-| **Gamemode** | Survival / Creative / Adventure / Spectator |
-| **PvP** | Enable or disable player vs. player combat |
-| **Allow Flight** | Allow flying in survival mode (useful with movement plugins) |
-| **Max Players** | Maximum number of simultaneous players |
-| **Spawn Animals** | Allow passive animal spawning |
-| **Spawn Monsters** | Allow hostile mob spawning |
+| Property           | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| **Difficulty**     | Peaceful / Easy / Normal / Hard                              |
+| **Gamemode**       | Survival / Creative / Adventure / Spectator                  |
+| **PvP**            | Enable or disable player vs. player combat                   |
+| **Allow Flight**   | Allow flying in survival mode (useful with movement plugins) |
+| **Max Players**    | Maximum number of simultaneous players                       |
+| **Spawn Animals**  | Allow passive animal spawning                                |
+| **Spawn Monsters** | Allow hostile mob spawning                                   |
 
 ### World
 
-| Property | Description |
-|----------|-------------|
-| **Level Type** | World type: normal, flat, amplified, or large_biomes |
-| **Level Seed** | World generation seed |
-| **Generate Structures** | Enable or disable dungeon/village generation |
-| **View Distance** | Server-side render distance (chunks, default: 10) |
-| **Simulation Distance** | Active entity simulation distance (chunks) |
+| Property                | Description                                          |
+| ----------------------- | ---------------------------------------------------- |
+| **Level Type**          | World type: normal, flat, amplified, or large_biomes |
+| **Level Seed**          | World generation seed                                |
+| **Generate Structures** | Enable or disable dungeon/village generation         |
+| **View Distance**       | Server-side render distance (chunks, default: 10)    |
+| **Simulation Distance** | Active entity simulation distance (chunks)           |
 
 ### Network
 
-| Property | Description |
-|----------|-------------|
-| **Server Port** | TCP port the server listens on (default: 25565) |
-| **Online Mode** | Enforce Mojang authentication (set `false` for offline/cracked mode) |
-| **Max Packet Size** | Maximum size of network packets |
+| Property            | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| **Server Port**     | TCP port the server listens on (default: 25565)                      |
+| **Online Mode**     | Enforce Mojang authentication (set `false` for offline/cracked mode) |
+| **Max Packet Size** | Maximum size of network packets                                      |
 
 ### Security
 
-| Property | Description |
-|----------|-------------|
-| **Whitelist** | Restrict who can join — use `/whitelist add <player>` in the [Console](/guide/features/console-logs) to add players |
-| **Enable Command Block** | Allow command blocks to run commands |
-| **Enforce Secure Chat** | Require signed chat messages (Minecraft 1.19.1+) |
+| Property                 | Description                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| **Whitelist**            | Restrict who can join — use `/whitelist add <player>` in the [Console](/guide/features/console-logs) to add players |
+| **Enable Command Block** | Allow command blocks to run commands                                                                                |
+| **Enforce Secure Chat**  | Require signed chat messages (Minecraft 1.19.1+)                                                                    |
 
 ## How to Edit
 

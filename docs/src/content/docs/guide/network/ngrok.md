@@ -41,6 +41,7 @@ tcp://0.tcp.ngrok.io:12345
 ```
 
 Share this with your friends. They enter it in **Minecraft → Multiplayer → Add Server**:
+
 - **Server Address:** `0.tcp.ngrok.io:12345`
 
 ## Stopping the Tunnel
@@ -50,13 +51,16 @@ The tunnel stops when you stop the server, or you can disable Ngrok in General S
 ## Troubleshooting
 
 **Tunnel not connecting:**
+
 - Verify the authtoken is correct in General Settings.
 - Check that you don't have another Ngrok tunnel running (free tier: one at a time).
 - Ensure the server is running before Ngrok tries to connect.
 
 **Friends cannot connect:**
+
 - Make sure you share the **current** Ngrok address — it changes on each restart.
 - Try the `ping_server` debug: open the Console and run `list` to confirm the server is online.
 
 **Ngrok binary not found:**
+
 - Click **"Re-download Ngrok"** in General Settings to force a fresh download.

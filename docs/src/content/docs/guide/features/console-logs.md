@@ -17,13 +17,13 @@ The log buffer holds the last **2,000 lines** per server. Older lines are droppe
 
 Use the filter toolbar to show only the log levels you care about:
 
-| Filter | Shows |
-|--------|-------|
-| **ALL** | Everything |
-| **INFO** | Standard info messages |
-| **WARN** | Warnings |
-| **ERROR** | Errors |
-| **FATAL** | Critical errors |
+| Filter    | Shows                  |
+| --------- | ---------------------- |
+| **ALL**   | Everything             |
+| **INFO**  | Standard info messages |
+| **WARN**  | Warnings               |
+| **ERROR** | Errors                 |
+| **FATAL** | Critical errors        |
 
 ## Sending Commands
 

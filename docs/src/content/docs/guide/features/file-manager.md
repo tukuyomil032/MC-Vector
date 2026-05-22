@@ -15,15 +15,15 @@ Navigate the server directory using the breadcrumb bar at the top. Folders are l
 
 Click any text file to open it in **Monaco Editor** — the same editor that powers VS Code. Syntax highlighting is automatically applied based on the file extension:
 
-| Extension | Language mode |
-|-----------|--------------|
-| `.json` | JSON |
-| `.yaml`, `.yml` | YAML |
-| `.properties` | Properties (key=value) |
-| `.toml` | TOML |
-| `.sh`, `.bat` | Shell / Batch |
-| `.ts`, `.js` | TypeScript / JavaScript |
-| `.rs` | Rust |
+| Extension       | Language mode           |
+| --------------- | ----------------------- |
+| `.json`         | JSON                    |
+| `.yaml`, `.yml` | YAML                    |
+| `.properties`   | Properties (key=value)  |
+| `.toml`         | TOML                    |
+| `.sh`, `.bat`   | Shell / Batch           |
+| `.ts`, `.js`    | TypeScript / JavaScript |
+| `.rs`           | Rust                    |
 
 Press **`Ctrl/Cmd+S`** or click **"Save"** to write changes to disk.
 

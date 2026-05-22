@@ -9,11 +9,11 @@ sidebar:
 
 The Dashboard shows three key performance indicators updated every 2 seconds:
 
-| Metric | Ideal | Action needed |
-|--------|-------|--------------|
-| **TPS** | 18–20 | Below 15: investigate heavy plugins or farms |
-| **CPU** | Below 80% | Consistently high: reduce entity count or view distance |
-| **Memory** | Below 90% of allocation | Near ceiling: increase memory in General Settings |
+| Metric     | Ideal                   | Action needed                                           |
+| ---------- | ----------------------- | ------------------------------------------------------- |
+| **TPS**    | 18–20                   | Below 15: investigate heavy plugins or farms            |
+| **CPU**    | Below 80%               | Consistently high: reduce entity count or view distance |
+| **Memory** | Below 90% of allocation | Near ceiling: increase memory in General Settings       |
 
 Use the 60-second rolling charts to identify patterns — is lag constant or does it spike at regular intervals?
 
@@ -33,12 +33,12 @@ Use the `/timings report` command (Paper) or `/spark` (Spark plugin) via the Con
 
 Common causes of low TPS:
 
-| Cause | Fix |
-|-------|-----|
-| Large mob farms | Add mob limits in `bukkit.yml` or reduce render distance near farms |
-| Redstone clocks | Remove or throttle redstone contraptions |
-| Chunk generation | Let the server pre-generate chunks using a tool like Chunky |
-| Heavy plugins | Disable plugins one by one to find the culprit |
+| Cause            | Fix                                                                 |
+| ---------------- | ------------------------------------------------------------------- |
+| Large mob farms  | Add mob limits in `bukkit.yml` or reduce render distance near farms |
+| Redstone clocks  | Remove or throttle redstone contraptions                            |
+| Chunk generation | Let the server pre-generate chunks using a tool like Chunky         |
+| Heavy plugins    | Disable plugins one by one to find the culprit                      |
 
 ## High Memory Usage
 
@@ -51,11 +51,11 @@ Common causes of low TPS:
 ### Recommended Allocations
 
 | Players | Minimum | Recommended |
-|---------|---------|-------------|
-| 1–5 | 1 GB | 2 GB |
-| 5–20 | 2 GB | 4 GB |
-| 20–50 | 4 GB | 8 GB |
-| 50+ | 8 GB | 12+ GB |
+| ------- | ------- | ----------- |
+| 1–5     | 1 GB    | 2 GB        |
+| 5–20    | 2 GB    | 4 GB        |
+| 20–50   | 4 GB    | 8 GB        |
+| 50+     | 8 GB    | 12+ GB      |
 
 ### JVM Tuning
 
@@ -81,9 +81,9 @@ Creating backups is CPU and disk intensive. Schedule automatic backups during lo
 
 ## Regular Maintenance
 
-| Action | Frequency |
-|--------|-----------|
-| Restart server | Weekly or after plugin updates |
-| Create a full backup | Before major changes |
-| Check for plugin updates | Monthly |
-| Review TPS trends in Dashboard | After any change |
+| Action                         | Frequency                      |
+| ------------------------------ | ------------------------------ |
+| Restart server                 | Weekly or after plugin updates |
+| Create a full backup           | Before major changes           |
+| Check for plugin updates       | Monthly                        |
+| Review TPS trends in Dashboard | After any change               |

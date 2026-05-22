@@ -9,13 +9,13 @@ sidebar:
 
 ## Basic Options
 
-| Setting | Description |
-|---------|-------------|
-| **Server Name** | Display name shown in the MC-Vector sidebar |
-| **Software** | Server type: Vanilla, Paper, Spigot, Fabric, or Forge |
-| **Version** | Minecraft version (e.g., 1.21.1) |
-| **Port** | TCP port the server listens on (default: 25565) |
-| **Memory** | JVM heap allocation in MB (e.g., 4096 for 4 GB) |
+| Setting         | Description                                           |
+| --------------- | ----------------------------------------------------- |
+| **Server Name** | Display name shown in the MC-Vector sidebar           |
+| **Software**    | Server type: Vanilla, Paper, Spigot, Fabric, or Forge |
+| **Version**     | Minecraft version (e.g., 1.21.1)                      |
+| **Port**        | TCP port the server listens on (default: 25565)       |
+| **Memory**      | JVM heap allocation in MB (e.g., 4096 for 4 GB)       |
 
 ## Java Version {#java-manager}
 
@@ -28,11 +28,11 @@ Select the Java runtime for this server:
 
 Click **"Manage Java"** to open the Java Manager, which lets you download and manage Java runtimes:
 
-| Java Version | Use for |
-|-------------|---------|
-| **Java 8** | Minecraft ≤ 1.16 |
-| **Java 17** | Minecraft 1.17–1.20 |
-| **Java 21** | Minecraft 1.21+ |
+| Java Version | Use for             |
+| ------------ | ------------------- |
+| **Java 8**   | Minecraft ≤ 1.16    |
+| **Java 17**  | Minecraft 1.17–1.20 |
+| **Java 21**  | Minecraft 1.21+     |
 
 To download a version, click **"Download"** next to it. Progress is shown in real-time. The binary is extracted automatically.
 
@@ -50,21 +50,21 @@ Common examples:
 
 When enabled, MC-Vector automatically restarts the server if it crashes:
 
-| Setting | Description |
-|---------|-------------|
-| **Auto-Restart on Crash** | Enable/disable automatic restart |
-| **Max Restarts** | Maximum restart attempts before giving up |
-| **Restart Delay** | Seconds to wait between crash detection and restart |
+| Setting                   | Description                                         |
+| ------------------------- | --------------------------------------------------- |
+| **Auto-Restart on Crash** | Enable/disable automatic restart                    |
+| **Max Restarts**          | Maximum restart attempts before giving up           |
+| **Restart Delay**         | Seconds to wait between crash detection and restart |
 
 ## Automatic Backups {#automatic-backups}
 
 Configure scheduled backups for this server:
 
-| Option | Description |
-|--------|-------------|
-| **Schedule type** | Interval (every N minutes), Daily (HH:MM), or Weekly (day + HH:MM) |
-| **Retention by count** | Keep only the N most recent backups |
-| **Retention by age** | Delete backups older than N days |
+| Option                 | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| **Schedule type**      | Interval (every N minutes), Daily (HH:MM), or Weekly (day + HH:MM) |
+| **Retention by count** | Keep only the N most recent backups                                |
+| **Retention by age**   | Delete backups older than N days                                   |
 
 ## Notifications
 

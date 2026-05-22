@@ -11,14 +11,14 @@ MC-Vector currently ships with a **dark theme** as its default and primary visua
 
 The dark theme uses the following color system:
 
-| Token | Color | Use |
-|-------|-------|-----|
-| Background | `#09090b` (zinc-950) | App background |
-| Card | `#18181b` (zinc-900) | Panels, sidebar |
-| Border | `#27272a` (zinc-800) | Dividers, outlines |
-| Text | `#f4f4f5` (zinc-100) | Primary text |
-| Muted text | `#a1a1aa` (zinc-400) | Secondary text |
-| Accent | `#ffffff` | Buttons, highlights |
+| Token      | Color                | Use                 |
+| ---------- | -------------------- | ------------------- |
+| Background | `#09090b` (zinc-950) | App background      |
+| Card       | `#18181b` (zinc-900) | Panels, sidebar     |
+| Border     | `#27272a` (zinc-800) | Dividers, outlines  |
+| Text       | `#f4f4f5` (zinc-100) | Primary text        |
+| Muted text | `#a1a1aa` (zinc-400) | Secondary text      |
+| Accent     | `#ffffff`            | Buttons, highlights |
 
 ## Application Settings
 

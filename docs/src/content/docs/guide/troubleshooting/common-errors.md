@@ -12,6 +12,7 @@ sidebar:
 **Cause:** No Java is assigned to this server, or the configured path no longer exists.
 
 **Fix:**
+
 1. Open **General Settings** for the server.
 2. Under **Java Version**, click **"Manage Java"**.
 3. Download the appropriate version (Java 21 for Minecraft 1.21+).
@@ -22,6 +23,7 @@ sidebar:
 **Cause:** The server JAR is missing, corrupt, or the configured path is wrong.
 
 **Fix:**
+
 1. Navigate to the **Files** tab and confirm `server.jar` (or the configured JAR) exists.
 2. If missing, use the **Version Upgrade Wizard** or re-create the server to re-download the JAR.
 
@@ -30,6 +32,7 @@ sidebar:
 **Cause:** The EULA has not been accepted, or `server.properties` has an invalid value.
 
 **Fix:**
+
 1. Open the **Files** tab and open `eula.txt`.
 2. Change `eula=false` to `eula=true` and save.
 3. Check the Console for the specific error line before the shutdown.
@@ -45,6 +48,7 @@ sidebar:
 ### Crash after installing a plugin
 
 **Fix:**
+
 1. Open the **Files** tab → `plugins/` folder.
 2. Remove the newly added plugin JAR.
 3. Restart the server and check if it stays online.
@@ -70,6 +74,7 @@ sidebar:
 ### "Connection refused" when using Ngrok
 
 **Fix:**
+
 - Verify the Ngrok authtoken in **General Settings**.
 - Free Ngrok accounts allow only one active tunnel — check you don't have another session open.
 - Re-enable the Ngrok toggle in General Settings to force a reconnect.
