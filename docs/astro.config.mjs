@@ -93,6 +93,14 @@ export default defineConfig({
             { label: 'Architecture', slug: 'dev/architecture' },
           ],
         },
+        {
+          label: 'API Reference',
+          badge: { text: 'Auto-generated', variant: 'caution' },
+          items: [
+            { label: 'TypeScript API', slug: 'api/typescript' },
+            { label: 'Rust API', slug: 'api/rust' },
+          ],
+        },
       ],
       customCss: ['./src/styles/custom.css'],
       social: {
