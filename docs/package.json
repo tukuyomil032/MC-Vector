@@ -10,7 +10,7 @@
     "astro": "astro",
     "check": "astro check",
     "check:fix": "biome check --write src",
-    "typedoc": "typedoc",
+    "typedoc": "typedoc && node scripts/generate-api-docs.mjs",
     "build:full": "pnpm typedoc && astro build"
   },
   "dependencies": {
