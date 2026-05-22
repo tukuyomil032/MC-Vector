@@ -1,8 +1,91 @@
 ---
 title: General Settings
-description: General Settings configuration guide.
+description: Configure server-level options including Java, memory, automatic backups, and Ngrok.
 sidebar:
   order: 1
 ---
 
-*Content coming soon.*
+**General Settings** contains per-server configuration that can be changed at any time — not just during creation.
+
+## Basic Options
+
+| Setting | Description |
+|---------|-------------|
+| **Server Name** | Display name shown in the MC-Vector sidebar |
+| **Software** | Server type: Vanilla, Paper, Spigot, Fabric, or Forge |
+| **Version** | Minecraft version (e.g., 1.21.1) |
+| **Port** | TCP port the server listens on (default: 25565) |
+| **Memory** | JVM heap allocation in MB (e.g., 4096 for 4 GB) |
+
+## Java Version {#java-manager}
+
+Select the Java runtime for this server:
+
+- **System Default** — uses the Java installation found on `$PATH`
+- **Custom** — choose a specific binary managed by MC-Vector's Java Manager
+
+### Java Manager
+
+Click **"Manage Java"** to open the Java Manager, which lets you download and manage Java runtimes:
+
+| Java Version | Use for |
+|-------------|---------|
+| **Java 8** | Minecraft ≤ 1.16 |
+| **Java 17** | Minecraft 1.17–1.20 |
+| **Java 21** | Minecraft 1.21+ |
+
+To download a version, click **"Download"** next to it. Progress is shown in real-time. The binary is extracted automatically.
+
+## JVM Extra Arguments
+
+Add custom JVM flags in the **JVM Extra Args** field. Flags are validated before saving.
+
+Common examples:
+
+```
+-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200
+```
+
+## Auto-Restart
+
+When enabled, MC-Vector automatically restarts the server if it crashes:
+
+| Setting | Description |
+|---------|-------------|
+| **Auto-Restart on Crash** | Enable/disable automatic restart |
+| **Max Restarts** | Maximum restart attempts before giving up |
+| **Restart Delay** | Seconds to wait between crash detection and restart |
+
+## Automatic Backups {#automatic-backups}
+
+Configure scheduled backups for this server:
+
+| Option | Description |
+|--------|-------------|
+| **Schedule type** | Interval (every N minutes), Daily (HH:MM), or Weekly (day + HH:MM) |
+| **Retention by count** | Keep only the N most recent backups |
+| **Retention by age** | Delete backups older than N days |
+
+## Notifications
+
+MC-Vector can send OS-level notifications for server events:
+
+- **Crash** — when the server crashes
+- **Start** — when the server comes online
+- **High CPU** — when CPU usage exceeds a configurable threshold
+
+## Ngrok Integration (Port Forwarding Elimination)
+
+Enable **Port Forwarding Elimination** to open a public TCP tunnel so friends can connect without router configuration.
+
+1. Enable the toggle.
+2. Enter your [Ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
+3. MC-Vector downloads the Ngrok binary if needed.
+4. A public address is generated (e.g., `tcp://0.tcp.ngrok.io:XXXXX`).
+5. Share `0.tcp.ngrok.io XXXXX` with players — they enter it as the server address in Minecraft.
+
+:::note
+A free Ngrok account provides one simultaneous tunnel. The public address changes each time Ngrok restarts.
+:::
+
+See the [Ngrok page](/guide/network/ngrok) for detailed setup instructions.
