@@ -119,12 +119,12 @@ src/
 
 MC-Vector uses **Zustand** for global state, split into four stores:
 
-| Store | Responsibility |
-|-------|---------------|
-| `useServerStore` | Server list, selected server, server status, process metadata |
-| `useUiStore` | Current view, modal open/close state, sidebar collapsed flag |
-| `useSettingsStore` | App-level settings (theme, language, update preferences) |
-| `useConsoleStore` | Console log buffer, command history per server |
+| Store              | Responsibility                                                |
+| ------------------ | ------------------------------------------------------------- |
+| `useServerStore`   | Server list, selected server, server status, process metadata |
+| `useUiStore`       | Current view, modal open/close state, sidebar collapsed flag  |
+| `useSettingsStore` | App-level settings (theme, language, update preferences)      |
+| `useConsoleStore`  | Console log buffer, command history per server                |
 
 ### API Layer
 
@@ -185,70 +185,70 @@ src-tauri/src/
 
 #### Server Management (`server.rs`)
 
-| Command | Description |
-|---------|-------------|
-| `start_server` | Spawn Java process; stream stdout/stderr to frontend |
-| `stop_server` | Send stop signal to the running server |
-| `send_command` | Queue a console command (rate-limited via `CommandLimiter`) |
-| `is_server_running` | Check process state |
-| `get_server_pid` | Return current PID |
-| `validate_jvm_extra_args` | Validate custom JVM flags before saving |
+| Command                   | Description                                                 |
+| ------------------------- | ----------------------------------------------------------- |
+| `start_server`            | Spawn Java process; stream stdout/stderr to frontend        |
+| `stop_server`             | Send stop signal to the running server                      |
+| `send_command`            | Queue a console command (rate-limited via `CommandLimiter`) |
+| `is_server_running`       | Check process state                                         |
+| `get_server_pid`          | Return current PID                                          |
+| `validate_jvm_extra_args` | Validate custom JVM flags before saving                     |
 
 #### File System (`file_utils.rs`)
 
-| Command | Description |
-|---------|-------------|
-| `resolve_managed_path` | Resolve path within managed roots (path-traversal safe) |
-| `read_managed_text_file` | Read text file content |
-| `write_managed_text_file` | Write text file content |
-| `list_dir_with_metadata` | List directory with size and modification time |
+| Command                   | Description                                             |
+| ------------------------- | ------------------------------------------------------- |
+| `resolve_managed_path`    | Resolve path within managed roots (path-traversal safe) |
+| `read_managed_text_file`  | Read text file content                                  |
+| `write_managed_text_file` | Write text file content                                 |
+| `list_dir_with_metadata`  | List directory with size and modification time          |
 
 #### Downloads (`download.rs`, `java.rs`)
 
-| Command | Description |
-|---------|-------------|
-| `download_file` | Generic download with progress events |
-| `download_server_jar` | Download server software JAR |
-| `download_java` | Download and extract Java JDK (tar.gz / zip) |
+| Command               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `download_file`       | Generic download with progress events        |
+| `download_server_jar` | Download server software JAR                 |
+| `download_java`       | Download and extract Java JDK (tar.gz / zip) |
 
 #### Backup / Archive (`backup.rs`)
 
-| Command | Description |
-|---------|-------------|
-| `create_backup` | ZIP the server directory with progress events |
-| `restore_backup` | Restore from a backup archive |
-| `compress_item` | Compress arbitrary file/folder |
-| `extract_item` | Extract any archive |
+| Command          | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `create_backup`  | ZIP the server directory with progress events |
+| `restore_backup` | Restore from a backup archive                 |
+| `compress_item`  | Compress arbitrary file/folder                |
+| `extract_item`   | Extract any archive                           |
 
 #### Network (`ngrok.rs`, `health_check.rs`)
 
-| Command | Description |
-|---------|-------------|
-| `start_ngrok` | Start a TCP tunnel |
-| `stop_ngrok` | Stop the tunnel |
-| `download_ngrok` | Download and extract the ngrok binary |
-| `is_ngrok_installed` | Check binary presence |
-| `ping_server` | Minecraft Server List Ping — returns status, player count, MOTD |
+| Command              | Description                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| `start_ngrok`        | Start a TCP tunnel                                              |
+| `stop_ngrok`         | Stop the tunnel                                                 |
+| `download_ngrok`     | Download and extract the ngrok binary                           |
+| `is_ngrok_installed` | Check binary presence                                           |
+| `ping_server`        | Minecraft Server List Ping — returns status, player count, MOTD |
 
 #### Observability, Security, Performance (`process_stats.rs`, `security.rs`, `perf.rs`, `updater_utils.rs`)
 
-| Command | Description |
-|---------|-------------|
+| Command            | Description                                                                   |
+| ------------------ | ----------------------------------------------------------------------------- |
 | `get_server_stats` | CPU + memory usage for a given PID (emitted every 2s as `server-stats` event) |
-| `security_gateway` | Centralized auth, rate-limit, path-safety, sanitization, audit log |
-| `parse_ansi_lines` | Rust-side ANSI color code parsing for fast console rendering |
-| `can_update_app` | Check if an app update is available |
-| `get_app_location` | Return the installed app binary path |
+| `security_gateway` | Centralized auth, rate-limit, path-safety, sanitization, audit log            |
+| `parse_ansi_lines` | Rust-side ANSI color code parsing for fast console rendering                  |
+| `can_update_app`   | Check if an app update is available                                           |
+| `get_app_location` | Return the installed app binary path                                          |
 
 ### Shared State (Tauri AppState)
 
 Three Mutex-protected state objects are available to all commands via Tauri's managed state:
 
-| State | Type | Purpose |
-|-------|------|---------|
-| `ServerManager` | `Mutex<HashMap<ServerId, ServerHandle>>` | Running server processes, command channels |
-| `CommandLimiter` | `Mutex<HashMap<ServerId, Instant>>` | Per-server command rate limiting |
-| `NgrokManager` | `Mutex<Option<NgrokHandle>>` | Active ngrok process handle |
+| State            | Type                                     | Purpose                                    |
+| ---------------- | ---------------------------------------- | ------------------------------------------ |
+| `ServerManager`  | `Mutex<HashMap<ServerId, ServerHandle>>` | Running server processes, command channels |
+| `CommandLimiter` | `Mutex<HashMap<ServerId, Instant>>`      | Per-server command rate limiting           |
+| `NgrokManager`   | `Mutex<Option<NgrokHandle>>`             | Active ngrok process handle                |
 
 ### Process Management
 
@@ -264,13 +264,13 @@ MC-Vector manages Minecraft server processes on Tokio with a queue-first pipelin
 
 The backend emits Tauri events consumed by the frontend:
 
-| Event | Payload | Source |
-|-------|---------|--------|
-| `server-log` | `{ line, stream }` | server.rs stdout/stderr |
-| `server-status-change` | `{ status }` | server.rs on spawn/exit |
-| `download-progress` | `{ downloaded, total }` | download.rs |
-| `ngrok-status-change` | `{ status, url }` | ngrok.rs |
-| `server-stats` | `{ cpu, memory }` | process_stats.rs (2s interval) |
+| Event                  | Payload                 | Source                         |
+| ---------------------- | ----------------------- | ------------------------------ |
+| `server-log`           | `{ line, stream }`      | server.rs stdout/stderr        |
+| `server-status-change` | `{ status }`            | server.rs on spawn/exit        |
+| `download-progress`    | `{ downloaded, total }` | download.rs                    |
+| `ngrok-status-change`  | `{ status, url }`       | ngrok.rs                       |
+| `server-stats`         | `{ cpu, memory }`       | process_stats.rs (2s interval) |
 
 ---
 

@@ -1,5 +1,7 @@
 /node_modules
+docs/node_modules
 /dist
+docs/dist
 /release
 /dist-electron
 .worktrees/

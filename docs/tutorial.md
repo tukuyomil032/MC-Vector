@@ -30,6 +30,7 @@ Complete guide to using MC-Vector for Minecraft server management.
 ---
 
 <!-- Starlight page: guide/getting-started/installation.md -->
+
 ## Getting Started
 
 MC-Vector is a desktop application that makes managing Minecraft servers easy and intuitive. Whether you're running a small server for friends or managing multiple server instances, MC-Vector provides all the tools you need.
@@ -46,6 +47,7 @@ MC-Vector is a desktop application that makes managing Minecraft servers easy an
 ---
 
 <!-- Starlight page: guide/getting-started/server-creation.md -->
+
 ## Creating Your First Server
 
 Follow these steps to create your first Minecraft server:
@@ -99,6 +101,7 @@ If you have an existing Minecraft server folder, you can import it into MC-Vecto
 ---
 
 <!-- Starlight page: guide/features/server-lifecycle.md -->
+
 ## Server Management Features
 
 Once your server is created, select it from the sidebar to manage it.
@@ -106,20 +109,21 @@ Once your server is created, select it from the sidebar to manage it.
 ---
 
 <!-- Starlight page: guide/features/dashboard.md -->
+
 ### Dashboard
 
 The Dashboard provides a real-time at-a-glance view of your server's health and performance.
 
 **KPI Tiles:**
 
-| Tile | Description |
-|------|-------------|
-| **Status** | Running / Stopped (color-coded: green / gray) |
-| **TPS** | Ticks Per Second — server performance indicator (20 = ideal) |
-| **CPU** | Current CPU usage of the Minecraft process |
-| **Memory** | Current RAM usage (used / allocated) |
-| **Software** | Server software and version (e.g., Paper 1.21.1) |
-| **Uptime** | Time elapsed since the server started |
+| Tile         | Description                                                  |
+| ------------ | ------------------------------------------------------------ |
+| **Status**   | Running / Stopped (color-coded: green / gray)                |
+| **TPS**      | Ticks Per Second — server performance indicator (20 = ideal) |
+| **CPU**      | Current CPU usage of the Minecraft process                   |
+| **Memory**   | Current RAM usage (used / allocated)                         |
+| **Software** | Server software and version (e.g., Paper 1.21.1)             |
+| **Uptime**   | Time elapsed since the server started                        |
 
 **Real-Time Charts (60-second window):**
 
@@ -136,6 +140,7 @@ The Dashboard provides a real-time at-a-glance view of your server's health and 
 ---
 
 <!-- Starlight page: guide/features/console-logs.md -->
+
 ### Console
 
 The Console is the command center for your server.
@@ -171,6 +176,7 @@ weather clear
 ---
 
 <!-- Starlight page: guide/features/players.md -->
+
 ### Users
 
 The Users tab lets you manage player permissions and access control.
@@ -214,6 +220,7 @@ When you enter a player's username, MC-Vector automatically fetches the player's
 ---
 
 <!-- Starlight page: guide/features/file-manager.md -->
+
 ### Files
 
 The Files tab provides a full-featured file manager for your server directory.
@@ -262,17 +269,18 @@ The Files tab provides a full-featured file manager for your server directory.
 ---
 
 <!-- Starlight page: guide/features/plugins-mods.md -->
+
 ### Plugins / Mods
 
 The Plugins / Mods tab lets you browse and install plugins and mods from popular sources.
 
 **Supported Sources:**
 
-| Source | For |
-|--------|-----|
+| Source       | For                                            |
+| ------------ | ---------------------------------------------- |
 | **Modrinth** | Plugins (Paper/Spigot) and Mods (Fabric/Forge) |
-| **Hangar** | Paper and Velocity plugins |
-| **SpigotMC** | Spigot/Paper plugins |
+| **Hangar**   | Paper and Velocity plugins                     |
+| **SpigotMC** | Spigot/Paper plugins                           |
 
 **Features:**
 
@@ -302,6 +310,7 @@ The Plugins / Mods tab lets you browse and install plugins and mods from popular
 ---
 
 <!-- Starlight page: guide/features/backup-restore.md -->
+
 ### Backups
 
 The Backups tab lets you create and restore server snapshots.
@@ -320,11 +329,11 @@ The Backups tab lets you create and restore server snapshots.
 
 **Backup Storage Location:**
 
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/MC-Vector/servers/<name>/backups/` |
-| Windows | `%APPDATA%\MC-Vector\servers\<name>\backups\` |
-| Linux | `~/.local/share/MC-Vector/servers/<name>/backups/` |
+| Platform | Path                                                              |
+| -------- | ----------------------------------------------------------------- |
+| macOS    | `~/Library/Application Support/MC-Vector/servers/<name>/backups/` |
+| Windows  | `%APPDATA%\MC-Vector\servers\<name>\backups\`                     |
+| Linux    | `~/.local/share/MC-Vector/servers/<name>/backups/`                |
 
 **How to Use:**
 
@@ -352,22 +361,23 @@ The Backups tab lets you create and restore server snapshots.
 ---
 
 <!-- Starlight page: guide/configuration/server-properties.md -->
+
 ### Properties
 
 The Properties tab gives you a form-based editor for `server.properties`.
 
 **Common Settings:**
 
-| Setting | Description |
-|---------|-------------|
-| **Difficulty** | Peaceful / Easy / Normal / Hard |
-| **Gamemode** | Survival / Creative / Adventure / Spectator |
-| **Max Players** | Maximum concurrent players |
-| **PvP** | Enable / disable player vs. player combat |
-| **Allow Flight** | Allow flight in survival mode |
-| **Whitelist** | Enforce whitelist on join |
-| **Online Mode** | Mojang authentication (set false for offline mode) |
-| **MOTD** | Message shown in the server list |
+| Setting          | Description                                        |
+| ---------------- | -------------------------------------------------- |
+| **Difficulty**   | Peaceful / Easy / Normal / Hard                    |
+| **Gamemode**     | Survival / Creative / Adventure / Spectator        |
+| **Max Players**  | Maximum concurrent players                         |
+| **PvP**          | Enable / disable player vs. player combat          |
+| **Allow Flight** | Allow flight in survival mode                      |
+| **Whitelist**    | Enforce whitelist on join                          |
+| **Online Mode**  | Mojang authentication (set false for offline mode) |
+| **MOTD**         | Message shown in the server list                   |
 
 **How to Use:**
 
@@ -379,6 +389,7 @@ The Properties tab gives you a form-based editor for `server.properties`.
 ---
 
 <!-- Starlight page: guide/configuration/general-settings.md -->
+
 ### General Settings
 
 The General Settings tab configures server-level settings that can be changed after creation.
@@ -414,6 +425,7 @@ MC-Vector can automatically open a public TCP tunnel using Ngrok, removing the n
 ---
 
 <!-- Starlight page: guide/network/velocity.md -->
+
 ### Proxy Network
 
 The Proxy Network tab helps you set up a proxy server (Velocity or BungeeCord) to link multiple backend servers.
@@ -436,6 +448,7 @@ The Proxy Network tab helps you set up a proxy server (Velocity or BungeeCord) t
 ---
 
 <!-- Starlight page: application features -->
+
 ## Application Features
 
 ---
@@ -450,11 +463,11 @@ The Command Palette provides keyboard-driven navigation and server control.
 
 **Available Commands:**
 
-| Category | Command |
-|----------|---------|
-| **Navigate** | Dashboard, Console, Users, Files, Plugins, Backups, Properties, Settings |
-| **Server (Online)** | Stop Server, Restart Server |
-| **Server (Offline)** | Start Server |
+| Category             | Command                                                                  |
+| -------------------- | ------------------------------------------------------------------------ |
+| **Navigate**         | Dashboard, Console, Users, Files, Plugins, Backups, Properties, Settings |
+| **Server (Online)**  | Stop Server, Restart Server                                              |
+| **Server (Offline)** | Start Server                                                             |
 
 **How to Use:**
 
@@ -539,6 +552,7 @@ MC-Vector checks for application updates automatically on launch.
 ---
 
 <!-- Starlight page: guide/troubleshooting/common-errors.md -->
+
 ## Tips and Tricks
 
 ### Keep Your Server Updated
