@@ -1,18 +1,13 @@
 # MC-Vector Development Guide
 
-Welcome to the MC-Vector development guide! This document will help you set up your development environment and understand our development workflow.
+Setup guide and development workflow for MC-Vector contributors.
 
-**Guide target version:** `2.0.54`
+**Guide target version:** `2.0.55`
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Environment Setup](#environment-setup)
-  - [Option 1: Using Nix (Recommended)](#option-1-using-nix-recommended)
-  - [Option 2: Manual Setup](#option-2-manual-setup)
-- [Task Runners](#task-runners)
-  - [Using justfile](#using-justfile)
-  - [Using Makefile](#using-makefile)
 - [Development Workflow](#development-workflow)
 - [Commands Reference](#commands-reference)
 - [Project Structure](#project-structure)
@@ -24,436 +19,263 @@ Welcome to the MC-Vector development guide! This document will help you set up y
 
 ## Prerequisites
 
-### Required Tools (Manual Setup)
+| Tool | Version | Notes |
+|------|---------|-------|
+| **Node.js** | v22+ (v20 minimum) | [nodejs.org](https://nodejs.org/) |
+| **pnpm** | v10.33.0+ | `npm install -g pnpm` |
+| **Rust** | stable (1.77+) | [rustup.rs](https://rustup.rs/) |
+| **Cargo** | (included with Rust) | — |
 
-- **Node.js** v18 or later (v22 recommended)
-- **pnpm** v10.33.0 or later
-- **Rust** v1.77.2 or later
-- **Cargo** (included with Rust)
+**macOS only:** Xcode Command Line Tools are required for Tauri builds:
 
-### Optional Tools
-
-- **just** - Modern task runner (recommended)
-- **Nix** - Reproducible development environment (recommended)
-- **direnv** - Auto-load development shell
+```bash
+xcode-select --install
+```
 
 ---
 
 ## Environment Setup
 
-### Option 1: Using Nix (Recommended)
-
-Nix provides a completely reproducible development environment with all dependencies pre-configured.
-
-> **Windows note:** Nix-based development is supported on Windows via **WSL2 only**.
-
-#### 1. Install Nix
-
-**macOS/Linux:**
-
-```bash
-sh <(curl -L https://nixos.org/nix/install) --daemon
-```
-
-**Enable Nix Flakes** (add to `~/.config/nix/nix.conf` or `/etc/nix/nix.conf`):
-
-```
-experimental-features = nix-command flakes
-```
-
-#### 2. Enter Development Shell
-
-**Using Nix Flakes:**
-
-```bash
-nix develop
-```
-
-**Using shell.nix (without Flakes):**
-
-```bash
-nix-shell
-```
-
-#### 3. (Optional) Auto-load with direnv
-
-Install direnv:
-
-```bash
-# macOS
-brew install direnv
-
-# Linux (add to ~/.bashrc or ~/.zshrc)
-eval "$(direnv hook bash)"  # or zsh, fish
-```
-
-Allow direnv for this project:
-
-```bash
-direnv allow
-```
-
-Now the Nix shell will automatically activate when you `cd` into the project directory!
-
----
-
-### Option 2: Manual Setup
-
-If you prefer not to use Nix, install dependencies manually:
-
-#### 1. Install Node.js and pnpm
+### 1. Install Node.js and pnpm
 
 **macOS:**
 
 ```bash
-brew install node@22 pnpm
+brew install node@22
+npm install -g pnpm@latest
 ```
 
-**Linux (using nvm):**
+**Linux (nvm):**
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 nvm install 22
-npm install -g pnpm@10.33.0
+npm install -g pnpm@latest
 ```
 
 **Windows:**
 
 - Download Node.js from [nodejs.org](https://nodejs.org/)
-- Install pnpm: `npm install -g pnpm@10.33.0`
+- Run: `npm install -g pnpm`
 
-#### 2. Install Rust
+### 2. Install Rust
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup default 1.77.2
+# Restart your shell, then verify:
+rustc --version
 ```
 
-#### 3. Install just (Optional)
+### 3. Clone and Install Dependencies
 
 ```bash
-brew install just
-```
-
-**Linux:**
-
-```bash
-cargo install just
-```
-
-**Windows:**
-
-```powershell
-choco install just
-```
-
-#### 4. Install Project Dependencies
-
-```bash
+git clone https://github.com/tukuyomil032/MC-Vector.git
+cd MC-Vector
 pnpm install
-```
-
----
-
-## Task Runners
-
-We provide two task runners: **justfile** (modern, recommended) and **Makefile** (traditional).
-
-### Using justfile
-
-**List all available tasks:**
-
-```bash
-just --list
-```
-
-**Common tasks:**
-
-```bash
-just install           # Install dependencies
-just dev               # Start frontend dev server via portless (https://mc-vector.localhost)
-just tauri-dev         # Start Tauri app in dev mode
-just build             # Build frontend
-just tauri-build       # Build Tauri app
-just check             # Run lint & format checks
-just check-all         # Run all quality checks
-just setup             # Full setup (install + check-all)
-```
-
-### Using Makefile
-
-**List all available tasks:**
-
-```bash
-make help
-```
-
-**Common tasks:**
-
-```bash
-make install           # Install dependencies
-make dev               # Start frontend dev server
-make tauri-dev         # Start Tauri app in dev mode
-make build             # Build frontend
-make tauri-build       # Build Tauri app
-make check             # Run lint & format checks
 ```
 
 ---
 
 ## Development Workflow
 
-### 1. First-Time Setup
-
-**With Nix:**
+### Start the Frontend Dev Server (browser-only)
 
 ```bash
-nix develop
-just setup
-```
-
-The `just setup` command will:
-
-1. Install all project dependencies via `pnpm install`
-2. Run all quality checks (`check-all`)
-3. Set up portless CA certificate for HTTPS development
-   - Runs `pnpm exec portless trust` to add the CA to your system trust store
-   - You may be prompted for your password to trust the certificate
-4. Sync hosts entry for `mc-vector.localhost`
-   - Runs `pnpm exec portless hosts sync` to add the entry to the OS hosts file
-   - Windows: `C:\Windows\System32\drivers\etc\hosts` (**requires Administrator**)
-   - macOS/Linux: `/etc/hosts` (**requires sudo password**)
-   - If this fails, Chrome/Firefox will still work, but cmux browser requires this step
-
-**Without Nix:**
-
-```bash
-pnpm install
-make setup   # Includes portless setup
-# or just run checks without portless setup:
-make check
-```
-
-**Portless Setup Notes:**
-
-- `portless trust` and `portless hosts sync` are idempotent (safe to run multiple times)
-- If `portless hosts sync` fails, the development server will still work in most browsers
-- cmux browser specifically requires the hosts entry to resolve `mc-vector.localhost`
-- You can skip portless setup and use plain `http://localhost:5173` if preferred
-
-### 2. Start Development
-
-**For browser-only development:**
-
-```bash
-just dev
-# or
 pnpm dev
 ```
 
-This starts the Vite dev server via portless at `https://mc-vector.localhost`.
+Opens the Vite dev server at `https://mc-vector.localhost` via portless.
 
-**For Tauri application development:**
-
-```bash
-just tauri-dev
-# or
-make tauri-dev
-```
-
-This starts both the Vite dev server (plain, non-portless) and the Tauri application.
-
-### 3. Code Quality
-
-Before committing, always run:
+For a plain HTTP server without portless:
 
 ```bash
-just check-all
-# or
-make check && make rustfmt
+pnpm dev:plain
+# → http://localhost:5173
 ```
 
-### 4. Build for Production
+### Start the Full Tauri App
 
 ```bash
-just tauri-build
-# or
-make tauri-build
+pnpm tauri:dev
 ```
 
-Built artifacts will be in `src-tauri/target/release/bundle/`.
+This starts both the Vite dev server and the Tauri desktop window. Use this for any work that requires Rust backend functionality (server management, file operations, etc.).
+
+### Before Committing
+
+Run the full lint and format check:
+
+```bash
+pnpm check
+```
+
+Auto-fix issues:
+
+```bash
+pnpm check:fix
+```
+
+[Lefthook](#lefthook) runs `pnpm check:fix` and `cargo fmt` automatically on `git commit` for staged files.
+
+### Build for Production
+
+```bash
+pnpm tauri:build
+```
+
+Artifacts are written to `src-tauri/target/release/bundle/`.
 
 ---
 
 ## Commands Reference
 
-### Development
+| Command | Description |
+|---------|-------------|
+| `pnpm install` | Install all dependencies |
+| `pnpm dev` | Frontend dev server (HTTPS via portless) |
+| `pnpm dev:plain` | Raw Vite dev server at localhost:5173 |
+| `pnpm tauri:dev` | Full desktop app in dev mode |
+| `pnpm build` | Build frontend for production |
+| `pnpm tauri:build` | Build production Tauri binary |
+| `pnpm check` | Run lint + format checks |
+| `pnpm check:fix` | Run checks and auto-fix |
+| `pnpm lint` | Run oxlint |
+| `pnpm format` | Run formatter (biome / oxfmt) |
+| `pnpm rustfmt` | Format Rust code (`cargo fmt`) |
+| `pnpm clean:artifacts` | Delete `dist/`, build output, `node_modules/.vite` |
 
-| Command      | justfile         | Makefile         | Description                                                            |
-| ------------ | ---------------- | ---------------- | ---------------------------------------------------------------------- |
-| Install deps | `just install`   | `make install`   | Install all dependencies                                               |
-| Dev server   | `just dev`       | `make dev`       | Start frontend dev server via portless (`https://mc-vector.localhost`) |
-| Tauri dev    | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode                                            |
+---
 
-### Build
+## Lefthook
 
-| Command        | justfile           | Makefile           | Description                   |
-| -------------- | ------------------ | ------------------ | ----------------------------- |
-| Build frontend | `just build`       | `make build`       | Build frontend for production |
-| Build app      | `just tauri-build` | `make tauri-build` | Build Tauri application       |
+MC-Vector uses [Lefthook](https://github.com/evilmartians/lefthook) for Git hooks. Hooks run automatically on `git commit`.
 
-### Quality
+| Hook | Glob | Action |
+|------|------|--------|
+| `lint-format-ts` | `src/**/*.{ts,tsx}` | `pnpm check:fix` |
+| `fmt-rust` | `src-tauri/src/**/*.rs` | `cargo fmt --all` |
 
-| Command     | justfile         | Makefile       | Description                             |
-| ----------- | ---------------- | -------------- | --------------------------------------- |
-| Lint        | `just lint`      | `make lint`    | Run oxlint (via vite+)                  |
-| Format      | `just format`    | `make format`  | Format with oxfmt and biome (via vite+) |
-| Check       | `just check`     | `make check`   | Run lint & format checks                |
-| Rust format | `just rustfmt`   | `make rustfmt` | Format Rust code                        |
-| All checks  | `just check-all` | N/A            | Run all quality checks                  |
+Both hooks use `stage_fixed: true` — auto-formatted files are re-staged automatically.
 
-### Utilities
-
-| Command            | justfile                  | Makefile                  | Description                   |
-| ------------------ | ------------------------- | ------------------------- | ----------------------------- |
-| Install extensions | `just install-extensions` | `make install-extensions` | Install VS Code extensions    |
-| Update versions    | `just update-versions`    | `make update-versions`    | Update version numbers        |
-| Clean              | `just clean`              | `make clean`              | Clean build artifacts         |
-| Setup              | `just setup`              | N/A                       | Full setup (install + checks) |
+Lefthook is installed as a dev dependency and activated via `pnpm install` (no global install required).
 
 ---
 
 ## Project Structure
 
-See the main [README.md](../README.md#project-structure) for the detailed project structure.
+```
+mc-vector/
+├── src/                        # React + TypeScript frontend
+│   ├── App.tsx                 # Root component
+│   ├── renderer/components/    # Feature UI components
+│   ├── lib/                    # Tauri IPC wrappers + adapters
+│   └── store/                  # Zustand state stores
+├── src-tauri/                  # Rust backend (Tauri v2)
+│   ├── src/
+│   │   ├── lib.rs              # Plugin registration, command list
+│   │   └── commands/           # Tauri command handlers
+│   ├── Cargo.toml
+│   └── tauri.conf.json
+├── docs/                       # Documentation
+├── migrate-wiki/               # Wiki migration plan
+├── .github/workflows/          # CI/CD (release.yml)
+├── lefthook.yml                # Git hooks
+├── biome.json                  # TypeScript formatter/linter config
+├── package.json
+└── pnpm-workspace.yaml
+```
 
-### Key Directories
-
-- `src/` - React frontend code
-  - `src/renderer/` - React components
-  - `src/lib/` - Frontend API wrappers
-  - `src/styles/` - SCSS styles
-- `src-tauri/` - Rust backend (Tauri core)
-  - `src-tauri/src/commands/` - Tauri command handlers
-- `docs/` - Documentation
-- `scripts/` - Utility scripts
+For detailed architecture, see [architecture.md](./architecture.md).
 
 ---
 
 ## Coding Conventions
 
-### Frontend (TypeScript/React)
+### TypeScript / React
 
-1. **Type Safety:**
-   - Avoid `any`. Use `unknown` for external input and narrow with type guards.
-   - All API payloads must be validated with runtime type guards.
-   - Use explicit interfaces for component props.
+1. **No `any`** — use `unknown` for external input and narrow with type guards in `src/lib/guards/`.
+2. **All API payloads** from external services must pass a runtime type guard before use.
+3. **Components call wrappers** in `src/lib/` — never raw `invoke()` directly.
+4. **Explicit prop interfaces** for all components.
+5. Short Tailwind utility chains in TSX; longer/reused patterns go in CSS or a shared component.
 
-2. **Component Structure:**
-   - Keep components focused and single-purpose.
-   - Extract repeated UI patterns into reusable components.
-   - Use semantic class names over anonymous utility chains.
+### Rust
 
-3. **Styling:**
-   - Short utility usage in TSX for one-off styles.
-   - Long/repeated class chains go in SCSS classes under `src/styles/`.
-   - Group styles by responsibility (base, components, layout, modals, views).
+1. Follow standard Rust style (enforced by `cargo fmt`).
+2. Return `Result<T, String>` from Tauri commands — the string becomes the JS-side error message.
+3. File operations must go through `resolve_managed_path` — never accept a raw user-supplied path.
 
-4. **Async Operations:**
-   - Keep file/system operations in `src/lib` wrappers.
-   - UI components call wrappers, not raw APIs.
+### Commits
 
-### Backend (Rust)
+Use the prefixes: `feat:`, `fix:`, `ref:`, `docs:`, `chore:`
 
-1. Follow Rust standard conventions.
-2. Use `cargo fmt` to format code: `just rustfmt` or `make rustfmt`.
-3. Handle errors properly with `Result<T, E>`.
-
-### Documentation
-
-1. Update documentation when changing behavior.
-2. Keep README.md aligned with actual functionality.
-3. Add inline comments only when code needs clarification.
+```bash
+git commit -m "feat: add server health check tile" \
+           -m "Uses ping_server Tauri command to show player count on Dashboard" \
+           -m "Falls back to unknown state if server is unreachable"
+```
 
 ---
 
 ## Testing
 
-Automated checks and tests are available and should be run before opening a PR:
+Before opening a PR, run:
 
-- Frontend quality gate: `pnpm check && pnpm build`
-- Rust quality gate: `cd src-tauri && cargo check -q`
-- Rust unit tests: `cd src-tauri && cargo test -q`
+```bash
+# Frontend: lint + type-check + build
+pnpm check && pnpm build
 
-Command-level Rust tests currently cover critical paths such as security gateway validation and ANSI/log parsing behavior.
+# Rust: check + unit tests
+cd src-tauri && cargo check -q && cargo test -q
+```
+
+Rust unit tests cover critical paths including security gateway validation and ANSI log parsing.
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+**`pnpm install` fails**
 
-**Issue: `pnpm install` fails**
+Ensure pnpm ≥ 10.33.0: `pnpm --version`
 
-- **Solution:** Ensure you're using pnpm v10.33.0 or later. Run `pnpm --version` to check.
+**Tauri build fails on macOS**
 
-**Issue: Tauri build fails on macOS**
+```bash
+xcode-select --install
+```
 
-- **Solution:** Ensure Xcode Command Line Tools are installed: `xcode-select --install`
+**`https://mc-vector.localhost` not accessible**
 
-**Issue: Nix commands not found**
+Run portless setup:
 
-- **Solution:** Ensure Nix is installed and Flakes are enabled in your Nix config.
+```bash
+pnpm exec portless trust
+pnpm exec portless hosts sync   # requires sudo
+```
 
-**Issue: direnv not auto-loading**
+Or use the plain dev server instead: `pnpm dev:plain`
 
-- **Solution:** Run `direnv allow` in the project directory.
+**Build errors after pulling latest changes**
 
-**Issue: Build errors after pulling latest changes**
+```bash
+pnpm clean:artifacts
+pnpm install
+```
 
-- **Solution:** Clean and reinstall dependencies:
-  ```bash
-  just clean
-  just install
-  ```
+**Lefthook hook not running**
 
-**Issue: `https://mc-vector.localhost` not accessible in cmux browser**
+Reinstall hooks:
 
-- **Solution:** cmux uses WKWebView which may have stricter TLS trust requirements:
-  1. Ensure portless CA is trusted: `pnpm exec portless trust`
-  2. Start dev server: `just dev`
-  3. Sync hosts file (requires sudo): `pnpm exec portless hosts sync`
-  4. Try accessing in cmux browser
-  5. If still not working, you may need to use `.test` TLD instead (see below)
-
-**Issue: Want to use `.test` TLD instead of `.localhost`**
-
-- **Solution:** Configure portless to use `.test`:
-
-  ```bash
-  # Stop any running portless proxy
-  pnpm exec portless proxy stop
-
-  # Start proxy with .test TLD
-  pnpm exec portless proxy start --tld test
-
-  # Update dev command to use the new TLD
-  # The URL will be https://mc-vector.test
-  ```
-
-### Getting Help
-
-- Check the [main README](../README.md) for basic usage.
-- Read the [tutorial](./tutorial.md) for detailed feature explanations.
-- Review [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines.
-- Open an issue on [GitHub](https://github.com/tukuyomil032/MC-Vector/issues) if you encounter a bug.
+```bash
+pnpm lefthook install
+```
 
 ---
 
-## Next Steps
+## Getting Help
 
-- Read the [Tutorial](./tutorial.md) to understand how to use MC-Vector.
-- Check [CONTRIBUTING.md](../CONTRIBUTING.md) if you want to contribute.
-- Explore the codebase and start hacking!
-
-Happy coding! 🚀
+- [Tutorial](./tutorial.md) — detailed feature walkthrough
+- [Architecture](./architecture.md) — system design reference
+- [GitHub Issues](https://github.com/tukuyomil032/MC-Vector/issues) — bug reports
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — contribution guidelines
