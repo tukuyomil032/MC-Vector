@@ -34,7 +34,8 @@ jobs:
           workspaces: ./src-tauri -> target
 
       - name: Build TypeDoc + Astro
-        run: vp --filter @mc-vector/docs build:full
+        working-directory: docs
+        run: pnpm build:full
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
