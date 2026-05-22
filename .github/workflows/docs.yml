@@ -19,8 +19,28 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.2
+
+      - name: Install docs dependencies
+        run: pnpm install --filter @mc-vector/docs...
+
+      - name: Build TypeDoc + Astro
+        run: pnpm --filter @mc-vector/docs build:full
+
+      - name: Prepare Vercel output
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r docs/dist/. .vercel/output/static/
+          printf '{"version":3}' > .vercel/output/config.json
+
       - name: Deploy to Vercel
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DOCS }}
-        run: npx vercel@latest deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: npx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
