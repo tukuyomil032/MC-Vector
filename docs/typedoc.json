@@ -1,0 +1,13 @@
+{
+  "plugin": ["typedoc-plugin-markdown"],
+  "entryPoints": ["../src/lib", "../src/store", "../src/renderer/components"],
+  "entryPointStrategy": "expand",
+  "tsconfig": "../tsconfig.app.json",
+  "out": "src/content/docs/api/typescript",
+  "readme": "none",
+  "skipErrorChecking": true,
+  "flattenOutputFiles": false,
+  "hidePageHeader": false,
+  "hideBreadcrumbs": false,
+  "useCodeBlocks": true
+}
