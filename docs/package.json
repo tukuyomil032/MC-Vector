@@ -1,0 +1,25 @@
+{
+  "name": "@mc-vector/docs",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "astro check",
+    "check:fix": "biome check --write src",
+    "typedoc": "typedoc",
+    "build:full": "pnpm typedoc && astro build"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.32.0",
+    "astro": "^5.8.0",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typedoc": "^0.26.0"
+  }
+}
