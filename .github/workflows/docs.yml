@@ -35,12 +35,11 @@ jobs:
 
       - name: Prepare Vercel output
         run: |
-          mkdir -p docs/.vercel/output/static
-          cp -r docs/dist/. docs/.vercel/output/static/
-          printf '{"version":3}' > docs/.vercel/output/config.json
+          mkdir -p .vercel/output/static
+          cp -r docs/dist/. .vercel/output/static/
+          printf '{"version":3}' > .vercel/output/config.json
 
       - name: Deploy to Vercel
-        working-directory: docs
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DOCS }}
