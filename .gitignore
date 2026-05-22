@@ -165,3 +165,8 @@ result-*
 
 
 docs/.astro
+
+# TypeDoc auto-generated output
+docs/src/content/docs/api/typescript/
+# Rustdoc auto-generated output
+docs/public/rustdoc/
