@@ -165,6 +165,7 @@ result-*
 
 
 docs/.astro
+docs/.vercel
 
 # TypeDoc auto-generated output
 docs/src/content/docs/api/typescript/
