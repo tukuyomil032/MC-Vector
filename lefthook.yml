@@ -8,3 +8,7 @@ pre-commit:
       glob: 'src-tauri/src/**/*.rs'
       run: cargo fmt --all --manifest-path src-tauri/Cargo.toml
       stage_fixed: true
+    lint-format-docs:
+      glob: 'docs/src/**/*.{ts,mjs}'
+      run: pnpm --filter @mc-vector/docs check:fix
+      stage_fixed: true
