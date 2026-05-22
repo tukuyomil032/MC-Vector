@@ -5,7 +5,7 @@
   --sl-color-accent-high: #e4e4e7; /* zinc-200 */
 }
 
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   --sl-color-bg: #09090b; /* zinc-950 */
   --sl-color-bg-nav: #09090b;
   --sl-color-bg-sidebar: #0c0c0e;

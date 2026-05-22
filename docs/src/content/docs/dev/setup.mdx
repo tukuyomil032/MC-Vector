@@ -1,0 +1,172 @@
+---
+title: Environment Setup
+description: Set up a local development environment for MC-Vector contributors.
+sidebar:
+  order: 1
+  badge:
+    text: Developer
+    variant: note
+---
+
+## Prerequisites
+
+| Tool        | Version            | Notes                             |
+| ----------- | ------------------ | --------------------------------- |
+| **Node.js** | v22+ (v20 minimum) | [nodejs.org](https://nodejs.org/) |
+| **pnpm**    | v10.33.0+          | `npm install -g pnpm`             |
+| **Rust**    | stable (1.77+)     | [rustup.rs](https://rustup.rs/)   |
+
+**macOS only:** Xcode Command Line Tools are required:
+
+```bash
+xcode-select --install
+```
+
+## Installation
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+### 1. Install Node.js and pnpm
+
+<Tabs>
+  <TabItem label="macOS">```bash brew install node@22 npm install -g pnpm@latest ```</TabItem>
+  <TabItem label="Linux (nvm)">
+    ```bash curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash nvm
+    install 22 npm install -g pnpm@latest ```
+  </TabItem>
+  <TabItem label="Windows">
+    Download Node.js from [nodejs.org](https://nodejs.org/), then: ```bash npm install -g pnpm ```
+  </TabItem>
+</Tabs>
+
+### 2. Install Rust
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Restart your shell, then verify:
+rustc --version
+```
+
+### 3. Clone and Install Dependencies
+
+```bash
+git clone https://github.com/tukuyomil032/mc-vector.git
+cd mc-vector
+pnpm install
+```
+
+## Development Workflow
+
+### Frontend Only (browser)
+
+```bash
+pnpm dev
+```
+
+Opens the Vite dev server at `https://mc-vector.localhost` via portless. Use this for UI-only work that doesn't require Rust backend functionality.
+
+For a plain HTTP server without portless:
+
+```bash
+pnpm dev:plain
+# → http://localhost:5173
+```
+
+### Full Desktop App
+
+```bash
+pnpm tauri:dev
+```
+
+Starts both the Vite dev server and the Tauri desktop window. Required for any work involving Rust commands (server management, file operations, etc.).
+
+### Before Committing
+
+```bash
+pnpm check      # Lint + type-check
+pnpm check:fix  # Auto-fix
+```
+
+[Lefthook](https://github.com/evilmartians/lefthook) runs `pnpm check:fix` and `cargo fmt` automatically on `git commit` for staged files.
+
+### Production Build
+
+```bash
+pnpm tauri:build
+```
+
+Artifacts are written to `src-tauri/target/release/bundle/`.
+
+## Commands Reference
+
+| Command                | Description                                        |
+| ---------------------- | -------------------------------------------------- |
+| `pnpm install`         | Install all dependencies                           |
+| `pnpm dev`             | Frontend dev server (HTTPS via portless)           |
+| `pnpm dev:plain`       | Raw Vite dev server at localhost:5173              |
+| `pnpm tauri:dev`       | Full desktop app in dev mode                       |
+| `pnpm build`           | Build frontend for production                      |
+| `pnpm tauri:build`     | Build production Tauri binary                      |
+| `pnpm check`           | Run lint + format checks                           |
+| `pnpm check:fix`       | Run checks and auto-fix                            |
+| `pnpm lint`            | Run oxlint                                         |
+| `pnpm format`          | Run formatter (biome)                              |
+| `pnpm rustfmt`         | Format Rust code (`cargo fmt`)                     |
+| `pnpm clean:artifacts` | Delete `dist/`, build output, `node_modules/.vite` |
+
+## Coding Conventions
+
+### TypeScript / React
+
+1. **No `any`** — use `unknown` for external input and narrow with type guards in `src/lib/guards/`.
+2. **All API payloads** from external services must pass a runtime type guard before use.
+3. **Components call wrappers** in `src/lib/` — never raw `invoke()` directly.
+4. **Explicit prop interfaces** for all components.
+
+### Rust
+
+1. Return `Result<T, String>` from Tauri commands — the string becomes the JS-side error message.
+2. File operations must go through `resolve_managed_path` — never accept a raw user-supplied path.
+3. Follow standard Rust style enforced by `cargo fmt`.
+
+## Testing
+
+Before opening a PR:
+
+```bash
+# Frontend: lint + type-check + build
+pnpm check && pnpm build
+
+# Rust: check + unit tests
+cd src-tauri && cargo check -q && cargo test -q
+```
+
+## Troubleshooting
+
+**`https://mc-vector.localhost` not accessible:**
+
+```bash
+pnpm exec portless trust
+pnpm exec portless hosts sync   # requires sudo
+```
+
+Or use the plain dev server: `pnpm dev:plain`
+
+**Tauri build fails on macOS:**
+
+```bash
+xcode-select --install
+```
+
+**Build errors after pulling:**
+
+```bash
+pnpm clean:artifacts
+pnpm install
+```
+
+**Lefthook not running:**
+
+```bash
+pnpm lefthook install
+```
