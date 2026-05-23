@@ -43,7 +43,7 @@ help:
 	@echo "  make rustfmt              Format Rust code"
 	@echo ""
 	@echo "Testing:"
-	@echo "  make test                 Run all tests (Rust unit tests)"
+	@echo "  make test                 Run all tests (Vitest + Rust unit tests)"
 	@echo "  make test-rust            Run Rust tests"
 	@echo "  make test-watch           Run Rust tests in watch mode"
 	@echo ""
@@ -154,8 +154,10 @@ watch: dev
 check-all: check rustfmt
 	@echo "✅ All quality checks passed!"
 
-# Testing: Run all tests (currently Rust unit tests)
-test: test-rust
+# Testing: Run all tests (Vitest + Rust unit tests)
+test:
+	pnpm test
+	cd src-tauri && cargo test
 
 # Testing: Run Rust unit tests
 test-rust:

@@ -91,8 +91,10 @@ rustfmt:
 # Testing
 # ═══════════════════════════════════════════════════════════════
 
-# Run all tests (Rust unit tests)
-test: test-rust
+# Run all tests (Vitest + Rust unit tests)
+test:
+    pnpm test
+    cd src-tauri && cargo test
 
 # Run Rust unit tests
 test-rust:
