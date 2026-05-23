@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, windows-latest]
+        platform: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v6
@@ -40,6 +40,16 @@ jobs:
           workspaces: ./src-tauri -> target
       - name: Install all dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install Linux dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            xvfb
       - name: Install tauri-driver
         run: cargo install tauri-driver --locked
       - name: Verify tauri-driver installation
@@ -47,9 +57,9 @@ jobs:
         run: |
           which tauri-driver || echo "tauri-driver not in PATH"
           ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
-      - name: Enable safaridriver (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: sudo safaridriver --enable
+      - name: Start Xvfb (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: Xvfb :99 -screen 0 1024x768x24 &
       - name: Install Microsoft Edge Driver (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -58,6 +68,8 @@ jobs:
           & "$HOME/.cargo/bin/msedgedriver-tool.exe"
           $PWD.Path >> $env:GITHUB_PATH
       - name: Run E2E tests
+        env:
+          DISPLAY: ${{ matrix.platform == 'ubuntu-latest' && ':99' || '' }}
         run: pnpm test:e2e
       - name: Upload E2E artifacts
         if: always()
