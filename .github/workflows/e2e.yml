@@ -43,6 +43,7 @@ jobs:
       - name: Install tauri-driver
         run: cargo install tauri-driver --locked
       - name: Verify tauri-driver installation
+        shell: bash
         run: |
           which tauri-driver || echo "tauri-driver not in PATH"
           ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
