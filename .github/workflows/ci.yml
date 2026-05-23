@@ -14,15 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: voidzero-dev/setup-vp@v1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: true
+          cache: 'pnpm'
       - name: Install dependencies
-        run: vp install --frozen-lockfile
-      - name: Vite+ Check (lint & format)
+        run: pnpm install --frozen-lockfile
+      - name: Biome check (lint & format)
         run: |
-          vp check --fix
+          pnpm check
           git diff --exit-code
 
   build-check:
@@ -33,16 +34,22 @@ jobs:
         platform: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v6
-      - uses: voidzero-dev/setup-vp@v1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: true
+          cache: 'pnpm'
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> target
       - name: Install just
         uses: taiki-e/install-action@just
-      - run: vp install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+      - name: Run Vitest
+        run: pnpm test
+      - name: Run cargo test
+        run: cargo test
+        working-directory: src-tauri
       - name: Build (debug mode)
-        run: vp exec tauri build --debug --no-bundle
+        run: pnpm exec tauri build --debug --no-bundle
