@@ -60,7 +60,10 @@ jobs:
           ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
       - name: Start Xvfb (Ubuntu)
         if: matrix.platform == 'ubuntu-latest'
-        run: Xvfb :99 -screen 0 1024x768x24 &
+        run: Xvfb :99 -screen 0 1920x1080x24 &
+      - name: Export DISPLAY (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: echo "DISPLAY=:99" >> $GITHUB_ENV
       - name: Install Microsoft Edge Driver (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -68,9 +71,9 @@ jobs:
           cargo install --git https://github.com/chippers/msedgedriver-tool
           & "$HOME/.cargo/bin/msedgedriver-tool.exe"
           $PWD.Path >> $env:GITHUB_PATH
+      - name: Pre-build Tauri app
+        run: pnpm exec tauri build --debug --no-bundle
       - name: Run E2E tests
-        env:
-          DISPLAY: ${{ matrix.platform == 'ubuntu-latest' && ':99' || '' }}
         run: pnpm test:e2e
       - name: Upload E2E artifacts
         if: always()
