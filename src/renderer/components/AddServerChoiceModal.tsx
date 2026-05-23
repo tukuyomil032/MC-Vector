@@ -28,6 +28,7 @@ export default function AddServerChoiceModal({
         <Dialog.Overlay className="mc-modal-overlay" />
         <Dialog.Content
           aria-describedby={undefined}
+          data-testid="add-server-choice-modal"
           className={cn(
             'mc-modal-panel',
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
@@ -37,6 +38,7 @@ export default function AddServerChoiceModal({
           <div className="flex flex-col gap-3">
             <button
               type="button"
+              data-testid="choice-new-server-button"
               className="flex flex-col items-start gap-1 p-4 rounded-lg border border-zinc-700 bg-transparent text-left hover:bg-zinc-800 transition-colors"
               onClick={() => {
                 onNewServer();
@@ -48,6 +50,7 @@ export default function AddServerChoiceModal({
             </button>
             <button
               type="button"
+              data-testid="choice-import-server-button"
               className="flex flex-col items-start gap-1 p-4 rounded-lg border border-zinc-700 bg-transparent text-left hover:bg-zinc-800 transition-colors"
               onClick={() => {
                 onImportServer();
