@@ -14,7 +14,7 @@ export default defineConfig({
       "src/**/*.spec.ts",
       "src/**/*.spec.tsx",
     ],
-    exclude: ["node_modules", "dist", "src-tauri", "e2e-tests"],
+    exclude: ["node_modules", "dist", "src-tauri", "e2e"],
   },
   resolve: {
     alias: {
