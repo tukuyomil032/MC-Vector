@@ -1,9 +1,9 @@
 import path from "node:path";
 import fs from "node:fs";
-import type { ThenableWebDriver } from "selenium-webdriver";
+import type { WebDriver } from "selenium-webdriver";
 
 export async function saveScreenshot(
-  driver: ThenableWebDriver,
+  driver: WebDriver,
   artifactsDir: string,
   name: string,
 ): Promise<string> {
