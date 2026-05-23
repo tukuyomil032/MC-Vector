@@ -42,6 +42,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install tauri-driver
         run: cargo install tauri-driver --locked
+      - name: Verify tauri-driver installation
+        run: |
+          which tauri-driver || echo "tauri-driver not in PATH"
+          ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
       - name: Enable safaridriver (macOS)
         if: matrix.platform == 'macos-latest'
         run: sudo safaridriver --enable
