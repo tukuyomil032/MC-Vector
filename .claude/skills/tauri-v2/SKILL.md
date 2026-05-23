@@ -1,7 +1,7 @@
 ---
 name: tauri-v2
-description: 'Tauri v2+ cross-platform app development with Rust backend. Use when configuring tauri.conf.json, implementing Rust commands (#[tauri::command]), setting up IPC patterns (invoke, emit, channels), configuring permissions/capabilities, troubleshooting build issues, or deploying desktop/mobile apps. Triggers on Tauri, src-tauri, invoke, emit, capabilities.json.'
-version: 1.0.1
+description: 'Tauri v2+ cross-platform app development with Rust backend. Use when configuring tauri.conf.json, implementing Rust commands (#[tauri::command]), setting up IPC patterns (invoke, emit, channels), configuring permissions/capabilities, troubleshooting build issues, deploying desktop/mobile apps, or setting up E2E testing with tauri-driver + selenium-webdriver. Triggers on Tauri, src-tauri, invoke, emit, capabilities.json, tauri-driver.'
+version: 1.1.0
 ---
 
 # Tauri v2+ Development Skill
@@ -443,6 +443,139 @@ _\*Last verified: 2026-04-02. Always check [official changelog](https://github.c
 - [Commands Reference](https://v2.tauri.app/develop/calling-rust/)
 - [Capabilities & Permissions](https://v2.tauri.app/security/capabilities/)
 - [Configuration Reference](https://v2.tauri.app/reference/config/)
+
+## E2E Testing with tauri-driver
+
+Tauri provides an official WebDriver implementation (`tauri-driver`) for end-to-end testing using **selenium-webdriver** (not WebdriverIO — use the `selenium-webdriver` npm package).
+
+### Setup
+
+```bash
+# Install tauri-driver (one-time, requires Rust toolchain)
+cargo install tauri-driver
+
+# Build debug binary for E2E (run from project root)
+pnpm exec tauri build --debug --no-bundle
+# Binary output: src-tauri/target/debug/<app-name> (or .exe on Windows)
+```
+
+### Selenium WebDriver Configuration (selenium-webdriver)
+
+```typescript
+import { Builder, Capabilities, type WebDriver } from "selenium-webdriver";
+import { spawn, type ChildProcess } from "node:child_process";
+
+// Start tauri-driver process
+const tauriDriver: ChildProcess = spawn("tauri-driver", [], {
+  stdio: ["ignore", "inherit", "inherit"],
+});
+await new Promise<void>((resolve) => setTimeout(resolve, 2000)); // wait for driver to start
+
+// Build WebDriver connection
+const capabilities = new Capabilities();
+capabilities.setBrowserName("wry");            // REQUIRED: Tauri webview name
+capabilities.set("tauri:options", {
+  application: "/absolute/path/to/src-tauri/target/debug/your-app",
+});
+
+const driver: WebDriver = await new Builder()
+  .withCapabilities(capabilities)
+  .usingServer("http://127.0.0.1:4444/")      // tauri-driver default port
+  .build();
+```
+
+**Why this matters:** `setBrowserName("wry")` and `tauri:options.application` are Tauri-specific — standard `chrome`/`firefox` browser names will not work. Use `selenium-webdriver`'s `Capabilities` class, not WebdriverIO config objects.
+
+### data-testid Convention for Testability
+
+Add `data-testid` to React components for reliable CSS selector-based testing:
+
+```tsx
+// Shell / layout
+<div data-testid="app-root" className={...}>
+<aside data-testid="app-sidebar" className={...}>
+<main data-testid="app-main" className={...}>
+
+// Navigation items (dynamic — view name injected)
+<div data-testid={`nav-item-${view}`} onClick={() => setCurrentView(view)}>
+
+// Server list and cards
+<div data-testid="server-list" className={...}>
+<button data-testid={`server-card-${server.id}`} className={...}>
+
+// Modals (Radix UI Dialog)
+<Dialog.Content data-testid="add-server-modal" className={...}>
+
+// Form inputs (react-hook-form — add data-testid alongside spread, no conflict)
+<input {...register('name')} data-testid="server-name-input" className={...} />
+
+// Context menu items (Radix UI)
+<ContextMenu.Item data-testid={`delete-server-${server.id}`} onSelect={...}>
+```
+
+**react-hook-form compatibility:** `{...register('name')}` spreads only `ref / name / onChange / onBlur`. Adding `data-testid` alongside it causes no conflict.
+
+**Radix UI compatibility:** `Dialog.Content`, `ContextMenu.Item`, and other Radix primitives accept `data-testid` directly.
+
+### Common E2E Patterns
+
+```typescript
+import { By, until } from "selenium-webdriver";
+
+// Wait for element with timeout
+await driver.wait(until.elementLocated(By.css("[data-testid='app-root']")), 10000);
+
+// Click element
+const btn = await driver.findElement(By.css("[data-testid='create-server-button']"));
+await btn.click();
+
+// ContextMenu (right-click required — standard click will NOT open it)
+const card = await driver.findElement(By.css("[data-testid='server-card-abc123']"));
+await driver.actions({ async: true }).contextClick(card).perform();
+const deleteBtn = await driver.wait(
+  until.elementLocated(By.css("[data-testid='delete-server-abc123']")),
+  5000,
+);
+await deleteBtn.click();
+
+// Wait for element to disappear
+await driver.wait(async () => {
+  const els = await driver.findElements(By.css("[data-testid='add-server-modal']"));
+  return els.length === 0;
+}, 15000);
+```
+
+### Tauri-Specific E2E Pitfalls
+
+| Pitfall | Solution |
+|---------|---------|
+| Sidebar component returns `null` when collapsed | Check sidebar class before asserting child elements; click `[data-testid='sidebar-toggle-button']` to open |
+| Zustand-driven views (no React Router) | Navigation tests must click `[data-testid='nav-item-{view}']` — do NOT navigate to a URL |
+| ContextMenu items not found | Open with `Actions.contextClick()` first — items only appear in DOM while menu is open |
+| `react-hook-form` + `data-testid` conflict | No conflict — add `data-testid` separately from `{...register()}` |
+| App binary not found | Ensure `src-tauri/target/debug/<name>` exists; run `tauri build --debug --no-bundle` first |
+
+### Sidebar State Guard Pattern
+
+When a sidebar component renders `null` while collapsed, always check/open it before asserting child elements:
+
+```typescript
+// Before hook: ensure sidebar is open
+before(async () => {
+  ctx = await startApp();
+  const sidebar = await ctx.driver.findElements(By.css("[data-testid='app-sidebar']"));
+  if (sidebar.length > 0) {
+    const cls = await sidebar[0].getAttribute("class");
+    if (!cls.includes("--open")) {          // class suffix pattern used in this app
+      const toggle = await ctx.driver.findElement(
+        By.css("[data-testid='sidebar-toggle-button']"),
+      );
+      await toggle.click();
+      await ctx.driver.sleep(500);          // wait for animation
+    }
+  }
+});
+```
 
 ## Troubleshooting
 
