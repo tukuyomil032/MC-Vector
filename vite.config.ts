@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite-plus';
+import { defineConfig } from 'vite';
 
 const tauriDevHost = process.env.TAURI_DEV_HOST;
 const parsedPort = process.env.PORT ? Number(process.env.PORT) : undefined;
@@ -82,34 +82,5 @@ export default defineConfig({
         },
       },
     },
-  },
-
-  // Oxlint configuration (migrated from biome.json)
-  lint: {
-    ignorePatterns: [
-      'dist/**',
-      'build/**',
-      'node_modules/**',
-      '.vscode/**',
-      '.github/workflows/**',
-      'scripts/**',
-      '.agents/**/*',
-      '.claude/**/*',
-      'CLAUDE.md',
-    ],
-  },
-
-  // Oxfmt configuration (migrated from biome.json)
-  fmt: {
-    semi: true,
-    singleQuote: true,
-    tabWidth: 2,
-    printWidth: 100,
-  },
-
-  // Staged file checks (replaces lint-staged)
-  staged: {
-    'src/**/*.{ts,tsx}': 'vp check --fix',
-    'src-tauri/src/**/*.rs': 'cargo fmt --all --manifest-path src-tauri/Cargo.toml --',
   },
 });
