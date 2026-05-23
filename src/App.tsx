@@ -289,10 +289,12 @@ function App() {
     <div
       className={`app-shell theme-${resolvedTheme}`}
       data-theme={resolvedTheme}
+      data-testid="app-root"
       style={appShellStyle}
     >
       <aside
         className={`app-sidebar app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'app-sidebar--open' : 'app-sidebar--collapsed'}`}
+        data-testid="app-sidebar"
       >
         <AppSidebarHeader
           isSidebarOpen={isSidebarOpen}
@@ -334,7 +336,7 @@ function App() {
         />
       </aside>
 
-      <main className="app-main app-shell__surface app-shell__surface--main">
+      <main className="app-main app-shell__surface app-shell__surface--main" data-testid="app-main">
         <AppMainHeader
           currentView={currentView}
           headerTitle={headerTitle}

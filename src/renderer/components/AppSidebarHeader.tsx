@@ -22,6 +22,7 @@ export default function AppSidebarHeader({
         <button
           type="button"
           className="app-sidebar__brand"
+          data-testid="sidebar-brand-button"
           onClick={onOpenSettings}
           aria-label={openSettingsLabel}
           title={openSettingsLabel}
@@ -32,6 +33,7 @@ export default function AppSidebarHeader({
 
       <button
         type="button"
+        data-testid="sidebar-toggle-button"
         onClick={onToggleSidebar}
         className="app-sidebar__menu-button"
         aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}

@@ -105,7 +105,10 @@ export default function AppServerSidebar({
   };
 
   return (
-    <div className="app-sidebar__servers app-shell__surface app-shell__surface--sidebar-panel surface-card">
+    <div
+      className="app-sidebar__servers app-shell__surface app-shell__surface--sidebar-panel surface-card"
+      data-testid="server-list"
+    >
       <div className="app-sidebar__servers-title flex items-center justify-between">
         <span>{serversLabel}</span>
         <button
@@ -138,6 +141,7 @@ export default function AppServerSidebar({
                     <button
                       type="button"
                       className={`app-sidebar__server-item flex-1 ${server.id === selectedServerId ? 'is-active' : ''}`}
+                      data-testid={`server-card-${server.id}`}
                       onClick={() => {
                         if (isBulkMode) {
                           toggleSelect(server.id);
@@ -174,6 +178,7 @@ export default function AppServerSidebar({
                       <ContextMenu.Separator className="my-1 h-px bg-zinc-700" />
                       <ContextMenu.Item
                         className={cn(contextMenuDangerItemClass)}
+                        data-testid={`delete-server-${server.id}`}
                         onSelect={() => void onDeleteServer(server.id)}
                       >
                         🗑️ {deleteLabel}
@@ -228,7 +233,11 @@ export default function AppServerSidebar({
         </div>
       )}
 
-      <button className="app-sidebar__add-server-btn w-full" onClick={onAddServer}>
+      <button
+        className="app-sidebar__add-server-btn w-full"
+        data-testid="create-server-button"
+        onClick={onAddServer}
+      >
         + {addServerLabel}
       </button>
     </div>

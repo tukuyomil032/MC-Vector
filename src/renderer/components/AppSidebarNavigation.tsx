@@ -51,7 +51,10 @@ export default function AppSidebarNavigation({
   t,
 }: AppSidebarNavigationProps) {
   return (
-    <div className="app-sidebar__nav app-shell__surface app-shell__surface--sidebar-panel surface-card">
+    <div
+      className="app-sidebar__nav app-shell__surface app-shell__surface--sidebar-panel surface-card"
+      data-testid="app-sidebar-nav"
+    >
       {NAV_ITEMS.map((item) => (
         <div key={item.view}>
           {item.showDividerBefore && <hr className="app-sidebar__divider" />}
