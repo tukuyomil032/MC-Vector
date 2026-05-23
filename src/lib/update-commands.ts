@@ -1,6 +1,6 @@
 import { getVersion } from '@tauri-apps/api/app';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { check, type Update } from '@tauri-apps/plugin-updater';
+import { type Update, check } from '@tauri-apps/plugin-updater';
 import { getTranslation } from '../i18n';
 import { logError } from './error-utils';
 import { tauriInvoke } from './tauri-api';
@@ -18,11 +18,7 @@ function normalizeUpdaterError(error: unknown): string {
   const lower = raw.toLowerCase();
 
   if (lower.includes('signature verification failed')) {
-    return (
-      t('errors.updateSignatureVerificationFailed') +
-      '\n' +
-      t('errors.updateSignatureVerificationDetails', { error: raw })
-    );
+    return `${t('errors.updateSignatureVerificationFailed')}\n${t('errors.updateSignatureVerificationDetails', { error: raw })}`;
   }
 
   return raw;
@@ -30,42 +26,12 @@ function normalizeUpdaterError(error: unknown): string {
 
 function createReadOnlyErrorMessage(location: string): string {
   const t = getTranslation();
-  return (
-    `${t('errors.updateReadOnlyLocationTitle')}\n\n` +
-    `${t('errors.updateReadOnlyLocationCurrent', { location })}\n\n` +
-    `${t('errors.updateReadOnlyLocationSteps')}\n` +
-    `${t('errors.updateReadOnlyLocationStep1')}\n` +
-    `${t('errors.updateReadOnlyLocationStep2')}\n` +
-    `${t('errors.updateReadOnlyLocationStep3')}\n` +
-    `${t('errors.updateReadOnlyLocationStep4')}\n\n` +
-    `The app is running from a read-only location.\n\n` +
-    `Current location: ${location}\n\n` +
-    `To apply the update:\n` +
-    `1. Quit this app\n` +
-    `2. Drag and drop the app to the Applications folder in Finder\n` +
-    `3. Launch the app again from the Applications folder\n` +
-    `4. Try updating again`
-  );
+  return `${t('errors.updateReadOnlyLocationTitle')}\n\n${t('errors.updateReadOnlyLocationCurrent', { location })}\n\n${t('errors.updateReadOnlyLocationSteps')}\n${t('errors.updateReadOnlyLocationStep1')}\n${t('errors.updateReadOnlyLocationStep2')}\n${t('errors.updateReadOnlyLocationStep3')}\n${t('errors.updateReadOnlyLocationStep4')}\n\nThe app is running from a read-only location.\n\nCurrent location: ${location}\n\nTo apply the update:\n1. Quit this app\n2. Drag and drop the app to the Applications folder in Finder\n3. Launch the app again from the Applications folder\n4. Try updating again`;
 }
 
 function createPermissionErrorMessage(location: string): string {
   const t = getTranslation();
-  return (
-    `${t('errors.updatePermissionDeniedTitle')}\n\n` +
-    `${t('errors.updatePermissionDeniedCurrent', { location })}\n\n` +
-    `${t('errors.updatePermissionDeniedSteps')}\n` +
-    `${t('errors.updatePermissionDeniedStep1')}\n` +
-    `${t('errors.updatePermissionDeniedStep2')}\n` +
-    `${t('errors.updatePermissionDeniedStep3')}\n` +
-    `${t('errors.updatePermissionDeniedStep4')}\n\n` +
-    `The app does not have the necessary permissions to update.\n\n` +
-    `Current location: ${location}\n\n` +
-    `To apply the update:\n` +
-    `1. Quit this app\n` +
-    `2. Move the app to the Applications folder in Finder\n` +
-    `3. Check the folder permissions\n` +
-    `4. Try updating again`
-  );
+  return `${t('errors.updatePermissionDeniedTitle')}\n\n${t('errors.updatePermissionDeniedCurrent', { location })}\n\n${t('errors.updatePermissionDeniedSteps')}\n${t('errors.updatePermissionDeniedStep1')}\n${t('errors.updatePermissionDeniedStep2')}\n${t('errors.updatePermissionDeniedStep3')}\n${t('errors.updatePermissionDeniedStep4')}\n\nThe app does not have the necessary permissions to update.\n\nCurrent location: ${location}\n\nTo apply the update:\n1. Quit this app\n2. Move the app to the Applications folder in Finder\n3. Check the folder permissions\n4. Try updating again`;
 }
 
 export async function checkForUpdates(): Promise<{
@@ -127,15 +93,14 @@ export async function downloadAndInstallUpdate(
     // Only show read-only specific message for read-only filesystem errors
     if (updateCheck.reason === 'read_only') {
       throw new Error(createReadOnlyErrorMessage(location));
-    } else if (updateCheck.reason === 'permission_denied') {
-      throw new Error(createPermissionErrorMessage(location));
-    } else {
-      // Generic error for other cases
-      throw new Error(
-        `${t('errors.updateCannotApply')}\n\n` +
-          `Cannot apply update. Please move the app to the Applications folder and try again.`,
-      );
     }
+    if (updateCheck.reason === 'permission_denied') {
+      throw new Error(createPermissionErrorMessage(location));
+    }
+    // Generic error for other cases
+    throw new Error(
+      `${t('errors.updateCannotApply')}\n\nCannot apply update. Please move the app to the Applications folder and try again.`,
+    );
   }
 
   let downloaded = 0;
@@ -145,7 +110,7 @@ export async function downloadAndInstallUpdate(
     downloaded = 0;
     contentLength = 0;
 
-    await currentUpdate!.downloadAndInstall((event) => {
+    await currentUpdate?.downloadAndInstall((event) => {
       switch (event.event) {
         case 'Started':
           contentLength = event.data.contentLength ?? 0;

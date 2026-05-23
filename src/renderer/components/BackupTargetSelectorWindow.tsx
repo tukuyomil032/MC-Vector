@@ -318,7 +318,7 @@ export default function BackupTargetSelectorWindow() {
 
         {node.isDirectory && isExpanded && hasChildren && (
           <div className="backup-selector-window__node-children">
-            {node.children!.map((child) => renderNode(child, depth + 1))}
+            {node.children?.map((child) => renderNode(child, depth + 1))}
           </div>
         )}
       </div>

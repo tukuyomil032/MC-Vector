@@ -8,14 +8,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useTranslation, type Translate, type TranslationKey } from '../../i18n';
+import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
-import {
-  type MinecraftServer,
-  type ServerStatus,
-} from '../components/../shared/server declaration';
+import type { MinecraftServer, ServerStatus } from '../components/../shared/server declaration';
 
 interface Props {
   server: MinecraftServer;

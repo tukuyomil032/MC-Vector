@@ -1,8 +1,10 @@
 import { appDataDir } from '@tauri-apps/api/path';
-import React, { useEffect, useRef, useState } from 'react';
-import { copyToClipboard } from '../../../lib/clipboard-commands';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
-import { getJavaVersions, type JavaVersion } from '../../../lib/java-commands';
+import { copyToClipboard } from '../../../lib/clipboard-commands';
+import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
 import {
   clearNgrokToken,
   getNgrokToken,
@@ -12,12 +14,11 @@ import {
   startNgrok,
   stopNgrok,
 } from '../../../lib/ngrok-commands';
-import { type MinecraftServer } from '../../components/../shared/server declaration';
+import type { MinecraftServer } from '../../components/../shared/server declaration';
 import { VERSION_OPTIONS } from '../../constants/versionOptions';
 import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
-import { toast } from 'sonner';
 import { Select } from '../ui/Select';
 
 interface ServerSettingsProps {
@@ -738,7 +739,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 >
                   <span
                     className={`server-settings__ngrok-switch-thumb ${isTunneling ? 'is-on' : ''}`}
-                  ></span>
+                  />
                 </span>
               </label>
             </div>

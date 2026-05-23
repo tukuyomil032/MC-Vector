@@ -1,43 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
+import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
 import {
-  getServerTemplates,
   type ServerTemplate,
+  getServerTemplates,
   startServer as startServerApi,
   stopServer as stopServerApi,
   updateServer as updateServerApi,
 } from '@/lib/server-commands';
-import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
+import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
 import AppMainContent from '@/renderer/components/AppMainContent';
 import AppMainHeader from '@/renderer/components/AppMainHeader';
 import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
+import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
-import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
-import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
-import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
-import { toast } from 'sonner';
-import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
+import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
-import { useServerContextActions } from '@/renderer/hooks/use-server-context-actions';
-import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
 import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action';
+import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
+import { useServerContextActions } from '@/renderer/hooks/use-server-context-actions';
 import { useServerCreateAction } from '@/renderer/hooks/use-server-create-action';
 import { useServerProcessActions } from '@/renderer/hooks/use-server-process-actions';
 import { useServerRuntimeListeners } from '@/renderer/hooks/use-server-runtime-listeners';
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
-import { type MinecraftServer } from '@/renderer/shared/server declaration';
+import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
+import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import { getHeaderTitle } from '@/renderer/shared/view-labels';
 import { useConsoleStore } from '@/store/consoleStore';
 import { useServerStore } from '@/store/serverStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 function App() {
   const { t } = useTranslation();

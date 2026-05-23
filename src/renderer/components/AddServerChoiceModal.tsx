@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '@/lib/ui';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useTranslation } from '../../i18n';
 
 interface AddServerChoiceModalProps {

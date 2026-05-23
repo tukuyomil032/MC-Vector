@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
 import { logError } from '../../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../../lib/file-commands';
 import { serverPropertiesList } from '../../shared/propertiesData';
-import { type MinecraftServer } from '../../shared/server declaration';
-import { toast } from 'sonner';
+import type { MinecraftServer } from '../../shared/server declaration';
 import { Switch } from '../ui/Switch';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 
@@ -60,7 +60,7 @@ export default function PropertiesView({ server }: Props) {
                 newProps[key.trim()] = true;
               } else if (cleaned === 'false') {
                 newProps[key.trim()] = false;
-              } else if (!isNaN(Number(cleaned)) && cleaned !== '') {
+              } else if (!Number.isNaN(Number(cleaned)) && cleaned !== '') {
                 newProps[key.trim()] = Number(cleaned);
               } else {
                 newProps[key.trim()] = cleaned;
@@ -222,7 +222,7 @@ export default function PropertiesView({ server }: Props) {
               <input
                 type="text"
                 className="input-field properties-view__motd-input"
-                value={props['motd'] as string}
+                value={props.motd as string}
                 onChange={(e) => handleChange('motd', e.target.value)}
               />
             </div>
@@ -235,7 +235,7 @@ export default function PropertiesView({ server }: Props) {
               </div>
               <select
                 className="input-field"
-                value={props['gamemode'] as string}
+                value={props.gamemode as string}
                 onChange={(e) => handleChange('gamemode', e.target.value)}
               >
                 <option value="survival">{t('properties.gameMode.options.survival')}</option>
@@ -253,7 +253,7 @@ export default function PropertiesView({ server }: Props) {
               </div>
               <select
                 className="input-field"
-                value={props['difficulty'] as string}
+                value={props.difficulty as string}
                 onChange={(e) => handleChange('difficulty', e.target.value)}
               >
                 <option value="peaceful">{t('properties.difficulty.options.peaceful')}</option>
@@ -271,7 +271,7 @@ export default function PropertiesView({ server }: Props) {
             <ToggleItem
               label={t('properties.toggles.pvp.label')}
               desc={t('properties.toggles.pvp.description')}
-              checked={Boolean(props['pvp'])}
+              checked={Boolean(props.pvp)}
               onChange={(v) => handleChange('pvp', v)}
             />
           )}

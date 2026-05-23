@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { MinecraftServer } from '../renderer/shared/server declaration';
-import { resolveStateUpdater, type StateUpdater } from './store-types';
+import { type StateUpdater, resolveStateUpdater } from './store-types';
 
 interface ServerStoreState {
   servers: MinecraftServer[];

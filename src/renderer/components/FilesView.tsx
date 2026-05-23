@@ -3,6 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask } from '@tauri-apps/plugin-dialog';
 import type * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import {
   iconFile,
   iconFiles,
@@ -30,9 +31,8 @@ import {
   readFileContent,
   saveFileContent,
 } from '../../lib/file-commands';
-import { type MinecraftServer } from '../components/../shared/server declaration';
+import type { MinecraftServer } from '../components/../shared/server declaration';
 import SvgMaskIcon from './SvgMaskIcon';
-import { toast } from 'sonner';
 
 interface Props {
   server: MinecraftServer;
@@ -678,7 +678,7 @@ export default function FilesView({ server }: Props) {
         </button>
         {selectedFiles.length > 0 && (
           <>
-            <div className="files-view__toolbar-divider"></div>
+            <div className="files-view__toolbar-divider" />
             <button
               className="files-view__toolbar-btn"
               onClick={() => openMoveModal(false)}
@@ -768,7 +768,7 @@ export default function FilesView({ server }: Props) {
                   {file.isDirectory
                     ? '-'
                     : file.size
-                      ? (file.size / 1024).toFixed(1) + ' KB'
+                      ? `${(file.size / 1024).toFixed(1)} KB`
                       : '0 KB'}
                 </span>
               </div>
@@ -898,7 +898,6 @@ export default function FilesView({ server }: Props) {
                   : t('files.modal.newFilePlaceholder')
               }
               className="mc-modal-input"
-              autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreate();
               }}
@@ -963,7 +962,6 @@ export default function FilesView({ server }: Props) {
               value={renameFileName}
               onChange={(e) => setRenameFileName(e.target.value)}
               className="mc-modal-input"
-              autoFocus
             />
             <div className="mc-modal-footer">
               <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
@@ -989,12 +987,12 @@ export default function FilesView({ server }: Props) {
               <div
                 className="files-view__context-item"
                 onClick={() => {
-                  setRenameFileName(contextMenu.file!.name);
+                  setRenameFileName(contextMenu.file?.name);
                   setModalType('rename');
                   setContextMenu(null);
                 }}
               >
-                <div className="files-view__context-spacer"></div>
+                <div className="files-view__context-spacer" />
                 {t('files.contextMenu.rename')}
               </div>
 
@@ -1052,7 +1050,7 @@ export default function FilesView({ server }: Props) {
                   setContextMenu(null);
                 }}
               >
-                <div className="files-view__context-spacer"></div>
+                <div className="files-view__context-spacer" />
                 {t('files.contextMenu.newCreate')}
               </div>
               <div
@@ -1062,7 +1060,7 @@ export default function FilesView({ server }: Props) {
                   setContextMenu(null);
                 }}
               >
-                <div className="files-view__context-spacer"></div>
+                <div className="files-view__context-spacer" />
                 {t('files.contextMenu.import')}
               </div>
               <div

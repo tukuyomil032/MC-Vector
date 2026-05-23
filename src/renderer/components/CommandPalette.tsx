@@ -1,7 +1,7 @@
-import { Command } from 'cmdk';
-import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import type { AppView, MinecraftServer } from '@/renderer/shared/server declaration';
+import { Command } from 'cmdk';
+import { useEffect, useRef, useState } from 'react';
 
 interface CommandPaletteProps {
   activeServer: MinecraftServer | undefined;

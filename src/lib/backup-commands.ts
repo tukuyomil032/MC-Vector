@@ -1,6 +1,6 @@
 import { type DirEntry, readDir, remove } from '@tauri-apps/plugin-fs';
 import { type FileEntryWithMeta, listFilesWithMetadata } from './file-commands';
-import { tauriInvoke, tauriListen, type UnlistenFn } from './tauri-api';
+import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 interface BackupInfo {
   name: string;

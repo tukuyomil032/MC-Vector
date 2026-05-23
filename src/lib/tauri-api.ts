@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { type Event, listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { type Event, type UnlistenFn, listen } from '@tauri-apps/api/event';
 import { ALLOWED_TAURI_COMMANDS } from './tauri-command-allowlist';
 
 function assertAllowedCommand(cmd: string): string {

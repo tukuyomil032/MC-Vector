@@ -1,19 +1,19 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '@/lib/ui';
+import * as Dialog from '@radix-ui/react-dialog';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { logError } from '../../lib/error-utils';
 import {
+  type JavaVersion,
   deleteJava,
   downloadJava,
   getJavaVersions,
-  type JavaVersion,
   onJavaDownloadProgress,
   selectJavaBinary,
 } from '../../lib/java-commands';
-import { toast } from 'sonner';
 
 interface Props {
   open: boolean;

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { onBackupProgress, createBackup } from '../../lib/backup-commands';
-import { downloadServerJar, onDownloadProgress, updateServer } from '../../lib/server-commands';
-import { resolveLatestJarUrl } from '../../lib/version-commands';
-import { useTranslation } from '../../i18n';
-import type { UnlistenFn } from '../../lib/tauri-api';
-import type { MinecraftServer } from '../shared/server declaration';
 import { toast } from 'sonner';
+import { useTranslation } from '../../i18n';
+import { createBackup, onBackupProgress } from '../../lib/backup-commands';
+import { downloadServerJar, onDownloadProgress, updateServer } from '../../lib/server-commands';
+import type { UnlistenFn } from '../../lib/tauri-api';
+import { resolveLatestJarUrl } from '../../lib/version-commands';
+import type { MinecraftServer } from '../shared/server declaration';
 
 type WizardStep = 'check' | 'backup' | 'download' | 'done';
 

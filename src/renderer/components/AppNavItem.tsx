@@ -1,6 +1,6 @@
-import { type AppView } from '../shared/server declaration';
-import { Tooltip } from './ui/Tooltip';
+import type { AppView } from '../shared/server declaration';
 import SvgMaskIcon from './SvgMaskIcon';
+import { Tooltip } from './ui/Tooltip';
 
 interface AppNavItemProps {
   label: string;

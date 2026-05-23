@@ -1,7 +1,7 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
-import { type MinecraftServer } from '../components/../shared/server declaration';
+import type { MinecraftServer } from '../components/../shared/server declaration';
 
 interface ProxySetupViewProps {
   servers: MinecraftServer[];

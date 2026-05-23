@@ -4,10 +4,10 @@ import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import {
+  type ServerTemplate,
   addServer as addServerApi,
   deleteServer as deleteServerApi,
   saveServerTemplate,
-  type ServerTemplate,
 } from '../../lib/server-commands';
 import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';

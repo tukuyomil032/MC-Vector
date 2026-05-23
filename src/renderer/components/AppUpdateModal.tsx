@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '@/lib/ui';
+import * as Dialog from '@radix-ui/react-dialog';
 import type { Translate } from '../../i18n';
 import { Progress } from './ui/Progress';
 

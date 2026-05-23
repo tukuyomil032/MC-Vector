@@ -1,6 +1,6 @@
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { isRecord } from './guards/json-guards';
 import { logError } from './error-utils';
+import { isRecord } from './guards/json-guards';
 
 /**
  * Resolves the latest available JAR download URL for the given server software.
@@ -50,7 +50,8 @@ export async function resolveLatestJarUrl(
           : `${project}-${latestVersion}-${buildNumber}.jar`;
       const downloadUrl = `https://api.papermc.io/v2/projects/${project}/versions/${latestVersion}/builds/${buildNumber}/downloads/${fileName}`;
       return { latestVersion, downloadUrl };
-    } else if (software === 'Vanilla') {
+    }
+    if (software === 'Vanilla') {
       const manifestRes = await tauriFetch(
         'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
       );
@@ -71,7 +72,8 @@ export async function resolveLatestJarUrl(
       const serverUrl = detail.downloads.server.url;
       if (typeof serverUrl !== 'string' || !serverUrl) return null;
       return { latestVersion, downloadUrl: serverUrl };
-    } else if (software === 'Fabric') {
+    }
+    if (software === 'Fabric') {
       const loaderRes = await tauriFetch('https://meta.fabricmc.net/v2/versions/loader');
       const loaders = await loaderRes.json();
       if (!Array.isArray(loaders) || loaders.length === 0) return null;

@@ -1,5 +1,5 @@
-import * as SelectPrimitive from '@radix-ui/react-select';
 import { cn } from '@/lib/ui';
+import * as SelectPrimitive from '@radix-ui/react-select';
 
 interface SelectOption {
   value: string;
@@ -67,25 +67,23 @@ export function Select({
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content className={contentClass} position="popper" sideOffset={4}>
           <SelectPrimitive.Viewport className="p-1">
-            {options &&
-              options.map((opt) => (
-                <SelectPrimitive.Item key={opt.value} value={opt.value} className={itemClass}>
-                  <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
-                </SelectPrimitive.Item>
-              ))}
-            {groups &&
-              groups.map((group) => (
-                <SelectPrimitive.Group key={group.label}>
-                  <SelectPrimitive.Label className={groupLabelClass}>
-                    {group.label}
-                  </SelectPrimitive.Label>
-                  {group.options.map((opt) => (
-                    <SelectPrimitive.Item key={opt.value} value={opt.value} className={itemClass}>
-                      <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
-                    </SelectPrimitive.Item>
-                  ))}
-                </SelectPrimitive.Group>
-              ))}
+            {options?.map((opt) => (
+              <SelectPrimitive.Item key={opt.value} value={opt.value} className={itemClass}>
+                <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
+              </SelectPrimitive.Item>
+            ))}
+            {groups?.map((group) => (
+              <SelectPrimitive.Group key={group.label}>
+                <SelectPrimitive.Label className={groupLabelClass}>
+                  {group.label}
+                </SelectPrimitive.Label>
+                {group.options.map((opt) => (
+                  <SelectPrimitive.Item key={opt.value} value={opt.value} className={itemClass}>
+                    <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
+                  </SelectPrimitive.Item>
+                ))}
+              </SelectPrimitive.Group>
+            ))}
           </SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>

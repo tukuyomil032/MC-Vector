@@ -375,8 +375,8 @@ function resolveHangarPlatform(software: string): string {
 export async function searchModrinth(
   query: string,
   facets: string,
-  offset: number = 0,
-  limit: number = 20,
+  offset = 0,
+  limit = 20,
 ): Promise<{ hits: ModrinthProject[]; total_hits: number }> {
   const result = await searchModrinthProjects({
     query,
@@ -444,7 +444,7 @@ export async function getModrinthProjectBody(projectId: string): Promise<string 
 
 export async function searchHangar(
   query: string,
-  offset: number = 0,
+  offset = 0,
 ): Promise<{ result: HangarProject[]; pagination: unknown }> {
   const payload = await searchHangarProjects({
     query,
@@ -595,11 +595,7 @@ export async function getHangarProjectBody(owner: string, slug: string): Promise
   return parsed.description.trim() ? parsed.description : null;
 }
 
-export async function searchSpigot(
-  query: string,
-  page: number = 1,
-  size: number = 25,
-): Promise<SpigetResource[]> {
+export async function searchSpigot(query: string, page = 1, size = 25): Promise<SpigetResource[]> {
   const resources = await searchSpigotResources({
     query,
     page,
@@ -635,7 +631,7 @@ export async function installModrinthProject(
 
   // Select the appropriate file entry
   let chosenEntry: unknown = null;
-  if (fileName && fileName.trim()) {
+  if (fileName?.trim()) {
     // If fileName is provided, find the matching file entry
     const trimmedFileName = fileName.trim();
     chosenEntry = payload.files.find((entry) => {
@@ -698,7 +694,7 @@ export async function installHangarProject(
   await tauriInvoke('download_file', {
     url: downloadUrl,
     dest: destPath,
-    eventId: `plugin-hangar`,
+    eventId: 'plugin-hangar',
   });
 }
 

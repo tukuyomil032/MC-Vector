@@ -1,5 +1,5 @@
-import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/ui';
+import * as SwitchPrimitive from '@radix-ui/react-switch';
 
 interface SwitchProps {
   checked: boolean;

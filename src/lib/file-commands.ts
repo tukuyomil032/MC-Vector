@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { copyFile, type DirEntry, mkdir, readDir, remove, rename } from '@tauri-apps/plugin-fs';
+import { type DirEntry, copyFile, mkdir, readDir, remove, rename } from '@tauri-apps/plugin-fs';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { tauriInvoke } from './tauri-api';
 

@@ -1,10 +1,10 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '@/lib/ui';
+import * as Dialog from '@radix-ui/react-dialog';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { analyzeServerFolder } from '../../lib/server-import-commands';
-import { toast } from 'sonner';
 
 interface ImportServerModalProps {
   open: boolean;

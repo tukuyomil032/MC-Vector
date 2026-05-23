@@ -1,13 +1,13 @@
-import * as Dialog from '@radix-ui/react-dialog';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from '@/lib/ui';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as Dialog from '@radix-ui/react-dialog';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useTranslation } from '../../i18n';
-import { logError } from '../../lib/error-utils';
 import { getServerRoot } from '../../lib/config-commands';
+import { logError } from '../../lib/error-utils';
 import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
 

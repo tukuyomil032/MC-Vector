@@ -1,6 +1,6 @@
+import { cn } from '@/lib/ui';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { useState } from 'react';
-import { cn } from '@/lib/ui';
 import type { MinecraftServer } from '../shared/server declaration';
 
 export interface AppServerGroup {
@@ -146,7 +146,7 @@ export default function AppServerSidebar({
                         }
                       }}
                     >
-                      <span className={`status-indicator ${server.status}`}></span>
+                      <span className={`status-indicator ${server.status}`} />
                       <span className="flex flex-col">
                         <span className="font-semibold text-sm text-text-primary">
                           {server.name}

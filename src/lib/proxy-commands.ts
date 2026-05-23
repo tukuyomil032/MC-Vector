@@ -15,7 +15,8 @@ export interface ProxyNetworkConfig {
 export function generateProxyConfig(config: ProxyNetworkConfig): string {
   if (config.proxyType === 'velocity') {
     return generateVelocityConfig(config);
-  } else if (config.proxyType === 'waterfall' || config.proxyType === 'bungeecord') {
+  }
+  if (config.proxyType === 'waterfall' || config.proxyType === 'bungeecord') {
     return generateBungeeConfig(config);
   }
   return '';

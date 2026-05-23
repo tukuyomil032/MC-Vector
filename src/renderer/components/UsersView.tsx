@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
 import { sendCommand } from '../../lib/server-commands';
-import { type MinecraftServer } from '../components/../shared/server declaration';
-import { toast } from 'sonner';
+import type { MinecraftServer } from '../components/../shared/server declaration';
 
 interface Props {
   server: MinecraftServer;

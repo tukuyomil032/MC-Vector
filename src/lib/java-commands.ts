@@ -4,7 +4,7 @@ import { remove } from '@tauri-apps/plugin-fs';
 import { arch, platform } from '@tauri-apps/plugin-os';
 import { load } from '@tauri-apps/plugin-store';
 import { logError } from './error-utils';
-import { tauriInvoke, tauriListen, type UnlistenFn } from './tauri-api';
+import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 const STORE_NAME = 'config.json';
 const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;

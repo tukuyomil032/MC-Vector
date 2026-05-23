@@ -1,5 +1,5 @@
 import { load } from '@tauri-apps/plugin-store';
-import { tauriInvoke, tauriListen, type UnlistenFn } from './tauri-api';
+import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 const STORE_NAME = 'config.json';
 

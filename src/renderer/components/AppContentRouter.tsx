@@ -6,9 +6,9 @@ import ConsoleView from './ConsoleView';
 import NgrokGuideView from './NgrokGuideView';
 import ProxyHelpView from './ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './ProxySetupView';
+import UsersView from './UsersView';
 import PropertiesView from './properties/PropertiesView';
 import ServerSettings from './properties/ServerSettings';
-import UsersView from './UsersView';
 
 const DashboardView = lazy(() => import('./DashboardView'));
 const FilesView = lazy(() => import('./FilesView'));

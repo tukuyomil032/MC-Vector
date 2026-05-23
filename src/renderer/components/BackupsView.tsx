@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
   createBackup,
@@ -9,6 +10,7 @@ import {
   listBackupsWithMetadata,
   restoreBackup,
 } from '../../lib/backup-commands';
+import { logError } from '../../lib/error-utils';
 import {
   deleteItem,
   listFiles,
@@ -16,10 +18,8 @@ import {
   readJsonFile,
   writeJsonFile,
 } from '../../lib/file-commands';
-import { logError } from '../../lib/error-utils';
 import { tauriListen } from '../../lib/tauri-api';
-import { type MinecraftServer } from '../shared/server declaration';
-import { toast } from 'sonner';
+import type { MinecraftServer } from '../shared/server declaration';
 
 interface Props {
   server: MinecraftServer;
@@ -743,7 +743,7 @@ export default function BackupsView({ server }: Props) {
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
   };
 
   const formatDate = (date: Date) => {

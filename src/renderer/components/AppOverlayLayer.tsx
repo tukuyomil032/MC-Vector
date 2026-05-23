@@ -1,5 +1,5 @@
-import type { ServerTemplate } from '../../lib/server-commands';
 import type { Translate } from '../../i18n';
+import type { ServerTemplate } from '../../lib/server-commands';
 import type { UpdatePromptState } from '../hooks/use-app-updater';
 import AddServerModal from './AddServerModal';
 import AppDownloadToast from './AppDownloadToast';

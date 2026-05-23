@@ -2,6 +2,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -12,9 +13,8 @@ import {
 } from '../../lib/performance-commands';
 import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
-import { type MinecraftServer } from '../components/../shared/server declaration';
 import { useConsoleStore } from '../../store/consoleStore';
-import { toast } from 'sonner';
+import type { MinecraftServer } from '../components/../shared/server declaration';
 
 type AnsiStyle = {
   color?: string;
@@ -71,7 +71,7 @@ const ANSI_BG_MAP: Record<string, string> = {
 };
 
 const ansiToSegments = (text: string): AnsiSegment[] => {
-  const regex = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g');
+  const regex = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
   let currentStyle: AnsiStyle = {};
   let lastIndex = 0;
   const segments: AnsiSegment[] = [];
@@ -102,7 +102,7 @@ const ansiToSegments = (text: string): AnsiSegment[] => {
       } else if (code === '1') {
         currentStyle.fontWeight = 700;
       } else if (code === '22') {
-        delete currentStyle.fontWeight;
+        currentStyle.fontWeight = undefined;
       } else if (ANSI_COLOR_MAP[code]) {
         currentStyle.color = ANSI_COLOR_MAP[code];
       } else if (ANSI_BG_MAP[code]) {
@@ -125,7 +125,7 @@ const ansiToSegments = (text: string): AnsiSegment[] => {
 };
 
 const stripAnsiCodes = (text: string): string =>
-  text.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '');
+  text.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '');
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

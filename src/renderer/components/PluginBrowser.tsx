@@ -1,3 +1,4 @@
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -16,17 +17,21 @@ import {
   Star,
   X,
 } from 'lucide-react';
-import { useQueries, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
 import {
+  type HangarProject,
+  type ModrinthProject,
+  type ModrinthProjectIdentity,
+  type SpigetResource,
   checkHangarCompatibility,
   getCompatibleModrinthVersion,
   getHangarProjectBody,
@@ -37,17 +42,12 @@ import {
   installHangarProject,
   installModrinthProject,
   installSpigotProject,
-  type HangarProject,
-  type ModrinthProject,
-  type ModrinthProjectIdentity,
   resolveHangarDownload,
-  type SpigetResource,
   searchHangar,
   searchModrinth,
   searchSpigot,
 } from '../../lib/plugin-commands';
-import { type MinecraftServer } from '../components/../shared/server declaration';
-import { toast } from 'sonner';
+import type { MinecraftServer } from '../components/../shared/server declaration';
 
 interface Props {
   server: MinecraftServer;
@@ -1133,7 +1133,7 @@ export default function PluginBrowser({ server }: Props) {
 
     for (const entry of needsCheck) {
       if (entry.sourceItem) {
-        setUpdateStatusByItemId((prev) => ({ ...prev, [entry.sourceItem!.id]: 'checking' }));
+        setUpdateStatusByItemId((prev) => ({ ...prev, [entry.sourceItem?.id]: 'checking' }));
       }
     }
 
