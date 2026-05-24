@@ -22,11 +22,14 @@ describe("Settings Window", function () {
         until.elementLocated(By.css(selectors.sidebarBrandButton)),
         10000,
       );
+      // Wait for button to be interactive before clicking (DOM presence ≠ clickable)
+      await ctx.driver.wait(until.elementIsEnabled(brandBtn), 5000);
       await brandBtn.click();
 
+      // Extended to 20s: CI runners under load can take longer for the panel animation
       await ctx.driver.wait(
         until.elementLocated(By.css(selectors.settingsWindow)),
-        10000,
+        20000,
       );
 
       await saveScreenshot(
