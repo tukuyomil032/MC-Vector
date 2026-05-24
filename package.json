@@ -101,5 +101,13 @@
     "vitest": "^4.1.7"
   },
   "packageManager": "pnpm@10.26.2",
-  "productName": "MC-Vector"
+  "productName": "MC-Vector",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@parcel/watcher",
+      "lefthook",
+      "sharp"
+    ]
+  }
 }
