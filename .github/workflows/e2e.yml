@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, windows-latest]
+        platform: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v6
@@ -53,13 +53,22 @@ jobs:
             xvfb \
             at-spi2-core \
             dbus-x11
-      - name: Install tauri-driver
+      - name: Install tauri-driver (Linux/Windows)
+        if: matrix.platform != 'macos-latest'
         run: cargo install tauri-driver --locked
-      - name: Verify tauri-driver installation
+      - name: Install tauri-wd (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: cargo install tauri-webdriver-automation --locked
+      - name: Verify driver installation
         shell: bash
         run: |
-          which tauri-driver || echo "tauri-driver not in PATH"
-          ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
+          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            which tauri-wd || echo "tauri-wd not in PATH"
+            ls -la ~/.cargo/bin/tauri-wd || echo "tauri-wd binary not found at ~/.cargo/bin"
+          else
+            which tauri-driver || echo "tauri-driver not in PATH"
+            ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
+          fi
       - name: Set WebKit headless env (Ubuntu)
         if: matrix.platform == 'ubuntu-latest'
         run: |
@@ -77,6 +86,8 @@ jobs:
         run: pnpm exec tauri build --debug --no-bundle
       - name: Run E2E tests
         shell: bash
+        # macOS is experimental (no official WKWebView WebDriver): allow failure
+        continue-on-error: ${{ matrix.platform == 'macos-latest' }}
         run: |
           if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
             dbus-run-session -- xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:e2e
