@@ -22,8 +22,8 @@ fi
 
 # リポジトリを自動検出（引数なし時）
 if [[ -z "$REPO_ARG" ]]; then
-  DETECTED=$(git remote get-url origin 2>/dev/null \
-    | sed 's/.*github\.com[:/]//' | sed 's/\.git$//')
+  DETECTED=$(git remote get-url origin 2>/dev/null |
+    sed 's/.*github\.com[:/]//' | sed 's/\.git$//')
   [[ -n "$DETECTED" ]] && REPO_ARG="--repo $DETECTED"
 fi
 
@@ -58,33 +58,33 @@ while IFS= read -r job; do
   # 実行時間を計算
   duration="—"
   if [[ -n "$started" && -n "$completed" ]]; then
-    start_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$started" +%s 2>/dev/null \
-      || date -d "$started" +%s 2>/dev/null || echo 0)
-    end_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$completed" +%s 2>/dev/null \
-      || date -d "$completed" +%s 2>/dev/null || echo 0)
+    start_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$started" +%s 2>/dev/null ||
+      date -d "$started" +%s 2>/dev/null || echo 0)
+    end_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$completed" +%s 2>/dev/null ||
+      date -d "$completed" +%s 2>/dev/null || echo 0)
     diff=$((end_epoch - start_epoch))
-    duration="$(( diff / 60 ))m $(( diff % 60 ))s"
+    duration="$((diff / 60))m $((diff % 60))s"
   fi
 
   # ステータスカラー
   case "$conclusion" in
-    success)
-      status_str="${GREEN}✓ PASS${NC}"
-      PASS_COUNT=$((PASS_COUNT + 1))
-      ;;
-    failure)
-      status_str="${RED}✗ FAIL${NC}"
-      FAILED_COUNT=$((FAILED_COUNT + 1))
-      ;;
-    cancelled)
-      status_str="${YELLOW}⊘ CANCEL${NC}"
-      ;;
-    skipped)
-      status_str="${DIM}— SKIP${NC}"
-      ;;
-    *)
-      status_str="${YELLOW}⋯ ${status}${NC}"
-      ;;
+  success)
+    status_str="${GREEN}✓ PASS${NC}"
+    PASS_COUNT=$((PASS_COUNT + 1))
+    ;;
+  failure)
+    status_str="${RED}✗ FAIL${NC}"
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    ;;
+  cancelled)
+    status_str="${YELLOW}⊘ CANCEL${NC}"
+    ;;
+  skipped)
+    status_str="${DIM}— SKIP${NC}"
+    ;;
+  *)
+    status_str="${YELLOW}⋯ ${status}${NC}"
+    ;;
   esac
 
   printf "${BOLD}${CYAN}│${NC} %-24s ${BOLD}${CYAN}│${NC} " "$name"

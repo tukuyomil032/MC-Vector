@@ -20,9 +20,18 @@ REPO_ARG=""
 # 引数解析
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --stdin) STDIN_MODE=true; shift ;;
-    --repo) REPO_ARG="--repo $2"; shift 2 ;;
-    *) RUN_ID="$1"; shift ;;
+  --stdin)
+    STDIN_MODE=true
+    shift
+    ;;
+  --repo)
+    REPO_ARG="--repo $2"
+    shift 2
+    ;;
+  *)
+    RUN_ID="$1"
+    shift
+    ;;
   esac
 done
 
@@ -34,8 +43,8 @@ fi
 
 # リポジトリを自動検出
 if [[ -z "$REPO_ARG" ]]; then
-  DETECTED=$(git remote get-url origin 2>/dev/null \
-    | sed 's/.*github\.com[:/]//' | sed 's/\.git$//')
+  DETECTED=$(git remote get-url origin 2>/dev/null |
+    sed 's/.*github\.com[:/]//' | sed 's/\.git$//')
   [[ -n "$DETECTED" ]] && REPO_ARG="--repo $DETECTED"
 fi
 
@@ -44,7 +53,7 @@ if [[ "$STDIN_MODE" == true ]]; then
   LOG_CONTENT=$(cat)
 else
   echo -e "${DIM}ログを取得中...${NC}" >&2
-  LOG_CONTENT=$(gh run view "$RUN_ID" $REPO_ARG --log-failed 2>&1 || \
+  LOG_CONTENT=$(gh run view "$RUN_ID" $REPO_ARG --log-failed 2>&1 ||
     gh run view "$RUN_ID" $REPO_ARG --log 2>&1 | head -500)
 fi
 
@@ -101,14 +110,14 @@ for category in "Rust Compile" "Build Tool" "Test Failure" "Package Error" "Lint
     echo -e "${DIM}  参照箇所:${NC}"
     while IFS= read -r ref; do
       echo -e "    ${CYAN}→ $ref${NC}"
-    done <<< "$file_ref"
+    done <<<"$file_ref"
     echo ""
   fi
 
   echo -e "${DIM}  エラー行:${NC}"
   while IFS= read -r line; do
     echo -e "    ${color}$line${NC}"
-  done <<< "$matched"
+  done <<<"$matched"
   echo ""
 done
 

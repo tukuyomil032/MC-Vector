@@ -26,8 +26,8 @@ REPO_FLAG=""
 # ジョブ情報を取得
 JOB_JSON=$(gh run view "$RUN_ID" $REPO_FLAG --json jobs,conclusion,displayTitle,headBranch 2>/dev/null || true)
 if [[ -z "$JOB_JSON" ]]; then
-  echo "## ⚠️ CI Summary (Run #${RUN_ID})" >> "$GITHUB_STEP_SUMMARY"
-  echo "ジョブ情報を取得できませんでした。" >> "$GITHUB_STEP_SUMMARY"
+  echo "## ⚠️ CI Summary (Run #${RUN_ID})" >>"$GITHUB_STEP_SUMMARY"
+  echo "ジョブ情報を取得できませんでした。" >>"$GITHUB_STEP_SUMMARY"
   exit 0
 fi
 
@@ -53,7 +53,7 @@ branch=$(echo "$JOB_JSON" | jq -r '.headBranch // "—"')
   echo ""
   echo "| Job | Status | Duration |"
   echo "|-----|--------|----------|"
-} >> "$GITHUB_STEP_SUMMARY"
+} >>"$GITHUB_STEP_SUMMARY"
 
 # ジョブ行を追記
 echo "$JOB_JSON" | jq -r '.jobs[] |
@@ -64,7 +64,7 @@ echo "$JOB_JSON" | jq -r '.jobs[] |
   (.startedAt // "" | if . != "" then . else null end) as $s |
   (.completedAt // "" | if . != "" then . else null end) as $e |
   "| \(.name) | \($icon) \(.conclusion // .status) | — |"
-' >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+' >>"$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
 # 失敗時はログ抜粋を追記
 if [[ "$overall" == "failure" ]]; then
@@ -75,7 +75,7 @@ if [[ "$overall" == "failure" ]]; then
     echo '```'
     gh run view "$RUN_ID" $REPO_FLAG --log-failed 2>&1 | head -50 || true
     echo '```'
-  } >> "$GITHUB_STEP_SUMMARY"
+  } >>"$GITHUB_STEP_SUMMARY"
 fi
 
 echo "✓ GitHub Actions Job Summary を更新しました。" >&2

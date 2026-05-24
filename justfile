@@ -201,3 +201,16 @@ update-versions:
 # Clean build artifacts
 clean:
     pnpm exec rimraf dist build src-tauri/target node_modules/.vite
+
+
+# ═══════════════════════════════════════════════════════════════
+# CI Monitoring
+# ═══════════════════════════════════════════════════════════════
+
+sh-check:
+    @echo "Running shellcheck & shfmt..."
+    shfmt -d .agents/skills/
+
+sh-fix:
+    @echo "Fixing shell scripts with shfmt..."
+    shfmt -d -w .agents/skills/

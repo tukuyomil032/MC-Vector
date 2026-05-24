@@ -32,8 +32,8 @@ check_deps() {
 }
 
 get_repo() {
-  git remote get-url origin 2>/dev/null \
-    | sed 's/.*github\.com[:/]//' | sed 's/\.git$//'
+  git remote get-url origin 2>/dev/null |
+    sed 's/.*github\.com[:/]//' | sed 's/\.git$//'
 }
 
 get_branch() {
@@ -42,34 +42,37 @@ get_branch() {
 
 icon_for_conclusion() {
   case "$1" in
-    success)   echo "✓" ;;
-    failure)   echo "✗" ;;
-    cancelled) echo "⊘" ;;
-    skipped)   echo "—" ;;
-    *)         echo "⋯" ;;
+  success) echo "✓" ;;
+  failure) echo "✗" ;;
+  cancelled) echo "⊘" ;;
+  skipped) echo "—" ;;
+  *) echo "⋯" ;;
   esac
 }
 
 color_for_conclusion() {
   case "$1" in
-    success)   echo "$GREEN" ;;
-    failure)   echo "$RED" ;;
-    cancelled) echo "$YELLOW" ;;
-    *)         echo "$DIM" ;;
+  success) echo "$GREEN" ;;
+  failure) echo "$RED" ;;
+  cancelled) echo "$YELLOW" ;;
+  *) echo "$DIM" ;;
   esac
 }
 
 format_time_ago() {
   local iso="$1"
   local epoch
-  epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$iso" +%s 2>/dev/null \
-    || date -d "$iso" +%s 2>/dev/null || echo 0)
+  epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$iso" +%s 2>/dev/null ||
+    date -d "$iso" +%s 2>/dev/null || echo 0)
   local now diff
   now=$(date +%s)
   diff=$((now - epoch))
-  if   [[ $diff -lt 60   ]]; then echo "${diff}s ago"
-  elif [[ $diff -lt 3600 ]]; then echo "$((diff / 60))m ago"
-  else                             echo "$((diff / 3600))h ago"
+  if [[ $diff -lt 60 ]]; then
+    echo "${diff}s ago"
+  elif [[ $diff -lt 3600 ]]; then
+    echo "$((diff / 60))m ago"
+  else
+    echo "$((diff / 3600))h ago"
   fi
 }
 
@@ -130,11 +133,24 @@ post_process_menu() {
 
   select opt in "${options[@]}"; do
     case "$REPLY" in
-      1) save_markdown_report "$run_id" "$repo"; break ;;
-      2) append_to_skill "$run_id" "$repo"; break ;;
-      3) save_markdown_report "$run_id" "$repo"; append_to_skill "$run_id" "$repo"; break ;;
-      4|"") echo -e "${DIM}スキップしました。${NC}"; break ;;
-      *) echo "1〜4 を入力してください。" ;;
+    1)
+      save_markdown_report "$run_id" "$repo"
+      break
+      ;;
+    2)
+      append_to_skill "$run_id" "$repo"
+      break
+      ;;
+    3)
+      save_markdown_report "$run_id" "$repo"
+      append_to_skill "$run_id" "$repo"
+      break
+      ;;
+    4 | "")
+      echo -e "${DIM}スキップしました。${NC}"
+      break
+      ;;
+    *) echo "1〜4 を入力してください。" ;;
     esac
   done
 }
@@ -160,15 +176,19 @@ save_markdown_report() {
     echo "## Job Summary"
     echo ""
     gh run view "$run_id" --repo "$repo" --json jobs \
-      --jq '.jobs[] | "| \(.name) | \(.conclusion // .status) | \(.startedAt // "—") |"' 2>/dev/null \
-      | { echo "| Job | Status | Started |"; echo "|-----|--------|---------|"; cat; } || true
+      --jq '.jobs[] | "| \(.name) | \(.conclusion // .status) | \(.startedAt // "—") |"' 2>/dev/null |
+      {
+        echo "| Job | Status | Started |"
+        echo "|-----|--------|---------|"
+        cat
+      } || true
     echo ""
     echo "## Failed Log (excerpt)"
     echo ""
     echo '```'
     gh run view "$run_id" --repo "$repo" --log-failed 2>&1 | head -100 || true
     echo '```'
-  } > "$out_file"
+  } >"$out_file"
 
   echo -e "${GREEN}✓ レポートを保存しました: ${out_file}${NC}"
 }
@@ -209,7 +229,7 @@ append_to_skill() {
     echo '```'
     echo "$log_excerpt"
     echo '```'
-  } >> "$target"
+  } >>"$target"
 
   echo -e "${GREEN}✓ 失敗パターンを SKILL.md に追記しました: ${target}${NC}"
 }
@@ -236,22 +256,22 @@ MODE="interactive"
 DIRECT_RUN_ID=""
 
 case "${1:-}" in
-  --latest) MODE="latest" ;;
-  --help|-h)
-    echo "Usage: $0 [<run-id> | --latest | --help]"
-    echo ""
-    echo "  (引数なし)   fzf でインタラクティブにジョブ選択"
-    echo "  <run-id>    特定の Run を直接表示・分析"
-    echo "  --latest    最新 Run を即時表示（非インタラクティブ）"
-    exit 0
-    ;;
-  "")
-    MODE="interactive"
-    ;;
-  *)
-    DIRECT_RUN_ID="$1"
-    MODE="direct"
-    ;;
+--latest) MODE="latest" ;;
+--help | -h)
+  echo "Usage: $0 [<run-id> | --latest | --help]"
+  echo ""
+  echo "  (引数なし)   fzf でインタラクティブにジョブ選択"
+  echo "  <run-id>    特定の Run を直接表示・分析"
+  echo "  --latest    最新 Run を即時表示（非インタラクティブ）"
+  exit 0
+  ;;
+"")
+  MODE="interactive"
+  ;;
+*)
+  DIRECT_RUN_ID="$1"
+  MODE="direct"
+  ;;
 esac
 
 # ──────── 直接指定モード ────────
@@ -331,8 +351,8 @@ SELECTED=$(echo "$FZF_LINES" | fzf \
   --preview="gh run view {1} --repo $REPO 2>/dev/null | head -30" \
   --preview-window="right:50%:wrap" \
   --height="60%" \
-  --border \
-  || true)
+  --border ||
+  true)
 
 if [[ -z "$SELECTED" ]]; then
   echo -e "${DIM}キャンセルしました。${NC}"
