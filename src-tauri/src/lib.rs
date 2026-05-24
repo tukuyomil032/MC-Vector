@@ -9,7 +9,6 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
@@ -24,6 +23,12 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            // Only register the updater in release builds. Debug builds (including E2E
+            // CI tests) skip it so the update-check error dialog cannot block the UI.
+            #[cfg(not(debug_assertions))]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_theme(Some(tauri::Theme::Dark));
