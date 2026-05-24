@@ -14,6 +14,11 @@ function appBinaryPath(): string {
 }
 
 function tauriDriverPath(): string {
+  // macOS: use tauri-wd (danielraffel/tauri-webdriver) because the official
+  // tauri-driver does not support WKWebView. Other platforms use the standard driver.
+  if (process.platform === "darwin") {
+    return path.resolve(os.homedir(), ".cargo", "bin", "tauri-wd");
+  }
   const fileName =
     process.platform === "win32" ? "tauri-driver.exe" : "tauri-driver";
   return path.resolve(os.homedir(), ".cargo", "bin", fileName);
@@ -85,7 +90,10 @@ export async function startApp(): Promise<E2EContext> {
     );
   }
 
-  const tauriDriver = spawn(driverPath, [], {
+  const isMacos = process.platform === "darwin";
+  // tauri-wd requires --port flag; tauri-driver uses positional args (defaults to 4444)
+  const driverArgs = isMacos ? ["--port", "4444"] : [];
+  const tauriDriver = spawn(driverPath, driverArgs, {
     stdio: ["ignore", "inherit", "inherit"],
     shell: false,
   });
@@ -93,10 +101,14 @@ export async function startApp(): Promise<E2EContext> {
   await waitForPort(4444, 30000);
 
   const capabilities = new Capabilities();
-  capabilities.setBrowserName("wry");
-  capabilities.set("tauri:options", {
-    application: appPath,
-  });
+  if (isMacos) {
+    // tauri-wd (danielraffel/tauri-webdriver) uses "binary" key
+    capabilities.set("tauri:options", { binary: appPath });
+  } else {
+    // standard tauri-driver uses browserName "wry" and "application" key
+    capabilities.setBrowserName("wry");
+    capabilities.set("tauri:options", { application: appPath });
+  }
 
   let driver: WebDriver;
   try {
