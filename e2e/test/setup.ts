@@ -121,6 +121,31 @@ export async function startApp(): Promise<E2EContext> {
     throw err;
   }
 
+  // macOS on CI: wait for Tauri IPC to initialize before returning.
+  // The tauri-wd session is created as soon as the plugin HTTP server starts,
+  // but __TAURI_INTERNALS__ initializes only after the full page load.
+  // On slow CI runners (no GPU, software rendering, 15MB+ JS bundle) this
+  // can lag far behind session creation, causing every command to timeout.
+  if (process.platform === "darwin" && process.env.CI) {
+    const deadline = Date.now() + 60_000;
+    let ready = false;
+    while (Date.now() < deadline) {
+      try {
+        await driver.executeScript("return 1");
+        ready = true;
+        break;
+      } catch {
+        await new Promise<void>((r) => setTimeout(r, 3_000));
+      }
+    }
+    if (!ready) {
+      tauriDriver.kill();
+      throw new Error(
+        "macOS CI: Tauri IPC did not initialize within 60s — app may not be rendering",
+      );
+    }
+  }
+
   return { driver, tauriDriver, artifactsDir };
 }
 
