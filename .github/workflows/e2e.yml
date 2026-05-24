@@ -51,7 +51,8 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             xvfb \
-            fluxbox
+            at-spi2-core \
+            dbus-x11
       - name: Install tauri-driver
         run: cargo install tauri-driver --locked
       - name: Verify tauri-driver installation
@@ -59,15 +60,12 @@ jobs:
         run: |
           which tauri-driver || echo "tauri-driver not in PATH"
           ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
-      - name: Start Xvfb (Ubuntu)
+      - name: Set WebKit headless env (Ubuntu)
         if: matrix.platform == 'ubuntu-latest'
-        run: Xvfb :99 -screen 0 1920x1080x24 &
-      - name: Start window manager (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
-        run: DISPLAY=:99 fluxbox &
-      - name: Export DISPLAY (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
-        run: echo "DISPLAY=:99" >> $GITHUB_ENV
+        run: |
+          echo "WEBKIT_DISABLE_COMPOSITING_MODE=1" >> $GITHUB_ENV
+          echo "WEBKIT_DISABLE_DMABUF_RENDERER=1" >> $GITHUB_ENV
+          echo "LIBGL_ALWAYS_SOFTWARE=1" >> $GITHUB_ENV
       - name: Install Microsoft Edge Driver (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -78,7 +76,13 @@ jobs:
       - name: Pre-build Tauri app
         run: pnpm exec tauri build --debug --no-bundle
       - name: Run E2E tests
-        run: pnpm test:e2e
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
+            dbus-run-session -- xvfb-run -a pnpm test:e2e
+          else
+            pnpm test:e2e
+          fi
       - name: Upload E2E artifacts
         if: always()
         uses: actions/upload-artifact@v4
