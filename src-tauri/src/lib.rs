@@ -34,6 +34,11 @@ pub fn run() {
                 let _ = window.set_theme(Some(tauri::Theme::Dark));
             }
 
+            // macOS debug builds: enable WKWebView WebDriver via community plugin
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            app.handle()
+                .plugin(tauri_plugin_webdriver_automation::init())?;
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()

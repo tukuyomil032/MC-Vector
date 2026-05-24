@@ -50,3 +50,6 @@ tauri-plugin-updater = "2"
 [target.'cfg(target_os = "linux")'.dependencies]
 # Limit glib to Linux targets to avoid needing glib dev packages on macOS/Windows runners
 glib = "0.20"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri-plugin-webdriver-automation = "0.1.3"
