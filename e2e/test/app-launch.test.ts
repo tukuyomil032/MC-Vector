@@ -19,11 +19,13 @@ describe("MC-Vector app launch", function () {
 
   it("shows main UI with non-empty body", async () => {
     try {
-      const body = await ctx.driver.wait(
-        until.elementLocated(By.css("body")),
+      // Wait for React to mount (appRoot appears) before checking body text
+      await ctx.driver.wait(
+        until.elementLocated(By.css(selectors.appRoot)),
         30000,
       );
 
+      const body = await ctx.driver.findElement(By.css("body"));
       const text = await body.getText();
 
       expect(text.length).to.be.greaterThan(0);
