@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
-            dbus-run-session -- xvfb-run -a pnpm test:e2e
+            dbus-run-session -- xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:e2e
           else
             pnpm test:e2e
           fi
