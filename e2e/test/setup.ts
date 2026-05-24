@@ -101,12 +101,12 @@ export async function startApp(): Promise<E2EContext> {
   await waitForPort(4444, 30000);
 
   const capabilities = new Capabilities();
+  // selenium-webdriver requires setBrowserName regardless of platform
+  capabilities.setBrowserName("wry");
   if (isMacos) {
-    // tauri-wd (danielraffel/tauri-webdriver) uses "binary" key
+    // tauri-wd (danielraffel/tauri-webdriver) uses "binary" key instead of "application"
     capabilities.set("tauri:options", { binary: appPath });
   } else {
-    // standard tauri-driver uses browserName "wry" and "application" key
-    capabilities.setBrowserName("wry");
     capabilities.set("tauri:options", { application: appPath });
   }
 
