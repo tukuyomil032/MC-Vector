@@ -172,3 +172,5 @@ docs/.vercel
 docs/src/content/docs/api/typescript/
 # Rustdoc auto-generated output
 docs/public/rustdoc/
+
+test-results/**
