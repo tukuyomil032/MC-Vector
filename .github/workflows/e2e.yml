@@ -5,7 +5,8 @@ on:
     paths:
       - "src/**"
       - "src-tauri/**"
-      - "e2e/**"
+      - "playwright/**"
+      - "playwright.config.ts"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/e2e.yml"
@@ -18,14 +19,10 @@ permissions:
   contents: read
 
 jobs:
-  e2e:
-    name: Tauri WebDriver E2E (${{ matrix.platform }})
-    runs-on: ${{ matrix.platform }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [ubuntu-latest, windows-latest, macos-latest]
+  playwright:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v6
@@ -34,71 +31,16 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ./src-tauri -> target
-      - name: Install all dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install Linux dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            webkit2gtk-driver \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            xvfb \
-            at-spi2-core \
-            dbus-x11
-      - name: Install tauri-driver (Linux/Windows)
-        if: matrix.platform != 'macos-latest'
-        run: cargo install tauri-driver --locked
-      - name: Install tauri-wd (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: cargo install tauri-webdriver-automation --locked
-      - name: Verify driver installation
-        shell: bash
-        run: |
-          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
-            which tauri-wd || echo "tauri-wd not in PATH"
-            ls -la ~/.cargo/bin/tauri-wd || echo "tauri-wd binary not found at ~/.cargo/bin"
-          else
-            which tauri-driver || echo "tauri-driver not in PATH"
-            ls -la ~/.cargo/bin/tauri-driver || echo "tauri-driver binary not found at ~/.cargo/bin"
-          fi
-      - name: Set WebKit headless env (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          echo "WEBKIT_DISABLE_COMPOSITING_MODE=1" >> $GITHUB_ENV
-          echo "WEBKIT_DISABLE_DMABUF_RENDERER=1" >> $GITHUB_ENV
-          echo "LIBGL_ALWAYS_SOFTWARE=1" >> $GITHUB_ENV
-      - name: Install Microsoft Edge Driver (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          cargo install --git https://github.com/chippers/msedgedriver-tool
-          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
-          $PWD.Path >> $env:GITHUB_PATH
-      - name: Pre-build Tauri app
-        run: pnpm exec tauri build --debug --no-bundle
-      - name: Run E2E tests
-        shell: bash
-        # macOS is experimental (no official WKWebView WebDriver): allow failure
-        continue-on-error: ${{ matrix.platform == 'macos-latest' }}
-        run: |
-          if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
-            dbus-run-session -- xvfb-run -a -s "-screen 0 1920x1080x24" pnpm test:e2e
-          else
-            pnpm test:e2e
-          fi
-      - name: Upload E2E artifacts
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Playwright E2E tests
+        run: pnpm test:playwright
+      - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-artifacts-${{ matrix.platform }}
-          path: |
-            e2e/artifacts
-            src-tauri/target/debug/*.log
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
