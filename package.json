@@ -27,7 +27,6 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:all": "pnpm check && pnpm test && cd src-tauri && cargo test",
-    "test:e2e": "pnpm --dir e2e build && pnpm --dir e2e test",
     "test:playwright": "playwright test",
     "test:playwright:ui": "playwright test --ui"
   },
