@@ -1,6 +1,7 @@
 ---
 name: ci-monitoring
-description: Monitor GitHub Actions CI/CD workflows after git push. ALWAYS invoke this skill automatically immediately after any successful `git push` command — do not wait for the user to ask. Also invoke when the user says "monitor CI", "check if CI passed", "watch the workflow", "CI の結果を確認", "ワークフローを監視", or provides a GitHub Actions URL. This skill is essential: after pushing code, Claude must verify CI results proactively so the user never has to manually check GitHub.
+description: "Monitor GitHub Actions CI/CD workflows after git push. ALWAYS invoke this skill automatically immediately after any successful `git push` command — do not wait for the user to ask. Also invoke when the user says monitor CI, check if CI passed, watch the workflow, CI の結果を確認, ワークフローを監視, or provides a GitHub Actions URL. This skill is essential after pushing code, Claude must verify CI results proactively so the user never has to manually check GitHub."
+license: MIT
 ---
 
 # CI Monitoring
