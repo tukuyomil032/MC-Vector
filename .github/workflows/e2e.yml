@@ -5,7 +5,8 @@ on:
     paths:
       - "src/**"
       - "src-tauri/**"
-      - "e2e/**"
+      - "playwright/**"
+      - "playwright.config.ts"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/e2e.yml"
@@ -18,47 +19,28 @@ permissions:
   contents: read
 
 jobs:
-  e2e:
-    name: Tauri WebDriver E2E (${{ matrix.platform }})
-    runs-on: ${{ matrix.platform }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [macos-latest, windows-latest]
+  playwright:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'pnpm'
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ./src-tauri -> target
-      - name: Install all dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install tauri-driver
-        run: cargo install tauri-driver --locked
-      - name: Enable safaridriver (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: sudo safaridriver --enable
-      - name: Install Microsoft Edge Driver (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          cargo install --git https://github.com/chippers/msedgedriver-tool
-          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
-          $PWD.Path >> $env:GITHUB_PATH
-      - name: Run E2E tests
-        run: pnpm test:e2e
-      - name: Upload E2E artifacts
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Playwright E2E tests
+        run: pnpm test:playwright
+      - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: e2e-artifacts-${{ matrix.platform }}
-          path: |
-            e2e/artifacts
-            src-tauri/target/debug/*.log
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

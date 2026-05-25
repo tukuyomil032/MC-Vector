@@ -24,13 +24,15 @@ export function useAppUpdater() {
           return;
         }
         if (result.error) {
-          setUpdateError(result.error);
+          // Silently log check failures — don't show a blocking modal when the
+          // update server is unreachable or doesn't list this platform (e.g. Linux CI).
+          logError('Update check failed silently', result.error);
           return;
         }
         setUpdateError(null);
       } catch (error) {
         logError('Update check failed', error);
-        setUpdateError(toErrorMessage(error));
+        // Don't surface IPC errors (e.g. plugin not registered in debug builds) as a modal.
       }
     };
     void doUpdateCheck();

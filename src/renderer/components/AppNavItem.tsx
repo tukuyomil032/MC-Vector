@@ -26,6 +26,7 @@ export default function AppNavItem({
     <Tooltip content={tooltip} disabled={isOpen} side="right">
       <div
         className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
+        data-testid={`nav-item-${view}`}
         onClick={() => set(view)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {

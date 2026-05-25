@@ -37,7 +37,10 @@ export default function AppMainContent({
   );
 
   return (
-    <div className="app-main__content app-shell__surface app-shell__surface--content surface-card">
+    <div
+      className="app-main__content app-shell__surface app-shell__surface--content surface-card"
+      data-testid="app-main-content"
+    >
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={`${selectedServerId || 'none'}-${currentView}`}

@@ -1,0 +1,26 @@
+{
+  "name": "ci-monitoring",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@inquirer/prompts": "^7.4.0",
+    "chalk": "^5.4.0",
+    "cli-table3": "^0.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxfmt": "^0.51.0",
+    "oxlint": "^1.66.0"
+  },
+  "scripts": {
+    "build": "bun build src/scripts/*.ts --outdir dist --target bun",
+    "dev": "bun --watch src/index.ts",
+    "typecheck": "bunx tsc -p tsconfig.json --noEmit",
+    "fmt": "oxfmt --check src tests",
+    "fmt:fix": "oxfmt src tests",
+    "lint": "oxlint src tests",
+    "lint:fix": "oxlint --fix",
+    "ci": "bun run typecheck && bun run build"
+  }
+}

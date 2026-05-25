@@ -2279,7 +2279,7 @@ export default function PluginBrowser({ server }: Props) {
     : { duration: 0.2, ease: 'easeOut' as const };
 
   return (
-    <div className="plugin-browser">
+    <div className="plugin-browser" data-testid="plugin-browser">
       <div
         className="plugin-browser__section-switch"
         role="tablist"
@@ -2360,6 +2360,7 @@ export default function PluginBrowser({ server }: Props) {
                   <Search size={16} />
                   <input
                     type="text"
+                    data-testid="plugin-search-input"
                     className="plugin-browser__search-input"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
