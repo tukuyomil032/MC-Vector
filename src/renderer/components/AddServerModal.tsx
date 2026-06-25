@@ -135,6 +135,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
         <Dialog.Overlay className="add-server-modal-backdrop" />
         <Dialog.Content
           aria-describedby={undefined}
+          data-testid="add-server-modal"
           className={cn(
             'add-server-modal-panel',
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
@@ -162,6 +163,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
               <input
                 type="text"
                 {...register('name')}
+                data-testid="server-name-input"
                 placeholder={t('addServer.name.placeholder')}
                 className="add-server-modal__field add-server-modal__field--text"
               />
@@ -234,14 +236,24 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
             <div className="add-server-modal__row add-server-modal__row--spaced">
               <div className="add-server-modal__field-group">
                 <label className="add-server-modal__label">{t('addServer.port.label')}</label>
-                <input type="number" {...register('port')} className="add-server-modal__field" />
+                <input
+                  type="number"
+                  {...register('port')}
+                  data-testid="server-port-input"
+                  className="add-server-modal__field"
+                />
                 {errors.port && (
                   <div className="add-server-modal__error">{t('addServer.port.invalid')}</div>
                 )}
               </div>
               <div className="add-server-modal__field-group">
                 <label className="add-server-modal__label">{t('addServer.memory.label')}</label>
-                <input type="number" {...register('memory')} className="add-server-modal__field" />
+                <input
+                  type="number"
+                  {...register('memory')}
+                  data-testid="server-memory-input"
+                  className="add-server-modal__field"
+                />
                 {errors.memory && (
                   <div className="add-server-modal__error">{t('addServer.memory.invalid')}</div>
                 )}
@@ -250,11 +262,19 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
 
             <div className="add-server-modal__footer">
               <Dialog.Close asChild>
-                <button type="button" className="add-server-modal__cancel-btn">
+                <button
+                  type="button"
+                  data-testid="cancel-server-button"
+                  className="add-server-modal__cancel-btn"
+                >
                   {t('common.cancel')}
                 </button>
               </Dialog.Close>
-              <button type="submit" className="add-server-modal__submit-btn">
+              <button
+                type="submit"
+                data-testid="save-server-button"
+                className="add-server-modal__submit-btn"
+              >
                 {t('common.create')}
               </button>
             </div>

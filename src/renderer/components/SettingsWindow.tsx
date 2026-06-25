@@ -102,7 +102,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    <div className="settings-window">
+    <div className="settings-window" data-testid="settings-window">
       <div className="settings-window__header">
         {onClose && (
           <button className="btn-secondary text-sm" onClick={onClose}>

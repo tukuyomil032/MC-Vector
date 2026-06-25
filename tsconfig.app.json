@@ -6,7 +6,7 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite-plus/client"],
+    "types": ["vite/client"],
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"]

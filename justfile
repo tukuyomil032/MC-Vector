@@ -201,3 +201,34 @@ update-versions:
 # Clean build artifacts
 clean:
     pnpm exec rimraf dist build src-tauri/target node_modules/.vite
+
+
+# ═══════════════════════════════════════════════════════════════
+# CI Monitoring
+# ═══════════════════════════════════════════════════════════════
+
+# Monitor CI — interactive run selector (uses fzf when available)
+ci-monitor:
+    bash .agents/skills/ci-monitoring/scripts/ci-monitor.sh
+
+# Monitor CI — show latest run immediately without interaction
+ci-monitor-latest:
+    bash .agents/skills/ci-monitoring/scripts/ci-monitor.sh --latest
+
+# Analyze CI failure logs for a specific run
+ci-analyze RUN_ID:
+    bash .agents/skills/ci-monitoring/scripts/analyze-failure.sh {{RUN_ID}}
+
+# Show ANSI job table for a specific run
+ci-report RUN_ID:
+    bash .agents/skills/ci-monitoring/scripts/report-table.sh {{RUN_ID}}
+
+
+
+sh-check:
+    @echo "Running shellcheck & shfmt..."
+    shfmt -d .agents/skills/
+
+sh-fix:
+    @echo "Fixing shell scripts with shfmt..."
+    shfmt -d -w .agents/skills/

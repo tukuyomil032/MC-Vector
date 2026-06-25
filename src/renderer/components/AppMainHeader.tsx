@@ -25,7 +25,10 @@ export default function AppMainHeader({
   const isOnline = activeServerStatus === 'online';
 
   return (
-    <header className="app-main__header app-shell__surface app-shell__surface--header">
+    <header
+      className="app-main__header app-shell__surface app-shell__surface--header"
+      data-testid="app-main-header"
+    >
       <div className="flex items-center gap-2.5">
         <h2 className="app-main__title">{headerTitle}</h2>
         <span className="app-main__subtitle"> / {getViewLabel(currentView, t)}</span>
@@ -35,6 +38,7 @@ export default function AppMainHeader({
           <>
             <button
               className="btn-start"
+              data-testid="server-start-button"
               onClick={onStart}
               title={t('server.actions.start')}
               disabled={!canStart}
@@ -43,6 +47,7 @@ export default function AppMainHeader({
             </button>
             <button
               className="btn-restart btn-secondary"
+              data-testid="server-restart-button"
               onClick={onRestart}
               title={t('server.actions.restart')}
               disabled={!isOnline}
@@ -51,6 +56,7 @@ export default function AppMainHeader({
             </button>
             <button
               className="btn-stop"
+              data-testid="server-stop-button"
               onClick={onStop}
               title={t('server.actions.stop')}
               disabled={!isOnline}

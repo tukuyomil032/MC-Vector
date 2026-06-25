@@ -19,7 +19,7 @@ tauri-build = { version = "2.5.4", features = [] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.0", features = [] }
+tauri = { version = "2.11.1", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2.7"
@@ -50,3 +50,6 @@ tauri-plugin-updater = "2"
 [target.'cfg(target_os = "linux")'.dependencies]
 # Limit glib to Linux targets to avoid needing glib dev packages on macOS/Windows runners
 glib = "0.20"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri-plugin-webdriver-automation = "0.1.3"

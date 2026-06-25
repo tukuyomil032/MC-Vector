@@ -27,7 +27,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:all": "pnpm check && pnpm test && cd src-tauri && cargo test",
-    "test:e2e": "pnpm --dir e2e build && pnpm --dir e2e test"
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -81,6 +82,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@playwright/test": "^1.60.0",
     "@tauri-apps/cli": "^2.11.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -101,5 +103,13 @@
     "vitest": "^4.1.7"
   },
   "packageManager": "pnpm@10.26.2",
-  "productName": "MC-Vector"
+  "productName": "MC-Vector",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@parcel/watcher",
+      "lefthook",
+      "sharp"
+    ]
+  }
 }

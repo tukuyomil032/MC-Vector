@@ -17,5 +17,6 @@
     "editor.formatOnSave": true,
     "editor.codeActionOnSave": {}
   },
-  "makefile.configureOnOpen": false
+  "makefile.configureOnOpen": false,
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }
