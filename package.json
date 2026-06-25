@@ -1,6 +1,6 @@
 {
   "name": "mc-vector",
-  "version": "2.0.55",
+  "version": "2.0.56",
   "private": true,
   "description": "Minecraft Server Management App",
   "author": "tukuyomi032",
@@ -99,7 +99,7 @@
     "sass": "^1.99.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
-    "vite": "^8.0.3",
+    "vite": "^8.0.16",
     "vitest": "^4.1.7"
   },
   "packageManager": "pnpm@10.26.2",
