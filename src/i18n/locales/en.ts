@@ -69,7 +69,7 @@ export const en: TranslationDictionary = {
     liquidGlass: {
       title: 'Liquid Glass (Experimental)',
       description:
-        'Adds a frosted-glass effect on top of the current look. This is still in preparation, so enabling it does not change the appearance yet.',
+        'Adds a native frosted-glass effect. Only visible on macOS 26 (Tahoe) and later.',
       label: 'Enable Liquid Glass',
     },
     general: {

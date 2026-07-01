@@ -69,7 +69,7 @@ export const ja: TranslationDictionary = {
     liquidGlass: {
       title: 'Liquid Glass（試験的）',
       description:
-        '既存の見た目にすりガラス風のエフェクトを追加します。現在は準備段階のため、ONにしても見た目はまだ変わりません。',
+        'すりガラス風のネイティブエフェクトを追加します。macOS 26 (Tahoe) 以降でのみ効果があります。',
       label: 'Liquid Glass を有効にする',
     },
     general: {

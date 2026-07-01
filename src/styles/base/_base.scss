@@ -6,7 +6,7 @@
   body,
   html {
     @apply m-0 p-0 h-full font-sans overflow-hidden;
-    background: var(--mv-surface-base);
+    background: transparent;
     color: var(--mv-surface-text-primary);
     -webkit-font-smoothing: antialiased;
   }
