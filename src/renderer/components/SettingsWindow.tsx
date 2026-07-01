@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { saveAppSettings } from '../../lib/config-commands';
+import { logError } from '../../lib/error-utils';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
 import { useSettingsStore } from '../../store/settingsStore';
 
@@ -107,7 +108,11 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
 
   const handleLiquidGlassToggle = async (enabled: boolean) => {
     setLiquidGlassEnabled(enabled);
-    await saveAppSettings({ liquidGlassEnabled: enabled });
+    try {
+      await saveAppSettings({ liquidGlassEnabled: enabled });
+    } catch (error) {
+      logError('Failed to persist liquid glass enabled setting', error, { enabled });
+    }
   };
 
   return (
