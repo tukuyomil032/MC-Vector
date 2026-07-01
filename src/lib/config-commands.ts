@@ -36,6 +36,8 @@ export interface AppSettings {
   theme?: string;
   /** Locale/language preference (e.g., 'en', 'ja') */
   locale?: string;
+  /** Whether the Liquid Glass visual effect is enabled */
+  liquidGlassEnabled?: boolean;
   /** Allow additional dynamic settings */
   [key: string]: unknown;
 }
@@ -48,9 +50,11 @@ export async function getAppSettings(): Promise<AppSettings> {
   const store = await load(STORE_NAME);
   const theme = await store.get<string>('theme');
   const locale = await store.get<string>('locale');
+  const liquidGlassEnabled = await store.get<boolean>('liquidGlassEnabled');
   return {
     theme: theme ?? undefined,
     locale: locale ?? undefined,
+    liquidGlassEnabled: liquidGlassEnabled ?? undefined,
   };
 }
 

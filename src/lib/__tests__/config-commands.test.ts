@@ -89,28 +89,30 @@ describe('config-commands', () => {
   });
 
   describe('getAppSettings', () => {
-    it('returns theme and locale from store', async () => {
-      getMock.mockResolvedValueOnce('dark').mockResolvedValueOnce('ja');
+    it('returns theme, locale, and liquidGlassEnabled from store', async () => {
+      getMock.mockResolvedValueOnce('dark').mockResolvedValueOnce('ja').mockResolvedValueOnce(true);
       const { getAppSettings } = await import('../config-commands');
       const result = await getAppSettings();
-      expect(result).toEqual({ theme: 'dark', locale: 'ja' });
+      expect(result).toEqual({ theme: 'dark', locale: 'ja', liquidGlassEnabled: true });
     });
 
     it('returns undefined fields when values are not set', async () => {
-      getMock.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+      getMock.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
       const { getAppSettings } = await import('../config-commands');
       const result = await getAppSettings();
       expect(result.theme).toBeUndefined();
       expect(result.locale).toBeUndefined();
+      expect(result.liquidGlassEnabled).toBeUndefined();
     });
   });
 
   describe('saveAppSettings', () => {
     it('saves each non-undefined setting and calls save', async () => {
       const { saveAppSettings } = await import('../config-commands');
-      await saveAppSettings({ theme: 'dark', locale: 'ja' });
+      await saveAppSettings({ theme: 'dark', locale: 'ja', liquidGlassEnabled: true });
       expect(setMock).toHaveBeenCalledWith('theme', 'dark');
       expect(setMock).toHaveBeenCalledWith('locale', 'ja');
+      expect(setMock).toHaveBeenCalledWith('liquidGlassEnabled', true);
       expect(saveMock).toHaveBeenCalled();
     });
 
