@@ -715,6 +715,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 className="btn-secondary server-settings__ngrok-btn server-settings__ngrok-btn--with-icon"
                 onClick={handleOpenGuide}
                 title={t('serverSettings.ngrok.connectionGuide')}
+                data-testid="ngrok-connection-guide-button"
               >
                 <span>❓</span> {t('serverSettings.ngrok.connectionGuide')}
               </button>

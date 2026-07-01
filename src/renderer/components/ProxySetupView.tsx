@@ -164,7 +164,11 @@ export default function ProxySetupView({
               {isBuilding ? t('proxySetup.building') : t('proxySetup.buildNetwork')}
             </button>
 
-            <button className="btn-secondary proxy-setup-view__help-btn" onClick={onOpenHelp}>
+            <button
+              className="btn-secondary proxy-setup-view__help-btn"
+              onClick={onOpenHelp}
+              data-testid="proxy-view-help-button"
+            >
               {t('proxySetup.viewHelp')}
             </button>
           </div>
