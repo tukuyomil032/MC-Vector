@@ -5,6 +5,12 @@
     color: var(--mv-shell-text, var(--mv-surface-text-primary));
   }
 
+  body.liquid-glass-active .app-shell {
+    margin: 16px;
+    width: calc(100vw - 32px);
+    height: calc(100vh - 32px);
+  }
+
   .app-shell__surface {
     color: inherit;
     border-color: var(--mv-shell-border, var(--mv-surface-border));

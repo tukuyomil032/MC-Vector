@@ -29,6 +29,7 @@ describe('useLiquidGlassSync', () => {
     isGlassSupportedMock.mockReset();
     setLiquidGlassEffectMock.mockReset().mockResolvedValue(undefined);
     logErrorMock.mockReset();
+    document.body.classList.remove('liquid-glass-active');
   });
 
   it('applies the effect when the platform supports it and the toggle is on', async () => {
@@ -74,6 +75,52 @@ describe('useLiquidGlassSync', () => {
 
     await waitFor(() => {
       expect(setLiquidGlassEffectMock).toHaveBeenCalledWith({ enabled: true });
+    });
+  });
+
+  it('adds the liquid-glass-active class to body when supported and enabled', async () => {
+    isGlassSupportedMock.mockResolvedValue(true);
+    const { useLiquidGlassSync } = await import('../use-liquid-glass-sync');
+    const setLiquidGlassEnabled = vi.fn();
+
+    renderHook(() => useLiquidGlassSync({ liquidGlassEnabled: true, setLiquidGlassEnabled }));
+
+    await waitFor(() => {
+      expect(document.body.classList.contains('liquid-glass-active')).toBe(true);
+    });
+  });
+
+  it('does not add the liquid-glass-active class when unsupported', async () => {
+    isGlassSupportedMock.mockResolvedValue(false);
+    const { useLiquidGlassSync } = await import('../use-liquid-glass-sync');
+    const setLiquidGlassEnabled = vi.fn();
+
+    renderHook(() => useLiquidGlassSync({ liquidGlassEnabled: true, setLiquidGlassEnabled }));
+
+    await waitFor(() => {
+      expect(isGlassSupportedMock).toHaveBeenCalled();
+    });
+    expect(document.body.classList.contains('liquid-glass-active')).toBe(false);
+  });
+
+  it('removes the liquid-glass-active class when the toggle is turned off', async () => {
+    isGlassSupportedMock.mockResolvedValue(true);
+    const { useLiquidGlassSync } = await import('../use-liquid-glass-sync');
+    const setLiquidGlassEnabled = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ enabled }) => useLiquidGlassSync({ liquidGlassEnabled: enabled, setLiquidGlassEnabled }),
+      { initialProps: { enabled: true } },
+    );
+
+    await waitFor(() => {
+      expect(document.body.classList.contains('liquid-glass-active')).toBe(true);
+    });
+
+    rerender({ enabled: false });
+
+    await waitFor(() => {
+      expect(document.body.classList.contains('liquid-glass-active')).toBe(false);
     });
   });
 

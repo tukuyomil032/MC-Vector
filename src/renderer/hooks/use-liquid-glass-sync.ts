@@ -45,6 +45,7 @@ export function useLiquidGlassSync({
     void (async () => {
       try {
         const supported = await isGlassSupported();
+        document.body.classList.toggle('liquid-glass-active', supported && liquidGlassEnabled);
         if (!supported) return;
         await setLiquidGlassEffect({ enabled: liquidGlassEnabled });
       } catch (error) {
