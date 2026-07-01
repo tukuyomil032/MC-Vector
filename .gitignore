@@ -174,3 +174,4 @@ docs/src/content/docs/api/typescript/
 docs/public/rustdoc/
 
 test-results/**
+playwright/screenshots/**

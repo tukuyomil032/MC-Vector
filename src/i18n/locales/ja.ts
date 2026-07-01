@@ -66,6 +66,12 @@ export const ja: TranslationDictionary = {
         system: 'システム',
       },
     },
+    liquidGlass: {
+      title: 'Liquid Glass（試験的）',
+      description:
+        '既存の見た目にすりガラス風のエフェクトを追加します。現在は準備段階のため、ONにしても見た目はまだ変わりません。',
+      label: 'Liquid Glass を有効にする',
+    },
     general: {
       title: '一般',
     },

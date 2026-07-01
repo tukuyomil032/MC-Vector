@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
+import { saveAppSettings } from '../../lib/config-commands';
+import { logError } from '../../lib/error-utils';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
+import { useSettingsStore } from '../../store/settingsStore';
 
 interface UpdateState {
   status:
@@ -48,6 +51,8 @@ function normalizeReleaseNotes(notes: unknown): string {
 const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
+  const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
+  const setLiquidGlassEnabled = useSettingsStore((state) => state.setLiquidGlassEnabled);
 
   const releaseNotesText = useMemo(
     () => normalizeReleaseNotes(updateState.releaseNotes),
@@ -99,6 +104,15 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
 
   const handleLanguageChange = async (value: LocaleCode) => {
     await setLocale(value);
+  };
+
+  const handleLiquidGlassToggle = async (enabled: boolean) => {
+    setLiquidGlassEnabled(enabled);
+    try {
+      await saveAppSettings({ liquidGlassEnabled: enabled });
+    } catch (error) {
+      logError('Failed to persist liquid glass enabled setting', error, { enabled });
+    }
   };
 
   return (
@@ -203,6 +217,25 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
           <option value="en">{t('settings.language.options.en')}</option>
           <option value="ja">{t('settings.language.options.ja')}</option>
         </select>
+      </section>
+
+      <section className="settings-window__section">
+        <div className="settings-window__section-head">
+          <div>
+            <h2 className="text-lg m-0">{t('settings.liquidGlass.title')}</h2>
+            <p className="text-sm text-zinc-400 m-0">{t('settings.liquidGlass.description')}</p>
+          </div>
+        </div>
+
+        <label className="settings-window__toggle-row" htmlFor="liquid-glass-toggle">
+          <input
+            id="liquid-glass-toggle"
+            type="checkbox"
+            checked={liquidGlassEnabled}
+            onChange={(e) => void handleLiquidGlassToggle(e.target.checked)}
+          />
+          <span>{t('settings.liquidGlass.label')}</span>
+        </label>
       </section>
     </div>
   );

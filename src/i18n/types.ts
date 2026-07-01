@@ -87,6 +87,11 @@ export interface TranslationDictionary {
         system: string;
       };
     };
+    liquidGlass: {
+      title: string;
+      description: string;
+      label: string;
+    };
     general: {
       title: string;
     };

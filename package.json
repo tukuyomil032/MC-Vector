@@ -28,7 +28,8 @@
     "test:ui": "vitest --ui",
     "test:all": "pnpm check && pnpm test && cd src-tauri && cargo test",
     "test:playwright": "playwright test",
-    "test:playwright:ui": "playwright test --ui"
+    "test:playwright:ui": "playwright test --ui",
+    "test:playwright:screenshots": "playwright test capture-theme-screenshots"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

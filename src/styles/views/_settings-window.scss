@@ -56,6 +56,10 @@
     border-color: rgba(63, 63, 70, 0.82);
     background-color: rgba(15, 23, 42, 0.8);
   }
+
+  .settings-window__toggle-row {
+    @apply flex items-center gap-2 text-sm text-zinc-300 cursor-pointer;
+  }
 }
 
 @media (max-width: 900px) {

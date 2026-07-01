@@ -21,6 +21,7 @@ import { CommandPalette } from '@/renderer/components/CommandPalette';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
+import { useLiquidGlassSync } from '@/renderer/hooks/use-liquid-glass-sync';
 import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action';
 import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
 import { useServerContextActions } from '@/renderer/hooks/use-server-context-actions';
@@ -75,6 +76,7 @@ function App() {
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
   const appTheme = useSettingsStore((state) => state.appTheme);
   const setAppTheme = useSettingsStore((state) => state.setAppTheme);
+  const setLiquidGlassEnabled = useSettingsStore((state) => state.setLiquidGlassEnabled);
   const {
     updatePrompt,
     updateProgress,
@@ -130,6 +132,7 @@ function App() {
   }, []);
 
   useAppThemeSync({ setAppTheme });
+  useLiquidGlassSync({ setLiquidGlassEnabled });
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);
