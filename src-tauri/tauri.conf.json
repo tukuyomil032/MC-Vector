@@ -9,6 +9,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "MC-Vector",
@@ -18,7 +19,8 @@
         "titleBarStyle": "Transparent",
         "backgroundColor": "#0f0f11",
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "transparent": true
       }
     ],
     "security": {
