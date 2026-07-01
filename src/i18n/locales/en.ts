@@ -66,6 +66,12 @@ export const en: TranslationDictionary = {
         system: 'System',
       },
     },
+    liquidGlass: {
+      title: 'Liquid Glass (Experimental)',
+      description:
+        'Adds a frosted-glass effect on top of the current look. This is still in preparation, so enabling it does not change the appearance yet.',
+      label: 'Enable Liquid Glass',
+    },
     general: {
       title: 'General',
     },
