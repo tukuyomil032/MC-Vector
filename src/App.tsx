@@ -76,6 +76,7 @@ function App() {
   const [ngrokData, setNgrokData] = useState<Record<string, string | null>>({});
   const appTheme = useSettingsStore((state) => state.appTheme);
   const setAppTheme = useSettingsStore((state) => state.setAppTheme);
+  const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const setLiquidGlassEnabled = useSettingsStore((state) => state.setLiquidGlassEnabled);
   const {
     updatePrompt,
@@ -132,7 +133,7 @@ function App() {
   }, []);
 
   useAppThemeSync({ setAppTheme });
-  useLiquidGlassSync({ setLiquidGlassEnabled });
+  useLiquidGlassSync({ liquidGlassEnabled, setLiquidGlassEnabled });
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);

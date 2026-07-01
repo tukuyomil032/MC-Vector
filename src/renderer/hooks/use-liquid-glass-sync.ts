@@ -1,12 +1,17 @@
 import { useEffect } from 'react';
 import { getAppSettings, onConfigChange } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
+import { isGlassSupported, setLiquidGlassEffect } from '../../lib/liquid-glass-commands';
 
 interface UseLiquidGlassSyncOptions {
+  liquidGlassEnabled: boolean;
   setLiquidGlassEnabled: (enabled: boolean) => void;
 }
 
-export function useLiquidGlassSync({ setLiquidGlassEnabled }: UseLiquidGlassSyncOptions) {
+export function useLiquidGlassSync({
+  liquidGlassEnabled,
+  setLiquidGlassEnabled,
+}: UseLiquidGlassSyncOptions) {
   useEffect(() => {
     const applyLiquidGlassEnabled = (value: unknown) => {
       setLiquidGlassEnabled(value === true);
@@ -35,4 +40,16 @@ export function useLiquidGlassSync({ setLiquidGlassEnabled }: UseLiquidGlassSync
       disposeLiquidGlassWatch?.();
     };
   }, [setLiquidGlassEnabled]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const supported = await isGlassSupported();
+        if (!supported) return;
+        await setLiquidGlassEffect({ enabled: liquidGlassEnabled });
+      } catch (error) {
+        logError('Failed to apply liquid glass effect', error, { liquidGlassEnabled });
+      }
+    })();
+  }, [liquidGlassEnabled]);
 }
