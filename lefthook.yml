@@ -12,3 +12,14 @@ pre-commit:
       glob: 'docs/src/**/*.{ts,mjs}'
       run: pnpm --filter @mc-vector/docs check:fix
       stage_fixed: true
+    lint-format-swift:
+      glob: 'apps/native-macos/**/*.swift'
+      run: |
+        if ! command -v swift >/dev/null 2>&1; then
+          echo "swift not found locally, skipping Swift format/lint (still enforced in CI)"
+          exit 0
+        fi
+        cd apps/native-macos && \
+          swift package --allow-writing-to-package-directory swiftformat && \
+          swift package --allow-writing-to-package-directory swiftlint --fix
+      stage_fixed: true

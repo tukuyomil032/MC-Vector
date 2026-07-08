@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.62.1"),
-        .package(url: "https://github.com/realm/SwiftLint", from: "0.65.0"),
+        .package(url: "https://github.com/realm/SwiftLint", from: "0.65.0")
     ],
     targets: [
         .executableTarget(
@@ -31,6 +31,6 @@ let package = Package(
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLint")
             ]
-        ),
+        )
     ]
 )
