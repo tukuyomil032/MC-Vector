@@ -16,6 +16,8 @@ struct Main {
             PanelSpikeRunner.runNSPanelBridge()
         case "panel-window":
             PanelSpikeRunner.runSwiftUIWindowLevel()
+        case "log-stream":
+            PanelSpikeRunner.runLogStreamSpike()
         default:
             print("Unknown MCV_SPIKE value: \(spike)")
         }

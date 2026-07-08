@@ -15,4 +15,8 @@ enum PanelSpikeRunner {
     static func runSwiftUIWindowLevel() {
         SwiftUIWindowLevelSpike.main()
     }
+
+    static func runLogStreamSpike() {
+        LogStreamSpikeApp.main()
+    }
 }
