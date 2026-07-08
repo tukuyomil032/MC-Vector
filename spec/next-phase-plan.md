@@ -1,31 +1,34 @@
-# MC-Vector Next Phase Plan — Rust Core化 + macOS Native版
+# MC-Vector Next Phase Plan — Tauri版整理 + macOS Native版
 
-> 最終更新: 2026-07-08
-> 要件定義・実現可能性調査: `docs/native-macos-requirements.md`
+> 最終更新: 2026-07-08(独立実装方針への転換)
+> 要件定義・実現可能性調査: `spec/native-macos-requirements.md`
 
 ## 全体像
 
 ```text
-Rust Core Engine (mc-vector-core + mc-vector-daemon)
-  ├─ MC-Vector Classic (Tauri / React) — クロスプラットフォーム安定版
-  └─ MC-Vector Native (SwiftUI / AppKit) — macOS Tahoe+ 旗艦版
+MC-Vector Classic (Tauri / React / Rust)      MC-Vector Native (SwiftUI / AppKit)
+  クロスプラットフォーム安定版                    macOS Tahoe+ 旗艦版・独立実装
+        │                                              │
+        └──────────── データ契約(JSONスキーマ) ─────────┘
 ```
+
+Rust Coreの共有・デーモン化は行わない。両実装はデータ契約(サーバー定義JSON等)のみを一致させる独立プロジェクトとして進める(`spec/native-macos-requirements.md` §4参照)。
 
 ## フェーズマトリクス
 
 | Phase | 内容 | 状態 | 備考 |
 |---|---|---|---|
-| 0 | 要件定義・実現可能性調査 | ✅ 完了 (2026-07-08) | `docs/native-macos-requirements.md` |
-| 1 | Rust Core extraction (workspace化・型生成導入・ジョブシステム・EventSink化) | 未着手 | 着手時に `/writing-plans` で実装プラン作成 |
-| 2 | Server Provisioning のRust化 (`provision_server`ジョブ・ロールバック・registry atomic update) | 未着手 | |
-| 3 | Plugin / Mod install のRust化 (provider client・互換性判定・DL/verify/install job) | 未着手 | |
-| 4 | デーモン化 + Shared schemas (mc-vector-daemon、JSON-RPC over UDS、Swift Codable生成) | 未着手 | Native Spike の前提 |
-| 5 | Native macOS Spike (SwiftUI: 一覧/詳細/起動停止/ログ/Floating Console/Activity Drawer) | 未着手 | 最初期に実機検証4項目を実施(要件定義 §5.6) |
-| 6 | Tahoe UI refinement (Liquid Glass調整・Toolbar/Inspector・アニメーション) | 未着手 | |
+| 0 | 要件定義・実現可能性調査 | ✅ 完了 (2026-07-08) | `spec/native-macos-requirements.md`。当初デーモン化前提だったが独立実装方針へ改訂済み |
+| 1 | Tauri版内部整理(emit抽象化・純関数化。`security.rs`パターンの横展開) | 未着手・要否は別途判断 | Swift版との共有が目的ではなく、Tauri版単体の保守性向上が目的。着手時に `/writing-plans` で実装プラン作成 |
+| 2 | Native macOS Spike セットアップ(SPM構成・SwiftLint/SwiftFormat・`native.yml`・lefthook追加) | 未着手 | Package.swift(executable+library+testTarget)を`apps/native-macos/`に作成するところから開始 |
+| 3 | Native macOS Spike 本体(SwiftUI: 一覧/詳細/起動停止/ログ/Floating Console/Activity Drawer) | 未着手 | 最初期に実機検証3項目を実施(要件定義 §5.5)。サーバープロセス管理はSwift側で独自実装 |
+| 4 | データ契約の文書化(servers.jsonスキーマ等) | 未着手 | JSON Schemaとして`spec/`または将来の`shared/schemas/`に記録するか判断 |
+| 5 | Tahoe UI refinement (Liquid Glass調整・Toolbar/Inspector・アニメーション) | 未着手 | |
 
-## 運用ルール(Phase 1〜終了まで)
+## 運用ルール
 
-- Core化を優先し、Tauri版の大型新機能は抑制(バグ修正のみ)
-- 新規ロジックは最初からCore側(Tauri非依存)に実装する
+- Tauri版とNative版はロジックを共有しない。共有するのはデータ契約(JSONスキーマ)のみ
+- `security.rs`相当の正しさが重要な処理は、Swift移植時にロジックとテストケースを忠実に移植する
 - 各フェーズは新ブランチ + PR単位で進める(スカッシュマージ不使用)
 - 言語を問わず各タスクにテストコードを追加する
+- プラグイン管理等をNative版に実装する段階で「二重実装がつらい」と分かった場合は、共有方式(FFI/プロセス分離)への転換を再評価する(`spec/native-macos-requirements.md` §4.2の記録を参照)
