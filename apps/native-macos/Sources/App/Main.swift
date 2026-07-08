@@ -12,6 +12,10 @@ struct Main {
         switch spike {
         case "hardened-runtime-java":
             await self.runHardenedRuntimeJavaSpike()
+        case "panel-nspanel":
+            PanelSpikeRunner.runNSPanelBridge()
+        case "panel-window":
+            PanelSpikeRunner.runSwiftUIWindowLevel()
         default:
             print("Unknown MCV_SPIKE value: \(spike)")
         }
