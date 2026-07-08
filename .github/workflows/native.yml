@@ -14,20 +14,18 @@ permissions:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     defaults:
       run:
         working-directory: apps/native-macos
     steps:
       - uses: actions/checkout@v7
-      - uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: '6.2'
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.app 2>/dev/null || sudo xcode-select -s /Applications/Xcode.app
       - name: SwiftFormat (lint)
         run: swift package --allow-writing-to-package-directory swiftformat --lint
       - name: SwiftLint
         run: swift package --allow-writing-to-package-directory swiftlint --strict
-
   build-and-test:
     runs-on: macos-26
     defaults:
