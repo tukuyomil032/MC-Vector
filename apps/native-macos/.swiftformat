@@ -5,3 +5,4 @@
 --importgrouping testable-last
 --exclude .build
 --disable swiftTestingTestCaseNames
+--disable trailingCommas

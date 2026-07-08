@@ -267,9 +267,10 @@ lint-format-swift:
 | Swift側とTauri側でロジックがドリフトする | 中 | データ契約(JSONスキーマ)のみ厳密に一致させる運用ルール。機能追加時は両実装のチェックリスト化を検討 |
 | `security.rs`相当の正しさが重要な処理の移植漏れ | 中 | Rust側の実装とテストケースを忠実にSwift側へ移植する運用ルール(§4.4) |
 | プラグイン解決ロジックの二重実装コスト | 低(現Spike範囲外) | Native版でプラグイン管理を実装する段階で再評価 |
-| glass非アクティブ劣化 | 低 | 実機検証→Materialフォールバック(確定済み) |
-| `.xcodeproj`なしによるXcode GUI機能の一部制約(Instruments連携等) | 低 | Xcodeは`Package.swift`を直接開けるため多くの機能は利用可能。制約が顕在化したら`.xcodeproj`併用を再検討 |
+| glass非アクティブ劣化 | 低 | 実機検証→Materialフォールバック(確定済み)。Phase 3-Aでスキャフォールド実装済み、実機での目視判定は`spec/phase3a-spike-results.md`参照(検証待ち) |
+| `.xcodeproj`なしによるXcode GUI機能の一部制約(Instruments連携等) | 低 | Xcodeは`Package.swift`を直接開けるため多くの機能は利用可能。制約が顕在化したら`.xcodeproj`併用を再検討。Phase 3-Aで`record_trace.py`/`analyze_trace.py`によるCLI経由のトレース取得・解析が可能なことを確認(`spec/phase3a-spike-results.md`) |
 | macOSランナーCIコスト | 低 | Lintはubuntu-latestに寄せ、ビルドのみmacos-latest |
+| Hardened Runtime下でのJavaプロセス起動可否 | 低(検証済み) | Phase 3-Aで検証: 追加entitlementsなしでも`java -version`はexit 0で起動可能。実ワークロードでの再検証は3-7(サーバー起動/停止実装)で実施(`spec/phase3a-spike-results.md`) |
 
 ## 7. 主要出典
 
