@@ -180,3 +180,6 @@ playwright/screenshots/**
 apps/native-macos/.build/
 apps/native-macos/.swiftpm/
 apps/native-macos/*.xcodeproj
+
+.agents/**
+.claude/skills/**
