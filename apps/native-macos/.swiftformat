@@ -4,3 +4,4 @@
 --self insert
 --importgrouping testable-last
 --exclude .build
+--disable swiftTestingTestCaseNames
