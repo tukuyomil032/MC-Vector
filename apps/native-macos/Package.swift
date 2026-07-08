@@ -7,6 +7,9 @@ let package = Package(
     products: [
         .library(name: "Core", targets: ["Core"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.62.1")
+    ],
     targets: [
         .executableTarget(
             name: "App",
