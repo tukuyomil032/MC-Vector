@@ -23,3 +23,5 @@ docs/**/*.mdx linguist-detectable=true linguist-language=MDX
 
 .agents/** linguist-detectable=false linguist-generated
 .claude/** linguist-detectable=false linguist-generated
+
+*.js
