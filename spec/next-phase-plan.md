@@ -2,6 +2,7 @@
 
 > 最終更新: 2026-07-08(独立実装方針への転換)
 > 要件定義・実現可能性調査: `spec/native-macos-requirements.md`
+> 各フェーズの詳細タスク分解: `spec/phase-tasks.md`
 
 ## 全体像
 
