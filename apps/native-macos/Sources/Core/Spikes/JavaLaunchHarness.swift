@@ -35,15 +35,19 @@ public actor JavaLaunchHarness {
 
         try process.run()
 
-        let stdoutData = try stdoutPipe.fileHandleForReading.readToEndCompat()
-        let stderrData = try stderrPipe.fileHandleForReading.readToEndCompat()
+        // Read both pipes concurrently: draining stdout fully before starting
+        // on stderr (or vice versa) deadlocks once a child fills the OS pipe
+        // buffer on the pipe being read second while the other is still full.
+        async let stdoutData = stdoutPipe.fileHandleForReading.readToEndCompat()
+        async let stderrData = stderrPipe.fileHandleForReading.readToEndCompat()
+        let (stdoutBytes, stderrBytes) = try await (stdoutData, stderrData)
 
         process.waitUntilExit()
 
         return JavaLaunchResult(
             terminationStatus: process.terminationStatus,
-            standardOutput: String(bytes: stdoutData, encoding: .utf8) ?? "",
-            standardError: String(bytes: stderrData, encoding: .utf8) ?? "",
+            standardOutput: String(bytes: stdoutBytes, encoding: .utf8) ?? "",
+            standardError: String(bytes: stderrBytes, encoding: .utf8) ?? "",
         )
     }
 }

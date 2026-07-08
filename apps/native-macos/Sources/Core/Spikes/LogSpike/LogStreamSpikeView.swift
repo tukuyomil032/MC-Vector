@@ -2,47 +2,46 @@ import Foundation
 import SwiftUI
 
 public struct LogStreamListView: View {
-    @State private var lines: [LogLine] = []
+    @State private var buffer: LogLineBuffer
     private let generator = DummyLogGenerator()
     private let linesPerSecond: Int
-    private let retainedLineCount: Int
 
-    public init(linesPerSecond: Int = 1000, retainedLineCount: Int = 5000) {
+    public init(linesPerSecond: Int = 1000, retainedLineCount: Int = 5000, trimOvershoot: Int = 500) {
         self.linesPerSecond = linesPerSecond
-        self.retainedLineCount = retainedLineCount
+        self._buffer = State(
+            initialValue: LogLineBuffer(retainedLineCount: retainedLineCount, trimOvershoot: trimOvershoot),
+        )
     }
 
     public var body: some View {
-        List(self.lines) { line in
+        List(self.buffer.lines) { line in
             Text(line.text)
                 .font(.system(.caption, design: .monospaced))
         }
         .task {
             for await line in await self.generator.stream(linesPerSecond: self.linesPerSecond) {
-                self.lines.append(line)
-                if self.lines.count > self.retainedLineCount {
-                    self.lines.removeFirst(self.lines.count - self.retainedLineCount)
-                }
+                self.buffer.append(line)
             }
         }
     }
 }
 
 public struct LogStreamScrollView: View {
-    @State private var lines: [LogLine] = []
+    @State private var buffer: LogLineBuffer
     private let generator = DummyLogGenerator()
     private let linesPerSecond: Int
-    private let retainedLineCount: Int
 
-    public init(linesPerSecond: Int = 1000, retainedLineCount: Int = 5000) {
+    public init(linesPerSecond: Int = 1000, retainedLineCount: Int = 5000, trimOvershoot: Int = 500) {
         self.linesPerSecond = linesPerSecond
-        self.retainedLineCount = retainedLineCount
+        self._buffer = State(
+            initialValue: LogLineBuffer(retainedLineCount: retainedLineCount, trimOvershoot: trimOvershoot),
+        )
     }
 
     public var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading) {
-                ForEach(self.lines) { line in
+                ForEach(self.buffer.lines) { line in
                     Text(line.text)
                         .font(.system(.caption, design: .monospaced))
                 }
@@ -50,10 +49,7 @@ public struct LogStreamScrollView: View {
         }
         .task {
             for await line in await self.generator.stream(linesPerSecond: self.linesPerSecond) {
-                self.lines.append(line)
-                if self.lines.count > self.retainedLineCount {
-                    self.lines.removeFirst(self.lines.count - self.retainedLineCount)
-                }
+                self.buffer.append(line)
             }
         }
     }

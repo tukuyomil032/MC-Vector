@@ -40,6 +40,8 @@ spike-baseline: exit=0
 
 **今後の課題**: 実際のMinecraftサーバーjarを長時間稼働させた際のJIT挙動・GC・ネイティブライブラリロード(一部modが使用)まで含めた検証は3-Bのサーバー起動/停止実装(3-7)時に改めて行う。
 
+**コードレビュー指摘への対応**: 初回実装の`JavaLaunchHarness.launch`はstdout→stderrの順に`readToEnd()`を逐次実行しており、子プロセスが標準出力を閉じないまま標準エラーへ大量出力するとOSパイプバッファが埋まりデッドロックする既知の`Process`/`Pipe`アンチパターンだった(`java -version`はstderrのみの小出力のため顕在化しなかった)。3-7でこのハーネスを実サーバー起動に転用する前提のため、`async let`で両パイプを並行読み取りする実装に修正済み(`JavaLaunchHarness.swift`)。
+
 ## 3-3: 高頻度ログ描画パフォーマンス
 
 | 項目 | 内容 |
@@ -50,7 +52,9 @@ spike-baseline: exit=0
 | 判定 | 未確定 |
 | 証跡パス | `.trace`ファイル(未取得、パスは取得後にユーザーから共有) |
 
-**実装済みスキャフォールド**: `apps/native-macos/Sources/Core/Spikes/LogSpike/`(`DummyLogGenerator.swift`, `LogBatcher.swift`, `LogStreamSpikeView.swift`)。`LogBatcher`のユニットテストは`Tests/CoreTests/LogBatcherTests.swift`で完了済み(同一ウィンドウ内のグルーピング、ウィンドウ境界での分割、空入力の3パターン)。
+**実装済みスキャフォールド**: `apps/native-macos/Sources/Core/Spikes/LogSpike/`(`DummyLogGenerator.swift`, `LogBatcher.swift`, `LogLineBuffer.swift`, `LogStreamSpikeView.swift`)。`LogBatcher`のユニットテストは`Tests/CoreTests/LogBatcherTests.swift`で完了済み(同一ウィンドウ内のグルーピング、ウィンドウ境界での分割、単一行、同一タイムスタンプ、空入力)。
+
+**コードレビュー指摘への対応**: 初回実装は`List`/`ScrollView`両方とも「1行追加するたびに`retainedLineCount`ちょうどまで`removeFirst`する」実装で、1000行/秒の負荷下では毎行O(n)の配列シフトが発生し、Instrumentsトレースが本来測定したい「List vs ScrollViewのレンダリングコスト差」ではなく「配列シフトのコスト」を支配的に示してしまう懸念があった。`LogLineBuffer`(ヒステリシス付きトリム: `retainedLineCount + trimOvershoot`を超えた時だけまとめてトリム)を切り出し両Viewで共有する実装に修正し、`Tests/CoreTests/LogLineBufferTests.swift`でトリム挙動を検証済み。
 
 **ユーザーへの依頼**: `swift run App` を `MCV_SPIKE=log-stream`(`MCV_LOG_SPIKE_VARIANT=list` または `scroll`)で起動し、`.claude/skills/swiftui-expert-skill/scripts/record_trace.py --launch <path> --template "SwiftUI" --time-limit 30s` でトレースを取得してほしい。取得済み`.trace`はClaudeが`analyze_trace.py --trace <path>`で解析し、ヒッチ/CPUホットスポットからバッチ化/仮想化戦略を決定する。
 

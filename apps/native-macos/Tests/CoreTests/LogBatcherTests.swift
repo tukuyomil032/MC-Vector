@@ -43,3 +43,29 @@ func logBatcherHandlesEmptyInput() {
     let batcher = LogBatcher(interval: .milliseconds(100))
     #expect(batcher.batch([]).isEmpty)
 }
+
+@Test("batch returns a single batch for a single line")
+func logBatcherHandlesSingleLine() {
+    let line = LogLine(id: 1, timestamp: ContinuousClock().now, text: "a")
+    let batcher = LogBatcher(interval: .milliseconds(100))
+    let batches = batcher.batch([line])
+
+    #expect(batches.count == 1)
+    #expect(batches.first?.map(\.id) == [1])
+}
+
+@Test("batch groups lines sharing an identical timestamp")
+func logBatcherGroupsIdenticalTimestamps() {
+    let timestamp = ContinuousClock().now
+    let lines = [
+        LogLine(id: 1, timestamp: timestamp, text: "a"),
+        LogLine(id: 2, timestamp: timestamp, text: "b"),
+        LogLine(id: 3, timestamp: timestamp, text: "c")
+    ]
+
+    let batcher = LogBatcher(interval: .milliseconds(100))
+    let batches = batcher.batch(lines)
+
+    #expect(batches.count == 1)
+    #expect(batches.first?.map(\.id) == [1, 2, 3])
+}
