@@ -34,65 +34,6 @@ struct ActivityDrawerView: View {
     }
 }
 
-private struct ActivityRow: View {
-    let entry: ActivityEntry
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: self.systemImage)
-                .foregroundStyle(self.tint)
-                .frame(width: 20)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(self.entry.serverName)
-                    .font(.body)
-                Text(self.statusLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            // Standard SwiftUI relative-date `Text` -- auto-updates ("2m
-            // ago" -> "3m ago") without any manual timer/formatter code.
-            Text(self.entry.timestamp, style: .relative)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var status: ServerStatus {
-        switch self.entry.kind {
-        case let .serverStatusChange(status): status
-        }
-    }
-
-    private var statusLabel: String {
-        self.status.rawValue.capitalized
-    }
-
-    private var systemImage: String {
-        switch self.status {
-        case .online: "play.circle.fill"
-        case .offline: "stop.circle"
-        case .starting, .restarting: "arrow.triangle.2.circlepath.circle"
-        case .stopping: "stop.circle.fill"
-        case .crashed: "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var tint: Color {
-        switch self.status {
-        case .online: .green
-        case .offline: .secondary
-        case .starting, .restarting, .stopping: .orange
-        case .crashed: .red
-        }
-    }
-}
-
 #Preview {
     ActivityDrawerView(entries: [
         ActivityEntry(serverId: "srv-1", serverName: "Survival", kind: .serverStatusChange(.offline)),
