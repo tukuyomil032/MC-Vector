@@ -38,6 +38,16 @@ public func resolveSafePath(base: String, input: String) throws -> String {
         throw SecurityError.pathTraversalDetected
     }
 
+    // Deliberately stricter than the Rust original here: `Path::components()`
+    // only ever produces a `Component::CurDir` for a *leading* `.` segment,
+    // since its parser silently collapses interior `.` segments away during
+    // normalization (e.g. `a/./b` never yields a `CurDir` component at all).
+    // This check instead rejects `.` in ANY position, not just leading. That
+    // divergence is intentional, not a transcription bug: an interior `.`
+    // segment has no legitimate meaning in a safe-path input, and rejecting
+    // it fails safe (over-strict) rather than silently accepting something
+    // Rust would also silently accept -- it's a strictly *safer* superset of
+    // the original behavior, never a looser one.
     let components = normalizedInput.split(separator: "/", omittingEmptySubsequences: false)
     guard !components.contains(where: { $0 == "." || $0 == ".." }) else {
         throw SecurityError.pathTraversalDetected
