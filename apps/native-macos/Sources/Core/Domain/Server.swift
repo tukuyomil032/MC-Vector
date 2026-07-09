@@ -9,7 +9,7 @@
 /// `createdDate` is kept as a plain ISO-8601 `String` rather than decoded
 /// into `Date` — the JSON on disk stores it as a string, and introducing a
 /// custom `JSONDecoder.dateDecodingStrategy` is out of scope for this task.
-public struct Server: Codable, Sendable, Equatable {
+public struct Server: Codable, Sendable, Equatable, Identifiable {
     public var id: String
     public var name: String
     public var profileName: String?
