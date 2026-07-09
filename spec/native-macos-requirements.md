@@ -183,11 +183,12 @@ apps/tauri  --(データ契約: servers.json等のJSONスキーマ)-->  apps/nat
 
 **SwiftUI on macOS 26新機能**: `WindowLevel`(SwiftUIシーンだけでfloatingウィンドウが可能に)、`ToolbarSpacer`、ウィンドウリサイズ同期アニメーション、List大幅高速化
 
-**Floating Console Panelの実装2択**:
+**Floating Console Panelの実装方式: (B) NSPanelブリッジを採用(確定)**
 
-- (A) 純SwiftUI: `Window`シーン + 新`WindowLevel`(簡潔)
-- (B) NSPanelブリッジ: `.nonactivatingPanel` + `isFloatingPanel` + `NSHostingView`(非アクティブ化挙動の細かい制御が必要なら確実)
-- **既知リスク**: NSHostingView内の`.glassEffect`はアプリ非アクティブ時に単なるブラーへ劣化する報告あり。nonactivatingPanelでは特に起きやすい → Spike最初期の実機検証項目
+- (A) 純SwiftUI: `Window`シーン + 新`WindowLevel`(簡潔) — Phase 3-Aの実機検証で、Dockクリックでは非アクティブ化を検知できず(Cmd+Tab等の操作でしか非アクティブ化しない)、キーウィンドウ状態の制御が不安定と判明したため不採用
+- **(B) NSPanelブリッジ**: `.nonactivatingPanel` + `isFloatingPanel` + `NSHostingView`。非アクティブ化検知が安定して機能することを実機で確認済み。**採用**
+- **既知リスク**: `.nonactivatingPanel`のNSPanelは、アプリ非アクティブ時に`.glassEffect`が単なるブラーへ劣化する未解決の既知バグがコミュニティで複数報告されている(HackingWithSwiftフォーラム、ワークアラウンド未確認)。ただし後述の「機能レイヤー限定」の適用方針を徹底する限り、影響範囲は小さなコントロール要素に留まり実用上許容できると評価(3-9実装時に改めて実物で影響範囲を確認する)
+- 判定の詳細な経緯・参照した一次情報は `spec/phase3a-spike-results.md` 3-1節を参照
 
 **配布**: Developer ID署名 + `notarytool` + stapler の従来フローに破壊的変更なし。Hardened Runtime必須。Java子プロセス起動に絡むentitlements(`com.apple.security.cs.allow-jit`等)の要否洗い出しが設計課題
 
@@ -267,7 +268,7 @@ lint-format-swift:
 | Swift側とTauri側でロジックがドリフトする | 中 | データ契約(JSONスキーマ)のみ厳密に一致させる運用ルール。機能追加時は両実装のチェックリスト化を検討 |
 | `security.rs`相当の正しさが重要な処理の移植漏れ | 中 | Rust側の実装とテストケースを忠実にSwift側へ移植する運用ルール(§4.4) |
 | プラグイン解決ロジックの二重実装コスト | 低(現Spike範囲外) | Native版でプラグイン管理を実装する段階で再評価 |
-| glass非アクティブ劣化 | 低 | 実機検証→Materialフォールバック(確定済み)。Phase 3-Aでスキャフォールド実装済み、実機での目視判定は`spec/phase3a-spike-results.md`参照(検証待ち) |
+| glass非アクティブ劣化 | 低 | 文献調査(Apple HIG・実例プロジェクト・コミュニティ既知バグ報告)により確定。Liquid Glassの適用範囲を機能レイヤーの小要素に限定する方針とし、パネル自体は不透明のまま維持することで影響範囲を最小化。NSPanelの非アクティブ時ブラー劣化は既知の未解決バグとして記録した上で許容。詳細は`spec/phase3a-spike-results.md` 3-1節参照 |
 | `.xcodeproj`なしによるXcode GUI機能の一部制約(Instruments連携等) | 低 | Xcodeは`Package.swift`を直接開けるため多くの機能は利用可能。制約が顕在化したら`.xcodeproj`併用を再検討。Phase 3-Aで`record_trace.py`/`analyze_trace.py`によるCLI経由のトレース取得・解析が可能なことを確認(`spec/phase3a-spike-results.md`) |
 | macOSランナーCIコスト | 低 | Lintはubuntu-latestに寄せ、ビルドのみmacos-latest |
 | Hardened Runtime下でのJavaプロセス起動可否 | 低(検証済み) | Phase 3-Aで検証: 追加entitlementsなしでも`java -version`はexit 0で起動可能。実ワークロードでの再検証は3-7(サーバー起動/停止実装)で実施(`spec/phase3a-spike-results.md`) |

@@ -8,15 +8,39 @@
 
 | 項目 | 内容 |
 |---|---|
-| 検証日 | 未実施(ユーザー実機待ち) |
-| 実施環境 | ユーザー実機(macOS Tahoe 26+) |
-| 結果 | — |
-| 判定 | 未確定 |
-| 証跡パス | `apps/native-macos/spec-assets/3-1/{nspanel,window}-{active,inactive}.png`(未作成) |
+| 検証日 | 2026-07-09 |
+| 実施環境 | 実機で予備スクリーンショット4枚を取得(`spec/spike/`)+ 文献調査(Apple公式ドキュメント・実例プロジェクト・コミュニティ報告) |
+| 結果 | 下記参照 |
+| 判定 | **文献調査により確定**(実機での劣化度合いの目視比較は行わず、設計方針の転換によって解決) |
+| 証跡パス | `spec/spike/{nspanel-active,nspanel-inactive,panel-window-active}.png`(予備取得分。この設計では判定材料として使用しない) |
 
 **実装済みスキャフォールド**: `apps/native-macos/Sources/Core/Spikes/PanelSpike/`(`GlassSpikeContent.swift`, `NonactivatingGlassPanel.swift`, `SwiftUIWindowLevelSpike.swift`)、`apps/native-macos/Sources/App/Spikes/PanelSpikeRunner.swift`。
 
-**ユーザーへの依頼**: `swift run App` を `MCV_SPIKE=panel-nspanel` と `MCV_SPIKE=panel-window` のそれぞれで起動し、他アプリへフォーカスを移して非アクティブ化した状態を含むスクリーンショットを4枚(`nspanel-active.png` / `nspanel-inactive.png` / `window-active.png` / `window-inactive.png`)撮影の上、`apps/native-macos/spec-assets/3-1/` 配下に保存してほしい。保存後、Claudeが画像を読み込み劣化度合いを比較し、本セクションと `native-macos-requirements.md` §5.4 に確定した実装方式を追記する。
+### 判定の経緯: 実機検証から文献調査ベースの判定への切り替え
+
+当初計画では、実機でactive/inactiveのスクリーンショット4枚を撮影し目視で劣化度合いを比較する予定だった。ユーザーに予備の3枚(`nspanel-active.png` / `nspanel-inactive.png` / `panel-window-active.png`)を撮影してもらったところ、**背景の壁紙(鮮やかな青紫グラデーション)がパネル内部に一切反映されず、active/inactiveの差もほぼ視認できない**という結果になった。
+
+これを受けてコードとApple公式ドキュメント・実例プロジェクトを調査した結果、根本原因は「バグ」ではなく**スパイクの検証設計自体がApple HIGのベストプラクティストに反していた**ことだと判明した:
+
+1. **HIGの「content layerに使うな」原則**: Apple HIG「Materials」("Don't use Liquid Glass in the content layer... use standard materials for elements in the content layer, such as app backgrounds.")および Apple公式「Applying Liquid Glass to custom views」より、`.glassEffect`はツールバー・ナビゲーション・コントロール群といった**機能層(functional layer)にのみ**適用すべきもので、パネル/ウィンドウ**背景全体**への適用は明確に非推奨。当時の`GlassSpikeContent.swift`は320×160の**カード全体**(Textのみ、背後に実コンテンツなし)に`.glassEffect`をチェーンしており、この原則に反していた
+2. **`.glassEffect`はデスクトップ透過機能ではない**: 実例プロジェクト`mertozseven/LiquidGlassSwiftUI`(GitHub)を調査すると、`.glassEffect`は単一の`Text`や64pt円形ボタンといった小さい要素にのみ適用され、背景画像自体には適用しない設計だった。ガラスは「同一ウィンドウ内で自分の背後にある実コンテンツ」を屈折させるものであり、デスクトップの壁紙をウィンドウ越しに透過させる仕組みではない。壁紙まで透過させるには、AppKit側で`NSWindow`/`NSPanel`の`isOpaque = false` / `backgroundColor = .clear`を別途明示的に設定する必要がある(未設定だった)
+3. **brew-browserの前例**: 同規模の参考実装`msitarzewski/brew-browser`(GitHub)の意思決定ログ(`memory-bank/tasks/2026-05/22-native-swift-liquid-glass-rebuild.md` D3)には「Stock Apple scaffolding only, no overrides. No custom window chrome, no `NSVisualEffectView`, no faked backgrounds... Established after several failed attempts to hand-build Xcode-like chrome.」と明記されており、ウィンドウの`isOpaque`/`backgroundColor`には一切手を入れず、標準SwiftUIコンテナ(`NavigationSplitView`等)にLiquid Glassの描画を完全委任する設計を採っている。自前でウィンドウ透明化・ガラス制御を試みて複数回失敗した末にこの方針へ収束した経緯があり、我々が直面した問題と同種の轍を踏んだ先例といえる
+4. **NSPanel特有の既知の未解決バグ**: `.nonactivatingPanel`のNSPanelは、アプリが非フォーカス時にglassEffectが単純なブラーに劣化するという未解決の報告が複数ある(HackingWithSwiftフォーラム、2025年9月・2026年3月に同一症状の報告)。ワークアラウンドや公式回答は確認できなかった
+
+参照した一次情報:
+- <https://developer.apple.com/design/human-interface-guidelines/materials>
+- <https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views>
+- <https://github.com/mertozseven/LiquidGlassSwiftUI>
+- <https://github.com/msitarzewski/brew-browser>(意思決定ログ: `memory-bank/tasks/2026-05/22-native-swift-liquid-glass-rebuild.md`)
+- <https://www.hackingwithswift.com/forums/swiftui/glasseffect-in-floating-window-panel/30067>
+- <https://github.com/onmyway133/blog/issues/1025>(`window.backgroundColor = .clear`が無いと透過しない、という実装者記録)
+
+### 確定した方針
+
+- **Liquid Glassの適用範囲は機能層(ツールバー・コントロール等の小要素)に限定し、パネル/ウィンドウ背景全体(コンテンツ層)には使わない**。これをNative版全体のガラス適用方針として採用する
+- **パネル自体(NSPanel/NSWindow)は不透明のまま維持し、デスクトップ壁紙の透過は行わない**。brew-browserの前例、および本来の要件(Floating Console Panelはログ表示領域の上に浮くコントロールであり、デスクトップ透過は要件にない)と整合する
+- NSPanelの非アクティブ時ブラー劣化バグは既知だが、ガラスを機能層の小要素に限定する設計であれば影響範囲は小さく、実用上許容できると評価する
+- 実装方式の確定は `native-macos-requirements.md` §5.4 を参照
 
 ## 3-2: Hardened Runtime下のJavaプロセス起動
 
@@ -46,19 +70,30 @@ spike-baseline: exit=0
 
 | 項目 | 内容 |
 |---|---|
-| 検証日 | 未実施(ユーザー実機待ち) |
-| 実施環境 | ユーザー実機(macOS Tahoe 26+、Instruments) |
-| 結果 | — |
-| 判定 | 未確定 |
-| 証跡パス | `.trace`ファイル(未取得、パスは取得後にユーザーから共有) |
+| 検証日 | 2026-07-09 |
+| 実施環境 | ユーザー実機(macOS 26 Tahoe、Instruments/xctrace 26.0 (17C529)) |
+| 結果 | 下記参照 |
+| 判定 | **検証完了**。ScrollView+LazyVStack方式を3-8で優先採用 |
+| 証跡パス | `apps/native-macos/swiftui-20260709-085046.trace`(list版)、`apps/native-macos/swiftui-20260709-085554.trace`(scroll版) |
 
 **実装済みスキャフォールド**: `apps/native-macos/Sources/Core/Spikes/LogSpike/`(`DummyLogGenerator.swift`, `LogBatcher.swift`, `LogLineBuffer.swift`, `LogStreamSpikeView.swift`)。`LogBatcher`のユニットテストは`Tests/CoreTests/LogBatcherTests.swift`で完了済み(同一ウィンドウ内のグルーピング、ウィンドウ境界での分割、単一行、同一タイムスタンプ、空入力)。
 
 **コードレビュー指摘への対応**: 初回実装は`List`/`ScrollView`両方とも「1行追加するたびに`retainedLineCount`ちょうどまで`removeFirst`する」実装で、1000行/秒の負荷下では毎行O(n)の配列シフトが発生し、Instrumentsトレースが本来測定したい「List vs ScrollViewのレンダリングコスト差」ではなく「配列シフトのコスト」を支配的に示してしまう懸念があった。`LogLineBuffer`(ヒステリシス付きトリム: `retainedLineCount + trimOvershoot`を超えた時だけまとめてトリム)を切り出し両Viewで共有する実装に修正し、`Tests/CoreTests/LogLineBufferTests.swift`でトリム挙動を検証済み。
 
-**ユーザーへの依頼**: `swift run App` を `MCV_SPIKE=log-stream`(`MCV_LOG_SPIKE_VARIANT=list` または `scroll`)で起動し、`.claude/skills/swiftui-expert-skill/scripts/record_trace.py --launch <path> --template "SwiftUI" --time-limit 30s` でトレースを取得してほしい。取得済み`.trace`はClaudeが`analyze_trace.py --trace <path>`で解析し、ヒッチ/CPUホットスポットからバッチ化/仮想化戦略を決定する。
+**実測結果**: `record_trace.py --launch <ビルド済みバイナリ> --env MCV_SPIKE=log-stream --env MCV_LOG_SPIKE_VARIANT={list,scroll} --template "SwiftUI" --time-limit 30s` で取得(初回は`--launch`にソースディレクトリを渡し起動失敗、再取得時にビルド済みバイナリのパスに修正)。`analyze_trace.py`で解析したところ、両トレースとも`[Warning] Trace file had no SwiftUI data`(SwiftUI内部更新グラフ`swiftui-causes`/`swiftui-updates`スキーマのみ空)という警告が出たが、**time-profile/hitches計測は正常に記録されており判定への支障はない**:
+
+| バリアント | ヒッチ数 | ヒッチ合計時間 | 最悪ヒッチ | CPU総サンプル数 |
+|---|---|---|---|---|
+| List(`List`単純trim) | 78 | 2017ms | 217ms(起動時3.7s) | 277,087 |
+| ScrollView(`LazyVStack`+ヒステリシスtrim) | 9 | 517ms | 367ms(起動時1.9s) | 248,359 |
+
+List版のホットスポットは`swift_retain`/`swift_release`中心(ARC負荷、行の頻繁な生成/破棄を示唆)。ScrollView版は`Set.contains`/`RawDictionaryStorage.find`等(`ForEach`のID解決コスト)。起動直後の一過性ヒッチはどちらにもあるが、定常状態でのヒッチ頻度・総量はScrollView版がList版の約1/4に留まる。
+
+**判定**: 1000行/秒のログ高頻度描画において、ScrollView(`LazyVStack`)+ヒステリシス付きトリム方式が明確に優位。3-8(ログストリーム本実装)ではこの方式を優先採用する。
 
 ## まとめ
 
 - 3-2は検証完了。追加entitlementsなしでもJavaサブプロセス起動自体は妨げられないことが判明し、`native-macos-requirements.md` §5.3の「entitlements要否の洗い出し」という設計課題に対する一次情報が得られた。
-- 3-1・3-3はスキャフォールド・自動テストまで完了し、実機でのみ可能な操作(スクリーンショット撮影・Instrumentsトレース記録)をユーザーに依頼した状態で本タスクを一旦クローズする。成果物が揃い次第、このファイルと`native-macos-requirements.md` §5.4/§6を追加コミットで更新する。
+- 3-3は検証完了。ScrollView+LazyVStack方式がList方式よりヒッチ数・総量ともに大幅に優位(9ヒッチ/517ms vs 78ヒッチ/2017ms)と判明し、3-8での採用方針を確定した。
+- 3-1は、実機での目視劣化比較ではなく文献調査(Apple HIG・実例プロジェクト・コミュニティ既知バグ)により判定を確定した。Liquid Glassの適用は機能層の小要素に限定し、パネル自体は不透明のまま維持する方針とする。詳細は当該セクションと`native-macos-requirements.md` §5.4/§6を参照。
+- Phase 3-A(実機検証3項目)は本更新をもって完全クローズとする。
