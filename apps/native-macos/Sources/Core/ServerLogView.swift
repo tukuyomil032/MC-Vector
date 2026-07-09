@@ -18,9 +18,22 @@ import SwiftUI
 /// trimOvershoot` is exceeded, so "the last id" is still always present and
 /// valid, but anchoring on a dedicated always-present sentinel avoids ever
 /// depending on that being true.
+///
+/// Purely a display component -- unlike its original (task 3-8) shape, it no
+/// longer owns a `.task` that calls `viewModel.streamLogs()`. As of task 3-9
+/// (Floating Console Panel), this view is instantiated *twice*
+/// simultaneously against the *same* `ServerLogViewModel`: once inline in
+/// `ServerDetailView`'s "Console Output" section, once inside
+/// `FloatingConsoleContentView` hosted in `FloatingConsolePanel`. If each
+/// instance ran its own `streamLogs()` call, that would be two concurrent
+/// calls into `ServerProcessService.stdoutLines(serverId:)` for the same
+/// running server -- explicitly documented there as unsafe (the underlying
+/// stream is single-consumer; two readers split stdout bytes
+/// unpredictably). `ServerDetailView` now owns the single `.task(id:
+/// server.status)` that drives `streamLogs()`; every `ServerLogView` merely
+/// *reads* `viewModel.lines`, which is safe from any number of views.
 struct ServerLogView: View {
     let viewModel: ServerLogViewModel
-    let serverStatus: ServerStatus
 
     private static let bottomAnchorID = "server-log-bottom"
 
@@ -43,9 +56,6 @@ struct ServerLogView: View {
             .onChange(of: self.viewModel.lines.count) {
                 proxy.scrollTo(Self.bottomAnchorID, anchor: .bottom)
             }
-        }
-        .task(id: self.serverStatus) {
-            await self.viewModel.streamLogs()
         }
     }
 }

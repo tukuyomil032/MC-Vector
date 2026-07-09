@@ -21,9 +21,19 @@ import SwiftUI
 /// (`RootView` still owns Start/Stop), not folded into the `Form` itself,
 /// since log lines have nothing in common with the labeled-field rows above
 /// them.
+///
+/// This view now also owns the single `.task(id: server.status)` that
+/// drives `logViewModel.streamLogs()` (task 3-9's "Floating Console Panel"
+/// moved this up from `ServerLogView` itself). That's what makes it safe to
+/// show the same log stream in two places at once -- inline here *and* in
+/// `FloatingConsolePanel` -- without ever calling `streamLogs()` (and
+/// transitively `ServerProcessService.stdoutLines(serverId:)`) more than
+/// once for the same running server; see `ServerLogView`'s and
+/// `FloatingConsolePanelController`'s doc comments for the full rationale.
 struct ServerDetailView: View {
     let server: Server
     @State private var logViewModel: ServerLogViewModel
+    @State private var consolePanelController: FloatingConsolePanelController?
 
     /// `processService` is threaded in from `RootView`'s
     /// `ServerListViewModel` (see that class's `processService` doc
@@ -66,11 +76,41 @@ struct ServerDetailView: View {
                     .font(.headline)
                     .padding([.horizontal, .top], 12)
                     .padding(.bottom, 4)
-                ServerLogView(viewModel: self.logViewModel, serverStatus: self.server.status)
+                ServerLogView(viewModel: self.logViewModel)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle(self.server.name)
+        .task(id: self.server.status) {
+            await self.logViewModel.streamLogs()
+        }
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button(
+                    self.consolePanelController?.isVisible == true ? "Hide Console Panel" : "Show Console Panel",
+                    systemImage: "terminal",
+                ) {
+                    self.consolePanel().toggle()
+                }
+            }
+        }
+        .onDisappear {
+            self.consolePanelController?.dismiss()
+        }
+    }
+
+    /// Lazily creates `consolePanelController` on first use (first toolbar
+    /// tap), passing it the same `logViewModel` instance driving the inline
+    /// "Console Output" section above -- never a second
+    /// `ServerLogViewModel`. Subsequent calls return the already-created
+    /// controller so repeated toggling reuses the same panel.
+    private func consolePanel() -> FloatingConsolePanelController {
+        if let controller = self.consolePanelController {
+            return controller
+        }
+        let controller = FloatingConsolePanelController(serverName: self.server.name, viewModel: self.logViewModel)
+        self.consolePanelController = controller
+        return controller
     }
 }
 
