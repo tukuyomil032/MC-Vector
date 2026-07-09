@@ -5,7 +5,7 @@ import Foundation
 struct Main {
     static func main() async {
         guard let spike = ProcessInfo.processInfo.environment["MCV_SPIKE"] else {
-            print("MC-Vector Native starting…")
+            MCVectorApp.main()
             return
         }
 
