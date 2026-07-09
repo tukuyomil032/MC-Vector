@@ -56,18 +56,37 @@ public final class ServerListViewModel {
     /// activity history has a different, much simpler lifecycle than server
     /// definitions, so it doesn't need a store of its own.
     ///
-    /// Populated exclusively from `apply(_:)`, i.e. exclusively from events
-    /// delivered over `processService.events`. That stream only ever reports
-    /// the two outcomes `ServerProcessService` alone can observe
-    /// asynchronously -- a tracked process exiting cleanly (`.offline`) or
-    /// crashing (`.crashed`), see `ServerProcessEvent`'s doc comment -- so
-    /// this log does not contain an entry for the optimistic `.starting`/
-    /// `.online` transitions `startSelectedServer()` sets synchronously
-    /// itself. Extending coverage to those would mean logging from
-    /// `startSelectedServer()`/`stopSelectedServer()` directly, which this
-    /// task deliberately did not do: the brief was specifically to extend
-    /// the *existing* `apply(_:)` subscriber, not to widen the log's scope
-    /// beyond what that single subscription already observes.
+    /// Populated from two places: `apply(_:)` (events delivered over
+    /// `processService.events` -- a tracked process exiting cleanly
+    /// (`.offline`) or crashing (`.crashed`), see `ServerProcessEvent`'s doc
+    /// comment) and `startSelectedServer()`'s synchronous `.online` success
+    /// path. Both funnel through the shared `appendActivity(forServerId:status:)`
+    /// helper.
+    ///
+    /// `startSelectedServer()` logs its own `.online` entry directly rather
+    /// than going through `processService.events` -- code review on task
+    /// 3-10 (see git history) found that a successful start never produced
+    /// an `ActivityEntry` at all, which contradicted the task spec's literal
+    /// "起動/停止/バックアップ等のアクティビティ履歴を表示する" requirement.
+    /// The original justification for omitting it (avoiding a second
+    /// subscriber on `processService.events`) doesn't actually apply here:
+    /// `startSelectedServer()` never touches that stream, so calling
+    /// `appendActivity` directly from its success path adds no risk of a
+    /// second consumer on the single-consumer `AsyncStream`.
+    ///
+    /// `stopSelectedServer()` deliberately does NOT get a matching
+    /// "stop requested" entry at the point it issues the stop -- only the
+    /// later `.offline`/`.crashed` entry, logged via `apply(_:)` once the
+    /// process actually exits. A stop's outcome is inherently uncertain
+    /// until the process really terminates (see that method's doc comment:
+    /// the actor's termination monitor is the single source of truth), so
+    /// logging an entry the moment the request is merely issued would be a
+    /// weaker, and arguably misleading, signal than a start's -- unlike
+    /// `startSelectedServer()`, where `.online` is already known for certain
+    /// by the time this code runs. Double-logging "stop requested" +
+    /// "stop completed" would also just clutter the drawer with two entries
+    /// for one user action; the spec asks for stop activity to be visible,
+    /// and the existing single offline/crashed entry already satisfies that.
     ///
     /// Bounded to `activityLogCap` entries (oldest dropped first) so a long
     /// session doesn't grow this array unboundedly -- same trim-on-overflow
@@ -164,6 +183,11 @@ public final class ServerListViewModel {
         do {
             try await self.processService.start(server: server)
             self.setStatus(.online, forServerId: server.id)
+            // Logged directly here, not via `processService.events` -- see
+            // `activityLog`'s doc comment for why this is safe (no stream
+            // contact) and why the task spec requires it (a successful
+            // start is an activity, same as a stop/crash).
+            self.appendActivity(forServerId: server.id, status: .online)
         } catch {
             self.setStatus(server.status, forServerId: server.id)
             self.errorMessage = error.localizedDescription
@@ -194,31 +218,40 @@ public final class ServerListViewModel {
         }
     }
 
-    /// The ONLY place `ActivityEntry` values are appended to `activityLog` --
-    /// see that property's doc comment for why the log's coverage is
-    /// therefore limited to what this single event stream reports. Handles
-    /// both jobs (status update and activity logging) for a single event
-    /// delivery, per this task's constraint against adding a second
+    /// The sole subscriber to `processService.events` -- handles both jobs
+    /// (status update and activity logging) for a single event delivery,
+    /// per this task's constraint against adding a second
     /// `for await event in processService.events` loop: `processService.events`
     /// is single-consumer, and this `apply(_:)` method is already the one
-    /// and only subscriber (see `init`'s `processEventTask`).
+    /// and only subscriber (see `init`'s `processEventTask`). Not the only
+    /// place activity entries are appended, though -- see
+    /// `appendActivity(forServerId:status:)`'s doc comment; the other caller
+    /// is `startSelectedServer()`'s synchronous success path, which never
+    /// touches this stream.
     private func apply(_ event: ServerProcessEvent) {
         self.setStatus(event.status, forServerId: event.serverId)
-        self.appendActivity(for: event)
+        self.appendActivity(forServerId: event.serverId, status: event.status)
     }
 
-    /// Resolves `event.serverId` against `servers` *before* appending, so
-    /// the stored `ActivityEntry.serverName` is a snapshot rather than a
-    /// live lookup -- see `ActivityEntry.serverName`'s doc comment. Falls
-    /// back to the raw id on a lookup miss (should not happen in practice,
-    /// since `setStatus` above ran against the same `servers` array moments
-    /// earlier, but avoids ever losing an entry over a resolution failure).
-    private func appendActivity(for event: ServerProcessEvent) {
-        let serverName = self.servers.first(where: { $0.id == event.serverId })?.name ?? event.serverId
+    /// Constructs and inserts a single `ActivityEntry`, shared by both
+    /// `apply(_:)` (event-driven: `.offline`/`.crashed`) and
+    /// `startSelectedServer()`'s success path (direct/synchronous:
+    /// `.online`) -- see `activityLog`'s doc comment for why the latter
+    /// bypasses the event stream entirely rather than routing through it.
+    ///
+    /// Resolves `serverId` against `servers` *before* appending, so the
+    /// stored `ActivityEntry.serverName` is a snapshot rather than a live
+    /// lookup -- see `ActivityEntry.serverName`'s doc comment. Falls back to
+    /// the raw id on a lookup miss (should not happen in practice, since
+    /// `setStatus` runs against the same `servers` array moments earlier in
+    /// both callers, but avoids ever losing an entry over a resolution
+    /// failure).
+    private func appendActivity(forServerId serverId: String, status: ServerStatus) {
+        let serverName = self.servers.first(where: { $0.id == serverId })?.name ?? serverId
         let entry = ActivityEntry(
-            serverId: event.serverId,
+            serverId: serverId,
             serverName: serverName,
-            kind: .serverStatusChange(event.status),
+            kind: .serverStatusChange(status),
         )
         self.activityLog.insert(entry, at: 0)
         if self.activityLog.count > self.activityLogCap {

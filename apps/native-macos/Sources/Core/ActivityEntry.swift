@@ -10,9 +10,12 @@ import Foundation
 /// for why): a plain `Date` is the right, simple choice for `timestamp`.
 public struct ActivityEntry: Sendable, Identifiable, Equatable {
     /// What kind of thing happened. Currently only tracks process status
-    /// changes observed via `ServerProcessService.events` (see
-    /// `ServerListViewModel.apply(_:)`, the sole place `ActivityEntry`
-    /// values are constructed).
+    /// changes -- both those observed via `ServerProcessService.events`
+    /// (`.offline`/`.crashed`, applied by `ServerListViewModel.apply(_:)`)
+    /// and the synchronous `.online` transition `ServerListViewModel
+    /// .startSelectedServer()` logs directly on a successful start. Both
+    /// paths construct entries through `ServerListViewModel
+    /// .appendActivity(forServerId:status:)`.
     ///
     /// Deliberately an enum rather than folding `ServerStatus` directly into
     /// `ActivityEntry` -- this app has no backup feature/service implemented

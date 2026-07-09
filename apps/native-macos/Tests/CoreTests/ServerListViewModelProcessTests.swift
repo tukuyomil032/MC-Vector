@@ -201,13 +201,52 @@ func stopSelectedServerEventuallySetsStatusToOfflineViaEventStream() async throw
 
 //
 // These tests exercise `ServerListViewModel.activityLog` exclusively through
-// `startSelectedServer()`/`stopSelectedServer()` and real event propagation
-// from `ServerProcessService.events` -- same pattern as the tests above, and
+// `startSelectedServer()`/`stopSelectedServer()` -- same pattern as the tests
+// above. A successful start's `.online` entry is logged directly and
+// synchronously (no stream involved); `.offline`/`.crashed` entries still
+// arrive via real event propagation from `processService.events`, and
 // deliberately not via any second `for await event in processService.events`
 // loop: `apply(_:)` (invoked by the ViewModel's own single subscription
-// `Task` set up in `init`) is the only place `ActivityEntry` values are
-// appended, so these tests observe the *effect* of that subscriber rather
-// than creating a competing one.
+// `Task` set up in `init`) is the only place those two entries are appended,
+// so these tests observe the *effect* of that subscriber rather than
+// creating a competing one.
+
+@MainActor
+@Test("a successful start appends an ActivityEntry with the resulting .online status")
+func startAppendsOnlineActivityEntry() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+    let scriptURL = try makeScriptFixture(stopOnStdinScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [makeServer(javaPath: scriptURL.path)]))
+
+    let viewModel = ServerListViewModel(store: store, processService: ServerProcessService())
+    await viewModel.load()
+    viewModel.selection = viewModel.servers.first?.id
+    let serverId = try #require(viewModel.servers.first?.id)
+    let serverName = try #require(viewModel.servers.first?.name)
+
+    await viewModel.startSelectedServer()
+
+    // Unlike the .offline/.crashed entries below (which arrive later via
+    // the event-subscription Task, so tests need `waitUntil`), a start's
+    // `.online` entry is logged directly and synchronously from
+    // `startSelectedServer()`'s success path -- no polling needed, matching
+    // how `startSelectedServerSetsStatusToOnlineOnSuccess` asserts
+    // `.online` status with no `waitUntil` either. This is the regression
+    // test for the task 3-10 code-review finding that a successful start
+    // never produced an `ActivityEntry` at all.
+    #expect(viewModel.activityLog.count == 1)
+    let entry = try #require(viewModel.activityLog.first)
+    #expect(entry.serverId == serverId)
+    #expect(entry.serverName == serverName)
+    #expect(entry.kind == .serverStatusChange(.online))
+
+    // Clean up: stop the real child process so the test doesn't leak it.
+    await viewModel.stopSelectedServer()
+}
 
 @MainActor
 @Test("stopping a server appends an ActivityEntry with the resulting .offline status")
@@ -227,16 +266,16 @@ func stopAppendsOfflineActivityEntry() async throws {
     let serverName = try #require(viewModel.servers.first?.name)
 
     await viewModel.startSelectedServer()
-    // The synchronous `.starting` -> `.online` transition `startSelectedServer()`
-    // sets itself never touches `apply(_:)`, so it logs nothing -- see
-    // `ServerListViewModel.activityLog`'s doc comment for why the log's
-    // coverage is scoped to `processService.events` only.
-    #expect(viewModel.activityLog.isEmpty)
+    // A successful start now logs its own `.online` entry directly from
+    // `startSelectedServer()`'s success path (task 3-10 review fix) -- see
+    // `ServerListViewModel.activityLog`'s doc comment.
+    #expect(viewModel.activityLog.count == 1)
+    #expect(viewModel.activityLog.first?.kind == .serverStatusChange(.online))
 
     await viewModel.stopSelectedServer()
-    await waitUntil { !viewModel.activityLog.isEmpty }
+    await waitUntil { viewModel.activityLog.count == 2 }
 
-    #expect(viewModel.activityLog.count == 1)
+    #expect(viewModel.activityLog.count == 2)
     let entry = try #require(viewModel.activityLog.first)
     #expect(entry.serverId == serverId)
     #expect(entry.serverName == serverName)
@@ -261,13 +300,19 @@ func crashAppendsCrashedActivityEntry() async throws {
     let serverName = try #require(viewModel.servers.first?.name)
 
     await viewModel.startSelectedServer()
-    await waitUntil { !viewModel.activityLog.isEmpty }
+    // The successful start already logged its own `.online` entry
+    // synchronously (see `stopAppendsOfflineActivityEntry` above), so this
+    // waits for a *second* entry -- the crash's -- rather than merely
+    // `!activityLog.isEmpty`, which the start's own entry would already
+    // satisfy before the crash is even observed.
+    await waitUntil { viewModel.activityLog.count == 2 }
 
-    #expect(viewModel.activityLog.count == 1)
+    #expect(viewModel.activityLog.count == 2)
     let entry = try #require(viewModel.activityLog.first)
     #expect(entry.serverId == serverId)
     #expect(entry.serverName == serverName)
     #expect(entry.kind == .serverStatusChange(.crashed))
+    #expect(viewModel.activityLog.last?.kind == .serverStatusChange(.online))
 }
 
 @MainActor
