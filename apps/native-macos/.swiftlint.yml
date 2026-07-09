@@ -1,0 +1,14 @@
+strict: true
+reporter: "xcode"
+
+excluded:
+  - .build
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - force_unwrapping
+
+disabled_rules:
+  - todo

@@ -20,3 +20,8 @@ scripts/**/*.js linguist-detectable=false
 
 docs/**/*.astro linguist-detectable=true linguist-language=Astro
 docs/**/*.mdx linguist-detectable=true linguist-language=MDX
+
+.agents/** linguist-detectable=false linguist-generated
+.claude/** linguist-detectable=false linguist-generated
+
+*.js

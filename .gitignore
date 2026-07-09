@@ -175,3 +175,11 @@ docs/public/rustdoc/
 
 test-results/**
 playwright/screenshots/**
+
+# Swift Package Manager build output
+apps/native-macos/.build/
+apps/native-macos/.swiftpm/
+apps/native-macos/*.xcodeproj
+
+.agents/**
+.claude/skills/**

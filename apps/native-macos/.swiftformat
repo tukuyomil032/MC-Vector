@@ -1,0 +1,8 @@
+--swiftversion 6.2
+--indent 4
+--maxwidth 120
+--self insert
+--importgrouping testable-last
+--exclude .build
+--disable swiftTestingTestCaseNames
+--disable trailingCommas
