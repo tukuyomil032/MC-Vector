@@ -21,6 +21,16 @@ public final class ServerListViewModel {
     public var selection: Server.ID?
     public private(set) var errorMessage: String?
 
+    /// The currently selected `Server`, resolved from `selection` against
+    /// `servers`. `nil` when nothing is selected, and also `nil` when
+    /// `selection` no longer matches any loaded server (e.g. it was
+    /// deleted, or a stale id survived a reload) -- callers such as
+    /// `RootView`'s detail pane fall back to a placeholder in both cases
+    /// without needing to distinguish them.
+    public var selectedServer: Server? {
+        self.servers.first(where: { $0.id == self.selection })
+    }
+
     /// Injectable initializer. Tests should use this with a `ServerStore`
     /// pointed at a temp file (see `ServerStoreTests` for the pattern) so
     /// they never touch the real Application Support directory.

@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Top-level app shell: a `NavigationSplitView` with the server list as the
-/// sidebar. The detail pane is a trivial "select a server" placeholder --
-/// task 3-6 replaces it with the real per-server detail screen.
+/// sidebar and the selected server's detail as the detail pane, falling
+/// back to a "select a server" placeholder when nothing is selected or the
+/// selected id no longer matches any loaded server.
 public struct RootView: View {
     @State private var viewModel: ServerListViewModel
 
@@ -22,11 +23,15 @@ public struct RootView: View {
         NavigationSplitView {
             ServerListView(viewModel: self.viewModel)
         } detail: {
-            ContentUnavailableView(
-                "Select a Server",
-                systemImage: "server.rack",
-                description: Text("Choose a server from the sidebar to see its details."),
-            )
+            if let server = self.viewModel.selectedServer {
+                ServerDetailView(server: server)
+            } else {
+                ContentUnavailableView(
+                    "Select a Server",
+                    systemImage: "server.rack",
+                    description: Text("Choose a server from the sidebar to see its details."),
+                )
+            }
         }
     }
 }

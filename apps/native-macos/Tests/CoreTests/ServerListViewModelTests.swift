@@ -89,3 +89,55 @@ func selectionStartsNilAndCanBeSet() async throws {
 
     #expect(viewModel.selection == "srv-1")
 }
+
+@MainActor
+@Test("selectedServer is nil when selection is nil")
+func selectedServerIsNilWhenSelectionIsNil() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [makeServer(id: "srv-1")]))
+
+    let viewModel = ServerListViewModel(store: store)
+    await viewModel.load()
+
+    #expect(viewModel.selection == nil)
+    #expect(viewModel.selectedServer == nil)
+}
+
+@MainActor
+@Test("selectedServer resolves the matching Server when selection is a loaded id")
+func selectedServerResolvesMatchingServer() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [
+        makeServer(id: "srv-1", name: "Survival"),
+        makeServer(id: "srv-2", name: "Modded")
+    ]))
+
+    let viewModel = ServerListViewModel(store: store)
+    await viewModel.load()
+    viewModel.selection = "srv-2"
+
+    #expect(viewModel.selectedServer?.id == "srv-2")
+    #expect(viewModel.selectedServer?.name == "Modded")
+}
+
+@MainActor
+@Test("selectedServer is nil when selection doesn't match any loaded server")
+func selectedServerIsNilWhenSelectionDoesNotMatch() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [makeServer(id: "srv-1")]))
+
+    let viewModel = ServerListViewModel(store: store)
+    await viewModel.load()
+    viewModel.selection = "srv-does-not-exist"
+
+    #expect(viewModel.selectedServer == nil)
+}
