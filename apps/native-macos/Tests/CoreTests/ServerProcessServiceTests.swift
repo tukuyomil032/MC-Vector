@@ -55,6 +55,19 @@ sleep 0.2
 exit 7
 """
 
+/// Echoes one line, then behaves like `stopOnStdinScript` -- lets a test
+/// claim a live `stdoutLines` reader, then trigger exit separately.
+private let echoesLineThenStopsOnStdinScript = """
+#!/bin/sh
+echo "hello"
+while IFS= read -r line; do
+  if [ "$line" = "stop" ]; then
+    exit 0
+  fi
+done
+exit 0
+"""
+
 /// Echoes three known lines to stdout with small delays between them (so a
 /// test can assert lines are delivered incrementally, not only bulk-read
 /// after the process exits), then exits cleanly.
@@ -323,6 +336,53 @@ func stdoutLinesReturnsNilOnSecondCallAfterDraining() async throws {
     let firstStream = try #require(await service.stdoutLines(serverId: server.id))
     for await _ in firstStream {}
 
+    let secondStream = await service.stdoutLines(serverId: server.id)
+    #expect(secondStream == nil)
+}
+
+/// Regression test for the review finding on `12d7805`: unconditional
+/// salvage in `handleTermination` reintroduced a race. `ServerDetailView`
+/// re-invokes `streamLogs()`/`stdoutLines(serverId:)` on every
+/// `server.status` transition via `.task(id:)`, so in the ordinary case
+/// (log view open while `.online`, then it stops/crashes) `stdoutLines` is
+/// legitimately called twice: once live (claiming the pipe), again after
+/// the status flips and `.task(id:)` re-fires. Unconditional salvage would
+/// hand the same pipe out a second time -- the "two readers split bytes
+/// unpredictably" hazard `stdoutLines` itself warns against, here
+/// triggered by the app's own re-entry, not caller error.
+///
+/// Claims the live pipe first (mirrors the `.online` call), drains it
+/// concurrently, stops the process (mirrors `.offline`), then asserts a
+/// second `stdoutLines` call returns `nil` -- not salvaged, matching
+/// pre-`12d7805` behavior for this case.
+@Test("stdoutLines returns nil after termination when the live pipe was already claimed while running")
+func stdoutLinesReturnsNilAfterClaimedLivePipeTerminates() async throws {
+    let service = ServerProcessService()
+    let scriptURL = try makeScriptFixture(echoesLineThenStopsOnStdinScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let server = makeServer(javaPath: scriptURL.path)
+    try await service.start(server: server)
+
+    // Claim the live pipe while running -- mirrors `.task(id:)` calling `streamLogs()` while `.online`.
+    let firstStream = try #require(await service.stdoutLines(serverId: server.id))
+
+    // Drain concurrently -- the script blocks on stdin until "stop" below, so a sequential drain would deadlock.
+    let drainTask = Task { () async -> [String] in
+        var lines: [String] = []
+        for await line in firstStream {
+            lines.append(line)
+        }
+        return lines
+    }
+
+    async let event = collectFirstEvent(from: service, matchingServerId: server.id)
+    try await service.stop(serverId: server.id)
+    #expect(await event?.status == .offline)
+
+    #expect(await drainTask.value == ["hello"])
+
+    // Unconditional salvage would re-serve this pipe as a second reader here instead of `nil`.
     let secondStream = await service.stdoutLines(serverId: server.id)
     #expect(secondStream == nil)
 }

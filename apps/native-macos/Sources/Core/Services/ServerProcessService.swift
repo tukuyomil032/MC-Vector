@@ -99,6 +99,8 @@ public actor ServerProcessService {
         /// `stdoutLines(serverId:)` has a direct, typed handle to read from
         /// -- task 3-8's job, per `start(server:)`'s doc comment below.
         let stdout: Pipe
+        /// Set when `stdoutLines(serverId:)` claims a live reader; gates `handleTermination`'s salvage.
+        var claimed = false
     }
 
     private var runningProcesses: [String: RunningProcess] = [:]
@@ -107,18 +109,22 @@ public actor ServerProcessService {
     /// already exited (`handleTermination` removed them from
     /// `runningProcesses`), but which `stdoutLines(serverId:)` hasn't read
     /// yet. Closes a narrow race: a process that exits very quickly can be
-    /// reaped by `start(server:)`'s monitoring `Task` *before* the caller's
+    /// reaped by `start(server:)`'s monitoring `Task` before the caller's
     /// first `stdoutLines` call -- without this cache, `stdoutLines` would
     /// key "anything to read" on `runningProcesses` liveness alone and
     /// wrongly return `nil`, even though the OS pipe still buffers every
-    /// byte the process wrote (a reader attaching late just sees EOF right
-    /// after that buffered data, not nothing). In production, this is
-    /// exactly the case that matters most: a crash message from a server
-    /// that dies immediately after launch.
+    /// byte written (a late-attaching reader sees EOF right after that
+    /// data, not nothing) -- most importantly, a crash message from a
+    /// server that dies immediately after launch. Entries are removed when
+    /// `stdoutLines` claims one, or when `start(server:)` runs again for
+    /// the same `serverId`.
     ///
-    /// Entries are removed when `stdoutLines` claims one, or when
-    /// `start(server:)` runs again for the same `serverId` (bounding this to
-    /// one stale entry per server rather than growing unboundedly).
+    /// Only populated when the process's stdout was never claimed live
+    /// (`RunningProcess.claimed == false`) at termination -- see
+    /// `handleTermination`. If it *was* claimed (log view open while
+    /// `.online`, then the server stops and `.task(id: server.status)`
+    /// re-fires), the live reader may still be mid-teardown, so salvaging
+    /// here would create a second reader splitting bytes unpredictably.
     private var terminatedStdout: [String: Pipe] = [:]
 
     private let eventContinuation: AsyncStream<ServerProcessEvent>.Continuation
@@ -153,47 +159,42 @@ public actor ServerProcessService {
     /// a placeholder) rather than treat it as exceptional, so a typed error
     /// would just force every caller to immediately catch-and-ignore it.
     ///
-    /// Checks `runningProcesses` first, then falls back to `terminatedStdout`
-    /// for an already-exited process whose buffered stdout hasn't been read.
+    /// Checks `runningProcesses` first (marking the pipe claimed -- see
+    /// `RunningProcess.claimed`), then falls back to `terminatedStdout` for
+    /// an already-exited, never-claimed process's unread buffered stdout.
     ///
     /// Reads incrementally via `FileHandle.bytes` (an `AsyncSequence` of
     /// bytes), per the swift-concurrency skill's guidance for bridging
     /// callback/handle-based APIs to `AsyncStream` -- deliberately not
     /// `readToEnd()`/`readToEndCompat()` (see `JavaLaunchHarness`), which
-    /// blocks until the pipe's write end closes (i.e. until the process
-    /// exits) and so cannot serve a *live* stream. Bytes are accumulated
-    /// into a line buffer and yielded as `String`s on each `\n`, with any
-    /// trailing partial line flushed once the loop ends.
+    /// blocks until the pipe's write end closes and so cannot serve a
+    /// *live* stream. Bytes accumulate into a line buffer, yielded as
+    /// `String`s on each `\n`, with any trailing partial line flushed once
+    /// the loop ends.
     ///
     /// The reading `Task` is spawned with `@concurrent` rather than
-    /// inheriting this actor's isolation: it lives for as long as the
-    /// process runs (potentially hours), and per the swift-concurrency
+    /// inheriting this actor's isolation -- per the swift-concurrency
     /// skill's actor guidance, a long-lived unstructured `Task` should never
-    /// pin an actor's serial executor for its whole lifetime -- doing so
-    /// here would make `isRunning`/`stop`/every other call to this actor
-    /// block until the server's stdout stream ends. `continuation.yield`
-    /// and `AsyncStream<String>` are both `Sendable`, so nothing unsafe
-    /// crosses the isolation boundary.
+    /// pin an actor's serial executor for its whole lifetime, which reading
+    /// a potentially-hours-long stream would otherwise do. `onTermination`
+    /// cancels the reading `Task` when the caller stops iterating; the
+    /// process exiting on its own needs no separate handling, since the
+    /// child's pipe end closing produces a natural EOF that falls through
+    /// to `continuation.finish()`.
     ///
-    /// `onTermination` cancels the reading `Task` when the caller stops
-    /// iterating (e.g. its own enclosing `Task`/`.task` view modifier is
-    /// cancelled), per the async-sequences skill guidance on stream
-    /// lifecycle cleanup. No explicit handling is needed for the *process*
-    /// exiting on its own: the child's end of the pipe closes automatically
-    /// on exit, `FileHandle.bytes` reaches a natural EOF, and the loop below
-    /// falls through to `continuation.finish()` -- the same clean-completion
-    /// path, no separate signal needed.
-    ///
-    /// Single-consumer only, like any `AsyncStream` (see the
-    /// async-sequences skill's "Limitations" section): calling this twice
-    /// for the same running `serverId` starts two independent readers on
-    /// the same underlying pipe file descriptor, splitting bytes
-    /// unpredictably between them. Callers (today: one `ServerLogViewModel`
-    /// per server) must not do that.
+    /// Single-consumer only, like any `AsyncStream`: calling this twice for
+    /// the same *live* `serverId` starts two independent readers on the
+    /// same pipe descriptor, splitting bytes unpredictably. Callers (today:
+    /// one `ServerLogViewModel` per server) must not do that -- the
+    /// `claimed` flag only protects the live-then-terminated re-entry
+    /// pattern (see `terminatedStdout`), not two concurrent live callers.
     public func stdoutLines(serverId: String) async -> AsyncStream<String>? {
         let stdoutPipe: Pipe
         if let running = self.runningProcesses[serverId] {
             stdoutPipe = running.stdout
+            // Mark claimed before returning so a same-race exit doesn't
+            // salvage this pipe out from under the reader below.
+            self.runningProcesses[serverId]?.claimed = true
         } else if let terminated = self.terminatedStdout.removeValue(forKey: serverId) {
             stdoutPipe = terminated
         } else {
@@ -391,9 +392,10 @@ public actor ServerProcessService {
     private func handleTermination(serverId: String, status: ServerStatus) {
         if let running = self.runningProcesses.removeValue(forKey: serverId) {
             try? running.stdin.close()
-            // Salvage the pipe: if nothing else retains it, deinit closes
-            // its descriptor, discarding buffered output nobody read yet.
-            self.terminatedStdout[serverId] = running.stdout
+            // Only salvage an unclaimed pipe -- see `terminatedStdout`'s doc.
+            if !running.claimed {
+                self.terminatedStdout[serverId] = running.stdout
+            }
         }
         self.eventContinuation.yield(ServerProcessEvent(serverId: serverId, status: status))
     }
