@@ -16,7 +16,14 @@ import Observation
 @Observable
 public final class ServerListViewModel {
     private let store: ServerStore
-    private let processService: ServerProcessService
+    /// Not `private` -- `RootView` needs the same `ServerProcessService`
+    /// instance to build a `ServerLogViewModel` for the detail screen's log
+    /// view (task 3-8), so log streaming reads from the same tracked
+    /// process this view model started/stopped. `ServerListViewModel`
+    /// itself has no log-related responsibility beyond exposing this;
+    /// owning log-streaming state is `ServerLogViewModel`'s job, not this
+    /// class's.
+    public let processService: ServerProcessService
     /// Housekeeping handle for the background event-subscription `Task`, not
     /// UI-relevant state -- no view reads `processEventTask`, so there's no
     /// reason for it to participate in `@Observable`'s change tracking.

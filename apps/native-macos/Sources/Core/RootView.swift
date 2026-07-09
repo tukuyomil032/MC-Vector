@@ -24,7 +24,15 @@ public struct RootView: View {
             ServerListView(viewModel: self.viewModel)
         } detail: {
             if let server = self.viewModel.selectedServer {
-                ServerDetailView(server: server)
+                // `.id(server.id)` forces a fresh `ServerDetailView`
+                // instance (and therefore a fresh `ServerLogViewModel`, per
+                // that view's `@State` init) whenever the sidebar selection
+                // changes to a different server -- without it, SwiftUI
+                // would reuse the existing `@State` across selections and
+                // the log view would keep streaming the *previous*
+                // server's stdout.
+                ServerDetailView(server: server, processService: self.viewModel.processService)
+                    .id(server.id)
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
                             Button("Start", systemImage: "play.fill") {

@@ -94,6 +94,11 @@ public actor ServerProcessService {
     private struct RunningProcess {
         let process: Process
         let stdin: FileHandle
+        /// The child's stdout `Pipe`, retained explicitly (rather than only
+        /// reachable via `process.standardOutput as? Pipe`) so
+        /// `stdoutLines(serverId:)` has a direct, typed handle to read from
+        /// -- task 3-8's job, per `start(server:)`'s doc comment below.
+        let stdout: Pipe
     }
 
     private var runningProcesses: [String: RunningProcess] = [:]
@@ -121,12 +126,97 @@ public actor ServerProcessService {
         self.runningProcesses[serverId] != nil
     }
 
+    /// A live, line-oriented view of `serverId`'s stdout, or `nil` if this
+    /// instance has no tracked running process for that id (never started,
+    /// already stopped/crashed, or a race with `start`/termination).
+    /// `nil`, not a thrown error: "no live stdout right now" is an expected,
+    /// steady-state outcome for a server that simply isn't running -- the
+    /// log view's job is to reflect that (e.g. show nothing / a placeholder)
+    /// rather than treat it as exceptional, so a typed error would just
+    /// force every caller to immediately catch-and-ignore it.
+    ///
+    /// Reads incrementally via `FileHandle.bytes` (an `AsyncSequence` of
+    /// bytes), per the swift-concurrency skill's guidance for bridging
+    /// callback/handle-based APIs to `AsyncStream` -- deliberately not
+    /// `readToEnd()`/`readToEndCompat()` (see `JavaLaunchHarness`), which
+    /// blocks until the pipe's write end closes (i.e. until the process
+    /// exits) and so cannot serve a *live* stream. Bytes are accumulated
+    /// into a line buffer and yielded as `String`s on each `\n`, with any
+    /// trailing partial line flushed once the loop ends.
+    ///
+    /// The reading `Task` is spawned with `@concurrent` rather than
+    /// inheriting this actor's isolation: it lives for as long as the
+    /// process runs (potentially hours), and per the swift-concurrency
+    /// skill's actor guidance, a long-lived unstructured `Task` should never
+    /// pin an actor's serial executor for its whole lifetime -- doing so
+    /// here would make `isRunning`/`stop`/every other call to this actor
+    /// block until the server's stdout stream ends. `continuation.yield`
+    /// and `AsyncStream<String>` are both `Sendable`, so nothing unsafe
+    /// crosses the isolation boundary.
+    ///
+    /// `onTermination` cancels the reading `Task` when the caller stops
+    /// iterating (e.g. its own enclosing `Task`/`.task` view modifier is
+    /// cancelled), per the async-sequences skill guidance on stream
+    /// lifecycle cleanup. No explicit handling is needed for the *process*
+    /// exiting on its own: the child's end of the pipe closes automatically
+    /// on exit, `FileHandle.bytes` reaches a natural EOF, and the loop below
+    /// falls through to `continuation.finish()` -- the same clean-completion
+    /// path, no separate signal needed.
+    ///
+    /// Single-consumer only, like any `AsyncStream` (see the
+    /// async-sequences skill's "Limitations" section): calling this twice
+    /// for the same running `serverId` starts two independent readers on
+    /// the same underlying pipe file descriptor, splitting bytes
+    /// unpredictably between them. Callers (today: one `ServerLogViewModel`
+    /// per server) must not do that.
+    public func stdoutLines(serverId: String) async -> AsyncStream<String>? {
+        guard let running = self.runningProcesses[serverId] else { return nil }
+        let handle = running.stdout.fileHandleForReading
+
+        return AsyncStream { continuation in
+            let task = Task<Void, Never> { @concurrent in
+                var lineBuffer = Data()
+                do {
+                    for try await byte in handle.bytes {
+                        if byte == UInt8(ascii: "\n") {
+                            continuation.yield(Self.decodeLine(lineBuffer))
+                            lineBuffer.removeAll(keepingCapacity: true)
+                        } else {
+                            lineBuffer.append(byte)
+                        }
+                    }
+                } catch {
+                    // `FileHandle.AsyncBytes` only throws for a genuine
+                    // read error on the underlying descriptor (e.g. it was
+                    // closed out from under us). There's nothing to retry
+                    // or recover mid-stream, so this just falls through to
+                    // flushing any trailing partial line and finishing --
+                    // the same outcome as a clean EOF.
+                }
+                if !lineBuffer.isEmpty {
+                    continuation.yield(Self.decodeLine(lineBuffer))
+                }
+                continuation.finish()
+            }
+
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func decodeLine(_ data: Data) -> String {
+        String(bytes: data, encoding: .utf8) ?? ""
+    }
+
     /// Launches `server`'s Java process. Sets `currentDirectoryURL` to
     /// `server.path` so the `-jar` argument can be a bare filename rather
     /// than an absolute path (matching the Rust reference's `current_dir`
-    /// approach). `standardOutput`/`standardError` are redirected to fresh
-    /// `Pipe`s only to avoid inheriting this process's own stdout/stderr --
-    /// reading their contents is task 3-8's job, not this one.
+    /// approach). `standardOutput` is redirected to a `Pipe` this actor
+    /// retains (see `RunningProcess.stdout`) so `stdoutLines(serverId:)`
+    /// can read it live -- task 3-8's job. `standardError` is still
+    /// redirected to a fresh, discarded `Pipe` only to avoid inheriting
+    /// this process's own stderr: Minecraft duplicates its console output
+    /// to both stdout and stderr, and the Rust reference app likewise never
+    /// surfaces stderr content, so there is nothing task 3-8 needs from it.
     public func start(server: Server) async throws {
         guard self.runningProcesses[server.id] == nil else {
             throw ServerProcessError.alreadyRunning(serverId: server.id)
@@ -141,8 +231,9 @@ public actor ServerProcessService {
         process.arguments = self.buildArguments(for: server)
 
         let stdinPipe = Pipe()
+        let stdoutPipe = Pipe()
         process.standardInput = stdinPipe
-        process.standardOutput = Pipe()
+        process.standardOutput = stdoutPipe
         process.standardError = Pipe()
 
         try process.run()
@@ -150,6 +241,7 @@ public actor ServerProcessService {
         self.runningProcesses[server.id] = RunningProcess(
             process: process,
             stdin: stdinPipe.fileHandleForWriting,
+            stdout: stdoutPipe,
         )
 
         let serverId = server.id

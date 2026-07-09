@@ -55,6 +55,29 @@ sleep 0.2
 exit 7
 """
 
+/// Echoes three known lines to stdout with small delays between them (so a
+/// test can assert lines are delivered incrementally, not only bulk-read
+/// after the process exits), then exits cleanly.
+private let echoesThreeLinesScript = """
+#!/bin/sh
+echo "line one"
+sleep 0.05
+echo "line two"
+sleep 0.05
+echo "line three"
+exit 0
+"""
+
+/// Writes a final line with no trailing newline before exiting, so a test
+/// can assert `stdoutLines` flushes a trailing partial line at EOF instead
+/// of silently dropping it.
+private let echoesUnterminatedLineScript = """
+#!/bin/sh
+echo "complete line"
+printf "no trailing newline"
+exit 0
+"""
+
 private func makeServer(
     id: String = "srv-1",
     javaPath: String?,
@@ -168,6 +191,56 @@ func stopThrowsServerNotRunningForUntrackedId() async throws {
     await #expect(throws: ServerProcessError.serverNotRunning(serverId: "no-such-server")) {
         try await service.stop(serverId: "no-such-server")
     }
+}
+
+@Test("stdoutLines returns nil for a server with no tracked running process")
+func stdoutLinesReturnsNilForUntrackedServer() async {
+    let service = ServerProcessService()
+
+    let stream = await service.stdoutLines(serverId: "no-such-server")
+    #expect(stream == nil)
+}
+
+@Test("stdoutLines delivers lines written to the process's live stdout, in arrival order")
+func stdoutLinesDeliversLinesInOrder() async throws {
+    let service = ServerProcessService()
+    let scriptURL = try makeScriptFixture(echoesThreeLinesScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let server = makeServer(javaPath: scriptURL.path)
+    try await service.start(server: server)
+
+    let stream = try #require(await service.stdoutLines(serverId: server.id))
+
+    // The fixture script echoes exactly three lines (with delays between
+    // them) and then exits -- its write end of the pipe closing at exit is
+    // what lets this `for await` complete on its own via EOF, rather than
+    // needing a manual iteration-count cutoff.
+    var received: [String] = []
+    for await line in stream {
+        received.append(line)
+    }
+
+    #expect(received == ["line one", "line two", "line three"])
+}
+
+@Test("stdoutLines flushes a trailing line with no terminating newline at EOF")
+func stdoutLinesFlushesTrailingUnterminatedLine() async throws {
+    let service = ServerProcessService()
+    let scriptURL = try makeScriptFixture(echoesUnterminatedLineScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let server = makeServer(javaPath: scriptURL.path)
+    try await service.start(server: server)
+
+    let stream = try #require(await service.stdoutLines(serverId: server.id))
+
+    var received: [String] = []
+    for await line in stream {
+        received.append(line)
+    }
+
+    #expect(received == ["complete line", "no trailing newline"])
 }
 
 /// Awaits the first `ServerProcessEvent` for `serverId` from `service`'s
