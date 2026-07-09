@@ -9,9 +9,10 @@ import Observation
 /// A first-run environment where `servers.json` doesn't exist on disk yet
 /// is not an error from this view model's perspective: `load()` treats a
 /// missing file as an empty list. Any other failure (corrupt JSON,
-/// permission error, etc.) is surfaced via `errorMessage` -- a full
-/// error-alert UI is out of scope for this task, but the failure is at
-/// least visible rather than silently swallowed.
+/// permission error, etc.) is surfaced via `error`, which `RootView`
+/// presents through a real `.alert` (task 3-12 code-review fix -- see
+/// `ServerListViewModelError`'s doc comment for why that's an `Identifiable`
+/// wrapper rather than a plain `String?`).
 @MainActor
 @Observable
 public final class ServerListViewModel {
@@ -47,7 +48,12 @@ public final class ServerListViewModel {
 
     public private(set) var servers: [Server] = []
     public var selection: Server.ID?
-    public private(set) var errorMessage: String?
+    /// The most recent failure from `load()`, `startSelectedServer()`, or
+    /// `stopSelectedServer()`, or `nil` if none is currently outstanding.
+    /// `RootView` presents this via `.alert(_:isPresented:presenting:
+    /// actions:message:)`, passing the snapshotted value through
+    /// `presenting:` -- see `ServerListViewModelError`'s doc comment.
+    public private(set) var error: ServerListViewModelError?
 
     /// Global, cross-server activity log for the Activity Drawer (task
     /// 3-10), newest-first (index 0 is the most recent entry). Session-only:
@@ -150,17 +156,17 @@ public final class ServerListViewModel {
 
     /// Loads servers from disk, updating `servers`. Treats a missing file
     /// (first run, nothing saved yet) as an empty list rather than an
-    /// error; any other failure is recorded in `errorMessage`.
+    /// error; any other failure is recorded in `error`.
     public func load() async {
         do {
             let file = try await self.store.load()
             self.servers = file.servers
-            self.errorMessage = nil
+            self.error = nil
         } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
             self.servers = []
-            self.errorMessage = nil
+            self.error = nil
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.error = ServerListViewModelError(message: error.localizedDescription)
         }
     }
 
@@ -172,13 +178,13 @@ public final class ServerListViewModel {
     /// `start(server:)` returns successfully -- that's known synchronously
     /// at that point, so it doesn't need to round-trip through
     /// `processService.events`. On failure, reverts to the server's prior
-    /// status and surfaces the error via `errorMessage` (e.g. a missing
-    /// Java path).
+    /// status and surfaces the error via `error` (e.g. a missing Java path),
+    /// which `RootView` presents as a real alert.
     public func startSelectedServer() async {
         guard let server = self.selectedServer else { return }
 
         self.setStatus(.starting, forServerId: server.id)
-        self.errorMessage = nil
+        self.error = nil
 
         do {
             try await self.processService.start(server: server)
@@ -190,7 +196,7 @@ public final class ServerListViewModel {
             self.appendActivity(forServerId: server.id, status: .online)
         } catch {
             self.setStatus(server.status, forServerId: server.id)
-            self.errorMessage = error.localizedDescription
+            self.error = ServerListViewModelError(message: error.localizedDescription)
         }
     }
 
@@ -208,14 +214,22 @@ public final class ServerListViewModel {
         guard let server = self.selectedServer else { return }
 
         self.setStatus(.stopping, forServerId: server.id)
-        self.errorMessage = nil
+        self.error = nil
 
         do {
             try await self.processService.stop(serverId: server.id)
         } catch {
             self.setStatus(server.status, forServerId: server.id)
-            self.errorMessage = error.localizedDescription
+            self.error = ServerListViewModelError(message: error.localizedDescription)
         }
+    }
+
+    /// Clears the currently displayed `error`, if any. `RootView`'s alert
+    /// calls this from its dismiss/OK action -- `error` is `private(set)`,
+    /// so the view can't `nil` it out directly, matching how `servers` and
+    /// `activityLog` are only ever mutated through this class's own methods.
+    public func clearError() {
+        self.error = nil
     }
 
     /// The sole subscriber to `processService.events` -- handles both jobs

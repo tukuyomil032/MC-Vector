@@ -52,7 +52,7 @@ private func makeTempFileURL() -> URL {
         .appendingPathExtension("json")
 }
 
-private func makeServer(id: String = "srv-1", javaPath: String) -> Server {
+private func makeServer(id: String = "srv-1", javaPath: String?) -> Server {
     Server(
         id: id,
         name: "Test Server",
@@ -119,10 +119,59 @@ func startSelectedServerSetsStatusToOnlineOnSuccess() async throws {
     // `crashPropagatesToViewModelStatusViaEventStream` below for the
     // complementary case that *does* require the event stream.
     #expect(viewModel.selectedServer?.status == .online)
-    #expect(viewModel.errorMessage == nil)
+    #expect(viewModel.error == nil)
 
     // Clean up: stop the real child process so the test doesn't leak it.
     await viewModel.stopSelectedServer()
+}
+
+// MARK: - Error alert (task 3-12 code-review fix)
+
+//
+// `ServerListViewModel.error` was set on failure but never read by any View
+// -- a failed start/stop had zero user-visible signal. These tests exercise
+// the ViewModel's state directly (the `Identifiable` `ServerListViewModelError`
+// wrapper populating and clearing correctly), not the rendered `.alert` --
+// this codebase has no UI-level testing infrastructure, matching this file's
+// existing convention of asserting on `viewModel` state rather than View
+// output.
+
+@MainActor
+@Test("a failed startSelectedServer() populates error with the failure's message")
+func startSelectedServerFailurePopulatesError() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+
+    let server = makeServer(javaPath: nil)
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [server]))
+
+    let viewModel = ServerListViewModel(store: store, processService: ServerProcessService())
+    await viewModel.load()
+    viewModel.selection = viewModel.servers.first?.id
+
+    await viewModel.startSelectedServer()
+
+    // A missing `javaPath` throws `ServerProcessError.javaPathNotConfigured`
+    // (see `ServerProcessService.start(server:)`) before any process is
+    // ever launched, so this is a deterministic, real failure path -- not a
+    // simulated/mocked one.
+    let expectedMessage = try #require(
+        ServerProcessError.javaPathNotConfigured(serverId: server.id).errorDescription,
+    )
+    let error = try #require(viewModel.error)
+    #expect(error.message == expectedMessage)
+
+    // The optimistic `.starting` status is reverted back to the server's
+    // prior status (`.offline`) on failure -- same assertion
+    // `startSelectedServerSetsStatusToOnlineOnSuccess` makes for the
+    // success path's `.online`.
+    #expect(viewModel.selectedServer?.status == .offline)
+
+    // `clearError()` is the ViewModel-side hook `RootView`'s alert calls
+    // from its dismiss/OK action.
+    viewModel.clearError()
+    #expect(viewModel.error == nil)
 }
 
 @MainActor

@@ -37,7 +37,7 @@ func loadPopulatesServersFromExistingFile() async throws {
 
     #expect(viewModel.servers.count == 2)
     #expect(viewModel.servers.map(\.id) == ["srv-1", "srv-2"])
-    #expect(viewModel.errorMessage == nil)
+    #expect(viewModel.error == nil)
 }
 
 @MainActor
@@ -50,17 +50,17 @@ func loadTreatsMissingFileAsEmptyList() async {
     await viewModel.load()
 
     #expect(viewModel.servers.isEmpty)
-    #expect(viewModel.errorMessage == nil)
+    #expect(viewModel.error == nil)
 }
 
 @MainActor
-@Test("load() surfaces unexpected decode failures via errorMessage instead of crashing")
-func loadSurfacesUnexpectedErrorsViaErrorMessage() async throws {
+@Test("load() surfaces unexpected decode failures via error instead of crashing")
+func loadSurfacesUnexpectedErrorsViaError() async throws {
     let fileURL = makeTempFileURL()
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
     // Malformed JSON -- not a "missing file" case, so this should surface
-    // as errorMessage rather than being swallowed as an empty list.
+    // as `error` rather than being swallowed as an empty list.
     try Data("not valid json".utf8).write(to: fileURL)
 
     let store = ServerStore(fileURL: fileURL)
@@ -69,7 +69,7 @@ func loadSurfacesUnexpectedErrorsViaErrorMessage() async throws {
     await viewModel.load()
 
     #expect(viewModel.servers.isEmpty)
-    #expect(viewModel.errorMessage != nil)
+    #expect(viewModel.error != nil)
 }
 
 @MainActor

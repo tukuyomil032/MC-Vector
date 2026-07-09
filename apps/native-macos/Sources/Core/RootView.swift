@@ -84,6 +84,44 @@ public struct RootView: View {
                 }
             }
         }
+        // Surfaces `ServerListViewModel.error` (task 3-12 code-review fix):
+        // previously `load()`/`startSelectedServer()`/`stopSelectedServer()`
+        // all set that property on failure, but no View ever read it, so a
+        // failed start/stop (e.g. a missing Java path) had zero user-visible
+        // signal beyond the status silently reverting.
+        //
+        // Uses `.alert(_:isPresented:presenting:actions:message:)` -- the
+        // current, non-deprecated alert API -- rather than the older
+        // `alert(item:content:) -> Alert` overload: that one predates this
+        // API and is itself soft-deprecated (it returns the also-deprecated
+        // `Alert` type; see `references/soft-deprecation.md` in
+        // `swiftui-expert-skill`, which calls out `Alert`/`ActionSheet` by
+        // name). `presenting:` still takes `viewModel.error` as a snapshot,
+        // so `message` reads a value captured at presentation time rather
+        // than re-reading a since-possibly-cleared view model property.
+        //
+        // `isPresented` still needs an explicit `Binding<Bool>` -- that's an
+        // inherent part of this API's shape, not an avoidable synthesis --
+        // but unlike the anti-pattern the review flagged, it only decides
+        // *whether* to show the alert; the message content itself never
+        // flows through it, so there is no risk of the boolean and the
+        // string momentarily disagreeing about what happened.
+        .alert(
+            "Something Went Wrong",
+            isPresented: Binding(
+                get: { self.viewModel.error != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        self.viewModel.clearError()
+                    }
+                },
+            ),
+            presenting: self.viewModel.error,
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { error in
+            Text(error.message)
+        }
     }
 
     /// Start is only meaningful from a fully-stopped state. `.stopping` and
