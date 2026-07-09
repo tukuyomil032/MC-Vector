@@ -119,12 +119,11 @@ public actor ServerProcessService {
     /// `stdoutLines` claims one, or when `start(server:)` runs again for
     /// the same `serverId`.
     ///
-    /// Only populated when the process's stdout was never claimed live
-    /// (`RunningProcess.claimed == false`) at termination -- see
-    /// `handleTermination`. If it *was* claimed (log view open while
-    /// `.online`, then the server stops and `.task(id: server.status)`
-    /// re-fires), the live reader may still be mid-teardown, so salvaging
-    /// here would create a second reader splitting bytes unpredictably.
+    /// Only populated when never claimed live (`RunningProcess.claimed ==
+    /// false`) at termination -- see `handleTermination`. If it *was*
+    /// claimed (log view open, then `.task(id: server.status)` re-fires on
+    /// stop), the live reader may still be mid-teardown, so salvaging would
+    /// create a second reader splitting bytes unpredictably.
     private var terminatedStdout: [String: Pipe] = [:]
 
     private let eventContinuation: AsyncStream<ServerProcessEvent>.Continuation
@@ -192,8 +191,7 @@ public actor ServerProcessService {
         let stdoutPipe: Pipe
         if let running = self.runningProcesses[serverId] {
             stdoutPipe = running.stdout
-            // Mark claimed before returning so a same-race exit doesn't
-            // salvage this pipe out from under the reader below.
+            // Mark claimed before returning: a same-race exit must not salvage this pipe out from under the reader.
             self.runningProcesses[serverId]?.claimed = true
         } else if let terminated = self.terminatedStdout.removeValue(forKey: serverId) {
             stdoutPipe = terminated

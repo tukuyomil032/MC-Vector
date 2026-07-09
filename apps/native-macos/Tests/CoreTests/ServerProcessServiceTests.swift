@@ -340,21 +340,16 @@ func stdoutLinesReturnsNilOnSecondCallAfterDraining() async throws {
     #expect(secondStream == nil)
 }
 
-/// Regression test for the review finding on `12d7805`: unconditional
-/// salvage in `handleTermination` reintroduced a race. `ServerDetailView`
-/// re-invokes `streamLogs()`/`stdoutLines(serverId:)` on every
-/// `server.status` transition via `.task(id:)`, so in the ordinary case
-/// (log view open while `.online`, then it stops/crashes) `stdoutLines` is
-/// legitimately called twice: once live (claiming the pipe), again after
-/// the status flips and `.task(id:)` re-fires. Unconditional salvage would
-/// hand the same pipe out a second time -- the "two readers split bytes
-/// unpredictably" hazard `stdoutLines` itself warns against, here
-/// triggered by the app's own re-entry, not caller error.
+/// Regression test for the review finding on `12d7805`: unconditional salvage in `handleTermination`
+/// reintroduced a race. `ServerDetailView` re-invokes `stdoutLines(serverId:)` on every `server.status`
+/// transition via `.task(id:)`, so in the ordinary case (log view open while `.online`, then it stops/crashes)
+/// it's legitimately called twice: once live (claiming the pipe), again after the status flips and `.task(id:)`
+/// re-fires. Unconditional salvage would hand the same pipe out a second time -- the "two readers split bytes
+/// unpredictably" hazard `stdoutLines` itself warns against, here triggered by the app's own re-entry.
 ///
-/// Claims the live pipe first (mirrors the `.online` call), drains it
-/// concurrently, stops the process (mirrors `.offline`), then asserts a
-/// second `stdoutLines` call returns `nil` -- not salvaged, matching
-/// pre-`12d7805` behavior for this case.
+/// Claims the live pipe first (mirrors `.online`), drains it concurrently, stops the process (mirrors
+/// `.offline`), then asserts a second `stdoutLines` call returns `nil` -- not salvaged, matching pre-`12d7805`
+/// behavior for this case.
 @Test("stdoutLines returns nil after termination when the live pipe was already claimed while running")
 func stdoutLinesReturnsNilAfterClaimedLivePipeTerminates() async throws {
     let service = ServerProcessService()
