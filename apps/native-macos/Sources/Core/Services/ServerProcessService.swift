@@ -103,6 +103,24 @@ public actor ServerProcessService {
 
     private var runningProcesses: [String: RunningProcess] = [:]
 
+    /// Stdout `Pipe`s salvaged from `RunningProcess` entries whose process
+    /// already exited (`handleTermination` removed them from
+    /// `runningProcesses`), but which `stdoutLines(serverId:)` hasn't read
+    /// yet. Closes a narrow race: a process that exits very quickly can be
+    /// reaped by `start(server:)`'s monitoring `Task` *before* the caller's
+    /// first `stdoutLines` call -- without this cache, `stdoutLines` would
+    /// key "anything to read" on `runningProcesses` liveness alone and
+    /// wrongly return `nil`, even though the OS pipe still buffers every
+    /// byte the process wrote (a reader attaching late just sees EOF right
+    /// after that buffered data, not nothing). In production, this is
+    /// exactly the case that matters most: a crash message from a server
+    /// that dies immediately after launch.
+    ///
+    /// Entries are removed when `stdoutLines` claims one, or when
+    /// `start(server:)` runs again for the same `serverId` (bounding this to
+    /// one stale entry per server rather than growing unboundedly).
+    private var terminatedStdout: [String: Pipe] = [:]
+
     private let eventContinuation: AsyncStream<ServerProcessEvent>.Continuation
 
     /// Single actor-wide stream of status-change events, not one per
@@ -127,13 +145,16 @@ public actor ServerProcessService {
     }
 
     /// A live, line-oriented view of `serverId`'s stdout, or `nil` if this
-    /// instance has no tracked running process for that id (never started,
-    /// already stopped/crashed, or a race with `start`/termination).
-    /// `nil`, not a thrown error: "no live stdout right now" is an expected,
-    /// steady-state outcome for a server that simply isn't running -- the
-    /// log view's job is to reflect that (e.g. show nothing / a placeholder)
-    /// rather than treat it as exceptional, so a typed error would just
-    /// force every caller to immediately catch-and-ignore it.
+    /// instance has never started a process for that id, or has already
+    /// served (and discarded) its buffered stdout via a previous call to
+    /// this method. `nil`, not a thrown error: "no live stdout right now" is
+    /// an expected, steady-state outcome for a server that simply isn't
+    /// running -- the log view's job is to reflect that (e.g. show nothing /
+    /// a placeholder) rather than treat it as exceptional, so a typed error
+    /// would just force every caller to immediately catch-and-ignore it.
+    ///
+    /// Checks `runningProcesses` first, then falls back to `terminatedStdout`
+    /// for an already-exited process whose buffered stdout hasn't been read.
     ///
     /// Reads incrementally via `FileHandle.bytes` (an `AsyncSequence` of
     /// bytes), per the swift-concurrency skill's guidance for bridging
@@ -170,8 +191,15 @@ public actor ServerProcessService {
     /// unpredictably between them. Callers (today: one `ServerLogViewModel`
     /// per server) must not do that.
     public func stdoutLines(serverId: String) async -> AsyncStream<String>? {
-        guard let running = self.runningProcesses[serverId] else { return nil }
-        let handle = running.stdout.fileHandleForReading
+        let stdoutPipe: Pipe
+        if let running = self.runningProcesses[serverId] {
+            stdoutPipe = running.stdout
+        } else if let terminated = self.terminatedStdout.removeValue(forKey: serverId) {
+            stdoutPipe = terminated
+        } else {
+            return nil
+        }
+        let handle = stdoutPipe.fileHandleForReading
 
         return AsyncStream { continuation in
             let task = Task<Void, Never> { @concurrent in
@@ -227,6 +255,11 @@ public actor ServerProcessService {
         guard let javaPath = server.javaPath else {
             throw ServerProcessError.javaPathNotConfigured(serverId: server.id)
         }
+
+        // Drop any stale, never-claimed pipe from a previous run of this
+        // server id -- `stdoutLines` should serve the *new* process's
+        // stdout, not a leftover reference to the old one.
+        self.terminatedStdout.removeValue(forKey: server.id)
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: javaPath)
@@ -358,6 +391,9 @@ public actor ServerProcessService {
     private func handleTermination(serverId: String, status: ServerStatus) {
         if let running = self.runningProcesses.removeValue(forKey: serverId) {
             try? running.stdin.close()
+            // Salvage the pipe: if nothing else retains it, deinit closes
+            // its descriptor, discarding buffered output nobody read yet.
+            self.terminatedStdout[serverId] = running.stdout
         }
         self.eventContinuation.yield(ServerProcessEvent(serverId: serverId, status: status))
     }

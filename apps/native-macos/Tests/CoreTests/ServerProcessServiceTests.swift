@@ -78,6 +78,25 @@ printf "no trailing newline"
 exit 0
 """
 
+/// Echoes five known lines to stdout with no delay between them, then exits
+/// immediately -- deliberately not `echoesThreeLinesScript`'s `sleep`-spaced
+/// variant, so this process is the kind that can complete and be reaped by
+/// `start(server:)`'s monitoring `Task` before a caller's first
+/// `stdoutLines(serverId:)` call reaches it under real-world CPU contention.
+/// `stdoutLinesDeliversBufferedLinesAfterProcessAlreadyReaped` below doesn't
+/// rely on that timing accident, though -- it explicitly waits for the
+/// termination event before calling `stdoutLines`, which reproduces the
+/// same race deterministically instead of only probabilistically.
+private let echoesFiveLinesScript = """
+#!/bin/sh
+echo "one"
+echo "two"
+echo "three"
+echo "four"
+echo "five"
+exit 0
+"""
+
 private func makeServer(
     id: String = "srv-1",
     javaPath: String?,
@@ -241,6 +260,71 @@ func stdoutLinesFlushesTrailingUnterminatedLine() async throws {
     }
 
     #expect(received == ["complete line", "no trailing newline"])
+}
+
+/// Regression test for the "exit-before-first-read" race: a process that
+/// writes its stdout and exits fast enough that `start(server:)`'s
+/// monitoring `Task` detects the exit and runs `handleTermination` --
+/// removing the `runningProcesses` entry `stdoutLines(serverId:)` used to
+/// key its "is there anything to read" check on -- before the caller's
+/// first `stdoutLines(serverId:)` call. Rather than trying to *provoke*
+/// that ordering via timing (inherently flaky, even with a fast-exiting
+/// fixture), this test *forces* it deterministically: it awaits the
+/// process's termination event via `collectFirstEvent` -- which, per
+/// `handleTermination`'s implementation, cannot fire until after the
+/// `runningProcesses` entry has already been removed -- before calling
+/// `stdoutLines`, then asserts the pre-written lines are still delivered
+/// via the `terminatedStdout` salvage path.
+@Test("stdoutLines still delivers buffered lines for a process already reaped before the first read")
+func stdoutLinesDeliversBufferedLinesAfterProcessAlreadyReaped() async throws {
+    let service = ServerProcessService()
+    let scriptURL = try makeScriptFixture(echoesFiveLinesScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let server = makeServer(javaPath: scriptURL.path)
+
+    async let event = collectFirstEvent(from: service, matchingServerId: server.id)
+    try await service.start(server: server)
+
+    // By the time this resolves, `handleTermination` has already run and
+    // removed `server.id` from `runningProcesses` -- confirmed below --
+    // reproducing the race deterministically rather than hoping the fixture
+    // script happens to finish before the next line runs.
+    _ = await event
+    #expect(await service.isRunning(serverId: server.id) == false)
+
+    let stream = try #require(await service.stdoutLines(serverId: server.id))
+    var received: [String] = []
+    for await line in stream {
+        received.append(line)
+    }
+
+    #expect(received == ["one", "two", "three", "four", "five"])
+}
+
+/// Companion to the reproduction above: once `stdoutLines(serverId:)` has
+/// claimed the salvaged pipe for an already-exited process, it's gone --
+/// calling `stdoutLines` again for the same id (with no new `start()`)
+/// should return `nil`, matching this method's single-consumer contract
+/// rather than silently handing out a second reader onto an already-drained
+/// stream.
+@Test("stdoutLines returns nil on a second call for an already-exited, already-drained server")
+func stdoutLinesReturnsNilOnSecondCallAfterDraining() async throws {
+    let service = ServerProcessService()
+    let scriptURL = try makeScriptFixture(echoesFiveLinesScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let server = makeServer(javaPath: scriptURL.path)
+
+    async let event = collectFirstEvent(from: service, matchingServerId: server.id)
+    try await service.start(server: server)
+    _ = await event
+
+    let firstStream = try #require(await service.stdoutLines(serverId: server.id))
+    for await _ in firstStream {}
+
+    let secondStream = await service.stdoutLines(serverId: server.id)
+    #expect(secondStream == nil)
 }
 
 /// Awaits the first `ServerProcessEvent` for `serverId` from `service`'s
