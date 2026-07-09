@@ -212,11 +212,14 @@ public actor ServerProcessService {
     /// than an absolute path (matching the Rust reference's `current_dir`
     /// approach). `standardOutput` is redirected to a `Pipe` this actor
     /// retains (see `RunningProcess.stdout`) so `stdoutLines(serverId:)`
-    /// can read it live -- task 3-8's job. `standardError` is still
-    /// redirected to a fresh, discarded `Pipe` only to avoid inheriting
-    /// this process's own stderr: Minecraft duplicates its console output
-    /// to both stdout and stderr, and the Rust reference app likewise never
-    /// surfaces stderr content, so there is nothing task 3-8 needs from it.
+    /// can read it live -- task 3-8's job. `standardError` is redirected to
+    /// its own `Pipe` too: Minecraft duplicates its console output to both
+    /// stdout and stderr, and the Rust reference app likewise never surfaces
+    /// stderr content, so nothing decodes or yields it -- but the pipe's
+    /// read end is still drained continuously in the background. Leaving it
+    /// unread would let the OS pipe buffer (~64KB on macOS) fill up under
+    /// enough console spam, blocking the child's next `write()` to stderr
+    /// and potentially hanging the Minecraft server itself.
     public func start(server: Server) async throws {
         guard self.runningProcesses[server.id] == nil else {
             throw ServerProcessError.alreadyRunning(serverId: server.id)
@@ -232,9 +235,10 @@ public actor ServerProcessService {
 
         let stdinPipe = Pipe()
         let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
         process.standardInput = stdinPipe
         process.standardOutput = stdoutPipe
-        process.standardError = Pipe()
+        process.standardError = stderrPipe
 
         try process.run()
 
@@ -244,11 +248,33 @@ public actor ServerProcessService {
             stdout: stdoutPipe,
         )
 
+        Self.drainAndDiscard(stderrPipe.fileHandleForReading)
+
         let serverId = server.id
         Task { [weak self] in
             let terminationStatus = await Self.awaitTermination(of: process)
             let status: ServerStatus = terminationStatus == 0 ? .offline : .crashed
             await self?.handleTermination(serverId: serverId, status: status)
+        }
+    }
+
+    /// Continuously reads and discards bytes from `handle` in the
+    /// background, purely to keep its OS pipe buffer from filling up and
+    /// blocking the writer -- see the note on `standardError` above. Not
+    /// tied to this actor's isolation (`@concurrent`, like
+    /// `stdoutLines(serverId:)`'s reader) since it lives for the whole
+    /// process lifetime and reads nothing actor-relevant. Ends naturally
+    /// when the pipe's write end closes (process exit), same as
+    /// `stdoutLines`'s reader.
+    private static func drainAndDiscard(_ handle: FileHandle) {
+        Task<Void, Never> { @concurrent in
+            do {
+                for try await _ in handle.bytes {}
+            } catch {
+                // Same rationale as `stdoutLines(serverId:)`: a read error
+                // here just means the descriptor closed out from under us,
+                // which is an ordinary way for this loop to end.
+            }
         }
     }
 
