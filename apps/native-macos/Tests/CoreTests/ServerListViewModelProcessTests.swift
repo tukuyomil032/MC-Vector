@@ -75,9 +75,18 @@ private func makeServer(id: String = "srv-1", javaPath: String) -> Server {
 /// either race a slow CI machine (flaky) or pad every run with dead time
 /// long enough to always be safe (slow). `@MainActor` because every caller
 /// inspects `viewModel` state, which is `@MainActor`-isolated.
+///
+/// Default bumped from 2s to 8s (task 3-10): with this file's crash-based
+/// tests now outnumbering the original one (3 vs. 1 -- see the Activity
+/// Drawer tests below), Swift Testing's parallel test execution puts enough
+/// concurrent real `Process` launches under contention that 2s was
+/// occasionally too tight purely from CPU scheduling delay, not any actual
+/// functional problem -- `waitUntil` still returns as soon as `condition`
+/// is true, so this only affects how long a genuinely-broken test takes to
+/// fail, not how long a passing run takes.
 @MainActor
 private func waitUntil(
-    timeout: Duration = .seconds(2),
+    timeout: Duration = .seconds(8),
     pollInterval: Duration = .milliseconds(20),
     _ condition: () -> Bool,
 ) async {
