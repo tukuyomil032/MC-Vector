@@ -187,3 +187,107 @@ func stopSelectedServerEventuallySetsStatusToOfflineViaEventStream() async throw
 
     #expect(viewModel.selectedServer?.status == .offline)
 }
+
+// MARK: - Activity Drawer (task 3-10)
+
+//
+// These tests exercise `ServerListViewModel.activityLog` exclusively through
+// `startSelectedServer()`/`stopSelectedServer()` and real event propagation
+// from `ServerProcessService.events` -- same pattern as the tests above, and
+// deliberately not via any second `for await event in processService.events`
+// loop: `apply(_:)` (invoked by the ViewModel's own single subscription
+// `Task` set up in `init`) is the only place `ActivityEntry` values are
+// appended, so these tests observe the *effect* of that subscriber rather
+// than creating a competing one.
+
+@MainActor
+@Test("stopping a server appends an ActivityEntry with the resulting .offline status")
+func stopAppendsOfflineActivityEntry() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+    let scriptURL = try makeScriptFixture(stopOnStdinScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [makeServer(javaPath: scriptURL.path)]))
+
+    let viewModel = ServerListViewModel(store: store, processService: ServerProcessService())
+    await viewModel.load()
+    viewModel.selection = viewModel.servers.first?.id
+    let serverId = try #require(viewModel.servers.first?.id)
+    let serverName = try #require(viewModel.servers.first?.name)
+
+    await viewModel.startSelectedServer()
+    // The synchronous `.starting` -> `.online` transition `startSelectedServer()`
+    // sets itself never touches `apply(_:)`, so it logs nothing -- see
+    // `ServerListViewModel.activityLog`'s doc comment for why the log's
+    // coverage is scoped to `processService.events` only.
+    #expect(viewModel.activityLog.isEmpty)
+
+    await viewModel.stopSelectedServer()
+    await waitUntil { !viewModel.activityLog.isEmpty }
+
+    #expect(viewModel.activityLog.count == 1)
+    let entry = try #require(viewModel.activityLog.first)
+    #expect(entry.serverId == serverId)
+    #expect(entry.serverName == serverName)
+    #expect(entry.kind == .serverStatusChange(.offline))
+}
+
+@MainActor
+@Test("a server crashing on its own appends an ActivityEntry with the resulting .crashed status")
+func crashAppendsCrashedActivityEntry() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+    let scriptURL = try makeScriptFixture(crashesShortlyScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [makeServer(javaPath: scriptURL.path)]))
+
+    let viewModel = ServerListViewModel(store: store, processService: ServerProcessService())
+    await viewModel.load()
+    viewModel.selection = viewModel.servers.first?.id
+    let serverId = try #require(viewModel.servers.first?.id)
+    let serverName = try #require(viewModel.servers.first?.name)
+
+    await viewModel.startSelectedServer()
+    await waitUntil { !viewModel.activityLog.isEmpty }
+
+    #expect(viewModel.activityLog.count == 1)
+    let entry = try #require(viewModel.activityLog.first)
+    #expect(entry.serverId == serverId)
+    #expect(entry.serverName == serverName)
+    #expect(entry.kind == .serverStatusChange(.crashed))
+}
+
+@MainActor
+@Test("activityLog trims to activityLogCap, dropping the oldest entries once exceeded")
+func activityLogTrimsToCapacity() async throws {
+    let fileURL = makeTempFileURL()
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+    let scriptURL = try makeScriptFixture(crashesShortlyScript)
+    defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+    let store = ServerStore(fileURL: fileURL)
+    try await store.save(ServersFile(servers: [makeServer(javaPath: scriptURL.path)]))
+
+    // A small cap keeps this test fast: it only needs more launches than the
+    // cap to prove the trim-on-overflow behavior, not hundreds of them.
+    let cap = 3
+    let viewModel = ServerListViewModel(store: store, processService: ServerProcessService(), activityLogCap: cap)
+    await viewModel.load()
+    viewModel.selection = viewModel.servers.first?.id
+
+    let iterations = cap + 2
+    for _ in 0 ..< iterations {
+        await viewModel.startSelectedServer()
+        // Each crash removes the prior run's tracked process (see
+        // `ServerProcessService.handleTermination`), so re-starting the same
+        // server id on the next iteration is safe -- it won't hit
+        // `.alreadyRunning`.
+        await waitUntil { viewModel.selectedServer?.status == .crashed }
+    }
+
+    #expect(viewModel.activityLog.count == cap)
+}

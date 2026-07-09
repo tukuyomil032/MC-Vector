@@ -49,6 +49,38 @@ public final class ServerListViewModel {
     public var selection: Server.ID?
     public private(set) var errorMessage: String?
 
+    /// Global, cross-server activity log for the Activity Drawer (task
+    /// 3-10), newest-first (index 0 is the most recent entry). Session-only:
+    /// unlike `servers` (backed by `ServerStore`/`servers.json`), this array
+    /// is never persisted to disk and starts empty on every launch --
+    /// activity history has a different, much simpler lifecycle than server
+    /// definitions, so it doesn't need a store of its own.
+    ///
+    /// Populated exclusively from `apply(_:)`, i.e. exclusively from events
+    /// delivered over `processService.events`. That stream only ever reports
+    /// the two outcomes `ServerProcessService` alone can observe
+    /// asynchronously -- a tracked process exiting cleanly (`.offline`) or
+    /// crashing (`.crashed`), see `ServerProcessEvent`'s doc comment -- so
+    /// this log does not contain an entry for the optimistic `.starting`/
+    /// `.online` transitions `startSelectedServer()` sets synchronously
+    /// itself. Extending coverage to those would mean logging from
+    /// `startSelectedServer()`/`stopSelectedServer()` directly, which this
+    /// task deliberately did not do: the brief was specifically to extend
+    /// the *existing* `apply(_:)` subscriber, not to widen the log's scope
+    /// beyond what that single subscription already observes.
+    ///
+    /// Bounded to `activityLogCap` entries (oldest dropped first) so a long
+    /// session doesn't grow this array unboundedly -- same trim-on-overflow
+    /// principle as `LogLineBuffer`, simplified to a plain array trim since
+    /// process events arrive far less frequently than log lines.
+    public private(set) var activityLog: [ActivityEntry] = []
+
+    /// Maximum number of entries retained in `activityLog`. Not `static` --
+    /// overridable per-instance (see `init`) so tests can exercise the
+    /// trim-on-overflow path with a small cap instead of needing hundreds of
+    /// real process launches.
+    private let activityLogCap: Int
+
     /// The currently selected `Server`, resolved from `selection` against
     /// `servers`. `nil` when nothing is selected, and also `nil` when
     /// `selection` no longer matches any loaded server (e.g. it was
@@ -64,9 +96,14 @@ public final class ServerListViewModel {
     /// they never touch the real Application Support directory, and
     /// (optionally) a dedicated `ServerProcessService` so process-related
     /// tests don't share state with other tests' server instances.
-    public init(store: ServerStore, processService: ServerProcessService = ServerProcessService()) {
+    public init(
+        store: ServerStore,
+        processService: ServerProcessService = ServerProcessService(),
+        activityLogCap: Int = 200,
+    ) {
         self.store = store
         self.processService = processService
+        self.activityLogCap = activityLogCap
         // @MainActor is this class's inherited isolation, but nothing in
         // this task's synchronous prefix needs it -- fetching `events` is
         // itself a cross-actor call, and the loop body only touches `self`
@@ -157,8 +194,36 @@ public final class ServerListViewModel {
         }
     }
 
+    /// The ONLY place `ActivityEntry` values are appended to `activityLog` --
+    /// see that property's doc comment for why the log's coverage is
+    /// therefore limited to what this single event stream reports. Handles
+    /// both jobs (status update and activity logging) for a single event
+    /// delivery, per this task's constraint against adding a second
+    /// `for await event in processService.events` loop: `processService.events`
+    /// is single-consumer, and this `apply(_:)` method is already the one
+    /// and only subscriber (see `init`'s `processEventTask`).
     private func apply(_ event: ServerProcessEvent) {
         self.setStatus(event.status, forServerId: event.serverId)
+        self.appendActivity(for: event)
+    }
+
+    /// Resolves `event.serverId` against `servers` *before* appending, so
+    /// the stored `ActivityEntry.serverName` is a snapshot rather than a
+    /// live lookup -- see `ActivityEntry.serverName`'s doc comment. Falls
+    /// back to the raw id on a lookup miss (should not happen in practice,
+    /// since `setStatus` above ran against the same `servers` array moments
+    /// earlier, but avoids ever losing an entry over a resolution failure).
+    private func appendActivity(for event: ServerProcessEvent) {
+        let serverName = self.servers.first(where: { $0.id == event.serverId })?.name ?? event.serverId
+        let entry = ActivityEntry(
+            serverId: event.serverId,
+            serverName: serverName,
+            kind: .serverStatusChange(event.status),
+        )
+        self.activityLog.insert(entry, at: 0)
+        if self.activityLog.count > self.activityLogCap {
+            self.activityLog.removeLast(self.activityLog.count - self.activityLogCap)
+        }
     }
 
     private func setStatus(_ status: ServerStatus, forServerId serverId: String) {
