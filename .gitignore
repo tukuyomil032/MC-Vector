@@ -181,5 +181,8 @@ apps/native-macos/.build/
 apps/native-macos/.swiftpm/
 apps/native-macos/*.xcodeproj
 
+# Instruments trace captures (local performance investigation artifacts)
+apps/native-macos/*.trace/
+
 .agents/**
 .claude/skills/**
