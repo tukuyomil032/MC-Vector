@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40">
-  <rect width="32" height="32" rx="6" fill="#09090b" y="4"/>
-  <path d="M6 12l10 16 10-16" stroke="#e4e4e7" stroke-width="2.5"
-        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <text x="44" y="26" font-family="system-ui,sans-serif" font-size="18"
-        font-weight="700" fill="#f4f4f5">MC-Vector</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40"><rect width="32" height="32" y="4" fill="#09090b" rx="6"/><path fill="none" stroke="#e4e4e7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 12l10 16 10-16"/><text x="44" y="26" fill="#f4f4f5" font-family="system-ui,sans-serif" font-size="18" font-weight="700">MC-Vector</text></svg>
