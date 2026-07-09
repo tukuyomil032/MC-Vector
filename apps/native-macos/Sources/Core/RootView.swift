@@ -25,6 +25,20 @@ public struct RootView: View {
         } detail: {
             if let server = self.viewModel.selectedServer {
                 ServerDetailView(server: server)
+                    .toolbar {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button("Start", systemImage: "play.fill") {
+                                Task { await self.viewModel.startSelectedServer() }
+                            }
+                            .disabled(!Self.canStart(server))
+                        }
+                        ToolbarItem(placement: .primaryAction) {
+                            Button("Stop", systemImage: "stop.fill") {
+                                Task { await self.viewModel.stopSelectedServer() }
+                            }
+                            .disabled(!Self.canStop(server))
+                        }
+                    }
             } else {
                 ContentUnavailableView(
                     "Select a Server",
@@ -32,6 +46,31 @@ public struct RootView: View {
                     description: Text("Choose a server from the sidebar to see its details."),
                 )
             }
+        }
+    }
+
+    /// Start is only meaningful from a fully-stopped state. `.stopping` and
+    /// `.restarting` are deliberately excluded too (not just the task's
+    /// explicitly called-out `.online`/`.starting`) -- starting a server
+    /// that's already mid-transition would race the in-flight operation.
+    private static func canStart(_ server: Server) -> Bool {
+        switch server.status {
+        case .offline, .crashed:
+            true
+        case .online, .starting, .stopping, .restarting:
+            false
+        }
+    }
+
+    /// Stop is meaningful whenever a process might plausibly be running or
+    /// coming up. Matches the task's explicit disabled set
+    /// (`.offline`/`.crashed`/`.stopping`) exactly.
+    private static func canStop(_ server: Server) -> Bool {
+        switch server.status {
+        case .online, .starting, .restarting:
+            true
+        case .offline, .crashed, .stopping:
+            false
         }
     }
 }
