@@ -68,3 +68,75 @@ func navigationStateCurrentViewIsSettable() {
     state.currentView = .backups
     #expect(state.currentView == .backups)
 }
+
+@MainActor
+private func makeContentRouter(currentView: AppView) -> ContentRouter {
+    let store = ServerStore(
+        fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("mc-vector-content-router-test-\(UUID().uuidString).json"),
+    )
+    return ContentRouter(
+        navigationState: NavigationState(currentView: currentView),
+        viewModel: ServerListViewModel(store: store),
+    )
+}
+
+@Test(
+    "ContentRouter.currentLabel/currentSystemImage resolve to the matching NavigationItem for every top-level view",
+    arguments: NavigationItem.allItems,
+)
+@MainActor
+func contentRouterResolvesLabelAndImageFromNavigationItem(item: NavigationItem) {
+    let router = makeContentRouter(currentView: item.view)
+
+    #expect(router.currentLabel == item.labelKey)
+    #expect(router.currentSystemImage == item.systemImage)
+}
+
+@Test("ContentRouter falls back to a capitalized raw value and placeholder symbol for views with no NavigationItem")
+@MainActor
+func contentRouterFallsBackForViewsWithoutNavigationItem() {
+    let router = makeContentRouter(currentView: .appSettings)
+
+    #expect(router.currentLabel == "Appsettings")
+    #expect(router.currentSystemImage == "questionmark.square.dashed")
+}
+
+@Test("ContentRouter.canStart mirrors the pre-4-4 RootView logic")
+func contentRouterCanStart() {
+    let startable: [ServerStatus] = [.offline, .crashed]
+    let notStartable: [ServerStatus] = [.online, .starting, .stopping, .restarting]
+
+    for status in startable {
+        #expect(ContentRouter.canStart(makeServer(withStatus: status)))
+    }
+    for status in notStartable {
+        #expect(!ContentRouter.canStart(makeServer(withStatus: status)))
+    }
+}
+
+@Test("ContentRouter.canStop mirrors the pre-4-4 RootView logic")
+func contentRouterCanStop() {
+    let stoppable: [ServerStatus] = [.online, .starting, .restarting]
+    let notStoppable: [ServerStatus] = [.offline, .crashed, .stopping]
+
+    for status in stoppable {
+        #expect(ContentRouter.canStop(makeServer(withStatus: status)))
+    }
+    for status in notStoppable {
+        #expect(!ContentRouter.canStop(makeServer(withStatus: status)))
+    }
+}
+
+private func makeServer(withStatus status: ServerStatus) -> Server {
+    Server(
+        id: "srv-1",
+        name: "Survival",
+        version: "1.21.1",
+        software: "paper",
+        port: 25565,
+        memory: 4096,
+        path: "/servers/srv-1",
+        status: status,
+    )
+}
