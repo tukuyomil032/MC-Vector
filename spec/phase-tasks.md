@@ -1,7 +1,7 @@
 # MC-Vector Native macOS — Phase別タスク分解
 
 > 関連: `spec/next-phase-plan.md`（フェーズマトリクス）, `spec/native-macos-requirements.md`（要件定義・実現可能性調査）
-> 最終更新: 2026-07-08
+> 最終更新: 2026-07-10 (Phase 4完了・フェーズ体系改訂を反映)
 
 ## 設計方針
 
@@ -85,40 +85,44 @@
 
 ---
 
-## Phase 4: データ契約の文書化(servers.jsonスキーマ等)
+## Phase 4: Navigation Shell + View Routing ✅ 完了 (2026-07-10)
 
-| # | タスク | 内容 | 依存 |
+> **フェーズ体系改訂**: 当初Phase 4は「データ契約の文書化」だったが、Tauri版全機能のSwift再現を優先するため改訂。データ契約文書化はPhase 15に移動。詳細プランは `.claude/plans/1-mc-vector-swift-mc-vector-tauri-swift-woolly-wozniak.md` を参照。
+
+| # | タスク | 内容 | 状態 |
 |---|---|---|---|
-| 4-1 | 配置場所の意思決定(ADR) | `spec/`直下 か 新設`shared/schemas/`かを決定し、`spec/native-macos-requirements.md`または新規ADRファイルに記録(コード変更なし) | Phase 3完了(実データ構造がPhase 3で固まった後の方が精度が高い) |
-| 4-2 | `servers.json` のJSON Schema定義作成 | TS側`ServerTemplate`(`src/lib/server-commands.ts`)とSwift側`Server`構造体(3-4)を突き合わせ、両者が一致するJSON Schemaファイルを1つ作成 | 4-1, 3-4 |
-| 4-3 | TS側にスキーマ検証テスト追加 | 4-2のJSON Schemaに対し、TS側の`servers.json`書き込み結果を検証するテスト(既存`guards/json-guards.ts`と統合、またはAjv等での軽量検証)を追加 | 4-2 |
-| 4-4 | Swift側にスキーマ検証テスト追加 | 4-2のJSON Schemaに対し、Swift側の`Server`エンコード/デコード結果を検証するテストを`MCVectorNativeKitTests`に追加 | 4-2 |
-| 4-5 | スキーマドキュメント執筆(人間向けMarkdown) | JSON Schemaの各フィールドの意味・型・両実装での扱いの違い(camelCase変換等)を説明するドキュメントを`spec/`に追加。将来の変更時に両実装で追随すべき手順もここに明記 | 4-2〜4-4 |
-| 4-6 | `spec/next-phase-plan.md` のPhase 4ステータス更新 | フェーズ完了をステータス表に反映 | 4-1〜4-5完了後 |
+| 4-1 | `AppView` enum + `NavigationItem` 定義 | 12-case `String`-backed enum (`Hashable`/`Identifiable`/`Sendable`/`CaseIterable`) + 9項目の `NavigationItem` 配列(SF Symbols付き) + テスト | ✅ 完了 (`eccbc97`) |
+| 4-2 | `NavigationState` (@Observable) | `@Observable @MainActor` クラス、`currentView: AppView = .dashboard`。Tauri版の `useUiStore.currentView` 相当 + テスト | ✅ 完了 (`7d757d6`) |
+| 4-3 | `ServerListView` → 2セクションサイドバー | 上部: ナビゲーションタブ（`Button` + `Label` per `NavigationItem`、アクティブ項目ハイライト、Proxy前に`Divider`）。下部: 既存サーバーリスト（「Servers」セクションヘッダー付き）。`NavigationState`パラメータ追加 | ✅ 完了 (`34b43f7`) |
+| 4-4 | `ContentRouter` + `RootView` 改修 | `ContentRouter`で`navigationState.currentView`に基づくビュー切替。`.serverSettings` → `ServerDetailView`、他は`ContentUnavailableView`プレースホルダー。Start/Stop toolbar移動。`RootView`が`NavigationState`を所有し両方に渡す | ✅ 完了 (`140c2d1`) |
 
-**理由付け**: 配置場所の意思決定(4-1)を最初に固定するのは、後続タスクのファイルパスが決まらないと着手できないため。TS側検証(4-3)とSwift側検証(4-4)は同一スキーマ(4-2)に依存するが互いには依存しないため並行実行可能。ドキュメント(4-5)は実装済みスキーマの内容を反映する必要があるため最後に置く。
+**成果物**: `Sources/Core/Navigation/` に4ファイル新規作成（`AppView.swift`, `NavigationItem.swift`, `NavigationState.swift`, `ContentRouter.swift`）。`ServerListView.swift`、`RootView.swift` を改修。`Tests/CoreTests/NavigationTests.swift` に11テスト追加（全85テストパス）。
 
 ---
 
-## Phase 5: Tahoe UI refinement(Liquid Glass調整)
+## Phase 5〜15: Tauri版全機能のSwift再現
 
-| # | タスク | 内容 | 使用スキル | 依存 |
-|---|---|---|---|---|
-| 5-1 | Toolbar/Inspector/NavigationSplitViewの標準glass化の目視確認+微調整 | 自動glass化されている標準コンポーネントの見た目をmacOS 26実機で確認し、必要ならスペーシング/`ToolbarSpacer`調整のみ行う(独自glass適用はしない領域) | swiftui-expert-skill | Phase 3完了 |
-| 5-2 | 機能レイヤーへのカスタム`.glassEffect`適用(サーバー起動/停止ボタン等) | Apple公式ガイダンス(機能レイヤー限定・glass入れ子禁止)に従い、操作系コントロールに`Glass.regular`/`.interactive()`を適用 | swiftui-expert-skill(Liquid Glass) | 5-1 |
-| 5-3 | Floating Console Panelのglass最終調整 | 3-1/3-9で決めた実装方式を前提に、`GlassEffectContainer`によるモーフィング/`glassEffectID`調整を行い、非アクティブ時劣化の許容度を最終確認 | swiftui-expert-skill | 5-1, 3-9 |
-| 5-4 | ウィンドウリサイズ同期アニメーション対応 | macOS 26新機能のウィンドウリサイズ同期アニメーションを一覧/詳細画面に適用 | swiftui-expert-skill | 5-1 |
-| 5-5 | Activity Drawerのアニメーション/トランジション調整 | drawerの開閉アニメーション、`glassEffectTransition`の適用 | swiftui-expert-skill | 5-1 |
-| 5-6 | swiftui-pro最終レビュー(HIG準拠・アクセシビリティ項目) | 9段階レビューのうちHIG準拠・アクセシビリティに絞った再チェックをUI調整後の状態に対して実施 | swiftui-pro | 5-2〜5-5完了 |
-| 5-7 | `spec/next-phase-plan.md` 全フェーズ完了ステータス更新 | Phase 5完了をもって全体のステータス表を更新 | 5-6完了後 |
+> 各フェーズの詳細タスク分解は `.claude/plans/1-mc-vector-swift-mc-vector-tauri-swift-woolly-wozniak.md` に記載。着手時に本ファイルにタスク行を追記する。
 
-**理由付け**: 5-1(標準コンポーネントの目視確認)を全ての起点にしたのは、Apple公式ガイダンス通り「機能レイヤー限定」の判断基準を実機で確認してから、カスタムglass適用(5-2〜5-5)の範囲を決める必要があるため。5-2〜5-5は対象コンポーネントが異なるため並行実行可能。5-6の最終レビューは全UI調整が終わった状態でのみ意味を持つため最後に置く。
+| Phase | 内容 | 主要な作成ファイル |
+|---|---|---|
+| 5 | Dashboard（KPIカード + Swift Charts） | `ServerPerformanceService`, `TPSExtractor`, `DashboardViewModel`, `DashboardView` |
+| 6 | Console フル機能化 | `ANSIParser`, `CommandHistoryStore`, `ConsoleView` |
+| 7 | Server CRUD + サイドバー強化 | `AddServerView`, `ImportServerView`, ServerListView改修 |
+| 8 | Properties + Server Settings | `ServerPropertiesService`, `PropertiesView`, `ServerSettingsView`, `JavaManagerView` |
+| 9 | Users | `UserListService`, `PlayerEntry`, `UsersView` |
+| 10 | Files | `FileSystemService`, `FilesView`, `FileEditorView` |
+| 11 | Backups | `BackupService`, `BackupsView` |
+| 12 | Plugins/Mods | `ModrinthClient`, `HangarClient`, `SpigotClient`, `PluginBrowserView` |
+| 13 | Proxy + 静的ドキュメント | `ProxySetupView`, `ProxyHelpView`, `NgrokGuideView` |
+| 14 | App Settings + i18n + Command Palette | `AppSettingsView`, `CommandPaletteView`, `.xcstrings` |
+| 15 | ダウンロード + Ngrok + ポリッシュ + データ契約 | `ServerJarDownloadService`, `NgrokService`, デザインシステム定数化 |
 
 ---
 
 ## フェーズ横断の補足
 
-- 各タスクの粒度は概ね「1〜3ファイル、実装+テストで1コミット」に収まるよう設計した。3-7(起動/停止)や3-11(security.rs移植)はやや大きめだが、これは機能の完結性(認可ロジックはテストケース単位で分割するとかえって仕様の一貫性検証が困難になる)を優先したトレードオフ。
-- Phase 3の実機検証(3-1〜3-3)は「タスク」だが、その性質上は調査であり、結果次第で後続タスク(3-9のFloating Panel実装方式など)の内容が変わりうる。これは`spec/native-macos-requirements.md` §6のリスク表にある既知の不確実性であり、タスクリスト自体もその判断結果を反映して更新される前提とする。
-- Phase 1はオプションフェーズであり、着手判断が出るまでは他フェーズの進行をブロックしない。もし着手する場合も、Native版とはロジック非依存のため、Phase 2〜5と並行して別ブランチで進めることが可能。
-- 次に実際にコーディングへ着手する場合は、`/clear` 後の新セッションで本ファイルのPhase 2セクション(2-1から)を起点に `/subagent-driven-development` で実行する。
+- 各タスクの粒度は概ね「1〜3ファイル、実装+テストで1コミット」に収まるよう設計した。3-7(起動/停止)や3-11(security.rs移植)はやや大きめだが、これは機能の完結性を優先したトレードオフ。
+- Phase 1はオプションフェーズであり、着手判断が出るまでは他フェーズの進行をブロックしない。
+- Phase 5, 6 は Phase 4 完了後すぐに着手可能。Phase 8-13 は Phase 7 完了後、任意の順序で実装可能。
+- 次に実際にコーディングへ着手する場合は、`/clear` 後の新セッションで `.claude/plans/` のプランファイルを起点に実行する。
