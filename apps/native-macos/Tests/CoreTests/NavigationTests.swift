@@ -51,3 +51,20 @@ func appViewCasesWithoutNavigationItem() {
 
     #expect(uncoveredViews == [.appSettings, .proxyHelp, .ngrokGuide])
 }
+
+@Test("NavigationState defaults to .dashboard")
+@MainActor
+func navigationStateDefaultsToDashboard() {
+    let state = NavigationState()
+    #expect(state.currentView == .dashboard)
+}
+
+@Test("NavigationState.currentView can be reassigned")
+@MainActor
+func navigationStateCurrentViewIsSettable() {
+    let state = NavigationState(currentView: .console)
+    #expect(state.currentView == .console)
+
+    state.currentView = .backups
+    #expect(state.currentView == .backups)
+}
