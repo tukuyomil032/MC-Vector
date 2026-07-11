@@ -242,7 +242,19 @@ public final class ServerListViewModel {
     /// `appendActivity(forServerId:status:)`'s doc comment; the other caller
     /// is `startSelectedServer()`'s synchronous success path, which never
     /// touches this stream.
+    ///
+    /// **Skips `.online` events** (task 5-1). The actor now emits `.online`
+    /// on a successful `start(server:)` for the benefit of downstream
+    /// subscribers (e.g. Phase 5's `ServerPerformanceService`), but this
+    /// view model already applies the `.online` transition synchronously
+    /// from `startSelectedServer()`'s success path -- doing it again here
+    /// would double-log an `ActivityEntry` for a single user action and
+    /// re-set an already-current `.online` status. Only the terminal
+    /// transitions (`.offline`/`.crashed`), which this actor is the single
+    /// source of truth for (see `stop`'s doc comment), are still applied
+    /// here.
     private func apply(_ event: ServerProcessEvent) {
+        guard event.status != .online else { return }
         self.setStatus(event.status, forServerId: event.serverId)
         self.appendActivity(forServerId: event.serverId, status: event.status)
     }

@@ -382,15 +382,17 @@ func stdoutLinesReturnsNilAfterClaimedLivePipeTerminates() async throws {
     #expect(secondStream == nil)
 }
 
-/// Awaits the first `ServerProcessEvent` for `serverId` from `service`'s
-/// `events` stream. Callers should start awaiting this (via `async let`)
-/// before triggering the action expected to produce the event, so no event
-/// emitted in a narrow race window is missed.
+/// Awaits the first *terminal* `ServerProcessEvent` for `serverId`
+/// (`.offline` or `.crashed`), filtering out the `.online` that
+/// `start(server:)` now also emits (task 5-1). Every caller here uses
+/// this helper to observe a termination, so the filter is baked in.
+/// Start awaiting via `async let` before triggering the action expected
+/// to produce the event, so no event in a narrow race window is missed.
 private func collectFirstEvent(
     from service: ServerProcessService,
     matchingServerId serverId: String,
 ) async -> ServerProcessEvent? {
-    for await event in await service.events where event.serverId == serverId {
+    for await event in await service.events where event.serverId == serverId && event.status != .online {
         return event
     }
     return nil
