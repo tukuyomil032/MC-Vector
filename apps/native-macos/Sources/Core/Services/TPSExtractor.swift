@@ -38,10 +38,10 @@ public struct TPSExtractor: Sendable {
         let normalized = Self.stripFormattingCodes(line)
 
         for regex in Self.tpsRegexes {
-            if let match = normalized.firstMatch(of: regex),
-               let value = Double(match.output.1) {
-                return Self.clampAndRound(value)
-            }
+            guard let match = normalized.firstMatch(of: regex),
+                  let value = Double(match.output.1)
+            else { continue }
+            return Self.clampAndRound(value)
         }
         return nil
     }
