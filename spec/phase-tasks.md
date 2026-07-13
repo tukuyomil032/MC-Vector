@@ -104,9 +104,25 @@
 
 > 各フェーズの詳細タスク分解は `.claude/plans/1-mc-vector-swift-mc-vector-tauri-swift-woolly-wozniak.md` に記載。着手時に本ファイルにタスク行を追記する。
 
+### Phase 5 タスク詳細（2026-07-13 完了、ブランチ `feat/native-macos-phase5-dashboard`）
+
+| # | 内容 | 主要変更ファイル | コミット |
+|---|---|---|---|
+| 5-1 | `ServerProcessService` 拡張: `pid(serverId:)` API 追加 / `start` 成功時 `.online` イベント発火 / `stdoutLines` を broadcaster 化 (シグネチャは維持) | `ServerProcessService.swift`, 新規 `ServerProcessService+Stdout.swift`, `ServerListViewModel.swift` (`.online` フィルタ追加) | `c3c866e` |
+| 5-2 | `ServerMetrics` 型 + `ServerPerformanceService` actor (`proc_pid_rusage` で 1Hz CPU/メモリサンプリング、`AsyncStream<ServerMetrics>` 配信) | 新規 `Domain/ServerMetrics.swift`, `Services/ServerPerformanceService.swift` | `aaaec9d` |
+| 5-3 | `TPSExtractor` (Paper/LeafMC のログ行から TPS を抽出、ANSI + § + `&` カラーコード除去、clamp `[0,25]`) | 新規 `Services/TPSExtractor.swift` | `573526b` |
+| 5-4 | `DashboardViewModel` + `DashboardView` + `DashboardChartPanels` + `ContentRouter`/`RootView` 配線 (6 KPI + 3 Swift Charts) | 新規 `DashboardViewModel.swift`, `DashboardView.swift`, `DashboardChartPanels.swift`, 改修 `Navigation/ContentRouter.swift`, `RootView.swift` | `a75c1ea` |
+
+**テスト**: 85 → 130 件全パス（+45 件、うち Task 5-1 が +3、5-2 が +14、5-3 が +14、5-4 が +14）。
+
+**Phase 5 完了時の申し送り** (詳細は `spec/next-phase-plan.md`):
+- CPU 値は multi-core 合計 (Tauri sysinfo と同じ、100 超え正常) — チャート y-scale は動的対応済み
+- `DashboardViewModel` の stdout 購読は init 時 attach — Dashboard を開いた後にサーバー起動しても TPS 収集は再購読しない (Tauri 版と同挙動)
+- 視覚ポリッシュ (軸密度・spacing 定数化・Liquid Glass 適用範囲) は Phase 15 で最終調整
+
 | Phase | 内容 | 主要な作成ファイル |
 |---|---|---|
-| 5 | Dashboard（KPIカード + Swift Charts） | `ServerPerformanceService`, `TPSExtractor`, `DashboardViewModel`, `DashboardView` |
+| 5 | Dashboard（KPIカード + Swift Charts） ✅ 2026-07-13 完了 | `ServerPerformanceService`, `ServerMetrics`, `TPSExtractor`, `DashboardViewModel`, `DashboardView`, `DashboardChartPanels` + `ServerProcessService+Stdout` (broadcaster) |
 | 6 | Console フル機能化 | `ANSIParser`, `CommandHistoryStore`, `ConsoleView` |
 | 7 | Server CRUD + サイドバー強化 | `AddServerView`, `ImportServerView`, ServerListView改修 |
 | 8 | Properties + Server Settings | `ServerPropertiesService`, `PropertiesView`, `ServerSettingsView`, `JavaManagerView` |
