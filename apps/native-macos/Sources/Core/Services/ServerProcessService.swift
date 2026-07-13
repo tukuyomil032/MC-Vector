@@ -37,14 +37,20 @@ extension ServerProcessError: LocalizedError {
 }
 
 /// A status-change notification emitted by `ServerProcessService` for
-/// transitions it alone can observe asynchronously -- namely a tracked
-/// process exiting on its own, at a time the caller isn't actively waiting.
+/// transitions in a tracked process's lifecycle.
 ///
-/// Transitions the caller learns synchronously (a successful `start(server:)`
-/// return, or the caller's own optimistic "starting"/"stopping" UI state)
-/// don't need to round-trip through this stream -- only the two outcomes
-/// this actor uniquely knows about when they happen (clean exit vs. crash)
-/// are published here.
+/// Emitted for three transitions:
+/// - `.online` when `start(server:)` successfully launches a process (task
+///   5-1: gives the future `ServerPerformanceService` and other downstream
+///   subscribers a single, uniform "server just came up" signal to key
+///   uptime / polling / instrumentation off, rather than each one having to
+///   snoop the actor's synchronous return path).
+/// - `.offline` when a tracked process exits cleanly (status 0).
+/// - `.crashed` when a tracked process exits non-zero or is terminated
+///   externally.
+///
+/// The caller's own optimistic UI states (`.starting`/`.stopping`) are not
+/// published -- only outcomes this actor can definitively observe are.
 public struct ServerProcessEvent: Sendable, Equatable {
     public let serverId: String
     public let status: ServerStatus
@@ -91,7 +97,14 @@ public actor ServerProcessService {
     /// exercise the escalation path without a real 15s wait.
     private let gracefulStopTimeout: Duration
 
-    private struct RunningProcess {
+    /// Non-`private` (default `internal`) so
+    /// `ServerProcessService+Stdout.swift` can pattern-match against its
+    /// `stdout` field when a new broadcaster attaches to a live process --
+    /// see that extension for the split rationale. The type still lives
+    /// entirely inside the actor: it's never instantiated, stored, or
+    /// passed anywhere except from within `ServerProcessService`'s own
+    /// isolated methods.
+    struct RunningProcess {
         let process: Process
         let stdin: FileHandle
         /// The child's stdout `Pipe`, retained explicitly (rather than only
@@ -99,32 +112,46 @@ public actor ServerProcessService {
         /// `stdoutLines(serverId:)` has a direct, typed handle to read from
         /// -- task 3-8's job, per `start(server:)`'s doc comment below.
         let stdout: Pipe
-        /// Set when `stdoutLines(serverId:)` claims a live reader; gates `handleTermination`'s salvage.
-        var claimed = false
     }
 
-    private var runningProcesses: [String: RunningProcess] = [:]
+    /// Non-`private` so `ServerProcessService+Stdout.swift`'s broadcaster
+    /// entry point can key its "is there a live process to attach to"
+    /// lookup off the same actor state -- see that file's header for the
+    /// `file_length`-driven split. The map itself, and the `Process`
+    /// references it holds (non-`Sendable`), still never leave actor
+    /// isolation.
+    var runningProcesses: [String: RunningProcess] = [:]
 
     /// Stdout `Pipe`s salvaged from `RunningProcess` entries whose process
     /// already exited (`handleTermination` removed them from
-    /// `runningProcesses`), but which `stdoutLines(serverId:)` hasn't read
-    /// yet. Closes a narrow race: a process that exits very quickly can be
-    /// reaped by `start(server:)`'s monitoring `Task` before the caller's
-    /// first `stdoutLines` call -- without this cache, `stdoutLines` would
-    /// key "anything to read" on `runningProcesses` liveness alone and
-    /// wrongly return `nil`, even though the OS pipe still buffers every
-    /// byte written (a late-attaching reader sees EOF right after that
-    /// data, not nothing) -- most importantly, a crash message from a
-    /// server that dies immediately after launch. Entries are removed when
-    /// `stdoutLines` claims one, or when `start(server:)` runs again for
-    /// the same `serverId`.
+    /// `runningProcesses`), but which `stdoutLines(serverId:)` hasn't
+    /// attached a broadcaster to yet. Closes a narrow race: a process that
+    /// exits very quickly can be reaped by `start(server:)`'s monitoring
+    /// `Task` before the caller's first `stdoutLines` call -- without this
+    /// cache, `stdoutLines` would key "anything to read" on
+    /// `runningProcesses` liveness alone and wrongly return `nil`, even
+    /// though the OS pipe still buffers every byte written (a late-attaching
+    /// reader sees EOF right after that data, not nothing) -- most
+    /// importantly, a crash message from a server that dies immediately
+    /// after launch. Entries are removed when `stdoutLines` creates a
+    /// broadcaster from one, or when `start(server:)` runs again for the
+    /// same `serverId`.
     ///
-    /// Only populated when never claimed live (`RunningProcess.claimed ==
-    /// false`) at termination -- see `handleTermination`. If it *was*
-    /// claimed (log view open, then `.task(id: server.status)` re-fires on
-    /// stop), the live reader may still be mid-teardown, so salvaging would
-    /// create a second reader splitting bytes unpredictably.
-    private var terminatedStdout: [String: Pipe] = [:]
+    /// Only populated when no broadcaster was ever created for this
+    /// `serverId` (`stdoutBroadcasters[id] == nil`) at termination -- see
+    /// `handleTermination`. If a broadcaster does exist, its reader task is
+    /// already draining the pipe, and its natural EOF (on the child's write
+    /// end closing at exit) finishes the stream without any salvage step
+    /// needed.
+    var terminatedStdout: [String: Pipe] = [:]
+
+    /// Per-`serverId` stdout fan-out coordinators. Non-`private` so the
+    /// broadcaster methods split off into `ServerProcessService+Stdout.swift`
+    /// (for SwiftLint's `file_length` cap) can still touch it while
+    /// running under this actor's isolation. Every access site is either
+    /// this file or that extension; the map and its `StdoutBroadcaster`
+    /// values never leave actor isolation.
+    var stdoutBroadcasters: [String: StdoutBroadcaster] = [:]
 
     private let eventContinuation: AsyncStream<ServerProcessEvent>.Continuation
 
@@ -149,90 +176,25 @@ public actor ServerProcessService {
         self.runningProcesses[serverId] != nil
     }
 
-    /// A live, line-oriented view of `serverId`'s stdout, or `nil` if this
-    /// instance has never started a process for that id, or has already
-    /// served (and discarded) its buffered stdout via a previous call to
-    /// this method. `nil`, not a thrown error: "no live stdout right now" is
-    /// an expected, steady-state outcome for a server that simply isn't
-    /// running -- the log view's job is to reflect that (e.g. show nothing /
-    /// a placeholder) rather than treat it as exceptional, so a typed error
-    /// would just force every caller to immediately catch-and-ignore it.
-    ///
-    /// Checks `runningProcesses` first (marking the pipe claimed -- see
-    /// `RunningProcess.claimed`), then falls back to `terminatedStdout` for
-    /// an already-exited, never-claimed process's unread buffered stdout.
-    ///
-    /// Reads incrementally via `FileHandle.bytes` (an `AsyncSequence` of
-    /// bytes), per the swift-concurrency skill's guidance for bridging
-    /// callback/handle-based APIs to `AsyncStream` -- deliberately not
-    /// `readToEnd()`/`readToEndCompat()` (see `JavaLaunchHarness`), which
-    /// blocks until the pipe's write end closes and so cannot serve a
-    /// *live* stream. Bytes accumulate into a line buffer, yielded as
-    /// `String`s on each `\n`, with any trailing partial line flushed once
-    /// the loop ends.
-    ///
-    /// The reading `Task` is spawned with `@concurrent` rather than
-    /// inheriting this actor's isolation -- per the swift-concurrency
-    /// skill's actor guidance, a long-lived unstructured `Task` should never
-    /// pin an actor's serial executor for its whole lifetime, which reading
-    /// a potentially-hours-long stream would otherwise do. `onTermination`
-    /// cancels the reading `Task` when the caller stops iterating; the
-    /// process exiting on its own needs no separate handling, since the
-    /// child's pipe end closing produces a natural EOF that falls through
-    /// to `continuation.finish()`.
-    ///
-    /// Single-consumer only, like any `AsyncStream`: calling this twice for
-    /// the same *live* `serverId` starts two independent readers on the
-    /// same pipe descriptor, splitting bytes unpredictably. Callers (today:
-    /// one `ServerLogViewModel` per server) must not do that -- the
-    /// `claimed` flag only protects the live-then-terminated re-entry
-    /// pattern (see `terminatedStdout`), not two concurrent live callers.
-    public func stdoutLines(serverId: String) async -> AsyncStream<String>? {
-        let stdoutPipe: Pipe
-        if let running = self.runningProcesses[serverId] {
-            stdoutPipe = running.stdout
-            // Mark claimed before returning: a same-race exit must not salvage this pipe out from under the reader.
-            self.runningProcesses[serverId]?.claimed = true
-        } else if let terminated = self.terminatedStdout.removeValue(forKey: serverId) {
-            stdoutPipe = terminated
-        } else {
-            return nil
-        }
-        let handle = stdoutPipe.fileHandleForReading
-
-        return AsyncStream { continuation in
-            let task = Task<Void, Never> { @concurrent in
-                var lineBuffer = Data()
-                do {
-                    for try await byte in handle.bytes {
-                        if byte == UInt8(ascii: "\n") {
-                            continuation.yield(Self.decodeLine(lineBuffer))
-                            lineBuffer.removeAll(keepingCapacity: true)
-                        } else {
-                            lineBuffer.append(byte)
-                        }
-                    }
-                } catch {
-                    // `FileHandle.AsyncBytes` only throws for a genuine
-                    // read error on the underlying descriptor (e.g. it was
-                    // closed out from under us). There's nothing to retry
-                    // or recover mid-stream, so this just falls through to
-                    // flushing any trailing partial line and finishing --
-                    // the same outcome as a clean EOF.
-                }
-                if !lineBuffer.isEmpty {
-                    continuation.yield(Self.decodeLine(lineBuffer))
-                }
-                continuation.finish()
-            }
-
-            continuation.onTermination = { _ in task.cancel() }
-        }
+    /// The kernel PID of `serverId`'s tracked running process, or `nil` if
+    /// no process is currently tracked for that id (never started, already
+    /// stopped, or crashed). Introduced in task 5-1 so the Dashboard's
+    /// `ServerPerformanceService` can address the exact child process for
+    /// per-PID CPU/memory sampling without maintaining a parallel PID
+    /// table -- the actor already holds the authoritative `Process`
+    /// reference, so exposing just the PID keeps `Process` (non-`Sendable`)
+    /// inside the actor while letting the sampler cross the actor boundary
+    /// with only the `pid_t` scalar.
+    public func pid(serverId: String) async -> pid_t? {
+        self.runningProcesses[serverId]?.process.processIdentifier
     }
 
-    private static func decodeLine(_ data: Data) -> String {
-        String(bytes: data, encoding: .utf8) ?? ""
-    }
+    // The public `stdoutLines(serverId:)` entry point and its supporting
+    // broadcaster machinery live in `ServerProcessService+Stdout.swift`.
+    // They were moved out of this file purely so both stay under
+    // SwiftLint's per-file line cap; they're still `ServerProcessService`
+    // members via an extension, mutate the actor's `stdoutBroadcasters` /
+    // `terminatedStdout` state directly, and run under actor isolation.
 
     /// Launches `server`'s Java process. Sets `currentDirectoryURL` to
     /// `server.path` so the `-jar` argument can be a bare filename rather
@@ -255,10 +217,15 @@ public actor ServerProcessService {
             throw ServerProcessError.javaPathNotConfigured(serverId: server.id)
         }
 
-        // Drop any stale, never-claimed pipe from a previous run of this
+        // Drop any stale, never-attached pipe from a previous run of this
         // server id -- `stdoutLines` should serve the *new* process's
-        // stdout, not a leftover reference to the old one.
+        // stdout, not a leftover reference to the old one. The broadcaster
+        // map is normally emptied on the prior run's EOF-finalize (see
+        // `finishBroadcaster(for:)`), but a defensive removal here
+        // covers the edge case where a same-id restart raced a still-
+        // finalizing broadcaster.
         self.terminatedStdout.removeValue(forKey: server.id)
+        self.stdoutBroadcasters.removeValue(forKey: server.id)
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: javaPath)
@@ -281,6 +248,14 @@ public actor ServerProcessService {
         )
 
         Self.drainAndDiscard(stderrPipe.fileHandleForReading)
+
+        // Emit `.online` after `runningProcesses` is populated but before
+        // the termination monitor Task is spawned: subscribers that key
+        // uptime tracking off this event (e.g. `ServerPerformanceService`
+        // in Phase 5) can immediately call back into `pid(serverId:)` /
+        // `isRunning(serverId:)` and see a consistent live state. See
+        // `ServerProcessEvent`'s doc for the full rationale.
+        self.eventContinuation.yield(ServerProcessEvent(serverId: server.id, status: .online))
 
         let serverId = server.id
         Task { [weak self] in
@@ -390,8 +365,14 @@ public actor ServerProcessService {
     private func handleTermination(serverId: String, status: ServerStatus) {
         if let running = self.runningProcesses.removeValue(forKey: serverId) {
             try? running.stdin.close()
-            // Only salvage an unclaimed pipe -- see `terminatedStdout`'s doc.
-            if !running.claimed {
+            // Salvage the stdout pipe only if no broadcaster ever attached
+            // to it -- see `terminatedStdout`'s doc. If one does exist,
+            // its reader `Task` is already draining the pipe, so the
+            // child's write end closing at exit produces a natural EOF
+            // that flows through `finishBroadcaster(for:)` on its own; a
+            // parallel salvage would create a second reader on the same
+            // descriptor and split bytes unpredictably.
+            if self.stdoutBroadcasters[serverId] == nil {
                 self.terminatedStdout[serverId] = running.stdout
             }
         }

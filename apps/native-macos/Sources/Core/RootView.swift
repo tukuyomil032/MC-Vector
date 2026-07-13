@@ -19,6 +19,13 @@ public struct RootView: View {
     /// keeps its own console-panel visibility state locally rather than
     /// hoisting it.
     @State private var isActivityDrawerPresented = false
+    /// Shared 1 Hz CPU/memory sampler service (task 5-4). Held here as
+    /// `@State` so it survives every re-render of `ContentRouter` and
+    /// so a single instance is shared across every server's Dashboard
+    /// subscription -- the actor itself is stateless per-server (all
+    /// per-server state lives inside the returned `AsyncStream`s), so
+    /// one service instance handles them all.
+    @State private var performanceService = ServerPerformanceService()
 
     public init() {
         self.init(viewModel: ServerListViewModel())
@@ -42,7 +49,11 @@ public struct RootView: View {
             // content. Start/Stop moved into `ContentRouter` too, so they
             // stay attached to the detail pane across every `AppView`, not
             // just `.serverSettings`.
-            ContentRouter(navigationState: self.navigationState, viewModel: self.viewModel)
+            ContentRouter(
+                navigationState: self.navigationState,
+                viewModel: self.viewModel,
+                performanceService: self.performanceService,
+            )
         }
         // Attached to the outer `NavigationSplitView` (not inside the
         // `detail` closure) so the Activity Drawer is a global, all-servers

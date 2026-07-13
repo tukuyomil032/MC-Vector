@@ -78,6 +78,7 @@ private func makeContentRouter(currentView: AppView) -> ContentRouter {
     return ContentRouter(
         navigationState: NavigationState(currentView: currentView),
         viewModel: ServerListViewModel(store: store),
+        performanceService: ServerPerformanceService(),
     )
 }
 

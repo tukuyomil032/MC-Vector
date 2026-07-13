@@ -3,14 +3,13 @@ import SwiftUI
 /// `RootView`'s detail-pane router: switches on `navigationState.currentView`
 /// to decide what to show, given the currently selected server (if any).
 ///
-/// Only `.serverSettings` is wired to a real screen today
-/// (`ServerDetailView`, ported forward unchanged from before task 4-4) --
-/// every other `AppView` case renders a placeholder
-/// `ContentUnavailableView`, since Dashboard/Console/Users/Files/Plugins/
-/// Backups/Properties/Proxy Network are all later Phase 4+ tasks' work.
-/// `.dashboard` gets its own "Coming Soon" placeholder per the task spec;
-/// the rest share a generic "under construction" placeholder keyed off the
-/// view's own navigation label where one exists.
+/// `.serverSettings` (task 4-4) and `.dashboard` (task 5-4) are wired
+/// to real screens today (`ServerDetailView` and `DashboardView`
+/// respectively); every other `AppView` case renders a placeholder
+/// `ContentUnavailableView`, since Console/Users/Files/Plugins/Backups/
+/// Properties/Proxy Network are all later Phase 6+ tasks' work. Those
+/// remaining placeholders share a generic "under construction" body
+/// keyed off the view's own navigation label where one exists.
 ///
 /// Also owns the Start/Stop toolbar buttons that previously lived directly
 /// in `RootView`'s `detail:` closure (task 3-7) -- moved here so they stay
@@ -20,6 +19,12 @@ import SwiftUI
 struct ContentRouter: View {
     let navigationState: NavigationState
     let viewModel: ServerListViewModel
+    /// Owned by `RootView` (task 5-4: `@State` there so it survives
+    /// `ContentRouter` recomputations while still being a single
+    /// instance shared across every server's Dashboard subscription).
+    /// Threaded down to `.dashboard`'s `DashboardView` only -- other
+    /// cases don't consume performance metrics.
+    let performanceService: ServerPerformanceService
 
     var body: some View {
         Group {
@@ -30,11 +35,14 @@ struct ContentRouter: View {
                         .id(server.id)
                 }
             case .dashboard:
-                ContentUnavailableView(
-                    "Dashboard",
-                    systemImage: "gauge.with.dots.needle.bottom.50percent",
-                    description: Text("Coming Soon"),
-                )
+                self.serverDependent { server in
+                    DashboardView(
+                        server: server,
+                        processService: self.viewModel.processService,
+                        performanceService: self.performanceService,
+                    )
+                    .id(server.id)
+                }
             default:
                 self.serverDependent { _ in
                     ContentUnavailableView(
