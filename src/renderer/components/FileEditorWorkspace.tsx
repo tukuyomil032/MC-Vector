@@ -136,11 +136,34 @@ export default function FileEditorWorkspace({
             };
             updateCursorPosition();
             editor.onDidChangeCursorPosition(updateCursorPosition);
+            let isDisposed = false;
+            let renderFrame = 0;
             const refreshEditor = () => {
+              if (isDisposed) {
+                return;
+              }
               editor.layout();
               editor.render(true);
             };
+            const scheduleRender = () => {
+              if (isDisposed || renderFrame !== 0) {
+                return;
+              }
+              renderFrame = requestAnimationFrame(() => {
+                renderFrame = 0;
+                refreshEditor();
+                requestAnimationFrame(refreshEditor);
+              });
+            };
             refreshEditor();
+            editor.onDidScrollChange(scheduleRender);
+            editor.onDidLayoutChange(scheduleRender);
+            editor.onDidDispose(() => {
+              isDisposed = true;
+              if (renderFrame !== 0) {
+                cancelAnimationFrame(renderFrame);
+              }
+            });
             requestAnimationFrame(() => {
               refreshEditor();
               setIsEditorReady(true);
