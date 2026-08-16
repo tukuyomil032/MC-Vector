@@ -69,6 +69,16 @@ describe('resolve jar URLs from official sources', () => {
     );
   });
 
+  it('does not turn an official API failure into an unavailable version', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('url not allowed on the configured scope'))
+      .mockResolvedValueOnce(makeResponse({}, 410));
+
+    const { resolveRequestedJarUrl } = await import('../version-commands');
+
+    await expect(resolveRequestedJarUrl('Paper', '26.2')).rejects.toThrow('HTTP 410');
+  });
+
   it('uses LeafMC official API and never PaperMC API', async () => {
     fetchMock.mockResolvedValueOnce(makeResponse({ versions: ['1.21'] })).mockResolvedValueOnce(
       makeResponse([

@@ -231,6 +231,7 @@ async function resolvePaperJarUrl(
   try {
     const fillResult = await resolvePaperFromFill(version, mode);
     if (fillResult) return fillResult;
+    return null;
   } catch (error) {
     logError('Paper Fill API resolution failed; trying PaperMC v2 fallback', error, {
       software: 'Paper',
@@ -349,7 +350,7 @@ export async function resolveLatestJarUrl(
     return await resolveJarUrl(software, version, 'latest');
   } catch (error) {
     logError('Failed to resolve latest jar URL', error, { software, version });
-    return null;
+    throw error;
   }
 }
 
@@ -361,6 +362,6 @@ export async function resolveRequestedJarUrl(
     return await resolveJarUrl(software, version, 'requested');
   } catch (error) {
     logError('Failed to resolve requested jar URL', error, { software, version });
-    return null;
+    throw error;
   }
 }

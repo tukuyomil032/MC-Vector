@@ -100,7 +100,7 @@ export function useServerCreateAction({
             logError('Server jar download failed', error, {
               serverId: newServer.id,
               serverPath,
-              downloadUrl,
+              downloadUrl: resolution.downloadUrl,
             });
             setDownloadStatus(null);
             throw error;
@@ -130,6 +130,8 @@ export function useServerCreateAction({
         }
         logError('Server creation failed', error, {
           serverDataType: typeof serverData,
+          software: (serverData as Record<string, unknown>).software,
+          version: (serverData as Record<string, unknown>).version,
         });
         showToast(t('server.toast.createFailed'), 'error');
         setDownloadStatus(null);
