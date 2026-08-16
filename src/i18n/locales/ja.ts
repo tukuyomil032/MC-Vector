@@ -246,6 +246,8 @@ export const ja: TranslationDictionary = {
     confirm: {
       delete: '{count}個の項目を削除しますか？',
       deleteTitle: 'ファイル削除',
+      discardChanges: '未保存の変更を破棄して閉じますか？',
+      discardChangesTitle: '未保存の変更',
     },
     contextMenu: {
       rename: '名前の変更',
@@ -260,6 +262,17 @@ export const ja: TranslationDictionary = {
     dropHint: 'ここにドロップして現在のフォルダへアップロード',
     editor: {
       saving: '保存中...',
+      close: '編集画面を閉じる',
+      unsaved: '未保存',
+      saved: '保存済み',
+      lineColumn: '行 {line}、列 {column}',
+      encoding: 'UTF-8',
+      lineEnding: 'LF',
+      readOnly: '読み取り専用',
+      settings: 'エディター設定',
+      minimap: 'ミニマップ',
+      wordWrap: '折り返し',
+      loadFailed: 'ファイルを読み込めませんでした',
     },
     emptyFolder: 'フォルダは空です',
     loading: '読み込み中...',

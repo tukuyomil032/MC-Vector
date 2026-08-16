@@ -2,7 +2,7 @@
   .files-view {
     @apply h-full flex flex-col text-zinc-300 p-5 gap-4;
     font-family: var(--mv-font-display);
-    background: var(--mv-view-bg);
+    background: var(--mv-panel-bg-alt);
   }
 
   .files-view__toolbar {
@@ -13,16 +13,16 @@
   }
 
   .files-view__toolbar-btn {
-    @apply border p-1.5 rounded-md transition-all;
+    @apply border p-1.5 rounded-md transition-colors;
     color: var(--mv-surface-text-secondary);
     border-color: rgba(100, 116, 139, 0.3);
-    background: rgba(15, 23, 42, 0.28);
+    background: var(--mv-panel-bg-alt);
   }
 
   .files-view__toolbar-btn:hover {
     color: var(--mv-surface-text-primary);
     border-color: rgba(56, 189, 248, 0.45);
-    background: rgba(51, 65, 85, 0.5);
+    background: var(--mv-border-soft);
   }
 
   .files-view__toolbar-icon {
@@ -60,7 +60,7 @@
 
   .files-view__breadcrumb-shell {
     @apply flex-1 px-2.5 py-1.5 rounded-lg overflow-x-auto whitespace-nowrap;
-    background: rgba(15, 23, 42, 0.82);
+    background: var(--mv-panel-bg-alt);
     border: 1px solid rgba(63, 63, 70, 0.72);
   }
 
@@ -69,8 +69,17 @@
   }
 
   .files-view__breadcrumb-link {
-    @apply cursor-pointer px-1 py-0.5 rounded;
+    @apply cursor-pointer rounded border-0 bg-transparent px-1 py-0.5 text-left;
+    font: inherit;
     @apply hover:bg-zinc-800/70 hover:text-white hover:underline;
+  }
+
+  .files-view__breadcrumb-link:focus-visible,
+  .files-view__row:focus-visible,
+  .files-view__toolbar-btn:focus-visible,
+  .files-view__context-item:focus-visible {
+    outline: 2px solid #7dd3fc;
+    outline-offset: 2px;
   }
 
   .files-view__breadcrumb-link--disabled {
@@ -83,7 +92,7 @@
 
   .files-view__list-pane {
     @apply flex-1 overflow-y-auto p-0 relative rounded-2xl border;
-    background: linear-gradient(145deg, rgba(17, 24, 39, 0.94), rgba(24, 24, 27, 0.9));
+    background: var(--mv-panel-bg);
     border-color: var(--mv-border-soft);
     box-shadow: 0 16px 38px rgba(2, 6, 23, 0.24);
   }
@@ -96,13 +105,17 @@
     @apply absolute inset-4 rounded-lg border-2 border-dashed text-sm font-semibold flex items-center justify-center pointer-events-none;
     border-color: rgba(56, 189, 248, 0.65);
     color: #bbf7d0;
-    background: rgba(8, 47, 73, 0.42);
+    background: var(--mv-panel-bg-alt);
     z-index: 4;
   }
 
   .files-view__row {
     @apply flex items-center p-2.5 bg-transparent border-b border-zinc-700/60 cursor-pointer select-none last:border-b-0 transition-colors;
     @apply hover:bg-zinc-800/45;
+  }
+
+  .files-view__row[aria-pressed='true'] {
+    outline-offset: -2px;
   }
 
   .files-view__row.is-selected {
@@ -142,17 +155,117 @@
 
   .files-view__editor-overlay {
     @apply fixed inset-0 z-[2000] flex flex-col;
-    background: linear-gradient(145deg, rgba(2, 6, 23, 0.95), rgba(15, 23, 42, 0.92));
+    background: var(--mv-panel-bg-alt);
+  }
+
+  .files-view__editor-overlay--loading {
+    @apply items-center justify-center;
+  }
+
+  .files-view__editor-loading {
+    @apply rounded-md border px-4 py-3 text-sm text-zinc-300;
+    background: var(--mv-panel-bg);
+    border-color: var(--mv-border-soft);
   }
 
   .files-view__editor-header {
-    @apply p-2.5 flex justify-between items-center border-b;
+    @apply min-h-[60px] px-5 py-2.5 flex justify-between items-center border-b;
     background: var(--mv-panel-bg);
     border-color: var(--mv-border-soft);
   }
 
   .files-view__editor-actions {
-    @apply flex items-center;
+    @apply flex items-center gap-3;
+  }
+
+  .files-view__editor-identity {
+    @apply flex min-w-0 items-center gap-3;
+  }
+
+  .files-view__editor-icon-button,
+  .files-view__editor-save-button {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-md border transition-colors;
+  }
+
+  .files-view__editor-icon-button {
+    @apply min-w-10 border-transparent text-zinc-400;
+  }
+
+  .files-view__editor-icon-button:hover,
+  .files-view__editor-icon-button:focus-visible {
+    @apply border-zinc-700 bg-zinc-800 text-zinc-100;
+  }
+
+  .files-view__editor-file-icon {
+    @apply flex h-9 w-9 items-center justify-center rounded-md;
+    color: var(--mv-surface-text-secondary);
+    background: var(--mv-panel-bg-alt);
+    border: 1px solid var(--mv-border-soft);
+  }
+
+  .files-view__editor-file-meta {
+    @apply flex min-w-0 flex-col gap-0.5;
+  }
+
+  .files-view__editor-file-title {
+    @apply flex min-w-0 items-center gap-2 text-sm text-zinc-100;
+  }
+
+  .files-view__editor-file-title strong {
+    @apply max-w-[min(60vw,720px)] overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+
+  .files-view__editor-file-path {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-zinc-500;
+  }
+
+  .files-view__editor-dirty {
+    @apply inline-flex items-center text-amber-400;
+  }
+
+  .files-view__editor-shortcut {
+    @apply hidden font-mono text-xs text-zinc-500 sm:inline;
+  }
+
+  .files-view__editor-save-button {
+    @apply border-zinc-600 bg-zinc-100 px-3.5 text-sm font-semibold text-zinc-950;
+  }
+
+  .files-view__editor-save-button:hover:not(:disabled),
+  .files-view__editor-save-button:focus-visible:not(:disabled) {
+    @apply border-white bg-white;
+  }
+
+  .files-view__editor-save-button:disabled {
+    @apply cursor-not-allowed border-zinc-800 bg-zinc-800 text-zinc-500;
+  }
+
+  .files-view__editor-saving-icon {
+    animation: files-editor-saving 1s linear infinite;
+  }
+
+  .files-view__editor-canvas {
+    @apply relative min-h-0 flex-1;
+    background: #111214;
+  }
+
+  .files-view__editor-canvas-loading {
+    @apply absolute inset-0 z-10 flex items-center justify-center text-sm text-zinc-400;
+    background: #111214;
+  }
+
+  .files-view__editor-statusbar {
+    @apply flex min-h-7 items-center gap-4 border-t px-4 font-mono text-xs text-zinc-400;
+    background: var(--mv-panel-bg);
+    border-color: var(--mv-border-soft);
+  }
+
+  .files-view__editor-position {
+    @apply ml-auto;
+  }
+
+  .files-view__editor-status {
+    @apply inline-flex items-center gap-1.5 text-zinc-300;
   }
 
   .files-view__modal-panel {
@@ -164,15 +277,15 @@
   }
 
   .files-view__create-option {
-    @apply flex flex-col items-center justify-center gap-2 p-5 rounded-lg cursor-pointer transition-all border-2;
+    @apply flex flex-col items-center justify-center gap-2 p-5 rounded-lg cursor-pointer transition-colors border-2;
     @apply border-transparent text-zinc-300;
-    background: rgba(30, 41, 59, 0.62);
+    background: var(--mv-panel-bg-alt);
   }
 
   .files-view__create-option.is-active {
     @apply text-white;
     border-color: rgba(34, 211, 238, 0.65);
-    background: linear-gradient(120deg, rgba(6, 182, 212, 0.24), rgba(16, 185, 129, 0.18));
+    background: var(--mv-border-soft);
   }
 
   .files-view__create-option--import:hover {
@@ -199,7 +312,7 @@
     @apply fixed border rounded-md min-w-[180px] p-1;
     z-index: 3000;
     border-color: rgba(63, 63, 70, 0.92);
-    background: linear-gradient(145deg, rgba(17, 24, 39, 0.96), rgba(24, 24, 27, 0.96));
+    background: var(--mv-panel-bg);
     box-shadow: 0 18px 42px rgba(2, 6, 23, 0.42);
   }
 
@@ -210,7 +323,7 @@
   }
 
   .files-view__context-item:hover {
-    background: linear-gradient(120deg, rgba(6, 182, 212, 0.25), rgba(16, 185, 129, 0.18));
+    background: var(--mv-border-soft);
   }
 
   .files-view__context-item--danger {
@@ -224,6 +337,18 @@
   .files-view__context-spacer,
   .files-view__context-icon {
     @apply w-4 h-4 inline-block;
+  }
+}
+
+@keyframes files-editor-saving {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .files-view__editor-saving-icon {
+    animation: none;
   }
 }
 

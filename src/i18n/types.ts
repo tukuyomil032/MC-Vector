@@ -269,6 +269,8 @@ export interface TranslationDictionary {
     confirm: {
       delete: string;
       deleteTitle: string;
+      discardChanges: string;
+      discardChangesTitle: string;
     };
     contextMenu: {
       rename: string;
@@ -283,6 +285,17 @@ export interface TranslationDictionary {
     dropHint: string;
     editor: {
       saving: string;
+      close: string;
+      unsaved: string;
+      saved: string;
+      lineColumn: string;
+      encoding: string;
+      lineEnding: string;
+      readOnly: string;
+      settings: string;
+      minimap: string;
+      wordWrap: string;
+      loadFailed: string;
     };
     emptyFolder: string;
     loading: string;

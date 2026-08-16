@@ -7,8 +7,8 @@ import {
   onServerLog,
   onServerStatusChange,
 } from '../../lib/server-commands';
-import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
+import type { ToastKind } from '../shared/toast';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;

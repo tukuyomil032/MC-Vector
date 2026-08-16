@@ -5,8 +5,8 @@ import { logError } from '../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../lib/file-commands';
 import { getServers, updateServer as updateServerApi } from '../../lib/server-commands';
 import type { ProxyNetworkConfig } from '../components/ProxySetupView';
-import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
+import type { ToastKind } from '../shared/toast';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
