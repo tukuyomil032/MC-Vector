@@ -473,6 +473,8 @@ export const ja: TranslationDictionary = {
       tabInstalled: '導入済み ({{count}})',
       searchOn: '{{platform}} で検索...',
       searching: '検索中...',
+      retry: '再試行',
+      searchError: 'プラグイン検索に失敗しました。接続を確認して再試行してください。',
       sortLabel: 'ソート',
       sortRelevance: '関連度',
       sortDownloads: 'ダウンロード数',

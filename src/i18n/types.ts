@@ -500,6 +500,8 @@ export interface TranslationDictionary {
       tabInstalled: string;
       searchOn: string;
       searching: string;
+      retry: string;
+      searchError: string;
       sortLabel: string;
       sortRelevance: string;
       sortDownloads: string;

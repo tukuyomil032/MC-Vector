@@ -476,6 +476,8 @@ export const en: TranslationDictionary = {
       tabInstalled: 'Installed ({{count}})',
       searchOn: 'Search on {{platform}}...',
       searching: 'Searching...',
+      retry: 'Retry',
+      searchError: 'Plugin search failed. Check your connection and try again.',
       sortLabel: 'Sort',
       sortRelevance: 'Relevance',
       sortDownloads: 'Downloads',
