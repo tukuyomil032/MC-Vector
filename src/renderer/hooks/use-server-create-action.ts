@@ -4,8 +4,8 @@ import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import { addServer as addServerApi, downloadServerJar } from '../../lib/server-commands';
 import { resolveRequestedJarUrl } from '../../lib/version-commands';
-import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
+import type { ToastKind } from '../shared/toast';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
