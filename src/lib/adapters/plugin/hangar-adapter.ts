@@ -19,6 +19,7 @@ export interface HangarSearchParams {
   query: string;
   offset: number;
   limit: number;
+  signal?: AbortSignal;
 }
 
 export interface HangarSearchResult {
@@ -64,7 +65,9 @@ const hangarSearchAdapter: PluginSourceAdapter<HangarSearchParams, HangarSearchR
     url.searchParams.set('offset', String(params.offset));
     url.searchParams.set('limit', String(params.limit));
 
-    const payload = await fetchJson<HangarSearchResponse>(url.toString());
+    const payload = await fetchJson<HangarSearchResponse>(url.toString(), {
+      signal: params.signal,
+    });
     const result = Array.isArray(payload.result)
       ? payload.result
           .map(parseHangarProject)

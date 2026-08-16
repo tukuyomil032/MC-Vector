@@ -2,6 +2,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
+import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import {
   type ServerTemplate,
@@ -14,6 +15,7 @@ import type { MinecraftServer } from '../shared/server declaration';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
+const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
 
 interface UseServerContextActionsOptions {
   servers: MinecraftServer[];
@@ -46,6 +48,25 @@ function buildTemplateFromServer(server: MinecraftServer, templateName: string):
     autoBackupTime: server.autoBackupTime,
     autoBackupWeekday: server.autoBackupWeekday,
   };
+}
+
+function normalizePath(input: string): string {
+  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
+    return normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function isDirectManagedServerPath(serverPath: string, serverRoot: string): boolean {
+  const normalizedServerPath = normalizePath(serverPath.trim());
+  const normalizedServerRoot = normalizePath(serverRoot.trim());
+  if (!normalizedServerPath || normalizedServerPath === normalizedServerRoot) {
+    return false;
+  }
+
+  const parentPath = normalizedServerPath.split('/').slice(0, -1).join('/');
+  return parentPath === normalizedServerRoot;
 }
 
 async function cloneServerDirectory(sourceDir: string, targetDir: string): Promise<void> {
@@ -81,11 +102,32 @@ export function useServerContextActions({
   const handleDeleteServer = useCallback(
     async (serverId: string) => {
       const target = servers.find((server) => server.id === serverId);
+      if (!target) {
+        return;
+      }
 
-      const confirmed = await ask(t('server.confirm.delete', { name: target?.name ?? '' }), {
-        title: t('common.delete'),
-        kind: 'warning',
-      });
+      let isManagedServer = false;
+      try {
+        isManagedServer = isDirectManagedServerPath(target.path, await getServerRoot());
+      } catch (error) {
+        logError('Resolve server root for delete confirmation failed', error, {
+          serverId,
+          serverPath: target.path,
+        });
+        showToast(t('server.toast.deleteError'), 'error');
+        return;
+      }
+
+      const confirmed = await ask(
+        t(isManagedServer ? 'server.confirm.deleteManaged' : 'server.confirm.deleteExternal', {
+          name: target.name,
+          path: target.path,
+        }),
+        {
+          title: t('common.delete'),
+          kind: 'warning',
+        },
+      );
       if (!confirmed) {
         return;
       }
@@ -105,7 +147,13 @@ export function useServerContextActions({
         }
       } catch (error) {
         logError('Delete server failed', error, { serverId });
-        showToast(t('server.toast.deleteError'), 'error');
+        const message = error instanceof Error ? error.message : String(error);
+        showToast(
+          message.includes('Cannot delete a running server')
+            ? t('server.toast.deleteRunning')
+            : t('server.toast.deleteError'),
+          'error',
+        );
       }
     },
     [removeServerLogs, selectedServerId, servers, setSelectedServerId, setServers, showToast, t],

@@ -134,6 +134,7 @@ export const ja: TranslationDictionary = {
       jarUrlFailed: 'ダウンロードURLの取得に失敗しました。手動でJARを配置してください。',
       createFailed: 'サーバー作成に失敗しました',
       deleted: 'サーバーを削除しました',
+      deleteRunning: '起動中のサーバーは削除できません',
       deleteFailed: '削除に失敗しました',
       deleteError: '削除エラー',
       cloned: 'サーバーを複製しました',
@@ -150,6 +151,9 @@ export const ja: TranslationDictionary = {
     },
     confirm: {
       delete: '本当に「{name}」を削除しますか？',
+      deleteManaged: '本当に「{name}」を削除しますか？\n管理フォルダも完全に削除されます: {path}',
+      deleteExternal:
+        '本当に「{name}」を登録解除しますか？\n外部インポートされたフォルダは削除されません: {path}',
       clone: '「{name}」を複製しますか？',
     },
   },
@@ -469,6 +473,8 @@ export const ja: TranslationDictionary = {
       tabInstalled: '導入済み ({{count}})',
       searchOn: '{{platform}} で検索...',
       searching: '検索中...',
+      retry: '再試行',
+      searchError: 'プラグイン検索に失敗しました。接続を確認して再試行してください。',
       sortLabel: 'ソート',
       sortRelevance: '関連度',
       sortDownloads: 'ダウンロード数',

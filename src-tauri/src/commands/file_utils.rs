@@ -133,6 +133,36 @@ fn is_within_root(target_path: &Path, root_path: &Path) -> bool {
     target_path == root_path || target_path.starts_with(root_path)
 }
 
+fn validate_managed_server_dir_for_delete(
+    servers_root: &Path,
+    server_path: &str,
+) -> Result<PathBuf, String> {
+    let normalized_input = normalize_path_string(server_path.trim());
+    if normalized_input.is_empty() || normalized_input.contains('\0') {
+        return Err("Invalid server path".to_string());
+    }
+    if has_traversal_segment(&normalized_input) {
+        return Err("Path traversal is not allowed".to_string());
+    }
+
+    let target_path = PathBuf::from(&normalized_input);
+    if !target_path.is_absolute() {
+        return Err("Server path must be absolute".to_string());
+    }
+    if target_path
+        .components()
+        .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+    {
+        return Err("Path traversal is not allowed".to_string());
+    }
+
+    if target_path.parent() != Some(servers_root) {
+        return Err("Only direct managed server folders can be deleted".to_string());
+    }
+
+    Ok(target_path)
+}
+
 #[tauri::command]
 pub async fn resolve_managed_path(app: AppHandle, path: String) -> Result<String, String> {
     let normalized_input = normalize_managed_input_path(&app, &path)?;
@@ -187,6 +217,60 @@ pub async fn read_managed_text_file(app: AppHandle, path: String) -> Result<Stri
         .map_err(|e| format!("Failed to read file: {}", e))
 }
 
+#[tauri::command]
+pub async fn delete_managed_server_dir(app: AppHandle, server_path: String) -> Result<(), String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let servers_root = app_data_dir.join("servers");
+    let requested_target = validate_managed_server_dir_for_delete(&servers_root, &server_path)?;
+
+    let servers_root_metadata = std::fs::symlink_metadata(&servers_root)
+        .map_err(|e| format!("Failed to inspect managed servers root: {}", e))?;
+    if servers_root_metadata.file_type().is_symlink() {
+        return Err("Refusing to delete through a symbolic-link managed root".to_string());
+    }
+    let canonical_servers_root = std::fs::canonicalize(&servers_root)
+        .map_err(|e| format!("Failed to resolve managed servers root: {}", e))?;
+
+    // Resolve the requested directory by enumerating the already trusted
+    // managed root. The user-provided path is used only for an exact match;
+    // filesystem operations below use the path returned by read_dir.
+    let target = std::fs::read_dir(&servers_root)
+        .map_err(|e| format!("Failed to inspect managed server folders: {}", e))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .find_map(|entry| match entry {
+            Ok(entry_path) if entry_path == requested_target => Some(Ok(entry_path)),
+            Ok(_) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .transpose()
+        .map_err(|e| format!("Failed to inspect managed server folder: {}", e))?
+        .ok_or_else(|| "Server folder is not a direct managed server folder".to_string())?;
+
+    let target_metadata = std::fs::symlink_metadata(&target)
+        .map_err(|e| format!("Failed to inspect server folder: {}", e))?;
+    if target_metadata.file_type().is_symlink() {
+        return Err("Refusing to delete a symbolic link".to_string());
+    }
+    if !target_metadata.is_dir() {
+        return Err("Server path is not a directory".to_string());
+    }
+
+    let canonical_target = std::fs::canonicalize(&target)
+        .map_err(|e| format!("Failed to resolve server folder: {}", e))?;
+    if canonical_target == canonical_servers_root
+        || canonical_target.parent() != Some(canonical_servers_root.as_path())
+    {
+        return Err("Server folder is outside the managed servers root".to_string());
+    }
+
+    tokio::fs::remove_dir_all(&target)
+        .await
+        .map_err(|e| format!("Failed to delete managed server folder: {}", e))
+}
+
 /// ディレクトリの内容をメタデータ付きで一括取得
 #[tauri::command]
 pub async fn list_dir_with_metadata(path: String) -> Result<Vec<FileEntryInfo>, String> {
@@ -232,4 +316,110 @@ pub async fn list_dir_with_metadata(path: String) -> Result<Vec<FileEntryInfo>, 
     });
 
     Ok(entries)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_managed_server_dir_for_delete;
+    use std::path::PathBuf;
+
+    fn servers_root() -> PathBuf {
+        #[cfg(windows)]
+        {
+            PathBuf::from(r"C:\mc-vector-file-utils-tests\servers")
+        }
+
+        #[cfg(not(windows))]
+        {
+            PathBuf::from("/tmp/mc-vector-file-utils-tests/servers")
+        }
+    }
+
+    #[test]
+    fn delete_validation_allows_direct_managed_server_folder() {
+        let servers_root = servers_root();
+        let server_dir = servers_root.join("alpha");
+
+        let result = validate_managed_server_dir_for_delete(
+            &servers_root,
+            server_dir.to_string_lossy().as_ref(),
+        )
+        .expect("direct managed server folder should be allowed");
+
+        assert_eq!(result, server_dir);
+    }
+
+    #[test]
+    fn delete_validation_rejects_managed_servers_root() {
+        let servers_root = servers_root();
+
+        let result = validate_managed_server_dir_for_delete(
+            &servers_root,
+            servers_root.to_string_lossy().as_ref(),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_validation_rejects_app_data_parent() {
+        let servers_root = servers_root();
+        let app_data = servers_root.parent().unwrap();
+
+        let result = validate_managed_server_dir_for_delete(
+            &servers_root,
+            app_data.to_string_lossy().as_ref(),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_validation_rejects_path_traversal() {
+        let servers_root = servers_root();
+        let traversal = servers_root.join("..").join("outside");
+
+        let result = validate_managed_server_dir_for_delete(
+            &servers_root,
+            traversal.to_string_lossy().as_ref(),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_validation_rejects_nested_paths_inside_server_folder() {
+        let servers_root = servers_root();
+        let nested = servers_root.join("alpha").join("world");
+
+        let result = validate_managed_server_dir_for_delete(
+            &servers_root,
+            nested.to_string_lossy().as_ref(),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_validation_rejects_external_folder() {
+        let servers_root = servers_root();
+        let external = servers_root.parent().unwrap().join("external-server");
+
+        let result = validate_managed_server_dir_for_delete(
+            &servers_root,
+            external.to_string_lossy().as_ref(),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_validation_rejects_empty_server_name() {
+        let servers_root = servers_root();
+        let empty_name = servers_root.to_string_lossy().to_string() + "/";
+
+        let result = validate_managed_server_dir_for_delete(&servers_root, &empty_name);
+
+        assert!(result.is_err());
+    }
 }

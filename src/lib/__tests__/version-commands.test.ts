@@ -4,177 +4,188 @@ const fetchMock = vi.fn();
 
 vi.mock('@tauri-apps/plugin-http', () => ({ fetch: fetchMock }));
 
-function makeResponse(data: unknown) {
-  return { json: vi.fn().mockResolvedValue(data) };
+function makeResponse(data: unknown, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 200 ? 'OK' : 'Not Found',
+    json: vi.fn().mockResolvedValue(data),
+  };
 }
 
-describe('resolveLatestJarUrl', () => {
+describe('resolve jar URLs from official sources', () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
   });
 
-  describe('Paper', () => {
-    it('returns latestVersion and downloadUrl from PaperMC API', async () => {
-      fetchMock
-        .mockResolvedValueOnce(makeResponse({ versions: ['1.20', '1.21'] }))
-        .mockResolvedValueOnce(
-          makeResponse({
-            builds: [{ build: 100, downloads: { application: { name: 'paper-1.21-100.jar' } } }],
-          }),
-        );
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Paper', '1.21');
-      expect(result?.latestVersion).toBe('1.21');
-      expect(result?.downloadUrl).toContain('paper-1.21-100.jar');
-      expect(result?.downloadUrl).toContain('api.papermc.io');
-    });
+  it('uses PaperMC Fill stable builds and verifies the official download host', async () => {
+    fetchMock
+      .mockResolvedValueOnce(makeResponse({ versions: { '1.21': ['1.21.10'] } }))
+      .mockResolvedValueOnce(
+        makeResponse([
+          {
+            id: 48,
+            channel: 'STABLE',
+            downloads: {
+              'server:default': {
+                name: 'paper-1.21.10-48.jar',
+                url: 'https://fill-data.papermc.io/v1/paper-1.21.10-48.jar',
+                checksums: { sha256: 'a'.repeat(64) },
+              },
+            },
+          },
+        ]),
+      );
 
-    it('uses filename from builds.downloads.application.name when available', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse({ versions: ['1.21'] })).mockResolvedValueOnce(
+    const { resolveLatestJarUrl } = await import('../version-commands');
+    const result = await resolveLatestJarUrl('Paper', '1.21');
+
+    expect(result).toEqual({
+      latestVersion: '1.21.10',
+      downloadUrl: 'https://fill-data.papermc.io/v1/paper-1.21.10-48.jar',
+      sha256: 'a'.repeat(64),
+    });
+  });
+
+  it('falls back only to the official Paper v2 API', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('Fill unavailable'))
+      .mockResolvedValueOnce(makeResponse({ versions: ['1.21'] }))
+      .mockResolvedValueOnce(
         makeResponse({
-          builds: [{ build: 42, downloads: { application: { name: 'custom-name.jar' } } }],
+          builds: [
+            { build: 100, channel: 'default', downloads: { application: { name: 'paper.jar' } } },
+          ],
         }),
       );
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Paper', '1.21');
-      expect(result?.downloadUrl).toContain('custom-name.jar');
-    });
 
-    it('generates default filename when application.name is absent', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse({ versions: ['1.21'] })).mockResolvedValueOnce(
-        makeResponse({
-          builds: [{ build: 5, downloads: {} }],
-        }),
-      );
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Paper', '1.21');
-      expect(result?.downloadUrl).toContain('paper-1.21-5.jar');
-    });
+    const { resolveLatestJarUrl } = await import('../version-commands');
+    const result = await resolveLatestJarUrl('Paper', '1.21');
 
-    it('returns null when versions array is empty', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse({ versions: [] }));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Paper', '1.21');
-      expect(result).toBeNull();
-    });
-
-    it('returns null when builds array is empty', async () => {
-      fetchMock
-        .mockResolvedValueOnce(makeResponse({ versions: ['1.21'] }))
-        .mockResolvedValueOnce(makeResponse({ builds: [] }));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Paper', '1.21');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('LeafMC', () => {
-    it('uses project=leafmc in the API URL', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse({ versions: ['1.21'] })).mockResolvedValueOnce(
-        makeResponse({
-          builds: [{ build: 1, downloads: { application: { name: 'leafmc-1.21-1.jar' } } }],
-        }),
-      );
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('LeafMC', '1.21');
-      expect(fetchMock.mock.calls[0][0]).toContain('projects/leafmc');
-      expect(result?.downloadUrl).toContain('leafmc');
-    });
-  });
-
-  describe('Vanilla', () => {
-    it('returns latestVersion and server JAR URL from version manifest', async () => {
-      fetchMock
-        .mockResolvedValueOnce(
-          makeResponse({
-            versions: [
-              { id: '1.21', type: 'release', url: 'https://piston-meta.example.com/1.21.json' },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeResponse({
-            downloads: { server: { url: 'https://launcher.mojang.com/v1/1.21/server.jar' } },
-          }),
-        );
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Vanilla', '1.21');
-      expect(result?.latestVersion).toBe('1.21');
-      expect(result?.downloadUrl).toBe('https://launcher.mojang.com/v1/1.21/server.jar');
-    });
-
-    it('skips snapshot entries and uses first release', async () => {
-      fetchMock
-        .mockResolvedValueOnce(
-          makeResponse({
-            versions: [
-              { id: '25w10a', type: 'snapshot', url: 'https://example.com/snap.json' },
-              { id: '1.21', type: 'release', url: 'https://example.com/1.21.json' },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeResponse({
-            downloads: { server: { url: 'https://launcher.mojang.com/v1/1.21/server.jar' } },
-          }),
-        );
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Vanilla', '');
-      expect(result?.latestVersion).toBe('1.21');
-    });
-
-    it('returns null when manifest has no release versions', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse({ versions: [] }));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Vanilla', '');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('Fabric', () => {
-    it('returns download URL with version parameter in the path', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse([{ version: '0.16.5' }, { version: '0.16.4' }]));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Fabric', '1.21.4');
-      expect(result?.latestVersion).toBe('1.21.4');
-      expect(result?.downloadUrl).toContain('/1.21.4/0.16.5/');
-      expect(result?.downloadUrl).toContain('meta.fabricmc.net');
-    });
-
-    it('uses the first loader version as the latest', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse([{ version: '0.99.0' }]));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Fabric', '1.20');
-      expect(result?.downloadUrl).toContain('0.99.0');
-    });
-
-    it('returns null when loaders array is empty', async () => {
-      fetchMock.mockResolvedValueOnce(makeResponse([]));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Fabric', '1.21');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('Unsupported software', () => {
-    it.each(['Spigot', 'Forge', 'Velocity', 'Waterfall', 'BungeeCord'])(
-      'returns null for %s',
-      async (software) => {
-        const { resolveLatestJarUrl } = await import('../version-commands');
-        const result = await resolveLatestJarUrl(software, '1.21');
-        expect(result).toBeNull();
-        expect(fetchMock).not.toHaveBeenCalled();
-      },
+    expect(result?.downloadUrl).toContain('https://api.papermc.io/v2/projects/paper/');
+    expect(fetchMock.mock.calls.map(([url]) => url)).not.toContain(
+      expect.stringContaining('papermc.io/repository'),
     );
   });
 
-  describe('Error handling', () => {
-    it('returns null when fetch throws', async () => {
-      fetchMock.mockRejectedValueOnce(new Error('Network failure'));
-      const { resolveLatestJarUrl } = await import('../version-commands');
-      const result = await resolveLatestJarUrl('Paper', '1.21');
-      expect(result).toBeNull();
-    });
+  it('does not turn an official API failure into an unavailable version', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('url not allowed on the configured scope'))
+      .mockResolvedValueOnce(makeResponse({}, 410));
+
+    const { resolveRequestedJarUrl } = await import('../version-commands');
+
+    await expect(resolveRequestedJarUrl('Paper', '26.2')).rejects.toThrow('HTTP 410');
+  });
+
+  it('uses LeafMC official API and never PaperMC API', async () => {
+    fetchMock.mockResolvedValueOnce(makeResponse({ versions: ['1.21'] })).mockResolvedValueOnce(
+      makeResponse([
+        {
+          build: 37,
+          downloads: {
+            application: {
+              name: 'leaf-1.21-37.jar',
+              checksums: { sha256: 'b'.repeat(64) },
+            },
+          },
+        },
+      ]),
+    );
+
+    const { resolveLatestJarUrl } = await import('../version-commands');
+    const result = await resolveLatestJarUrl('LeafMC', '1.21');
+
+    expect(fetchMock.mock.calls.every(([url]) => url.includes('api.leafmc.one'))).toBe(true);
+    expect(result?.downloadUrl).toContain('https://api.leafmc.one/v2/projects/leaf/');
+    expect(result?.sha256).toBe('b'.repeat(64));
+  });
+
+  it('resolves Vanilla from Mojang metadata and data hosts only', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        makeResponse({
+          versions: [
+            { id: '25w10a', type: 'snapshot', url: 'https://example.com/snapshot.json' },
+            {
+              id: '1.21.10',
+              type: 'release',
+              url: 'https://piston-meta.mojang.com/v1/1.21.10.json',
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeResponse({
+          downloads: {
+            server: { url: 'https://piston-data.mojang.com/v1/1.21.10/server.jar' },
+          },
+        }),
+      );
+
+    const { resolveLatestJarUrl } = await import('../version-commands');
+    const result = await resolveLatestJarUrl('Vanilla', '');
+
+    expect(result?.latestVersion).toBe('1.21.10');
+    expect(result?.downloadUrl).toBe('https://piston-data.mojang.com/v1/1.21.10/server.jar');
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
+    );
+  });
+
+  it('resolves Fabric loader and installer versions from the official Meta API', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        makeResponse([
+          { loader: { version: '0.16.5', stable: true } },
+          { loader: { version: '0.16.4', stable: false } },
+        ]),
+      )
+      .mockResolvedValueOnce(makeResponse([{ version: '1.0.1', stable: true }]));
+
+    const { resolveLatestJarUrl } = await import('../version-commands');
+    const result = await resolveLatestJarUrl('Fabric', '1.21.4');
+
+    expect(result?.downloadUrl).toBe(
+      'https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.5/1.0.1/server/jar',
+    );
+  });
+
+  it('resolves the requested Minecraft version for server creation', async () => {
+    fetchMock.mockResolvedValueOnce(
+      makeResponse([
+        {
+          id: 48,
+          channel: 'STABLE',
+          downloads: {
+            'server:default': {
+              url: 'https://fill-data.papermc.io/v1/paper.jar',
+            },
+          },
+        },
+      ]),
+    );
+
+    const { resolveRequestedJarUrl } = await import('../version-commands');
+    const result = await resolveRequestedJarUrl('Paper', '1.21.10');
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/paper/versions/1.21.10/builds');
+    expect(result?.latestVersion).toBe('1.21.10');
+  });
+
+  it.each(['Spigot', 'Forge', 'Velocity', 'Waterfall', 'BungeeCord'])(
+    'does not auto-download unsupported software: %s',
+    async (software) => {
+      const { resolveRequestedJarUrl } = await import('../version-commands');
+      await expect(resolveRequestedJarUrl(software, '1.21')).resolves.toBeNull();
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('returns null for an unavailable version', async () => {
+    fetchMock.mockResolvedValueOnce(makeResponse([]));
+    const { resolveRequestedJarUrl } = await import('../version-commands');
+    await expect(resolveRequestedJarUrl('Paper', '9.99')).resolves.toBeNull();
   });
 });

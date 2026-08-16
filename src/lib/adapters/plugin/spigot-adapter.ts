@@ -19,6 +19,7 @@ export interface SpigotSearchParams {
   query: string;
   page: number;
   size: number;
+  signal?: AbortSignal;
 }
 
 function toSpigotIconUrl(iconPath: string): string {
@@ -79,6 +80,7 @@ const spigotSearchAdapter: PluginSourceAdapter<SpigotSearchParams, SpigetResourc
       headers: {
         'User-Agent': 'MC-Vector/2.0',
       },
+      signal: params.signal,
     });
 
     return resources

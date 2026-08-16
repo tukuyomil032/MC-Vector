@@ -21,7 +21,10 @@
     {
       "identifier": "http:default",
       "allow": [
+        { "url": "https://fill.papermc.io/**" },
+        { "url": "https://fill-data.papermc.io/**" },
         { "url": "https://api.papermc.io/**" },
+        { "url": "https://api.leafmc.one/**" },
         { "url": "https://piston-meta.mojang.com/**" },
         { "url": "https://launchermeta.mojang.com/**" },
         { "url": "https://meta.fabricmc.net/**" },

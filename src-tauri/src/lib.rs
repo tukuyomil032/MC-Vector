@@ -80,6 +80,7 @@ pub fn run() {
             commands::file_utils::resolve_managed_path,
             commands::file_utils::read_managed_text_file,
             commands::file_utils::write_managed_text_file,
+            commands::file_utils::delete_managed_server_dir,
             // アップデートユーティリティ
             commands::updater_utils::can_update_app,
             commands::updater_utils::get_app_location,

@@ -17,6 +17,7 @@ export interface ModrinthSearchParams {
   facets: string;
   offset: number;
   limit: number;
+  signal?: AbortSignal;
 }
 
 export interface ModrinthSearchResult {
@@ -34,7 +35,7 @@ const modrinthSearchAdapter: PluginSourceAdapter<ModrinthSearchParams, ModrinthS
       url.searchParams.set('facets', params.facets);
     }
 
-    return fetchJson<ModrinthSearchResult>(url.toString());
+    return fetchJson<ModrinthSearchResult>(url.toString(), { signal: params.signal });
   },
 };
 

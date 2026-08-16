@@ -155,6 +155,7 @@ export interface TranslationDictionary {
       jarUrlFailed: string;
       createFailed: string;
       deleted: string;
+      deleteRunning: string;
       deleteFailed: string;
       deleteError: string;
       cloned: string;
@@ -171,6 +172,8 @@ export interface TranslationDictionary {
     };
     confirm: {
       delete: string;
+      deleteManaged: string;
+      deleteExternal: string;
       clone: string;
     };
   };
@@ -497,6 +500,8 @@ export interface TranslationDictionary {
       tabInstalled: string;
       searchOn: string;
       searching: string;
+      retry: string;
+      searchError: string;
       sortLabel: string;
       sortRelevance: string;
       sortDownloads: string;
