@@ -135,6 +135,7 @@ export const en: TranslationDictionary = {
       jarUrlFailed: 'Failed to get download URL. Please place the JAR manually.',
       createFailed: 'Failed to create server',
       deleted: 'Server deleted',
+      deleteRunning: 'Cannot delete a running server',
       deleteFailed: 'Failed to delete server',
       deleteError: 'Delete error',
       cloned: 'Server cloned',
@@ -151,6 +152,10 @@ export const en: TranslationDictionary = {
     },
     confirm: {
       delete: 'Are you sure you want to delete "{name}"?',
+      deleteManaged:
+        'Delete "{name}"?\nThe managed server folder will also be permanently deleted: {path}',
+      deleteExternal:
+        'Unregister "{name}"?\nThe externally imported folder will not be deleted: {path}',
       clone: 'Clone "{name}"?',
     },
   },

@@ -20,6 +20,7 @@ const CORE_COMMANDS = [
   'resolve_managed_path',
   'read_managed_text_file',
   'write_managed_text_file',
+  'delete_managed_server_dir',
   'can_update_app',
   'get_app_location',
 ] as const;

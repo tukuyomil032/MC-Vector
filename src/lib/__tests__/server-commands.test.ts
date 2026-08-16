@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tauriInvokeMock = vi.fn();
+const appDataDirMock = vi.fn();
+
+vi.mock('@tauri-apps/api/path', () => ({
+  appDataDir: appDataDirMock,
+}));
 
 vi.mock('../tauri-api', () => ({
   tauriInvoke: tauriInvokeMock,
@@ -19,6 +24,8 @@ describe('server-commands', () => {
   beforeEach(() => {
     vi.resetModules();
     tauriInvokeMock.mockReset();
+    appDataDirMock.mockReset();
+    appDataDirMock.mockResolvedValue('/app-data');
   });
 
   it('startServer invokes start_server with correct args (no jvmExtraArgs)', async () => {

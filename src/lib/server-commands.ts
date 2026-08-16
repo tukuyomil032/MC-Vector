@@ -1,9 +1,11 @@
+import { appDataDir } from '@tauri-apps/api/path';
 import { load } from '@tauri-apps/plugin-store';
 import type { MinecraftServer } from '../renderer/shared/server declaration';
 import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 const STORE_NAME = 'servers.json';
 const SERVER_TEMPLATES_KEY = 'serverTemplates';
+const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
 
 export interface ServerTemplate {
   id: string;
@@ -25,7 +27,32 @@ export interface ServerTemplate {
   autoBackupWeekday?: number;
 }
 
-// --- サーバー CRUD (Store で完結 → Rust 不要) ---
+function normalizePath(input: string): string {
+  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
+    return normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function isDirectManagedServerPath(serverPath: string, serverRoot: string): boolean {
+  const normalizedServerPath = normalizePath(serverPath.trim());
+  const normalizedServerRoot = normalizePath(serverRoot.trim());
+  if (!normalizedServerPath || normalizedServerPath === normalizedServerRoot) {
+    return false;
+  }
+
+  const parentPath = normalizedServerPath.split('/').slice(0, -1).join('/');
+  return parentPath === normalizedServerRoot;
+}
+
+async function resolveManagedServerDeletionPath(serverPath: string): Promise<string | null> {
+  const dataDir = await appDataDir();
+  const serverRoot = `${dataDir}/servers`;
+  return isDirectManagedServerPath(serverPath, serverRoot) ? serverPath : null;
+}
+
+// --- サーバー CRUD ---
 
 export async function getServers(): Promise<MinecraftServer[]> {
   const store = await load(STORE_NAME);
@@ -55,6 +82,22 @@ export async function updateServer(updated: MinecraftServer): Promise<void> {
 export async function deleteServer(id: string): Promise<boolean> {
   const store = await load(STORE_NAME);
   const servers = (await store.get<MinecraftServer[]>('servers')) ?? [];
+  const target = servers.find((s) => s.id === id);
+  if (!target) {
+    return false;
+  }
+
+  if (await isServerRunning(id)) {
+    throw new Error('Cannot delete a running server');
+  }
+
+  const managedServerPath = await resolveManagedServerDeletionPath(target.path);
+  if (managedServerPath) {
+    await tauriInvoke('delete_managed_server_dir', {
+      serverPath: managedServerPath,
+    });
+  }
+
   const filtered = servers.filter((s) => s.id !== id);
   await store.set('servers', filtered);
   await store.save();
