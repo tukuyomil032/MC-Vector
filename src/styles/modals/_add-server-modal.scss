@@ -61,7 +61,7 @@
   }
 
   .add-server-modal__submit-btn {
-    @apply px-5 py-2.5 bg-accent border-none text-white rounded font-bold;
-    @apply hover:bg-accent-hover;
+    @apply px-5 py-2.5 bg-zinc-900 border border-zinc-700 text-white rounded font-bold;
+    @apply hover:bg-zinc-800;
   }
 }
