@@ -165,6 +165,21 @@ fn validate_managed_server_dir_for_delete(
     let canonical_servers_root = std::fs::canonicalize(&servers_root)
         .map_err(|e| format!("Failed to resolve managed servers root: {}", e))?;
 
+    // Resolve the requested directory by enumerating the already trusted
+    // managed root. The user-provided path is used only for an exact match;
+    // filesystem operations below use the path returned by read_dir.
+    let target_path = std::fs::read_dir(&servers_root)
+        .map_err(|e| format!("Failed to inspect managed server folders: {}", e))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .find_map(|entry| match entry {
+            Ok(entry_path) if entry_path == target_path => Some(Ok(entry_path)),
+            Ok(_) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .transpose()
+        .map_err(|e| format!("Failed to inspect managed server folder: {}", e))?
+        .ok_or_else(|| "Server folder is not a direct managed server folder".to_string())?;
+
     let target_metadata = std::fs::symlink_metadata(&target_path)
         .map_err(|e| format!("Failed to inspect server folder: {}", e))?;
     if target_metadata.file_type().is_symlink() {
