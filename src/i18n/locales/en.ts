@@ -248,6 +248,8 @@ export const en: TranslationDictionary = {
     confirm: {
       delete: 'Delete {count} item(s)?',
       deleteTitle: 'Delete Files',
+      discardChanges: 'Discard unsaved changes and close this file?',
+      discardChangesTitle: 'Unsaved Changes',
     },
     contextMenu: {
       rename: 'Rename',
@@ -262,6 +264,17 @@ export const en: TranslationDictionary = {
     dropHint: 'Drop here to upload into the current folder',
     editor: {
       saving: 'Saving...',
+      close: 'Close editor',
+      unsaved: 'Unsaved',
+      saved: 'Saved',
+      lineColumn: 'Ln {line}, Col {column}',
+      encoding: 'UTF-8',
+      lineEnding: 'LF',
+      readOnly: 'Read-only',
+      settings: 'Editor settings',
+      minimap: 'Minimap',
+      wordWrap: 'Word wrap',
+      loadFailed: 'Could not load file',
     },
     emptyFolder: 'Folder is empty',
     loading: 'Loading...',

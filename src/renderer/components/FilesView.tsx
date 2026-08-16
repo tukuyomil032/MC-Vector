@@ -1,8 +1,9 @@
-import { DiffEditor, Editor } from '@monaco-editor/react';
+import { DiffEditor } from '@monaco-editor/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ask } from '@tauri-apps/plugin-dialog';
+import { ArrowUp, FolderPlus, GitCompareArrows, X } from 'lucide-react';
 import type * as React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   iconFile,
@@ -32,6 +33,7 @@ import {
   saveFileContent,
 } from '../../lib/file-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import FileEditorWorkspace from './FileEditorWorkspace';
 import SvgMaskIcon from './SvgMaskIcon';
 
 interface Props {
@@ -107,7 +109,9 @@ export default function FilesView({ server }: Props) {
 
   const [editingFile, setEditingFile] = useState<EditingFileState | null>(null);
   const [fileContent, setFileContent] = useState('');
+  const [originalFileContent, setOriginalFileContent] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExternalDropActive, setIsExternalDropActive] = useState(false);
 
@@ -128,6 +132,8 @@ export default function FilesView({ server }: Props) {
   const [diffOriginal, setDiffOriginal] = useState<{ path: string; content: string } | null>(null);
   const [diffModified, setDiffModified] = useState<{ path: string; content: string } | null>(null);
   const [diffSelectStep, setDiffSelectStep] = useState<'original' | 'modified' | null>(null);
+  const editorRequestId = useRef(0);
+  const filesRequestId = useRef(0);
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     if (type === 'success') {
@@ -210,10 +216,18 @@ export default function FilesView({ server }: Props) {
   }, [currentPath, t]);
 
   const loadFiles = async (path: string) => {
+    const requestId = filesRequestId.current + 1;
+    filesRequestId.current = requestId;
     try {
       const entries = await listFilesWithMetadata(path);
+      if (requestId !== filesRequestId.current) {
+        return;
+      }
       setFiles(entries);
     } catch (e) {
+      if (requestId !== filesRequestId.current) {
+        return;
+      }
       logError('Failed to list files', e, { path });
       showToast(t('files.toast.loadFailed'), 'error');
     }
@@ -238,12 +252,13 @@ export default function FilesView({ server }: Props) {
 
     return (
       <div className="files-view__breadcrumbs">
-        <span
+        <button
+          type="button"
           className="files-view__breadcrumb-link"
           onClick={() => setCurrentPath(normalizedRoot)}
         >
           {t('nav.servers')}
-        </span>
+        </button>
 
         {segments.map((seg, index) => {
           const pathUpToHere = `${normalizedRoot}/${segments.slice(0, index + 1).join('/')}`;
@@ -253,7 +268,8 @@ export default function FilesView({ server }: Props) {
           return (
             <span key={index} className="flex items-center">
               <span className="files-view__breadcrumb-separator">/</span>
-              <span
+              <button
+                type="button"
                 className={`files-view__breadcrumb-link ${!isWithinServerPath ? 'files-view__breadcrumb-link--disabled' : ''}`}
                 onClick={() => {
                   if (isWithinServerPath) {
@@ -262,7 +278,7 @@ export default function FilesView({ server }: Props) {
                 }}
               >
                 {seg}
-              </span>
+              </button>
             </span>
           );
         })}
@@ -315,11 +331,18 @@ export default function FilesView({ server }: Props) {
         setSelectedFiles([]);
       }
     } else {
+      const requestId = editorRequestId.current + 1;
+      editorRequestId.current = requestId;
+      setIsEditorLoading(true);
       try {
         const filePath = joinManagedPath(currentPath, fileName);
         const content = await readFileContent(filePath);
+        if (requestId !== editorRequestId.current) {
+          return;
+        }
         setEditingFile({ name: fileName, path: filePath });
         setFileContent(content);
+        setOriginalFileContent(content);
         setIsEditorOpen(true);
       } catch (e) {
         logError('Failed to read file', e, {
@@ -327,6 +350,10 @@ export default function FilesView({ server }: Props) {
           fileName,
         });
         showToast(t('files.toast.readFailed'), 'error');
+      } finally {
+        if (requestId === editorRequestId.current) {
+          setIsEditorLoading(false);
+        }
       }
     }
   };
@@ -347,15 +374,14 @@ export default function FilesView({ server }: Props) {
   };
 
   const handleSaveFile = useCallback(async () => {
-    if (!editingFile || isSaving) {
+    if (!editingFile || isSaving || fileContent === originalFileContent) {
       return;
     }
     setIsSaving(true);
     try {
       await saveFileContent(editingFile.path, fileContent);
+      setOriginalFileContent(fileContent);
       showToast(t('files.toast.saved'), 'success');
-      setIsEditorOpen(false);
-      setEditingFile(null);
     } catch (err) {
       console.error('Failed to save file content', {
         currentPath,
@@ -366,7 +392,28 @@ export default function FilesView({ server }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [currentPath, editingFile, fileContent, isSaving, t]);
+  }, [currentPath, editingFile, fileContent, isSaving, originalFileContent, t]);
+
+  const handleCloseEditor = useCallback(async () => {
+    if (!editingFile || isSaving) {
+      return;
+    }
+
+    if (fileContent !== originalFileContent) {
+      const discard = await ask(t('files.confirm.discardChanges'), {
+        title: t('files.confirm.discardChangesTitle'),
+        kind: 'warning',
+      });
+      if (!discard) {
+        return;
+      }
+    }
+
+    setIsEditorOpen(false);
+    setEditingFile(null);
+    setFileContent('');
+    setOriginalFileContent('');
+  }, [editingFile, fileContent, isSaving, originalFileContent, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -632,27 +679,33 @@ export default function FilesView({ server }: Props) {
       {/* ツールバー */}
       <div className="files-view__toolbar">
         <button
+          type="button"
           className="files-view__toolbar-btn"
           onClick={handleGoUp}
           disabled={currentPath === server.path}
+          aria-label={t('files.toolbar.goUp')}
           title={t('files.toolbar.goUp')}
         >
-          ⬆
+          <ArrowUp aria-hidden="true" className="files-view__toolbar-icon" size={16} />
         </button>
 
         {/* パンくずリスト */}
         <div className="files-view__breadcrumb-shell">{renderBreadcrumbs()}</div>
 
         <button
+          type="button"
           className="files-view__toolbar-btn"
           onClick={() => setModalType('create')}
+          aria-label={t('files.toolbar.createImport')}
           title={t('files.toolbar.createImport')}
         >
-          +
+          <FolderPlus aria-hidden="true" className="files-view__toolbar-icon" size={16} />
         </button>
         <button
+          type="button"
           className="files-view__toolbar-btn"
           onClick={handleOpenExplorer}
+          aria-label={t('files.toolbar.openExplorer')}
           title={t('files.toolbar.openExplorer')}
         >
           <SvgMaskIcon src={iconOpenFolder} className="files-view__toolbar-icon" />
@@ -672,37 +725,49 @@ export default function FilesView({ server }: Props) {
               showToast(t('files.toast.diffSelectOriginal'), 'info');
             }
           }}
+          aria-label={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
           title={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
         >
-          {diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
+          <GitCompareArrows aria-hidden="true" className="files-view__toolbar-icon" size={16} />
+          <span className="sr-only">
+            {diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
+          </span>
         </button>
         {selectedFiles.length > 0 && (
           <>
             <div className="files-view__toolbar-divider" />
             <button
+              type="button"
               className="files-view__toolbar-btn"
               onClick={() => openMoveModal(false)}
+              aria-label={t('files.toolbar.move')}
               title={t('files.toolbar.move')}
             >
               <SvgMaskIcon src={iconMove} className="files-view__toolbar-icon" />
             </button>
             <button
+              type="button"
               className="files-view__toolbar-btn"
               onClick={handleZip}
+              aria-label={t('files.toolbar.compress')}
               title={t('files.toolbar.compress')}
             >
               <SvgMaskIcon src={iconZip} className="files-view__toolbar-icon" />
             </button>
             <button
+              type="button"
               className="files-view__toolbar-btn"
               onClick={handleUnzip}
+              aria-label={t('files.toolbar.extract')}
               title={t('files.toolbar.extract')}
             >
               <SvgMaskIcon src={iconUnzip} className="files-view__toolbar-icon" />
             </button>
             <button
+              type="button"
               className="files-view__toolbar-btn files-view__toolbar-btn--danger"
               onClick={handleDelete}
+              aria-label={t('files.toolbar.delete')}
               title={t('files.toolbar.delete')}
             >
               <SvgMaskIcon src={iconTrash} className="files-view__toolbar-icon" />
@@ -725,6 +790,10 @@ export default function FilesView({ server }: Props) {
               <div
                 key={file.name}
                 className={`files-view__row ${selectedFiles.includes(file.name) ? 'is-selected' : ''}${diffSelectStep && !file.isDirectory ? ' cursor-crosshair' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label={file.name}
+                aria-pressed={selectedFiles.includes(file.name)}
                 onContextMenu={(e) => {
                   e.stopPropagation();
                   handleContextMenu(e, file);
@@ -737,6 +806,16 @@ export default function FilesView({ server }: Props) {
                   }
                 }}
                 onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (diffSelectStep && !file.isDirectory) {
+                      void handleDiffSelect(file, filePath);
+                    } else {
+                      void handleFileDoubleClick(file.name);
+                    }
+                  }
+                }}
                 draggable
                 onDragStart={(e) => handleDragStart(e, file.name)}
                 onDragOver={(e) => {
@@ -752,6 +831,7 @@ export default function FilesView({ server }: Props) {
                 <input
                   type="checkbox"
                   checked={selectedFiles.includes(file.name)}
+                  aria-label={file.name}
                   onClick={(e) => handleCheckboxClick(file.name, e)}
                   className="cursor-pointer mr-2.5 ml-2.5"
                 />
@@ -780,22 +860,36 @@ export default function FilesView({ server }: Props) {
 
       {/* Diff View Overlay */}
       {diffMode && diffOriginal && diffModified && (
-        <div className="files-view__editor-overlay">
+        <div className="files-view__editor-overlay" aria-label={t('files.toolbar.diffOpen')}>
           <div className="files-view__editor-header">
-            <span>
-              {diffOriginal.path.split(/[\\/]/).at(-1)}
-              {' → '}
-              {diffModified.path.split(/[\\/]/).at(-1)}
-            </span>
+            <div className="files-view__editor-identity">
+              <span className="files-view__editor-file-icon" aria-hidden="true">
+                <GitCompareArrows size={18} strokeWidth={1.8} />
+              </span>
+              <div className="files-view__editor-file-meta">
+                <div className="files-view__editor-file-title">
+                  <strong>
+                    {diffOriginal.path.split(/[\\/]/).at(-1)}
+                    {' → '}
+                    {diffModified.path.split(/[\\/]/).at(-1)}
+                  </strong>
+                </div>
+                <span className="files-view__editor-file-path">{t('files.toolbar.diffOpen')}</span>
+              </div>
+            </div>
             <div className="files-view__editor-actions">
               <button
-                className="btn-secondary"
+                type="button"
+                className="files-view__editor-icon-button"
                 onClick={() => {
                   setDiffMode(false);
                   setDiffOriginal(null);
                   setDiffModified(null);
                 }}
+                aria-label={t('common.close')}
+                title={t('common.close')}
               >
+                <X aria-hidden="true" size={18} strokeWidth={1.8} />
                 {t('common.close')}
               </button>
             </div>
@@ -808,41 +902,34 @@ export default function FilesView({ server }: Props) {
             theme="vs-dark"
             options={{ readOnly: true, minimap: { enabled: false }, renderSideBySide: true }}
           />
+          <div className="files-view__editor-statusbar" aria-live="polite">
+            <span>{detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}</span>
+            <span>{t('files.editor.readOnly')}</span>
+          </div>
         </div>
       )}
 
       {/* Editor Modal */}
-      {isEditorOpen && (
-        <div className="files-view__editor-overlay">
-          <div className="files-view__editor-header">
-            <span>{editingFile?.name}</span>
-            <div className="files-view__editor-actions">
-              <button
-                className="btn-secondary mr-2.5"
-                onClick={() => {
-                  setIsEditorOpen(false);
-                  setEditingFile(null);
-                }}
-              >
-                {t('common.close')}
-              </button>
-              <button
-                className="btn-primary disabled:opacity-50"
-                onClick={handleSaveFile}
-                disabled={isSaving}
-              >
-                {isSaving ? t('files.editor.saving') : t('common.save')}
-              </button>
-            </div>
-          </div>
-          <Editor
-            height="100%"
-            defaultLanguage={detectLanguage(editingFile?.name ?? '')}
-            theme="vs-dark"
-            value={fileContent}
-            onChange={(val) => setFileContent(val || '')}
-          />
+      {isEditorLoading && (
+        <div
+          className="files-view__editor-overlay files-view__editor-overlay--loading"
+          aria-busy="true"
+        >
+          <div className="files-view__editor-loading">{t('files.loading')}</div>
         </div>
+      )}
+      {isEditorOpen && editingFile && !isEditorLoading && (
+        <FileEditorWorkspace
+          file={editingFile}
+          content={fileContent}
+          language={detectLanguage(editingFile.name)}
+          isDirty={fileContent !== originalFileContent}
+          isSaving={isSaving}
+          onChange={setFileContent}
+          onSave={() => void handleSaveFile()}
+          onClose={() => void handleCloseEditor()}
+          t={t}
+        />
       )}
 
       {/* New Create / Import Modal */}
@@ -855,6 +942,15 @@ export default function FilesView({ server }: Props) {
               <div
                 className={`files-view__create-option ${createMode === 'folder' ? 'is-active' : ''}`}
                 onClick={() => setCreateMode('folder')}
+                role="button"
+                tabIndex={0}
+                aria-pressed={createMode === 'folder'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setCreateMode('folder');
+                  }
+                }}
               >
                 <SvgMaskIcon src={iconFiles} className="w-8 h-8" />
                 <span
@@ -867,6 +963,15 @@ export default function FilesView({ server }: Props) {
               <div
                 className={`files-view__create-option ${createMode === 'file' ? 'is-active' : ''}`}
                 onClick={() => setCreateMode('file')}
+                role="button"
+                tabIndex={0}
+                aria-pressed={createMode === 'file'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setCreateMode('file');
+                  }
+                }}
               >
                 <SvgMaskIcon src={iconFile} className="w-8 h-8" />
                 <span
@@ -879,6 +984,14 @@ export default function FilesView({ server }: Props) {
               <div
                 className="files-view__create-option files-view__create-option--import"
                 onClick={handleImport}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    void handleImport();
+                  }
+                }}
               >
                 <SvgMaskIcon src={iconImport} className="w-8 h-8" />
                 <span className="files-view__create-option-label is-idle">
@@ -980,14 +1093,28 @@ export default function FilesView({ server }: Props) {
         <div
           className="files-view__context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
+          role="menu"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setContextMenu(null);
+            } else if (e.key === 'Enter' || e.key === ' ') {
+              const target = e.target;
+              if (target instanceof HTMLElement && target !== e.currentTarget) {
+                e.preventDefault();
+                target.click();
+              }
+            }
+          }}
         >
           {contextMenu.file ? (
             <>
               {/* 1. 名前の変更 (画像なしのため透明なスペースで位置合わせ) */}
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
-                  setRenameFileName(contextMenu.file?.name);
+                  setRenameFileName(contextMenu.file?.name ?? '');
                   setModalType('rename');
                   setContextMenu(null);
                 }}
@@ -999,6 +1126,8 @@ export default function FilesView({ server }: Props) {
               {/* 2. アイテムを移動 */}
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   openMoveModal(false);
                   setContextMenu(null);
@@ -1011,6 +1140,8 @@ export default function FilesView({ server }: Props) {
               {/* 3. アイテムを圧縮 */}
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   handleZip();
                   setContextMenu(null);
@@ -1023,6 +1154,8 @@ export default function FilesView({ server }: Props) {
               {/* 4. アイテムを解凍 */}
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   handleUnzip();
                   setContextMenu(null);
@@ -1035,6 +1168,8 @@ export default function FilesView({ server }: Props) {
               {/* 5. アイテムを削除 */}
               <div
                 className="files-view__context-item files-view__context-item--danger"
+                role="menuitem"
+                tabIndex={0}
                 onClick={handleDelete}
               >
                 <SvgMaskIcon src={iconTrash} className="files-view__context-icon" />
@@ -1045,6 +1180,8 @@ export default function FilesView({ server }: Props) {
             <>
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   setModalType('create');
                   setContextMenu(null);
@@ -1055,6 +1192,8 @@ export default function FilesView({ server }: Props) {
               </div>
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   handleImport();
                   setContextMenu(null);
@@ -1065,6 +1204,8 @@ export default function FilesView({ server }: Props) {
               </div>
               <div
                 className="files-view__context-item"
+                role="menuitem"
+                tabIndex={0}
                 onClick={() => {
                   openMoveModal(true);
                   setContextMenu(null);
