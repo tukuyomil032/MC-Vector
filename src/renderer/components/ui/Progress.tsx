@@ -15,8 +15,8 @@ export function Progress({ value, className }: ProgressProps) {
       value={clampedValue}
     >
       <ProgressPrimitive.Indicator
-        className="h-full w-full flex-1 bg-[#5865F2] transition-all duration-200"
-        style={{ transform: `translateX(-${100 - clampedValue}%)` }}
+        className="h-full bg-[#5865F2]"
+        style={{ width: `${clampedValue}%` }}
       />
     </ProgressPrimitive.Root>
   );
