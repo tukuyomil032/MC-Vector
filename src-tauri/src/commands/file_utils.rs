@@ -324,7 +324,15 @@ mod tests {
     use std::path::PathBuf;
 
     fn servers_root() -> PathBuf {
-        PathBuf::from("/tmp/mc-vector-file-utils-tests/servers")
+        #[cfg(windows)]
+        {
+            PathBuf::from(r"C:\mc-vector-file-utils-tests\servers")
+        }
+
+        #[cfg(not(windows))]
+        {
+            PathBuf::from("/tmp/mc-vector-file-utils-tests/servers")
+        }
     }
 
     #[test]
