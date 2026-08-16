@@ -1,22 +1,15 @@
-import { mkdir } from '@tauri-apps/plugin-fs';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { exists, mkdir, remove } from '@tauri-apps/plugin-fs';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import { addServer as addServerApi, downloadServerJar } from '../../lib/server-commands';
+import { resolveRequestedJarUrl } from '../../lib/version-commands';
 import type { ToastKind } from '../components/ToastProvider';
 import type { MinecraftServer } from '../shared/server declaration';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
 type SetDownloadStatus = (status: { id: string; progress: number; msg: string } | null) => void;
-
-type PaperBuildsResponse = {
-  builds?: Array<{ build: number; downloads?: { application?: { name?: string } } }>;
-};
-type MojangManifest = { versions?: Array<{ id: string; url: string }> };
-type VerDetail = { downloads?: { server?: { url?: string } } };
-type FabricLoader = Array<{ version: string }>;
 
 interface UseServerCreateActionOptions {
   setServers: SetServers;
@@ -37,6 +30,8 @@ export function useServerCreateAction({
 }: UseServerCreateActionOptions) {
   const handleAddServer = useCallback(
     async (serverData: unknown) => {
+      let createdDirectory = false;
+      let createdServerPath = '';
       try {
         const source = serverData as Record<string, unknown>;
         const id = crypto.randomUUID();
@@ -46,6 +41,8 @@ export function useServerCreateAction({
           return;
         }
 
+        createdServerPath = serverPath;
+        createdDirectory = !(await exists(serverPath));
         await mkdir(serverPath, { recursive: true });
 
         const newServer: MinecraftServer = {
@@ -81,66 +78,24 @@ export function useServerCreateAction({
             typeof source.autoBackupWeekday === 'number' ? Math.floor(source.autoBackupWeekday) : 0,
           createdDate: new Date().toISOString(),
         };
-        await addServerApi(newServer);
-        setServers((prev) => [...prev, newServer]);
-        setSelectedServerId(newServer.id);
-        setShowAddServerModal(false);
-        showToast(t('server.toast.created'), 'success');
-
         const software = (source.software as string) || 'Vanilla';
         const version = (source.version as string) || '';
-        let downloadUrl = '';
+        const autoDownloadSoftware = new Set(['Paper', 'LeafMC', 'Vanilla', 'Fabric']);
+        const resolution = await resolveRequestedJarUrl(software, version);
 
-        try {
-          if (software === 'Paper' || software === 'LeafMC') {
-            const project = software === 'Paper' ? 'paper' : 'leafmc';
-            const buildsResponse = await tauriFetch(
-              `https://api.papermc.io/v2/projects/${project}/versions/${version}/builds`,
-            );
-            const buildsData = (await buildsResponse.json()) as PaperBuildsResponse;
-            if (buildsData.builds && buildsData.builds.length > 0) {
-              const latestBuild = buildsData.builds[buildsData.builds.length - 1];
-              const buildNumber = latestBuild.build;
-              const fileName =
-                latestBuild.downloads?.application?.name ||
-                `${project}-${version}-${buildNumber}.jar`;
-              downloadUrl = `https://api.papermc.io/v2/projects/${project}/versions/${version}/builds/${buildNumber}/downloads/${fileName}`;
-            }
-          } else if (software === 'Vanilla') {
-            const manifestResponse = await tauriFetch(
-              'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
-            );
-            const manifest = (await manifestResponse.json()) as MojangManifest;
-            const versionInfo = manifest.versions?.find((entry) => entry.id === version);
-            if (versionInfo) {
-              const versionDetailResponse = await tauriFetch(versionInfo.url);
-              const versionDetail = (await versionDetailResponse.json()) as VerDetail;
-              downloadUrl = versionDetail.downloads?.server?.url || '';
-            }
-          } else if (software === 'Fabric') {
-            const loaderResponse = await tauriFetch('https://meta.fabricmc.net/v2/versions/loader');
-            const loaders = (await loaderResponse.json()) as FabricLoader;
-            const latestLoader = loaders?.[0]?.version || '';
-            if (latestLoader) {
-              downloadUrl = `https://meta.fabricmc.net/v2/versions/loader/${version}/${latestLoader}/1.0.1/server/jar`;
-            }
-          }
-        } catch (error) {
-          logError('Failed to resolve server jar download URL', error, {
-            software,
-            version,
-            serverId: newServer.id,
-          });
-        }
-
-        if (downloadUrl) {
+        if (resolution) {
           setDownloadStatus({
             id: newServer.id,
             progress: 0,
             msg: t('server.toast.downloadStarting'),
           });
           try {
-            await downloadServerJar(downloadUrl, `${serverPath}/server.jar`, newServer.id);
+            await downloadServerJar(
+              resolution.downloadUrl,
+              `${serverPath}/server.jar`,
+              newServer.id,
+              resolution.sha256,
+            );
           } catch (error) {
             logError('Server jar download failed', error, {
               serverId: newServer.id,
@@ -148,12 +103,31 @@ export function useServerCreateAction({
               downloadUrl,
             });
             setDownloadStatus(null);
-            showToast(t('server.toast.jarDownloadFailed'), 'error');
+            throw error;
           }
-        } else {
+        } else if (autoDownloadSoftware.has(software)) {
+          throw new Error(`No official stable JAR is available for ${software} ${version}`);
+        }
+
+        await addServerApi(newServer);
+        setServers((prev) => [...prev, newServer]);
+        setSelectedServerId(newServer.id);
+        setShowAddServerModal(false);
+        showToast(t('server.toast.created'), 'success');
+        setDownloadStatus(null);
+        if (!resolution) {
           showToast(t('server.toast.jarUrlFailed'), 'info');
         }
       } catch (error) {
+        if (createdDirectory && createdServerPath) {
+          try {
+            await remove(createdServerPath, { recursive: true });
+          } catch (cleanupError) {
+            logError('Failed to roll back server directory', cleanupError, {
+              serverPath: createdServerPath,
+            });
+          }
+        }
         logError('Server creation failed', error, {
           serverDataType: typeof serverData,
         });

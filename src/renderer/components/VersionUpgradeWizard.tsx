@@ -30,6 +30,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
   const [step, setStep] = useState<WizardStep>('check');
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [downloadSha256, setDownloadSha256] = useState<string | undefined>();
   const [backupProgress, setBackupProgress] = useState(0);
   const [dlProgress, setDlProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
@@ -48,6 +49,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
         } else {
           setLatestVersion(result.latestVersion);
           setDownloadUrl(result.downloadUrl);
+          setDownloadSha256(result.sha256);
         }
       })
       .catch(() => {
@@ -97,7 +99,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
           setDlProgress(Math.round(progress));
         }
       });
-      await downloadServerJar(downloadUrl, `${server.path}/server.jar`, server.id);
+      await downloadServerJar(downloadUrl, `${server.path}/server.jar`, server.id, downloadSha256);
       const updated: MinecraftServer = { ...server, version: latestVersion };
       await updateServer(updated);
       await onServerUpdate(updated);

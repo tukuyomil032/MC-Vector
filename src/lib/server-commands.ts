@@ -128,8 +128,15 @@ export async function downloadServerJar(
   url: string,
   destPath: string,
   serverId: string,
+  sha256?: string,
 ): Promise<void> {
-  return tauriInvoke('download_server_jar', { url, destPath, serverId });
+  const args: { url: string; destPath: string; serverId: string; sha256?: string } = {
+    url,
+    destPath,
+    serverId,
+  };
+  if (sha256) args.sha256 = sha256;
+  return tauriInvoke('download_server_jar', args);
 }
 
 export async function getServerStats(pid: number): Promise<{ cpu: number; memory: number }> {
