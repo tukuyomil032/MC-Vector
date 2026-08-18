@@ -2,12 +2,14 @@
 
 [![CI](https://github.com/tukuyomil032/MC-Vector/workflows/CI/badge.svg)](https://github.com/tukuyomil032/MC-Vector/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0.55-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
+[![Version](https://img.shields.io/badge/version-2.0.58-green.svg)](https://github.com/tukuyomil032/MC-Vector/releases)
 [![GitHub stars](https://img.shields.io/github/stars/tukuyomil032/MC-Vector.svg?style=social)](https://github.com/tukuyomil032/MC-Vector/stargazers)
 
 **Minecraft - Multi-Function Server Management Software**
 
 MC-Vector is a powerful cross-platform desktop application for managing Minecraft servers with ease. Built with Tauri and React, it provides a modern, fast, and intuitive interface for server administration.
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and the pull request process.
 
 ## Features
 
@@ -25,13 +27,9 @@ MC-Vector is a powerful cross-platform desktop application for managing Minecraf
 - 🔄 **Auto-Updater** - Keep MC-Vector up to date automatically
 
 ---
-
-## Installation
+## One-liner install(recommended)
 
 ### macOS
-
-#### One-liner install(recommended)
-
 ```bash
 brew tap tukuyomil032/tap
 brew install --cask mc-vector
@@ -40,36 +38,38 @@ brew install --cask mc-vector
 xattr -cr /Applications/MC-Vector.app
 ```
 
-### Uninstall
+### Windows
+```bash
+scoop bucket add tukuyomil032 https://github.com/tukuyomil032/homebrew-tap
+scoop install mc-vector
+```
+## Uninstall
 
+### macOS
 ```bash
 brew uninstall mc-vector
 brew untap tukuyomil032/mcvector
-
+```
+### Windows
+```bash
+scoop uninstall mc-vector
+scoop bucket rm tukuyomil032
 ```
 
 #### Manual Installation
 
+#### macOS
 1. Download `MC-Vector.dmg` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
 2. Open the `.dmg` file
 3. Drag MC-Vector to Applications
 4. Launch MC-Vector from Applications
 
-### Windows
+#### Windows
 
 1. Download `MC-Vector-Setup.exe` from [Releases](https://github.com/tukuyomil032/MC-Vector/releases)
 2. Run the installer
 3. Follow the installation wizard
 4. Launch MC-Vector from the Start menu
-
-### Linux
-
-**AppImage:**
-
-```bash
-chmod +x MC-Vector.AppImage
-./MC-Vector.AppImage
-```
 
 ---
 
@@ -106,8 +106,6 @@ chmod +x MC-Vector.AppImage
 Optional:
 
 - **just** - Modern task runner
-- **Nix** - Reproducible development environment
-- **direnv** - Auto-load development shell
 
 ---
 
@@ -124,18 +122,17 @@ Optional:
    - Click "Create"
 5. **Start your server** and enjoy!
 
-For detailed usage instructions, see the [User Guide](docs/tutorial.md).
+For detailed usage instructions, see the [User Guide](docs/src/content/docs/guide/getting-started/installation.mdx).
 
 ### For Developers
 
-**Using Nix (Recommended):**
+**Quick Setup:**
 
 ```bash
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
-nix develop
 just setup
-just tauri-dev  # Start Tauri app with dev server
+just dev-app  # Start Tauri app with dev server
 ```
 
 **Manual Setup:**
@@ -149,18 +146,16 @@ pnpm install
 
 # Optional but recommended: Run full setup with portless
 just setup
-# or
-make setup
 
 # Start development
-just tauri-dev
+just dev-app
 # or
 pnpm tauri:dev
 ```
 
-**What does `just setup` / `make setup` do?**
+**What does `just setup` do?**
 
-Both `just setup` and `make setup` automate your development environment setup:
+`just setup` automates your development environment setup:
 
 1. 📦 Installs all project dependencies via `pnpm install`
 2. ✅ Runs all quality checks (lint, format, rustfmt)
@@ -173,38 +168,16 @@ Both `just setup` and `make setup` automate your development environment setup:
 
 **Development server options:**
 
-- `just dev` - Browser-only dev server via portless HTTPS (`https://mc-vector.localhost`)
-- `just tauri-dev` - Full Tauri app with dev server (recommended for app development)
+- `just dev-web` - Browser-only dev server via portless HTTPS (`https://mc-vector.localhost`)
+- `just dev-app` - Full Tauri app with dev server (recommended for app development)
 
-For detailed development instructions, see the [Development Guide](docs/development-guide.md).
+For detailed development instructions, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).
 
 ---
 
 ## Development
 
 ### Setup Development Environment
-
-**Option 1: Using Nix (Recommended)**
-
-Nix provides a fully reproducible development environment:
-
-> **Windows note:** Nix-based development is supported on Windows via **WSL2 only**.
-
-```bash
-# Install Nix (if not already installed)
-sh <(curl -L https://nixos.org/nix/install) --daemon
-
-# Enable Flakes (add to ~/.config/nix/nix.conf)
-echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-
-# Enter development shell
-nix develop
-
-# Run full setup (installs deps, configures portless, runs checks)
-just setup
-```
-
-**Option 2: Manual Setup**
 
 Install dependencies manually:
 
@@ -214,11 +187,11 @@ Install dependencies manually:
 
 # Install project dependencies and configure environment
 pnpm install
-just setup  # or make setup
+just setup
 
 # Alternative: Skip portless setup and use standard localhost
 pnpm install
-make check
+pnpm check
 ```
 
 ### Development Workflow
@@ -226,9 +199,7 @@ make check
 **For Tauri app development (recommended):**
 
 ```bash
-just tauri-dev
-# or
-make tauri-dev
+just dev-app
 ```
 
 This starts both the Vite dev server and the Tauri application window.
@@ -236,7 +207,7 @@ This starts both the Vite dev server and the Tauri application window.
 **For browser-only development:**
 
 ```bash
-just dev
+just dev-web
 # or
 pnpm dev
 ```
@@ -247,11 +218,9 @@ Run quality checks before committing:
 
 ```bash
 just check-all
-# or
-make check && make rustfmt
 ```
 
-For more details, see the [Development Guide](docs/development-guide.md).
+For more details, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).
 
 ---
 
@@ -259,16 +228,8 @@ For more details, see the [Development Guide](docs/development-guide.md).
 
 ### Build for Production
 
-**Using justfile:**
-
 ```bash
 just tauri-build
-```
-
-**Using Makefile:**
-
-```bash
-make tauri-build
 ```
 
 Build artifacts will be in `src-tauri/target/release/bundle/`:
@@ -335,14 +296,12 @@ MC-Vector/
 │           ├── java.rs               # Java runtime detection
 │           └── ngrok.rs              # Ngrok integration
 │
-├── docs/                             # Documentation
-│   ├── tutorial.md                   # User guide
-│   ├── development-guide.md          # Developer guide
-│   ├── architecture.md               # Technical architecture
-│   └── ...
+├── docs/                             # Astro/Starlight documentation site
+│   └── src/content/docs/             # User guide, dev setup, architecture docs
 │
 ├── .github/                          # GitHub configurations
-│   └── workflows/                    # CI/CD workflows
+│   ├── workflows/                    # CI/CD workflows
+│   └── pull_request_template.md      # PR description template
 │
 ├── scripts/
 │   ├── cargo-optional.mjs            # check Cargo dependencies
@@ -351,11 +310,7 @@ MC-Vector/
 │   ├── release-tag.mjs               # create tag
 │   └── update-versions.js            # Update version numbers
 │
-├── Makefile                          # Traditional task runner
 ├── justfile                          # Modern task runner
-├── flake.nix                         # Nix Flakes definition
-├── shell.nix                         # Nix shell environment
-├── .envrc                            # direnv configuration
 ├── package.json                      # Node.js project manifest
 ├── pnpm-lock.yaml                    # pnpm lock file
 ├── vite.config.ts                    # Vite build configuration
@@ -364,11 +319,12 @@ MC-Vector/
 ├── tsconfig.json                     # TypeScript configuration
 ├── AGENTS.md                         # AI Agent rule file
 ├── CLAUDE.md                         # CLAUDE rule files
+├── CONTRIBUTING.md                   # Contribution guidelines
 └── README.md                         # This file
 
 ```
 
-For a detailed architecture overview, see [Architecture Documentation](docs/architecture.md).
+For a detailed architecture overview, see [Architecture Documentation](docs/src/content/docs/dev/architecture.mdx).
 
 ---
 
@@ -376,57 +332,60 @@ For a detailed architecture overview, see [Architecture Documentation](docs/arch
 
 ### Development Tasks
 
-| Task                 | justfile         | Makefile         | Description                                                        |
-| -------------------- | ---------------- | ---------------- | ------------------------------------------------------------------ |
-| Install dependencies | `just install`   | `make install`   | Install all dependencies                                           |
-| Full setup           | `just setup`     | `make setup`     | Install deps + portless setup + quality checks                     |
-| Start frontend dev   | `just dev`       | `make dev`       | Start Vite dev server via portless (`https://mc-vector.localhost`) |
-| Start Tauri dev      | `just tauri-dev` | `make tauri-dev` | Start Tauri app in dev mode                                        |
+| Task                 | justfile         | Description                                                        |
+| -------------------- | ---------------- | ------------------------------------------------------------------ |
+| Install dependencies | `just install`   | Install all dependencies                                           |
+| Full setup           | `just setup`     | Install deps + portless setup + quality checks                     |
+| Start frontend dev   | `just dev-web`   | Start Vite dev server via portless (`https://mc-vector.localhost`) |
+| Start Tauri dev      | `just dev-app`   | Start Tauri app in dev mode                                        |
 
 ### Build Tasks
 
-| Task            | justfile           | Makefile           | Description                   |
-| --------------- | ------------------ | ------------------ | ----------------------------- |
-| Build frontend  | `just build`       | `make build`       | Build frontend for production |
-| Build Tauri app | `just tauri-build` | `make tauri-build` | Build Tauri application       |
+| Task            | justfile           | Description                   |
+| --------------- | ------------------ | ----------------------------- |
+| Build frontend  | `just build`       | Build frontend for production |
+| Build Tauri app | `just tauri-build` | Build Tauri application       |
 
 ### Quality Checks
 
-| Task        | justfile         | Makefile       | Description                             |
-| ----------- | ---------------- | -------------- | --------------------------------------- |
-| Lint code   | `just lint`      | `make lint`    | Run oxlint (via vite+)                  |
-| Format code | `just format`    | `make format`  | Format with oxfmt and biome (via vite+) |
-| Check all   | `just check`     | `make check`   | Run lint & format checks                |
-| Format Rust | `just rustfmt`   | `make rustfmt` | Format Rust code                        |
-| All checks  | `just check-all` | N/A            | Run all quality checks                  |
+| Task        | justfile         | Description               |
+| ----------- | ---------------- | -------------------------- |
+| Lint code   | `just lint`      | Run Biome linter           |
+| Format code | `just format`    | Format code with Biome     |
+| Check all   | `just check`     | Run lint & format checks   |
+| Format Rust | `just rustfmt`   | Format Rust code           |
+| All checks  | `just check-all` | Run all quality checks     |
 
 ### Utilities
 
-| Task               | justfile                  | Makefile                  | Description                          |
-| ------------------ | ------------------------- | ------------------------- | ------------------------------------ |
-| Full setup         | `just setup`              | `make setup`              | Install deps + portless + all checks |
-| Clean builds       | `just clean`              | `make clean`              | Clean build artifacts                |
-| Install extensions | `just install-extensions` | `make install-extensions` | Install VS Code extensions           |
-| Update versions    | `just update-versions`    | `make update-versions`    | Update version numbers               |
+| Task               | justfile                  | Description                          |
+| ------------------ | ------------------------- | ------------------------------------ |
+| Full setup         | `just setup`              | Install deps + portless + all checks |
+| Clean builds       | `just clean`              | Clean build artifacts                |
+| Install extensions | `just install-extensions` | Install VS Code extensions           |
+| Update versions    | `just update-versions`    | Update version numbers               |
 
-For detailed command usage, see the [Development Guide](docs/development-guide.md).
+For detailed command usage, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).
 
 ---
 
 ## Documentation
 
-- **[User Guide](docs/tutorial.md)** - Complete guide to using MC-Vector
-- **[Development Guide](docs/development-guide.md)** - Developer setup and workflow
-- **[Architecture](docs/architecture.md)** - Technical architecture overview
+- **[User Guide](docs/src/content/docs/guide/getting-started/installation.mdx)** - Complete guide to using MC-Vector
+- **[Development Guide](docs/src/content/docs/dev/setup.mdx)** - Developer setup and workflow
+- **[Architecture](docs/src/content/docs/dev/architecture.mdx)** - Technical architecture overview
+- **[Contributing Guide](CONTRIBUTING.md)** - Conventions, validation, and pull request expectations
 
 ---
 
 ### Quick Contribution Guide
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guidelines. In short:
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make your changes
-4. Run quality checks: `just check-all` or `make check`
+4. Run quality checks: `just check-all`
 5. Commit your changes: `git commit -m "feat: your feature description"`
 6. Push to your fork: `git push origin feature/your-feature`
 7. Open a Pull Request
@@ -449,11 +408,10 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Charts:** Recharts
 - **Terminal:** xterm.js
 - **Package Manager:** pnpm
-- **Build Tool:** Vite+
-- **Task Runners:** just, Make
-- **Environment:** Nix (optional)
+- **Build Tool:** Vite
+- **Task Runner:** just
 
-For more details, see the [Architecture Documentation](docs/architecture.md) and [Development Guide](docs/development-guide.md).
+For more details, see the [Architecture Documentation](docs/src/content/docs/dev/architecture.mdx) and [Development Guide](docs/src/content/docs/dev/setup.mdx).
 
 ---
 
