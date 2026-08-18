@@ -1,6 +1,6 @@
 [package]
 name = "mc-vector"
-version = "2.0.56"
+version = "2.0.58"
 description = "Minecraft Server Management App"
 authors = ["tukuyomi032"]
 license = "MIT"
@@ -42,6 +42,7 @@ tar = "0.4"
 flate2 = "1"
 reqwest = { version = "0.12", features = ["stream"] }
 futures-util = "0.3"
+sha2 = "0.10"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

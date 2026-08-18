@@ -135,6 +135,7 @@ export const en: TranslationDictionary = {
       jarUrlFailed: 'Failed to get download URL. Please place the JAR manually.',
       createFailed: 'Failed to create server',
       deleted: 'Server deleted',
+      deleteRunning: 'Cannot delete a running server',
       deleteFailed: 'Failed to delete server',
       deleteError: 'Delete error',
       cloned: 'Server cloned',
@@ -151,6 +152,10 @@ export const en: TranslationDictionary = {
     },
     confirm: {
       delete: 'Are you sure you want to delete "{name}"?',
+      deleteManaged:
+        'Delete "{name}"?\nThe managed server folder will also be permanently deleted: {path}',
+      deleteExternal:
+        'Unregister "{name}"?\nThe externally imported folder will not be deleted: {path}',
       clone: 'Clone "{name}"?',
     },
   },
@@ -243,6 +248,8 @@ export const en: TranslationDictionary = {
     confirm: {
       delete: 'Delete {count} item(s)?',
       deleteTitle: 'Delete Files',
+      discardChanges: 'Discard unsaved changes and close this file?',
+      discardChangesTitle: 'Unsaved Changes',
     },
     contextMenu: {
       rename: 'Rename',
@@ -257,6 +264,17 @@ export const en: TranslationDictionary = {
     dropHint: 'Drop here to upload into the current folder',
     editor: {
       saving: 'Saving...',
+      close: 'Close editor',
+      unsaved: 'Unsaved',
+      saved: 'Saved',
+      lineColumn: 'Ln {line}, Col {column}',
+      encoding: 'UTF-8',
+      lineEnding: 'LF',
+      readOnly: 'Read-only',
+      settings: 'Editor settings',
+      minimap: 'Minimap',
+      wordWrap: 'Word wrap',
+      loadFailed: 'Could not load file',
     },
     emptyFolder: 'Folder is empty',
     loading: 'Loading...',
@@ -471,6 +489,8 @@ export const en: TranslationDictionary = {
       tabInstalled: 'Installed ({{count}})',
       searchOn: 'Search on {{platform}}...',
       searching: 'Searching...',
+      retry: 'Retry',
+      searchError: 'Plugin search failed. Check your connection and try again.',
       sortLabel: 'Sort',
       sortRelevance: 'Relevance',
       sortDownloads: 'Downloads',

@@ -116,6 +116,10 @@
     @apply flex flex-wrap items-center justify-end gap-2.5;
   }
 
+  .plugin-browser__search-error {
+    @apply flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-200;
+  }
+
   .plugin-browser__sort-label {
     @apply text-xs uppercase tracking-[0.08em] text-zinc-500;
   }

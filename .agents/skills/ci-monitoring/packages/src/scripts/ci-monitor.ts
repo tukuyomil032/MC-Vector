@@ -7,7 +7,6 @@ import {
   listRuns,
   validateRepo,
   type JobInfo,
-  type RunInfo,
 } from "../lib/gh.js";
 import { pickRun, promptRepo } from "../lib/picker.js";
 import { buildJobTable, conclusionBadge, printHeader } from "../lib/tui.js";
@@ -85,7 +84,9 @@ async function saveFailureReport(jobs: JobInfo[]): Promise<void> {
   md += `生成日時: ${new Date().toLocaleString()}\n\n`;
   md += "## 失敗ジョブ\n\n";
   for (const j of failed) {
-    md += `- **${j.name}**  (${conclusionBadge(j.conclusion, j.status).replace(/\x1b\[[0-9;]*m/g, "")})\n`;
+    // eslint-disable-next-line no-control-regex -- intentional: strip ANSI escape codes
+    md += `- **${j.name}**  (${conclusionBadge(j.conclusion, j.status).replace(/\u001b\[[0-9;]*m/g, "")})
+`;
   }
   try {
     const log = await getRunLog(runId, repo, true);

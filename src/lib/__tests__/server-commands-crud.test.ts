@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getMock = vi.fn();
 const setMock = vi.fn();
 const saveMock = vi.fn();
+const appDataDirMock = vi.fn();
+const tauriInvokeMock = vi.fn();
+
+vi.mock('@tauri-apps/api/path', () => ({
+  appDataDir: appDataDirMock,
+}));
 
 vi.mock('@tauri-apps/plugin-store', () => ({
   load: vi.fn().mockResolvedValue({
@@ -13,7 +19,7 @@ vi.mock('@tauri-apps/plugin-store', () => ({
 }));
 
 vi.mock('../tauri-api', () => ({
-  tauriInvoke: vi.fn(),
+  tauriInvoke: tauriInvokeMock,
   tauriListen: vi.fn(),
 }));
 
@@ -32,6 +38,15 @@ describe('server-commands (CRUD)', () => {
     getMock.mockReset();
     setMock.mockReset();
     saveMock.mockReset();
+    appDataDirMock.mockReset();
+    tauriInvokeMock.mockReset();
+    appDataDirMock.mockResolvedValue('/app-data');
+    tauriInvokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'is_server_running') {
+        return false;
+      }
+      return undefined;
+    });
   });
 
   describe('getServers', () => {
@@ -96,7 +111,7 @@ describe('server-commands (CRUD)', () => {
   });
 
   describe('deleteServer', () => {
-    it('removes server by id and saves', async () => {
+    it('removes external server from store without deleting its folder', async () => {
       const servers = [
         { id: 's1', name: 'A', ...SERVER_BASE },
         { id: 's2', name: 'B', ...SERVER_BASE, port: 25566 },
@@ -104,9 +119,80 @@ describe('server-commands (CRUD)', () => {
       getMock.mockResolvedValueOnce(servers);
       const { deleteServer } = await import('../server-commands');
       const result = await deleteServer('s1');
+      expect(tauriInvokeMock).toHaveBeenCalledWith('is_server_running', { serverId: 's1' });
+      expect(tauriInvokeMock).not.toHaveBeenCalledWith(
+        'delete_managed_server_dir',
+        expect.anything(),
+      );
       expect(setMock).toHaveBeenCalledWith('servers', [servers[1]]);
       expect(saveMock).toHaveBeenCalled();
       expect(result).toBe(true);
+    });
+
+    it('deletes managed server folder before removing the store entry', async () => {
+      const servers = [
+        { id: 's1', name: 'A', ...SERVER_BASE, path: '/app-data/servers/s1' },
+        { id: 's2', name: 'B', ...SERVER_BASE, path: '/app-data/servers/s2' },
+      ];
+      getMock.mockResolvedValueOnce(servers);
+      const { deleteServer } = await import('../server-commands');
+
+      await expect(deleteServer('s1')).resolves.toBe(true);
+
+      expect(tauriInvokeMock).toHaveBeenNthCalledWith(1, 'is_server_running', { serverId: 's1' });
+      expect(tauriInvokeMock).toHaveBeenNthCalledWith(2, 'delete_managed_server_dir', {
+        serverPath: '/app-data/servers/s1',
+      });
+      expect(setMock).toHaveBeenCalledWith('servers', [servers[1]]);
+      expect(saveMock).toHaveBeenCalled();
+    });
+
+    it('does not update store when managed folder deletion fails', async () => {
+      const servers = [{ id: 's1', name: 'A', ...SERVER_BASE, path: '/app-data/servers/s1' }];
+      getMock.mockResolvedValueOnce(servers);
+      tauriInvokeMock.mockImplementation(async (cmd: string) => {
+        if (cmd === 'is_server_running') {
+          return false;
+        }
+        if (cmd === 'delete_managed_server_dir') {
+          throw new Error('permission denied');
+        }
+        return undefined;
+      });
+      const { deleteServer } = await import('../server-commands');
+
+      await expect(deleteServer('s1')).rejects.toThrow('permission denied');
+
+      expect(setMock).not.toHaveBeenCalled();
+      expect(saveMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects running servers before folder deletion or store updates', async () => {
+      const servers = [{ id: 's1', name: 'A', ...SERVER_BASE, path: '/app-data/servers/s1' }];
+      getMock.mockResolvedValueOnce(servers);
+      tauriInvokeMock.mockResolvedValueOnce(true);
+      const { deleteServer } = await import('../server-commands');
+
+      await expect(deleteServer('s1')).rejects.toThrow('Cannot delete a running server');
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('is_server_running', { serverId: 's1' });
+      expect(tauriInvokeMock).not.toHaveBeenCalledWith(
+        'delete_managed_server_dir',
+        expect.anything(),
+      );
+      expect(setMock).not.toHaveBeenCalled();
+      expect(saveMock).not.toHaveBeenCalled();
+    });
+
+    it('returns false without saving when server is not found', async () => {
+      getMock.mockResolvedValueOnce([]);
+      const { deleteServer } = await import('../server-commands');
+
+      await expect(deleteServer('missing')).resolves.toBe(false);
+
+      expect(tauriInvokeMock).not.toHaveBeenCalled();
+      expect(setMock).not.toHaveBeenCalled();
+      expect(saveMock).not.toHaveBeenCalled();
     });
   });
 

@@ -1,5 +1,5 @@
-import { fetch } from '@tauri-apps/plugin-http';
 import { searchHangarProjects } from './adapters/plugin/hangar-adapter';
+import { fetchJson } from './adapters/plugin/http-client';
 import { searchModrinthProjects } from './adapters/plugin/modrinth-adapter';
 import { searchSpigotResources } from './adapters/plugin/spigot-adapter';
 import { asString, isRecord } from './guards/json-guards';
@@ -94,26 +94,6 @@ interface SpigotResourceDocument {
 interface HangarVersionResponse {
   result: unknown[];
   pagination: unknown;
-}
-
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (!headers.has('Accept')) {
-    headers.set('Accept', 'application/json');
-  }
-  if (!headers.has('User-Agent')) {
-    headers.set('User-Agent', 'MC-Vector/2.0');
-  }
-
-  const response = await fetch(url, {
-    ...init,
-    headers,
-  });
-
-  if (!response.ok) {
-    throw new Error(`API error ${response.status} ${response.statusText}: ${url}`);
-  }
-  return response.json() as Promise<T>;
 }
 
 function parseModrinthDependency(value: unknown): ModrinthDependency | null {
@@ -377,12 +357,14 @@ export async function searchModrinth(
   facets: string,
   offset = 0,
   limit = 20,
+  signal?: AbortSignal,
 ): Promise<{ hits: ModrinthProject[]; total_hits: number }> {
   const result = await searchModrinthProjects({
     query,
     facets,
     offset,
     limit,
+    signal,
   });
 
   return {
@@ -445,11 +427,13 @@ export async function getModrinthProjectBody(projectId: string): Promise<string 
 export async function searchHangar(
   query: string,
   offset = 0,
+  signal?: AbortSignal,
 ): Promise<{ result: HangarProject[]; pagination: unknown }> {
   const payload = await searchHangarProjects({
     query,
     offset,
     limit: 25,
+    signal,
   });
   const result: HangarProject[] = payload.result.map((project) => ({
     name: project.name,
@@ -595,11 +579,17 @@ export async function getHangarProjectBody(owner: string, slug: string): Promise
   return parsed.description.trim() ? parsed.description : null;
 }
 
-export async function searchSpigot(query: string, page = 1, size = 25): Promise<SpigetResource[]> {
+export async function searchSpigot(
+  query: string,
+  page = 1,
+  size = 25,
+  signal?: AbortSignal,
+): Promise<SpigetResource[]> {
   const resources = await searchSpigotResources({
     query,
     page,
     size,
+    signal,
   });
 
   return resources.map((resource) => ({ ...resource }));

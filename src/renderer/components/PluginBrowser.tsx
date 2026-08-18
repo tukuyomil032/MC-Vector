@@ -12,6 +12,7 @@ import {
   Loader2,
   type LucideIcon,
   Package,
+  RefreshCw,
   Search,
   Server,
   Star,
@@ -657,15 +658,17 @@ export default function PluginBrowser({ server }: Props) {
       platform,
       committedQuery,
       page,
+      server.id,
+      server.path,
       server.version,
       isModServer,
     ] as const,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const offset = page * LIMIT;
       if (platform === 'Modrinth') {
         const searchType = isModServer ? 'mod' : 'plugin';
         const facets = `[["project_type:${searchType}"],["versions:${server.version}"]]`;
-        const result = await searchModrinth(committedQuery, facets, offset, LIMIT);
+        const result = await searchModrinth(committedQuery, facets, offset, LIMIT, signal);
         const items = result.hits
           .map(mapModrinthProject)
           .filter((item): item is ProjectItem => item !== null);
@@ -676,23 +679,48 @@ export default function PluginBrowser({ server }: Props) {
         };
       }
       if (platform === 'Hangar') {
-        const data = await searchHangar(committedQuery, offset);
+        const data = await searchHangar(committedQuery, offset, signal);
         const items = data.result.map(mapHangarProject);
         return { items, hasNextPage: items.length === LIMIT, totalPages: null as number | null };
       }
-      const resources = await searchSpigot(committedQuery, page + 1, LIMIT);
+      const resources = await searchSpigot(committedQuery, page + 1, LIMIT, signal);
       const items = resources.map(mapSpigotResource);
       return { items, hasNextPage: items.length === LIMIT, totalPages: null as number | null };
     },
     enabled: isInAppSearch && activeSection === 'browse',
     staleTime: 5 * 60 * 1000,
-    placeholderData: (prev) => prev,
+    retry: 1,
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 1_000),
+    refetchOnWindowFocus: false,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[4] === server.id && previousQuery.queryKey[5] === server.path
+        ? previous
+        : undefined,
   });
 
-  const results = searchQuery.data?.items ?? [];
+  const searchIdentity = `${server.id}\u0000${server.path}\u0000${platform}`;
+  const lastSuccessfulSearchRef = useRef<{
+    identity: string;
+    data: NonNullable<typeof searchQuery.data>;
+  } | null>(null);
+  useEffect(() => {
+    if (searchQuery.data && !searchQuery.isError) {
+      lastSuccessfulSearchRef.current = {
+        identity: searchIdentity,
+        data: searchQuery.data,
+      };
+    }
+  }, [searchIdentity, searchQuery.data, searchQuery.isError]);
+
+  const retainedData =
+    lastSuccessfulSearchRef.current?.identity === searchIdentity
+      ? lastSuccessfulSearchRef.current.data
+      : undefined;
+  const searchData = searchQuery.data ?? retainedData;
+  const results = searchData?.items ?? [];
   const loading = searchQuery.isFetching;
-  const hasNextPage = searchQuery.data?.hasNextPage ?? false;
-  const totalPages = searchQuery.data?.totalPages ?? null;
+  const hasNextPage = searchData?.hasNextPage ?? false;
+  const totalPages = searchData?.totalPages ?? null;
 
   // Show toast on search error (searchError is stable per React Query - only changes identity on new error)
   const searchError = searchQuery.error;
@@ -2403,6 +2431,22 @@ export default function PluginBrowser({ server }: Props) {
                   <option value="compatibility">{t('plugins.browser.sortCompatibility')}</option>
                 </select>
               </div>
+              {searchQuery.isError && (
+                <div className="plugin-browser__search-error" role="alert">
+                  <span>
+                    {t('plugins.browser.searchError')} {toErrorMessage(searchQuery.error)}
+                  </span>
+                  <button
+                    type="button"
+                    className="plugin-browser__unsupported-btn"
+                    onClick={() => void searchQuery.refetch()}
+                    disabled={loading}
+                  >
+                    <RefreshCw size={14} />
+                    <span>{t('plugins.browser.retry')}</span>
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="plugin-browser__unsupported-panel">

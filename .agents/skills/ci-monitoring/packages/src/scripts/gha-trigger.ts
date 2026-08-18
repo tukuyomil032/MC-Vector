@@ -133,7 +133,7 @@ if (!proceed) {
 try {
   await triggerWorkflow(wfFile, selectedBranch, repo, fields);
   console.log(chalk.green.bold("\n✓ ワークフローをトリガーしました。\n"));
-} catch (e) {
+} catch {
   console.error(chalk.red.bold("\n✗ ワークフローのトリガーに失敗しました。"));
   console.error(chalk.dim("  ヒント: ブランチ名、権限、workflow_dispatch トリガーの有無を確認\n"));
   process.exit(1);

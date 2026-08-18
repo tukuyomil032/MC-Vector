@@ -155,6 +155,7 @@ export interface TranslationDictionary {
       jarUrlFailed: string;
       createFailed: string;
       deleted: string;
+      deleteRunning: string;
       deleteFailed: string;
       deleteError: string;
       cloned: string;
@@ -171,6 +172,8 @@ export interface TranslationDictionary {
     };
     confirm: {
       delete: string;
+      deleteManaged: string;
+      deleteExternal: string;
       clone: string;
     };
   };
@@ -266,6 +269,8 @@ export interface TranslationDictionary {
     confirm: {
       delete: string;
       deleteTitle: string;
+      discardChanges: string;
+      discardChangesTitle: string;
     };
     contextMenu: {
       rename: string;
@@ -280,6 +285,17 @@ export interface TranslationDictionary {
     dropHint: string;
     editor: {
       saving: string;
+      close: string;
+      unsaved: string;
+      saved: string;
+      lineColumn: string;
+      encoding: string;
+      lineEnding: string;
+      readOnly: string;
+      settings: string;
+      minimap: string;
+      wordWrap: string;
+      loadFailed: string;
     };
     emptyFolder: string;
     loading: string;
@@ -497,6 +513,8 @@ export interface TranslationDictionary {
       tabInstalled: string;
       searchOn: string;
       searching: string;
+      retry: string;
+      searchError: string;
       sortLabel: string;
       sortRelevance: string;
       sortDownloads: string;

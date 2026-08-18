@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fetchMock = vi.fn();
 
@@ -8,8 +8,13 @@ vi.mock('@tauri-apps/plugin-http', () => ({
 
 describe('fetchJson', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.resetModules();
     fetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('adds Accept and User-Agent headers when not present', async () => {
@@ -24,7 +29,7 @@ describe('fetchJson', () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
     expect(headers.get('Accept')).toBe('application/json');
-    expect(headers.get('User-Agent')).toBe('MC-Vector/2.0');
+    expect(headers.get('User-Agent')).toBe('MC-Vector/2.0.57');
   });
 
   it('does not overwrite existing Accept header', async () => {
@@ -119,5 +124,20 @@ describe('fetchJson', () => {
       'https://api.example.com/v2/projects',
       expect.any(Object),
     );
+  });
+
+  it('aborts a request after the timeout', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementationOnce(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        }),
+    );
+    const { fetchJson, PLUGIN_API_TIMEOUT_MS } = await import('../http-client');
+    const request = fetchJson('https://example.com/slow');
+    const assertion = expect(request).rejects.toThrow('timed out');
+    await vi.advanceTimersByTimeAsync(PLUGIN_API_TIMEOUT_MS);
+    await assertion;
   });
 });
