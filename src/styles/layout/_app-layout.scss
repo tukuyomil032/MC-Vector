@@ -155,7 +155,7 @@
   }
 
   .app-nav-item {
-    @apply flex items-center w-full box-border transition-all text-sm rounded-md mx-1 my-0.5 border-l-[3px];
+    @apply flex items-center w-full box-border transition-all text-sm rounded-md mx-1 my-0.5;
     color: var(--mv-surface-text-secondary);
   }
 
@@ -170,11 +170,10 @@
   .app-nav-item.is-active {
     background-color: rgba(255, 255, 255, 0.07);
     color: #ffffff;
-    border-left-color: #ffffff;
   }
 
   .app-nav-item.is-idle {
-    @apply border-l-transparent hover:translate-x-1;
+    @apply hover:translate-x-1;
   }
 
   .app-nav-item.is-idle:hover {
