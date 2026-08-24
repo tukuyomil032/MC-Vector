@@ -14,13 +14,13 @@
     "build:full": "pnpm typedoc && astro build"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.32.0",
-    "astro": "^6.1.10",
-    "sharp": "^0.35.1"
+    "@astrojs/starlight": "^0.41.7",
+    "astro": "^7.2.4",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "typedoc": "^0.28.19",
-    "typedoc-plugin-markdown": "^4.11.0"
+    "@biomejs/biome": "^2.5.9",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.12.0"
   }
 }
