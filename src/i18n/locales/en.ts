@@ -562,6 +562,29 @@ export const en: TranslationDictionary = {
       dependencyCheckOnly:
         'Only ran dependency check. Please install dependencies first if needed.',
       incompatibilityWarning: 'This plugin may be incompatible with the current server version',
+      incompatibleInstallTitle: 'Plugin installation blocked',
+      incompatibleInstallDescription:
+        '{{title}} is not compatible with {{software}} {{version}} and cannot be installed. Supported versions reported by the provider: {{supportedVersions}}.',
+      unverifiedInstallTitle: 'Unverified plugin download blocked',
+      unverifiedInstallDescription:
+        'This plugin was not installed because the provider did not supply a checksum. The artifact cannot be verified safely. You can allow hashless downloads in General Settings, but URL, destination, redirect, archive, and size protections remain active.',
+      checksumInstallTitle: 'Plugin integrity check failed',
+      checksumInstallDescription:
+        'The downloaded plugin failed its integrity check, so it was not placed in the server folder. Any existing plugin file was kept.',
+      sourceInstallTitle: 'Plugin source rejected',
+      sourceInstallDescription:
+        'The plugin download was rejected by the security policy because its source or redirect is not approved.',
+      destinationInstallTitle: 'Plugin destination rejected',
+      destinationInstallDescription:
+        'The plugin download was rejected because its managed server destination is not valid.',
+      sizeInstallTitle: 'Plugin download is too large',
+      sizeInstallDescription:
+        'The plugin download was rejected because it exceeds the safety size limit.',
+      networkInstallError:
+        'The plugin could not be downloaded. Check your connection and try again.',
+      unknownInstallError:
+        'The plugin could not be installed. Check the plugin entry and try again.',
+      openGeneralSettings: 'Open General Settings',
       compatibilityUnknown: 'Compatibility with server {{version}} is unknown',
       compatibilityUnknownWithVersions:
         'Compatibility with server {{version}} is unknown (candidates: {{versions}})',

@@ -23,7 +23,6 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
-import { toast } from 'sonner';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
@@ -49,7 +48,18 @@ import {
   searchModrinth,
   searchSpigot,
 } from '../../lib/plugin-commands';
+import {
+  type PluginInstallFailureCode,
+  classifyPluginInstallFailure,
+} from '../../lib/plugin-install-errors';
+import { useUiStore } from '../../store/uiStore';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import {
+  pluginInstallFailurePresentation,
+  shouldBlockPluginInstall,
+} from '../shared/plugin-install-policy';
+import { useAppFeedback } from './AppFeedbackProvider';
+import InlineError from './InlineError';
 import { createPluginInstallTarget } from './plugin-install-target';
 
 interface Props {
@@ -540,6 +550,9 @@ export default function PluginBrowser({ server }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('relevance');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installFailureByItemId, setInstallFailureByItemId] = useState<
+    Record<string, PluginInstallFailureCode>
+  >({});
   const [detailItem, setDetailItem] = useState<ProjectItem | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('info');
   const [detailReadme, setDetailReadme] = useState<string | null>(null);
@@ -567,10 +580,10 @@ export default function PluginBrowser({ server }: Props) {
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
+  const { notify, openDialog } = useAppFeedback();
+  const setCurrentView = useUiStore((state) => state.setCurrentView);
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
+    notify(msg, type);
   };
   const folderName = isModServer ? 'mods' : 'plugins';
   const tSafe = (
@@ -739,20 +752,6 @@ export default function PluginBrowser({ server }: Props) {
   const loading = searchQuery.isFetching;
   const hasNextPage = searchData?.hasNextPage ?? false;
   const totalPages = searchData?.totalPages ?? null;
-
-  // Show toast on search error (searchError is stable per React Query - only changes identity on new error)
-  const searchError = searchQuery.error;
-  useEffect(() => {
-    if (!searchError) return;
-    const message = toErrorMessage(searchError);
-    if (platform === 'Hangar') {
-      showToast(t('plugins.browser.fetchHangarError', { message }), 'error');
-    } else if (platform === 'Spigot') {
-      showToast(t('plugins.browser.fetchSpigotError', { message }), 'error');
-    } else {
-      showToast(t('plugins.browser.fetchError'), 'error');
-    }
-  }, [searchError, platform, t]);
 
   // React Query: Hangar compatibility checks (parallel, auto-cached)
   const hangarItems = useMemo(
@@ -1450,11 +1449,98 @@ export default function PluginBrowser({ server }: Props) {
     return isCompatibleVersion(hints, server.version) ? 'compatible' : 'incompatible';
   }
 
+  const openIncompatiblePluginDialog = (item: ProjectItem) => {
+    const supportedVersions = compatibilityDetailByItemId[item.id]?.supportedVersions ?? [];
+    void openDialog({
+      severity: 'warning',
+      title: t('plugins.browser.incompatibleInstallTitle'),
+      description: t('plugins.browser.incompatibleInstallDescription', {
+        title: item.title,
+        software: server.software || 'Paper',
+        version: server.version,
+        supportedVersions:
+          supportedVersions.length > 0
+            ? supportedVersions.slice(0, 8).join(', ')
+            : t('plugins.browser.versionsNotPublished'),
+      }),
+    });
+  };
+
+  const installFailureCopy = (code: PluginInstallFailureCode) => {
+    switch (code) {
+      case 'unverified-artifact-blocked':
+        return {
+          title: t('plugins.browser.unverifiedInstallTitle'),
+          description: t('plugins.browser.unverifiedInstallDescription'),
+        };
+      case 'checksum-mismatch':
+      case 'checksum-invalid':
+        return {
+          title: t('plugins.browser.checksumInstallTitle'),
+          description: t('plugins.browser.checksumInstallDescription'),
+        };
+      case 'source-rejected':
+        return {
+          title: t('plugins.browser.sourceInstallTitle'),
+          description: t('plugins.browser.sourceInstallDescription'),
+        };
+      case 'destination-rejected':
+        return {
+          title: t('plugins.browser.destinationInstallTitle'),
+          description: t('plugins.browser.destinationInstallDescription'),
+        };
+      case 'size-limit-exceeded':
+        return {
+          title: t('plugins.browser.sizeInstallTitle'),
+          description: t('plugins.browser.sizeInstallDescription'),
+        };
+      case 'network':
+        return {
+          title: '',
+          description: t('plugins.browser.networkInstallError'),
+        };
+      default:
+        return {
+          title: '',
+          description: t('plugins.browser.unknownInstallError'),
+        };
+    }
+  };
+
+  const handleInstallFailure = (item: ProjectItem, error: unknown) => {
+    const failure = classifyPluginInstallFailure(error);
+    setInstallFailureByItemId((previous) => ({ ...previous, [item.id]: failure.code }));
+
+    const presentation = pluginInstallFailurePresentation(failure.code);
+    if (presentation !== 'dialog') {
+      return;
+    }
+
+    const copy = installFailureCopy(failure.code);
+    const isUnverified = failure.code === 'unverified-artifact-blocked';
+    void openDialog({
+      severity: 'error',
+      title: copy.title,
+      description: copy.description,
+      primaryAction: isUnverified
+        ? {
+            label: t('plugins.browser.openGeneralSettings'),
+            onSelect: () => setCurrentView('app-settings'),
+          }
+        : undefined,
+    });
+  };
+
   const performInstall = async (
     item: ProjectItem,
     mode: 'fresh' | 'overwrite' | 'update',
     installedFile?: string,
   ) => {
+    if (shouldBlockPluginInstall(compatibilityByItemId[item.id] ?? 'unknown')) {
+      openIncompatiblePluginDialog(item);
+      return;
+    }
+
     const pluginDir = `${server.path}/${folderName}`;
     const preserveDisabledState = Boolean(installedFile && isDisabledPluginFile(installedFile));
     let installedTarget: PluginInstallTarget | null = null;
@@ -1513,11 +1599,16 @@ export default function PluginBrowser({ server }: Props) {
           pluginDir,
           error: toErrorMessage(error),
         });
-        showToast(t('plugins.browser.deleteExistingError'), 'error');
+        handleInstallFailure(item, new Error('Plugin destination could not be cleaned up'));
         return false;
       }
     };
 
+    setInstallFailureByItemId((previous) => {
+      const next = { ...previous };
+      delete next[item.id];
+      return next;
+    });
     setInstallingId(item.id);
     try {
       if (item.platform === 'Modrinth') {
@@ -1529,7 +1620,11 @@ export default function PluginBrowser({ server }: Props) {
         });
 
         if (!resolvedVersion) {
-          showToast(t('plugins.browser.noCompatibleVersion'), 'error');
+          void openDialog({
+            severity: 'warning',
+            title: t('plugins.browser.noCompatibleVersion'),
+            description: t('plugins.browser.compatibilityUnknown', { version: server.version }),
+          });
           return;
         }
 
@@ -1630,14 +1725,15 @@ export default function PluginBrowser({ server }: Props) {
                   }
 
                   if (!dependencyVersion) {
-                    showToast(
-                      tSafe(
+                    void openDialog({
+                      severity: 'warning',
+                      title: t('plugins.browser.noCompatibleVersion'),
+                      description: tSafe(
                         'plugins.browser.dependencyVersionNotFound',
                         `No compatible version found for dependency ${dependency.identity.title}`,
                         { title: dependency.identity.title },
                       ),
-                      'info',
-                    );
+                    });
                     continue;
                   }
 
@@ -1653,14 +1749,15 @@ export default function PluginBrowser({ server }: Props) {
                     dependencyTitle: dependency.identity.title,
                     dependencyProjectId: dependency.identity.projectId,
                   });
-                  showToast(
-                    tSafe(
+                  void openDialog({
+                    severity: 'error',
+                    title: t('plugins.browser.installError'),
+                    description: tSafe(
                       'plugins.browser.dependencyInstallFailed',
                       `Failed to install dependency ${dependency.identity.title}`,
                       { title: dependency.identity.title },
                     ),
-                    'error',
-                  );
+                  });
                 }
               }
 
@@ -1680,24 +1777,26 @@ export default function PluginBrowser({ server }: Props) {
 
               // Check if all required dependencies were installed
               if (installedDependencyCount < missingDependencies.length) {
-                showToast(
-                  tSafe(
+                void openDialog({
+                  severity: 'warning',
+                  title: t('plugins.browser.installError'),
+                  description: tSafe(
                     'plugins.browser.dependencyInstallIncomplete',
                     'Not all required dependencies were installed. Main plugin installation aborted.',
                   ),
-                  'error',
-                );
+                });
                 return;
               }
             } else {
               // User declined to install dependencies
-              showToast(
-                tSafe(
+              void openDialog({
+                severity: 'warning',
+                title: t('plugins.browser.installError'),
+                description: tSafe(
                   'plugins.browser.dependencyCheckOnly',
                   'Required dependencies not installed. Main plugin installation aborted.',
                 ),
-                'error',
-              );
+              });
               return;
             }
           }
@@ -1721,28 +1820,17 @@ export default function PluginBrowser({ server }: Props) {
         });
 
         if (!resolved) {
-          showToast(t('plugins.browser.noCompatibleVersion'), 'error');
+          void openDialog({
+            severity: 'warning',
+            title: t('plugins.browser.noCompatibleVersion'),
+            description: t('plugins.browser.compatibilityUnknown', { version: server.version }),
+          });
           return;
-        }
-
-        if (!resolved.compatible) {
-          const listedVersions = resolved.supportedVersions.slice(0, 3).join(', ');
-          const suffix = resolved.supportedVersions.length > 3 ? ', ...' : '';
-          showToast(
-            listedVersions
-              ? t('plugins.browser.compatibilityUnknownWithVersions', {
-                  version: server.version,
-                  versions: `${listedVersions}${suffix}`,
-                })
-              : t('plugins.browser.compatibilityUnknown', { version: server.version }),
-            'info',
-          );
         }
 
         if (!resolved.downloadUrl) {
           const externalUrl = resolved.externalUrl || `https://hangar.papermc.io/${owner}/${slug}`;
           await openExternal(externalUrl);
-          showToast(t('plugins.browser.browserDownloadRequired'), 'info');
           return;
         }
 
@@ -1756,7 +1844,7 @@ export default function PluginBrowser({ server }: Props) {
       } else if (item.platform === 'Spigot') {
         const resourceId = Number(item.id);
         if (!Number.isFinite(resourceId)) {
-          showToast(t('plugins.browser.spigotIdInvalid'), 'error');
+          handleInstallFailure(item, new Error('Invalid plugin source URL'));
           return;
         }
 
@@ -1764,7 +1852,6 @@ export default function PluginBrowser({ server }: Props) {
           item.source_obj.external === true || item.source_obj.premium === true;
         if (shouldOpenBrowser) {
           await openExternal(`https://www.spigotmc.org/resources/${resourceId}/`);
-          showToast(t('plugins.browser.spigotBrowserRequired'), 'info');
           return;
         }
 
@@ -1803,7 +1890,7 @@ export default function PluginBrowser({ server }: Props) {
         itemTitle: item.title,
         mode,
       });
-      showToast(t('plugins.browser.installError'), 'error');
+      handleInstallFailure(item, error);
     } finally {
       await refreshInstalled();
       setInstallingId(null);
@@ -1812,8 +1899,9 @@ export default function PluginBrowser({ server }: Props) {
 
   const handleInstall = (item: ProjectItem) => {
     const compatibility = compatibilityByItemId[item.id] ?? 'unknown';
-    if (compatibility === 'incompatible') {
-      showToast(t('plugins.browser.incompatibilityWarning'), 'info');
+    if (shouldBlockPluginInstall(compatibility)) {
+      openIncompatiblePluginDialog(item);
+      return;
     }
 
     const installedMatch = findInstalledMatchStrict(item);
@@ -1838,7 +1926,11 @@ export default function PluginBrowser({ server }: Props) {
       await openUrl(url);
     } catch (error) {
       logError('Failed to open external plugin URL', error, { url });
-      showToast(t('plugins.browser.browserOpenError'), 'error');
+      void openDialog({
+        severity: 'error',
+        title: t('plugins.browser.browserOpenError'),
+        description: t('plugins.browser.browserOpenError'),
+      });
     }
   };
 
@@ -1983,7 +2075,11 @@ export default function PluginBrowser({ server }: Props) {
         availableFiles,
         error: toErrorMessage(error),
       });
-      showToast(t('plugins.browser.toggleError'), 'error');
+      void openDialog({
+        severity: 'error',
+        title: t('plugins.browser.toggleError'),
+        description: t('plugins.browser.toggleError'),
+      });
     } finally {
       await refreshInstalled();
       setInstallingId(null);
@@ -2042,7 +2138,11 @@ export default function PluginBrowser({ server }: Props) {
         pluginDir,
         error: toErrorMessage(error),
       });
-      showToast(t('plugins.browser.uninstallError'), 'error');
+      void openDialog({
+        severity: 'error',
+        title: t('plugins.browser.uninstallError'),
+        description: t('plugins.browser.uninstallError'),
+      });
     } finally {
       await refreshInstalled();
       setBusyInstalledFile(null);
@@ -2421,20 +2521,12 @@ export default function PluginBrowser({ server }: Props) {
                 </select>
               </div>
               {searchQuery.isError && (
-                <div className="plugin-browser__search-error" role="alert">
-                  <span>
-                    {t('plugins.browser.searchError')} {toErrorMessage(searchQuery.error)}
-                  </span>
-                  <button
-                    type="button"
-                    className="plugin-browser__unsupported-btn"
-                    onClick={() => void searchQuery.refetch()}
-                    disabled={loading}
-                  >
-                    <RefreshCw size={14} />
-                    <span>{t('plugins.browser.retry')}</span>
-                  </button>
-                </div>
+                <InlineError
+                  className="plugin-browser__search-error"
+                  message={t('plugins.browser.searchError')}
+                  onRetry={() => searchQuery.refetch()}
+                  retryLabel={t('plugins.browser.retry')}
+                />
               )}
             </>
           ) : (
@@ -2489,9 +2581,11 @@ export default function PluginBrowser({ server }: Props) {
                     const requiresBrowser =
                       item.platform === 'Spigot' &&
                       (item.source_obj.external === true || item.source_obj.premium === true);
+                    const installFailure = installFailureByItemId[item.id];
                     const installActionButton = showInstallAction ? (
                       <button
                         type="button"
+                        data-testid={`plugin-install-${item.id}`}
                         onClick={() => void handleInstall(item)}
                         disabled={installingId === item.id}
                         className={`plugin-browser__install-btn ${
@@ -2603,6 +2697,15 @@ export default function PluginBrowser({ server }: Props) {
                               {t('plugins.browser.externalDownload')}
                             </div>
                           )}
+                          {installFailure &&
+                          (installFailure === 'network' || installFailure === 'unknown') ? (
+                            <InlineError
+                              className="mt-3"
+                              message={installFailureCopy(installFailure).description}
+                              onRetry={() => handleInstall(item)}
+                              retryLabel={t('plugins.browser.retry')}
+                            />
+                          ) : null}
                         </div>
                       </motion.div>
                     );

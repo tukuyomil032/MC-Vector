@@ -1,6 +1,6 @@
 use futures_util::StreamExt;
 use reqwest::{redirect, Client, Url};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
@@ -273,7 +273,7 @@ fn http_client(allowed_hosts: Option<&[&str]>) -> Result<Client, String> {
             if validate_https_url(attempt.url().as_str(), allowed.as_deref()).is_ok() {
                 attempt.follow()
             } else {
-                attempt.stop()
+                attempt.error("Download redirect rejected by provider source policy")
             }
         }))
         .user_agent(USER_AGENT)
@@ -523,6 +523,65 @@ fn provider_hosts(provider: &str) -> Result<&'static [&'static str], String> {
         _ => Err("Unsupported plugin download provider".to_string()),
     }
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PluginDownloadCommandError {
+    code: &'static str,
+    message: String,
+}
+
+fn plugin_download_error(code: &'static str, message: impl Into<String>) -> String {
+    let error = PluginDownloadCommandError {
+        code,
+        message: message.into(),
+    };
+    serde_json::to_string(&error).unwrap_or_else(|_| {
+        format!("{{\"code\":\"{code}\",\"message\":\"plugin download failed\"}}")
+    })
+}
+
+fn classify_plugin_download_error(error: &str) -> &'static str {
+    if error.contains("checksum mismatch") {
+        return "checksum-mismatch";
+    }
+    if (error.contains("Invalid ") && error.to_ascii_lowercase().contains("checksum"))
+        || error.contains("Unsupported checksum algorithm")
+    {
+        return "checksum-invalid";
+    }
+    if error.contains("Download exceeds") || error.contains("Download size overflow") {
+        return "size-limit-exceeded";
+    }
+    if error.contains("Download URL")
+        || error.contains("Download redirect rejected")
+        || error.contains("Unsupported plugin download provider")
+    {
+        return "source-rejected";
+    }
+    if error.contains("Plugin path")
+        || error.contains("Plugin filename")
+        || error.contains("Plugin destination")
+        || error.contains("managed plugin")
+        || error.contains("managed root")
+        || error.contains("Temporary download path")
+        || error.contains("atomically move downloaded file")
+        || error.contains("replace existing destination")
+    {
+        return "destination-rejected";
+    }
+    if error.contains("HTTP")
+        || error.contains("Download stalled")
+        || error.contains("Download stream")
+        || error.contains("download failed")
+        || error.contains("HTTP client")
+        || error.contains("connection")
+    {
+        return "network";
+    }
+    "unknown"
+}
+
 fn hashless_plugin_download_is_allowed(config_value: Option<&serde_json::Value>) -> bool {
     matches!(config_value, Some(serde_json::Value::Bool(true)))
 }
@@ -540,13 +599,20 @@ pub async fn download_plugin_artifact(
     app: AppHandle,
     request: PluginArtifactRequest,
 ) -> Result<(), String> {
-    let hosts = provider_hosts(&request.provider)?;
-    let url = validate_https_url(&request.url, Some(hosts))?;
-    let destination =
-        managed_plugin_destination(&app, &request.server_id, &request.relative_path).await?;
-    let event_id = validate_event_id(&request.event_id)?;
+    let hosts = provider_hosts(&request.provider)
+        .map_err(|error| plugin_download_error("source-rejected", error))?;
+    let url = validate_https_url(&request.url, Some(hosts))
+        .map_err(|error| plugin_download_error("source-rejected", error))?;
+    let destination = managed_plugin_destination(&app, &request.server_id, &request.relative_path)
+        .await
+        .map_err(|error| plugin_download_error("destination-rejected", error))?;
+    let event_id = validate_event_id(&request.event_id)
+        .map_err(|error| plugin_download_error("unknown", error))?;
     if request.checksum.is_none() && !allows_unverified_plugin_downloads(&app) {
-        return Err("Plugin download rejected: checksum is required. Set allowUnverifiedPluginDownloads to true in config.json only when you explicitly accept an unverified artifact.".to_string());
+        return Err(plugin_download_error(
+            "unverified-artifact-blocked",
+            "Plugin download rejected: checksum is required. Set allowUnverifiedPluginDownloads to true in config.json only when you explicitly accept an unverified artifact.",
+        ));
     }
     let event = format!("download-progress-{event_id}");
     download_with_retry(
@@ -561,6 +627,7 @@ pub async fn download_plugin_artifact(
         },
     )
     .await
+    .map_err(|error| plugin_download_error(classify_plugin_download_error(&error), error))
 }
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -896,6 +963,49 @@ mod tests {
         assert!(hashless_plugin_download_is_allowed(Some(
             &serde_json::json!(true)
         )));
+    }
+
+    #[test]
+    fn plugin_command_errors_keep_stable_codes_and_private_details_out_of_ui_classification() {
+        let encoded = plugin_download_error(
+            "checksum-mismatch",
+            "SHA256 checksum mismatch: expected private, got actual",
+        );
+        let payload: serde_json::Value =
+            serde_json::from_str(&encoded).expect("plugin error should be JSON encoded");
+        assert_eq!(payload["code"], "checksum-mismatch");
+        assert_eq!(
+            payload["message"],
+            "SHA256 checksum mismatch: expected private, got actual"
+        );
+    }
+
+    #[test]
+    fn plugin_download_failures_are_classified_by_security_boundary() {
+        assert_eq!(
+            classify_plugin_download_error("Invalid SHA256 checksum"),
+            "checksum-invalid"
+        );
+        assert_eq!(
+            classify_plugin_download_error("Download URL host is not approved"),
+            "source-rejected"
+        );
+        assert_eq!(
+            classify_plugin_download_error("Download redirect rejected by provider source policy"),
+            "source-rejected"
+        );
+        assert_eq!(
+            classify_plugin_download_error("Plugin destination must not be a symlink"),
+            "destination-rejected"
+        );
+        assert_eq!(
+            classify_plugin_download_error("Download exceeds the 512-byte limit"),
+            "size-limit-exceeded"
+        );
+        assert_eq!(
+            classify_plugin_download_error("HTTP request failed: connection reset"),
+            "network"
+        );
     }
 
     #[tokio::test]

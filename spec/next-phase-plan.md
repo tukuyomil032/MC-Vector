@@ -74,3 +74,38 @@ Phase 3-B完了後、当初予定していたPhase 4（データ契約文書化�
   Gatekeeper assessment remains informational until Developer ID signing and notarization are
   introduced.
 - Low findings L-01 through L-03 remain outside the current implementation scope.
+
+## Feedback and notification policy
+
+The renderer uses one shared feedback policy through `AppFeedbackProvider` and
+`src/renderer/shared/feedback.ts`:
+
+- `toast`: successful completion, lightweight information, and background completion that does not
+  require user action. Toasts are polite live-region notifications and never take focus.
+- `inline`: a screen- or card-scoped failure that the user can retry or correct. Search failures
+  retain the previous results and expose retry next to the search controls. Plugin network failures
+  use the same card-scoped retry surface.
+- `blocking dialog`: security refusals, confirmed incompatibility, integrity failures, and any
+  decision that must stop the operation. These use the shared Radix dialog with a title,
+  description, explicit close action, keyboard focus management, Escape handling, and textual
+  severity information.
+- `progress`: long-running downloads and other operations that need ongoing progress.
+
+The PluginBrowser is the first complete consumer. A confirmed incompatible plugin never reaches a
+provider API, download IPC, or filesystem operation; unknown compatibility remains installable.
+Hashless artifact rejection, checksum failures, source/destination policy failures, and size
+violations are blocking dialogs. Network failures are inline retryable errors. Successful install,
+overwrite, and update operations retain success toasts only. Browser-required Hangar/Spigot
+resources are informational actions, not install-error toasts.
+
+The remaining notification inventory is intentionally staged rather than changed in one sweep:
+
+| Area | Current policy | Follow-up |
+|---|---|---|
+| Server lifecycle and bulk operations | Existing success/error callbacks, routed through the shared toast boundary | Move recoverable lifecycle failures to screen-scoped inline errors and blocking decisions in the next migration task |
+| Backup create/restore/delete | Success remains toast; failure paths are still mixed | Add restore/delete-specific dialog and retry surfaces |
+| File delete/move and editor failures | Existing screen-specific handling | Convert destructive and recovery-required failures to shared dialogs/inline errors |
+| Java and ngrok downloads | Progress/success infrastructure exists | Add typed failure presentation and retry surfaces |
+| Settings saves | Success toast and existing inline rollback in settings | Keep rollback inline; use shared dialog only for policy refusals |
+| Simple destructive confirmations | Native Tauri `ask` | Keep while the interaction is a simple yes/no confirmation |
+| Rich confirmations and security explanations | Shared Radix dialog | Required for future cross-screen migrations |
