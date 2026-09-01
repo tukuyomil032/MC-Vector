@@ -29,6 +29,20 @@ MC-Vector downloads the JAR and places it directly into the server's `plugins/` 
 Plugins and mods are always installed into the **currently selected server**. Switch servers in the sidebar before installing if needed.
 :::
 
+## Download Verification
+
+MC-Vector verifies a provider-published checksum when one is available. By default, an artifact
+without a checksum is rejected because its contents cannot be authenticated after download.
+
+If a provider does not publish checksums, the application-wide **Settings → Security → Allow
+unverified plugin downloads** option can be enabled temporarily. This option is off by default and
+only changes the missing-checksum decision; invalid or mismatched checksums, untrusted URLs,
+managed-path violations, redirect violations, and size-limit violations remain errors.
+
+Plugin files are written by the Rust backend into the selected server's managed `plugins/` or
+`mods/` directory. The renderer supplies a server ID and relative path rather than an arbitrary
+filesystem destination.
+
 ## Sorting Results
 
 Results can be sorted by:
