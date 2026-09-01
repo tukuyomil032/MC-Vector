@@ -7,17 +7,12 @@ const loadMock = vi.fn().mockResolvedValue({ get: storeGet, set: storeSet, save:
 
 const appDataDirMock = vi.fn();
 const openMock = vi.fn();
-const removeMock = vi.fn();
-const archMock = vi.fn();
-const platformMock = vi.fn();
 const tauriInvokeMock = vi.fn();
 const tauriListenMock = vi.fn();
 const logErrorMock = vi.fn();
 
 vi.mock('@tauri-apps/api/path', () => ({ appDataDir: appDataDirMock }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: openMock }));
-vi.mock('@tauri-apps/plugin-fs', () => ({ remove: removeMock }));
-vi.mock('@tauri-apps/plugin-os', () => ({ arch: archMock, platform: platformMock }));
 vi.mock('@tauri-apps/plugin-store', () => ({ load: loadMock }));
 vi.mock('../tauri-api', () => ({ tauriInvoke: tauriInvokeMock, tauriListen: tauriListenMock }));
 vi.mock('../error-utils', () => ({ logError: logErrorMock }));
@@ -31,9 +26,6 @@ beforeEach(() => {
   storeSave.mockReset();
   appDataDirMock.mockReset();
   openMock.mockReset();
-  removeMock.mockReset();
-  archMock.mockReset();
-  platformMock.mockReset();
   tauriInvokeMock.mockReset();
   tauriListenMock.mockReset();
   logErrorMock.mockReset();
@@ -75,8 +67,6 @@ describe('saveJavaVersions', () => {
 
 describe('downloadJava', () => {
   it('returns true and saves version entry on success', async () => {
-    platformMock.mockReturnValue('linux');
-    archMock.mockReturnValue('x64');
     appDataDirMock.mockResolvedValue('/app-data');
     tauriInvokeMock.mockResolvedValue('/app-data/java/jdk-21');
     storeGet.mockResolvedValue([]);
@@ -87,10 +77,7 @@ describe('downloadJava', () => {
     const result = await downloadJava(21);
 
     expect(result).toBe(true);
-    expect(tauriInvokeMock).toHaveBeenCalledWith(
-      'download_java',
-      expect.objectContaining({ installDir: '/app-data/java/jdk-21' }),
-    );
+    expect(tauriInvokeMock).toHaveBeenCalledWith('download_java', { majorVersion: 21 });
     expect(storeSet).toHaveBeenCalledWith(
       'javaVersions',
       expect.arrayContaining([expect.objectContaining({ version: 21 })]),
@@ -98,8 +85,6 @@ describe('downloadJava', () => {
   });
 
   it('uses zip archive type on windows', async () => {
-    platformMock.mockReturnValue('windows');
-    archMock.mockReturnValue('x64');
     appDataDirMock.mockResolvedValue('C:/AppData');
     tauriInvokeMock.mockResolvedValue('C:/AppData/java/jdk-17');
     storeGet.mockResolvedValue([]);
@@ -109,15 +94,10 @@ describe('downloadJava', () => {
     const { downloadJava } = await import('../java-commands');
     await downloadJava(17);
 
-    expect(tauriInvokeMock).toHaveBeenCalledWith(
-      'download_java',
-      expect.objectContaining({ archiveType: 'zip' }),
-    );
+    expect(tauriInvokeMock).toHaveBeenCalledWith('download_java', { majorVersion: 17 });
   });
 
   it('uses tar.gz archive type on macOS', async () => {
-    platformMock.mockReturnValue('macos');
-    archMock.mockReturnValue('aarch64');
     appDataDirMock.mockResolvedValue('/Library/AppData');
     tauriInvokeMock.mockResolvedValue('/Library/AppData/java/jdk-21');
     storeGet.mockResolvedValue([]);
@@ -127,15 +107,10 @@ describe('downloadJava', () => {
     const { downloadJava } = await import('../java-commands');
     await downloadJava(21);
 
-    expect(tauriInvokeMock).toHaveBeenCalledWith(
-      'download_java',
-      expect.objectContaining({ archiveType: 'tar.gz' }),
-    );
+    expect(tauriInvokeMock).toHaveBeenCalledWith('download_java', { majorVersion: 21 });
   });
 
   it('returns false and logs error when download fails', async () => {
-    platformMock.mockReturnValue('linux');
-    archMock.mockReturnValue('x64');
     appDataDirMock.mockResolvedValue('/app-data');
     tauriInvokeMock.mockRejectedValue(new Error('network error'));
 
@@ -149,8 +124,6 @@ describe('downloadJava', () => {
   });
 
   it('updates existing entry when same version already saved', async () => {
-    platformMock.mockReturnValue('linux');
-    archMock.mockReturnValue('x64');
     appDataDirMock.mockResolvedValue('/app-data');
     tauriInvokeMock.mockResolvedValue('/app-data/java/jdk-21/new-path');
     storeGet.mockResolvedValue([
@@ -175,7 +148,7 @@ describe('deleteJava', () => {
     const { deleteJava } = await import('../java-commands');
     await deleteJava(21);
 
-    expect(removeMock).not.toHaveBeenCalled();
+    expect(tauriInvokeMock).not.toHaveBeenCalled();
     expect(storeSet).not.toHaveBeenCalled();
   });
 
@@ -189,43 +162,45 @@ describe('deleteJava', () => {
     const { deleteJava } = await import('../java-commands');
     await deleteJava(21);
 
-    expect(removeMock).not.toHaveBeenCalled();
+    expect(tauriInvokeMock).not.toHaveBeenCalled();
     expect(storeSet).toHaveBeenCalledWith('javaVersions', []);
   });
 
   it('removes filesystem path and store entry for managed version', async () => {
     storeGet.mockResolvedValue([{ version: 21, path: '/app-data/java/jdk-21', name: 'Java 21' }]);
     appDataDirMock.mockResolvedValue('/app-data');
-    removeMock.mockResolvedValue(undefined);
+    tauriInvokeMock.mockResolvedValue(undefined);
     storeSet.mockResolvedValue(undefined);
     storeSave.mockResolvedValue(undefined);
 
     const { deleteJava } = await import('../java-commands');
     await deleteJava(21);
 
-    expect(removeMock).toHaveBeenCalledWith('/app-data/java/jdk-21', { recursive: true });
+    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_path', {
+      request: { root: 'java', relativePath: 'jdk-21' },
+    });
     expect(storeSet).toHaveBeenCalledWith('javaVersions', []);
   });
 
-  it('ignores "not found" errors during removal', async () => {
+  it('propagates managed deletion errors', async () => {
     storeGet.mockResolvedValue([{ version: 21, path: '/app-data/java/jdk-21', name: 'Java 21' }]);
     appDataDirMock.mockResolvedValue('/app-data');
-    removeMock.mockRejectedValue(new Error('No such file or directory'));
+    tauriInvokeMock.mockRejectedValue(new Error('No such file or directory'));
     storeSet.mockResolvedValue(undefined);
     storeSave.mockResolvedValue(undefined);
 
     const { deleteJava } = await import('../java-commands');
-    await expect(deleteJava(21)).resolves.not.toThrow();
-    expect(storeSet).toHaveBeenCalledWith('javaVersions', []);
+    await expect(deleteJava(21)).rejects.toThrow('No such file or directory');
+    expect(storeSet).not.toHaveBeenCalled();
   });
 
   it('throws when a non-not-found error occurs during removal', async () => {
     storeGet.mockResolvedValue([{ version: 21, path: '/app-data/java/jdk-21', name: 'Java 21' }]);
     appDataDirMock.mockResolvedValue('/app-data');
-    removeMock.mockRejectedValue(new Error('permission denied'));
+    tauriInvokeMock.mockRejectedValue(new Error('permission denied'));
 
     const { deleteJava } = await import('../java-commands');
-    await expect(deleteJava(21)).rejects.toThrow('Failed to remove Java 21');
+    await expect(deleteJava(21)).rejects.toThrow('permission denied');
   });
 
   it('handles macOS JDK Contents/Home path by stripping the marker', async () => {
@@ -237,29 +212,32 @@ describe('deleteJava', () => {
       },
     ]);
     appDataDirMock.mockResolvedValue('/app-data');
-    removeMock.mockResolvedValue(undefined);
+    tauriInvokeMock.mockResolvedValue(undefined);
     storeSet.mockResolvedValue(undefined);
     storeSave.mockResolvedValue(undefined);
 
     const { deleteJava } = await import('../java-commands');
     await deleteJava(21);
 
-    expect(removeMock).toHaveBeenCalledWith('/app-data/java/jdk-21', { recursive: true });
+    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_path', {
+      request: { root: 'java', relativePath: 'jdk-21' },
+    });
   });
 
   it('filters out paths outside the managed java directory', async () => {
     storeGet.mockResolvedValue([{ version: 21, path: '/custom/external/jdk-21', name: 'Java 21' }]);
     appDataDirMock.mockResolvedValue('/app-data');
-    removeMock.mockResolvedValue(undefined);
+    tauriInvokeMock.mockResolvedValue(undefined);
     storeSet.mockResolvedValue(undefined);
     storeSave.mockResolvedValue(undefined);
 
     const { deleteJava } = await import('../java-commands');
     await deleteJava(21);
 
-    // External path filtered out — only managedVersionDir attempted
-    expect(removeMock).toHaveBeenCalledWith('/app-data/java/jdk-21', { recursive: true });
-    expect(removeMock).not.toHaveBeenCalledWith('/custom/external/jdk-21', expect.anything());
+    // Stored paths cannot redirect the deletion target.
+    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_path', {
+      request: { root: 'java', relativePath: 'jdk-21' },
+    });
   });
 });
 

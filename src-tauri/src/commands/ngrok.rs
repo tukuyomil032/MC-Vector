@@ -1,8 +1,44 @@
+use std::collections::HashSet;
+use std::io::{Read, Write};
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
+
+const MAX_NGROK_ARCHIVE_BYTES: u64 = 100 * 1024 * 1024;
+const MAX_NGROK_ARCHIVE_ENTRIES: usize = 32;
+const MAX_NGROK_EXTRACTED_BYTES: u64 = 200 * 1024 * 1024;
+const MAX_NGROK_ENTRY_NAME_BYTES: usize = 255;
+const MAX_NGROK_ENTRY_DEPTH: usize = 32;
+const MAX_NGROK_COMPRESSION_RATIO: u64 = 100;
+const COPY_BUFFER_SIZE: usize = 64 * 1024;
+
+struct DownloadTempGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl DownloadTempGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for DownloadTempGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+const NGROK_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(20);
+const NGROK_INACTIVITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
 #[derive(Default)]
 pub struct NgrokManager {
@@ -17,13 +53,21 @@ struct NgrokStatusPayload {
     server_id: Option<String>,
 }
 
-fn validate_ngrok_path(ngrok_path: &str, allowed_dir: &std::path::Path) -> Result<String, String> {
-    let normalized = ngrok_path.trim();
-    if normalized.is_empty() {
+fn validate_ngrok_path(
+    ngrok_path: &std::path::Path,
+    allowed_dir: &std::path::Path,
+) -> Result<String, String> {
+    if ngrok_path.as_os_str().is_empty() {
         return Err("ngrok path is empty".to_string());
     }
 
-    let canonical = std::path::Path::new(normalized)
+    let metadata =
+        std::fs::symlink_metadata(ngrok_path).map_err(|e| format!("Invalid ngrok path: {}", e))?;
+    if is_link_or_reparse_point(&metadata) {
+        return Err("ngrok binary must not be a symbolic link or reparse point".to_string());
+    }
+
+    let canonical = ngrok_path
         .canonicalize()
         .map_err(|e| format!("Invalid ngrok path: {}", e))?;
 
@@ -58,6 +102,114 @@ fn validate_ngrok_path(ngrok_path: &str, allowed_dir: &std::path::Path) -> Resul
     Ok(canonical.to_string_lossy().to_string())
 }
 
+fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return metadata.file_attributes() & 0x0400 != 0;
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+fn safe_ngrok_entry_name(name: &str) -> Result<PathBuf, String> {
+    let normalized = name.trim_end_matches('/');
+    if normalized.is_empty()
+        || normalized.len() > MAX_NGROK_ENTRY_NAME_BYTES
+        || normalized.contains('\\')
+        || normalized.contains('\0')
+        || normalized.contains(':')
+    {
+        return Err("ngrok archive contains an unsafe entry name".to_string());
+    }
+    let path = Path::new(normalized);
+    let mut depth = 0;
+    for component in path.components() {
+        let Component::Normal(component) = component else {
+            return Err("ngrok archive entry must be a strict relative path".to_string());
+        };
+        if component.to_string_lossy().len() > MAX_NGROK_ENTRY_NAME_BYTES {
+            return Err("ngrok archive entry component is too long".to_string());
+        }
+        depth += 1;
+    }
+    if depth == 0 || depth > MAX_NGROK_ENTRY_DEPTH {
+        return Err("ngrok archive entry depth exceeds the limit".to_string());
+    }
+    Ok(path.to_path_buf())
+}
+
+fn ensure_ngrok_directory(root: &Path, relative: Option<&Path>) -> Result<PathBuf, String> {
+    let root_metadata = std::fs::symlink_metadata(root)
+        .map_err(|error| format!("Failed to inspect ngrok destination: {error}"))?;
+    if is_link_or_reparse_point(&root_metadata) || !root_metadata.is_dir() {
+        return Err("ngrok destination root must be a real directory".to_string());
+    }
+    let mut current = root.to_path_buf();
+    if let Some(relative) = relative {
+        for component in relative.components() {
+            let Component::Normal(component) = component else {
+                return Err("ngrok destination path is not relative".to_string());
+            };
+            current.push(component);
+            match std::fs::symlink_metadata(&current) {
+                Ok(metadata) if is_link_or_reparse_point(&metadata) => {
+                    return Err(
+                        "ngrok destination contains a symbolic link or reparse point".to_string(),
+                    );
+                }
+                Ok(metadata) if !metadata.is_dir() => {
+                    return Err("ngrok destination component is not a directory".to_string());
+                }
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    std::fs::create_dir(&current)
+                        .map_err(|error| format!("Failed to create ngrok destination: {error}"))?;
+                }
+                Err(error) => return Err(format!("Failed to inspect ngrok destination: {error}")),
+            }
+        }
+    }
+    Ok(current)
+}
+
+fn copy_ngrok_entry<R: Read, W: Write>(
+    reader: &mut R,
+    writer: &mut W,
+    expected_size: u64,
+    total: &mut u64,
+) -> Result<(), String> {
+    let mut buffer = [0_u8; COPY_BUFFER_SIZE];
+    let mut copied = 0_u64;
+    loop {
+        let read = reader
+            .read(&mut buffer)
+            .map_err(|error| format!("Failed to read ngrok archive entry: {error}"))?;
+        if read == 0 {
+            break;
+        }
+        copied = copied
+            .checked_add(read as u64)
+            .ok_or_else(|| "ngrok entry size overflow".to_string())?;
+        *total = total
+            .checked_add(read as u64)
+            .ok_or_else(|| "ngrok archive size overflow".to_string())?;
+        if copied > expected_size || *total > MAX_NGROK_EXTRACTED_BYTES {
+            return Err("ngrok archive expands beyond the extraction limit".to_string());
+        }
+        writer
+            .write_all(&buffer[..read])
+            .map_err(|error| format!("Failed to extract ngrok archive entry: {error}"))?;
+    }
+    if copied != expected_size {
+        return Err("ngrok archive entry size changed while extracting".to_string());
+    }
+    Ok(())
+}
+
 fn validate_protocol(protocol: &str) -> Result<String, String> {
     let normalized = protocol.trim().to_ascii_lowercase();
     if normalized == "tcp" {
@@ -87,7 +239,6 @@ fn extract_ngrok_url(log_line: &str) -> Option<String> {
 pub async fn start_ngrok(
     app: AppHandle,
     state: State<'_, NgrokManager>,
-    ngrok_path: String,
     protocol: String,
     port: u16,
     authtoken: String,
@@ -99,7 +250,10 @@ pub async fn start_ngrok(
         .map_err(|_| "Failed to resolve app data directory".to_string())?;
     let allowed_dir = app_data_dir.join("ngrok");
 
-    let validated_ngrok_path = validate_ngrok_path(&ngrok_path, &allowed_dir)?;
+    let validated_ngrok_path = validate_ngrok_path(
+        &allowed_dir.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" }),
+        &allowed_dir,
+    )?;
     let validated_protocol = validate_protocol(&protocol)?;
     let normalized_token = authtoken.trim().to_string();
     if normalized_token.is_empty() {
@@ -224,12 +378,24 @@ pub async fn stop_ngrok(state: State<'_, NgrokManager>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn download_ngrok(app: AppHandle, dest_dir: String) -> Result<String, String> {
+pub async fn download_ngrok(app: AppHandle) -> Result<String, String> {
     // OS/arch に応じた URL を決定
     let (url, file_name) =
         get_ngrok_download_url().ok_or_else(|| "Unsupported platform".to_string())?;
+    let url = validate_ngrok_download_url(&url)?;
 
-    let dest_archive = format!("{}/{}", &dest_dir, file_name);
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let managed_dir = app_data_dir.join("ngrok");
+    if let Ok(metadata) = std::fs::symlink_metadata(&managed_dir) {
+        if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+            return Err("Managed ngrok directory is not a real directory".to_string());
+        }
+    }
+    let dest_dir = managed_dir.to_string_lossy().to_string();
+    let dest_archive = managed_dir.join(format!(".{file_name}"));
 
     // ディレクトリ作成
     tokio::fs::create_dir_all(&dest_dir)
@@ -237,24 +403,48 @@ pub async fn download_ngrok(app: AppHandle, dest_dir: String) -> Result<String, 
         .map_err(|e| format!("Failed to create directory: {}", e))?;
 
     // ダウンロード
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(NGROK_CONNECT_TIMEOUT)
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|e| format!("Failed to create ngrok download client: {e}"))?;
     let response = client
-        .get(&url)
+        .get(url)
         .send()
         .await
         .map_err(|e| format!("HTTP request failed: {}", e))?;
 
+    if !response.status().is_success() {
+        return Err(format!("HTTP error: {}", response.status()));
+    }
     let total = response.content_length().unwrap_or(0);
+    if total > MAX_NGROK_ARCHIVE_BYTES {
+        return Err("ngrok archive exceeds the download size limit".to_string());
+    }
+    if tokio::fs::symlink_metadata(&dest_archive).await.is_ok() {
+        return Err("ngrok temporary archive already exists".to_string());
+    }
     let mut file = tokio::fs::File::create(&dest_archive)
         .await
         .map_err(|e| format!("Failed to create file: {}", e))?;
+    let mut archive_guard = DownloadTempGuard::new(dest_archive.clone());
 
     let mut downloaded: u64 = 0;
     let mut stream = futures_util::StreamExt::fuse(response.bytes_stream());
 
     use futures_util::StreamExt as _;
-    while let Some(chunk) = stream.next().await {
+    while let Some(chunk) = tokio::time::timeout(NGROK_INACTIVITY_TIMEOUT, stream.next())
+        .await
+        .map_err(|_| "ngrok download stalled while waiting for data".to_string())?
+    {
         let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
+        if downloaded
+            .checked_add(chunk.len() as u64)
+            .ok_or_else(|| "ngrok download size overflow".to_string())?
+            > MAX_NGROK_ARCHIVE_BYTES
+        {
+            return Err("ngrok archive exceeds the download size limit".to_string());
+        }
         tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
             .await
             .map_err(|e| format!("Write error: {}", e))?;
@@ -270,44 +460,99 @@ pub async fn download_ngrok(app: AppHandle, dest_dir: String) -> Result<String, 
             serde_json::json!({ "progress": progress }),
         );
     }
+    file.flush()
+        .await
+        .map_err(|e| format!("Flush error: {}", e))?;
+    file.sync_all()
+        .await
+        .map_err(|e| format!("Sync error: {}", e))?;
 
     // ZIP を展開
-    let dest = dest_dir.clone();
+    let dest = managed_dir.clone();
     let archive = dest_archive.clone();
-    tokio::task::spawn_blocking(move || {
+    let extraction_result = tokio::task::spawn_blocking(move || {
         let file =
             std::fs::File::open(&archive).map_err(|e| format!("Failed to open zip: {}", e))?;
+        let compressed_size = file
+            .metadata()
+            .map_err(|e| format!("Failed to inspect zip: {}", e))?
+            .len();
+        if compressed_size > MAX_NGROK_ARCHIVE_BYTES {
+            return Err("ngrok archive exceeds the download size limit".to_string());
+        }
         let mut zip =
             zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip: {}", e))?;
 
+        if zip.len() > MAX_NGROK_ARCHIVE_ENTRIES {
+            return Err("ngrok archive contains too many entries".to_string());
+        }
+        let mut declared_bytes = 0_u64;
+        let mut paths = HashSet::with_capacity(zip.len());
+        for i in 0..zip.len() {
+            let file = zip
+                .by_index(i)
+                .map_err(|e| format!("Zip entry error: {}", e))?;
+            let relative = safe_ngrok_entry_name(file.name())?;
+            if file.is_symlink()
+                || paths.iter().any(|existing: &PathBuf| {
+                    relative.starts_with(existing) || existing.starts_with(&relative)
+                })
+            {
+                return Err("ngrok archive contains a link or colliding entry".to_string());
+            }
+            paths.insert(relative);
+            declared_bytes = declared_bytes
+                .checked_add(file.size())
+                .ok_or_else(|| "ngrok archive size overflow".to_string())?;
+            if declared_bytes > MAX_NGROK_EXTRACTED_BYTES {
+                return Err("ngrok archive expands beyond the extraction limit".to_string());
+            }
+        }
+        if declared_bytes > compressed_size.saturating_mul(MAX_NGROK_COMPRESSION_RATIO) {
+            return Err("ngrok archive compression ratio exceeds the limit".to_string());
+        }
+
+        let mut extracted_bytes = 0_u64;
         for i in 0..zip.len() {
             let mut file = zip
                 .by_index(i)
                 .map_err(|e| format!("Zip entry error: {}", e))?;
-            let out_path = std::path::Path::new(&dest).join(file.mangled_name());
-
+            let relative = safe_ngrok_entry_name(file.name())?;
             if file.is_dir() {
-                std::fs::create_dir_all(&out_path).ok();
-            } else {
-                if let Some(parent) = out_path.parent() {
-                    std::fs::create_dir_all(parent).ok();
-                }
-                let mut outfile = std::fs::File::create(&out_path)
-                    .map_err(|e| format!("Failed to create: {}", e))?;
-                std::io::copy(&mut file, &mut outfile)
-                    .map_err(|e| format!("Failed to extract: {}", e))?;
+                ensure_ngrok_directory(&dest, Some(&relative))?;
+                continue;
             }
+            let parent = ensure_ngrok_directory(&dest, relative.parent())?;
+            let output_path = parent.join(
+                relative
+                    .file_name()
+                    .ok_or_else(|| "ngrok archive entry has no file name".to_string())?,
+            );
+            if let Ok(metadata) = std::fs::symlink_metadata(&output_path) {
+                if is_link_or_reparse_point(&metadata) || metadata.is_dir() {
+                    return Err("ngrok archive destination is unsafe".to_string());
+                }
+            }
+            let mut outfile = std::fs::File::create(&output_path)
+                .map_err(|e| format!("Failed to create: {}", e))?;
+            let expected_size = file.size();
+            copy_ngrok_entry(&mut file, &mut outfile, expected_size, &mut extracted_bytes)?;
         }
         Ok::<(), String>(())
     })
     .await
-    .map_err(|e| format!("Task error: {}", e))??;
+    .map_err(|e| format!("Task error: {}", e))?;
 
     // アーカイブを削除
-    let _ = tokio::fs::remove_file(&dest_archive).await;
+    if extraction_result.is_ok() {
+        if tokio::fs::remove_file(&dest_archive).await.is_ok() {
+            archive_guard.disarm();
+        }
+    }
+    extraction_result?;
 
     // macOS/Linux の場合、実行権限を付与
-    let ngrok_binary = format!("{}/ngrok", &dest_dir);
+    let ngrok_binary = managed_dir.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -318,12 +563,19 @@ pub async fn download_ngrok(app: AppHandle, dest_dir: String) -> Result<String, 
         }
     }
 
-    Ok(ngrok_binary)
+    validate_ngrok_path(&ngrok_binary, &managed_dir)
 }
 
 #[tauri::command]
-pub async fn is_ngrok_installed(path: String) -> Result<bool, String> {
-    Ok(std::path::Path::new(&path).exists())
+pub async fn is_ngrok_installed(app: AppHandle) -> Result<bool, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let binary = app_data_dir
+        .join("ngrok")
+        .join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
+    Ok(validate_ngrok_path(&binary, &app_data_dir.join("ngrok")).is_ok())
 }
 
 fn get_ngrok_download_url() -> Option<(String, String)> {
@@ -348,9 +600,28 @@ fn get_ngrok_download_url() -> Option<(String, String)> {
     Some((url, file_name))
 }
 
+fn validate_ngrok_download_url(url: &str) -> Result<reqwest::Url, String> {
+    let parsed = reqwest::Url::parse(url.trim())
+        .map_err(|error| format!("Invalid ngrok download URL: {error}"))?;
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| "ngrok download URL host is missing".to_string())?;
+    if parsed.scheme() != "https"
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.port().is_some()
+        || parsed.fragment().is_some()
+        || host.parse::<std::net::IpAddr>().is_ok()
+        || !host.eq_ignore_ascii_case("bin.equinox.io")
+    {
+        return Err("ngrok download URL is not an approved HTTPS URL".to_string());
+    }
+    Ok(parsed)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::extract_ngrok_url;
+    use super::{extract_ngrok_url, MAX_NGROK_ARCHIVE_BYTES};
 
     #[test]
     fn extract_ngrok_url_accepts_tcp_url() {
@@ -386,5 +657,10 @@ mod tests {
     #[test]
     fn extract_ngrok_url_rejects_missing_marker() {
         assert!(extract_ngrok_url("lvl=info msg=no-url").is_none());
+    }
+
+    #[test]
+    fn ngrok_download_limit_is_reasonable_and_fixed() {
+        assert_eq!(MAX_NGROK_ARCHIVE_BYTES, 100 * 1024 * 1024);
     }
 }

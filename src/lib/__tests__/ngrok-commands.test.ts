@@ -36,9 +36,8 @@ describe('ngrok-commands', () => {
     it('invokes start_ngrok with correct args', async () => {
       tauriInvokeMock.mockResolvedValueOnce(undefined);
       const { startNgrok } = await import('../ngrok-commands');
-      await startNgrok('/usr/local/bin/ngrok', 'tcp', 25565, 'token123', 'server-1');
+      await startNgrok('tcp', 25565, 'token123', 'server-1');
       expect(tauriInvokeMock).toHaveBeenCalledWith('start_ngrok', {
-        ngrokPath: '/usr/local/bin/ngrok',
         protocol: 'tcp',
         port: 25565,
         authtoken: 'token123',
@@ -60,8 +59,8 @@ describe('ngrok-commands', () => {
     it('invokes download_ngrok and returns installed binary path', async () => {
       tauriInvokeMock.mockResolvedValueOnce('/usr/local/bin/ngrok');
       const { downloadNgrok } = await import('../ngrok-commands');
-      const result = await downloadNgrok('/usr/local/bin');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('download_ngrok', { destDir: '/usr/local/bin' });
+      const result = await downloadNgrok();
+      expect(tauriInvokeMock).toHaveBeenCalledWith('download_ngrok');
       expect(result).toBe('/usr/local/bin/ngrok');
     });
   });
@@ -70,17 +69,15 @@ describe('ngrok-commands', () => {
     it('returns true when ngrok binary exists', async () => {
       tauriInvokeMock.mockResolvedValueOnce(true);
       const { isNgrokInstalled } = await import('../ngrok-commands');
-      const result = await isNgrokInstalled('/usr/local/bin/ngrok');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('is_ngrok_installed', {
-        path: '/usr/local/bin/ngrok',
-      });
+      const result = await isNgrokInstalled();
+      expect(tauriInvokeMock).toHaveBeenCalledWith('is_ngrok_installed');
       expect(result).toBe(true);
     });
 
     it('returns false when ngrok binary is missing', async () => {
       tauriInvokeMock.mockResolvedValueOnce(false);
       const { isNgrokInstalled } = await import('../ngrok-commands');
-      const result = await isNgrokInstalled('/nonexistent/ngrok');
+      const result = await isNgrokInstalled();
       expect(result).toBe(false);
     });
   });

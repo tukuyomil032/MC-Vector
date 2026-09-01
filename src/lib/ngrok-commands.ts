@@ -4,25 +4,24 @@ import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 const STORE_NAME = 'config.json';
 
 export async function startNgrok(
-  ngrokPath: string,
   protocol: string,
   port: number,
   authtoken: string,
   serverId: string,
 ): Promise<void> {
-  return tauriInvoke('start_ngrok', { ngrokPath, protocol, port, authtoken, serverId });
+  return tauriInvoke('start_ngrok', { protocol, port, authtoken, serverId });
 }
 
 export async function stopNgrok(): Promise<void> {
   return tauriInvoke('stop_ngrok', {});
 }
 
-export async function downloadNgrok(destDir: string): Promise<string> {
-  return tauriInvoke<string>('download_ngrok', { destDir });
+export async function downloadNgrok(): Promise<string> {
+  return tauriInvoke<string>('download_ngrok');
 }
 
-export async function isNgrokInstalled(path: string): Promise<boolean> {
-  return tauriInvoke<boolean>('is_ngrok_installed', { path });
+export async function isNgrokInstalled(): Promise<boolean> {
+  return tauriInvoke<boolean>('is_ngrok_installed');
 }
 
 export async function getNgrokToken(): Promise<string | null> {

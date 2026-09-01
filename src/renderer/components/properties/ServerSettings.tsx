@@ -1,4 +1,3 @@
-import { appDataDir } from '@tauri-apps/api/path';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -244,8 +243,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         return;
       }
       setTunnelLog((prev) => [...prev, t('serverSettings.ngrok.initializing')]);
-      const ngrokPath = `${await appDataDir()}/ngrok`;
-      await startNgrok(ngrokPath, 'tcp', server.port, tokenToUse, server.id);
+      await startNgrok('tcp', server.port, tokenToUse, server.id);
       setInputToken('');
     } else {
       await stopNgrok();
@@ -265,8 +263,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     await setNgrokToken(inputToken);
     setShowTokenModal(false);
     setTunnelLog([t('serverSettings.ngrok.initializingWithNewToken')]);
-    const ngrokPath = `${await appDataDir()}/ngrok`;
-    await startNgrok(ngrokPath, 'tcp', server.port, inputToken, server.id);
+    await startNgrok('tcp', server.port, inputToken, server.id);
     setInputToken('');
   };
 

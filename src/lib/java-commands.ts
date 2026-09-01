@@ -1,57 +1,9 @@
-import { appDataDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
-import { remove } from '@tauri-apps/plugin-fs';
-import { arch, platform } from '@tauri-apps/plugin-os';
 import { load } from '@tauri-apps/plugin-store';
 import { logError } from './error-utils';
 import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 const STORE_NAME = 'config.json';
-const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
-
-function normalizePath(input: string): string {
-  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
-  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
-    return normalized.slice(0, -1);
-  }
-  return normalized;
-}
-
-function isNotFoundError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  const lower = message.toLowerCase();
-  return (
-    lower.includes('not found') ||
-    lower.includes('no such file') ||
-    lower.includes('does not exist')
-  );
-}
-
-function deriveDeletionCandidates(
-  appDataRoot: string,
-  majorVersion: number,
-  storedPath: string,
-): string[] {
-  const normalizedRoot = normalizePath(appDataRoot);
-  const managedJavaRoot = `${normalizedRoot}/java`;
-  const managedVersionDir = `${managedJavaRoot}/jdk-${majorVersion}`;
-  const candidates = new Set<string>([managedVersionDir]);
-
-  const normalizedStored = normalizePath(storedPath);
-  const contentsHomeMarker = '/Contents/Home';
-  if (normalizedStored.includes(contentsHomeMarker)) {
-    const stripped = normalizedStored.slice(0, normalizedStored.indexOf(contentsHomeMarker));
-    if (stripped) {
-      candidates.add(stripped);
-    }
-  } else {
-    candidates.add(normalizedStored);
-  }
-
-  return Array.from(candidates).filter(
-    (candidate) => candidate === managedVersionDir || candidate.startsWith(`${managedVersionDir}/`),
-  );
-}
 
 export interface JavaVersion {
   version: number;
@@ -77,14 +29,8 @@ export async function saveJavaVersions(versions: JavaVersion[]): Promise<void> {
  */
 export async function downloadJava(majorVersion: number): Promise<boolean> {
   try {
-    const dataDir = await appDataDir();
-    const installDir = `${dataDir}/java/jdk-${majorVersion}`;
-    const archiveType = getOs() === 'windows' ? 'zip' : 'tar.gz';
-    // Use Rust command to download and extract
     const javaHome = await tauriInvoke<string>('download_java', {
-      downloadUrl: `https://api.adoptium.net/v3/binary/latest/${majorVersion}/ga/${getOs()}/${getArch()}/jdk/hotspot/normal/eclipse?project=jdk`,
-      installDir,
-      archiveType,
+      majorVersion,
     });
     // Register in store
     const versions = await getJavaVersions();
@@ -107,19 +53,6 @@ export async function downloadJava(majorVersion: number): Promise<boolean> {
   }
 }
 
-function getOs(): string {
-  const p = platform();
-  if (p === 'macos') return 'mac';
-  if (p === 'windows') return 'windows';
-  return 'linux';
-}
-
-function getArch(): string {
-  const a = arch();
-  if (a === 'aarch64') return 'aarch64';
-  return 'x64';
-}
-
 /**
  * Delete an installed Java version by major version number.
  */
@@ -135,23 +68,9 @@ export async function deleteJava(majorVersion: number): Promise<void> {
     return;
   }
 
-  const dataDir = await appDataDir();
-  const deletionCandidates = deriveDeletionCandidates(dataDir, majorVersion, target.path);
-  const errors: string[] = [];
-
-  for (const candidate of deletionCandidates) {
-    try {
-      await remove(candidate, { recursive: true });
-    } catch (error) {
-      if (!isNotFoundError(error)) {
-        errors.push(`${candidate}: ${String(error)}`);
-      }
-    }
-  }
-
-  if (errors.length > 0) {
-    throw new Error(`Failed to remove Java ${majorVersion}: ${errors.join(' | ')}`);
-  }
+  await tauriInvoke('delete_managed_path', {
+    request: { root: 'java', relativePath: `jdk-${majorVersion}` },
+  });
 
   await saveJavaVersions(versions.filter((v) => v.version !== majorVersion));
 }
