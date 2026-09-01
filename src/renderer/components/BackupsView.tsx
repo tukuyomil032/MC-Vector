@@ -266,7 +266,7 @@ export default function BackupsView({ server }: Props) {
   const loadBackups = async () => {
     setLoading(true);
     try {
-      const list = await listBackupsWithMetadata(server.path);
+      const list = await listBackupsWithMetadata(server.id);
       setBackups(list);
     } catch (e) {
       logError('Failed to load backups', e, { serverPath: server.path });
@@ -502,7 +502,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
 
-    const all = await listBackupsWithMetadata(serverPath);
+    const all = await listBackupsWithMetadata(srv.id);
     const sorted = [...all].sort(
       (a, b) => b.date.getTime() - a.date.getTime() || a.name.localeCompare(b.name),
     );
@@ -519,7 +519,7 @@ export default function BackupsView({ server }: Props) {
     });
     for (const backup of toDelete) {
       // 直列実行（Promise.all は NG）
-      await deleteBackup(serverPath, backup.name);
+      await deleteBackup(srv.id, backup.name);
     }
 
     if (toDelete.length > 0) {
@@ -574,7 +574,7 @@ export default function BackupsView({ server }: Props) {
         sourcesForBackup = changed;
       }
 
-      await createBackup(server.path, normalizedName, sourcesForBackup, compressionLevel);
+      await createBackup(server.id, normalizedName, sourcesForBackup, compressionLevel);
 
       const currentMeta = getBackupMeta(normalizedName);
       const nextCatalog: BackupCatalog = {
@@ -625,7 +625,7 @@ export default function BackupsView({ server }: Props) {
   const handleRestore = async (backupName: string) => {
     setProcessing(true);
     try {
-      await restoreBackup(server.path, backupName);
+      await restoreBackup(server.id, backupName);
       showToast(t('backups.toast.restored'), 'success');
     } catch (error) {
       logError('Failed to restore backup', error, {
@@ -640,7 +640,7 @@ export default function BackupsView({ server }: Props) {
 
   const handleDelete = async (backupName: string) => {
     try {
-      await deleteBackup(server.path, backupName);
+      await deleteBackup(server.id, backupName);
       const nextCatalog: BackupCatalog = {
         ...backupCatalog,
         lastBackupName:

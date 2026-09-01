@@ -264,7 +264,7 @@ export function useServerAutomation({
 
       autoBackupRunningRef.current[serverId] = true;
       try {
-        await createBackup(targetServer.path, buildAutoBackupName(targetServer));
+        await createBackup(targetServer.id, buildAutoBackupName(targetServer));
         showToast(t('server.toast.autoBackupCreated', { name: targetServer.name }), 'success');
         return true;
       } catch (error) {
@@ -320,13 +320,7 @@ export function useServerAutomation({
 
           const javaPath = latestServer.javaPath || 'java';
           const jarFile = latestServer.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-          await startServerApi(
-            latestServer.id,
-            javaPath,
-            latestServer.path,
-            latestServer.memory,
-            jarFile,
-          );
+          await startServerApi(latestServer.id, javaPath, latestServer.memory, jarFile);
         } catch (error) {
           console.error('Auto restart failed:', error);
           delete autoRestartInProgressRef.current[serverId];

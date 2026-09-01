@@ -33,18 +33,11 @@ describe('server-commands', () => {
 
     const { startServer } = await import('../server-commands');
 
-    await startServer(
-      'server-1',
-      'C:\\Java\\bin\\java.exe',
-      'C:\\MC-Vector\\servers\\server-1',
-      4096,
-      'server.jar',
-    );
+    await startServer('server-1', 'C:\\Java\\bin\\java.exe', 4096, 'server.jar');
 
     expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
       serverId: 'server-1',
       javaPath: 'C:\\Java\\bin\\java.exe',
-      serverPath: 'C:\\MC-Vector\\servers\\server-1',
       memory: 4096,
       jarFile: 'server.jar',
       jvmExtraArgs: null,
@@ -56,19 +49,11 @@ describe('server-commands', () => {
 
     const { startServer } = await import('../server-commands');
 
-    await startServer(
-      'server-1',
-      '/usr/bin/java',
-      '/servers/server-1',
-      2048,
-      'server.jar',
-      '-XX:+UseG1GC',
-    );
+    await startServer('server-1', '/usr/bin/java', 2048, 'server.jar', '-XX:+UseG1GC');
 
     expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
       serverId: 'server-1',
       javaPath: '/usr/bin/java',
-      serverPath: '/servers/server-1',
       memory: 2048,
       jarFile: 'server.jar',
       jvmExtraArgs: '-XX:+UseG1GC',

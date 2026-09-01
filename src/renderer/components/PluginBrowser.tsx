@@ -484,6 +484,29 @@ function projectPageUrl(item: ProjectItem): string {
   return `https://www.spigotmc.org/resources/${item.id}/`;
 }
 
+const ALLOWED_PLUGIN_BROWSER_HOSTS = new Set([
+  'modrinth.com',
+  'hangar.papermc.io',
+  'www.spigotmc.org',
+  'www.curseforge.com',
+]);
+
+function isAllowedPluginBrowserUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      !url.hash &&
+      ALLOWED_PLUGIN_BROWSER_HOSTS.has(url.hostname.toLowerCase())
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
@@ -1619,7 +1642,8 @@ export default function PluginBrowser({ server }: Props) {
                   await installModrinthProject(
                     dependencyVersion.id,
                     dependencyFileName,
-                    `${server.path}/${folderName}`,
+                    server.id,
+                    folderName,
                   );
                   installedDependencyCount += 1;
                 } catch (error) {
@@ -1679,7 +1703,7 @@ export default function PluginBrowser({ server }: Props) {
 
         const tempFileName = `${resolvedVersion.fileName}.tmp-${Date.now()}`;
         installedArtifactName = resolvedVersion.fileName;
-        await installModrinthProject(resolvedVersion.id, tempFileName, pluginDir);
+        await installModrinthProject(resolvedVersion.id, tempFileName, server.id, folderName);
 
         if (!(await replaceExistingFileIfNeeded(tempFileName))) {
           await deleteItem(`${pluginDir}/${tempFileName}`).catch((cleanupError) => {
@@ -1731,7 +1755,13 @@ export default function PluginBrowser({ server }: Props) {
 
         const tempFileNameHangar = `${resolved.fileName}.tmp-${Date.now()}`;
         installedArtifactName = resolved.fileName;
-        await installHangarProject(resolved.downloadUrl, tempFileNameHangar, pluginDir);
+        await installHangarProject(
+          resolved.downloadUrl,
+          tempFileNameHangar,
+          server.id,
+          folderName,
+          resolved.checksum,
+        );
 
         if (!(await replaceExistingFileIfNeeded(tempFileNameHangar))) {
           await deleteItem(`${pluginDir}/${tempFileNameHangar}`).catch((cleanupError) => {
@@ -1777,7 +1807,13 @@ export default function PluginBrowser({ server }: Props) {
 
         const tempFileNameSpigot = `${fileName}.tmp-${Date.now()}`;
         installedArtifactName = fileName;
-        await installSpigotProject(resourceId, tempFileNameSpigot, pluginDir, versionId);
+        await installSpigotProject(
+          resourceId,
+          tempFileNameSpigot,
+          server.id,
+          folderName,
+          versionId,
+        );
 
         if (!(await replaceExistingFileIfNeeded(tempFileNameSpigot))) {
           await deleteItem(`${pluginDir}/${tempFileNameSpigot}`).catch((cleanupError) => {
@@ -1846,6 +1882,9 @@ export default function PluginBrowser({ server }: Props) {
 
   const openExternal = async (url: string) => {
     try {
+      if (!isAllowedPluginBrowserUrl(url)) {
+        throw new Error('External plugin URL is not an approved HTTPS provider URL');
+      }
       await openUrl(url);
     } catch (error) {
       logError('Failed to open external plugin URL', error, { url });

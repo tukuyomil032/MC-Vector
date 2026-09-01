@@ -111,7 +111,7 @@ describe('server-commands (CRUD)', () => {
   });
 
   describe('deleteServer', () => {
-    it('removes external server from store without deleting its folder', async () => {
+    it('removes a managed server from store after deleting its managed folder', async () => {
       const servers = [
         { id: 's1', name: 'A', ...SERVER_BASE },
         { id: 's2', name: 'B', ...SERVER_BASE, port: 25566 },
@@ -120,10 +120,7 @@ describe('server-commands (CRUD)', () => {
       const { deleteServer } = await import('../server-commands');
       const result = await deleteServer('s1');
       expect(tauriInvokeMock).toHaveBeenCalledWith('is_server_running', { serverId: 's1' });
-      expect(tauriInvokeMock).not.toHaveBeenCalledWith(
-        'delete_managed_server_dir',
-        expect.anything(),
-      );
+      expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_server_dir', { serverId: 's1' });
       expect(setMock).toHaveBeenCalledWith('servers', [servers[1]]);
       expect(saveMock).toHaveBeenCalled();
       expect(result).toBe(true);
@@ -141,7 +138,7 @@ describe('server-commands (CRUD)', () => {
 
       expect(tauriInvokeMock).toHaveBeenNthCalledWith(1, 'is_server_running', { serverId: 's1' });
       expect(tauriInvokeMock).toHaveBeenNthCalledWith(2, 'delete_managed_server_dir', {
-        serverPath: '/app-data/servers/s1',
+        serverId: 's1',
       });
       expect(setMock).toHaveBeenCalledWith('servers', [servers[1]]);
       expect(saveMock).toHaveBeenCalled();

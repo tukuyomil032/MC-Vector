@@ -24,6 +24,7 @@ function makeHangarVersionResponse(
   platform: string,
   downloadUrl: string,
   gameVersions: string[],
+  fileInfo: Record<string, unknown> = { name: `plugin-${name}.jar` },
 ) {
   return {
     name,
@@ -31,7 +32,7 @@ function makeHangarVersionResponse(
       [platform]: {
         downloadUrl,
         externalUrl: '',
-        fileInfo: { name: `plugin-${name}.jar` },
+        fileInfo,
       },
     },
     platformDependencies: {
@@ -137,6 +138,28 @@ describe('plugin-commands (Hangar)', () => {
   });
 
   describe('resolveHangarDownload', () => {
+    it('extracts Hangar camelCase checksum metadata', async () => {
+      fetchMock.mockResolvedValueOnce(
+        makeFetchResponse({
+          result: [
+            makeHangarVersionResponse('1.0', 'PAPER', 'https://dl.example.com/p.jar', ['1.21'], {
+              name: 'plugin.jar',
+              sha256Hash: 'a'.repeat(64),
+            }),
+          ],
+          pagination: {},
+        }),
+      );
+      const { resolveHangarDownload } = await import('../plugin-commands');
+      const result = await resolveHangarDownload({
+        owner: 'o',
+        slug: 's',
+        software: 'paper',
+        minecraftVersion: '1.21',
+      });
+      expect(result?.checksum).toEqual({ algorithm: 'sha256', value: 'a'.repeat(64) });
+    });
+
     it('resolves VELOCITY platform for velocity software', async () => {
       fetchMock.mockResolvedValueOnce(
         makeFetchResponse({
@@ -155,6 +178,28 @@ describe('plugin-commands (Hangar)', () => {
       });
       expect(result).not.toBeNull();
       expect(result?.downloadUrl).toBe('https://dl.example.com/p.jar');
+    });
+
+    it('preserves malformed provider hashes for Rust-side rejection', async () => {
+      fetchMock.mockResolvedValueOnce(
+        makeFetchResponse({
+          result: [
+            makeHangarVersionResponse('1.0', 'PAPER', 'https://dl.example.com/p.jar', ['1.21'], {
+              name: 'plugin.jar',
+              sha256: 'invalid',
+            }),
+          ],
+          pagination: {},
+        }),
+      );
+      const { resolveHangarDownload } = await import('../plugin-commands');
+      const result = await resolveHangarDownload({
+        owner: 'o',
+        slug: 's',
+        software: 'paper',
+        minecraftVersion: '1.21',
+      });
+      expect(result?.checksum).toEqual({ algorithm: 'sha256', value: 'invalid' });
     });
 
     it('resolves WATERFALL platform for waterfall software', async () => {
@@ -317,13 +362,22 @@ describe('plugin-commands (Hangar)', () => {
   });
 
   describe('installHangarProject', () => {
-    it('calls download_file with correct dest path', async () => {
+    it('calls the typed plugin artifact command', async () => {
       const { installHangarProject } = await import('../plugin-commands');
-      await installHangarProject('https://dl.hangar.io/plugin.jar', 'plugin.jar', '/plugins');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('download_file', {
-        url: 'https://dl.hangar.io/plugin.jar',
-        dest: '/plugins/plugin.jar',
-        eventId: 'plugin-hangar',
+      await installHangarProject(
+        'https://hangar.papermc.io/plugin.jar',
+        'plugin.jar',
+        'server-1',
+        'plugins',
+      );
+      expect(tauriInvokeMock).toHaveBeenCalledWith('download_plugin_artifact', {
+        request: {
+          url: 'https://hangar.papermc.io/plugin.jar',
+          relativePath: 'plugins/plugin.jar',
+          provider: 'hangar',
+          serverId: 'server-1',
+          eventId: 'plugin-hangar',
+        },
       });
     });
   });

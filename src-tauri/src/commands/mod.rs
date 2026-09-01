@@ -6,6 +6,5 @@ pub mod java;
 pub mod ngrok;
 pub mod perf;
 pub mod process_stats;
-pub mod security;
 pub mod server;
 pub mod updater_utils;

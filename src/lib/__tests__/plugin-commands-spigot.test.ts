@@ -93,53 +93,63 @@ describe('plugin-commands (Spigot)', () => {
   });
 
   describe('downloadPlugin', () => {
-    it('calls download_file with url/dest/eventId', async () => {
+    it('calls the typed plugin artifact command', async () => {
       const { downloadPlugin } = await import('../plugin-commands');
-      await downloadPlugin('https://example.com/plugin.jar', '/plugins/plugin.jar', 'event-1');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('download_file', {
-        url: 'https://example.com/plugin.jar',
-        dest: '/plugins/plugin.jar',
+      await downloadPlugin({
+        serverId: 'server-1',
+        relativePath: 'plugins/plugin.jar',
+        provider: 'spiget',
+        url: 'https://api.spiget.org/v2/resources/1/download',
         eventId: 'event-1',
+      });
+      expect(tauriInvokeMock).toHaveBeenCalledWith('download_plugin_artifact', {
+        request: {
+          serverId: 'server-1',
+          relativePath: 'plugins/plugin.jar',
+          provider: 'spiget',
+          url: 'https://api.spiget.org/v2/resources/1/download',
+          eventId: 'event-1',
+        },
       });
     });
   });
 
   describe('installSpigotProject', () => {
-    it('calls download_file with the correct Spiget download URL', async () => {
+    it('calls the typed command with the correct Spiget download URL', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', '/plugins');
+      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins');
       const [cmd, args] = tauriInvokeMock.mock.calls[0];
-      expect(cmd).toBe('download_file');
-      expect(args.url).toContain('/v2/resources/83557/download');
-      expect(args.dest).toBe('/plugins/essentials.jar');
+      expect(cmd).toBe('download_plugin_artifact');
+      expect(args.request.url).toContain('/v2/resources/83557/download');
+      expect(args.request.relativePath).toBe('plugins/essentials.jar');
     });
 
     it('adds version param to URL when versionId is provided', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', '/plugins', 99);
+      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins', 99);
       const [, args] = tauriInvokeMock.mock.calls[0];
-      expect(args.url).toContain('version=99');
+      expect(args.request.url).toContain('version=99');
     });
 
     it('omits version param when versionId is not provided', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', '/plugins');
+      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins');
       const [, args] = tauriInvokeMock.mock.calls[0];
-      expect(args.url).not.toContain('version=');
+      expect(args.request.url).not.toContain('version=');
     });
 
     it('omits version param when versionId is 0 or negative', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', '/plugins', 0);
+      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins', 0);
       const [, args] = tauriInvokeMock.mock.calls[0];
-      expect(args.url).not.toContain('version=');
+      expect(args.request.url).not.toContain('version=');
     });
 
     it('includes resourceId in eventId', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', '/plugins');
+      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins');
       const [, args] = tauriInvokeMock.mock.calls[0];
-      expect(args.eventId).toContain('83557');
+      expect(args.request.eventId).toContain('83557');
     });
   });
 });

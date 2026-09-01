@@ -2,118 +2,96 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tauriInvokeMock = vi.fn();
 const tauriListenMock = vi.fn();
-const readDirMock = vi.fn();
-const listFilesWithMetadataMock = vi.fn();
 
 vi.mock('../tauri-api', () => ({
   tauriInvoke: tauriInvokeMock,
   tauriListen: tauriListenMock,
 }));
 
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  readDir: readDirMock,
-  remove: vi.fn(),
-}));
-
-vi.mock('../file-commands', () => ({
-  listFilesWithMetadata: listFilesWithMetadataMock,
-}));
+beforeEach(() => {
+  vi.resetModules();
+  tauriInvokeMock.mockReset();
+  tauriListenMock.mockReset();
+  tauriInvokeMock.mockResolvedValue(undefined);
+});
 
 describe('backup-commands', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    tauriInvokeMock.mockReset();
-    tauriListenMock.mockReset();
-    readDirMock.mockReset();
-    listFilesWithMetadataMock.mockReset();
-  });
-
-  describe('createBackup', () => {
-    it('invokes create_backup with null sources and default compression', async () => {
-      tauriInvokeMock.mockResolvedValueOnce(undefined);
-      const { createBackup } = await import('../backup-commands');
-      await createBackup('/servers/s1', 'backup-2024');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('create_backup', {
-        serverId: 'backup-2024',
-        sourceDir: '/servers/s1',
-        backupDir: '/servers/s1/backups',
-        sources: null,
-        compressionLevel: 5,
-      });
-    });
-
-    it('passes sources and custom compression level when provided', async () => {
-      tauriInvokeMock.mockResolvedValueOnce(undefined);
-      const { createBackup } = await import('../backup-commands');
-      await createBackup('/servers/s1', 'backup-2024', ['world', 'plugins'], 9);
-      expect(tauriInvokeMock).toHaveBeenCalledWith('create_backup', {
-        serverId: 'backup-2024',
-        sourceDir: '/servers/s1',
-        backupDir: '/servers/s1/backups',
-        sources: ['world', 'plugins'],
-        compressionLevel: 9,
-      });
-    });
-
-    it('passes null for empty sources array', async () => {
-      tauriInvokeMock.mockResolvedValueOnce(undefined);
-      const { createBackup } = await import('../backup-commands');
-      await createBackup('/servers/s1', 'backup-2024', []);
-      expect(tauriInvokeMock).toHaveBeenCalledWith(
-        'create_backup',
-        expect.objectContaining({ sources: null }),
-      );
+  it('creates a backup with server ID and relative sources only', async () => {
+    const { createBackup } = await import('../backup-commands');
+    await createBackup('server-1', 'backup-2024', ['world', 'plugins'], 9);
+    expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_backup', {
+      serverId: 'server-1',
+      backupName: 'backup-2024',
+      sources: ['world', 'plugins'],
+      compressionLevel: 9,
     });
   });
 
-  describe('listBackups', () => {
-    it('returns zip file names filtered from backup directory', async () => {
-      readDirMock.mockResolvedValueOnce([
-        { name: 'backup1.zip' },
-        { name: 'backup2.zip' },
-        { name: 'readme.txt' },
-      ]);
-      const { listBackups } = await import('../backup-commands');
-      const result = await listBackups('/servers/s1');
-      expect(result).toEqual(['backup1.zip', 'backup2.zip']);
-    });
-
-    it('returns empty array when backup directory does not exist', async () => {
-      readDirMock.mockRejectedValueOnce(new Error('directory not found'));
-      const { listBackups } = await import('../backup-commands');
-      const result = await listBackups('/servers/s1');
-      expect(result).toEqual([]);
-    });
-
-    it('returns empty array when no zip files exist', async () => {
-      readDirMock.mockResolvedValueOnce([{ name: 'notes.txt' }, { name: 'readme.md' }]);
-      const { listBackups } = await import('../backup-commands');
-      const result = await listBackups('/servers/s1');
-      expect(result).toEqual([]);
+  it('normalizes an empty source list to null', async () => {
+    const { createBackup } = await import('../backup-commands');
+    await createBackup('server-1', 'backup-2024', []);
+    expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_backup', {
+      serverId: 'server-1',
+      backupName: 'backup-2024',
+      sources: null,
+      compressionLevel: 5,
     });
   });
 
-  describe('restoreBackup', () => {
-    it('invokes restore_backup with correct path construction', async () => {
-      tauriInvokeMock.mockResolvedValueOnce(undefined);
-      const { restoreBackup } = await import('../backup-commands');
-      await restoreBackup('/servers/s1', 'backup-2024.zip');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('restore_backup', {
-        backupPath: '/servers/s1/backups/backup-2024.zip',
-        targetDir: '/servers/s1',
-      });
+  it('lists backups through the managed metadata command', async () => {
+    tauriInvokeMock.mockResolvedValueOnce([
+      { name: 'backup1.zip', isDirectory: false, size: 10, modified: 100 },
+      { name: 'notes.txt', isDirectory: false, size: 2, modified: 200 },
+    ]);
+    const { listBackupsWithMetadata } = await import('../backup-commands');
+    await expect(listBackupsWithMetadata('server-1')).resolves.toEqual([
+      { name: 'backup1.zip', date: new Date(100_000), size: 10 },
+    ]);
+    expect(tauriInvokeMock).toHaveBeenCalledWith('list_dir_with_metadata', {
+      request: { root: 'backups', serverId: 'server-1', relativePath: '' },
     });
   });
 
-  describe('onBackupProgress', () => {
-    it('registers listener for backup-progress event and returns unlisten fn', async () => {
-      const unlistenFn = vi.fn();
-      tauriListenMock.mockResolvedValueOnce(unlistenFn);
-      const { onBackupProgress } = await import('../backup-commands');
-      const callback = vi.fn();
-      const unlisten = await onBackupProgress(callback);
-      expect(tauriListenMock).toHaveBeenCalledWith('backup-progress', callback);
-      expect(unlisten).toBe(unlistenFn);
+  it('returns an empty list when the managed directory is unavailable', async () => {
+    tauriInvokeMock.mockRejectedValueOnce(new Error('directory not found'));
+    const { listBackups } = await import('../backup-commands');
+    await expect(listBackups('server-1')).resolves.toEqual([]);
+  });
+
+  it('restores a validated backup name through the managed command', async () => {
+    const { restoreBackup } = await import('../backup-commands');
+    await restoreBackup('server-1', 'backup-2024.zip');
+    expect(tauriInvokeMock).toHaveBeenCalledWith('restore_managed_backup', {
+      serverId: 'server-1',
+      backupName: 'backup-2024.zip',
     });
+  });
+
+  it('rejects traversal in backup names before IPC', async () => {
+    const { restoreBackup, deleteBackup } = await import('../backup-commands');
+    await expect(restoreBackup('server-1', '../outside.zip')).rejects.toThrow(
+      'Invalid backup name',
+    );
+    await expect(deleteBackup('server-1', 'nested/backup.zip')).rejects.toThrow(
+      'Invalid backup name',
+    );
+    expect(tauriInvokeMock).not.toHaveBeenCalled();
+  });
+
+  it('deletes a backup using a typed managed request', async () => {
+    const { deleteBackup } = await import('../backup-commands');
+    await deleteBackup('server-1', 'backup-2024.zip');
+    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_path', {
+      request: { root: 'backups', serverId: 'server-1', relativePath: 'backup-2024.zip' },
+    });
+  });
+
+  it('registers backup progress listeners', async () => {
+    const unlisten = vi.fn();
+    tauriListenMock.mockResolvedValueOnce(unlisten);
+    const { onBackupProgress } = await import('../backup-commands');
+    const callback = vi.fn();
+    await expect(onBackupProgress(callback)).resolves.toBe(unlisten);
+    expect(tauriListenMock).toHaveBeenCalledWith('backup-progress', callback);
   });
 });

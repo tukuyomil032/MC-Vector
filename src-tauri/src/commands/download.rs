@@ -1,15 +1,44 @@
 use futures_util::StreamExt;
-use reqwest::Client;
-use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
+use reqwest::{redirect, Client, Url};
+use serde::Deserialize;
+use sha2::{Digest, Sha256, Sha512};
+use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_store::StoreExt;
 use tokio::io::AsyncWriteExt;
+
+use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 
 const USER_AGENT: &str = "MC-Vector/2.0.57 (https://github.com/tukuyomil032/MC-Vector)";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_ATTEMPTS: usize = 2;
+const MAX_EVENT_ID_LENGTH: usize = 128;
+const MAX_SERVER_ID_LENGTH: usize = 128;
+const MAX_PLUGIN_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
+const MAX_SERVER_JAR_BYTES: u64 = 512 * 1024 * 1024;
+const SERVER_JAR_HOSTS: &[&str] = &[
+    "api.leafmc.one",
+    "api.papermc.io",
+    "fill-data.papermc.io",
+    "fill.papermc.io",
+    "meta.fabricmc.net",
+    "piston-data.mojang.com",
+];
+
+fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return metadata.file_attributes() & 0x0400 != 0;
+    }
+    #[cfg(not(windows))]
+    false
+}
 
 #[derive(serde::Serialize, Clone)]
 struct DownloadProgress {
@@ -17,35 +46,267 @@ struct DownloadProgress {
     total: u64,
 }
 
-fn http_client() -> Result<Client, String> {
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginArtifactRequest {
+    pub url: String,
+    pub server_id: String,
+    pub relative_path: String,
+    pub provider: String,
+    pub checksum: Option<ExpectedChecksum>,
+    pub event_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ExpectedChecksum {
+    pub algorithm: String,
+    pub value: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ChecksumAlgorithm {
+    Sha1,
+    Sha256,
+    Sha512,
+}
+
+impl ChecksumAlgorithm {
+    fn parse(value: &str) -> Result<Self, String> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "sha1" => Ok(Self::Sha1),
+            "sha256" => Ok(Self::Sha256),
+            "sha512" => Ok(Self::Sha512),
+            _ => {
+                Err("Unsupported checksum algorithm; expected sha1, sha256, or sha512".to_string())
+            }
+        }
+    }
+    fn hex_length(self) -> usize {
+        match self {
+            Self::Sha1 => 40,
+            Self::Sha256 => 64,
+            Self::Sha512 => 128,
+        }
+    }
+}
+
+// SHA-1 remains necessary for Modrinth metadata. It is used only for integrity
+// comparison of a provider-supplied digest, never as a signing primitive.
+struct Sha1Digest {
+    state: [u32; 5],
+    pending: Vec<u8>,
+    bit_len: u64,
+}
+impl Sha1Digest {
+    fn new() -> Self {
+        Self {
+            state: [
+                0x6745_2301,
+                0xEFCD_AB89,
+                0x98BA_DCFE,
+                0x1032_5476,
+                0xC3D2_E1F0,
+            ],
+            pending: Vec::new(),
+            bit_len: 0,
+        }
+    }
+    fn process_block(&mut self, block: &[u8]) {
+        let mut words = [0_u32; 80];
+        for (index, bytes) in block.chunks_exact(4).take(16).enumerate() {
+            words[index] = u32::from_be_bytes(bytes.try_into().expect("aligned SHA-1 block"));
+        }
+        for index in 16..80 {
+            words[index] =
+                (words[index - 3] ^ words[index - 8] ^ words[index - 14] ^ words[index - 16])
+                    .rotate_left(1);
+        }
+        let (mut a, mut b, mut c, mut d, mut e) = (
+            self.state[0],
+            self.state[1],
+            self.state[2],
+            self.state[3],
+            self.state[4],
+        );
+        for (index, word) in words.into_iter().enumerate() {
+            let (f, k) = match index {
+                0..=19 => ((b & c) | ((!b) & d), 0x5A82_7999),
+                20..=39 => (b ^ c ^ d, 0x6ED9_EBA1),
+                40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1B_BCDC),
+                _ => (b ^ c ^ d, 0xCA62_C1D6),
+            };
+            let next = a
+                .rotate_left(5)
+                .wrapping_add(f)
+                .wrapping_add(e)
+                .wrapping_add(k)
+                .wrapping_add(word);
+            e = d;
+            d = c;
+            c = b.rotate_left(30);
+            b = a;
+            a = next;
+        }
+        self.state[0] = self.state[0].wrapping_add(a);
+        self.state[1] = self.state[1].wrapping_add(b);
+        self.state[2] = self.state[2].wrapping_add(c);
+        self.state[3] = self.state[3].wrapping_add(d);
+        self.state[4] = self.state[4].wrapping_add(e);
+    }
+    fn update(&mut self, bytes: &[u8]) {
+        self.bit_len = self
+            .bit_len
+            .wrapping_add((bytes.len() as u64).wrapping_mul(8));
+        self.pending.extend_from_slice(bytes);
+        while self.pending.len() >= 64 {
+            let block: Vec<u8> = self.pending.drain(..64).collect();
+            self.process_block(&block);
+        }
+    }
+    fn finalize(mut self) -> [u8; 20] {
+        let length = self.bit_len;
+        self.pending.push(0x80);
+        while self.pending.len() % 64 != 56 {
+            self.pending.push(0);
+        }
+        self.pending.extend_from_slice(&length.to_be_bytes());
+        while !self.pending.is_empty() {
+            let block: Vec<u8> = self.pending.drain(..64).collect();
+            self.process_block(&block);
+        }
+        let mut output = [0_u8; 20];
+        for (index, word) in self.state.into_iter().enumerate() {
+            output[index * 4..index * 4 + 4].copy_from_slice(&word.to_be_bytes());
+        }
+        output
+    }
+}
+
+enum ChecksumHasher {
+    Sha1(Sha1Digest),
+    Sha256(Sha256),
+    Sha512(Sha512),
+}
+impl ChecksumHasher {
+    fn new(algorithm: ChecksumAlgorithm) -> Self {
+        match algorithm {
+            ChecksumAlgorithm::Sha1 => Self::Sha1(Sha1Digest::new()),
+            ChecksumAlgorithm::Sha256 => Self::Sha256(Sha256::new()),
+            ChecksumAlgorithm::Sha512 => Self::Sha512(Sha512::new()),
+        }
+    }
+    fn update(&mut self, bytes: &[u8]) {
+        match self {
+            Self::Sha1(hasher) => hasher.update(bytes),
+            Self::Sha256(hasher) => hasher.update(bytes),
+            Self::Sha512(hasher) => hasher.update(bytes),
+        }
+    }
+    fn finalize(self) -> String {
+        match self {
+            Self::Sha1(hasher) => hex_encode(&hasher.finalize()),
+            Self::Sha256(hasher) => hex_encode(&hasher.finalize()),
+            Self::Sha512(hasher) => hex_encode(&hasher.finalize()),
+        }
+    }
+}
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+fn validated_checksum(checksum: &ExpectedChecksum) -> Result<(ChecksumAlgorithm, String), String> {
+    let algorithm = ChecksumAlgorithm::parse(&checksum.algorithm)?;
+    let value = checksum.value.trim().to_ascii_lowercase();
+    if value.len() != algorithm.hex_length() || !value.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(format!(
+            "Invalid {} checksum",
+            checksum.algorithm.trim().to_ascii_uppercase()
+        ));
+    }
+    Ok((algorithm, value))
+}
+
+fn validate_https_url(url: &str, allowed_hosts: Option<&[&str]>) -> Result<Url, String> {
+    if url.chars().any(char::is_control) {
+        return Err("Download URL contains control characters".to_string());
+    }
+    let parsed = Url::parse(url.trim()).map_err(|_| "Invalid download URL".to_string())?;
+    if parsed.scheme() != "https" {
+        return Err("Download URL must use HTTPS".to_string());
+    }
+    if !parsed.username().is_empty() || parsed.password().is_some() {
+        return Err("Download URL must not contain userinfo".to_string());
+    }
+    if parsed.port().is_some() || parsed.fragment().is_some() {
+        return Err("Download URL contains an unsupported port or fragment".to_string());
+    }
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| "Download URL host is missing".to_string())?;
+    if host.parse::<std::net::IpAddr>().is_ok() {
+        return Err("Download URL must use a provider hostname, not an IP address".to_string());
+    }
+    if let Some(allowed_hosts) = allowed_hosts {
+        if !allowed_hosts
+            .iter()
+            .any(|allowed| host.eq_ignore_ascii_case(allowed))
+        {
+            return Err("Download URL host is not approved for this provider".to_string());
+        }
+    }
+    Ok(parsed)
+}
+
+fn http_client(allowed_hosts: Option<&[&str]>) -> Result<Client, String> {
+    let hosts = allowed_hosts.map(|items| {
+        items
+            .iter()
+            .map(|item| (*item).to_string())
+            .collect::<Vec<_>>()
+    });
     Client::builder()
         .connect_timeout(CONNECT_TIMEOUT)
+        .redirect(redirect::Policy::custom(move |attempt| {
+            let allowed = hosts
+                .as_ref()
+                .map(|items| items.iter().map(String::as_str).collect::<Vec<_>>());
+            if validate_https_url(attempt.url().as_str(), allowed.as_deref()).is_ok() {
+                attempt.follow()
+            } else {
+                attempt.stop()
+            }
+        }))
         .user_agent(USER_AGENT)
         .build()
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
 }
 
 fn temporary_path(destination: &Path, attempt: usize) -> PathBuf {
-    let file_name = destination
+    let name = destination
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("download");
-    destination.with_file_name(format!(
-        ".{file_name}.part-{}-{attempt}",
-        std::process::id()
-    ))
+    destination.with_file_name(format!(".{name}.part-{}-{attempt}", std::process::id()))
 }
-
 async fn replace_destination(temp: &Path, destination: &Path) -> Result<(), String> {
+    if let Ok(metadata) = tokio::fs::symlink_metadata(destination).await {
+        if is_link_or_reparse_point(&metadata) {
+            return Err(
+                "Download destination must not be a symbolic link or reparse point".to_string(),
+            );
+        }
+    }
     match tokio::fs::rename(temp, destination).await {
         Ok(()) => Ok(()),
-        Err(rename_error) if destination.exists() => {
+        Err(initial) if destination.exists() => {
             tokio::fs::remove_file(destination)
                 .await
                 .map_err(|error| format!("Failed to replace existing destination: {error}"))?;
-            tokio::fs::rename(temp, destination)
-                .await
-                .map_err(|error| format!("Failed to atomically move downloaded file: {error}; initial error: {rename_error}"))
+            tokio::fs::rename(temp, destination).await.map_err(|error| {
+                format!(
+                    "Failed to atomically move downloaded file: {error}; initial error: {initial}"
+                )
+            })
         }
         Err(error) => Err(format!(
             "Failed to atomically move downloaded file: {error}"
@@ -53,154 +314,294 @@ async fn replace_destination(temp: &Path, destination: &Path) -> Result<(), Stri
     }
 }
 
-fn verify_sha256(digest: &[u8; 32], expected: &str) -> Result<(), String> {
-    let normalized = expected.trim().to_ascii_lowercase();
-    if normalized.len() != 64 || !normalized.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err("Invalid expected SHA-256 checksum".to_string());
-    }
-    let actual = digest
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
-    if actual != normalized {
-        return Err(format!(
-            "SHA-256 mismatch: expected {normalized}, got {actual}"
-        ));
-    }
-    Ok(())
-}
-
 async fn download_once<F>(
     client: &Client,
-    app: &AppHandle,
-    url: &str,
+    url: &Url,
     destination: &Path,
-    checksum: Option<&str>,
-    mut report_progress: F,
+    checksum: Option<&ExpectedChecksum>,
+    max_bytes: u64,
+    mut report: F,
 ) -> Result<(), String>
 where
     F: FnMut(u64, u64) -> Result<(), String>,
 {
     let response = client
-        .get(url)
+        .get(url.clone())
         .send()
         .await
         .map_err(|error| format!("HTTP request failed: {error}"))?;
-    let status = response.status();
-    if !status.is_success() {
-        return Err(format!("HTTP error: {status}"));
+    if !response.status().is_success() {
+        return Err(format!("HTTP error: {}", response.status()));
     }
-
     let total = response.content_length().unwrap_or(0);
+    if total > max_bytes {
+        return Err(format!("Download exceeds the {max_bytes}-byte limit"));
+    }
+    let mut hasher = checksum
+        .map(validated_checksum)
+        .transpose()?
+        .map(|(algorithm, _)| ChecksumHasher::new(algorithm));
+    if let Ok(metadata) = tokio::fs::symlink_metadata(destination).await {
+        if is_link_or_reparse_point(&metadata) {
+            return Err(
+                "Temporary download path must not be a symbolic link or reparse point".to_string(),
+            );
+        }
+    }
     let mut file = tokio::fs::File::create(destination)
         .await
         .map_err(|error| format!("Failed to create temporary file: {error}"))?;
     let mut stream = response.bytes_stream();
     let mut downloaded = 0_u64;
-    let mut hasher = Sha256::new();
-
     while let Some(chunk) = tokio::time::timeout(INACTIVITY_TIMEOUT, stream.next())
         .await
         .map_err(|_| "Download stalled while waiting for data".to_string())?
         .transpose()
         .map_err(|error| format!("Download stream error: {error}"))?
     {
+        downloaded = downloaded
+            .checked_add(chunk.len() as u64)
+            .ok_or_else(|| "Download size overflow".to_string())?;
+        if downloaded > max_bytes {
+            return Err(format!("Download exceeds the {max_bytes}-byte limit"));
+        }
         file.write_all(&chunk)
             .await
             .map_err(|error| format!("Failed to write temporary file: {error}"))?;
-        hasher.update(&chunk);
-        downloaded += chunk.len() as u64;
-        report_progress(downloaded, total)?;
+        if let Some(hasher) = &mut hasher {
+            hasher.update(&chunk);
+        }
+        report(downloaded, total)?;
     }
-
     file.flush()
         .await
         .map_err(|error| format!("Failed to flush temporary file: {error}"))?;
     file.sync_all()
         .await
         .map_err(|error| format!("Failed to sync temporary file: {error}"))?;
-
-    let digest: [u8; 32] = hasher.finalize().into();
-    if let Some(expected) = checksum {
-        verify_sha256(&digest, expected)?;
+    if let (Some(checksum), Some(hasher)) = (checksum, hasher) {
+        let (_, expected) = validated_checksum(checksum)?;
+        let actual = hasher.finalize();
+        if actual != expected {
+            return Err(format!(
+                "{} checksum mismatch: expected {expected}, got {actual}",
+                checksum.algorithm.trim().to_ascii_uppercase()
+            ));
+        }
     }
-    let _ = app;
     Ok(())
 }
-
 async fn download_with_retry<F>(
-    app: &AppHandle,
-    url: String,
+    url: Url,
     destination: PathBuf,
-    checksum: Option<String>,
-    mut report_progress: F,
+    checksum: Option<ExpectedChecksum>,
+    max_bytes: u64,
+    allowed_hosts: Option<&[&str]>,
+    mut report: F,
 ) -> Result<(), String>
 where
     F: FnMut(u64, u64) -> Result<(), String>,
 {
-    let client = http_client()?;
+    let client = http_client(allowed_hosts)?;
     let mut last_error = "download failed".to_string();
-
     for attempt in 1..=MAX_ATTEMPTS {
         let temp = temporary_path(&destination, attempt);
-        let result = download_once(
+        match download_once(
             &client,
-            app,
             &url,
             &temp,
-            checksum.as_deref(),
-            &mut report_progress,
+            checksum.as_ref(),
+            max_bytes,
+            &mut report,
         )
-        .await;
-        match result {
-            Ok(()) => {
-                let rename_result = replace_destination(&temp, &destination).await;
-                if rename_result.is_ok() {
-                    return Ok(());
-                }
-                last_error = rename_result.unwrap_err();
-            }
+        .await
+        {
+            Ok(()) => match replace_destination(&temp, &destination).await {
+                Ok(()) => return Ok(()),
+                Err(error) => last_error = error,
+            },
             Err(error) => last_error = error,
-        }
+        };
         let _ = tokio::fs::remove_file(&temp).await;
         if attempt < MAX_ATTEMPTS {
             tokio::time::sleep(Duration::from_millis(250 * attempt as u64)).await;
         }
     }
-
     Err(last_error)
 }
 
-#[tauri::command]
-pub async fn download_file(
-    app: AppHandle,
-    url: String,
-    dest: String,
-    event_id: String,
-) -> Result<(), String> {
-    let destination = PathBuf::from(dest);
+fn validate_event_id(event_id: &str) -> Result<String, String> {
+    let value = event_id.trim();
+    if value.is_empty()
+        || value.len() > MAX_EVENT_ID_LENGTH
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        Err("Invalid download event ID".to_string())
+    } else {
+        Ok(value.to_string())
+    }
+}
+fn validate_server_id(server_id: &str) -> Result<String, String> {
+    let value = server_id.trim();
+    if value.is_empty()
+        || value.len() > MAX_SERVER_ID_LENGTH
+        || value.chars().any(char::is_control)
+        || matches!(value, "." | "..")
+        || value.contains(['/', '\\', ':'])
+    {
+        Err("Invalid server ID".to_string())
+    } else {
+        Ok(value.to_string())
+    }
+}
+fn validate_plugin_relative_path(relative_path: &str) -> Result<(String, String), String> {
+    let path = Path::new(relative_path.trim());
+    let components = path.components().collect::<Vec<_>>();
+    if path.is_absolute()
+        || components.len() != 2
+        || !components
+            .iter()
+            .all(|component| matches!(component, Component::Normal(_)))
+    {
+        return Err("Plugin path must be plugins/<file>.jar or mods/<file>.jar".to_string());
+    }
+    let directory = components[0]
+        .as_os_str()
+        .to_str()
+        .ok_or_else(|| "Plugin path is not valid UTF-8".to_string())?;
+    let file = components[1]
+        .as_os_str()
+        .to_str()
+        .ok_or_else(|| "Plugin filename is not valid UTF-8".to_string())?;
+    if !matches!(directory, "plugins" | "mods")
+        || file.len() > 128
+        || file.contains('\0')
+        || !file.to_ascii_lowercase().ends_with(".jar")
+    {
+        return Err("Plugin path must target a .jar file under plugins or mods".to_string());
+    }
+    Ok((directory.to_string(), file.to_string()))
+}
+async fn managed_plugin_destination(
+    app: &AppHandle,
+    server_id: &str,
+    relative_path: &str,
+) -> Result<PathBuf, String> {
+    let server_id = validate_server_id(server_id)?;
+    let _ = validate_plugin_relative_path(relative_path)?;
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let request = ManagedPathRequest {
+        root: ManagedRoot::Servers,
+        server_id: Some(server_id),
+        relative_path: relative_path.trim().to_string(),
+    };
+    let destination = resolve_managed_request(&app_data, &request, true)?;
     if let Some(parent) = destination.parent() {
         tokio::fs::create_dir_all(parent)
             .await
-            .map_err(|error| format!("Failed to create directory: {error}"))?;
+            .map_err(|error| format!("Failed to create managed plugin directory: {error}"))?;
     }
-    let event_name = format!("download-progress-{event_id}");
-    download_with_retry(&app, url, destination, None, |downloaded, total| {
-        app.emit(&event_name, DownloadProgress { downloaded, total })
-            .map_err(|error| format!("Failed to emit download progress: {error}"))
-    })
+    if tokio::fs::symlink_metadata(&destination)
+        .await
+        .ok()
+        .is_some_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Err("Plugin destination must not be a symlink".to_string());
+    }
+    Ok(destination)
+}
+fn provider_hosts(provider: &str) -> Result<&'static [&'static str], String> {
+    match provider.trim().to_ascii_lowercase().as_str() {
+        "modrinth" => Ok(&["cdn.modrinth.com"]),
+        "hangar" => Ok(&["hangar.papermc.io", "hangarcdn.papermc.io", "dl.hangar.io"]),
+        "spiget" => Ok(&["api.spiget.org"]),
+        _ => Err("Unsupported plugin download provider".to_string()),
+    }
+}
+fn hashless_plugin_download_is_allowed(config_value: Option<&serde_json::Value>) -> bool {
+    matches!(config_value, Some(serde_json::Value::Bool(true)))
+}
+
+fn allows_unverified_plugin_downloads(app: &AppHandle) -> bool {
+    let value = app
+        .store("config.json")
+        .ok()
+        .and_then(|store| store.get("allowUnverifiedPluginDownloads"));
+    hashless_plugin_download_is_allowed(value.as_ref())
+}
+
+#[tauri::command]
+pub async fn download_plugin_artifact(
+    app: AppHandle,
+    request: PluginArtifactRequest,
+) -> Result<(), String> {
+    let hosts = provider_hosts(&request.provider)?;
+    let url = validate_https_url(&request.url, Some(hosts))?;
+    let destination =
+        managed_plugin_destination(&app, &request.server_id, &request.relative_path).await?;
+    let event_id = validate_event_id(&request.event_id)?;
+    if request.checksum.is_none() && !allows_unverified_plugin_downloads(&app) {
+        return Err("Plugin download rejected: checksum is required. Set allowUnverifiedPluginDownloads to true in config.json only when you explicitly accept an unverified artifact.".to_string());
+    }
+    let event = format!("download-progress-{event_id}");
+    download_with_retry(
+        url,
+        destination,
+        request.checksum,
+        MAX_PLUGIN_DOWNLOAD_BYTES,
+        Some(hosts),
+        |downloaded, total| {
+            app.emit(&event, DownloadProgress { downloaded, total })
+                .map_err(|error| format!("Failed to emit download progress: {error}"))
+        },
+    )
     .await
+}
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerJarDownloadRequest {
+    pub server_id: String,
+    pub relative_path: String,
+    pub url: String,
+    pub checksum: Option<ExpectedChecksum>,
 }
 
 #[tauri::command]
 pub async fn download_server_jar(
     app: AppHandle,
-    url: String,
-    dest_path: String,
-    server_id: String,
-    sha256: Option<String>,
+    request: ServerJarDownloadRequest,
 ) -> Result<(), String> {
-    let destination = PathBuf::from(dest_path);
+    let url = validate_https_url(&request.url, Some(SERVER_JAR_HOSTS))?;
+    let server_id = validate_server_id(&request.server_id)?;
+    let jar_path = Path::new(request.relative_path.trim());
+    let components = jar_path.components().collect::<Vec<_>>();
+    if jar_path.is_absolute()
+        || components.len() != 1
+        || !components
+            .iter()
+            .all(|component| matches!(component, Component::Normal(_)))
+        || !jar_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.to_ascii_lowercase().ends_with(".jar"))
+    {
+        return Err("Server JAR destination must be a single .jar filename".to_string());
+    }
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let managed_request = ManagedPathRequest {
+        root: ManagedRoot::Servers,
+        server_id: Some(server_id.clone()),
+        relative_path: request.relative_path.trim().to_string(),
+    };
+    let destination = resolve_managed_request(&app_data, &managed_request, true)?;
     if let Some(parent) = destination.parent() {
         tokio::fs::create_dir_all(parent)
             .await
@@ -208,31 +609,37 @@ pub async fn download_server_jar(
     }
     let progress_app = app.clone();
     let progress_server_id = server_id.clone();
-    download_with_retry(&app, url, destination, sha256, move |downloaded, total| {
-        let progress = if total > 0 {
-            ((downloaded as f64 / total as f64) * 100.0) as u32
-        } else {
-            0
-        };
-        progress_app
-            .emit(
-                "download-progress",
-                serde_json::json!({
-                    "serverId": progress_server_id,
-                    "progress": progress,
-                    "status": format!("Downloading... {progress}%"),
-                }),
-            )
-            .map_err(|error| format!("Failed to emit download progress: {error}"))
-    })
+    download_with_retry(
+        url,
+        destination,
+        request.checksum,
+        MAX_SERVER_JAR_BYTES,
+        Some(SERVER_JAR_HOSTS),
+        move |downloaded, total| {
+            let progress = if total > 0 {
+                ((downloaded as f64 / total as f64) * 100.0) as u32
+            } else {
+                0
+            };
+            progress_app
+                .emit(
+                    "download-progress",
+                    serde_json::json!({
+                        "serverId": progress_server_id,
+                        "progress": progress,
+                        "status": format!("Downloading... {progress}%")
+                    }),
+                )
+                .map_err(|error| format!("Failed to emit download progress: {error}"))
+        },
+    )
     .await?;
-
     app.emit(
         "download-progress",
         serde_json::json!({
             "serverId": server_id,
             "progress": 100,
-            "status": "Download complete",
+            "status": "Download complete"
         }),
     )
     .map_err(|error| format!("Failed to emit download progress: {error}"))?;
@@ -241,13 +648,68 @@ pub async fn download_server_jar(
 
 #[cfg(test)]
 mod tests {
-    use super::verify_sha256;
+    use super::*;
+    #[test]
+    fn verifies_all_supported_checksum_algorithms() {
+        for (algorithm, input, expected) in [("sha1", "abc", "a9993e364706816aba3e25717850c26c9cd0d89d"), ("sha256", "abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"), ("sha512", "abc", "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f")] { let (parsed, _) = validated_checksum(&ExpectedChecksum { algorithm: algorithm.to_string(), value: expected.to_string() }).unwrap(); let mut hasher = ChecksumHasher::new(parsed); hasher.update(input.as_bytes()); assert_eq!(hasher.finalize(), expected); }
+    }
+    #[test]
+    fn rejects_invalid_checksum_and_unapproved_urls() {
+        assert!(validated_checksum(&ExpectedChecksum {
+            algorithm: "sha1".to_string(),
+            value: "0".repeat(64)
+        })
+        .is_err());
+        assert!(validate_https_url(
+            "http://cdn.modrinth.com/file.jar",
+            Some(&["cdn.modrinth.com"])
+        )
+        .is_err());
+        assert!(
+            validate_https_url("https://127.0.0.1/file.jar", Some(&["cdn.modrinth.com"])).is_err()
+        );
+        assert!(
+            validate_https_url("https://evil.example/file.jar", Some(&["cdn.modrinth.com"]))
+                .is_err()
+        );
+        assert!(validate_https_url(
+            "https://user@cdn.modrinth.com/file.jar",
+            Some(&["cdn.modrinth.com"])
+        )
+        .is_err());
+    }
+    #[test]
+    fn plugin_paths_and_events_are_tightly_scoped() {
+        assert_eq!(
+            validate_plugin_relative_path("plugins/example.jar").unwrap(),
+            ("plugins".to_string(), "example.jar".to_string())
+        );
+        assert!(validate_plugin_relative_path("../plugins/example.jar").is_err());
+        assert!(validate_plugin_relative_path("plugins/nested/example.jar").is_err());
+        assert!(validate_plugin_relative_path("plugins/example.txt").is_err());
+        assert!(validate_event_id("plugin-version_1.2").is_ok());
+        assert!(validate_event_id("plugin/event").is_err());
+    }
+    #[test]
+    fn provider_allowlists_are_exact() {
+        assert_eq!(provider_hosts("modrinth").unwrap(), ["cdn.modrinth.com"]);
+        assert!(provider_hosts("hangar")
+            .unwrap()
+            .contains(&"hangarcdn.papermc.io"));
+        assert!(provider_hosts("modrinth.evil.example").is_err());
+    }
 
     #[test]
-    fn verifies_sha256_and_rejects_mismatch() {
-        let digest = [0_u8; 32];
-        let expected = "00".repeat(32);
-        assert!(verify_sha256(&digest, &expected).is_ok());
-        assert!(verify_sha256(&digest, &"11".repeat(32)).is_err());
+    fn hashless_download_policy_defaults_to_reject() {
+        assert!(!hashless_plugin_download_is_allowed(None));
+        assert!(!hashless_plugin_download_is_allowed(Some(
+            &serde_json::json!("true")
+        )));
+        assert!(!hashless_plugin_download_is_allowed(Some(
+            &serde_json::json!(false)
+        )));
+        assert!(hashless_plugin_download_is_allowed(Some(
+            &serde_json::json!(true)
+        )));
     }
 }

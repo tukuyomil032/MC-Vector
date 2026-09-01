@@ -51,6 +51,8 @@ pub fn run() {
         .manage(commands::server::ServerManager::default())
         .manage(commands::server::CommandLimiter::default())
         .manage(commands::ngrok::NgrokManager::default())
+        .manage(commands::file_utils::ServerImportManager::default())
+        .manage(commands::health_check::ProbeLimiter::default())
         .invoke_handler(tauri::generate_handler![
             // サーバー操作
             commands::server::start_server,
@@ -61,13 +63,13 @@ pub fn run() {
             // プロセス統計
             commands::process_stats::get_server_stats,
             // ダウンロード
-            commands::download::download_file,
             commands::download::download_server_jar,
+            commands::download::download_plugin_artifact,
             // バックアップ
-            commands::backup::create_backup,
-            commands::backup::restore_backup,
-            commands::backup::compress_item,
-            commands::backup::extract_item,
+            commands::backup::create_managed_backup,
+            commands::backup::restore_managed_backup,
+            commands::backup::compress_managed_items,
+            commands::backup::extract_managed_item,
             // Java
             commands::java::download_java,
             // ngrok
@@ -80,12 +82,21 @@ pub fn run() {
             commands::file_utils::resolve_managed_path,
             commands::file_utils::read_managed_text_file,
             commands::file_utils::write_managed_text_file,
+            commands::file_utils::import_managed_files,
+            commands::file_utils::pick_server_import,
+            commands::file_utils::complete_server_import,
+            commands::file_utils::cancel_server_import,
+            commands::file_utils::export_text_file,
+            commands::file_utils::create_managed_directory,
+            commands::file_utils::delete_managed_path,
+            commands::file_utils::move_managed_path,
             commands::file_utils::delete_managed_server_dir,
+            commands::file_utils::clone_managed_server,
+            commands::file_utils::migrate_managed_server_directory,
             // アップデートユーティリティ
             commands::updater_utils::can_update_app,
             commands::updater_utils::get_app_location,
-            // セキュリティ/パフォーマンス拡張
-            commands::security::security_gateway,
+            // パフォーマンス拡張
             commands::perf::parse_ansi_lines,
             // ヘルスチェック
             commands::health_check::ping_server,

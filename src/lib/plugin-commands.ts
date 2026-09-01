@@ -48,6 +48,7 @@ export interface HangarDownloadInfo {
   downloadUrl: string | null;
   externalUrl: string | null;
   fileName: string | null;
+  checksum?: PluginChecksum;
 }
 
 export interface HangarVersion {
@@ -61,6 +62,7 @@ export interface HangarResolvedDownload {
   fileName: string;
   downloadUrl: string | null;
   externalUrl: string | null;
+  checksum?: PluginChecksum;
   compatible: boolean;
   supportedVersions: string[];
 }
@@ -76,6 +78,20 @@ export interface SpigetResource {
   authorName?: string;
   fileType?: string;
   latestVersionId?: number;
+}
+
+export interface PluginChecksum {
+  algorithm: 'sha1' | 'sha256' | 'sha512';
+  value: string;
+}
+
+export interface PluginArtifactRequest {
+  serverId: string;
+  relativePath: string;
+  provider: 'modrinth' | 'hangar' | 'spiget';
+  url: string;
+  checksum?: PluginChecksum;
+  eventId: string;
 }
 
 interface ModrinthProjectDocument {
@@ -165,6 +181,43 @@ function parseModrinthVersion(version: unknown): ModrinthVersion | null {
     gameVersions,
     dependencies,
   };
+}
+
+function parsePluginChecksum(value: unknown): PluginChecksum | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const checksumKeys = {
+    sha512: ['sha512', 'sha512Hash', 'sha512_hash'],
+    sha256: ['sha256', 'sha256Hash', 'sha256_hash'],
+    sha1: ['sha1', 'sha1Hash', 'sha1_hash'],
+  } as const;
+
+  let malformedChecksum: PluginChecksum | undefined;
+  for (const algorithm of ['sha512', 'sha256', 'sha1'] as const) {
+    const checksumKey = checksumKeys[algorithm].find((key) => Object.hasOwn(value, key));
+    if (!checksumKey) {
+      continue;
+    }
+
+    const rawHash = value[checksumKey];
+    const hash = asString(rawHash).trim().toLowerCase();
+    const expectedLength = algorithm === 'sha512' ? 128 : algorithm === 'sha256' ? 64 : 40;
+    if (hash.length === expectedLength && /^[0-9a-f]+$/.test(hash)) {
+      return { algorithm, value: hash };
+    }
+
+    malformedChecksum ??= {
+      algorithm,
+      value: typeof rawHash === 'string' ? hash : '',
+    };
+  }
+
+  // Keep malformed provider metadata visible to the Rust boundary. It will
+  // reject the checksum regardless of the hashless-download compatibility
+  // setting instead of treating malformed metadata as an absent hash.
+  return malformedChecksum;
 }
 
 function parseModrinthProjectIdentity(project: unknown): ModrinthProjectIdentity | null {
@@ -273,6 +326,7 @@ function parseHangarVersion(version: unknown): HangarVersion | null {
       downloadUrl: downloadUrl || null,
       externalUrl: externalUrl || null,
       fileName: fileInfoRaw ? asString(fileInfoRaw.name) || null : null,
+      checksum: fileInfoRaw ? parsePluginChecksum(fileInfoRaw) : undefined,
     };
   }
 
@@ -528,6 +582,7 @@ export async function resolveHangarDownload(params: {
     fileName,
     downloadUrl: selectedDownload.downloadUrl,
     externalUrl: selectedDownload.externalUrl,
+    checksum: selectedDownload.checksum,
     compatible: Boolean(compatibleVersion),
     supportedVersions,
   };
@@ -605,14 +660,15 @@ export async function getSpigotResourceBody(resourceId: number): Promise<string 
   return parsed.description?.trim() ? parsed.description : null;
 }
 
-export async function downloadPlugin(url: string, dest: string, eventId: string): Promise<void> {
-  return tauriInvoke('download_file', { url, dest, eventId });
+export async function downloadPlugin(request: PluginArtifactRequest): Promise<void> {
+  return tauriInvoke('download_plugin_artifact', { request });
 }
 
 export async function installModrinthProject(
   versionId: string,
   fileName: string,
-  destDir: string,
+  serverId: string,
+  relativeDir: 'plugins' | 'mods',
 ): Promise<void> {
   const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/version/${versionId}`);
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
@@ -667,10 +723,12 @@ export async function installModrinthProject(
     throw new Error('No filename available for Modrinth install');
   }
 
-  const destPath = `${destDir}/${targetFileName}`;
-  await tauriInvoke('download_file', {
+  await downloadPlugin({
+    serverId,
+    relativePath: `${relativeDir}/${targetFileName}`,
+    provider: 'modrinth',
     url,
-    dest: destPath,
+    checksum: parsePluginChecksum(chosenEntry.hashes),
     eventId: `plugin-${versionId}`,
   });
 }
@@ -678,12 +736,16 @@ export async function installModrinthProject(
 export async function installHangarProject(
   downloadUrl: string,
   fileName: string,
-  destDir: string,
+  serverId: string,
+  relativeDir: 'plugins' | 'mods',
+  checksum?: PluginChecksum,
 ): Promise<void> {
-  const destPath = `${destDir}/${fileName}`;
-  await tauriInvoke('download_file', {
+  await downloadPlugin({
+    serverId,
+    relativePath: `${relativeDir}/${fileName}`,
+    provider: 'hangar',
     url: downloadUrl,
-    dest: destPath,
+    checksum,
     eventId: 'plugin-hangar',
   });
 }
@@ -691,7 +753,8 @@ export async function installHangarProject(
 export async function installSpigotProject(
   resourceId: number,
   fileName: string,
-  destDir: string,
+  serverId: string,
+  relativeDir: 'plugins' | 'mods',
   versionId?: number,
 ): Promise<void> {
   const url = new URL(`https://api.spiget.org/v2/resources/${resourceId}/download`);
@@ -699,10 +762,11 @@ export async function installSpigotProject(
     url.searchParams.set('version', String(versionId));
   }
 
-  const destPath = `${destDir}/${fileName}`;
-  await tauriInvoke('download_file', {
+  await downloadPlugin({
+    serverId,
+    relativePath: `${relativeDir}/${fileName}`,
+    provider: 'spiget',
     url: url.toString(),
-    dest: destPath,
     eventId: `plugin-spigot-${resourceId}`,
   });
 }

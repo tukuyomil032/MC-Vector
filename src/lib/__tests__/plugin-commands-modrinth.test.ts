@@ -210,7 +210,7 @@ describe('plugin-commands (Modrinth)', () => {
   });
 
   describe('installModrinthProject', () => {
-    it('calls download_file with matching fileName', async () => {
+    it('calls the typed command with matching fileName', async () => {
       fetchMock.mockResolvedValueOnce(
         makeFetchResponse({
           files: [
@@ -220,12 +220,41 @@ describe('plugin-commands (Modrinth)', () => {
         }),
       );
       const { installModrinthProject } = await import('../plugin-commands');
-      await installModrinthProject('v1', 'worldedit-7.jar', '/plugins');
+      await installModrinthProject('v1', 'worldedit-7.jar', 'server-1', 'plugins');
       expect(tauriInvokeMock).toHaveBeenCalledWith(
-        'download_file',
+        'download_plugin_artifact',
         expect.objectContaining({
-          url: 'https://cdn.example.com/we7.jar',
-          dest: '/plugins/worldedit-7.jar',
+          request: expect.objectContaining({
+            url: 'https://cdn.example.com/we7.jar',
+            relativePath: 'plugins/worldedit-7.jar',
+            provider: 'modrinth',
+            serverId: 'server-1',
+          }),
+        }),
+      );
+    });
+
+    it('passes malformed provider hashes to the Rust boundary for rejection', async () => {
+      fetchMock.mockResolvedValueOnce(
+        makeFetchResponse({
+          files: [
+            {
+              filename: 'worldedit-7.jar',
+              url: 'https://cdn.example.com/we7.jar',
+              primary: true,
+              hashes: { sha256: 'not-a-sha256' },
+            },
+          ],
+        }),
+      );
+      const { installModrinthProject } = await import('../plugin-commands');
+      await installModrinthProject('v1', 'worldedit-7.jar', 'server-1', 'plugins');
+      expect(tauriInvokeMock).toHaveBeenCalledWith(
+        'download_plugin_artifact',
+        expect.objectContaining({
+          request: expect.objectContaining({
+            checksum: { algorithm: 'sha256', value: 'not-a-sha256' },
+          }),
         }),
       );
     });
@@ -239,11 +268,13 @@ describe('plugin-commands (Modrinth)', () => {
         }),
       );
       const { installModrinthProject } = await import('../plugin-commands');
-      await installModrinthProject('v1', '', '/plugins');
+      await installModrinthProject('v1', '', 'server-1', 'plugins');
       expect(tauriInvokeMock).toHaveBeenCalledWith(
-        'download_file',
+        'download_plugin_artifact',
         expect.objectContaining({
-          url: 'https://cdn.example.com/we7.jar',
+          request: expect.objectContaining({
+            url: 'https://cdn.example.com/we7.jar',
+          }),
         }),
       );
     });
@@ -251,13 +282,13 @@ describe('plugin-commands (Modrinth)', () => {
     it('throws when files array is empty', async () => {
       fetchMock.mockResolvedValueOnce(makeFetchResponse({ files: [] }));
       const { installModrinthProject } = await import('../plugin-commands');
-      await expect(installModrinthProject('v1', '', '/plugins')).rejects.toThrow();
+      await expect(installModrinthProject('v1', '', 'server-1', 'plugins')).rejects.toThrow();
     });
 
     it('throws when payload lacks files property', async () => {
       fetchMock.mockResolvedValueOnce(makeFetchResponse({ id: 'v1' }));
       const { installModrinthProject } = await import('../plugin-commands');
-      await expect(installModrinthProject('v1', '', '/plugins')).rejects.toThrow(
+      await expect(installModrinthProject('v1', '', 'server-1', 'plugins')).rejects.toThrow(
         'Failed to parse Modrinth version payload',
       );
     });

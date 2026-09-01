@@ -7,7 +7,6 @@ const mockData: Record<string, unknown> = {
   get_app_location: '/mock/app',
   can_update_app: false,
   parse_ansi_lines: [],
-  security_gateway: null,
   get_server_templates: [],
 };
 
