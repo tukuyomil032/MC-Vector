@@ -717,18 +717,22 @@ pub async fn move_managed_path(
     reject_managed_root_target(&app_data_dir, &from, &source)?;
     reject_managed_root_target(&app_data_dir, &to, &destination)?;
 
-    let source_metadata = std::fs::symlink_metadata(&source)
+    move_managed_entry(&source, &destination).await
+}
+
+async fn move_managed_entry(source: &Path, destination: &Path) -> Result<(), String> {
+    let source_metadata = std::fs::symlink_metadata(source)
         .map_err(|error| format!("Failed to inspect managed source: {error}"))?;
     if is_link_or_reparse_point(&source_metadata) {
         return Err("Refusing to move a symbolic link or reparse point".to_string());
     }
-    if let Ok(destination_metadata) = std::fs::symlink_metadata(&destination) {
+    if let Ok(destination_metadata) = std::fs::symlink_metadata(destination) {
         if is_link_or_reparse_point(&destination_metadata) {
             return Err("Refusing to replace a symbolic link or reparse point".to_string());
         }
     }
 
-    tokio::fs::rename(&source, &destination)
+    tokio::fs::rename(source, destination)
         .await
         .map_err(|error| format!("Failed to move managed path: {error}"))
 }
@@ -918,6 +922,10 @@ pub async fn list_dir_with_metadata(
 ) -> Result<Vec<FileEntryInfo>, String> {
     let app_data_dir = app_data_dir(&app)?;
     let dir_path = resolve_managed_request(&app_data_dir, &request, false)?;
+    list_directory_entries(&dir_path)
+}
+
+fn list_directory_entries(dir_path: &Path) -> Result<Vec<FileEntryInfo>, String> {
     let metadata =
         std::fs::symlink_metadata(&dir_path).map_err(|_| "Directory does not exist".to_string())?;
     if is_link_or_reparse_point(&metadata) {
@@ -967,7 +975,8 @@ pub async fn list_dir_with_metadata(
 #[cfg(test)]
 mod tests {
     use super::{
-        resolve_managed_request, validated_relative_path, ManagedPathRequest, ManagedRoot,
+        list_directory_entries, move_managed_entry, resolve_managed_request,
+        validated_relative_path, ManagedPathRequest, ManagedRoot,
     };
     use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1095,6 +1104,87 @@ mod tests {
             true,
         )
         .is_err());
+    }
+
+    #[tokio::test]
+    async fn moves_a_downloaded_jar_within_the_managed_server_root() {
+        let app_data = TestDirectory::new();
+        let source_request = server_request("server-1", "plugins/example.jar.part-valid.jar");
+        let destination_request = server_request("server-1", "plugins/example.jar");
+        let source = resolve_managed_request(app_data.path(), &source_request, true)
+            .expect("managed source should resolve");
+        let destination = resolve_managed_request(app_data.path(), &destination_request, true)
+            .expect("managed destination should resolve");
+        std::fs::create_dir_all(source.parent().expect("source should have a parent"))
+            .expect("managed plugin directory should be created");
+        std::fs::write(&source, b"downloaded plugin").expect("temporary plugin should be written");
+
+        move_managed_entry(&source, &destination)
+            .await
+            .expect("managed jar should move");
+
+        assert!(!source.exists());
+        assert_eq!(std::fs::read(&destination).unwrap(), b"downloaded plugin");
+        let plugins_dir = destination.parent().expect("jar should have a parent");
+        let entries = list_directory_entries(plugins_dir).expect("plugins directory should list");
+        assert!(entries.iter().any(|entry| entry.name == "example.jar"));
+    }
+
+    #[tokio::test]
+    async fn resolves_jar_destination_below_the_requested_server_id() {
+        let app_data = TestDirectory::new();
+        let source = resolve_managed_request(
+            app_data.path(),
+            &server_request("server-1", "plugins/example.jar.part-valid.jar"),
+            true,
+        )
+        .expect("managed source should resolve");
+        let destination = resolve_managed_request(
+            app_data.path(),
+            &server_request("server-2", "plugins/example.jar"),
+            true,
+        )
+        .expect("managed destination should resolve");
+        std::fs::create_dir_all(source.parent().expect("source should have a parent"))
+            .expect("managed plugin directory should be created");
+        std::fs::write(&source, b"server one plugin").expect("source should be written");
+
+        let canonical_app_data = std::fs::canonicalize(app_data.path()).unwrap();
+        assert!(source.starts_with(canonical_app_data.join("servers/server-1")));
+        assert!(destination.starts_with(canonical_app_data.join("servers/server-2")));
+        assert_ne!(source.parent(), destination.parent());
+        assert!(destination.parent().unwrap().ends_with("server-2/plugins"));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn rejects_symlink_source_and_destination_for_managed_move() {
+        use std::os::unix::fs::symlink;
+
+        let app_data = TestDirectory::new();
+        let outside = TestDirectory::new();
+        let source = resolve_managed_request(
+            app_data.path(),
+            &server_request("server-1", "plugins/example.jar.part-valid.jar"),
+            true,
+        )
+        .expect("source should resolve");
+        let destination = resolve_managed_request(
+            app_data.path(),
+            &server_request("server-1", "plugins/example.jar"),
+            true,
+        )
+        .expect("destination should resolve");
+        std::fs::create_dir_all(source.parent().expect("source should have a parent"))
+            .expect("managed plugin directory should be created");
+        symlink(outside.path(), &source).expect("source symlink should be created");
+        assert!(move_managed_entry(&source, &destination).await.is_err());
+
+        std::fs::remove_file(&source).expect("source symlink should be removed");
+        std::fs::write(&source, b"safe source").expect("safe source should be written");
+        symlink(outside.path(), &destination).expect("destination symlink should be created");
+        assert!(move_managed_entry(&source, &destination).await.is_err());
+        assert!(source.exists());
     }
 
     #[cfg(unix)]

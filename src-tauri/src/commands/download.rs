@@ -649,6 +649,165 @@ pub async fn download_server_jar(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::mpsc;
+    use std::thread;
+
+    static TEST_DIRECTORY_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    struct TestDirectory(PathBuf);
+
+    impl TestDirectory {
+        fn new() -> Self {
+            let nonce = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock should be after the Unix epoch")
+                .as_nanos();
+            let sequence = TEST_DIRECTORY_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "mc-vector-download-{}-{nonce}-{sequence}",
+                std::process::id()
+            ));
+            std::fs::create_dir_all(&path).expect("test directory should be created");
+            Self(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+
+        fn destination(&self, relative_path: &str) -> PathBuf {
+            let destination = self.path().join(relative_path);
+            std::fs::create_dir_all(
+                destination
+                    .parent()
+                    .expect("destination should have parent"),
+            )
+            .expect("destination parent should be created");
+            destination
+        }
+    }
+
+    impl Drop for TestDirectory {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    struct TestHttpServer {
+        url: Url,
+        thread: Option<thread::JoinHandle<()>>,
+    }
+
+    impl TestHttpServer {
+        fn new(body: &[u8], include_content_length: bool, requests: usize) -> Self {
+            let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener should bind");
+            let address = listener
+                .local_addr()
+                .expect("loopback listener should have an address");
+            let body = body.to_vec();
+            let (ready_sender, ready_receiver) = mpsc::channel();
+            let thread = thread::spawn(move || {
+                ready_sender
+                    .send(())
+                    .expect("test server should signal readiness");
+                for _ in 0..requests {
+                    let (mut stream, _) = listener.accept().expect("test request should connect");
+                    let mut request = [0_u8; 4096];
+                    let _ = stream.read(&mut request);
+                    write_response(&mut stream, &body, include_content_length);
+                }
+            });
+            ready_receiver
+                .recv()
+                .expect("test server should become ready");
+            Self {
+                url: Url::parse(&format!("http://{address}/plugin.jar"))
+                    .expect("test server URL should parse"),
+                thread: Some(thread),
+            }
+        }
+    }
+
+    impl Drop for TestHttpServer {
+        fn drop(&mut self) {
+            if let Some(thread) = self.thread.take() {
+                thread.join().expect("test server should stop cleanly");
+            }
+        }
+    }
+
+    fn write_response(stream: &mut TcpStream, body: &[u8], include_content_length: bool) {
+        let content_length = if include_content_length {
+            format!("Content-Length: {}\r\n", body.len())
+        } else {
+            String::new()
+        };
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/java-archive\r\n{content_length}Connection: close\r\n\r\n"
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("test response headers should be written");
+        stream
+            .write_all(body)
+            .expect("test response body should be written");
+        stream.flush().expect("test response should be flushed");
+    }
+
+    fn test_checksum(algorithm: &str, body: &[u8]) -> ExpectedChecksum {
+        let algorithm_value =
+            ChecksumAlgorithm::parse(algorithm).expect("test algorithm should parse");
+        let mut hasher = ChecksumHasher::new(algorithm_value);
+        hasher.update(body);
+        ExpectedChecksum {
+            algorithm: algorithm.to_string(),
+            value: hasher.finalize(),
+        }
+    }
+
+    fn assert_no_temporary_files(directory: &Path, destination: &Path) {
+        let destination_name = destination
+            .file_name()
+            .expect("destination should have a filename")
+            .to_string_lossy();
+        let temporary_prefix = format!(".{destination_name}.part-");
+        let leftovers = std::fs::read_dir(directory)
+            .expect("test directory should be readable")
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(&temporary_prefix)
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            leftovers.is_empty(),
+            "temporary files remain: {leftovers:?}"
+        );
+    }
+
+    async fn download_from_test_server(
+        server: &TestHttpServer,
+        destination: PathBuf,
+        checksum: Option<ExpectedChecksum>,
+        max_bytes: u64,
+    ) -> Result<(), String> {
+        download_with_retry(
+            server.url.clone(),
+            destination,
+            checksum,
+            max_bytes,
+            None,
+            |_, _| Ok(()),
+        )
+        .await
+    }
+
     #[test]
     fn verifies_all_supported_checksum_algorithms() {
         for (algorithm, input, expected) in [("sha1", "abc", "a9993e364706816aba3e25717850c26c9cd0d89d"), ("sha256", "abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"), ("sha512", "abc", "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f")] { let (parsed, _) = validated_checksum(&ExpectedChecksum { algorithm: algorithm.to_string(), value: expected.to_string() }).unwrap(); let mut hasher = ChecksumHasher::new(parsed); hasher.update(input.as_bytes()); assert_eq!(hasher.finalize(), expected); }
@@ -684,11 +843,37 @@ mod tests {
             validate_plugin_relative_path("plugins/example.jar").unwrap(),
             ("plugins".to_string(), "example.jar".to_string())
         );
+        assert_eq!(
+            validate_plugin_relative_path("mods/Example.JAR").unwrap(),
+            ("mods".to_string(), "Example.JAR".to_string())
+        );
         assert!(validate_plugin_relative_path("../plugins/example.jar").is_err());
+        assert!(validate_plugin_relative_path("/tmp/example.jar").is_err());
         assert!(validate_plugin_relative_path("plugins/nested/example.jar").is_err());
         assert!(validate_plugin_relative_path("plugins/example.txt").is_err());
+        assert!(validate_plugin_relative_path("plugins/example.jar.tmp").is_err());
+        assert!(validate_plugin_relative_path("plugins/example.jar.tmp-123").is_err());
+        assert!(validate_plugin_relative_path("plugins/").is_err());
         assert!(validate_event_id("plugin-version_1.2").is_ok());
         assert!(validate_event_id("plugin/event").is_err());
+    }
+
+    #[test]
+    fn deserializes_the_camel_case_plugin_download_contract() {
+        let request: PluginArtifactRequest = serde_json::from_value(serde_json::json!({
+            "serverId": "server-1",
+            "relativePath": "plugins/example.jar",
+            "provider": "modrinth",
+            "url": "https://cdn.modrinth.com/example.jar",
+            "checksum": { "algorithm": "sha256", "value": "0".repeat(64) },
+            "eventId": "plugin-example"
+        }))
+        .expect("camelCase plugin request should deserialize");
+
+        assert_eq!(request.server_id, "server-1");
+        assert_eq!(request.relative_path, "plugins/example.jar");
+        assert_eq!(request.event_id, "plugin-example");
+        assert_eq!(request.checksum.unwrap().algorithm, "sha256");
     }
     #[test]
     fn provider_allowlists_are_exact() {
@@ -711,5 +896,168 @@ mod tests {
         assert!(hashless_plugin_download_is_allowed(Some(
             &serde_json::json!(true)
         )));
+    }
+
+    #[tokio::test]
+    async fn downloads_plugins_and_mods_to_the_final_jar_path() {
+        for relative_path in ["plugins/example.jar", "mods/example.jar"] {
+            let test_dir = TestDirectory::new();
+            let destination = test_dir.destination(relative_path);
+            let server = TestHttpServer::new(b"plugin bytes", true, 1);
+
+            download_from_test_server(&server, destination.clone(), None, 1024)
+                .await
+                .expect("plugin should download");
+
+            assert_eq!(std::fs::read(&destination).unwrap(), b"plugin bytes");
+            assert_no_temporary_files(destination.parent().unwrap(), &destination);
+        }
+    }
+
+    #[tokio::test]
+    async fn verifies_sha1_sha256_and_sha512_during_real_downloads() {
+        let body = b"plugin bytes with a checksum";
+        for algorithm in ["sha1", "sha256", "sha512"] {
+            let test_dir = TestDirectory::new();
+            let destination = test_dir.destination("plugins/example.jar");
+            let server = TestHttpServer::new(body, true, 1);
+
+            download_from_test_server(
+                &server,
+                destination.clone(),
+                Some(test_checksum(algorithm, body)),
+                1024,
+            )
+            .await
+            .expect("checksum should match downloaded bytes");
+
+            assert_eq!(std::fs::read(destination).unwrap(), body);
+        }
+    }
+
+    #[tokio::test]
+    async fn rejects_checksum_mismatch_and_cleans_up_without_touching_final_file() {
+        let test_dir = TestDirectory::new();
+        let destination = test_dir.destination("plugins/example.jar");
+        std::fs::write(&destination, b"existing plugin")
+            .expect("existing plugin should be written");
+        let server = TestHttpServer::new(b"new plugin", true, MAX_ATTEMPTS);
+        let checksum = ExpectedChecksum {
+            algorithm: "sha256".to_string(),
+            value: "0".repeat(64),
+        };
+
+        let error = download_from_test_server(&server, destination.clone(), Some(checksum), 1024)
+            .await
+            .expect_err("checksum mismatch should reject the download");
+
+        assert!(error.contains("checksum mismatch"));
+        assert_eq!(std::fs::read(&destination).unwrap(), b"existing plugin");
+        assert_no_temporary_files(destination.parent().unwrap(), &destination);
+    }
+
+    #[tokio::test]
+    async fn rejects_content_length_and_stream_size_limits_without_final_file() {
+        let test_dir = TestDirectory::new();
+        let content_length_destination = test_dir.destination("plugins/content-length.jar");
+        let content_length_server = TestHttpServer::new(b"012345", true, MAX_ATTEMPTS);
+        let content_length_error = download_from_test_server(
+            &content_length_server,
+            content_length_destination.clone(),
+            None,
+            5,
+        )
+        .await
+        .expect_err("content-length over limit should reject");
+        assert!(content_length_error.contains("Download exceeds the 5-byte limit"));
+        assert!(!content_length_destination.exists());
+        assert_no_temporary_files(
+            content_length_destination.parent().unwrap(),
+            &content_length_destination,
+        );
+
+        let stream_destination = test_dir.destination("plugins/stream-limit.jar");
+        let stream_server = TestHttpServer::new(b"012345", false, MAX_ATTEMPTS);
+        let stream_error =
+            download_from_test_server(&stream_server, stream_destination.clone(), None, 5)
+                .await
+                .expect_err("stream size over limit should reject");
+        assert!(stream_error.contains("Download exceeds the 5-byte limit"));
+        assert!(!stream_destination.exists());
+        assert_no_temporary_files(stream_destination.parent().unwrap(), &stream_destination);
+    }
+
+    #[tokio::test]
+    async fn atomically_replaces_an_existing_destination_only_after_success() {
+        let test_dir = TestDirectory::new();
+        let destination = test_dir.destination("plugins/example.jar");
+        std::fs::write(&destination, b"old plugin").expect("old plugin should be written");
+        let server = TestHttpServer::new(b"new plugin", true, 1);
+
+        download_from_test_server(&server, destination.clone(), None, 1024)
+            .await
+            .expect("new plugin should download");
+
+        assert_eq!(std::fs::read(&destination).unwrap(), b"new plugin");
+        assert_no_temporary_files(destination.parent().unwrap(), &destination);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn rejects_a_symlink_destination_before_replacement() {
+        use std::os::unix::fs::symlink;
+
+        let test_dir = TestDirectory::new();
+        let outside = TestDirectory::new();
+        let destination = test_dir.destination("plugins/example.jar");
+        symlink(outside.path().join("outside.jar"), &destination)
+            .expect("destination symlink should be created");
+        let server = TestHttpServer::new(b"plugin bytes", true, MAX_ATTEMPTS);
+
+        let error = download_from_test_server(&server, destination.clone(), None, 1024)
+            .await
+            .expect_err("symlink destination should be rejected");
+
+        assert!(error.contains("symbolic link"));
+        assert!(std::fs::symlink_metadata(&destination)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_no_temporary_files(destination.parent().unwrap(), &destination);
+    }
+
+    #[test]
+    fn rejects_malformed_checksum_values_before_download() {
+        for (algorithm, value) in [
+            ("sha1", "0".repeat(39)),
+            ("sha256", "0".repeat(63)),
+            ("sha512", "0".repeat(127)),
+            ("sha256", format!("{}g", "0".repeat(63))),
+        ] {
+            assert!(validated_checksum(&ExpectedChecksum {
+                algorithm: algorithm.to_string(),
+                value,
+            })
+            .is_err());
+        }
+        assert!(ChecksumAlgorithm::parse("md5").is_err());
+    }
+
+    #[test]
+    fn redirect_validation_keeps_provider_allowlists_strict() {
+        assert!(validate_https_url(
+            "https://cdn.modrinth.com/plugin.jar",
+            Some(&["cdn.modrinth.com"])
+        )
+        .is_ok());
+        assert!(validate_https_url(
+            "https://evil.example/plugin.jar",
+            Some(&["cdn.modrinth.com"])
+        )
+        .is_err());
+        assert!(
+            validate_https_url("https://127.0.0.1/plugin.jar", Some(&["cdn.modrinth.com"]))
+                .is_err()
+        );
     }
 }
