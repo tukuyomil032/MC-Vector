@@ -51,8 +51,16 @@ function normalizeReleaseNotes(notes: unknown): string {
 const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
+  const [isSavingSecuritySetting, setIsSavingSecuritySetting] = useState(false);
+  const [securitySettingError, setSecuritySettingError] = useState<string | undefined>();
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const setLiquidGlassEnabled = useSettingsStore((state) => state.setLiquidGlassEnabled);
+  const allowUnverifiedPluginDownloads = useSettingsStore(
+    (state) => state.allowUnverifiedPluginDownloads,
+  );
+  const setAllowUnverifiedPluginDownloads = useSettingsStore(
+    (state) => state.setAllowUnverifiedPluginDownloads,
+  );
 
   const releaseNotesText = useMemo(
     () => normalizeReleaseNotes(updateState.releaseNotes),
@@ -112,6 +120,26 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
       await saveAppSettings({ liquidGlassEnabled: enabled });
     } catch (error) {
       logError('Failed to persist liquid glass enabled setting', error, { enabled });
+    }
+  };
+
+  const handleAllowUnverifiedPluginDownloadsToggle = async (enabled: boolean) => {
+    if (isSavingSecuritySetting) {
+      return;
+    }
+    const previousValue = allowUnverifiedPluginDownloads;
+    setSecuritySettingError(undefined);
+    setAllowUnverifiedPluginDownloads(enabled);
+    setIsSavingSecuritySetting(true);
+
+    try {
+      await saveAppSettings({ allowUnverifiedPluginDownloads: enabled });
+    } catch (error) {
+      setAllowUnverifiedPluginDownloads(previousValue);
+      setSecuritySettingError(t('settings.security.saveError'));
+      logError('Failed to persist unverified plugin downloads setting', error, { enabled });
+    } finally {
+      setIsSavingSecuritySetting(false);
     }
   };
 
@@ -217,6 +245,43 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
           <option value="en">{t('settings.language.options.en')}</option>
           <option value="ja">{t('settings.language.options.ja')}</option>
         </select>
+      </section>
+
+      <section className="settings-window__section">
+        <div className="settings-window__section-head">
+          <div>
+            <h2 className="text-lg m-0">{t('settings.security.title')}</h2>
+            <p className="text-sm text-zinc-400 m-0">{t('settings.security.description')}</p>
+          </div>
+        </div>
+
+        <label className="settings-window__toggle-row" htmlFor="allow-unverified-plugin-downloads">
+          <input
+            id="allow-unverified-plugin-downloads"
+            type="checkbox"
+            checked={allowUnverifiedPluginDownloads}
+            disabled={isSavingSecuritySetting}
+            aria-describedby="allow-unverified-plugin-downloads-warning"
+            onChange={(e) => void handleAllowUnverifiedPluginDownloadsToggle(e.target.checked)}
+          />
+          <span>{t('settings.security.label')}</span>
+        </label>
+        <p
+          id="allow-unverified-plugin-downloads-warning"
+          className="text-sm text-amber-300 mt-3 mb-0"
+        >
+          {t('settings.security.warning')}
+        </p>
+        {isSavingSecuritySetting && (
+          <p className="text-sm text-zinc-400 mt-2 mb-0" aria-live="polite">
+            {t('settings.security.saving')}
+          </p>
+        )}
+        {securitySettingError && (
+          <p className="text-sm text-red-400 mt-2 mb-0" role="alert">
+            {securitySettingError}
+          </p>
+        )}
       </section>
 
       <section className="settings-window__section">

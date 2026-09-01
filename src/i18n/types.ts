@@ -92,6 +92,14 @@ export interface TranslationDictionary {
       description: string;
       label: string;
     };
+    security: {
+      title: string;
+      description: string;
+      label: string;
+      warning: string;
+      saving: string;
+      saveError: string;
+    };
     general: {
       title: string;
     };

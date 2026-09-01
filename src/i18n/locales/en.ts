@@ -72,6 +72,15 @@ export const en: TranslationDictionary = {
         'Adds a frosted-glass effect on top of the current look. This is still in preparation, so enabling it does not change the appearance yet.',
       label: 'Enable Liquid Glass',
     },
+    security: {
+      title: 'Security',
+      description: 'Control whether plugin downloads without verification are allowed.',
+      label: 'Allow unverified plugin downloads',
+      warning:
+        'Warning: Enabling this allows plugin downloads without verification. Only enable it if you understand and accept the risk.',
+      saving: 'Saving security setting...',
+      saveError: 'This setting could not be saved. The change was reverted.',
+    },
     general: {
       title: 'General',
     },

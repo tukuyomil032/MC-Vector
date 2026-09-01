@@ -11,6 +11,8 @@ interface SettingsStoreState {
   setAppTheme: (theme: AppTheme) => void;
   liquidGlassEnabled: boolean;
   setLiquidGlassEnabled: (enabled: boolean) => void;
+  allowUnverifiedPluginDownloads: boolean;
+  setAllowUnverifiedPluginDownloads: (enabled: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
@@ -18,4 +20,6 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   setAppTheme: (theme) => set({ appTheme: theme }),
   liquidGlassEnabled: false,
   setLiquidGlassEnabled: (enabled) => set({ liquidGlassEnabled: enabled }),
+  allowUnverifiedPluginDownloads: false,
+  setAllowUnverifiedPluginDownloads: (enabled) => set({ allowUnverifiedPluginDownloads: enabled }),
 }));

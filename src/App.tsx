@@ -77,6 +77,9 @@ function App() {
   const appTheme = useSettingsStore((state) => state.appTheme);
   const setAppTheme = useSettingsStore((state) => state.setAppTheme);
   const setLiquidGlassEnabled = useSettingsStore((state) => state.setLiquidGlassEnabled);
+  const setAllowUnverifiedPluginDownloads = useSettingsStore(
+    (state) => state.setAllowUnverifiedPluginDownloads,
+  );
   const {
     updatePrompt,
     updateProgress,
@@ -132,7 +135,7 @@ function App() {
   }, []);
 
   useAppThemeSync({ setAppTheme });
-  useLiquidGlassSync({ setLiquidGlassEnabled });
+  useLiquidGlassSync({ setLiquidGlassEnabled, setAllowUnverifiedPluginDownloads });
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);
@@ -206,7 +209,7 @@ function App() {
           prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'starting' } : srv)),
         );
         const jarFile = s.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-        await startServerApi(s.id, s.javaPath || 'java', s.path, s.memory, jarFile, s.jvmArgs);
+        await startServerApi(s.id, s.javaPath || 'java', s.memory, jarFile, s.jvmArgs);
       } catch (error) {
         logError('Bulk start failed', error, { serverId: s.id });
         setServers((prev) =>
@@ -231,7 +234,7 @@ function App() {
   const handleBulkBackup = async (servers: MinecraftServer[]) => {
     for (const s of servers) {
       try {
-        await createBackup(s.path, buildAutoBackupName(s, new Date()));
+        await createBackup(s.id, buildAutoBackupName(s, new Date()));
         showToast(t('server.toast.bulkBackupCreated', { name: s.name }), 'success');
       } catch (error) {
         logError('Bulk backup failed', error, { serverId: s.id });

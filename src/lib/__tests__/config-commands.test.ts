@@ -89,30 +89,61 @@ describe('config-commands', () => {
   });
 
   describe('getAppSettings', () => {
-    it('returns theme, locale, and liquidGlassEnabled from store', async () => {
-      getMock.mockResolvedValueOnce('dark').mockResolvedValueOnce('ja').mockResolvedValueOnce(true);
+    it('returns application settings from store', async () => {
+      getMock
+        .mockResolvedValueOnce('dark')
+        .mockResolvedValueOnce('ja')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
       const { getAppSettings } = await import('../config-commands');
       const result = await getAppSettings();
-      expect(result).toEqual({ theme: 'dark', locale: 'ja', liquidGlassEnabled: true });
+      expect(result).toEqual({
+        theme: 'dark',
+        locale: 'ja',
+        liquidGlassEnabled: true,
+        allowUnverifiedPluginDownloads: true,
+      });
     });
 
-    it('returns undefined fields when values are not set', async () => {
-      getMock.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    it('defaults allowUnverifiedPluginDownloads to false when it is not set', async () => {
+      getMock
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
       const { getAppSettings } = await import('../config-commands');
       const result = await getAppSettings();
       expect(result.theme).toBeUndefined();
       expect(result.locale).toBeUndefined();
       expect(result.liquidGlassEnabled).toBeUndefined();
+      expect(result.allowUnverifiedPluginDownloads).toBe(false);
+    });
+
+    it('defaults allowUnverifiedPluginDownloads to false for non-boolean stored values', async () => {
+      getMock
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce('true');
+      const { getAppSettings } = await import('../config-commands');
+      const result = await getAppSettings();
+      expect(result.allowUnverifiedPluginDownloads).toBe(false);
     });
   });
 
   describe('saveAppSettings', () => {
     it('saves each non-undefined setting and calls save', async () => {
       const { saveAppSettings } = await import('../config-commands');
-      await saveAppSettings({ theme: 'dark', locale: 'ja', liquidGlassEnabled: true });
+      await saveAppSettings({
+        theme: 'dark',
+        locale: 'ja',
+        liquidGlassEnabled: true,
+        allowUnverifiedPluginDownloads: true,
+      });
       expect(setMock).toHaveBeenCalledWith('theme', 'dark');
       expect(setMock).toHaveBeenCalledWith('locale', 'ja');
       expect(setMock).toHaveBeenCalledWith('liquidGlassEnabled', true);
+      expect(setMock).toHaveBeenCalledWith('allowUnverifiedPluginDownloads', true);
       expect(saveMock).toHaveBeenCalled();
     });
 
