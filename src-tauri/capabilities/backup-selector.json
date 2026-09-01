@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "backup-selector-capability",
+  "description": "Capability for the backup target selector window",
+  "windows": ["backup-selector"],
+  "permissions": [
+    "core:default",
+    "window-state:default",
+    "store:default"
+  ]
+}
