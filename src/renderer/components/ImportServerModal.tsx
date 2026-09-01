@@ -1,10 +1,9 @@
 import { cn } from '@/lib/ui';
 import * as Dialog from '@radix-ui/react-dialog';
-import { open } from '@tauri-apps/plugin-dialog';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
-import { analyzeServerFolder } from '../../lib/server-import-commands';
+import { cancelServerImport, pickServerImport } from '../../lib/server-import-commands';
 
 interface ImportServerModalProps {
   open: boolean;
@@ -36,28 +35,37 @@ export default function ImportServerModal({
   const [hasServerJar, setHasServerJar] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [importToken, setImportToken] = useState<string | null>(null);
+  const hasSubmitted = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      hasSubmitted.current = false;
+    }
+  }, [isOpen]);
 
   const handleSelectFolder = async () => {
-    const selected = await open({ directory: true, multiple: false });
-    if (!selected || typeof selected !== 'string') {
-      return;
-    }
-
     setIsAnalyzing(true);
     try {
-      const analysis = await analyzeServerFolder(selected);
-      if (!analysis.hasServerJar) {
-        showToast(t('importServer.toast.noJar'), 'error');
-        setIsAnalyzing(false);
+      if (importToken) {
+        await cancelServerImport(importToken);
+      }
+      const analysis = await pickServerImport();
+      if (!analysis) {
         return;
       }
-      setFolderPath(selected);
+      if (!analysis.hasServerJar) {
+        await cancelServerImport(analysis.token);
+        showToast(t('importServer.toast.noJar'), 'error');
+        return;
+      }
+      setImportToken(analysis.token);
+      setFolderPath(analysis.folderName);
       setHasServerJar(analysis.hasServerJar);
       setEulaAccepted(analysis.eulaAccepted);
       setVersion(analysis.detectedVersion);
       setSoftware(analysis.detectedSoftware);
-      const folderName = selected.replace(/\\/g, '/').split('/').at(-1) ?? 'imported-server';
-      setServerName(folderName);
+      setServerName(analysis.folderName);
       setAnalyzed(true);
     } catch {
       showToast(t('importServer.toast.failed'), 'error');
@@ -67,18 +75,27 @@ export default function ImportServerModal({
   };
 
   const handleImport = () => {
-    if (!folderPath || !serverName) {
+    if (!importToken || !serverName) {
       return;
     }
+    hasSubmitted.current = true;
     onAdd({
       name: serverName,
       version,
       software,
       port: 25565,
       memory: 4,
-      path: folderPath,
+      importToken,
     });
     showToast(t('importServer.toast.success'), 'success');
+    onClose();
+  };
+
+  const handleCancel = () => {
+    if (!hasSubmitted.current && importToken) {
+      void cancelServerImport(importToken).catch(() => undefined);
+    }
+    setImportToken(null);
     onClose();
   };
 
@@ -86,7 +103,7 @@ export default function ImportServerModal({
     <Dialog.Root
       open={isOpen}
       onOpenChange={(o) => {
-        if (!o) onClose();
+        if (!o) handleCancel();
       }}
     >
       <Dialog.Portal>
@@ -154,7 +171,7 @@ export default function ImportServerModal({
 
           <div className="mc-modal-footer">
             <Dialog.Close asChild>
-              <button type="button" className="mc-modal-btn-secondary">
+              <button type="button" className="mc-modal-btn-secondary" onClick={handleCancel}>
                 {t('common.cancel')}
               </button>
             </Dialog.Close>

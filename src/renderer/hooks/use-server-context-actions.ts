@@ -1,9 +1,9 @@
 import { ask } from '@tauri-apps/plugin-dialog';
-import { copyFile, mkdir, readDir } from '@tauri-apps/plugin-fs';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
+import { cloneManagedServer } from '../../lib/file-commands';
 import {
   type ServerTemplate,
   addServer as addServerApi,
@@ -15,7 +15,6 @@ import type { ToastKind } from '../shared/toast';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
-const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
 
 interface UseServerContextActionsOptions {
   servers: MinecraftServer[];
@@ -50,45 +49,6 @@ function buildTemplateFromServer(server: MinecraftServer, templateName: string):
   };
 }
 
-function normalizePath(input: string): string {
-  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
-  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
-    return normalized.slice(0, -1);
-  }
-  return normalized;
-}
-
-function isDirectManagedServerPath(serverPath: string, serverRoot: string): boolean {
-  const normalizedServerPath = normalizePath(serverPath.trim());
-  const normalizedServerRoot = normalizePath(serverRoot.trim());
-  if (!normalizedServerPath || normalizedServerPath === normalizedServerRoot) {
-    return false;
-  }
-
-  const parentPath = normalizedServerPath.split('/').slice(0, -1).join('/');
-  return parentPath === normalizedServerRoot;
-}
-
-async function cloneServerDirectory(sourceDir: string, targetDir: string): Promise<void> {
-  await mkdir(targetDir, { recursive: true });
-
-  const entries = await readDir(sourceDir);
-  for (const entry of entries) {
-    const entryName = entry.name;
-    if (!entryName) {
-      continue;
-    }
-
-    const sourcePath = `${sourceDir}/${entryName}`;
-    const targetPath = `${targetDir}/${entryName}`;
-    if (entry.isDirectory) {
-      await cloneServerDirectory(sourcePath, targetPath);
-    } else {
-      await copyFile(sourcePath, targetPath);
-    }
-  }
-}
-
 export function useServerContextActions({
   servers,
   setServers,
@@ -106,20 +66,8 @@ export function useServerContextActions({
         return;
       }
 
-      let isManagedServer = false;
-      try {
-        isManagedServer = isDirectManagedServerPath(target.path, await getServerRoot());
-      } catch (error) {
-        logError('Resolve server root for delete confirmation failed', error, {
-          serverId,
-          serverPath: target.path,
-        });
-        showToast(t('server.toast.deleteError'), 'error');
-        return;
-      }
-
       const confirmed = await ask(
-        t(isManagedServer ? 'server.confirm.deleteManaged' : 'server.confirm.deleteExternal', {
+        t('server.confirm.deleteManaged', {
           name: target.name,
           path: target.path,
         }),
@@ -175,20 +123,13 @@ export function useServerContextActions({
       }
 
       try {
-        const basePath = `${target.path}-clone`;
-        const existingPaths = new Set(servers.map((server) => server.path));
-        let candidatePath = basePath;
-        let suffix = 1;
-        while (existingPaths.has(candidatePath)) {
-          candidatePath = `${basePath}-${suffix}`;
-          suffix += 1;
-        }
-
-        await cloneServerDirectory(target.path, candidatePath);
+        const duplicatedId = crypto.randomUUID();
+        await cloneManagedServer(target.id, duplicatedId);
+        const candidatePath = `${await getServerRoot()}/${duplicatedId}`;
 
         const duplicatedServer: MinecraftServer = {
           ...target,
-          id: crypto.randomUUID(),
+          id: duplicatedId,
           name: t('server.create.cloneDefaultName', { name: target.name }),
           path: candidatePath,
           status: 'offline',

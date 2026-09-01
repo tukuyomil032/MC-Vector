@@ -34,6 +34,7 @@ export interface MinecraftServer {
   notifyOnStart?: boolean;
   notifyOnHighCpu?: boolean;
   notifyHighCpuThreshold?: number;
+  unavailableReason?: string;
 }
 
 export type AppView =

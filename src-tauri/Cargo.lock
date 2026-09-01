@@ -2792,6 +2792,7 @@ dependencies = [
  "tauri-plugin-webdriver-automation",
  "tauri-plugin-window-state",
  "tokio",
+ "uuid",
  "zip 2.4.2",
 ]
 

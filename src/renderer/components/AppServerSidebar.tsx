@@ -142,6 +142,7 @@ export default function AppServerSidebar({
                       type="button"
                       className={`app-sidebar__server-item flex-1 ${server.id === selectedServerId ? 'is-active' : ''}`}
                       data-testid={`server-card-${server.id}`}
+                      title={server.unavailableReason}
                       onClick={() => {
                         if (isBulkMode) {
                           toggleSelect(server.id);
@@ -155,6 +156,11 @@ export default function AppServerSidebar({
                         <span className="font-semibold text-sm text-text-primary">
                           {server.name}
                         </span>
+                        {server.unavailableReason && (
+                          <span className="text-[0.72rem] text-amber-300">
+                            {server.unavailableReason}
+                          </span>
+                        )}
                         {server.profileName && (
                           <span className="text-[0.72rem] text-zinc-400">{server.profileName}</span>
                         )}

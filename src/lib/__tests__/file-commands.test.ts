@@ -1,242 +1,118 @@
-import { type MockInstance, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tauriInvokeMock = vi.fn();
-const copyFileMock = vi.fn();
-const mkdirMock = vi.fn();
-const readDirMock = vi.fn();
-const removeMock = vi.fn();
-const renameMock = vi.fn();
-const openMock = vi.fn();
+const appDataDirMock = vi.fn();
 
+vi.mock('@tauri-apps/api/path', () => ({ appDataDir: appDataDirMock }));
 vi.mock('../tauri-api', () => ({ tauriInvoke: tauriInvokeMock, tauriListen: vi.fn() }));
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  copyFile: copyFileMock,
-  mkdir: mkdirMock,
-  readDir: readDirMock,
-  remove: removeMock,
-  rename: renameMock,
-}));
-vi.mock('@tauri-apps/plugin-dialog', () => ({ open: openMock }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ revealItemInDir: vi.fn() }));
 
-function mockResolvePath() {
-  (tauriInvokeMock as MockInstance).mockImplementation((cmd: string, args?: unknown) => {
-    if (cmd === 'resolve_managed_path') {
-      return Promise.resolve((args as { path: string }).path);
-    }
-    return Promise.resolve(undefined);
-  });
-}
+const serverRoot = '/app-data/servers/s1';
 
 beforeEach(() => {
   vi.resetModules();
   tauriInvokeMock.mockReset();
-  copyFileMock.mockReset();
-  mkdirMock.mockReset();
-  readDirMock.mockReset();
-  removeMock.mockReset();
-  renameMock.mockReset();
-  openMock.mockReset();
-});
-
-describe('listFiles', () => {
-  it('returns DirEntry array from readDir', async () => {
-    mockResolvePath();
-    const entries = [{ name: 'server.jar', isDirectory: false, isFile: true, isSymlink: false }];
-    readDirMock.mockResolvedValue(entries);
-
-    const { listFiles } = await import('../file-commands');
-    const result = await listFiles('/servers/default');
-    expect(result).toEqual(entries);
-    expect(readDirMock).toHaveBeenCalledWith('/servers/default');
-  });
-
-  it('throws on empty path', async () => {
-    const { listFiles } = await import('../file-commands');
-    await expect(listFiles('')).rejects.toThrow('Invalid path');
-    await expect(listFiles('  ')).rejects.toThrow('Invalid path');
-  });
-
-  it('throws on null-byte path', async () => {
-    const { listFiles } = await import('../file-commands');
-    await expect(listFiles('/path\0/foo')).rejects.toThrow('Invalid path');
+  appDataDirMock.mockReset();
+  appDataDirMock.mockResolvedValue('/app-data');
+  tauriInvokeMock.mockImplementation((command: string) => {
+    if (command === 'resolve_managed_path') {
+      return Promise.resolve('/resolved/managed/path');
+    }
+    return Promise.resolve(undefined);
   });
 });
 
-describe('saveFileContent', () => {
-  it('calls write_managed_text_file with resolved path and content', async () => {
-    tauriInvokeMock.mockResolvedValue('/resolved/server.properties');
-    const { saveFileContent } = await import('../file-commands');
-    await saveFileContent('/servers/server.properties', 'level-name=world');
-    expect(tauriInvokeMock).toHaveBeenCalledWith('resolve_managed_path', {
-      path: '/servers/server.properties',
+describe('managed file commands', () => {
+  it('lists through the typed managed path contract', async () => {
+    tauriInvokeMock.mockImplementation((command: string) => {
+      if (command === 'resolve_managed_path') return Promise.resolve('/resolved');
+      if (command === 'list_dir_with_metadata') {
+        return Promise.resolve([{ name: 'server.jar', isDirectory: false, size: 10, modified: 1 }]);
+      }
+      return Promise.resolve(undefined);
     });
+    const { listFiles } = await import('../file-commands');
+    await expect(listFiles(serverRoot)).resolves.toEqual([
+      { name: 'server.jar', isDirectory: false, size: 10, modified: 1 },
+    ]);
+    expect(tauriInvokeMock).toHaveBeenCalledWith('list_dir_with_metadata', {
+      request: { root: 'servers', serverId: 's1', relativePath: '' },
+    });
+  });
+
+  it('rejects paths outside app-managed storage before IPC', async () => {
+    const { listFiles } = await import('../file-commands');
+    await expect(listFiles('/tmp/outside')).rejects.toThrow('outside MC-Vector managed storage');
+    expect(tauriInvokeMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects traversal and missing paths', async () => {
+    const { listFiles, createFile } = await import('../file-commands');
+    await expect(listFiles(`${serverRoot}/../outside`)).rejects.toThrow('Path traversal');
+    await expect(createFile(serverRoot, '')).rejects.toThrow('Invalid file or folder name');
+  });
+
+  it('writes, creates, deletes, and moves using managed requests', async () => {
+    const { saveFileContent, createFile, createFolder, deleteItem, moveItem } = await import(
+      '../file-commands'
+    );
+    await saveFileContent(`${serverRoot}/server.properties`, 'level-name=world');
+    await createFile(serverRoot, 'new.txt');
+    await createFolder(serverRoot, 'world');
+    await deleteItem(`${serverRoot}/old.txt`);
+    await moveItem(`${serverRoot}/old.txt`, `${serverRoot}/new.txt`);
+
     expect(tauriInvokeMock).toHaveBeenCalledWith('write_managed_text_file', {
-      path: '/resolved/server.properties',
+      request: { root: 'servers', serverId: 's1', relativePath: 'server.properties' },
       content: 'level-name=world',
     });
-  });
-});
-
-describe('createFile', () => {
-  it('creates empty file at resolved path', async () => {
-    mockResolvePath();
-
-    const { createFile } = await import('../file-commands');
-    await createFile('/servers/default', 'newfile.txt');
-    expect(tauriInvokeMock).toHaveBeenCalledWith('write_managed_text_file', {
-      path: '/servers/default/newfile.txt',
-      content: '',
+    expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_directory', {
+      request: { root: 'servers', serverId: 's1', relativePath: 'world' },
+    });
+    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_path', {
+      request: { root: 'servers', serverId: 's1', relativePath: 'old.txt' },
+    });
+    expect(tauriInvokeMock).toHaveBeenCalledWith('move_managed_path', {
+      from: { root: 'servers', serverId: 's1', relativePath: 'old.txt' },
+      to: { root: 'servers', serverId: 's1', relativePath: 'new.txt' },
     });
   });
 
-  it('throws on empty name', async () => {
-    const { createFile } = await import('../file-commands');
-    await expect(createFile('/servers', '')).rejects.toThrow('Invalid file or folder name');
-    await expect(createFile('/servers', '  ')).rejects.toThrow('Invalid file or folder name');
-  });
-
-  it('throws when name contains slash', async () => {
-    const { createFile } = await import('../file-commands');
-    await expect(createFile('/servers', 'a/b')).rejects.toThrow('Invalid file or folder name');
-    await expect(createFile('/servers', 'a\\b')).rejects.toThrow('Invalid file or folder name');
-  });
-
-  it('throws when name contains ..', async () => {
-    const { createFile } = await import('../file-commands');
-    await expect(createFile('/servers', '..')).rejects.toThrow('Invalid file or folder name');
-    await expect(createFile('/servers', 'a..b')).rejects.toThrow('Invalid file or folder name');
-  });
-});
-
-describe('createFolder', () => {
-  it('calls mkdir with recursive option', async () => {
-    mockResolvePath();
-    mkdirMock.mockResolvedValue(undefined);
-
-    const { createFolder } = await import('../file-commands');
-    await createFolder('/servers', 'myworld');
-    expect(mkdirMock).toHaveBeenCalledWith('/servers/myworld', { recursive: true });
-  });
-
-  it('throws on invalid folder name', async () => {
-    const { createFolder } = await import('../file-commands');
-    await expect(createFolder('/servers', '')).rejects.toThrow('Invalid file or folder name');
-  });
-});
-
-describe('deleteItem', () => {
-  it('calls remove with resolved path and recursive', async () => {
-    mockResolvePath();
-    removeMock.mockResolvedValue(undefined);
-
-    const { deleteItem } = await import('../file-commands');
-    await deleteItem('/servers/old-world');
-    expect(removeMock).toHaveBeenCalledWith('/servers/old-world', { recursive: true });
-  });
-});
-
-describe('moveItem', () => {
-  it('calls rename with both resolved paths', async () => {
-    mockResolvePath();
-    renameMock.mockResolvedValue(undefined);
-
-    const { moveItem } = await import('../file-commands');
-    await moveItem('/servers/a.txt', '/servers/b.txt');
-    expect(renameMock).toHaveBeenCalledWith('/servers/a.txt', '/servers/b.txt');
-  });
-});
-
-describe('readJsonFile', () => {
-  it('returns parsed object when content is valid JSON object', async () => {
-    tauriInvokeMock.mockResolvedValue(JSON.stringify({ key: 'value' }));
-
-    const { readJsonFile } = await import('../file-commands');
-    const result = await readJsonFile('/config.json');
-    expect(result).toEqual({ key: 'value' });
-  });
-
-  it('returns parsed array when content is valid JSON array', async () => {
-    tauriInvokeMock.mockResolvedValue(JSON.stringify([1, 2, 3]));
-
-    const { readJsonFile } = await import('../file-commands');
-    const result = await readJsonFile('/list.json');
-    expect(result).toEqual([1, 2, 3]);
-  });
-
-  it('returns null when content is primitive JSON', async () => {
-    tauriInvokeMock.mockResolvedValue('42');
-
-    const { readJsonFile } = await import('../file-commands');
-    const result = await readJsonFile('/num.json');
-    expect(result).toBeNull();
-  });
-
-  it('returns null when JSON parse fails', async () => {
-    tauriInvokeMock.mockResolvedValue('{ invalid json }');
-
-    const { readJsonFile } = await import('../file-commands');
-    const result = await readJsonFile('/broken.json');
-    expect(result).toBeNull();
-  });
-
-  it('returns null when tauriInvoke throws', async () => {
-    tauriInvokeMock.mockRejectedValue(new Error('file not found'));
-
-    const { readJsonFile } = await import('../file-commands');
-    const result = await readJsonFile('/missing.json');
-    expect(result).toBeNull();
-  });
-});
-
-describe('writeJsonFile', () => {
-  it('serializes data and writes via tauriInvoke', async () => {
-    mockResolvePath();
-
-    const { writeJsonFile } = await import('../file-commands');
-    const data = { server: 'vanilla', port: 25565 };
-    await writeJsonFile('/config.json', data);
-
-    expect(tauriInvokeMock).toHaveBeenCalledWith('write_managed_text_file', {
-      path: '/config.json',
-      content: JSON.stringify(data, null, 2),
+  it('uses a native Rust picker for imports', async () => {
+    tauriInvokeMock.mockImplementation((command: string) => {
+      if (command === 'resolve_managed_path') return Promise.resolve('/resolved');
+      if (command === 'import_managed_files') {
+        return Promise.resolve([
+          { serverId: 's1', relativePath: 'plugins/example.jar', isDirectory: false, size: 42 },
+        ]);
+      }
+      return Promise.resolve(undefined);
     });
-  });
-
-  it('serializes array data correctly', async () => {
-    mockResolvePath();
-
-    const { writeJsonFile } = await import('../file-commands');
-    await writeJsonFile('/list.json', [1, 2, 3]);
-    expect(tauriInvokeMock).toHaveBeenCalledWith('write_managed_text_file', {
-      path: '/list.json',
-      content: JSON.stringify([1, 2, 3], null, 2),
-    });
-  });
-});
-
-describe('importFile', () => {
-  it('returns null when user cancels dialog', async () => {
-    mockResolvePath();
-    openMock.mockResolvedValue(null);
-
-    const { importFile } = await import('../file-commands');
-    const result = await importFile('/servers/plugins');
-    expect(result).toBeNull();
-    expect(copyFileMock).not.toHaveBeenCalled();
-  });
-
-  it('copies selected file and returns destination path', async () => {
-    mockResolvePath();
-    openMock.mockResolvedValue('/downloads/myplugin.jar');
-    copyFileMock.mockResolvedValue(undefined);
-
-    const { importFile } = await import('../file-commands');
-    const result = await importFile('/servers/plugins');
-    expect(copyFileMock).toHaveBeenCalledWith(
-      '/downloads/myplugin.jar',
-      '/servers/plugins/myplugin.jar',
+    const { importFile, importFilesFromPaths } = await import('../file-commands');
+    await expect(importFile(`${serverRoot}/plugins`)).resolves.toBe(
+      `${serverRoot}/plugins/example.jar`,
     );
-    expect(result).toBe('/servers/plugins/myplugin.jar');
+    await expect(
+      importFilesFromPaths(['/arbitrary/source.jar'], `${serverRoot}/plugins`),
+    ).resolves.toEqual([`${serverRoot}/plugins/example.jar`]);
+    expect(tauriInvokeMock).not.toHaveBeenCalledWith(
+      'import_managed_files_from_paths',
+      expect.anything(),
+    );
+  });
+
+  it('serializes JSON through the managed text command', async () => {
+    const { readJsonFile, writeJsonFile } = await import('../file-commands');
+    tauriInvokeMock.mockImplementation((command: string) => {
+      if (command === 'resolve_managed_path') return Promise.resolve('/resolved');
+      if (command === 'read_managed_text_file') return Promise.resolve('{"key":"value"}');
+      return Promise.resolve(undefined);
+    });
+    await expect(readJsonFile(`${serverRoot}/config.json`)).resolves.toEqual({ key: 'value' });
+    await writeJsonFile(`${serverRoot}/config.json`, [1, 2, 3]);
+    expect(tauriInvokeMock).toHaveBeenCalledWith('write_managed_text_file', {
+      request: { root: 'servers', serverId: 's1', relativePath: 'config.json' },
+      content: '[\n  1,\n  2,\n  3\n]',
+    });
   });
 });
