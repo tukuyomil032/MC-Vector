@@ -4,10 +4,10 @@ import { restoreStateCurrent } from '@tauri-apps/plugin-window-state';
 import * as monaco from 'monaco-editor';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Toaster } from 'sonner';
 import 'sonner/dist/styles.css';
 import App from './App';
 import { useI18nStore } from './i18n';
+import { AppFeedbackProvider } from './renderer/components/AppFeedbackProvider';
 import './styles/index.scss';
 
 const queryClient = new QueryClient({
@@ -34,8 +34,9 @@ async function bootstrap() {
   root.render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <App />
-        <Toaster position="bottom-right" richColors />
+        <AppFeedbackProvider>
+          <App />
+        </AppFeedbackProvider>
       </QueryClientProvider>
     </React.StrictMode>,
   );

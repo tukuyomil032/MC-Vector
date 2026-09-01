@@ -10,6 +10,7 @@ import {
   updateServer as updateServerApi,
 } from '@/lib/server-commands';
 import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
+import { useAppFeedback } from '@/renderer/components/AppFeedbackProvider';
 import AppMainContent from '@/renderer/components/AppMainContent';
 import AppMainHeader from '@/renderer/components/AppMainHeader';
 import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
@@ -37,11 +38,11 @@ import { useConsoleStore } from '@/store/consoleStore';
 import { useServerStore } from '@/store/serverStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 function App() {
   const { t } = useTranslation();
+  const { notify } = useAppFeedback();
   const servers = useServerStore((state) => state.servers);
   const setServers = useServerStore((state) => state.setServers);
   const selectedServerId = useServerStore((state) => state.selectedServerId);
@@ -60,15 +61,12 @@ function App() {
     msg: string;
   } | null>(null);
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
+  const showToast = useCallback(
+    (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+      notify(msg, type);
+    },
+    [notify],
+  );
 
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);
   const setIsSidebarOpen = useUiStore((state) => state.setIsSidebarOpen);
