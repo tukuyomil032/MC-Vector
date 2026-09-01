@@ -117,39 +117,71 @@ describe('plugin-commands (Spigot)', () => {
   describe('installSpigotProject', () => {
     it('calls the typed command with the correct Spiget download URL', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins');
+      await installSpigotProject(83557, {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'managed-essentials.jar',
+      });
       const [cmd, args] = tauriInvokeMock.mock.calls[0];
       expect(cmd).toBe('download_plugin_artifact');
       expect(args.request.url).toContain('/v2/resources/83557/download');
-      expect(args.request.relativePath).toBe('plugins/essentials.jar');
+      expect(args.request.relativePath).toBe('plugins/managed-essentials.jar');
     });
 
     it('adds version param to URL when versionId is provided', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins', 99);
+      await installSpigotProject(
+        83557,
+        { serverId: 'server-1', relativeDir: 'plugins', fileName: 'essentials.jar' },
+        99,
+      );
       const [, args] = tauriInvokeMock.mock.calls[0];
       expect(args.request.url).toContain('version=99');
     });
 
     it('omits version param when versionId is not provided', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins');
+      await installSpigotProject(83557, {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'essentials.jar',
+      });
       const [, args] = tauriInvokeMock.mock.calls[0];
       expect(args.request.url).not.toContain('version=');
     });
 
     it('omits version param when versionId is 0 or negative', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins', 0);
+      await installSpigotProject(
+        83557,
+        { serverId: 'server-1', relativeDir: 'plugins', fileName: 'essentials.jar' },
+        0,
+      );
       const [, args] = tauriInvokeMock.mock.calls[0];
       expect(args.request.url).not.toContain('version=');
     });
 
     it('includes resourceId in eventId', async () => {
       const { installSpigotProject } = await import('../plugin-commands');
-      await installSpigotProject(83557, 'essentials.jar', 'server-1', 'plugins');
+      await installSpigotProject(83557, {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'essentials.jar',
+      });
       const [, args] = tauriInvokeMock.mock.calls[0];
       expect(args.request.eventId).toContain('83557');
+    });
+
+    it('rejects an invalid managed filename before invoking Rust', async () => {
+      const { installSpigotProject } = await import('../plugin-commands');
+      await expect(
+        installSpigotProject(83557, {
+          serverId: 'server-1',
+          relativeDir: 'plugins',
+          fileName: 'plugin.jar.tmp',
+        }),
+      ).rejects.toThrow('Invalid managed plugin destination');
+      expect(tauriInvokeMock).not.toHaveBeenCalled();
     });
   });
 });

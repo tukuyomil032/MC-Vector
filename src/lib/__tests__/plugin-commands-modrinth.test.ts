@@ -220,13 +220,17 @@ describe('plugin-commands (Modrinth)', () => {
         }),
       );
       const { installModrinthProject } = await import('../plugin-commands');
-      await installModrinthProject('v1', 'worldedit-7.jar', 'server-1', 'plugins');
+      await installModrinthProject('v1', 'worldedit-7.jar', {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'managed-worldedit.jar',
+      });
       expect(tauriInvokeMock).toHaveBeenCalledWith(
         'download_plugin_artifact',
         expect.objectContaining({
           request: expect.objectContaining({
             url: 'https://cdn.example.com/we7.jar',
-            relativePath: 'plugins/worldedit-7.jar',
+            relativePath: 'plugins/managed-worldedit.jar',
             provider: 'modrinth',
             serverId: 'server-1',
           }),
@@ -248,7 +252,11 @@ describe('plugin-commands (Modrinth)', () => {
         }),
       );
       const { installModrinthProject } = await import('../plugin-commands');
-      await installModrinthProject('v1', 'worldedit-7.jar', 'server-1', 'plugins');
+      await installModrinthProject('v1', 'worldedit-7.jar', {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'managed-worldedit.jar',
+      });
       expect(tauriInvokeMock).toHaveBeenCalledWith(
         'download_plugin_artifact',
         expect.objectContaining({
@@ -268,12 +276,17 @@ describe('plugin-commands (Modrinth)', () => {
         }),
       );
       const { installModrinthProject } = await import('../plugin-commands');
-      await installModrinthProject('v1', '', 'server-1', 'plugins');
+      await installModrinthProject('v1', 'missing-provider-file.jar', {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'managed-worldedit.jar',
+      });
       expect(tauriInvokeMock).toHaveBeenCalledWith(
         'download_plugin_artifact',
         expect.objectContaining({
           request: expect.objectContaining({
             url: 'https://cdn.example.com/we7.jar',
+            relativePath: 'plugins/managed-worldedit.jar',
           }),
         }),
       );
@@ -282,15 +295,98 @@ describe('plugin-commands (Modrinth)', () => {
     it('throws when files array is empty', async () => {
       fetchMock.mockResolvedValueOnce(makeFetchResponse({ files: [] }));
       const { installModrinthProject } = await import('../plugin-commands');
-      await expect(installModrinthProject('v1', '', 'server-1', 'plugins')).rejects.toThrow();
+      await expect(
+        installModrinthProject('v1', '', {
+          serverId: 'server-1',
+          relativeDir: 'plugins',
+          fileName: 'managed-worldedit.jar',
+        }),
+      ).rejects.toThrow();
     });
 
     it('throws when payload lacks files property', async () => {
       fetchMock.mockResolvedValueOnce(makeFetchResponse({ id: 'v1' }));
       const { installModrinthProject } = await import('../plugin-commands');
-      await expect(installModrinthProject('v1', '', 'server-1', 'plugins')).rejects.toThrow(
-        'Failed to parse Modrinth version payload',
+      await expect(
+        installModrinthProject('v1', '', {
+          serverId: 'server-1',
+          relativeDir: 'plugins',
+          fileName: 'managed-worldedit.jar',
+        }),
+      ).rejects.toThrow('Failed to parse Modrinth version payload');
+    });
+
+    it('does not add provider filename or download settings to the target payload', async () => {
+      fetchMock.mockResolvedValueOnce(
+        makeFetchResponse({
+          files: [
+            {
+              filename: 'provider.jar',
+              url: 'https://cdn.example.com/provider.jar',
+              primary: true,
+              hashes: { sha256: 'a'.repeat(64) },
+            },
+          ],
+        }),
       );
+      const { installModrinthProject } = await import('../plugin-commands');
+      await installModrinthProject('v1', 'provider.jar', {
+        serverId: 'server-1',
+        relativeDir: 'mods',
+        fileName: 'managed.jar',
+      });
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('download_plugin_artifact', {
+        request: {
+          serverId: 'server-1',
+          relativePath: 'mods/managed.jar',
+          provider: 'modrinth',
+          url: 'https://cdn.example.com/provider.jar',
+          checksum: { algorithm: 'sha256', value: 'a'.repeat(64) },
+          eventId: 'plugin-v1',
+        },
+      });
+      expect(tauriInvokeMock.mock.calls[0][1].request).not.toHaveProperty(
+        'allowUnverifiedPluginDownloads',
+      );
+    });
+
+    it('rejects renderer-generated temporary target filenames before IPC', async () => {
+      const { installModrinthProject } = await import('../plugin-commands');
+      await expect(
+        installModrinthProject('v1', 'provider.jar', {
+          serverId: 'server-1',
+          relativeDir: 'plugins',
+          fileName: 'managed.jar.tmp-123',
+        }),
+      ).rejects.toThrow('Invalid managed plugin destination');
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(tauriInvokeMock).not.toHaveBeenCalled();
+    });
+
+    it('propagates a failed final-target download', async () => {
+      fetchMock.mockResolvedValueOnce(
+        makeFetchResponse({
+          files: [
+            {
+              filename: 'provider.jar',
+              url: 'https://cdn.example.com/provider.jar',
+              primary: true,
+            },
+          ],
+        }),
+      );
+      tauriInvokeMock.mockRejectedValueOnce(new Error('download failed'));
+      const { installModrinthProject } = await import('../plugin-commands');
+
+      await expect(
+        installModrinthProject('v1', 'provider.jar', {
+          serverId: 'server-1',
+          relativeDir: 'plugins',
+          fileName: 'managed.jar',
+        }),
+      ).rejects.toThrow('download failed');
     });
   });
 });

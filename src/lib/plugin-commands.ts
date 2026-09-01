@@ -85,6 +85,31 @@ export interface PluginChecksum {
   value: string;
 }
 
+export interface PluginInstallTarget {
+  serverId: string;
+  relativeDir: 'plugins' | 'mods';
+  fileName: string;
+}
+
+// This is a renderer-side convenience check only. Rust remains the final
+// security boundary for managed plugin destinations.
+function validatePluginInstallTarget(target: PluginInstallTarget): void {
+  const fileName = target.fileName.trim();
+  if (
+    !target.serverId.trim() ||
+    !['plugins', 'mods'].includes(target.relativeDir) ||
+    !fileName ||
+    fileName.length > 128 ||
+    fileName.includes('/') ||
+    fileName.includes('\\') ||
+    fileName === '.' ||
+    fileName === '..' ||
+    !fileName.toLowerCase().endsWith('.jar')
+  ) {
+    throw new Error('Invalid managed plugin destination');
+  }
+}
+
 export interface PluginArtifactRequest {
   serverId: string;
   relativePath: string;
@@ -666,10 +691,10 @@ export async function downloadPlugin(request: PluginArtifactRequest): Promise<vo
 
 export async function installModrinthProject(
   versionId: string,
-  fileName: string,
-  serverId: string,
-  relativeDir: 'plugins' | 'mods',
+  providerFileName: string,
+  target: PluginInstallTarget,
 ): Promise<void> {
+  validatePluginInstallTarget(target);
   const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/version/${versionId}`);
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new Error('Failed to parse Modrinth version payload');
@@ -677,9 +702,9 @@ export async function installModrinthProject(
 
   // Select the appropriate file entry
   let chosenEntry: unknown = null;
-  if (fileName?.trim()) {
+  if (providerFileName?.trim()) {
     // If fileName is provided, find the matching file entry
-    const trimmedFileName = fileName.trim();
+    const trimmedFileName = providerFileName.trim();
     chosenEntry = payload.files.find((entry) => {
       if (!isRecord(entry)) {
         return false;
@@ -717,15 +742,13 @@ export async function installModrinthProject(
     throw new Error('No download URL in Modrinth version file');
   }
 
-  const fallbackFileName = asString(chosenEntry.filename);
-  const targetFileName = fileName.trim() || fallbackFileName;
-  if (!targetFileName) {
+  if (!target.fileName.trim()) {
     throw new Error('No filename available for Modrinth install');
   }
 
   await downloadPlugin({
-    serverId,
-    relativePath: `${relativeDir}/${targetFileName}`,
+    serverId: target.serverId,
+    relativePath: `${target.relativeDir}/${target.fileName}`,
     provider: 'modrinth',
     url,
     checksum: parsePluginChecksum(chosenEntry.hashes),
@@ -735,14 +758,14 @@ export async function installModrinthProject(
 
 export async function installHangarProject(
   downloadUrl: string,
-  fileName: string,
-  serverId: string,
-  relativeDir: 'plugins' | 'mods',
+  target: PluginInstallTarget,
   checksum?: PluginChecksum,
 ): Promise<void> {
+  validatePluginInstallTarget(target);
+
   await downloadPlugin({
-    serverId,
-    relativePath: `${relativeDir}/${fileName}`,
+    serverId: target.serverId,
+    relativePath: `${target.relativeDir}/${target.fileName}`,
     provider: 'hangar',
     url: downloadUrl,
     checksum,
@@ -752,19 +775,19 @@ export async function installHangarProject(
 
 export async function installSpigotProject(
   resourceId: number,
-  fileName: string,
-  serverId: string,
-  relativeDir: 'plugins' | 'mods',
+  target: PluginInstallTarget,
   versionId?: number,
 ): Promise<void> {
+  validatePluginInstallTarget(target);
+
   const url = new URL(`https://api.spiget.org/v2/resources/${resourceId}/download`);
   if (typeof versionId === 'number' && Number.isFinite(versionId) && versionId > 0) {
     url.searchParams.set('version', String(versionId));
   }
 
   await downloadPlugin({
-    serverId,
-    relativePath: `${relativeDir}/${fileName}`,
+    serverId: target.serverId,
+    relativePath: `${target.relativeDir}/${target.fileName}`,
     provider: 'spiget',
     url: url.toString(),
     eventId: `plugin-spigot-${resourceId}`,

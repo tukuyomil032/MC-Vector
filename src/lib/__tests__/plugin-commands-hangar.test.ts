@@ -364,21 +364,59 @@ describe('plugin-commands (Hangar)', () => {
   describe('installHangarProject', () => {
     it('calls the typed plugin artifact command', async () => {
       const { installHangarProject } = await import('../plugin-commands');
-      await installHangarProject(
-        'https://hangar.papermc.io/plugin.jar',
-        'plugin.jar',
-        'server-1',
-        'plugins',
-      );
+      await installHangarProject('https://hangar.papermc.io/plugin.jar', {
+        serverId: 'server-1',
+        relativeDir: 'plugins',
+        fileName: 'managed-plugin.jar',
+      });
       expect(tauriInvokeMock).toHaveBeenCalledWith('download_plugin_artifact', {
         request: {
           url: 'https://hangar.papermc.io/plugin.jar',
-          relativePath: 'plugins/plugin.jar',
+          relativePath: 'plugins/managed-plugin.jar',
           provider: 'hangar',
           serverId: 'server-1',
           eventId: 'plugin-hangar',
         },
       });
+    });
+
+    it('passes checksum metadata without adding download settings to the request', async () => {
+      const { installHangarProject } = await import('../plugin-commands');
+      await installHangarProject(
+        'https://hangar.papermc.io/plugin.jar',
+        {
+          serverId: 'server-1',
+          relativeDir: 'mods',
+          fileName: 'managed-plugin.jar',
+        },
+        { algorithm: 'sha256', value: 'a'.repeat(64) },
+      );
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('download_plugin_artifact', {
+        request: {
+          url: 'https://hangar.papermc.io/plugin.jar',
+          relativePath: 'mods/managed-plugin.jar',
+          provider: 'hangar',
+          serverId: 'server-1',
+          checksum: { algorithm: 'sha256', value: 'a'.repeat(64) },
+          eventId: 'plugin-hangar',
+        },
+      });
+      expect(tauriInvokeMock.mock.calls[0][1].request).not.toHaveProperty(
+        'allowUnverifiedPluginDownloads',
+      );
+    });
+
+    it('rejects an invalid managed filename before invoking Rust', async () => {
+      const { installHangarProject } = await import('../plugin-commands');
+      await expect(
+        installHangarProject('https://hangar.papermc.io/plugin.jar', {
+          serverId: 'server-1',
+          relativeDir: 'plugins',
+          fileName: 'plugin.jar.tmp-123',
+        }),
+      ).rejects.toThrow('Invalid managed plugin destination');
+      expect(tauriInvokeMock).not.toHaveBeenCalled();
     });
   });
 });

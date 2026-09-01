@@ -32,6 +32,7 @@ import {
   type HangarProject,
   type ModrinthProject,
   type ModrinthProjectIdentity,
+  type PluginInstallTarget,
   type SpigetResource,
   checkHangarCompatibility,
   getCompatibleModrinthVersion,
@@ -49,6 +50,7 @@ import {
   searchSpigot,
 } from '../../lib/plugin-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import { createPluginInstallTarget } from './plugin-install-target';
 
 interface Props {
   server: MinecraftServer;
@@ -149,13 +151,6 @@ function toSlug(value: string): string {
     .replace(/-{2,}/g, '-')
     .replace(/^-+|-+$/g, '');
   return normalized || 'plugin';
-}
-
-function normalizeFileExtension(value?: string): string {
-  if (!value) {
-    return '.jar';
-  }
-  return value.startsWith('.') ? value : `.${value}`;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -1462,16 +1457,24 @@ export default function PluginBrowser({ server }: Props) {
   ) => {
     const pluginDir = `${server.path}/${folderName}`;
     const preserveDisabledState = Boolean(installedFile && isDisabledPluginFile(installedFile));
-    let installedArtifactName: string | null = null;
+    let installedTarget: PluginInstallTarget | null = null;
     let existingDeleted = false;
 
-    const replaceExistingFileIfNeeded = async (_downloadedTempFile: string): Promise<boolean> => {
+    const removePreviousInstalledFileIfNeeded = async (newFileName: string): Promise<boolean> => {
       if (!installedFile || existingDeleted) {
         return true;
       }
 
       const requestedInstalledFile = toListedPluginFileName(installedFile);
       if (!requestedInstalledFile) {
+        existingDeleted = true;
+        return true;
+      }
+
+      // The typed plugin command owns the final destination and has already
+      // completed successfully here. Keep the existing file when the target
+      // is the same path so overwrite/update can be handled by Rust.
+      if (requestedInstalledFile.toLowerCase() === newFileName.toLowerCase()) {
         existingDeleted = true;
         return true;
       }
@@ -1505,7 +1508,7 @@ export default function PluginBrowser({ server }: Props) {
         existingDeleted = true;
         return true;
       } catch (error) {
-        console.error('Failed to delete existing installed file after install', {
+        console.error('Failed to delete previous installed file after download', {
           requestedInstalledFile: installedFile,
           pluginDir,
           error: toErrorMessage(error),
@@ -1642,8 +1645,7 @@ export default function PluginBrowser({ server }: Props) {
                   await installModrinthProject(
                     dependencyVersion.id,
                     dependencyFileName,
-                    server.id,
-                    folderName,
+                    createPluginInstallTarget(server.id, folderName, dependencyVersion.fileName),
                   );
                   installedDependencyCount += 1;
                 } catch (error) {
@@ -1701,22 +1703,13 @@ export default function PluginBrowser({ server }: Props) {
           }
         }
 
-        const tempFileName = `${resolvedVersion.fileName}.tmp-${Date.now()}`;
-        installedArtifactName = resolvedVersion.fileName;
-        await installModrinthProject(resolvedVersion.id, tempFileName, server.id, folderName);
+        const target = createPluginInstallTarget(server.id, folderName, resolvedVersion.fileName);
+        installedTarget = target;
+        await installModrinthProject(resolvedVersion.id, resolvedVersion.fileName, target);
 
-        if (!(await replaceExistingFileIfNeeded(tempFileName))) {
-          await deleteItem(`${pluginDir}/${tempFileName}`).catch((cleanupError) => {
-            console.error('Failed to clean up temporary plugin file after replace cancellation', {
-              pluginDir,
-              tempFileName,
-              error: toErrorMessage(cleanupError),
-            });
-          });
+        if (!(await removePreviousInstalledFileIfNeeded(target.fileName))) {
           return;
         }
-
-        await moveItem(`${pluginDir}/${tempFileName}`, `${pluginDir}/${installedArtifactName}`);
       } else if (item.platform === 'Hangar') {
         const owner = item.author;
         const slug = item.slug || item.title;
@@ -1753,34 +1746,13 @@ export default function PluginBrowser({ server }: Props) {
           return;
         }
 
-        const tempFileNameHangar = `${resolved.fileName}.tmp-${Date.now()}`;
-        installedArtifactName = resolved.fileName;
-        await installHangarProject(
-          resolved.downloadUrl,
-          tempFileNameHangar,
-          server.id,
-          folderName,
-          resolved.checksum,
-        );
+        const target = createPluginInstallTarget(server.id, folderName, resolved.fileName);
+        installedTarget = target;
+        await installHangarProject(resolved.downloadUrl, target, resolved.checksum);
 
-        if (!(await replaceExistingFileIfNeeded(tempFileNameHangar))) {
-          await deleteItem(`${pluginDir}/${tempFileNameHangar}`).catch((cleanupError) => {
-            console.error(
-              'Failed to clean up temporary Hangar plugin file after replace cancellation',
-              {
-                pluginDir,
-                tempFileName: tempFileNameHangar,
-                error: toErrorMessage(cleanupError),
-              },
-            );
-          });
+        if (!(await removePreviousInstalledFileIfNeeded(target.fileName))) {
           return;
         }
-
-        await moveItem(
-          `${pluginDir}/${tempFileNameHangar}`,
-          `${pluginDir}/${installedArtifactName}`,
-        );
       } else if (item.platform === 'Spigot') {
         const resourceId = Number(item.id);
         if (!Number.isFinite(resourceId)) {
@@ -1796,47 +1768,25 @@ export default function PluginBrowser({ server }: Props) {
           return;
         }
 
-        const extension = normalizeFileExtension(
-          typeof item.source_obj.fileType === 'string' ? item.source_obj.fileType : '.jar',
-        );
         const versionId =
           typeof item.source_obj.latestVersionId === 'number'
             ? item.source_obj.latestVersionId
             : undefined;
-        const fileName = `${toSlug(item.title)}-${resourceId}${extension}`;
-
-        const tempFileNameSpigot = `${fileName}.tmp-${Date.now()}`;
-        installedArtifactName = fileName;
-        await installSpigotProject(
-          resourceId,
-          tempFileNameSpigot,
+        const target = createPluginInstallTarget(
           server.id,
           folderName,
-          versionId,
+          `${toSlug(item.title)}-${resourceId}.jar`,
         );
+        installedTarget = target;
+        await installSpigotProject(resourceId, target, versionId);
 
-        if (!(await replaceExistingFileIfNeeded(tempFileNameSpigot))) {
-          await deleteItem(`${pluginDir}/${tempFileNameSpigot}`).catch((cleanupError) => {
-            console.error(
-              'Failed to clean up temporary Spigot plugin file after replace cancellation',
-              {
-                pluginDir,
-                tempFileName: tempFileNameSpigot,
-                error: toErrorMessage(cleanupError),
-              },
-            );
-          });
+        if (!(await removePreviousInstalledFileIfNeeded(target.fileName))) {
           return;
         }
-
-        await moveItem(
-          `${pluginDir}/${tempFileNameSpigot}`,
-          `${pluginDir}/${installedArtifactName}`,
-        );
       }
 
-      if (preserveDisabledState && installedArtifactName) {
-        const installedPath = `${pluginDir}/${installedArtifactName}`;
+      if (preserveDisabledState && installedTarget) {
+        const installedPath = `${pluginDir}/${installedTarget.fileName}`;
         await moveItem(installedPath, `${installedPath}.disabled`);
       }
 
