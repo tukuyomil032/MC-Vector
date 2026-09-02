@@ -362,6 +362,9 @@ mod tests {
         for arg in ["-javaagent:evil.jar", "-cp evil.jar", "-XX:OnError=cmd"] {
             assert!(validate_jvm_extra_args(arg).is_err(), "{arg}");
         }
+
+        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_dir_all(&outside_install_dir);
     }
 }
 
