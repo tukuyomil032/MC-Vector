@@ -202,7 +202,11 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
             <div className="add-server-modal__row">
               <div className="add-server-modal__field-group">
                 <label className="add-server-modal__label">{t('addServer.software.label')}</label>
-                <select {...register('software')} className="add-server-modal__field">
+                <select
+                  {...register('software')}
+                  data-testid="server-software-select"
+                  className="add-server-modal__field"
+                >
                   <optgroup label={t('addServer.software.groups.standard')}>
                     <option value="Vanilla">{t('addServer.software.options.vanilla')}</option>
                     <option value="Paper">{t('addServer.software.options.paper')}</option>
@@ -223,7 +227,11 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
 
               <div className="add-server-modal__field-group">
                 <label className="add-server-modal__label">{t('addServer.version.label')}</label>
-                <select {...register('version')} className="add-server-modal__field">
+                <select
+                  {...register('version')}
+                  data-testid="server-version-select"
+                  className="add-server-modal__field"
+                >
                   {VERSION_OPTIONS.map((v) => (
                     <option key={v} value={v}>
                       {v}

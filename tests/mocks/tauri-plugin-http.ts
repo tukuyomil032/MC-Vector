@@ -72,6 +72,7 @@ function hangarProject(): Record<string, unknown> {
 
 function hangarVersion(): Record<string, unknown> {
   const hashless = getE2eScenario() === 'hashless-plugin';
+  const incompatible = getE2eScenario() === 'incompatible-plugin';
   return {
     name: '2.0',
     downloads: {
@@ -83,7 +84,7 @@ function hangarVersion(): Record<string, unknown> {
         },
       },
     },
-    platformDependencies: { PAPER: ['1.21.10'] },
+    platformDependencies: { PAPER: [incompatible ? '1.20.1' : '1.21.10'] },
   };
 }
 

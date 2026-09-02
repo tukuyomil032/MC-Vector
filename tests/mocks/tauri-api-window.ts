@@ -22,6 +22,7 @@ export function getCurrentWindow() {
     theme: async () => 'dark',
     onThemeChanged: async (_handler: unknown) => () => {},
     onCloseRequested: async (_handler: unknown) => () => {},
+    onDragDropEvent: async (_handler: unknown) => () => {},
     onFocusChanged: async (_handler: unknown) => () => {},
     onScaleChanged: async (_handler: unknown) => () => {},
     setResizable: async (_val: boolean) => {},

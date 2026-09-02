@@ -5,14 +5,6 @@ const NAVIGABLE_VIEWS = ['dashboard', 'console', 'files', 'plugins', 'backups'] 
 test.describe('Navigation', () => {
   test.beforeEach(async ({ app }) => {
     await app.gotoApp();
-
-    // ensure sidebar is open so nav items are visible & clickable
-    const sidebar = page.locator('[data-testid="app-sidebar"]');
-    const isOpen = await sidebar.evaluate((el) => el.classList.contains('app-sidebar--open'));
-    if (!isOpen) {
-      await page.locator('[data-testid="sidebar-toggle-button"]').click();
-      await expect(sidebar).toHaveClass(/app-sidebar--open/);
-    }
   });
 
   for (const view of NAVIGABLE_VIEWS) {

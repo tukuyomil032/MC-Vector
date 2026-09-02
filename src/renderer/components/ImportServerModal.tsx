@@ -109,6 +109,7 @@ export default function ImportServerModal({
       <Dialog.Portal>
         <Dialog.Overlay className="mc-modal-overlay" />
         <Dialog.Content
+          data-testid="import-server-modal"
           aria-describedby={undefined}
           className={cn(
             'mc-modal-panel',
@@ -130,6 +131,7 @@ export default function ImportServerModal({
             <button
               type="button"
               className="btn-secondary"
+              data-testid="import-select-folder-button"
               onClick={handleSelectFolder}
               disabled={isAnalyzing}
             >
@@ -178,6 +180,7 @@ export default function ImportServerModal({
             <button
               type="button"
               className="mc-modal-btn-primary"
+              data-testid="import-server-submit"
               onClick={handleImport}
               disabled={!analyzed || !hasServerJar || !serverName}
             >

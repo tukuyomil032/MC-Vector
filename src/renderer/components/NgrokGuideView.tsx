@@ -8,7 +8,7 @@ export default function NgrokGuideView() {
   };
 
   return (
-    <div className="ngrok-guide-view">
+    <div className="ngrok-guide-view" data-testid="ngrok-guide-view">
       <h1 className="ngrok-guide-view__title">🌐 {t('ngrokGuide.title')}</h1>
 
       <div className="ngrok-guide-view__intro">

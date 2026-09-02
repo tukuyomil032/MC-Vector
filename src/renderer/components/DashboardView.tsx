@@ -446,7 +446,7 @@ export default function DashboardView({ server }: Props) {
   }, [server.id, server.status, supportsTpsPolling]);
 
   return (
-    <div className="dashboard-view">
+    <div className="dashboard-view" data-testid="dashboard-view">
       <header className="dashboard-view__header surface-card">
         <div className="dashboard-view__header-main">
           <h2 className="dashboard-view__title">{t('dashboard.title', { name: server.name })}</h2>

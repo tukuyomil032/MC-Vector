@@ -144,164 +144,171 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    <div className="settings-window" data-testid="settings-window">
-      <div className="settings-window__header">
-        {onClose && (
-          <button className="btn-secondary text-sm" onClick={onClose}>
-            {t('settings.backButton')}
-          </button>
-        )}
-        <h1 className="text-2xl font-semibold m-0">{t('settings.title')}</h1>
-      </div>
-
-      <section className="settings-window__section">
-        <div className="settings-window__section-head">
-          <div>
-            <h2 className="text-lg m-0">{t('settings.update.title')}</h2>
-            <p className="text-sm text-zinc-400 m-0">{t('settings.update.description')}</p>
-          </div>
-          <div className="flex gap-2">
-            {['idle', 'not-available', 'error'].includes(updateState.status) && (
-              <button
-                className="btn-secondary"
-                onClick={handleCheck}
-                disabled={updateState.status === 'checking'}
-              >
-                {updateState.status === 'checking'
-                  ? t('settings.update.checking')
-                  : t('settings.update.checkButton')}
-              </button>
-            )}
-            {updateState.status === 'available' && (
-              <button className="btn-secondary" onClick={handleDownload}>
-                {t('settings.update.download')}
-              </button>
-            )}
-            {updateState.status === 'downloaded' && (
-              <button className="btn-primary" onClick={handleInstall}>
-                {t('settings.update.restart')}
-              </button>
-            )}
-          </div>
+    <div data-testid="app-settings-view">
+      <div className="settings-window" data-testid="settings-window">
+        <div className="settings-window__header">
+          {onClose && (
+            <button className="btn-secondary text-sm" onClick={onClose}>
+              {t('settings.backButton')}
+            </button>
+          )}
+          <h1 className="text-2xl font-semibold m-0">{t('settings.title')}</h1>
         </div>
 
-        <div className="settings-window__status-body">
-          {updateState.status === 'idle' && <div>{t('settings.update.idle')}</div>}
-          {updateState.status === 'checking' && <div>{t('settings.update.checkingStatus')}</div>}
-          {updateState.status === 'available' && (
-            <div className="text-accent font-semibold">
-              {t('settings.update.available', { version: updateState.version || 'unknown' })}
-            </div>
-          )}
-          {updateState.status === 'not-available' && <div>{t('settings.update.notAvailable')}</div>}
-          {updateState.status === 'downloading' && (
+        <section className="settings-window__section">
+          <div className="settings-window__section-head">
             <div>
-              {t('settings.update.downloading', {
-                progress: Math.round(updateState.progress || 0),
-              })}
-              <div className="settings-window__progress-track">
-                <div
-                  className="settings-window__progress-bar"
-                  style={{ width: `${Math.min(100, Math.round(updateState.progress || 0))}%` }}
-                />
+              <h2 className="text-lg m-0">{t('settings.update.title')}</h2>
+              <p className="text-sm text-zinc-400 m-0">{t('settings.update.description')}</p>
+            </div>
+            <div className="flex gap-2">
+              {['idle', 'not-available', 'error'].includes(updateState.status) && (
+                <button
+                  className="btn-secondary"
+                  onClick={handleCheck}
+                  disabled={updateState.status === 'checking'}
+                >
+                  {updateState.status === 'checking'
+                    ? t('settings.update.checking')
+                    : t('settings.update.checkButton')}
+                </button>
+              )}
+              {updateState.status === 'available' && (
+                <button className="btn-secondary" onClick={handleDownload}>
+                  {t('settings.update.download')}
+                </button>
+              )}
+              {updateState.status === 'downloaded' && (
+                <button className="btn-primary" onClick={handleInstall}>
+                  {t('settings.update.restart')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="settings-window__status-body">
+            {updateState.status === 'idle' && <div>{t('settings.update.idle')}</div>}
+            {updateState.status === 'checking' && <div>{t('settings.update.checkingStatus')}</div>}
+            {updateState.status === 'available' && (
+              <div className="text-accent font-semibold">
+                {t('settings.update.available', { version: updateState.version || 'unknown' })}
               </div>
+            )}
+            {updateState.status === 'not-available' && (
+              <div>{t('settings.update.notAvailable')}</div>
+            )}
+            {updateState.status === 'downloading' && (
+              <div>
+                {t('settings.update.downloading', {
+                  progress: Math.round(updateState.progress || 0),
+                })}
+                <div className="settings-window__progress-track">
+                  <div
+                    className="settings-window__progress-bar"
+                    style={{ width: `${Math.min(100, Math.round(updateState.progress || 0))}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {updateState.status === 'downloaded' && <div>{t('settings.update.downloaded')}</div>}
+            {updateState.status === 'error' && (
+              <div className="text-red-400">
+                {t('settings.update.error', { message: updateState.error || '' })}
+              </div>
+            )}
+          </div>
+
+          {releaseNotesText && (
+            <div className="settings-window__release-notes">
+              <div className="settings-window__release-notes-label">
+                {t('settings.update.releaseNotes')}
+              </div>
+              <pre className="settings-window__release-notes-body">{releaseNotesText}</pre>
             </div>
           )}
-          {updateState.status === 'downloaded' && <div>{t('settings.update.downloaded')}</div>}
-          {updateState.status === 'error' && (
-            <div className="text-red-400">
-              {t('settings.update.error', { message: updateState.error || '' })}
+        </section>
+
+        <section className="settings-window__section">
+          <div className="settings-window__section-head">
+            <div>
+              <h2 className="text-lg m-0">{t('settings.language.title')}</h2>
+              <p className="text-sm text-zinc-400 m-0">{t('settings.language.description')}</p>
             </div>
+          </div>
+
+          <label className="text-sm text-zinc-300 block mb-2" htmlFor="language-select">
+            {t('settings.language.label')}
+          </label>
+          <select
+            id="language-select"
+            className="settings-window__theme-select"
+            value={locale}
+            onChange={(e) => handleLanguageChange(e.target.value as LocaleCode)}
+          >
+            <option value="en">{t('settings.language.options.en')}</option>
+            <option value="ja">{t('settings.language.options.ja')}</option>
+          </select>
+        </section>
+
+        <section className="settings-window__section">
+          <div className="settings-window__section-head">
+            <div>
+              <h2 className="text-lg m-0">{t('settings.security.title')}</h2>
+              <p className="text-sm text-zinc-400 m-0">{t('settings.security.description')}</p>
+            </div>
+          </div>
+
+          <label
+            className="settings-window__toggle-row"
+            htmlFor="allow-unverified-plugin-downloads"
+          >
+            <input
+              id="allow-unverified-plugin-downloads"
+              type="checkbox"
+              checked={allowUnverifiedPluginDownloads}
+              disabled={isSavingSecuritySetting}
+              aria-describedby="allow-unverified-plugin-downloads-warning"
+              onChange={(e) => void handleAllowUnverifiedPluginDownloadsToggle(e.target.checked)}
+            />
+            <span>{t('settings.security.label')}</span>
+          </label>
+          <p
+            id="allow-unverified-plugin-downloads-warning"
+            className="text-sm text-amber-300 mt-3 mb-0"
+          >
+            {t('settings.security.warning')}
+          </p>
+          {isSavingSecuritySetting && (
+            <p className="text-sm text-zinc-400 mt-2 mb-0" aria-live="polite">
+              {t('settings.security.saving')}
+            </p>
           )}
-        </div>
+          {securitySettingError && (
+            <p className="text-sm text-red-400 mt-2 mb-0" role="alert">
+              {securitySettingError}
+            </p>
+          )}
+        </section>
 
-        {releaseNotesText && (
-          <div className="settings-window__release-notes">
-            <div className="settings-window__release-notes-label">
-              {t('settings.update.releaseNotes')}
+        <section className="settings-window__section">
+          <div className="settings-window__section-head">
+            <div>
+              <h2 className="text-lg m-0">{t('settings.liquidGlass.title')}</h2>
+              <p className="text-sm text-zinc-400 m-0">{t('settings.liquidGlass.description')}</p>
             </div>
-            <pre className="settings-window__release-notes-body">{releaseNotesText}</pre>
           </div>
-        )}
-      </section>
 
-      <section className="settings-window__section">
-        <div className="settings-window__section-head">
-          <div>
-            <h2 className="text-lg m-0">{t('settings.language.title')}</h2>
-            <p className="text-sm text-zinc-400 m-0">{t('settings.language.description')}</p>
-          </div>
-        </div>
-
-        <label className="text-sm text-zinc-300 block mb-2" htmlFor="language-select">
-          {t('settings.language.label')}
-        </label>
-        <select
-          id="language-select"
-          className="settings-window__theme-select"
-          value={locale}
-          onChange={(e) => handleLanguageChange(e.target.value as LocaleCode)}
-        >
-          <option value="en">{t('settings.language.options.en')}</option>
-          <option value="ja">{t('settings.language.options.ja')}</option>
-        </select>
-      </section>
-
-      <section className="settings-window__section">
-        <div className="settings-window__section-head">
-          <div>
-            <h2 className="text-lg m-0">{t('settings.security.title')}</h2>
-            <p className="text-sm text-zinc-400 m-0">{t('settings.security.description')}</p>
-          </div>
-        </div>
-
-        <label className="settings-window__toggle-row" htmlFor="allow-unverified-plugin-downloads">
-          <input
-            id="allow-unverified-plugin-downloads"
-            type="checkbox"
-            checked={allowUnverifiedPluginDownloads}
-            disabled={isSavingSecuritySetting}
-            aria-describedby="allow-unverified-plugin-downloads-warning"
-            onChange={(e) => void handleAllowUnverifiedPluginDownloadsToggle(e.target.checked)}
-          />
-          <span>{t('settings.security.label')}</span>
-        </label>
-        <p
-          id="allow-unverified-plugin-downloads-warning"
-          className="text-sm text-amber-300 mt-3 mb-0"
-        >
-          {t('settings.security.warning')}
-        </p>
-        {isSavingSecuritySetting && (
-          <p className="text-sm text-zinc-400 mt-2 mb-0" aria-live="polite">
-            {t('settings.security.saving')}
-          </p>
-        )}
-        {securitySettingError && (
-          <p className="text-sm text-red-400 mt-2 mb-0" role="alert">
-            {securitySettingError}
-          </p>
-        )}
-      </section>
-
-      <section className="settings-window__section">
-        <div className="settings-window__section-head">
-          <div>
-            <h2 className="text-lg m-0">{t('settings.liquidGlass.title')}</h2>
-            <p className="text-sm text-zinc-400 m-0">{t('settings.liquidGlass.description')}</p>
-          </div>
-        </div>
-
-        <label className="settings-window__toggle-row" htmlFor="liquid-glass-toggle">
-          <input
-            id="liquid-glass-toggle"
-            type="checkbox"
-            checked={liquidGlassEnabled}
-            onChange={(e) => void handleLiquidGlassToggle(e.target.checked)}
-          />
-          <span>{t('settings.liquidGlass.label')}</span>
-        </label>
-      </section>
+          <label className="settings-window__toggle-row" htmlFor="liquid-glass-toggle">
+            <input
+              id="liquid-glass-toggle"
+              type="checkbox"
+              checked={liquidGlassEnabled}
+              onChange={(e) => void handleLiquidGlassToggle(e.target.checked)}
+            />
+            <span>{t('settings.liquidGlass.label')}</span>
+          </label>
+        </section>
+      </div>
     </div>
   );
 };

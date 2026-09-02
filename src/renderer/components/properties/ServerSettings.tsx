@@ -279,7 +279,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   };
 
   return (
-    <div className="server-settings">
+    <div className="server-settings" data-testid="server-settings-view">
       <div className="server-settings__inner">
         <h2 className="server-settings__title">{t('serverSettings.title')}</h2>
 
@@ -291,6 +291,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
             <input
               type="text"
               value={name}
+              data-testid="server-settings-name-input"
               onChange={(e) => setName(e.target.value)}
               className="input-field"
             />
@@ -393,6 +394,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
               />
               <button
                 className="btn-secondary whitespace-nowrap server-settings__java-manage-btn"
+                data-testid="server-settings-java-manage-button"
                 onClick={() => {
                   setShowJavaManager(true);
                   loadJavaList();
@@ -684,6 +686,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 void handleSubmit();
               }}
               className="btn-start server-settings__save-btn disabled:opacity-50"
+              data-testid="server-settings-save-button"
               disabled={isSaving}
             >
               {t('serverSettings.saveSettings')}
@@ -729,6 +732,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 <input
                   type="checkbox"
                   checked={isTunneling}
+                  data-testid="ngrok-toggle"
                   onChange={handleToggleTunnel}
                   className="server-settings__ngrok-switch-input"
                 />
@@ -799,6 +803,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
             <input
               type="text"
               className="input-field server-settings__token-input"
+              data-testid="ngrok-token-input"
               placeholder={t('serverSettings.ngrok.tokenRequired.placeholder')}
               value={inputToken}
               onChange={(e) => setInputToken(e.target.value)}
@@ -813,6 +818,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
               <button
                 onClick={handleTokenSubmit}
                 className="btn-primary server-settings__token-save disabled:opacity-50"
+                data-testid="ngrok-token-save"
                 disabled={!inputToken}
               >
                 {t('serverSettings.ngrok.tokenRequired.saveAndConnect')}

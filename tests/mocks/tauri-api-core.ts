@@ -154,10 +154,7 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       state.pluginDownloadAttempts += 1;
       const checksum = request.checksum;
       const scenario = getE2eScenario();
-      if (
-        scenario === 'hashless-plugin' ||
-        (!checksum && state.config.allowUnverifiedPluginDownloads !== true)
-      ) {
+      if (!checksum && state.config.allowUnverifiedPluginDownloads !== true) {
         throw errorWithCode('unverified-artifact-blocked');
       }
       if (scenario === 'checksum-mismatch') throw errorWithCode('checksum-mismatch');
@@ -238,7 +235,7 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'start_ngrok':
       state.ngrokStatus = 'online';
       void emit('ngrok-status-change', {
-        status: 'online',
+        status: 'connected',
         url: 'https://example.ngrok.test',
         serverId: payload.serverId,
       });
@@ -246,7 +243,7 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
 
     case 'stop_ngrok':
       state.ngrokStatus = 'offline';
-      void emit('ngrok-status-change', { status: 'offline', serverId: payload.serverId });
+      void emit('ngrok-status-change', { status: 'stopped', serverId: payload.serverId });
       return null;
 
     case 'download_ngrok':

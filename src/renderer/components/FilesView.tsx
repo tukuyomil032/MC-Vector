@@ -675,7 +675,7 @@ export default function FilesView({ server }: Props) {
   };
 
   return (
-    <div className="files-view" onClick={() => setContextMenu(null)}>
+    <div className="files-view" data-testid="files-view" onClick={() => setContextMenu(null)}>
       {/* ツールバー */}
       <div className="files-view__toolbar">
         <button
@@ -695,6 +695,7 @@ export default function FilesView({ server }: Props) {
         <button
           type="button"
           className="files-view__toolbar-btn"
+          data-testid="files-create-button"
           onClick={() => setModalType('create')}
           aria-label={t('files.toolbar.createImport')}
           title={t('files.toolbar.createImport')}
@@ -790,6 +791,7 @@ export default function FilesView({ server }: Props) {
               <div
                 key={file.name}
                 className={`files-view__row ${selectedFiles.includes(file.name) ? 'is-selected' : ''}${diffSelectStep && !file.isDirectory ? ' cursor-crosshair' : ''}`}
+                data-testid={`file-row-${file.name}`}
                 role="button"
                 tabIndex={0}
                 aria-label={file.name}
@@ -1004,6 +1006,7 @@ export default function FilesView({ server }: Props) {
             <input
               type="text"
               value={newFileName}
+              data-testid="files-name-input"
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder={
                 createMode === 'folder'
@@ -1023,6 +1026,7 @@ export default function FilesView({ server }: Props) {
               <button
                 onClick={handleCreate}
                 className="mc-modal-btn-primary"
+                data-testid="files-create-submit"
                 disabled={!newFileName}
               >
                 {t('common.create')}
@@ -1049,6 +1053,7 @@ export default function FilesView({ server }: Props) {
             <input
               type="text"
               value={moveDestPath}
+              data-testid="files-move-input"
               onChange={(e) => setMoveDestPath(e.target.value)}
               placeholder={t('files.modal.moveDestPlaceholder')}
               className="mc-modal-input"
