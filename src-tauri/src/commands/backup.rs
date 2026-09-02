@@ -528,27 +528,23 @@ pub async fn create_backup(
     app: AppHandle,
     server_id: String,
     backup_name: String,
-    source_dir: String,
-    backup_dir: String,
+    source_path: PathBuf,
+    backup_path: PathBuf,
     sources: Option<Vec<String>>,
     compression_level: Option<i64>,
 ) -> Result<String, String> {
-    let source = source_dir.clone();
-    let backup = backup_dir.clone();
     let sid = server_id.clone();
     let backup_name = backup_name.clone();
     let app_clone = app.clone();
     tokio::task::spawn_blocking(move || {
-        let source_path = Path::new(&source);
-        let source_metadata = fs::symlink_metadata(source_path)
+        let source_metadata = fs::symlink_metadata(&source_path)
             .map_err(|error| format!("Failed to inspect source directory: {error}"))?;
         if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
             return Err("Source path must be a real directory".to_string());
         }
-        let source_canonical = fs::canonicalize(source_path)
+        let source_canonical = fs::canonicalize(&source_path)
             .map_err(|error| format!("Failed to resolve source directory: {error}"))?;
-        let backup_path = Path::new(&backup);
-        fs::create_dir_all(backup_path)
+        fs::create_dir_all(&backup_path)
             .map_err(|error| format!("Failed to create backup directory: {error}"))?;
         let zip_name = if backup_name.ends_with(".zip") {
             backup_name.clone()
@@ -588,7 +584,7 @@ pub async fn create_backup(
             }
             files
         } else {
-            collect_files(source_path)
+            collect_files(&source_path)
                 .map_err(|error| format!("Failed to collect files: {error}"))?
         };
         let total = entries.len() as f32;
@@ -756,7 +752,10 @@ fn ensure_directory_without_symlink(
     Ok(current)
 }
 
-fn extract_archive_to_directory(archive_path: &str, destination: &str) -> Result<(), String> {
+fn extract_archive_to_directory(
+    archive_path: &Path,
+    destination_path: &Path,
+) -> Result<(), String> {
     let file =
         File::open(archive_path).map_err(|error| format!("Failed to open archive: {error}"))?;
     validate_archive_file_size(&file, ARCHIVE_POLICY)?;
@@ -764,7 +763,6 @@ fn extract_archive_to_directory(archive_path: &str, destination: &str) -> Result
         zip::ZipArchive::new(file).map_err(|error| format!("Failed to read zip: {error}"))?;
     preflight_archive(&mut archive, ARCHIVE_POLICY)?;
 
-    let destination_path = Path::new(destination);
     match fs::symlink_metadata(destination_path) {
         Ok(metadata) if is_link_or_reparse_point(&metadata) => {
             return Err("Destination root must not be a symlink".to_string());
@@ -867,32 +865,33 @@ fn extract_archive_to_directory(archive_path: &str, destination: &str) -> Result
 
 pub async fn restore_backup(
     _app: AppHandle,
-    backup_path: String,
-    target_dir: String,
+    backup_path: PathBuf,
+    target_dir: PathBuf,
 ) -> Result<(), String> {
     tokio::task::spawn_blocking(move || extract_archive_to_directory(&backup_path, &target_dir))
         .await
         .map_err(|error| format!("Task join error: {error}"))?
 }
 
-pub async fn compress_item(sources: Vec<String>, dest: String) -> Result<String, String> {
+pub async fn compress_item(sources: Vec<PathBuf>, destination: PathBuf) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
-        let destination = PathBuf::from(&dest);
         write_zip_atomically(&destination, |zip, totals| {
             for source in &sources {
-                let source_path = Path::new(source);
-                let metadata = fs::symlink_metadata(source_path)
+                let metadata = fs::symlink_metadata(source)
                     .map_err(|error| format!("Failed to inspect source: {error}"))?;
                 if is_link_or_reparse_point(&metadata) {
-                    return Err(format!("Symlink source entry is not allowed: {source}"));
+                    return Err(format!(
+                        "Symlink source entry is not allowed: {}",
+                        source.display()
+                    ));
                 }
                 if metadata.is_dir() {
-                    let containment_root = fs::canonicalize(source_path)
+                    let containment_root = fs::canonicalize(source)
                         .map_err(|error| format!("Failed to resolve source: {error}"))?;
                     let archive_root =
-                        fs::canonicalize(source_path.parent().unwrap_or_else(|| Path::new(".")))
+                        fs::canonicalize(source.parent().unwrap_or_else(|| Path::new(".")))
                             .map_err(|error| format!("Failed to resolve archive root: {error}"))?;
-                    let entries = collect_files(source_path)
+                    let entries = collect_files(source)
                         .map_err(|error| format!("Failed to collect files: {error}"))?;
                     for entry in entries {
                         append_source_entry(
@@ -907,12 +906,12 @@ pub async fn compress_item(sources: Vec<String>, dest: String) -> Result<String,
                     }
                 } else if metadata.is_file() {
                     let archive_root =
-                        fs::canonicalize(source_path.parent().unwrap_or_else(|| Path::new(".")))
+                        fs::canonicalize(source.parent().unwrap_or_else(|| Path::new(".")))
                             .map_err(|error| format!("Failed to resolve archive root: {error}"))?;
                     let containment_root = archive_root.clone();
                     append_source_entry(
                         zip,
-                        source_path,
+                        source,
                         &containment_root,
                         &archive_root,
                         totals,
@@ -920,19 +919,19 @@ pub async fn compress_item(sources: Vec<String>, dest: String) -> Result<String,
                             .compression_method(zip::CompressionMethod::Deflated),
                     )?;
                 } else {
-                    return Err(format!("Unsupported source type: {source}"));
+                    return Err(format!("Unsupported source type: {}", source.display()));
                 }
             }
             Ok(())
         })?;
-        Ok(dest)
+        Ok(destination.to_string_lossy().to_string())
     })
     .await
     .map_err(|error| format!("Task join error: {error}"))?
 }
 
-pub async fn extract_item(archive: String, dest: String) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || extract_archive_to_directory(&archive, &dest))
+pub async fn extract_item(archive: PathBuf, destination: PathBuf) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || extract_archive_to_directory(&archive, &destination))
         .await
         .map_err(|error| format!("Task join error: {error}"))?
 }
@@ -965,8 +964,8 @@ pub async fn create_managed_backup(
         app,
         server_id,
         backup_name,
-        source.to_string_lossy().to_string(),
-        backup.to_string_lossy().to_string(),
+        source,
+        backup,
         sources,
         compression_level,
     )
@@ -995,12 +994,7 @@ pub async fn restore_managed_backup(
     };
     let archive = resolve_managed_request(&app_data_dir, &archive_request, false)?;
     let target = resolve_managed_request(&app_data_dir, &target_request, false)?;
-    restore_backup(
-        app,
-        archive.to_string_lossy().to_string(),
-        target.to_string_lossy().to_string(),
-    )
-    .await
+    restore_backup(app, archive, target).await
 }
 
 #[tauri::command]
@@ -1015,13 +1009,10 @@ pub async fn compress_managed_items(
         .map_err(|_| "Failed to resolve app data directory".to_string())?;
     let source_paths = sources
         .iter()
-        .map(|request| {
-            resolve_managed_request(&app_data_dir, request, false)
-                .map(|path| path.to_string_lossy().to_string())
-        })
+        .map(|request| resolve_managed_request(&app_data_dir, request, false))
         .collect::<Result<Vec<_>, _>>()?;
     let destination = resolve_managed_request(&app_data_dir, &destination, true)?;
-    compress_item(source_paths, destination.to_string_lossy().to_string()).await
+    compress_item(source_paths, destination).await
 }
 
 #[tauri::command]
@@ -1036,11 +1027,7 @@ pub async fn extract_managed_item(
         .map_err(|_| "Failed to resolve app data directory".to_string())?;
     let archive = resolve_managed_request(&app_data_dir, &archive, false)?;
     let destination = resolve_managed_request(&app_data_dir, &destination, true)?;
-    extract_item(
-        archive.to_string_lossy().to_string(),
-        destination.to_string_lossy().to_string(),
-    )
-    .await
+    extract_item(archive, destination).await
 }
 
 /// Recursively collect regular files and directories without following symlinks.
@@ -1052,19 +1039,23 @@ fn collect_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
 }
 
 fn collect_files_internal(dir: &Path, root: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
-    let directory_metadata = fs::symlink_metadata(dir)?;
-    if is_link_or_reparse_point(&directory_metadata) || !directory_metadata.is_dir() {
-        return Err(limit_error("source directory is not a real directory"));
-    }
     let canonical = fs::canonicalize(dir)?;
     if !canonical.starts_with(root) {
         return Err(limit_error("source entry escapes source directory"));
     }
+    let directory_metadata = fs::symlink_metadata(dir)?;
+    if is_link_or_reparse_point(&directory_metadata) || !directory_metadata.is_dir() {
+        return Err(limit_error("source directory is not a real directory"));
+    }
 
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
+        let file_type = entry.file_type()?;
+        if file_type.is_symlink() {
+            return Err(limit_error("symlink source entry is not allowed"));
+        }
         let path = entry.path();
-        let metadata = fs::symlink_metadata(&path)?;
+        let metadata = entry.metadata()?;
         if is_link_or_reparse_point(&metadata) {
             return Err(limit_error("symlink source entry is not allowed"));
         }
