@@ -7,6 +7,7 @@ interface InlineErrorProps {
   retryLabel?: string;
   action?: ReactNode;
   className?: string;
+  testId?: string;
 }
 
 export default function InlineError({
@@ -15,10 +16,12 @@ export default function InlineError({
   retryLabel = 'Retry',
   action,
   className = '',
+  testId,
 }: InlineErrorProps) {
   return (
     <div
       role="alert"
+      data-testid={testId}
       className={`flex items-start gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100 ${className}`}
     >
       <AlertCircle size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-red-300" />

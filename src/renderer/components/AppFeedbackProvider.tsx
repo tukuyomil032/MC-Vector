@@ -81,6 +81,7 @@ function FeedbackDialogContent({
 }) {
   return (
     <Dialog.Content
+      data-testid="feedback-dialog"
       className="mc-modal-panel fixed left-1/2 top-1/2 z-[1001] max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto"
       onEscapeKeyDown={dialog.dismissible === false ? (event) => event.preventDefault() : undefined}
       onPointerDownOutside={
