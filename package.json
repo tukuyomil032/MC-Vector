@@ -27,10 +27,14 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "test:typecheck": "tsc -p tsconfig.tests.json --noEmit",
     "test:all": "pnpm check && pnpm test && cd src-tauri && cargo test",
     "test:playwright": "playwright test",
     "test:playwright:ui": "playwright test --ui",
-    "test:playwright:screenshots": "playwright test capture-theme-screenshots"
+    "test:playwright:screenshots": "playwright test tests/e2e/capture-theme-screenshots.spec.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:screenshots": "playwright test tests/e2e/capture-theme-screenshots.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

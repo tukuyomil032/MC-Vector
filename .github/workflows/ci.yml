@@ -62,8 +62,10 @@ jobs:
       - name: Install just
         uses: taiki-e/install-action@ae666e311a8d98d0043e81161903fc9f9beb8689 # just
       - run: pnpm install --frozen-lockfile
-      - name: Run Vitest
-        run: pnpm test
+      - name: Run Vitest and test typecheck
+        run: |
+          pnpm test
+          pnpm typecheck:tests
       - name: Run cargo test
         run: cargo test
         working-directory: src-tauri
