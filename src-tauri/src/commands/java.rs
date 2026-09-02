@@ -343,9 +343,21 @@ mod tests {
     }
     #[test]
     fn install_dir_and_jvm_args_are_scoped() {
-        let root = Path::new("/app-data");
-        assert!(validate_managed_java_install_dir(root, "/app-data/java/jdk-21").is_ok());
-        assert!(validate_managed_java_install_dir(root, "/tmp/jdk-21").is_err());
+        let root = std::env::temp_dir().join(format!("mc-vector-java-root-{}", std::process::id()));
+        let managed_install_dir = root.join("java").join("jdk-21");
+        let outside_install_dir = root
+            .parent()
+            .expect("temporary directory must have a parent")
+            .join(format!("mc-vector-java-outside-{}", std::process::id()));
+
+        assert!(
+            validate_managed_java_install_dir(&root, &managed_install_dir.to_string_lossy())
+                .is_ok()
+        );
+        assert!(
+            validate_managed_java_install_dir(&root, &outside_install_dir.to_string_lossy())
+                .is_err()
+        );
         assert!(validate_jvm_extra_args("-Dfile.encoding=UTF-8 -XX:+UseG1GC").is_ok());
         for arg in ["-javaagent:evil.jar", "-cp evil.jar", "-XX:OnError=cmd"] {
             assert!(validate_jvm_extra_args(arg).is_err(), "{arg}");
