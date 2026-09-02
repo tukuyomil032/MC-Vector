@@ -12,7 +12,6 @@ import {
   Loader2,
   type LucideIcon,
   Package,
-  RefreshCw,
   Search,
   Server,
   Star,
@@ -1178,7 +1177,8 @@ export default function PluginBrowser({ server }: Props) {
 
     for (const entry of needsCheck) {
       if (entry.sourceItem) {
-        setUpdateStatusByItemId((prev) => ({ ...prev, [entry.sourceItem?.id]: 'checking' }));
+        const itemId = entry.sourceItem.id;
+        setUpdateStatusByItemId((prev) => ({ ...prev, [itemId]: 'checking' }));
       }
     }
 
@@ -2524,7 +2524,9 @@ export default function PluginBrowser({ server }: Props) {
                 <InlineError
                   className="plugin-browser__search-error"
                   message={t('plugins.browser.searchError')}
-                  onRetry={() => searchQuery.refetch()}
+                  onRetry={() => {
+                    void searchQuery.refetch();
+                  }}
                   retryLabel={t('plugins.browser.retry')}
                 />
               )}
