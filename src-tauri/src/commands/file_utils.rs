@@ -549,11 +549,12 @@ pub async fn write_managed_text_file(
     std::fs::write(&resolved, content).map_err(|error| format!("Failed to write file: {error}"))
 }
 
-fn copy_external_entry(
-    source: &Path,
-    destination: &Path,
-    managed_root: &Path,
-) -> Result<(bool, u64), String> {
+struct ResolvedPickerEntry {
+    path: PathBuf,
+    metadata: std::fs::Metadata,
+}
+
+fn resolve_picker_entry(source: &Path) -> Result<ResolvedPickerEntry, String> {
     if !source.is_absolute()
         || source.components().any(|component| {
             matches!(
@@ -564,63 +565,158 @@ fn copy_external_entry(
     {
         return Err("Selected source must be an absolute, normalized path".to_string());
     }
-    if !destination.is_absolute() || !destination.starts_with(managed_root) {
-        return Err("Import destination is outside the managed root".to_string());
+    let source_name = source
+        .file_name()
+        .ok_or_else(|| "Selected source has no file name".to_string())?;
+    if source_name.is_empty()
+        || source_name == "."
+        || source_name == ".."
+        || source_name.to_string_lossy().chars().any(char::is_control)
+    {
+        return Err("Selected source has an unsafe file name".to_string());
     }
-    let destination_parent = destination
+    let source_parent = source
         .parent()
-        .ok_or_else(|| "Import destination has no parent".to_string())?;
-    if !destination_parent.starts_with(managed_root) {
-        return Err("Import destination parent is outside the managed root".to_string());
+        .ok_or_else(|| "Selected source has no parent".to_string())?;
+    let canonical_parent = std::fs::canonicalize(source_parent)
+        .map_err(|error| format!("Failed to resolve selected source parent: {error}"))?;
+    if canonical_parent != source_parent || !canonical_parent.is_absolute() {
+        return Err("Selected source parent must not be a symbolic link".to_string());
     }
 
-    let metadata = std::fs::symlink_metadata(source)
+    let entry = std::fs::read_dir(&canonical_parent)
+        .map_err(|error| format!("Failed to inspect selected source parent: {error}"))?
+        .find_map(|entry| {
+            let entry = entry.ok()?;
+            (entry.file_name() == source_name).then_some(entry)
+        })
+        .ok_or_else(|| "Selected source no longer exists".to_string())?;
+    let file_type = entry
+        .file_type()
+        .map_err(|error| format!("Failed to inspect selected source type: {error}"))?;
+    let metadata = entry
+        .metadata()
         .map_err(|error| format!("Failed to inspect selected source: {error}"))?;
+    if file_type.is_symlink() {
+        return Err("Selected source must not be a symbolic link or reparse point".to_string());
+    }
     if is_link_or_reparse_point(&metadata) {
         return Err("Selected source must not be a symbolic link or reparse point".to_string());
     }
     if !metadata.is_file() && !metadata.is_dir() {
         return Err("Selected source must be a file or directory".to_string());
     }
-    let canonical_source = std::fs::canonicalize(source)
-        .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
-    if !canonical_source.is_absolute()
-        || canonical_source.components().any(|component| {
-            matches!(
-                component,
-                std::path::Component::CurDir | std::path::Component::ParentDir
-            )
-        })
-    {
-        return Err("Selected source resolved to an unsafe path".to_string());
+    Ok(ResolvedPickerEntry {
+        path: entry.path(),
+        metadata,
+    })
+}
+
+fn resolve_managed_destination(destination: &Path, managed_root: &Path) -> Result<PathBuf, String> {
+    if !destination.is_absolute() || !destination.starts_with(managed_root) {
+        return Err("Import destination is outside the managed root".to_string());
     }
-    if std::fs::symlink_metadata(destination).is_ok() {
+    let destination_parent = destination
+        .parent()
+        .ok_or_else(|| "Import destination has no parent".to_string())?;
+    let canonical_parent = std::fs::canonicalize(destination_parent)
+        .map_err(|error| format!("Failed to resolve import destination parent: {error}"))?;
+    if canonical_parent != destination_parent
+        || !canonical_parent.is_absolute()
+        || !canonical_parent.starts_with(managed_root)
+    {
+        return Err("Import destination parent is outside the managed root".to_string());
+    }
+    let destination_name = destination
+        .file_name()
+        .ok_or_else(|| "Import destination has no file name".to_string())?;
+    if destination_name.is_empty()
+        || destination_name == "."
+        || destination_name == ".."
+        || destination_name
+            .to_string_lossy()
+            .chars()
+            .any(char::is_control)
+    {
+        return Err("Import destination has an unsafe file name".to_string());
+    }
+    if std::fs::read_dir(&canonical_parent)
+        .map_err(|error| format!("Failed to inspect import destination parent: {error}"))?
+        .find_map(|entry| {
+            let entry = entry.ok()?;
+            (entry.file_name() == destination_name).then_some(entry)
+        })
+        .is_some()
+    {
         return Err(format!(
             "An item with the same name already exists: {}",
             destination.display()
         ));
     }
+    let resolved = canonical_parent.join(destination_name);
+    if !resolved.starts_with(managed_root) {
+        return Err("Import destination is outside the managed root".to_string());
+    }
+    Ok(resolved)
+}
 
+fn copy_external_entry(
+    source: &Path,
+    destination: &Path,
+    managed_root: &Path,
+) -> Result<(bool, u64), String> {
+    let source = resolve_picker_entry(source)?;
+    let destination = resolve_managed_destination(destination, managed_root)?;
+    copy_external_entry_resolved(source.path, source.metadata, destination, managed_root)
+}
+
+fn copy_external_entry_resolved(
+    source: PathBuf,
+    metadata: std::fs::Metadata,
+    destination: PathBuf,
+    managed_root: &Path,
+) -> Result<(bool, u64), String> {
     if metadata.is_dir() {
-        std::fs::create_dir(destination)
+        std::fs::create_dir(&destination)
             .map_err(|error| format!("Failed to create imported directory: {error}"))?;
-        for entry in std::fs::read_dir(&canonical_source)
+        for entry in std::fs::read_dir(&source)
             .map_err(|error| format!("Failed to read selected directory: {error}"))?
         {
             let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
+            let file_type = entry
+                .file_type()
+                .map_err(|error| format!("Failed to inspect selected entry type: {error}"))?;
+            if file_type.is_symlink() {
+                return Err(
+                    "Selected source must not contain a symbolic link or reparse point".to_string(),
+                );
+            }
+            let child_metadata = entry
+                .metadata()
+                .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
+            if is_link_or_reparse_point(&child_metadata) {
+                return Err(
+                    "Selected source must not contain a symbolic link or reparse point".to_string(),
+                );
+            }
             let name = entry.file_name();
-            let child_destination = destination.join(&name);
-            let child_source = canonical_source.join(&name);
-            copy_external_entry(&child_source, &child_destination, managed_root)?;
+            let child_destination =
+                resolve_managed_destination(&destination.join(&name), managed_root)?;
+            copy_external_entry_resolved(
+                entry.path(),
+                child_metadata,
+                child_destination,
+                managed_root,
+            )?;
         }
         Ok((true, 0))
     } else {
-        std::fs::copy(&canonical_source, destination)
+        std::fs::copy(&source, &destination)
             .map_err(|error| format!("Failed to copy selected file: {error}"))?;
-        let destination_metadata = std::fs::symlink_metadata(destination)
+        let destination_metadata = std::fs::symlink_metadata(&destination)
             .map_err(|error| format!("Failed to verify imported file: {error}"))?;
         if is_link_or_reparse_point(&destination_metadata) || !destination_metadata.is_file() {
-            let _ = std::fs::remove_file(destination);
+            let _ = std::fs::remove_file(&destination);
             return Err("Imported file is not a regular file".to_string());
         }
         Ok((false, destination_metadata.len()))
