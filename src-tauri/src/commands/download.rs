@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 
-const USER_AGENT: &str = "MC-Vector/2.0.57 (https://github.com/tukuyomil032/MC-Vector)";
+const USER_AGENT: &str = "MC-Vector/2.0.59 (https://github.com/tukuyomil032/MC-Vector)";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_ATTEMPTS: usize = 2;

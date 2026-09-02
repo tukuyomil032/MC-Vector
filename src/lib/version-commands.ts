@@ -2,7 +2,7 @@ import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { logError } from './error-utils';
 import { isRecord } from './guards/json-guards';
 
-const MC_VECTOR_USER_AGENT = 'MC-Vector/2.0.57 (https://github.com/tukuyomil032/MC-Vector)';
+const MC_VECTOR_USER_AGENT = 'MC-Vector/2.0.59 (https://github.com/tukuyomil032/MC-Vector)';
 const PAPER_FILL_API = 'https://fill.papermc.io/v3';
 const PAPER_FALLBACK_API = 'https://api.papermc.io/v2';
 const LEAF_API = 'https://api.leafmc.one/v2';
