@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
@@ -152,81 +152,68 @@ fn validated_relative_path(path: &str) -> Result<PathBuf, String> {
     Ok(relative)
 }
 
-fn validated_root_and_relative(
-    request: &ManagedPathRequest,
-) -> Result<(ManagedRoot, PathBuf), String> {
-    match request.root {
-        ManagedRoot::Servers | ManagedRoot::Backups => {
-            let server_id = request
-                .server_id
-                .as_deref()
-                .ok_or_else(|| "This managed path requires a server ID".to_string())?;
-            let server_id = validate_server_id(server_id)?;
-            let mut relative = PathBuf::from(server_id);
-            relative.push(validated_relative_path(&request.relative_path)?);
-            Ok((request.root, relative))
-        }
-        root => {
-            if request.server_id.is_some() {
-                return Err("Only server paths may include a server ID".to_string());
-            }
-            Ok((root, validated_relative_path(&request.relative_path)?))
-        }
-    }
-}
-
-fn canonicalize_with_existing_ancestor(path: &Path) -> Result<PathBuf, String> {
-    if path.exists() {
-        return std::fs::canonicalize(path)
-            .map_err(|error| format!("Failed to resolve path: {error}"));
-    }
-
-    let mut existing_ancestor = path;
-    let mut missing_segments = Vec::new();
-    while !existing_ancestor.exists() {
-        let segment = existing_ancestor
-            .file_name()
-            .ok_or_else(|| "Path has no existing parent".to_string())?;
-        missing_segments.push(segment.to_os_string());
-        existing_ancestor = existing_ancestor
-            .parent()
-            .ok_or_else(|| "Path has no existing parent".to_string())?;
-    }
-
-    let mut canonical = std::fs::canonicalize(existing_ancestor)
-        .map_err(|error| format!("Failed to resolve path: {error}"))?;
-    for segment in missing_segments.iter().rev() {
-        canonical.push(segment);
-    }
-    Ok(canonical)
-}
-
-fn reject_link_components(root: &Path, relative: &Path) -> Result<(), String> {
-    let mut current = root.to_path_buf();
-    for component in relative.components() {
-        let Component::Normal(component) = component else {
-            return Err("Managed path contains a non-normal component".to_string());
-        };
-        current.push(component);
-        match std::fs::symlink_metadata(&current) {
-            Ok(metadata) if is_link_or_reparse_point(&metadata) => {
-                return Err("Managed path contains a symbolic link or reparse point".to_string());
-            }
-            Ok(_) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
-            Err(error) => return Err(format!("Failed to inspect managed path: {error}")),
-        }
-    }
-    Ok(())
-}
-
 pub(crate) fn resolve_managed_request(
     app_data_dir: &Path,
     request: &ManagedPathRequest,
     create_root: bool,
 ) -> Result<PathBuf, String> {
-    let (root, relative) = validated_root_and_relative(request)?;
+    let root = request.root;
     let managed_root = app_data_dir.join(root.directory_name());
+
+    let mut components = Vec::new();
+    match root {
+        ManagedRoot::Servers | ManagedRoot::Backups => {
+            let server_id = request
+                .server_id
+                .as_deref()
+                .ok_or_else(|| "This managed path requires a server ID".to_string())?;
+            let server_id = server_id.trim();
+            if server_id.is_empty() {
+                return Err("Server ID is empty".to_string());
+            }
+            if server_id.len() > 128 {
+                return Err("Server ID is too long".to_string());
+            }
+            if server_id.chars().any(char::is_control)
+                || server_id == "."
+                || server_id == ".."
+                || server_id.contains('/')
+                || server_id.contains('\\')
+                || server_id.contains(':')
+            {
+                return Err("Server ID must be a single safe path component".to_string());
+            }
+            components.push(server_id.to_string());
+        }
+        _ => {
+            if request.server_id.is_some() {
+                return Err("Only server paths may include a server ID".to_string());
+            }
+        }
+    }
+
+    let relative_path = request.relative_path.trim();
+    if relative_path.chars().any(char::is_control) {
+        return Err("Relative path contains control characters".to_string());
+    }
+    if is_absolute_like(relative_path) {
+        return Err("Absolute paths are not allowed".to_string());
+    }
+    for segment in relative_path
+        .split(['/', '\\'])
+        .filter(|segment| !segment.is_empty())
+    {
+        if segment.is_empty()
+            || segment == "."
+            || segment == ".."
+            || segment.contains('/')
+            || segment.contains('\\')
+            || segment.chars().any(char::is_control)
+        {
+            return Err("Managed path contains an unsafe component".to_string());
+        }
+        components.push(segment.to_string());
+    }
 
     if create_root {
         std::fs::create_dir_all(&managed_root)
@@ -242,17 +229,51 @@ pub(crate) fn resolve_managed_request(
         return Err("Managed root is not a directory".to_string());
     }
 
-    reject_link_components(&managed_root, &relative)?;
-
     let canonical_root = std::fs::canonicalize(&managed_root)
         .map_err(|error| format!("Failed to resolve managed root: {error}"))?;
-    let requested_path = managed_root.join(relative);
-    let canonical_target = canonicalize_with_existing_ancestor(&requested_path)?;
-    if !canonical_target.starts_with(&canonical_root) {
-        return Err("Path is outside the managed root".to_string());
+
+    let mut current = canonical_root.clone();
+    for (index, component) in components.iter().enumerate() {
+        let is_final = index + 1 == components.len();
+        let entry = std::fs::read_dir(&current)
+            .map_err(|error| format!("Failed to inspect managed path parent: {error}"))?
+            .find_map(|entry| {
+                let entry = entry.ok()?;
+                (entry.file_name() == component.as_str()).then_some(entry)
+            });
+
+        if let Some(entry) = entry {
+            let metadata = entry
+                .metadata()
+                .map_err(|error| format!("Failed to inspect managed path component: {error}"))?;
+            if is_link_or_reparse_point(&metadata) {
+                return Err("Managed path contains a symbolic link or reparse point".to_string());
+            }
+            if !is_final && !metadata.is_dir() {
+                return Err("Managed path parent is not a directory".to_string());
+            }
+            current = entry.path();
+            continue;
+        }
+
+        if !is_final {
+            return Err("Managed path parent does not exist".to_string());
+        }
+
+        // A missing final component is returned for the caller to create. The
+        // parent came from a trusted directory entry (or the fixed root), and
+        // the component was checked above as one normal path component.
+        let candidate = current.join(component);
+        if !candidate.starts_with(&canonical_root) {
+            return Err("Path is outside the managed root".to_string());
+        }
+        return Ok(candidate);
     }
 
-    Ok(canonical_target)
+    if !current.starts_with(&canonical_root) {
+        return Err("Path is outside the managed root".to_string());
+    }
+    Ok(current)
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -1016,6 +1037,8 @@ mod tests {
     #[test]
     fn resolves_server_relative_path_below_server_id() {
         let app_data = TestDirectory::new();
+        std::fs::create_dir_all(app_data.path().join("servers/alpha/world"))
+            .expect("managed server parent should be created");
         let resolved = resolve_managed_request(
             app_data.path(),
             &server_request("alpha", "world/level.dat"),
@@ -1048,6 +1071,8 @@ mod tests {
             server_id: Some("alpha".to_string()),
             relative_path: "artifact.bin".to_string(),
         };
+        std::fs::create_dir_all(app_data.path().join("backups/alpha"))
+            .expect("managed backup parent should be created");
         let resolved = resolve_managed_request(app_data.path(), &request, true)
             .expect("backup managed root should resolve");
         assert!(resolved.starts_with(std::fs::canonicalize(app_data.path()).unwrap()));
@@ -1187,6 +1212,19 @@ mod tests {
         assert!(source.exists());
     }
 
+    #[test]
+    fn rejects_missing_non_final_component() {
+        let app_data = TestDirectory::new();
+        let error = resolve_managed_request(
+            app_data.path(),
+            &server_request("alpha", "missing/level.dat"),
+            true,
+        )
+        .expect_err("only the final managed path component may be new");
+
+        assert_eq!(error, "Managed path parent does not exist");
+    }
+
     #[cfg(unix)]
     #[test]
     fn rejects_symbolic_link_managed_root() {
@@ -1206,6 +1244,30 @@ mod tests {
         assert_eq!(
             error,
             "Refusing to access a symbolic-link or reparse-point managed root"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_symbolic_link_path_component() {
+        use std::os::unix::fs::symlink;
+
+        let app_data = TestDirectory::new();
+        let server_root = app_data.path().join("servers/alpha");
+        let outside = TestDirectory::new();
+        std::fs::create_dir_all(&server_root).expect("managed server should be created");
+        symlink(outside.path(), server_root.join("link"))
+            .expect("test symlink component should be created");
+
+        let error = resolve_managed_request(
+            app_data.path(),
+            &server_request("alpha", "link/server.properties"),
+            false,
+        )
+        .expect_err("symlink path component must fail");
+        assert_eq!(
+            error,
+            "Managed path contains a symbolic link or reparse point"
         );
     }
 }
