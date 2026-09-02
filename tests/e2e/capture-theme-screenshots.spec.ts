@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { expect, test } from './support/app-fixture';
 
 /**
  * This spec does not assert theme correctness — it is a design-review utility
@@ -34,9 +34,8 @@ test.describe('Liquid Glass screenshot capture', () => {
     fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
   });
 
-  test('captures static (no-server) views', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="app-root"]', { timeout: 15_000 });
+  test('captures static (no-server) views', async ({ page, app }) => {
+    await app.gotoApp();
 
     await page.locator('[data-testid="sidebar-brand-button"]').click();
     await expect(page.locator('[data-testid="settings-window"]')).toBeVisible({
@@ -58,9 +57,8 @@ test.describe('Liquid Glass screenshot capture', () => {
     await capture(page, 'proxy-help');
   });
 
-  test('captures server-scoped views', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="app-root"]', { timeout: 15_000 });
+  test('captures server-scoped views', async ({ page, app }) => {
+    await app.gotoApp();
 
     await page.locator('[data-testid="create-server-button"]').click();
     await expect(page.locator('[data-testid="add-server-choice-modal"]')).toBeVisible({

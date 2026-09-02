@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/app-fixture';
 
 test.describe('Sidebar', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="app-root"]', { timeout: 15_000 });
+  test.beforeEach(async ({ app }) => {
+    await app.gotoApp();
   });
 
   test('renders app shell with sidebar and main area', async ({ page }) => {
@@ -21,18 +20,14 @@ test.describe('Sidebar', () => {
   });
 
   test('sidebar toggle button is present', async ({ page }) => {
-    await expect(
-      page.locator('[data-testid="sidebar-toggle-button"]'),
-    ).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-toggle-button"]')).toBeVisible();
   });
 
   test('sidebar collapses when toggle is clicked', async ({ page }) => {
     const sidebar = page.locator('[data-testid="app-sidebar"]');
     const toggle = page.locator('[data-testid="sidebar-toggle-button"]');
 
-    const isOpen = await sidebar.evaluate((el) =>
-      el.classList.contains('app-sidebar--open'),
-    );
+    const isOpen = await sidebar.evaluate((el) => el.classList.contains('app-sidebar--open'));
 
     await toggle.click();
 
@@ -44,8 +39,6 @@ test.describe('Sidebar', () => {
   });
 
   test('sidebar brand button is present', async ({ page }) => {
-    await expect(
-      page.locator('[data-testid="sidebar-brand-button"]'),
-    ).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-brand-button"]')).toBeVisible();
   });
 });

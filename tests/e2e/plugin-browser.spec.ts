@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/app-fixture';
 
 test.describe('Plugin Browser UI', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="app-root"]', { timeout: 15_000 });
+  test.beforeEach(async ({ app }) => {
+    await app.gotoApp();
   });
 
   test('shows plugin browser when a server is selected and plugins nav is clicked', async ({
@@ -28,9 +27,7 @@ test.describe('Plugin Browser UI', () => {
     // Navigate to plugins view
     await page.locator('[data-testid="nav-item-plugins"]').click();
 
-    await expect(
-      page.locator('[data-testid="plugin-browser"]'),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="plugin-browser"]')).toBeVisible({ timeout: 15_000 });
   });
 
   test('shows plugin search input in plugin browser', async ({ page }) => {
@@ -51,8 +48,8 @@ test.describe('Plugin Browser UI', () => {
 
     await page.locator('[data-testid="nav-item-plugins"]').click();
 
-    await expect(
-      page.locator('[data-testid="plugin-search-input"]'),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="plugin-search-input"]')).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

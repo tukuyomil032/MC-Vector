@@ -1,18 +1,15 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/app-fixture';
 
 test.describe('Server Lifecycle', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="app-root"]', { timeout: 15_000 });
+  test.beforeEach(async ({ app }) => {
+    await app.gotoApp();
   });
 
-  test('creates a new server and shows it in the server list', async ({
-    page,
-  }) => {
+  test('creates a new server and shows it in the server list', async ({ page }) => {
     await page.locator('[data-testid="create-server-button"]').click();
-    await expect(
-      page.locator('[data-testid="add-server-choice-modal"]'),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="add-server-choice-modal"]')).toBeVisible({
+      timeout: 5_000,
+    });
 
     await page.locator('[data-testid="choice-new-server-button"]').click();
     const modal = page.locator('[data-testid="add-server-modal"]');
@@ -24,9 +21,9 @@ test.describe('Server Lifecycle', () => {
     await modal.locator('[data-testid="save-server-button"]').click();
 
     await expect(modal).toHaveCount(0, { timeout: 15_000 });
-    await expect(
-      page.locator('[data-testid^="server-card-"]').last(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid^="server-card-"]').last()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('deletes a server via context menu', async ({ page }) => {
@@ -55,9 +52,7 @@ test.describe('Server Lifecycle', () => {
 
     const serverCard = page.locator(`[data-testid="server-card-${serverId}"]`);
     await serverCard.click({ button: 'right' });
-    await page
-      .locator(`[data-testid="delete-server-${serverId}"]`)
-      .click({ timeout: 5_000 });
+    await page.locator(`[data-testid="delete-server-${serverId}"]`).click({ timeout: 5_000 });
 
     await expect(serverCard).toHaveCount(0, { timeout: 10_000 });
   });

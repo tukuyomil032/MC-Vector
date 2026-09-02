@@ -1,3 +1,5 @@
+import { recordE2eCall } from '../e2e/support/e2e-runtime';
+
 export type UnlistenFn = () => void;
 
 export interface Event<T> {
@@ -7,20 +9,48 @@ export interface Event<T> {
   windowLabel: string;
 }
 
+type Listener = (event: Event<unknown>) => void;
+const listeners = new Map<string, Set<Listener>>();
+
 export async function listen<T>(
-  _event: string,
-  _handler: (event: Event<T>) => void,
+  event: string,
+  handler: (event: Event<T>) => void,
 ): Promise<UnlistenFn> {
-  return () => {};
+  recordE2eCall('ipc', 'listen', { event });
+  const listener = handler as (event: Event<unknown>) => void;
+  const eventListeners = listeners.get(event) ?? new Set<Listener>();
+  eventListeners.add(listener);
+  listeners.set(event, eventListeners);
+  return () => {
+    eventListeners.delete(listener);
+  };
 }
 
 export async function once<T>(
-  _event: string,
-  _handler: (event: Event<T>) => void,
+  event: string,
+  handler: (event: Event<T>) => void,
 ): Promise<UnlistenFn> {
-  return () => {};
+  const unlisten = await listen(event, (payload) => {
+    unlisten();
+    handler(payload as Event<T>);
+  });
+  return unlisten;
 }
 
-export async function emit(_event: string, _payload?: unknown): Promise<void> {}
+export async function emit(event: string, payload?: unknown): Promise<void> {
+  recordE2eCall('ipc', 'emit', { event, payload });
+  const eventListeners = listeners.get(event);
+  if (!eventListeners) return;
+  const eventPayload: Event<unknown> = {
+    event,
+    payload,
+    id: 1,
+    windowLabel: 'main',
+  };
+  for (const listener of eventListeners) listener(eventPayload);
+}
 
-export async function emitTo(_target: string, _event: string, _payload?: unknown): Promise<void> {}
+export async function emitTo(target: string, event: string, payload?: unknown): Promise<void> {
+  recordE2eCall('ipc', 'emitTo', { target, event, payload });
+  await emit(event, payload);
+}
