@@ -118,6 +118,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
         <Dialog.Overlay className="java-manager-modal-overlay" />
         <Dialog.Content
           aria-describedby={undefined}
+          data-testid="java-manager-dialog"
           className={cn(
             'java-manager-modal-panel',
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
@@ -147,6 +148,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                     ) : (
                       <button
                         className="btn-primary java-manager-modal__download-btn disabled:opacity-50"
+                        data-testid={`java-download-${v}`}
                         onClick={() => handleDownload(v)}
                         disabled={isDownloading}
                       >

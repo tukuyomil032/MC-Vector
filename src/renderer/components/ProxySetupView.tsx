@@ -64,7 +64,7 @@ export default function ProxySetupView({
   };
 
   return (
-    <div className="proxy-setup-view">
+    <div className="proxy-setup-view" data-testid="proxy-view">
       <div className="proxy-setup-view__inner">
         <h2 className="proxy-setup-view__title">{t('proxySetup.title')}</h2>
 

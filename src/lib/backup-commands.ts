@@ -1,5 +1,4 @@
-import { type DirEntry, readDir, remove } from '@tauri-apps/plugin-fs';
-import { type FileEntryWithMeta, listFilesWithMetadata } from './file-commands';
+import type { FileEntryWithMeta, ManagedPathRequest } from './file-commands';
 import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 interface BackupInfo {
@@ -8,36 +7,55 @@ interface BackupInfo {
   size: number;
 }
 
+function backupDirectoryRequest(serverId: string): ManagedPathRequest {
+  return { root: 'backups', serverId, relativePath: '' };
+}
+
+function backupFileRequest(serverId: string, backupName: string): ManagedPathRequest {
+  const normalized = backupName.trim();
+  if (
+    !normalized ||
+    normalized.includes('/') ||
+    normalized.includes('\\') ||
+    normalized === '.' ||
+    normalized === '..' ||
+    !normalized.endsWith('.zip')
+  ) {
+    throw new Error('Invalid backup name');
+  }
+  return { root: 'backups', serverId, relativePath: normalized };
+}
+
 export async function createBackup(
-  serverPath: string,
+  serverId: string,
   backupName: string,
   sources?: string[],
   compressionLevel?: number,
 ): Promise<void> {
-  const backupDir = `${serverPath}/backups`;
-  return tauriInvoke('create_backup', {
-    serverId: backupName,
-    sourceDir: serverPath,
-    backupDir,
+  return tauriInvoke('create_managed_backup', {
+    serverId,
+    backupName,
     sources: sources && sources.length > 0 ? sources : null,
     compressionLevel: compressionLevel ?? 5,
   });
 }
 
-export async function listBackups(serverPath: string): Promise<string[]> {
-  const backupDir = `${serverPath}/backups`;
+export async function listBackups(serverId: string): Promise<string[]> {
   try {
-    const entries = await readDir(backupDir);
-    return entries.filter((e: DirEntry) => e.name.endsWith('.zip')).map((e: DirEntry) => e.name);
+    const entries = await tauriInvoke<FileEntryWithMeta[]>('list_dir_with_metadata', {
+      request: backupDirectoryRequest(serverId),
+    });
+    return entries.filter((entry) => entry.name.endsWith('.zip')).map((entry) => entry.name);
   } catch {
     return [];
   }
 }
 
-export async function listBackupsWithMetadata(serverPath: string): Promise<BackupInfo[]> {
-  const backupDir = `${serverPath}/backups`;
+export async function listBackupsWithMetadata(serverId: string): Promise<BackupInfo[]> {
   try {
-    const entries: FileEntryWithMeta[] = await listFilesWithMetadata(backupDir);
+    const entries = await tauriInvoke<FileEntryWithMeta[]>('list_dir_with_metadata', {
+      request: backupDirectoryRequest(serverId),
+    });
     return entries
       .filter((e) => e.name.endsWith('.zip'))
       .map((e) => ({
@@ -50,14 +68,15 @@ export async function listBackupsWithMetadata(serverPath: string): Promise<Backu
   }
 }
 
-export async function restoreBackup(serverPath: string, backupName: string): Promise<void> {
-  const backupPath = `${serverPath}/backups/${backupName}`;
-  return tauriInvoke('restore_backup', { backupPath, targetDir: serverPath });
+export async function restoreBackup(serverId: string, backupName: string): Promise<void> {
+  backupFileRequest(serverId, backupName);
+  return tauriInvoke('restore_managed_backup', { serverId, backupName });
 }
 
-export async function deleteBackup(serverPath: string, backupName: string): Promise<void> {
-  const backupPath = `${serverPath}/backups/${backupName}`;
-  await remove(backupPath);
+export async function deleteBackup(serverId: string, backupName: string): Promise<void> {
+  await tauriInvoke('delete_managed_path', {
+    request: backupFileRequest(serverId, backupName),
+  });
 }
 
 export function onBackupProgress(

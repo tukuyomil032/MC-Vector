@@ -38,6 +38,8 @@ export interface AppSettings {
   locale?: string;
   /** Whether the Liquid Glass visual effect is enabled */
   liquidGlassEnabled?: boolean;
+  /** Whether plugin downloads without verification are allowed */
+  allowUnverifiedPluginDownloads: boolean;
   /** Allow additional dynamic settings */
   [key: string]: unknown;
 }
@@ -51,10 +53,12 @@ export async function getAppSettings(): Promise<AppSettings> {
   const theme = await store.get<string>('theme');
   const locale = await store.get<string>('locale');
   const liquidGlassEnabled = await store.get<boolean>('liquidGlassEnabled');
+  const allowUnverifiedPluginDownloads = await store.get<boolean>('allowUnverifiedPluginDownloads');
   return {
     theme: theme ?? undefined,
     locale: locale ?? undefined,
     liquidGlassEnabled: liquidGlassEnabled ?? undefined,
+    allowUnverifiedPluginDownloads: allowUnverifiedPluginDownloads === true,
   };
 }
 

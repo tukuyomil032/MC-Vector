@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Capability for the main window",
-  "windows": ["main", "backup-selector"],
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "window-state:default",
@@ -11,7 +11,6 @@
     "core:webview:allow-create-webview-window",
     "core:webview:allow-set-webview-focus",
     "dialog:default",
-    "fs:default",
     "process:default",
     "store:default",
     "updater:default",
@@ -26,6 +25,7 @@
         { "url": "https://api.papermc.io/**" },
         { "url": "https://api.leafmc.one/**" },
         { "url": "https://piston-meta.mojang.com/**" },
+        { "url": "https://piston-data.mojang.com/**" },
         { "url": "https://launchermeta.mojang.com/**" },
         { "url": "https://meta.fabricmc.net/**" },
         { "url": "https://api.modrinth.com/**" },
@@ -38,21 +38,6 @@
         { "url": "https://bin.equinox.io/**" },
         { "url": "https://tukuyomil032.github.io/**" }
       ]
-    },
-    {
-      "identifier": "fs:scope",
-      "allow": [{ "path": "$APPDATA/**" }, { "path": "$APPLOCALDATA/**" }, { "path": "$HOME/**" }]
-    },
-    {
-      "identifier": "fs:scope",
-      "allow": [
-        { "path": "$APPDATA/mc-vector/**" },
-        { "path": "$APPLOCALDATA/mc-vector/**" },
-        { "path": "$HOME/.mc-vector/**" },
-        { "path": "$HOME/mc-vector/**" }
-      ]
-    },
-    "fs:allow-remove",
-    "fs:allow-rename"
+    }
   ]
 }

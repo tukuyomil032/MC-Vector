@@ -7,14 +7,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
+    setupFiles: ["./tests/setup.ts"],
     include: [
-      "src/**/*.test.ts",
-      "src/**/*.test.tsx",
-      "src/**/*.spec.ts",
-      "src/**/*.spec.tsx",
+      "tests/**/*.test.ts",
+      "tests/**/*.test.tsx",
+      "tests/**/*.spec.ts",
+      "tests/**/*.spec.tsx",
     ],
-    exclude: ["node_modules", "dist", "src-tauri", "e2e"],
+    exclude: ["node_modules", "dist", "src-tauri", "tests/e2e/**"],
   },
   resolve: {
     alias: {

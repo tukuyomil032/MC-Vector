@@ -1,5 +1,3 @@
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -12,7 +10,7 @@ import {
   parseAnsiLines,
 } from '../../lib/performance-commands';
 import { sendCommand } from '../../lib/server-commands';
-import { tauriListen } from '../../lib/tauri-api';
+import { tauriInvoke, tauriListen } from '../../lib/tauri-api';
 import { useConsoleStore } from '../../store/consoleStore';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 
@@ -632,22 +630,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     const defaultFileName = `${server.name}-console-${yyyy}${mm}${dd}-${hh}${min}${sec}.log`;
 
     try {
-      const targetPath = await save({
-        defaultPath: defaultFileName,
-        filters: [
-          { name: 'Log File', extensions: ['log'] },
-          { name: 'Text File', extensions: ['txt'] },
-        ],
-      });
-
-      if (!targetPath) {
-        return;
-      }
-
       const output = visibleLogs.map((entry) => entry.plainLine.replace(/\r\n/g, '\n')).join('\n');
-
-      await writeTextFile(targetPath, output);
-      showToast(t('console.toast.logsSaved'), 'success');
+      const exported = await tauriInvoke<boolean>('export_text_file', {
+        content: output,
+        suggestedName: defaultFileName,
+      });
+      if (exported) {
+        showToast(t('console.toast.logsSaved'), 'success');
+      }
     } catch (error) {
       logError('Failed to export console logs', error, {
         serverId: server.id,
@@ -663,7 +653,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   };
 
   return (
-    <div className="console-view">
+    <div className="console-view" data-testid="console-view">
       <section className="console-view__status-strip surface-card">
         <div className="console-view__status-col console-view__status-col--with-divider">
           <div className="console-view__status-label">{t('console.status.address')}</div>
@@ -722,6 +712,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               }}
               placeholder={t('console.search.placeholder')}
               className="console-view__search-input"
+              data-testid="console-search-input"
             />
 
             <div className="console-view__search-count">
@@ -776,6 +767,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             </span>
             <button
               type="button"
+              data-testid="console-search-open-button"
               className="console-view__search-open-btn control-chip"
               onClick={openSearch}
             >
@@ -956,6 +948,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           <button
             type="button"
             className="console-view__save-button control-chip"
+            data-testid="console-save-button"
             onClick={() => void handleExportLogs()}
           >
             {t('console.actions.saveLogs')}
@@ -1001,8 +994,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             onKeyDown={handleKeyDown}
             placeholder={t('console.command.placeholder')}
             className="console-view__command-input"
+            data-testid="console-command-input"
           />
-          <button type="button" onClick={handleSend} className="console-view__send-button">
+          <button
+            type="button"
+            onClick={handleSend}
+            className="console-view__send-button"
+            data-testid="console-send-button"
+          >
             {t('console.actions.send')}
           </button>
         </div>

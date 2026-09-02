@@ -20,7 +20,7 @@ Rust Coreの共有・デーモン化は行わない。両実装はデータ契�
 | Phase | 内容 | 状態 | 備考 |
 |---|---|---|---|
 | 0 | 要件定義・実現可能性調査 | ✅ 完了 (2026-07-08) | `spec/native-macos-requirements.md`。当初デーモン化前提だったが独立実装方針へ改訂済み |
-| 1 | Tauri版内部整理(emit抽象化・純関数化。`security.rs`パターンの横展開) | 未着手・要否は別途判断 | Swift版との共有が目的ではなく、Tauri版単体の保守性向上が目的。着手時に `/writing-plans` で実装プラン作成 |
+| 1 | Tauri版内部整理(emit抽象化・純関数化。`security.rs`パターンの横展開) | セキュリティ監査対応中 | Rust側managed path、用途別download/archive/network policy、renderer IPC境界の整理を優先。Swift版との共有が目的ではなく、Tauri版単体の保守性向上が目的 |
 | 2 | Native macOS Spike セットアップ(SPM構成・SwiftLint/SwiftFormat・`native.yml`・lefthook追加) | ✅ 完了 | `apps/native-macos/`にPackage.swift(executable+library+testTarget)構築済み(PR #153) |
 | 3-A | 実機検証3項目(NSPanel×glassEffect / Hardened Runtime下のJava起動 / 高頻度ログ描画performance) | ✅ 完了 (2026-07-09) | `spec/phase3a-spike-results.md`。NSPanelブリッジ方式・entitlements不要・ScrollView+LazyVStack方式を確定(PR #154) |
 | 3-B | Native macOS Spike 本体(SwiftUI: 一覧/詳細/起動停止/ログ/Floating Console/Activity Drawer + security.rs移植) | ✅ 完了 (2026-07-09) | `spec/phase-tasks.md` 3-4〜3-12全完了。3-4〜3-11実装+3-12 swiftui-pro全体レビュー実施済み(下記「Phase 3-B完了時の申し送り」参照) |
@@ -62,3 +62,50 @@ Phase 3-B完了後、当初予定していたPhase 4（データ契約文書化�
 - 各フェーズは新ブランチ + PR単位で進める(スカッシュマージ不使用)
 - 言語を問わず各タスクにテストコードを追加する
 - プラグイン管理等をNative版に実装する段階で「二重実装がつらい」と分かった場合は、共有方式(FFI/プロセス分離)への転換を再評価する(`spec/native-macos-requirements.md` §4.2の記録を参照)
+
+## Security Audit Follow-up
+
+- High findings H-01 through H-05 and Medium findings M-01 through M-07 are being addressed on
+  `fix/security-audit-hardening`.
+- Plugin artifacts without a published checksum are rejected by default. The application-wide
+  setting `allowUnverifiedPluginDownloads` is an explicit compatibility opt-in; published hashes
+  are still verified when present.
+- Existing ad-hoc signing is intentionally retained. `codesign --verify` is blocking, while
+  Gatekeeper assessment remains informational until Developer ID signing and notarization are
+  introduced.
+- Low findings L-01 through L-03 remain outside the current implementation scope.
+
+## Feedback and notification policy
+
+The renderer uses one shared feedback policy through `AppFeedbackProvider` and
+`src/renderer/shared/feedback.ts`:
+
+- `toast`: successful completion, lightweight information, and background completion that does not
+  require user action. Toasts are polite live-region notifications and never take focus.
+- `inline`: a screen- or card-scoped failure that the user can retry or correct. Search failures
+  retain the previous results and expose retry next to the search controls. Plugin network failures
+  use the same card-scoped retry surface.
+- `blocking dialog`: security refusals, confirmed incompatibility, integrity failures, and any
+  decision that must stop the operation. These use the shared Radix dialog with a title,
+  description, explicit close action, keyboard focus management, Escape handling, and textual
+  severity information.
+- `progress`: long-running downloads and other operations that need ongoing progress.
+
+The PluginBrowser is the first complete consumer. A confirmed incompatible plugin never reaches a
+provider API, download IPC, or filesystem operation; unknown compatibility remains installable.
+Hashless artifact rejection, checksum failures, source/destination policy failures, and size
+violations are blocking dialogs. Network failures are inline retryable errors. Successful install,
+overwrite, and update operations retain success toasts only. Browser-required Hangar/Spigot
+resources are informational actions, not install-error toasts.
+
+The remaining notification inventory is intentionally staged rather than changed in one sweep:
+
+| Area | Current policy | Follow-up |
+|---|---|---|
+| Server lifecycle and bulk operations | Existing success/error callbacks, routed through the shared toast boundary | Move recoverable lifecycle failures to screen-scoped inline errors and blocking decisions in the next migration task |
+| Backup create/restore/delete | Success remains toast; failure paths are still mixed | Add restore/delete-specific dialog and retry surfaces |
+| File delete/move and editor failures | Existing screen-specific handling | Convert destructive and recovery-required failures to shared dialogs/inline errors |
+| Java and ngrok downloads | Progress/success infrastructure exists | Add typed failure presentation and retry surfaces |
+| Settings saves | Success toast and existing inline rollback in settings | Keep rollback inline; use shared dialog only for policy refusals |
+| Simple destructive confirmations | Native Tauri `ask` | Keep while the interaction is a simple yes/no confirmation |
+| Rich confirmations and security explanations | Shared Radix dialog | Required for future cross-screen migrations |

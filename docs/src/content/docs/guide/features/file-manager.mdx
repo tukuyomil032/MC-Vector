@@ -7,6 +7,12 @@ sidebar:
 
 The **Files** tab provides a full file manager for your server directory, with a built-in code editor for configuration files.
 
+All server file operations are resolved by the Rust backend below the selected server's managed
+root. File actions use a server ID and relative path; absolute paths and traversal outside the
+managed root are rejected. Importing an external folder uses the native folder picker and copies
+the selected content into a managed server directory before it becomes available to the file
+manager.
+
 ## Browsing Files
 
 Navigate the server directory using the breadcrumb bar at the top. Folders are listed before files, sorted alphabetically.

@@ -10,7 +10,7 @@
     "dev:plain": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "biome check --diagnostic-level=error src",
+    "check": "biome check --diagnostic-level=error src tests",
     "check:fix": "biome check --write --diagnostic-level=error src",
     "lint": "biome lint --diagnostic-level=error src",
     "format": "biome format --write src",
@@ -26,10 +26,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "test:typecheck": "tsc -p tsconfig.tests.json --noEmit",
     "test:all": "pnpm check && pnpm test && cd src-tauri && cargo test",
-    "test:playwright": "playwright test",
-    "test:playwright:ui": "playwright test --ui",
-    "test:playwright:screenshots": "playwright test capture-theme-screenshots"
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -87,6 +88,7 @@
     "@tauri-apps/cli": "^2.11.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/node": "^24.10.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

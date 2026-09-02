@@ -11,6 +11,11 @@ import Video from '../../../../components/Video.astro';
 
 The **Backups** tab lets you snapshot your server and restore it to any saved state.
 
+Backup and archive destinations are managed by the Rust backend. The UI identifies a server and
+relative backup entry instead of providing arbitrary source or destination paths. Archive entries
+are checked for traversal, links, excessive nesting, entry count, expanded size, and compression
+ratio before extraction.
+
 ## Backup Types
 
 | Type             | Description                                                            |

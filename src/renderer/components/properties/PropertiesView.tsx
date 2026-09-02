@@ -176,7 +176,7 @@ export default function PropertiesView({ server }: Props) {
   }
 
   return (
-    <div className="properties-view">
+    <div className="properties-view" data-testid="properties-view">
       <div className="properties-view__container">
         <div className="properties-view__header">
           <h3>{t('properties.title')}</h3>

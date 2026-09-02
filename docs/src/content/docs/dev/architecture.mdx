@@ -40,6 +40,13 @@ MC-Vector is a cross-platform desktop application built with **Tauri v2** (Rust 
 
 **Core data flow:** React components → `src/lib/` wrappers → `invoke()` → Rust commands → system resources
 
+Security-sensitive commands enforce their policy in Rust. Filesystem operations resolve managed
+roots from application-owned identifiers and relative paths; renderer-side allowlists are not a
+security boundary. Provider downloads use typed source contracts, HTTPS and host allowlists,
+bounded streaming, checksum verification, and atomic replacement. The global setting for plugin
+artifacts without a published checksum is an explicit compatibility preference: it never disables
+the remaining URL, path, archive, or resource-limit checks.
+
 ## Frontend
 
 ### Directory Structure

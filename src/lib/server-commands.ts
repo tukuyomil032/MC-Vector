@@ -5,7 +5,6 @@ import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 const STORE_NAME = 'servers.json';
 const SERVER_TEMPLATES_KEY = 'serverTemplates';
-const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:\/$/;
 
 export interface ServerTemplate {
   id: string;
@@ -27,36 +26,47 @@ export interface ServerTemplate {
   autoBackupWeekday?: number;
 }
 
-function normalizePath(input: string): string {
-  const normalized = input.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
-  if (normalized.length > 1 && normalized.endsWith('/') && !WINDOWS_DRIVE_ROOT.test(normalized)) {
-    return normalized.slice(0, -1);
-  }
-  return normalized;
-}
-
-function isDirectManagedServerPath(serverPath: string, serverRoot: string): boolean {
-  const normalizedServerPath = normalizePath(serverPath.trim());
-  const normalizedServerRoot = normalizePath(serverRoot.trim());
-  if (!normalizedServerPath || normalizedServerPath === normalizedServerRoot) {
-    return false;
-  }
-
-  const parentPath = normalizedServerPath.split('/').slice(0, -1).join('/');
-  return parentPath === normalizedServerRoot;
-}
-
-async function resolveManagedServerDeletionPath(serverPath: string): Promise<string | null> {
-  const dataDir = await appDataDir();
-  const serverRoot = `${dataDir}/servers`;
-  return isDirectManagedServerPath(serverPath, serverRoot) ? serverPath : null;
-}
-
 // --- サーバー CRUD ---
 
 export async function getServers(): Promise<MinecraftServer[]> {
   const store = await load(STORE_NAME);
-  return (await store.get<MinecraftServer[]>('servers')) ?? [];
+  const servers = (await store.get<MinecraftServer[]>('servers')) ?? [];
+  if (servers.length === 0) {
+    return servers;
+  }
+
+  const dataDir = (await appDataDir()).replace(/\\/g, '/').replace(/\/$/, '');
+  const legacyPrefix = `${dataDir}/servers/`;
+  let changed = false;
+  for (const server of servers) {
+    const normalizedPath = server.path.replace(/\\/g, '/').replace(/\/$/, '');
+    if (!normalizedPath.startsWith(legacyPrefix)) {
+      continue;
+    }
+    const legacyDirectoryName = normalizedPath.slice(legacyPrefix.length);
+    if (
+      !legacyDirectoryName ||
+      legacyDirectoryName.includes('/') ||
+      legacyDirectoryName === server.id
+    ) {
+      continue;
+    }
+    try {
+      server.path = await tauriInvoke<string>('migrate_managed_server_directory', {
+        legacyDirectoryName,
+        serverId: server.id,
+      });
+      server.unavailableReason = undefined;
+      changed = true;
+    } catch (error) {
+      server.unavailableReason = `Server directory migration failed: ${String(error)}`;
+    }
+  }
+  if (changed) {
+    await store.set('servers', servers);
+    await store.save();
+  }
+  return servers;
 }
 
 export async function addServer(server: MinecraftServer): Promise<MinecraftServer> {
@@ -91,12 +101,7 @@ export async function deleteServer(id: string): Promise<boolean> {
     throw new Error('Cannot delete a running server');
   }
 
-  const managedServerPath = await resolveManagedServerDeletionPath(target.path);
-  if (managedServerPath) {
-    await tauriInvoke('delete_managed_server_dir', {
-      serverPath: managedServerPath,
-    });
-  }
+  await tauriInvoke('delete_managed_server_dir', { serverId: id });
 
   const filtered = servers.filter((s) => s.id !== id);
   await store.set('servers', filtered);
@@ -136,7 +141,6 @@ export async function deleteServerTemplate(templateId: string): Promise<void> {
 export async function startServer(
   serverId: string,
   javaPath: string,
-  serverPath: string,
   memory: number,
   jarFile: string,
   jvmExtraArgs?: string,
@@ -144,7 +148,6 @@ export async function startServer(
   return tauriInvoke('start_server', {
     serverId,
     javaPath,
-    serverPath,
     memory,
     jarFile,
     jvmExtraArgs: jvmExtraArgs ?? null,
@@ -169,21 +172,26 @@ export async function getServerPid(serverId: string): Promise<number> {
 
 export async function downloadServerJar(
   url: string,
-  destPath: string,
   serverId: string,
+  relativePath: string,
   sha256?: string,
 ): Promise<void> {
-  const args: { url: string; destPath: string; serverId: string; sha256?: string } = {
+  const request: {
+    url: string;
+    serverId: string;
+    relativePath: string;
+    checksum?: { algorithm: 'sha256'; value: string };
+  } = {
     url,
-    destPath,
     serverId,
+    relativePath,
   };
-  if (sha256) args.sha256 = sha256;
-  return tauriInvoke('download_server_jar', args);
+  if (sha256) request.checksum = { algorithm: 'sha256', value: sha256 };
+  return tauriInvoke('download_server_jar', { request });
 }
 
-export async function getServerStats(pid: number): Promise<{ cpu: number; memory: number }> {
-  return tauriInvoke('get_server_stats', { pid });
+export async function getServerStats(serverId: string): Promise<{ cpu: number; memory: number }> {
+  return tauriInvoke('get_server_stats', { serverId });
 }
 
 // --- イベントリスナー ---

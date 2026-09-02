@@ -17,6 +17,17 @@ updates:
         patterns:
           - '*'
 
+  # Rust / Cargo dependencies
+  - package-ecosystem: 'cargo'
+    directory: '/src-tauri'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 10
+    groups:
+      all-cargo-dependencies:
+        patterns:
+          - '*'
+
   # GitHub Actions dependencies
   - package-ecosystem: 'github-actions'
     directory: '/'

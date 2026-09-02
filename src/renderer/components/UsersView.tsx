@@ -235,7 +235,7 @@ export default function UsersView({ server }: Props) {
   };
 
   return (
-    <div className="users-view">
+    <div className="users-view" data-testid="users-view">
       <div className="users-view__grid">
         <UserListCard
           title={t('users.lists.whitelist')}
@@ -331,7 +331,7 @@ function UserListCard({
   };
 
   return (
-    <div className="users-view__card">
+    <div className="users-view__card" data-testid={`users-list-${type}`}>
       <div className="users-view__card-header">
         {title}
         <span className="users-view__count">
@@ -384,12 +384,17 @@ function UserListCard({
         <input
           type="text"
           className="input-field users-view__input"
+          data-testid={`users-input-${type}`}
           placeholder={type === 'banned-ips' ? placeholderIp : placeholderPlayer}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
         />
-        <button className="btn-primary users-view__add-btn" onClick={handleAddClick}>
+        <button
+          className="btn-primary users-view__add-btn"
+          data-testid={`users-add-${type}`}
+          onClick={handleAddClick}
+        >
           {addLabel}
         </button>
       </div>

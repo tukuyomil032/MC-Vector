@@ -75,7 +75,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
         }
       });
       const backupName = `pre-upgrade-${Date.now()}`;
-      await createBackup(server.path, backupName);
+      await createBackup(server.id, backupName);
       setStep('download');
     } catch {
       showToast(t('serverSettings.versionUpgrade.backupFailed'), 'error');
@@ -99,7 +99,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
           setDlProgress(Math.round(progress));
         }
       });
-      await downloadServerJar(downloadUrl, `${server.path}/server.jar`, server.id, downloadSha256);
+      await downloadServerJar(downloadUrl, server.id, 'server.jar', downloadSha256);
       const updated: MinecraftServer = { ...server, version: latestVersion };
       await updateServer(updated);
       await onServerUpdate(updated);

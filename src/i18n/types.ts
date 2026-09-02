@@ -92,6 +92,14 @@ export interface TranslationDictionary {
       description: string;
       label: string;
     };
+    security: {
+      title: string;
+      description: string;
+      label: string;
+      warning: string;
+      saving: string;
+      saveError: string;
+    };
     general: {
       title: string;
     };
@@ -572,6 +580,21 @@ export interface TranslationDictionary {
       dependencyInstallSuccess: string;
       dependencyCheckOnly: string;
       incompatibilityWarning: string;
+      incompatibleInstallTitle: string;
+      incompatibleInstallDescription: string;
+      unverifiedInstallTitle: string;
+      unverifiedInstallDescription: string;
+      checksumInstallTitle: string;
+      checksumInstallDescription: string;
+      sourceInstallTitle: string;
+      sourceInstallDescription: string;
+      destinationInstallTitle: string;
+      destinationInstallDescription: string;
+      sizeInstallTitle: string;
+      sizeInstallDescription: string;
+      networkInstallError: string;
+      unknownInstallError: string;
+      openGeneralSettings: string;
       compatibilityUnknown: string;
       compatibilityUnknownWithVersions: string;
       browserDownloadRequired: string;

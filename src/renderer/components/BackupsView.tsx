@@ -266,7 +266,7 @@ export default function BackupsView({ server }: Props) {
   const loadBackups = async () => {
     setLoading(true);
     try {
-      const list = await listBackupsWithMetadata(server.path);
+      const list = await listBackupsWithMetadata(server.id);
       setBackups(list);
     } catch (e) {
       logError('Failed to load backups', e, { serverPath: server.path });
@@ -502,7 +502,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
 
-    const all = await listBackupsWithMetadata(serverPath);
+    const all = await listBackupsWithMetadata(srv.id);
     const sorted = [...all].sort(
       (a, b) => b.date.getTime() - a.date.getTime() || a.name.localeCompare(b.name),
     );
@@ -519,7 +519,7 @@ export default function BackupsView({ server }: Props) {
     });
     for (const backup of toDelete) {
       // 直列実行（Promise.all は NG）
-      await deleteBackup(serverPath, backup.name);
+      await deleteBackup(srv.id, backup.name);
     }
 
     if (toDelete.length > 0) {
@@ -574,7 +574,7 @@ export default function BackupsView({ server }: Props) {
         sourcesForBackup = changed;
       }
 
-      await createBackup(server.path, normalizedName, sourcesForBackup, compressionLevel);
+      await createBackup(server.id, normalizedName, sourcesForBackup, compressionLevel);
 
       const currentMeta = getBackupMeta(normalizedName);
       const nextCatalog: BackupCatalog = {
@@ -625,7 +625,7 @@ export default function BackupsView({ server }: Props) {
   const handleRestore = async (backupName: string) => {
     setProcessing(true);
     try {
-      await restoreBackup(server.path, backupName);
+      await restoreBackup(server.id, backupName);
       showToast(t('backups.toast.restored'), 'success');
     } catch (error) {
       logError('Failed to restore backup', error, {
@@ -640,7 +640,7 @@ export default function BackupsView({ server }: Props) {
 
   const handleDelete = async (backupName: string) => {
     try {
-      await deleteBackup(server.path, backupName);
+      await deleteBackup(server.id, backupName);
       const nextCatalog: BackupCatalog = {
         ...backupCatalog,
         lastBackupName:
@@ -751,11 +751,12 @@ export default function BackupsView({ server }: Props) {
   };
 
   return (
-    <div className="backups-view">
+    <div className="backups-view" data-testid="backups-view">
       <div className="backups-view__header">
         <h3>{t('backups.title')}</h3>
         <button
           className="btn-primary disabled:opacity-70"
+          data-testid="backups-create-button"
           onClick={openCreateModal}
           disabled={processing}
         >
@@ -779,6 +780,7 @@ export default function BackupsView({ server }: Props) {
                   key={backup.name}
                   ref={backupVirtualizer.measureElement}
                   data-index={virtualRow.index}
+                  data-testid={`backup-row-${backup.name}`}
                   className="backups-view__item-row"
                   style={{ position: 'absolute', top: virtualRow.start, left: 0, width: '100%' }}
                 >
@@ -901,6 +903,7 @@ export default function BackupsView({ server }: Props) {
                   <label className="backups-view__form-label">{t('backups.modal.fileName')}</label>
                   <input
                     className="input-field"
+                    data-testid="backup-name-input"
                     placeholder={defaultName()}
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
@@ -949,6 +952,7 @@ export default function BackupsView({ server }: Props) {
                 <div className="flex gap-2">
                   <button
                     className="btn-secondary text-sm"
+                    data-testid="backups-open-selector-button"
                     onClick={() => void openSelectorWindow()}
                   >
                     {t('backups.modal.openSelector')}
@@ -996,6 +1000,7 @@ export default function BackupsView({ server }: Props) {
                 </button>
                 <button
                   className="btn-primary"
+                  data-testid="backups-create-submit"
                   onClick={handleCreateBackup}
                   disabled={processing || selectedPaths.size === 0}
                 >

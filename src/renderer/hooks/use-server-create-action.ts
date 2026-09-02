@@ -1,8 +1,13 @@
-import { exists, mkdir, remove } from '@tauri-apps/plugin-fs';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
+import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
+import {
+  createManagedServerDirectory,
+  deleteManagedServerDirectory,
+} from '../../lib/file-commands';
 import { addServer as addServerApi, downloadServerJar } from '../../lib/server-commands';
+import { completeServerImport } from '../../lib/server-import-commands';
 import { resolveRequestedJarUrl } from '../../lib/version-commands';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
@@ -30,20 +35,16 @@ export function useServerCreateAction({
 }: UseServerCreateActionOptions) {
   const handleAddServer = useCallback(
     async (serverData: unknown) => {
+      const id = crypto.randomUUID();
       let createdDirectory = false;
       let createdServerPath = '';
       try {
         const source = serverData as Record<string, unknown>;
-        const id = crypto.randomUUID();
-        const serverPath = typeof source.path === 'string' ? source.path : '';
-        if (!serverPath) {
-          showToast(t('server.toast.pathEmpty'), 'error');
-          return;
-        }
-
+        const importToken = typeof source.importToken === 'string' ? source.importToken : null;
+        const serverPath = `${await getServerRoot()}/${id}`;
+        await createManagedServerDirectory(id);
         createdServerPath = serverPath;
-        createdDirectory = !(await exists(serverPath));
-        await mkdir(serverPath, { recursive: true });
+        createdDirectory = true;
 
         const newServer: MinecraftServer = {
           id,
@@ -80,33 +81,39 @@ export function useServerCreateAction({
         };
         const software = (source.software as string) || 'Vanilla';
         const version = (source.version as string) || '';
-        const autoDownloadSoftware = new Set(['Paper', 'LeafMC', 'Vanilla', 'Fabric']);
-        const resolution = await resolveRequestedJarUrl(software, version);
+        let resolution: Awaited<ReturnType<typeof resolveRequestedJarUrl>> = null;
 
-        if (resolution) {
-          setDownloadStatus({
-            id: newServer.id,
-            progress: 0,
-            msg: t('server.toast.downloadStarting'),
-          });
-          try {
-            await downloadServerJar(
-              resolution.downloadUrl,
-              `${serverPath}/server.jar`,
-              newServer.id,
-              resolution.sha256,
-            );
-          } catch (error) {
-            logError('Server jar download failed', error, {
-              serverId: newServer.id,
-              serverPath,
-              downloadUrl: resolution.downloadUrl,
+        if (importToken) {
+          await completeServerImport(importToken, newServer.id);
+        } else {
+          const autoDownloadSoftware = new Set(['Paper', 'LeafMC', 'Vanilla', 'Fabric']);
+          resolution = await resolveRequestedJarUrl(software, version);
+
+          if (resolution) {
+            setDownloadStatus({
+              id: newServer.id,
+              progress: 0,
+              msg: t('server.toast.downloadStarting'),
             });
-            setDownloadStatus(null);
-            throw error;
+            try {
+              await downloadServerJar(
+                resolution.downloadUrl,
+                newServer.id,
+                'server.jar',
+                resolution.sha256,
+              );
+            } catch (error) {
+              logError('Server jar download failed', error, {
+                serverId: newServer.id,
+                serverPath,
+                downloadUrl: resolution.downloadUrl,
+              });
+              setDownloadStatus(null);
+              throw error;
+            }
+          } else if (autoDownloadSoftware.has(software)) {
+            throw new Error(`No official stable JAR is available for ${software} ${version}`);
           }
-        } else if (autoDownloadSoftware.has(software)) {
-          throw new Error(`No official stable JAR is available for ${software} ${version}`);
         }
 
         await addServerApi(newServer);
@@ -121,7 +128,7 @@ export function useServerCreateAction({
       } catch (error) {
         if (createdDirectory && createdServerPath) {
           try {
-            await remove(createdServerPath, { recursive: true });
+            await deleteManagedServerDirectory(id);
           } catch (cleanupError) {
             logError('Failed to roll back server directory', cleanupError, {
               serverPath: createdServerPath,

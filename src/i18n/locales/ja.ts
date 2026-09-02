@@ -72,6 +72,15 @@ export const ja: TranslationDictionary = {
         '既存の見た目にすりガラス風のエフェクトを追加します。現在は準備段階のため、ONにしても見た目はまだ変わりません。',
       label: 'Liquid Glass を有効にする',
     },
+    security: {
+      title: 'セキュリティ',
+      description: 'プラグインのダウンロード検証に関する設定です。',
+      label: '未検証のプラグインダウンロードを許可する',
+      warning:
+        '警告：有効にすると、検証されていないプラグインのダウンロードを許可します。リスクを理解し、受け入れられる場合だけ有効にしてください。',
+      saving: 'セキュリティ設定を保存中...',
+      saveError: 'この設定を保存できなかったため、変更を元に戻しました。',
+    },
     general: {
       title: '一般',
     },
@@ -551,6 +560,29 @@ export const ja: TranslationDictionary = {
       dependencyCheckOnly:
         '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
       incompatibilityWarning: 'このプラグインは現在のサーバーバージョンと非互換の可能性があります',
+      incompatibleInstallTitle: 'プラグインのインストールを中止しました',
+      incompatibleInstallDescription:
+        '{{title}} は {{software}} {{version}} と互換性がないため、インストールできません。プロバイダーが示す対応バージョン: {{supportedVersions}}',
+      unverifiedInstallTitle: 'ハッシュ未確認のプラグインを拒否しました',
+      unverifiedInstallDescription:
+        'プロバイダーがチェックサムを提供していないため、安全性を確認できずインストールを中止しました。全般設定でハッシュなし取得を許可できますが、URL、配置先、リダイレクト、アーカイブ、サイズの保護は引き続き有効です。',
+      checksumInstallTitle: 'プラグインの整合性検証に失敗しました',
+      checksumInstallDescription:
+        'ダウンロードしたプラグインの整合性検証に失敗したため、サーバーフォルダには配置しませんでした。既存のプラグインファイルは保持しています。',
+      sourceInstallTitle: 'プラグインの取得元を拒否しました',
+      sourceInstallDescription:
+        '承認されていない取得元またはリダイレクト先のため、セキュリティポリシーによりダウンロードを拒否しました。',
+      destinationInstallTitle: 'プラグインの配置先を拒否しました',
+      destinationInstallDescription:
+        '管理対象サーバーの配置先が不正なため、セキュリティポリシーによりダウンロードを拒否しました。',
+      sizeInstallTitle: 'プラグインのサイズ上限を超えました',
+      sizeInstallDescription:
+        '安全性のために設定されたサイズ上限を超えるため、プラグインのダウンロードを拒否しました。',
+      networkInstallError:
+        'プラグインをダウンロードできませんでした。接続を確認して再試行してください。',
+      unknownInstallError:
+        'プラグインをインストールできませんでした。対象を確認して再試行してください。',
+      openGeneralSettings: '全般設定を開く',
       compatibilityUnknown: 'サーバー {{version}} との互換性が未確認です',
       compatibilityUnknownWithVersions:
         'サーバー {{version}} との互換性が未確認です (対応候補: {{versions}})',

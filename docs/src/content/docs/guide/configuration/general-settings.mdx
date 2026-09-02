@@ -89,3 +89,17 @@ A free Ngrok account provides one simultaneous tunnel. The public address change
 :::
 
 See the [Ngrok page](/guide/network/ngrok) for detailed setup instructions.
+
+## Plugin Download Security
+
+The application-wide **Security** section controls whether plugin downloads are allowed when the
+provider does not publish a checksum.
+
+- **Off (default)** — reject plugin artifacts that have no published checksum.
+- **On** — allow artifacts without a published checksum for compatibility with providers that do
+  not expose one.
+
+When a checksum is available, MC-Vector verifies it regardless of this setting. The setting does
+not disable HTTPS/provider allowlists, managed destination paths, redirect checks, download size
+limits, or archive safety checks. Enabling it only relaxes the missing-checksum case, so keep it
+off unless the source is trusted and the compatibility requirement is understood.

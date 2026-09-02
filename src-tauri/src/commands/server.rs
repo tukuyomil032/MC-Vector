@@ -1,11 +1,14 @@
 use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{mpsc, Mutex};
+
+use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
+use super::java::{validate_java_executable_path, validate_jvm_extra_args};
 
 const MAX_RUNNING_SERVERS: usize = 8;
 const MIN_MEMORY_MB: u32 = 256;
@@ -17,10 +20,23 @@ const LOG_BUFFER_CAPACITY: usize = 4096;
 const LOG_EMIT_INTERVAL: Duration = Duration::from_millis(50);
 const LOG_EMIT_LINES_PER_TICK: usize = 200;
 
+fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return metadata.file_attributes() & 0x0400 != 0;
+    }
+    #[cfg(not(windows))]
+    false
+}
+
 /// 実行中サーバーの情報
 pub(crate) struct RunningServer {
     command_tx: mpsc::Sender<String>,
-    pid: u32,
+    pub(crate) pid: u32,
     // child は tokio::spawn 内で管理されるため、ここには保持しない
 }
 
@@ -49,45 +65,6 @@ struct ServerStatusPayload {
     #[serde(rename = "serverId")]
     server_id: String,
     status: String,
-}
-
-fn validate_java_path(java_path: &str) -> Result<String, String> {
-    let normalized = java_path.trim();
-    if normalized.is_empty() {
-        return Err("Java path is empty".to_string());
-    }
-
-    let java_name = Path::new(normalized)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .map(|name| name.to_ascii_lowercase())
-        .ok_or_else(|| "Invalid java path".to_string())?;
-
-    if java_name != "java" && java_name != "java.exe" {
-        return Err("Java path must point to java executable".to_string());
-    }
-
-    if normalized.contains('/') || normalized.contains('\\') {
-        let canonical = PathBuf::from(normalized)
-            .canonicalize()
-            .map_err(|e| format!("Invalid java path: {}", e))?;
-        if !canonical.is_file() {
-            return Err("Java path is not a file".to_string());
-        }
-        return Ok(canonical.to_string_lossy().to_string());
-    }
-
-    Ok(normalized.to_string())
-}
-
-fn validate_server_dir(server_path: &str) -> Result<PathBuf, String> {
-    let canonical = PathBuf::from(server_path)
-        .canonicalize()
-        .map_err(|e| format!("Invalid server path: {}", e))?;
-    if !canonical.is_dir() {
-        return Err("Server path is not a directory".to_string());
-    }
-    Ok(canonical)
 }
 
 fn validate_jar_file_name(jar_file: &str) -> Result<String, String> {
@@ -132,6 +109,9 @@ fn validate_server_id(server_id: &str) -> Result<String, String> {
     if normalized.chars().any(char::is_control) {
         return Err("Server ID contains control characters".to_string());
     }
+    if matches!(normalized, "." | "..") || normalized.contains(['/', '\\', ':']) {
+        return Err("Server ID must be a single safe identifier".to_string());
+    }
     Ok(normalized.to_string())
 }
 
@@ -144,25 +124,6 @@ fn audit_server_action(action: &str, server_id: &str) {
     );
 }
 
-#[tauri::command]
-fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
-    let args: Vec<String> = raw.split_whitespace().map(|s| s.to_string()).collect();
-    for arg in &args {
-        if !arg.starts_with('-') {
-            return Err(format!("Invalid JVM argument (must start with '-'): {arg}"));
-        }
-        if arg.contains(|c: char| {
-            matches!(
-                c,
-                ';' | '&' | '|' | '`' | '$' | '(' | ')' | '{' | '}' | '<' | '>' | '\n' | '\r'
-            )
-        }) {
-            return Err(format!("JVM argument contains forbidden characters: {arg}"));
-        }
-    }
-    Ok(args)
-}
-
 /// サーバーを起動し、stdout/stderr をイベントストリーミングする
 #[tauri::command]
 pub async fn start_server(
@@ -171,14 +132,26 @@ pub async fn start_server(
     limiter: State<'_, CommandLimiter>,
     server_id: String,
     java_path: String,
-    server_path: String,
     memory: u32,
     jar_file: String,
     jvm_extra_args: Option<String>,
 ) -> Result<(), String> {
     let validated_server_id = validate_server_id(&server_id)?;
-    let validated_java_path = validate_java_path(&java_path)?;
-    let validated_server_dir = validate_server_dir(&server_path)?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let server_request = ManagedPathRequest {
+        root: ManagedRoot::Servers,
+        server_id: Some(validated_server_id.clone()),
+        relative_path: String::new(),
+    };
+    let validated_server_dir = resolve_managed_request(&app_data_dir, &server_request, false)
+        .map_err(|error| format!("Invalid managed server directory: {error}"))?;
+    let validated_java_path =
+        validate_java_executable_path(&java_path, &app_data_dir.join("java"))?
+            .to_string_lossy()
+            .to_string();
     let validated_jar_file = validate_jar_file_name(&jar_file)?;
     if !(MIN_MEMORY_MB..=MAX_MEMORY_MB).contains(&memory) {
         return Err(format!(
@@ -193,7 +166,9 @@ pub async fn start_server(
     };
 
     let jar_path = validated_server_dir.join(&validated_jar_file);
-    if !jar_path.exists() || !jar_path.is_file() {
+    let jar_metadata = std::fs::symlink_metadata(&jar_path)
+        .map_err(|_| format!("Jar file not found: {validated_jar_file}"))?;
+    if is_link_or_reparse_point(&jar_metadata) || !jar_metadata.is_file() {
         return Err(format!("Jar file not found: {}", validated_jar_file));
     }
 

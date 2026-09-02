@@ -4,12 +4,19 @@ import { logError } from '../../lib/error-utils';
 
 interface UseLiquidGlassSyncOptions {
   setLiquidGlassEnabled: (enabled: boolean) => void;
+  setAllowUnverifiedPluginDownloads: (enabled: boolean) => void;
 }
 
-export function useLiquidGlassSync({ setLiquidGlassEnabled }: UseLiquidGlassSyncOptions) {
+export function useLiquidGlassSync({
+  setLiquidGlassEnabled,
+  setAllowUnverifiedPluginDownloads,
+}: UseLiquidGlassSyncOptions) {
   useEffect(() => {
     const applyLiquidGlassEnabled = (value: unknown) => {
       setLiquidGlassEnabled(value === true);
+    };
+    const applyAllowUnverifiedPluginDownloads = (value: unknown) => {
+      setAllowUnverifiedPluginDownloads(value === true);
     };
 
     const loadAppSettings = async () => {
@@ -18,6 +25,7 @@ export function useLiquidGlassSync({ setLiquidGlassEnabled }: UseLiquidGlassSync
         if (settings?.liquidGlassEnabled !== undefined) {
           applyLiquidGlassEnabled(settings.liquidGlassEnabled);
         }
+        applyAllowUnverifiedPluginDownloads(settings.allowUnverifiedPluginDownloads);
       } catch (error) {
         logError('Failed to load app settings for liquid glass sync', error);
       }
@@ -25,14 +33,24 @@ export function useLiquidGlassSync({ setLiquidGlassEnabled }: UseLiquidGlassSync
     void loadAppSettings();
 
     let disposeLiquidGlassWatch: (() => void) | undefined;
+    let disposeAllowUnverifiedPluginDownloadsWatch: (() => void) | undefined;
     void (async () => {
       disposeLiquidGlassWatch = await onConfigChange('liquidGlassEnabled', (value) => {
         applyLiquidGlassEnabled(value);
       });
     })();
+    void (async () => {
+      disposeAllowUnverifiedPluginDownloadsWatch = await onConfigChange(
+        'allowUnverifiedPluginDownloads',
+        (value) => {
+          applyAllowUnverifiedPluginDownloads(value);
+        },
+      );
+    })();
 
     return () => {
       disposeLiquidGlassWatch?.();
+      disposeAllowUnverifiedPluginDownloadsWatch?.();
     };
-  }, [setLiquidGlassEnabled]);
+  }, [setAllowUnverifiedPluginDownloads, setLiquidGlassEnabled]);
 }

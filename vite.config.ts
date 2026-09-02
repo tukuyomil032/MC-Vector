@@ -10,7 +10,7 @@ const devHost = tauriDevHost ?? process.env.HOST;
 const isPlaywright = process.env.VITE_PLAYWRIGHT === 'true';
 
 function mockPath(name: string) {
-  return fileURLToPath(new URL(`./src/test-mocks/${name}`, import.meta.url));
+  return fileURLToPath(new URL(`./tests/mocks/${name}`, import.meta.url));
 }
 
 const playwrightAliases = isPlaywright

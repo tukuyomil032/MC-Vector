@@ -9,7 +9,7 @@ const ProxyHelpView: FC = () => {
   };
 
   return (
-    <div className="proxy-help-view">
+    <div className="proxy-help-view" data-testid="proxy-help-view">
       <h1 className="proxy-help-view__title">🌐 {t('proxyHelp.title')}</h1>
 
       <div className="proxy-help-view__intro">
