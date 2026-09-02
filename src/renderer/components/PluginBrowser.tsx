@@ -2434,6 +2434,7 @@ export default function PluginBrowser({ server }: Props) {
                 <motion.button
                   key={option.key}
                   type="button"
+                  data-testid={`plugin-provider-${option.key.toLowerCase()}`}
                   whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                   whileHover={prefersReducedMotion ? undefined : { y: -1 }}
                   className={`plugin-browser__platform-chip ${active ? 'is-active' : ''}`}
@@ -2523,6 +2524,7 @@ export default function PluginBrowser({ server }: Props) {
               {searchQuery.isError && (
                 <InlineError
                   className="plugin-browser__search-error"
+                  testId="plugin-search-error"
                   message={t('plugins.browser.searchError')}
                   onRetry={() => {
                     void searchQuery.refetch();
@@ -2608,6 +2610,7 @@ export default function PluginBrowser({ server }: Props) {
                       <button
                         type="button"
                         className="plugin-browser__details-btn"
+                        data-testid={`plugin-details-${item.id}`}
                         onClick={() => openDetailModal(item)}
                       >
                         {t('plugins.browser.details')}
@@ -2617,6 +2620,7 @@ export default function PluginBrowser({ server }: Props) {
                     return (
                       <motion.div
                         key={`${item.platform}-${item.id}`}
+                        data-testid={`plugin-result-${item.id}`}
                         initial={platformSwitchInitial}
                         animate={platformSwitchAnimate}
                         exit={platformSwitchExit}
@@ -2703,6 +2707,7 @@ export default function PluginBrowser({ server }: Props) {
                           (installFailure === 'network' || installFailure === 'unknown') ? (
                             <InlineError
                               className="mt-3"
+                              testId={`plugin-install-error-${item.id}`}
                               message={installFailureCopy(installFailure).description}
                               onRetry={() => handleInstall(item)}
                               retryLabel={t('plugins.browser.retry')}
@@ -2732,6 +2737,7 @@ export default function PluginBrowser({ server }: Props) {
                 <button
                   type="button"
                   className="plugin-browser__pager-btn"
+                  data-testid="plugin-prev-page"
                   onClick={() => setPage((value) => Math.max(0, value - 1))}
                   disabled={page === 0 || loading}
                 >
@@ -2761,11 +2767,13 @@ export default function PluginBrowser({ server }: Props) {
                       }
                     }}
                     className="plugin-browser__pager-input"
+                    data-testid="plugin-page-input"
                     aria-label={t('plugins.browser.pageNumberAriaLabel')}
                   />
                   <button
                     type="button"
                     className="plugin-browser__pager-go"
+                    data-testid="plugin-page-go"
                     onClick={jumpToPage}
                     disabled={loading}
                   >
@@ -2776,6 +2784,7 @@ export default function PluginBrowser({ server }: Props) {
                 <button
                   type="button"
                   className="plugin-browser__pager-btn"
+                  data-testid="plugin-next-page"
                   onClick={() => setPage((value) => value + 1)}
                   disabled={!hasNextPage || loading}
                 >
