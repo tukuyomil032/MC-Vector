@@ -676,10 +676,17 @@ fn copy_external_entry_resolved(
     destination: PathBuf,
     managed_root: &Path,
 ) -> Result<(bool, u64), String> {
+    let canonical_source = source
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
+    if !canonical_source.is_absolute() {
+        return Err("Selected source resolved to a non-absolute path".to_string());
+    }
+
     if metadata.is_dir() {
         std::fs::create_dir(&destination)
             .map_err(|error| format!("Failed to create imported directory: {error}"))?;
-        for entry in std::fs::read_dir(&source)
+        for entry in std::fs::read_dir(&canonical_source)
             .map_err(|error| format!("Failed to read selected directory: {error}"))?
         {
             let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
@@ -711,7 +718,7 @@ fn copy_external_entry_resolved(
         }
         Ok((true, 0))
     } else {
-        std::fs::copy(&source, &destination)
+        std::fs::copy(&canonical_source, &destination)
             .map_err(|error| format!("Failed to copy selected file: {error}"))?;
         let destination_metadata = std::fs::symlink_metadata(&destination)
             .map_err(|error| format!("Failed to verify imported file: {error}"))?;
@@ -945,56 +952,102 @@ pub async fn delete_managed_server_dir(app: AppHandle, server_id: String) -> Res
         .map_err(|error| format!("Failed to delete managed server folder: {error}"))
 }
 
-fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> Result<(), String> {
-    if !source.is_absolute()
-        || !destination.is_absolute()
-        || !source.starts_with(managed_root)
-        || !destination.starts_with(managed_root)
-    {
+fn resolve_managed_copy_path(
+    path: &Path,
+    managed_root: &Path,
+    allow_missing_final: bool,
+) -> Result<PathBuf, String> {
+    if !path.is_absolute() || !managed_root.is_absolute() || !path.starts_with(managed_root) {
         return Err("Managed copy path is outside the managed root".to_string());
     }
-    if source.components().any(|component| {
-        matches!(
-            component,
-            std::path::Component::CurDir | std::path::Component::ParentDir
-        )
-    }) || destination.components().any(|component| {
-        matches!(
-            component,
-            std::path::Component::CurDir | std::path::Component::ParentDir
-        )
-    }) {
-        return Err("Managed copy path is not normalized".to_string());
+
+    let relative = path
+        .strip_prefix(managed_root)
+        .map_err(|_| "Managed copy path is outside the managed root".to_string())?;
+    let components = relative.components().collect::<Vec<_>>();
+    if components
+        .iter()
+        .any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        return Err("Managed copy path contains an unsafe component".to_string());
     }
-    let metadata = std::fs::symlink_metadata(source)
+
+    let canonical_root = std::fs::canonicalize(managed_root)
+        .map_err(|error| format!("Failed to resolve managed copy root: {error}"))?;
+    let mut current = canonical_root.clone();
+    for (index, component) in components.iter().enumerate() {
+        let is_final = index + 1 == components.len();
+        let entry = std::fs::read_dir(&current)
+            .map_err(|error| format!("Failed to inspect managed copy parent: {error}"))?
+            .find_map(|entry| {
+                let entry = entry.ok()?;
+                (entry.file_name() == component.as_os_str()).then_some(entry)
+            });
+
+        if let Some(entry) = entry {
+            let metadata = entry
+                .metadata()
+                .map_err(|error| format!("Failed to inspect managed copy entry: {error}"))?;
+            if is_link_or_reparse_point(&metadata) {
+                return Err(
+                    "Managed copy path contains a symbolic link or reparse point".to_string(),
+                );
+            }
+            if !is_final && !metadata.is_dir() {
+                return Err("Managed copy path parent is not a directory".to_string());
+            }
+            current = entry.path();
+            continue;
+        }
+
+        if !is_final || !allow_missing_final {
+            return Err("Managed copy path does not exist".to_string());
+        }
+        let candidate = current.join(component.as_os_str());
+        if !candidate.starts_with(&canonical_root) {
+            return Err("Managed copy path is outside the managed root".to_string());
+        }
+        return Ok(candidate);
+    }
+
+    if !current.starts_with(&canonical_root) {
+        return Err("Managed copy path is outside the managed root".to_string());
+    }
+    Ok(current)
+}
+
+fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> Result<(), String> {
+    let source = resolve_managed_copy_path(source, managed_root, false)?;
+    let destination = resolve_managed_copy_path(destination, managed_root, true)?;
+    copy_managed_tree_resolved(source, destination, managed_root)
+}
+
+fn copy_managed_tree_resolved(
+    source: PathBuf,
+    destination: PathBuf,
+    managed_root: &Path,
+) -> Result<(), String> {
+    let metadata = std::fs::symlink_metadata(&source)
         .map_err(|error| format!("Failed to inspect source entry: {error}"))?;
     if is_link_or_reparse_point(&metadata) {
         return Err("Managed source must not contain a symbolic link or reparse point".to_string());
     }
     if metadata.is_dir() {
-        std::fs::create_dir(destination)
+        std::fs::create_dir(&destination)
             .map_err(|error| format!("Failed to create copied directory: {error}"))?;
-        for entry in std::fs::read_dir(source)
+        for entry in std::fs::read_dir(&source)
             .map_err(|error| format!("Failed to read source directory: {error}"))?
         {
             let entry = entry.map_err(|error| format!("Failed to read source entry: {error}"))?;
-            let child_destination = destination.join(entry.file_name());
-            if !child_destination.is_absolute()
-                || child_destination.components().any(|component| {
-                    matches!(
-                        component,
-                        std::path::Component::CurDir | std::path::Component::ParentDir
-                    )
-                })
-                || !child_destination.starts_with(managed_root)
-            {
-                return Err("Managed copy destination is outside the managed root".to_string());
-            }
-            let child_source = source.join(entry.file_name());
-            copy_managed_tree(&child_source, &child_destination, managed_root)?;
+            let child_name = entry.file_name();
+            let child_destination =
+                resolve_managed_copy_path(&destination.join(&child_name), managed_root, true)?;
+            let child_source =
+                resolve_managed_copy_path(&source.join(&child_name), managed_root, false)?;
+            copy_managed_tree_resolved(child_source, child_destination, managed_root)?;
         }
     } else if metadata.is_file() {
-        std::fs::copy(source, destination)
+        std::fs::copy(&source, &destination)
             .map_err(|error| format!("Failed to copy managed file: {error}"))?;
     } else {
         return Err("Managed source must be a regular file or directory".to_string());
