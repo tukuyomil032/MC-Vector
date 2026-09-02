@@ -1134,6 +1134,8 @@ mod tests {
     #[tokio::test]
     async fn moves_a_downloaded_jar_within_the_managed_server_root() {
         let app_data = TestDirectory::new();
+        std::fs::create_dir_all(app_data.path().join("servers/server-1/plugins"))
+            .expect("managed plugin directory should be created");
         let source_request = server_request("server-1", "plugins/example.jar.part-valid.jar");
         let destination_request = server_request("server-1", "plugins/example.jar");
         let source = resolve_managed_request(app_data.path(), &source_request, true)
@@ -1158,6 +1160,10 @@ mod tests {
     #[tokio::test]
     async fn resolves_jar_destination_below_the_requested_server_id() {
         let app_data = TestDirectory::new();
+        std::fs::create_dir_all(app_data.path().join("servers/server-1/plugins"))
+            .expect("server one plugin directory should be created");
+        std::fs::create_dir_all(app_data.path().join("servers/server-2/plugins"))
+            .expect("server two plugin directory should be created");
         let source = resolve_managed_request(
             app_data.path(),
             &server_request("server-1", "plugins/example.jar.part-valid.jar"),
@@ -1188,6 +1194,8 @@ mod tests {
 
         let app_data = TestDirectory::new();
         let outside = TestDirectory::new();
+        std::fs::create_dir_all(app_data.path().join("servers/server-1/plugins"))
+            .expect("managed plugin directory should be created");
         let source = resolve_managed_request(
             app_data.path(),
             &server_request("server-1", "plugins/example.jar.part-valid.jar"),

@@ -288,7 +288,28 @@ fn temporary_path(destination: &Path, attempt: usize) -> PathBuf {
         .unwrap_or("download");
     destination.with_file_name(format!(".{name}.part-{}-{attempt}", std::process::id()))
 }
-async fn replace_destination(temp: &Path, destination: &Path) -> Result<(), String> {
+
+fn managed_servers_root(app_data_dir: &Path) -> Result<PathBuf, String> {
+    // This root is fixed by the command contract. It is never derived from
+    // renderer-provided path data.
+    let root = app_data_dir.join("servers");
+    let metadata = std::fs::symlink_metadata(&root)
+        .map_err(|error| format!("Failed to inspect managed server root: {error}"))?;
+    if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+        return Err("Managed server root must be a real directory".to_string());
+    }
+    std::fs::canonicalize(&root)
+        .map_err(|error| format!("Failed to resolve managed server root: {error}"))
+}
+
+async fn replace_destination(
+    temp: &Path,
+    destination: &Path,
+    managed_root: &Path,
+) -> Result<(), String> {
+    if !temp.starts_with(managed_root) || !destination.starts_with(managed_root) {
+        return Err("Download paths must remain inside managed storage".to_string());
+    }
     if let Ok(metadata) = tokio::fs::symlink_metadata(destination).await {
         if is_link_or_reparse_point(&metadata) {
             return Err(
@@ -318,6 +339,7 @@ async fn download_once<F>(
     client: &Client,
     url: &Url,
     destination: &Path,
+    managed_root: &Path,
     checksum: Option<&ExpectedChecksum>,
     max_bytes: u64,
     mut report: F,
@@ -325,6 +347,9 @@ async fn download_once<F>(
 where
     F: FnMut(u64, u64) -> Result<(), String>,
 {
+    if !destination.starts_with(managed_root) {
+        return Err("Temporary download path must remain inside managed storage".to_string());
+    }
     let response = client
         .get(url.clone())
         .send()
@@ -394,6 +419,7 @@ where
 async fn download_with_retry<F>(
     url: Url,
     destination: PathBuf,
+    managed_root: &Path,
     checksum: Option<ExpectedChecksum>,
     max_bytes: u64,
     allowed_hosts: Option<&[&str]>,
@@ -402,6 +428,9 @@ async fn download_with_retry<F>(
 where
     F: FnMut(u64, u64) -> Result<(), String>,
 {
+    if !destination.starts_with(managed_root) {
+        return Err("Download destination must remain inside managed storage".to_string());
+    }
     let client = http_client(allowed_hosts)?;
     let mut last_error = "download failed".to_string();
     for attempt in 1..=MAX_ATTEMPTS {
@@ -410,19 +439,22 @@ where
             &client,
             &url,
             &temp,
+            managed_root,
             checksum.as_ref(),
             max_bytes,
             &mut report,
         )
         .await
         {
-            Ok(()) => match replace_destination(&temp, &destination).await {
+            Ok(()) => match replace_destination(&temp, &destination, managed_root).await {
                 Ok(()) => return Ok(()),
                 Err(error) => last_error = error,
             },
             Err(error) => last_error = error,
         };
-        let _ = tokio::fs::remove_file(&temp).await;
+        if temp.starts_with(managed_root) {
+            let _ = tokio::fs::remove_file(&temp).await;
+        }
         if attempt < MAX_ATTEMPTS {
             tokio::time::sleep(Duration::from_millis(250 * attempt as u64)).await;
         }
@@ -544,6 +576,11 @@ pub async fn download_plugin_artifact(
     let url = validate_https_url(&request.url, Some(hosts))?;
     let destination =
         managed_plugin_destination(&app, &request.server_id, &request.relative_path).await?;
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let managed_root = managed_servers_root(&app_data)?;
     let event_id = validate_event_id(&request.event_id)?;
     if request.checksum.is_none() && !allows_unverified_plugin_downloads(&app) {
         return Err("Plugin download rejected: checksum is required. Set allowUnverifiedPluginDownloads to true in config.json only when you explicitly accept an unverified artifact.".to_string());
@@ -552,6 +589,7 @@ pub async fn download_plugin_artifact(
     download_with_retry(
         url,
         destination,
+        &managed_root,
         request.checksum,
         MAX_PLUGIN_DOWNLOAD_BYTES,
         Some(hosts),
@@ -602,6 +640,7 @@ pub async fn download_server_jar(
         relative_path: request.relative_path.trim().to_string(),
     };
     let destination = resolve_managed_request(&app_data, &managed_request, true)?;
+    let managed_root = managed_servers_root(&app_data)?;
     if let Some(parent) = destination.parent() {
         tokio::fs::create_dir_all(parent)
             .await
@@ -612,6 +651,7 @@ pub async fn download_server_jar(
     download_with_retry(
         url,
         destination,
+        &managed_root,
         request.checksum,
         MAX_SERVER_JAR_BYTES,
         Some(SERVER_JAR_HOSTS),
@@ -679,8 +719,7 @@ mod tests {
             &self.0
         }
 
-        fn destination(&self, relative_path: &str) -> PathBuf {
-            let destination = self.path().join(relative_path);
+        fn prepare_destination(&self, destination: PathBuf) -> PathBuf {
             std::fs::create_dir_all(
                 destination
                     .parent()
@@ -688,6 +727,22 @@ mod tests {
             )
             .expect("destination parent should be created");
             destination
+        }
+
+        fn plugins_example(&self) -> PathBuf {
+            self.prepare_destination(self.path().join("plugins").join("example.jar"))
+        }
+
+        fn mods_example(&self) -> PathBuf {
+            self.prepare_destination(self.path().join("mods").join("example.jar"))
+        }
+
+        fn plugins_content_length(&self) -> PathBuf {
+            self.prepare_destination(self.path().join("plugins").join("content-length.jar"))
+        }
+
+        fn plugins_stream_limit(&self) -> PathBuf {
+            self.prepare_destination(self.path().join("plugins").join("stream-limit.jar"))
         }
     }
 
@@ -793,6 +848,7 @@ mod tests {
 
     async fn download_from_test_server(
         server: &TestHttpServer,
+        managed_root: &Path,
         destination: PathBuf,
         checksum: Option<ExpectedChecksum>,
         max_bytes: u64,
@@ -800,6 +856,7 @@ mod tests {
         download_with_retry(
             server.url.clone(),
             destination,
+            managed_root,
             checksum,
             max_bytes,
             None,
@@ -900,12 +957,12 @@ mod tests {
 
     #[tokio::test]
     async fn downloads_plugins_and_mods_to_the_final_jar_path() {
-        for relative_path in ["plugins/example.jar", "mods/example.jar"] {
+        for destination in [TestDirectory::plugins_example, TestDirectory::mods_example] {
             let test_dir = TestDirectory::new();
-            let destination = test_dir.destination(relative_path);
+            let destination = destination(&test_dir);
             let server = TestHttpServer::new(b"plugin bytes", true, 1);
 
-            download_from_test_server(&server, destination.clone(), None, 1024)
+            download_from_test_server(&server, test_dir.path(), destination.clone(), None, 1024)
                 .await
                 .expect("plugin should download");
 
@@ -919,11 +976,12 @@ mod tests {
         let body = b"plugin bytes with a checksum";
         for algorithm in ["sha1", "sha256", "sha512"] {
             let test_dir = TestDirectory::new();
-            let destination = test_dir.destination("plugins/example.jar");
+            let destination = test_dir.plugins_example();
             let server = TestHttpServer::new(body, true, 1);
 
             download_from_test_server(
                 &server,
+                test_dir.path(),
                 destination.clone(),
                 Some(test_checksum(algorithm, body)),
                 1024,
@@ -938,7 +996,7 @@ mod tests {
     #[tokio::test]
     async fn rejects_checksum_mismatch_and_cleans_up_without_touching_final_file() {
         let test_dir = TestDirectory::new();
-        let destination = test_dir.destination("plugins/example.jar");
+        let destination = test_dir.plugins_example();
         std::fs::write(&destination, b"existing plugin")
             .expect("existing plugin should be written");
         let server = TestHttpServer::new(b"new plugin", true, MAX_ATTEMPTS);
@@ -947,9 +1005,15 @@ mod tests {
             value: "0".repeat(64),
         };
 
-        let error = download_from_test_server(&server, destination.clone(), Some(checksum), 1024)
-            .await
-            .expect_err("checksum mismatch should reject the download");
+        let error = download_from_test_server(
+            &server,
+            test_dir.path(),
+            destination.clone(),
+            Some(checksum),
+            1024,
+        )
+        .await
+        .expect_err("checksum mismatch should reject the download");
 
         assert!(error.contains("checksum mismatch"));
         assert_eq!(std::fs::read(&destination).unwrap(), b"existing plugin");
@@ -959,10 +1023,11 @@ mod tests {
     #[tokio::test]
     async fn rejects_content_length_and_stream_size_limits_without_final_file() {
         let test_dir = TestDirectory::new();
-        let content_length_destination = test_dir.destination("plugins/content-length.jar");
+        let content_length_destination = test_dir.plugins_content_length();
         let content_length_server = TestHttpServer::new(b"012345", true, MAX_ATTEMPTS);
         let content_length_error = download_from_test_server(
             &content_length_server,
+            test_dir.path(),
             content_length_destination.clone(),
             None,
             5,
@@ -976,12 +1041,17 @@ mod tests {
             &content_length_destination,
         );
 
-        let stream_destination = test_dir.destination("plugins/stream-limit.jar");
+        let stream_destination = test_dir.plugins_stream_limit();
         let stream_server = TestHttpServer::new(b"012345", false, MAX_ATTEMPTS);
-        let stream_error =
-            download_from_test_server(&stream_server, stream_destination.clone(), None, 5)
-                .await
-                .expect_err("stream size over limit should reject");
+        let stream_error = download_from_test_server(
+            &stream_server,
+            test_dir.path(),
+            stream_destination.clone(),
+            None,
+            5,
+        )
+        .await
+        .expect_err("stream size over limit should reject");
         assert!(stream_error.contains("Download exceeds the 5-byte limit"));
         assert!(!stream_destination.exists());
         assert_no_temporary_files(stream_destination.parent().unwrap(), &stream_destination);
@@ -990,11 +1060,11 @@ mod tests {
     #[tokio::test]
     async fn atomically_replaces_an_existing_destination_only_after_success() {
         let test_dir = TestDirectory::new();
-        let destination = test_dir.destination("plugins/example.jar");
+        let destination = test_dir.plugins_example();
         std::fs::write(&destination, b"old plugin").expect("old plugin should be written");
         let server = TestHttpServer::new(b"new plugin", true, 1);
 
-        download_from_test_server(&server, destination.clone(), None, 1024)
+        download_from_test_server(&server, test_dir.path(), destination.clone(), None, 1024)
             .await
             .expect("new plugin should download");
 
@@ -1009,14 +1079,15 @@ mod tests {
 
         let test_dir = TestDirectory::new();
         let outside = TestDirectory::new();
-        let destination = test_dir.destination("plugins/example.jar");
+        let destination = test_dir.plugins_example();
         symlink(outside.path().join("outside.jar"), &destination)
             .expect("destination symlink should be created");
         let server = TestHttpServer::new(b"plugin bytes", true, MAX_ATTEMPTS);
 
-        let error = download_from_test_server(&server, destination.clone(), None, 1024)
-            .await
-            .expect_err("symlink destination should be rejected");
+        let error =
+            download_from_test_server(&server, test_dir.path(), destination.clone(), None, 1024)
+                .await
+                .expect_err("symlink destination should be rejected");
 
         assert!(error.contains("symbolic link"));
         assert!(std::fs::symlink_metadata(&destination)
