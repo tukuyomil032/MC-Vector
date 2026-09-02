@@ -62,17 +62,6 @@ pub enum ManagedRoot {
     Backups,
 }
 
-impl ManagedRoot {
-    fn directory_name(self) -> &'static str {
-        match self {
-            Self::Servers => "servers",
-            Self::Java => "java",
-            Self::Ngrok => "ngrok",
-            Self::Backups => "backups",
-        }
-    }
-}
-
 /// An IPC-safe location. No command in this module accepts a caller-provided
 /// absolute filesystem path.
 #[derive(Clone, Debug, serde::Deserialize)]
@@ -158,7 +147,12 @@ pub(crate) fn resolve_managed_request(
     create_root: bool,
 ) -> Result<PathBuf, String> {
     let root = request.root;
-    let managed_root = app_data_dir.join(root.directory_name());
+    let managed_root = match root {
+        ManagedRoot::Servers => app_data_dir.join("servers"),
+        ManagedRoot::Java => app_data_dir.join("java"),
+        ManagedRoot::Ngrok => app_data_dir.join("ngrok"),
+        ManagedRoot::Backups => app_data_dir.join("backups"),
+    };
 
     let mut components = Vec::new();
     match root {
@@ -361,8 +355,7 @@ fn analyze_import_folder(source: &Path, token: String) -> Result<ServerImportAna
     {
         let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
         let metadata = entry
-            .path()
-            .symlink_metadata()
+            .metadata()
             .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
         if is_link_or_reparse_point(&metadata) {
             return Err(
@@ -471,6 +464,8 @@ pub async fn complete_server_import(
         relative_path: String::new(),
     };
     let destination = resolve_managed_request(&app_data_dir, &destination_request, false)?;
+    let managed_root = std::fs::canonicalize(app_data_dir.join("servers"))
+        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
     let destination_metadata = std::fs::symlink_metadata(&destination)
         .map_err(|error| format!("Failed to inspect managed import destination: {error}"))?;
     if is_link_or_reparse_point(&destination_metadata) || !destination_metadata.is_dir() {
@@ -497,7 +492,7 @@ pub async fn complete_server_import(
     {
         let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
         let destination_entry = destination.join(entry.file_name());
-        let (_, size) = copy_external_entry(&entry.path(), &destination_entry)?;
+        let (_, size) = copy_external_entry(&entry.path(), &destination_entry, &managed_root)?;
         entry_count += 1;
         byte_size = byte_size.saturating_add(size);
     }
@@ -541,14 +536,34 @@ pub async fn write_managed_text_file(
 ) -> Result<(), String> {
     let app_data_dir = app_data_dir(&app)?;
     let resolved = resolve_managed_request(&app_data_dir, &request, true)?;
-    if resolved == app_data_dir.join(request.root.directory_name()) {
+    let managed_root = match request.root {
+        ManagedRoot::Servers => app_data_dir.join("servers"),
+        ManagedRoot::Java => app_data_dir.join("java"),
+        ManagedRoot::Ngrok => app_data_dir.join("ngrok"),
+        ManagedRoot::Backups => app_data_dir.join("backups"),
+    };
+    if resolved == managed_root {
         return Err("Managed path must identify a file".to_string());
     }
 
     std::fs::write(&resolved, content).map_err(|error| format!("Failed to write file: {error}"))
 }
 
-fn copy_external_entry(source: &Path, destination: &Path) -> Result<(bool, u64), String> {
+fn copy_external_entry(
+    source: &Path,
+    destination: &Path,
+    managed_root: &Path,
+) -> Result<(bool, u64), String> {
+    if !destination.is_absolute() || !destination.starts_with(managed_root) {
+        return Err("Import destination is outside the managed root".to_string());
+    }
+    let destination_parent = destination
+        .parent()
+        .ok_or_else(|| "Import destination has no parent".to_string())?;
+    if !destination_parent.starts_with(managed_root) {
+        return Err("Import destination parent is outside the managed root".to_string());
+    }
+
     let metadata = std::fs::symlink_metadata(source)
         .map_err(|error| format!("Failed to inspect selected source: {error}"))?;
     if is_link_or_reparse_point(&metadata) {
@@ -573,7 +588,7 @@ fn copy_external_entry(source: &Path, destination: &Path) -> Result<(bool, u64),
             let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
             let name = entry.file_name();
             let child_destination = destination.join(&name);
-            copy_external_entry(&entry.path(), &child_destination)?;
+            copy_external_entry(&entry.path(), &child_destination, managed_root)?;
         }
         Ok((true, 0))
     } else {
@@ -598,6 +613,14 @@ pub async fn import_managed_files(
 ) -> Result<Vec<ImportedManagedFile>, String> {
     let app_data_dir = app_data_dir(&app)?;
     let destination = resolve_managed_request(&app_data_dir, &request, true)?;
+    let managed_root = match request.root {
+        ManagedRoot::Servers => app_data_dir.join("servers"),
+        ManagedRoot::Java => app_data_dir.join("java"),
+        ManagedRoot::Ngrok => app_data_dir.join("ngrok"),
+        ManagedRoot::Backups => app_data_dir.join("backups"),
+    };
+    let managed_root = std::fs::canonicalize(&managed_root)
+        .map_err(|error| format!("Failed to resolve import managed root: {error}"))?;
     let destination_metadata = std::fs::symlink_metadata(&destination)
         .map_err(|error| format!("Failed to inspect import destination: {error}"))?;
     if is_link_or_reparse_point(&destination_metadata) || !destination_metadata.is_dir() {
@@ -624,7 +647,8 @@ pub async fn import_managed_files(
                 .file_name()
                 .ok_or_else(|| "Selected source has no file name".to_string())?;
             let destination_path = destination.join(name);
-            let (is_directory, size) = copy_external_entry(&source, &destination_path)?;
+            let (is_directory, size) =
+                copy_external_entry(&source, &destination_path, &managed_root)?;
             let name = name.to_string_lossy().to_string();
             let relative_path = if request.relative_path.is_empty() {
                 name
@@ -682,7 +706,12 @@ fn reject_managed_root_target(
     request: &ManagedPathRequest,
     target: &Path,
 ) -> Result<(), String> {
-    let root = app_data_dir.join(request.root.directory_name());
+    let root = match request.root {
+        ManagedRoot::Servers => app_data_dir.join("servers"),
+        ManagedRoot::Java => app_data_dir.join("java"),
+        ManagedRoot::Ngrok => app_data_dir.join("ngrok"),
+        ManagedRoot::Backups => app_data_dir.join("backups"),
+    };
     if target == root {
         return Err("Managed path must identify a child entry".to_string());
     }
@@ -780,9 +809,8 @@ pub async fn delete_managed_server_dir(app: AppHandle, server_id: String) -> Res
         relative_path: String::new(),
     };
     let target = resolve_managed_request(&app_data_dir, &request, false)?;
-    let servers_root =
-        std::fs::canonicalize(app_data_dir.join(ManagedRoot::Servers.directory_name()))
-            .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
+    let servers_root = std::fs::canonicalize(app_data_dir.join("servers"))
+        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
 
     if target == servers_root || target.parent() != Some(servers_root.as_path()) {
         return Err("Server folder is outside the managed servers root".to_string());
@@ -802,7 +830,14 @@ pub async fn delete_managed_server_dir(app: AppHandle, server_id: String) -> Res
         .map_err(|error| format!("Failed to delete managed server folder: {error}"))
 }
 
-fn copy_managed_tree(source: &Path, destination: &Path) -> Result<(), String> {
+fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> Result<(), String> {
+    if !source.is_absolute()
+        || !destination.is_absolute()
+        || !source.starts_with(managed_root)
+        || !destination.starts_with(managed_root)
+    {
+        return Err("Managed copy path is outside the managed root".to_string());
+    }
     let metadata = std::fs::symlink_metadata(source)
         .map_err(|error| format!("Failed to inspect source entry: {error}"))?;
     if is_link_or_reparse_point(&metadata) {
@@ -815,7 +850,11 @@ fn copy_managed_tree(source: &Path, destination: &Path) -> Result<(), String> {
             .map_err(|error| format!("Failed to read source directory: {error}"))?
         {
             let entry = entry.map_err(|error| format!("Failed to read source entry: {error}"))?;
-            copy_managed_tree(&entry.path(), &destination.join(entry.file_name()))?;
+            let child_destination = destination.join(entry.file_name());
+            if !child_destination.starts_with(managed_root) {
+                return Err("Managed copy destination is outside the managed root".to_string());
+            }
+            copy_managed_tree(&entry.path(), &child_destination, managed_root)?;
         }
     } else if metadata.is_file() {
         std::fs::copy(source, destination)
@@ -845,6 +884,8 @@ pub async fn clone_managed_server(
     };
     let source = resolve_managed_request(&app_data_dir, &source_request, false)?;
     let destination = resolve_managed_request(&app_data_dir, &destination_request, true)?;
+    let managed_root = std::fs::canonicalize(app_data_dir.join("servers"))
+        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
     let source_metadata = std::fs::symlink_metadata(&source)
         .map_err(|error| format!("Failed to inspect source server: {error}"))?;
     if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
@@ -858,7 +899,7 @@ pub async fn clone_managed_server(
         .ok_or_else(|| "Destination server has no parent".to_string())?;
     std::fs::create_dir_all(parent)
         .map_err(|error| format!("Failed to create managed server root: {error}"))?;
-    copy_managed_tree(&source, &destination)
+    copy_managed_tree(&source, &destination, &managed_root)
 }
 
 /// Safely migrates a legacy `servers/<name>` directory to `servers/<id>`.
@@ -884,9 +925,8 @@ pub async fn migrate_managed_server_directory(
         relative_path: String::new(),
     };
     let destination = resolve_managed_request(&app_data_dir, &destination_request, true)?;
-    let destination_root =
-        std::fs::canonicalize(app_data_dir.join(ManagedRoot::Servers.directory_name()))
-            .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
+    let destination_root = std::fs::canonicalize(app_data_dir.join("servers"))
+        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
     if destination.parent() != Some(destination_root.as_path()) {
         return Err("Migrated server destination is outside the managed root".to_string());
     }
@@ -921,7 +961,7 @@ pub async fn migrate_managed_server_directory(
     }
 
     if let Err(rename_error) = std::fs::rename(&source, &destination) {
-        if let Err(copy_error) = copy_managed_tree(&source, &destination) {
+        if let Err(copy_error) = copy_managed_tree(&source, &destination, &destination_root) {
             let _ = std::fs::remove_dir_all(&destination);
             return Err(format!(
                 "Failed to migrate legacy server directory: {copy_error}; rename error: {rename_error}"
@@ -1000,17 +1040,18 @@ mod tests {
         validated_relative_path, ManagedPathRequest, ManagedRoot,
     };
     use std::path::{Path, PathBuf};
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TEST_DIRECTORY: AtomicU64 = AtomicU64::new(0);
 
     struct TestDirectory(PathBuf);
 
     impl TestDirectory {
         fn new() -> Self {
-            let nonce = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("system clock should be after the Unix epoch")
-                .as_nanos();
-            let path = std::env::temp_dir().join(format!("mc-vector-file-utils-{nonce}"));
+            let sequence = NEXT_TEST_DIRECTORY.fetch_add(1, Ordering::Relaxed);
+            let path = PathBuf::from("target")
+                .join("mc-vector-file-utils")
+                .join(format!("{}-{sequence}", std::process::id()));
             std::fs::create_dir_all(&path).expect("test directory should be created");
             Self(path)
         }

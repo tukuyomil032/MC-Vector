@@ -82,10 +82,10 @@ fn java_client() -> Result<Client, String> {
 
 fn validate_managed_java_install_dir(
     app_data_dir: &Path,
-    install_dir: &str,
+    install_dir: &Path,
 ) -> Result<PathBuf, String> {
     let root = app_data_dir.join("java");
-    let candidate = PathBuf::from(install_dir);
+    let candidate = install_dir;
     if !candidate.is_absolute()
         || !candidate.starts_with(&root)
         || candidate == root
@@ -109,7 +109,7 @@ fn validate_managed_java_install_dir(
             );
         }
     }
-    Ok(candidate)
+    Ok(candidate.to_path_buf())
 }
 
 /// Validates paths that the server launcher can adopt once its command boundary
@@ -241,8 +241,7 @@ pub async fn download_java(app: AppHandle, major_version: u16) -> Result<String,
     let install_dir = app_data_dir
         .join("java")
         .join(format!("jdk-{major_version}"));
-    let install_path =
-        validate_managed_java_install_dir(&app_data_dir, &install_dir.to_string_lossy())?;
+    let install_path = validate_managed_java_install_dir(&app_data_dir, &install_dir)?;
     let download_url = validate_java_download_url(&download_url)?;
     let client = java_client()?;
     let response = client
@@ -343,28 +342,22 @@ mod tests {
     }
     #[test]
     fn install_dir_and_jvm_args_are_scoped() {
-        let root = std::env::temp_dir().join(format!("mc-vector-java-root-{}", std::process::id()));
+        let test_root = std::fs::canonicalize("target").expect("cargo should provide target");
+        let root = test_root
+            .join("mc-vector-java-root")
+            .join(std::process::id().to_string());
         let managed_install_dir = root.join("java").join("jdk-21");
-        let outside_install_dir = root
-            .parent()
-            .expect("temporary directory must have a parent")
-            .join(format!("mc-vector-java-outside-{}", std::process::id()));
+        let outside_install_dir = std::fs::canonicalize("target")
+            .expect("cargo should provide target")
+            .join("mc-vector-java-outside")
+            .join(std::process::id().to_string());
 
-        assert!(
-            validate_managed_java_install_dir(&root, &managed_install_dir.to_string_lossy())
-                .is_ok()
-        );
-        assert!(
-            validate_managed_java_install_dir(&root, &outside_install_dir.to_string_lossy())
-                .is_err()
-        );
+        assert!(validate_managed_java_install_dir(&root, &managed_install_dir).is_ok());
+        assert!(validate_managed_java_install_dir(&root, &outside_install_dir).is_err());
         assert!(validate_jvm_extra_args("-Dfile.encoding=UTF-8 -XX:+UseG1GC").is_ok());
         for arg in ["-javaagent:evil.jar", "-cp evil.jar", "-XX:OnError=cmd"] {
             assert!(validate_jvm_extra_args(arg).is_err(), "{arg}");
         }
-
-        let _ = std::fs::remove_dir_all(&root);
-        let _ = std::fs::remove_dir_all(&outside_install_dir);
     }
 }
 
