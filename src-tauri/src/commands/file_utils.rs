@@ -554,6 +554,16 @@ fn copy_external_entry(
     destination: &Path,
     managed_root: &Path,
 ) -> Result<(bool, u64), String> {
+    if !source.is_absolute()
+        || source.components().any(|component| {
+            matches!(
+                component,
+                std::path::Component::CurDir | std::path::Component::ParentDir
+            )
+        })
+    {
+        return Err("Selected source must be an absolute, normalized path".to_string());
+    }
     if !destination.is_absolute() || !destination.starts_with(managed_root) {
         return Err("Import destination is outside the managed root".to_string());
     }
@@ -572,7 +582,19 @@ fn copy_external_entry(
     if !metadata.is_file() && !metadata.is_dir() {
         return Err("Selected source must be a file or directory".to_string());
     }
-    if destination.exists() {
+    let canonical_source = std::fs::canonicalize(source)
+        .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
+    if !canonical_source.is_absolute()
+        || canonical_source.components().any(|component| {
+            matches!(
+                component,
+                std::path::Component::CurDir | std::path::Component::ParentDir
+            )
+        })
+    {
+        return Err("Selected source resolved to an unsafe path".to_string());
+    }
+    if std::fs::symlink_metadata(destination).is_ok() {
         return Err(format!(
             "An item with the same name already exists: {}",
             destination.display()
@@ -582,17 +604,18 @@ fn copy_external_entry(
     if metadata.is_dir() {
         std::fs::create_dir(destination)
             .map_err(|error| format!("Failed to create imported directory: {error}"))?;
-        for entry in std::fs::read_dir(source)
+        for entry in std::fs::read_dir(&canonical_source)
             .map_err(|error| format!("Failed to read selected directory: {error}"))?
         {
             let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
             let name = entry.file_name();
             let child_destination = destination.join(&name);
-            copy_external_entry(&entry.path(), &child_destination, managed_root)?;
+            let child_source = canonical_source.join(&name);
+            copy_external_entry(&child_source, &child_destination, managed_root)?;
         }
         Ok((true, 0))
     } else {
-        std::fs::copy(source, destination)
+        std::fs::copy(&canonical_source, destination)
             .map_err(|error| format!("Failed to copy selected file: {error}"))?;
         let destination_metadata = std::fs::symlink_metadata(destination)
             .map_err(|error| format!("Failed to verify imported file: {error}"))?;
@@ -834,6 +857,19 @@ fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> 
     {
         return Err("Managed copy path is outside the managed root".to_string());
     }
+    if source.components().any(|component| {
+        matches!(
+            component,
+            std::path::Component::CurDir | std::path::Component::ParentDir
+        )
+    }) || destination.components().any(|component| {
+        matches!(
+            component,
+            std::path::Component::CurDir | std::path::Component::ParentDir
+        )
+    }) {
+        return Err("Managed copy path is not normalized".to_string());
+    }
     let metadata = std::fs::symlink_metadata(source)
         .map_err(|error| format!("Failed to inspect source entry: {error}"))?;
     if is_link_or_reparse_point(&metadata) {
@@ -847,10 +883,19 @@ fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> 
         {
             let entry = entry.map_err(|error| format!("Failed to read source entry: {error}"))?;
             let child_destination = destination.join(entry.file_name());
-            if !child_destination.starts_with(managed_root) {
+            if !child_destination.is_absolute()
+                || child_destination.components().any(|component| {
+                    matches!(
+                        component,
+                        std::path::Component::CurDir | std::path::Component::ParentDir
+                    )
+                })
+                || !child_destination.starts_with(managed_root)
+            {
                 return Err("Managed copy destination is outside the managed root".to_string());
             }
-            copy_managed_tree(&entry.path(), &child_destination, managed_root)?;
+            let child_source = source.join(entry.file_name());
+            copy_managed_tree(&child_source, &child_destination, managed_root)?;
         }
     } else if metadata.is_file() {
         std::fs::copy(source, destination)
