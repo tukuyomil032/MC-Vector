@@ -307,8 +307,34 @@ async fn replace_destination(
     destination: &Path,
     managed_root: &Path,
 ) -> Result<(), String> {
-    if !temp.starts_with(managed_root) || !destination.starts_with(managed_root) {
+    if !temp.is_absolute()
+        || !destination.is_absolute()
+        || !temp.starts_with(managed_root)
+        || !destination.starts_with(managed_root)
+        || temp
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
         return Err("Download paths must remain inside managed storage".to_string());
+    }
+    let temp_parent = temp
+        .parent()
+        .ok_or_else(|| "Temporary download path has no parent".to_string())?;
+    let destination_parent = destination
+        .parent()
+        .ok_or_else(|| "Download destination has no parent".to_string())?;
+    let canonical_temp_parent = std::fs::canonicalize(temp_parent)
+        .map_err(|error| format!("Failed to resolve temporary download directory: {error}"))?;
+    let canonical_destination_parent = std::fs::canonicalize(destination_parent)
+        .map_err(|error| format!("Failed to resolve download directory: {error}"))?;
+    if !canonical_temp_parent.starts_with(managed_root)
+        || !canonical_destination_parent.starts_with(managed_root)
+        || canonical_temp_parent != canonical_destination_parent
+    {
+        return Err("Download directories must remain inside managed storage".to_string());
     }
     if let Ok(metadata) = tokio::fs::symlink_metadata(destination).await {
         if is_link_or_reparse_point(&metadata) {
@@ -319,19 +345,25 @@ async fn replace_destination(
     }
     match tokio::fs::rename(temp, destination).await {
         Ok(()) => Ok(()),
-        Err(initial) if destination.exists() => {
-            tokio::fs::remove_file(destination)
-                .await
-                .map_err(|error| format!("Failed to replace existing destination: {error}"))?;
-            tokio::fs::rename(temp, destination).await.map_err(|error| {
-                format!(
-                    "Failed to atomically move downloaded file: {error}; initial error: {initial}"
-                )
-            })
-        }
-        Err(error) => Err(format!(
-            "Failed to atomically move downloaded file: {error}"
-        )),
+        Err(initial) => match tokio::fs::symlink_metadata(destination).await {
+            Ok(metadata) if !is_link_or_reparse_point(&metadata) && metadata.is_file() => {
+                tokio::fs::remove_file(destination)
+                    .await
+                    .map_err(|error| format!("Failed to replace existing destination: {error}"))?;
+                tokio::fs::rename(temp, destination).await.map_err(|error| {
+                    format!(
+                        "Failed to atomically move downloaded file: {error}; initial error: {initial}"
+                    )
+                })
+            }
+            Ok(_) => Err("Download destination is not a regular file".to_string()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Err(format!(
+                "Failed to atomically move downloaded file: {initial}"
+            )),
+            Err(error) => Err(format!(
+                "Failed to inspect existing download destination: {error}"
+            )),
+        },
     }
 }
 
@@ -347,8 +379,21 @@ async fn download_once<F>(
 where
     F: FnMut(u64, u64) -> Result<(), String>,
 {
-    if !destination.starts_with(managed_root) {
+    if !destination.is_absolute()
+        || !destination.starts_with(managed_root)
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
         return Err("Temporary download path must remain inside managed storage".to_string());
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "Temporary download path has no parent".to_string())?;
+    let canonical_parent = std::fs::canonicalize(parent)
+        .map_err(|error| format!("Failed to resolve temporary download directory: {error}"))?;
+    if !canonical_parent.starts_with(managed_root) {
+        return Err("Temporary download directory must remain inside managed storage".to_string());
     }
     let response = client
         .get(url.clone())
@@ -428,8 +473,21 @@ async fn download_with_retry<F>(
 where
     F: FnMut(u64, u64) -> Result<(), String>,
 {
-    if !destination.starts_with(managed_root) {
+    if !destination.is_absolute()
+        || !destination.starts_with(managed_root)
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
         return Err("Download destination must remain inside managed storage".to_string());
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "Download destination has no parent".to_string())?;
+    let canonical_parent = std::fs::canonicalize(parent)
+        .map_err(|error| format!("Failed to resolve download directory: {error}"))?;
+    if !canonical_parent.starts_with(managed_root) {
+        return Err("Download directory must remain inside managed storage".to_string());
     }
     let client = http_client(allowed_hosts)?;
     let mut last_error = "download failed".to_string();
@@ -452,7 +510,12 @@ where
             },
             Err(error) => last_error = error,
         };
-        if temp.starts_with(managed_root) {
+        if temp.is_absolute()
+            && temp.starts_with(managed_root)
+            && !temp
+                .components()
+                .any(|component| matches!(component, Component::ParentDir))
+        {
             let _ = tokio::fs::remove_file(&temp).await;
         }
         if attempt < MAX_ATTEMPTS {
@@ -533,11 +596,6 @@ async fn managed_plugin_destination(
         relative_path: relative_path.trim().to_string(),
     };
     let destination = resolve_managed_request(&app_data, &request, true)?;
-    if let Some(parent) = destination.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|error| format!("Failed to create managed plugin directory: {error}"))?;
-    }
     if tokio::fs::symlink_metadata(&destination)
         .await
         .ok()
@@ -648,6 +706,26 @@ pub async fn download_plugin_artifact(
     })?;
     let managed_root = managed_servers_root(&app_data)
         .map_err(|error| plugin_download_error("destination-rejected", error))?;
+    if !destination.is_absolute()
+        || !destination.starts_with(&managed_root)
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err("Plugin destination must remain inside managed storage".to_string());
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "Plugin destination has no parent".to_string())?;
+    let canonical_parent = std::fs::canonicalize(parent)
+        .map_err(|error| format!("Failed to resolve plugin directory: {error}"))?;
+    if !canonical_parent.starts_with(&managed_root) {
+        return Err("Plugin directory must remain inside managed storage".to_string());
+    }
+    tokio::fs::create_dir_all(parent)
+        .await
+        .map_err(|error| format!("Failed to create managed plugin directory: {error}"))?;
+
     if request.checksum.is_none() && !allows_unverified_plugin_downloads(&app) {
         return Err(plugin_download_error(
             "unverified-artifact-blocked",
@@ -711,11 +789,25 @@ pub async fn download_server_jar(
     };
     let destination = resolve_managed_request(&app_data, &managed_request, true)?;
     let managed_root = managed_servers_root(&app_data)?;
-    if let Some(parent) = destination.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|error| format!("Failed to create directory: {error}"))?;
+    if !destination.is_absolute()
+        || !destination.starts_with(&managed_root)
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err("Server JAR destination must remain inside managed storage".to_string());
     }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "Server JAR destination has no parent".to_string())?;
+    let canonical_parent = std::fs::canonicalize(parent)
+        .map_err(|error| format!("Failed to resolve server JAR directory: {error}"))?;
+    if !canonical_parent.starts_with(&managed_root) {
+        return Err("Server JAR directory must remain inside managed storage".to_string());
+    }
+    tokio::fs::create_dir_all(parent)
+        .await
+        .map_err(|error| format!("Failed to create directory: {error}"))?;
     let progress_app = app.clone();
     let progress_server_id = server_id.clone();
     download_with_retry(
@@ -772,15 +864,11 @@ mod tests {
 
     impl TestDirectory {
         fn new() -> Self {
-            let nonce = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("system clock should be after the Unix epoch")
-                .as_nanos();
+            let root = std::fs::canonicalize("target").expect("cargo should provide target");
             let sequence = TEST_DIRECTORY_COUNTER.fetch_add(1, Ordering::Relaxed);
-            let path = std::env::temp_dir().join(format!(
-                "mc-vector-download-{}-{nonce}-{sequence}",
-                std::process::id()
-            ));
+            let path = root
+                .join("mc-vector-download")
+                .join(format!("{}-{sequence}", std::process::id()));
             std::fs::create_dir_all(&path).expect("test directory should be created");
             Self(path)
         }
@@ -789,30 +877,28 @@ mod tests {
             &self.0
         }
 
-        fn prepare_destination(&self, destination: PathBuf) -> PathBuf {
-            std::fs::create_dir_all(
-                destination
-                    .parent()
-                    .expect("destination should have parent"),
-            )
-            .expect("destination parent should be created");
-            destination
-        }
-
         fn plugins_example(&self) -> PathBuf {
-            self.prepare_destination(self.path().join("plugins").join("example.jar"))
+            let directory = self.path().join("plugins");
+            std::fs::create_dir_all(&directory).expect("plugin directory should be created");
+            directory.join("example.jar")
         }
 
         fn mods_example(&self) -> PathBuf {
-            self.prepare_destination(self.path().join("mods").join("example.jar"))
+            let directory = self.path().join("mods");
+            std::fs::create_dir_all(&directory).expect("mod directory should be created");
+            directory.join("example.jar")
         }
 
         fn plugins_content_length(&self) -> PathBuf {
-            self.prepare_destination(self.path().join("plugins").join("content-length.jar"))
+            let directory = self.path().join("plugins");
+            std::fs::create_dir_all(&directory).expect("plugin directory should be created");
+            directory.join("content-length.jar")
         }
 
         fn plugins_stream_limit(&self) -> PathBuf {
-            self.prepare_destination(self.path().join("plugins").join("stream-limit.jar"))
+            let directory = self.path().join("plugins");
+            std::fs::create_dir_all(&directory).expect("plugin directory should be created");
+            directory.join("stream-limit.jar")
         }
     }
 
