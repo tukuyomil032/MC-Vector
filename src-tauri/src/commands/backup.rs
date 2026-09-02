@@ -1034,21 +1034,24 @@ pub async fn extract_managed_item(
 fn collect_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     let root_canonical = fs::canonicalize(dir)?;
     let mut files = Vec::new();
-    collect_files_internal(dir, &root_canonical, &mut files)?;
+    collect_files_internal(&root_canonical, &root_canonical, &mut files)?;
     Ok(files)
 }
 
-fn collect_files_internal(dir: &Path, root: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
-    let canonical = fs::canonicalize(dir)?;
-    if !canonical.starts_with(root) {
+fn collect_files_internal(
+    canonical_dir: &Path,
+    root: &Path,
+    files: &mut Vec<PathBuf>,
+) -> io::Result<()> {
+    if !canonical_dir.is_absolute() || !canonical_dir.starts_with(root) {
         return Err(limit_error("source entry escapes source directory"));
     }
-    let directory_metadata = fs::symlink_metadata(dir)?;
+    let directory_metadata = fs::symlink_metadata(canonical_dir)?;
     if is_link_or_reparse_point(&directory_metadata) || !directory_metadata.is_dir() {
         return Err(limit_error("source directory is not a real directory"));
     }
 
-    for entry in fs::read_dir(dir)? {
+    for entry in fs::read_dir(canonical_dir)? {
         let entry = entry?;
         let file_type = entry.file_type()?;
         if file_type.is_symlink() {
@@ -1070,7 +1073,7 @@ fn collect_files_internal(dir: &Path, root: &Path, files: &mut Vec<PathBuf>) -> 
             ));
         }
         if metadata.is_dir() {
-            collect_files_internal(&path, root, files)?;
+            collect_files_internal(&entry_canonical, root, files)?;
         } else if !metadata.is_file() {
             return Err(limit_error("unsupported source entry type"));
         }
