@@ -86,9 +86,17 @@ function decodeErrorText(value: unknown, depth = 0): string | undefined {
       return undefined;
     }
 
+    if (Object.prototype.hasOwnProperty.call(FAILURE_DETAILS, text)) {
+      return text as PluginInstallFailureCode;
+    }
+
     try {
       const decoded = JSON.parse(text) as unknown;
       if (!(typeof decoded === 'string' && decoded === text)) {
+        const decodedCode = readKnownCode(decoded, depth + 1);
+        if (decodedCode) {
+          return decodedCode;
+        }
         const decodedText = decodeErrorText(decoded, depth + 1);
         if (decodedText) {
           return decodedText;
@@ -126,6 +134,19 @@ function readKnownCode(value: unknown, depth = 0): PluginInstallFailureCode | un
 
   if (typeof value === 'string' && Object.prototype.hasOwnProperty.call(FAILURE_DETAILS, value)) {
     return value as PluginInstallFailureCode;
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      const parsedCode = readKnownCode(parsed, depth + 1);
+      if (parsedCode) return parsedCode;
+    } catch {
+      const embeddedCode = value.match(/"code"\s*:\s*"([^"]+)"/i)?.[1];
+      if (embeddedCode && Object.prototype.hasOwnProperty.call(FAILURE_DETAILS, embeddedCode)) {
+        return embeddedCode as PluginInstallFailureCode;
+      }
+    }
   }
 
   if (value !== null && typeof value === 'object') {
