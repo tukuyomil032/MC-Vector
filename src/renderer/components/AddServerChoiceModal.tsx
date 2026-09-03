@@ -1,6 +1,7 @@
 import { cn } from '@/lib/ui';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useTranslation } from '../../i18n';
+import { Button } from './ui/Button';
 
 interface AddServerChoiceModalProps {
   open: boolean;
@@ -34,7 +35,9 @@ export default function AddServerChoiceModal({
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
           )}
         >
-          <Dialog.Title className="mc-modal-title">{t('addServer.choice.title')}</Dialog.Title>
+          <Dialog.Title className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+            {t('addServer.choice.title')}
+          </Dialog.Title>
           <div className="flex flex-col gap-3">
             <button
               type="button"
@@ -63,11 +66,11 @@ export default function AddServerChoiceModal({
               </span>
             </button>
           </div>
-          <div className="mc-modal-footer">
+          <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
             <Dialog.Close asChild>
-              <button type="button" className="mc-modal-btn-secondary">
+              <Button type="button" variant="modalSecondary">
                 {t('common.cancel')}
-              </button>
+              </Button>
             </Dialog.Close>
           </div>
         </Dialog.Content>

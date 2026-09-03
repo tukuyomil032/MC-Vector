@@ -38,7 +38,7 @@ export default function AppMainContent({
 
   return (
     <div
-      className="app-main__content app-shell__surface app-shell__surface--content surface-card"
+      className="relative m-3 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden p-0 app-shell__surface app-shell__surface--content surface-card rounded-2xl"
       data-testid="app-main-content"
     >
       <AnimatePresence mode="wait" initial={false}>

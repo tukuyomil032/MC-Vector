@@ -25,7 +25,7 @@ export default function AppNavItem({
   return (
     <Tooltip content={tooltip} disabled={isOpen} side="right">
       <div
-        className={`app-nav-item ${isOpen ? 'app-nav-item--open' : 'app-nav-item--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
+        className={`app-nav-item mx-1 my-0.5 flex w-full items-center box-border rounded-md text-sm transition-all focus:outline-none ${isOpen ? 'justify-start px-4 py-2.5' : 'justify-center px-0 py-2.5'} ${isActive ? 'is-active' : 'is-idle hover:translate-x-1 hover:bg-white/5 hover:text-text-primary'}`}
         data-testid={`nav-item-${view}`}
         onClick={() => set(view)}
         onKeyDown={(event) => {
@@ -41,9 +41,9 @@ export default function AppNavItem({
       >
         <SvgMaskIcon
           src={iconSrc}
-          className={`app-nav-item__icon ${isOpen ? 'app-nav-item__icon--open' : 'app-nav-item__icon--collapsed'} ${isActive ? 'is-active' : 'is-idle'}`}
+          className={`app-nav-item__icon block h-5 w-5 shrink-0 ${isOpen ? 'mr-3' : 'mr-0'} ${isActive ? 'is-active opacity-100' : 'is-idle opacity-80'}`}
         />
-        {isOpen && <span className="app-nav-item__label">{label}</span>}
+        {isOpen && <span className="app-nav-item__label truncate">{label}</span>}
       </div>
     </Tooltip>
   );

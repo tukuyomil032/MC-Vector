@@ -1,6 +1,7 @@
 import type { Translate } from '../../i18n';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import { getViewLabel } from '../shared/view-labels';
+import { Button } from './ui/Button';
 
 interface AppMainHeaderProps {
   currentView: AppView;
@@ -26,43 +27,46 @@ export default function AppMainHeader({
 
   return (
     <header
-      className="app-main__header app-shell__surface app-shell__surface--header"
+      className="z-10 flex h-[60px] shrink-0 items-center justify-between border-b px-5 backdrop-blur-xl app-shell__surface app-shell__surface--header"
       data-testid="app-main-header"
     >
       <div className="flex items-center gap-2.5">
-        <h2 className="app-main__title">{headerTitle}</h2>
-        <span className="app-main__subtitle"> / {getViewLabel(currentView, t)}</span>
+        <h2 className="app-main__title text-xl font-bold">{headerTitle}</h2>
+        <span className="app-main__subtitle text-sm opacity-70">
+          {' / '}
+          {getViewLabel(currentView, t)}
+        </span>
       </div>
       <div className="flex items-center gap-2.5 ml-auto">
         {currentView !== 'proxy' && (
           <>
-            <button
-              className="btn-start"
+            <Button
+              variant="start"
               data-testid="server-start-button"
               onClick={onStart}
               title={t('server.actions.start')}
               disabled={!canStart}
             >
               ▶ {t('server.actions.start')}
-            </button>
-            <button
-              className="btn-restart btn-secondary"
+            </Button>
+            <Button
+              variant="restart"
               data-testid="server-restart-button"
               onClick={onRestart}
               title={t('server.actions.restart')}
               disabled={!isOnline}
             >
               ↻ {t('server.actions.restart')}
-            </button>
-            <button
-              className="btn-stop"
+            </Button>
+            <Button
+              variant="stop"
               data-testid="server-stop-button"
               onClick={onStop}
               title={t('server.actions.stop')}
               disabled={!isOnline}
             >
               ■ {t('server.actions.stop')}
-            </button>
+            </Button>
           </>
         )}
       </div>

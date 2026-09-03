@@ -291,13 +291,13 @@ function App() {
 
   return (
     <div
-      className={`app-shell theme-${resolvedTheme}`}
+      className={`app-shell flex h-screen w-screen theme-${resolvedTheme}`}
       data-theme={resolvedTheme}
       data-testid="app-root"
       style={appShellStyle}
     >
       <aside
-        className={`app-sidebar app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'app-sidebar--open' : 'app-sidebar--collapsed'}`}
+        className={`z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}
         data-testid="app-sidebar"
       >
         <AppSidebarHeader
@@ -340,7 +340,10 @@ function App() {
         />
       </aside>
 
-      <main className="app-main app-shell__surface app-shell__surface--main" data-testid="app-main">
+      <main
+        className="relative flex min-w-0 flex-1 flex-col overflow-hidden app-shell__surface app-shell__surface--main"
+        data-testid="app-main"
+      >
         <AppMainHeader
           currentView={currentView}
           headerTitle={headerTitle}

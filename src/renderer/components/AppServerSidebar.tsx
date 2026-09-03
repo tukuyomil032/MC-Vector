@@ -42,6 +42,15 @@ const contextMenuItemClass =
 const contextMenuDangerItemClass =
   'relative flex cursor-default select-none items-center gap-2 rounded px-3 py-1.5 text-sm text-red-400 outline-none transition-colors data-[highlighted]:bg-red-500/20';
 
+const statusIndicatorClasses: Record<MinecraftServer['status'], string> = {
+  online: 'bg-success shadow-lg shadow-success',
+  offline: 'bg-bg-tertiary',
+  starting: 'bg-warning animate-pulse',
+  stopping: 'bg-danger',
+  restarting: 'bg-info animate-spin',
+  crashed: 'bg-rose-500 animate-pulse',
+};
+
 export default function AppServerSidebar({
   isSidebarOpen,
   groupedServers,
@@ -106,10 +115,10 @@ export default function AppServerSidebar({
 
   return (
     <div
-      className="app-sidebar__servers app-shell__surface app-shell__surface--sidebar-panel surface-card"
+      className="app-sidebar__servers mt-2.5 flex max-h-[40%] flex-col rounded-xl border p-2.5 app-shell__surface app-shell__surface--sidebar-panel surface-card rounded-2xl"
       data-testid="server-list"
     >
-      <div className="app-sidebar__servers-title flex items-center justify-between">
+      <div className="app-sidebar__servers-title flex items-center justify-between px-2.5 py-1 text-xs font-bold tracking-wider text-text-secondary">
         <span>{serversLabel}</span>
         <button
           type="button"
@@ -120,10 +129,12 @@ export default function AppServerSidebar({
           {bulkSelectLabel}
         </button>
       </div>
-      <div className="app-sidebar__server-list">
+      <div className="app-sidebar__server-list flex-1 shrink-0 overflow-y-auto p-2.5">
         {groupedServers.map((group) => (
           <div key={group.groupName} className="mb-2.5">
-            <div className="app-sidebar__group-title">{group.groupName}</div>
+            <div className="app-sidebar__group-title px-2 py-1 text-[0.68rem] uppercase tracking-[0.12em] text-text-muted">
+              {group.groupName}
+            </div>
 
             {group.servers.map((server) => (
               <div key={server.id} className="flex items-center gap-1">
@@ -140,7 +151,7 @@ export default function AppServerSidebar({
                   <ContextMenu.Trigger asChild>
                     <button
                       type="button"
-                      className={`app-sidebar__server-item flex-1 ${server.id === selectedServerId ? 'is-active' : ''}`}
+                      className={`app-sidebar__server-item mb-1.5 flex flex-1 items-center gap-3 rounded-md border border-transparent px-3 py-2.5 transition-all hover:translate-x-0.5 hover:bg-white/5 ${server.id === selectedServerId ? 'is-active' : ''}`}
                       data-testid={`server-card-${server.id}`}
                       title={server.unavailableReason}
                       onClick={() => {
@@ -151,7 +162,12 @@ export default function AppServerSidebar({
                         }
                       }}
                     >
-                      <span className={`status-indicator ${server.status}`} />
+                      <span
+                        className={cn(
+                          'h-2 w-2 shrink-0 rounded-full bg-bg-tertiary',
+                          statusIndicatorClasses[server.status],
+                        )}
+                      />
                       <span className="flex flex-col">
                         <span className="font-semibold text-sm text-text-primary">
                           {server.name}
@@ -206,7 +222,7 @@ export default function AppServerSidebar({
           <div className="flex gap-1 flex-wrap">
             <button
               type="button"
-              className="app-sidebar__add-server-btn flex-1 text-xs"
+              className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
               disabled={isBulkRunning}
               onClick={() => runBulk(() => onBulkStart(selectedServers))}
             >
@@ -214,7 +230,7 @@ export default function AppServerSidebar({
             </button>
             <button
               type="button"
-              className="app-sidebar__add-server-btn flex-1 text-xs"
+              className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
               disabled={isBulkRunning}
               onClick={() => runBulk(() => onBulkStop(selectedServers.map((s) => s.id)))}
             >
@@ -222,7 +238,7 @@ export default function AppServerSidebar({
             </button>
             <button
               type="button"
-              className="app-sidebar__add-server-btn flex-1 text-xs"
+              className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
               disabled={isBulkRunning}
               onClick={() => runBulk(() => onBulkBackup(selectedServers))}
             >
@@ -230,7 +246,7 @@ export default function AppServerSidebar({
             </button>
             <button
               type="button"
-              className="app-sidebar__add-server-btn text-xs"
+              className="app-sidebar__add-server-btn mt-1.5 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
               onClick={() => setSelectedIds(new Set())}
             >
               {bulkClearLabel}
@@ -240,7 +256,7 @@ export default function AppServerSidebar({
       )}
 
       <button
-        className="app-sidebar__add-server-btn w-full"
+        className="app-sidebar__add-server-btn mt-1.5 w-full rounded-md border border-dashed border-border-color py-2.5 text-sm text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
         data-testid="create-server-button"
         onClick={onAddServer}
       >

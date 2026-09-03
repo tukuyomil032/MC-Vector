@@ -14,6 +14,7 @@ import {
   onJavaDownloadProgress,
   selectJavaBinary,
 } from '../../lib/java-commands';
+import { Button } from './ui/Button';
 
 interface Props {
   open: boolean;
@@ -146,8 +147,9 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                     {isInstalled ? (
                       <div className="text-success font-bold">{t('javaManager.installed')}</div>
                     ) : (
-                      <button
-                        className="btn-primary java-manager-modal__download-btn disabled:opacity-50"
+                      <Button
+                        variant="primary"
+                        className="java-manager-modal__download-btn"
                         data-testid={`java-download-${v}`}
                         onClick={() => handleDownload(v)}
                         disabled={isDownloading}
@@ -155,7 +157,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                         {downloading === v
                           ? t('javaManager.downloading', { progress: downloadProgress ?? '' })
                           : t('javaManager.download')}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 );
@@ -177,8 +179,8 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                 {t('javaManager.manualSelect.description')}
               </p>
             </div>
-            <button
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={async () => {
                 const picked = await selectJavaBinary();
                 if (picked) {
@@ -194,7 +196,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
               }}
             >
               {t('javaManager.manualSelect.button')}
-            </button>
+            </Button>
           </div>
 
           <div className="java-manager-modal__installed-section">
@@ -211,12 +213,13 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                       <div className="java-manager-modal__runtime-name">{java.name}</div>
                       <div className="java-manager-modal__runtime-path">{java.path}</div>
                     </div>
-                    <button
-                      className="btn-stop java-manager-modal__delete-btn"
+                    <Button
+                      variant="stop"
+                      className="java-manager-modal__delete-btn"
                       onClick={() => handleDelete(java.version)}
                     >
                       {t('common.delete')}
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>

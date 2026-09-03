@@ -1,6 +1,7 @@
 import { cn } from '@/lib/ui';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { Translate } from '../../i18n';
+import { Button } from './ui/Button';
 import { Progress } from './ui/Progress';
 
 interface UpdatePromptState {
@@ -83,7 +84,7 @@ export default function AppUpdateModal({
           onEscapeKeyDown={isDownloading ? (e) => e.preventDefault() : undefined}
           onPointerDownOutside={(e) => e.preventDefault()}
         >
-          <Dialog.Title className="app-update-modal__title">
+          <Dialog.Title className="app-update-modal__title mt-0 mb-2 text-xl font-semibold">
             {updatePrompt
               ? t('settings.update.available', { version: updatePrompt.version || '?' })
               : t('settings.update.title')}
@@ -91,10 +92,12 @@ export default function AppUpdateModal({
 
           {releaseNotesText && updatePrompt && (
             <div className="mb-4">
-              <div className="app-update-modal__notes-label">
+              <div className="app-update-modal__notes-label mb-1 text-xs text-text-secondary">
                 {t('settings.update.releaseNotes')}
               </div>
-              <pre className="app-update-modal__notes">{releaseNotesText}</pre>
+              <pre className="app-update-modal__notes max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-border-color bg-bg-primary p-3 text-xs">
+                {releaseNotesText}
+              </pre>
             </div>
           )}
 
@@ -106,7 +109,7 @@ export default function AppUpdateModal({
 
           {updatePrompt && updateProgress !== null && !updateReady && (
             <div className="mb-4">
-              <div className="app-update-modal__progress-label">
+              <div className="app-update-modal__progress-label mb-1 text-sm text-zinc-300">
                 {t('settings.update.downloading', { progress: Math.round(updateProgress) })}
               </div>
               <Progress value={Math.min(100, Math.round(updateProgress))} className="mt-2" />
@@ -118,18 +121,18 @@ export default function AppUpdateModal({
           )}
 
           <div className="flex justify-end gap-2">
-            <button className="btn-secondary" onClick={onDismiss}>
+            <Button variant="secondary" onClick={onDismiss}>
               {t('common.cancel')}
-            </button>
+            </Button>
             {updatePrompt && !updateReady && (
-              <button className="btn-primary" onClick={onUpdateNow} disabled={isDownloading}>
+              <Button variant="primary" onClick={onUpdateNow} disabled={isDownloading}>
                 {t('settings.update.download')}
-              </button>
+              </Button>
             )}
             {updatePrompt && updateReady && (
-              <button className="btn-primary" onClick={onInstall}>
+              <Button variant="primary" onClick={onInstall}>
                 {t('settings.update.restart')}
-              </button>
+              </Button>
             )}
           </div>
         </Dialog.Content>

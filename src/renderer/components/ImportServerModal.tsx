@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { cancelServerImport, pickServerImport } from '../../lib/server-import-commands';
+import { Button } from './ui/Button';
+import { Input } from './ui/Field';
 
 interface ImportServerModalProps {
   open: boolean;
@@ -112,31 +114,33 @@ export default function ImportServerModal({
           data-testid="import-server-modal"
           aria-describedby={undefined}
           className={cn(
-            'mc-modal-panel',
+            'mc-modal-panel min-w-[420px]',
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
           )}
-          style={{ minWidth: 420 }}
         >
-          <Dialog.Title className="mc-modal-title">{t('importServer.title')}</Dialog.Title>
+          <Dialog.Title className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+            {t('importServer.title')}
+          </Dialog.Title>
 
           <label className="mc-modal-label">{t('importServer.folderLabel')}</label>
           <div className="flex gap-2 mb-3">
-            <input
+            <Input
               type="text"
               readOnly
               value={folderPath}
               placeholder={t('importServer.folderPlaceholder')}
-              className="mc-modal-input flex-1"
+              variant="modal"
+              className="flex-1"
             />
-            <button
+            <Button
               type="button"
-              className="btn-secondary"
+              variant="secondary"
               data-testid="import-select-folder-button"
               onClick={handleSelectFolder}
               disabled={isAnalyzing}
             >
               {isAnalyzing ? '...' : t('importServer.selectButton')}
-            </button>
+            </Button>
           </div>
 
           {analyzed && hasServerJar && (
@@ -146,46 +150,49 @@ export default function ImportServerModal({
               )}
 
               <label className="mc-modal-label">{t('importServer.nameLabel')}</label>
-              <input
+              <Input
                 type="text"
                 value={serverName}
                 onChange={(e) => setServerName(e.target.value)}
-                className="mc-modal-input mb-3"
+                variant="modal"
+                className="mb-3"
               />
 
               <label className="mc-modal-label">{t('importServer.versionLabel')}</label>
-              <input
+              <Input
                 type="text"
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
-                className="mc-modal-input mb-3"
+                variant="modal"
+                className="mb-3"
               />
 
               <label className="mc-modal-label">{t('importServer.softwareLabel')}</label>
-              <input
+              <Input
                 type="text"
                 value={software}
                 onChange={(e) => setSoftware(e.target.value)}
-                className="mc-modal-input mb-3"
+                variant="modal"
+                className="mb-3"
               />
             </>
           )}
 
-          <div className="mc-modal-footer">
+          <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
             <Dialog.Close asChild>
-              <button type="button" className="mc-modal-btn-secondary" onClick={handleCancel}>
+              <Button type="button" variant="modalSecondary" onClick={handleCancel}>
                 {t('common.cancel')}
-              </button>
+              </Button>
             </Dialog.Close>
-            <button
+            <Button
               type="button"
-              className="mc-modal-btn-primary"
+              variant="modalPrimary"
               data-testid="import-server-submit"
               onClick={handleImport}
               disabled={!analyzed || !hasServerJar || !serverName}
             >
               {t('importServer.importButton')}
-            </button>
+            </Button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

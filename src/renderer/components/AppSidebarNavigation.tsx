@@ -52,7 +52,7 @@ export default function AppSidebarNavigation({
 }: AppSidebarNavigationProps) {
   return (
     <div
-      className="app-sidebar__nav app-shell__surface app-shell__surface--sidebar-panel surface-card"
+      className="app-sidebar__nav mt-2.5 flex flex-1 flex-col overflow-y-auto rounded-xl border p-2.5 app-shell__surface app-shell__surface--sidebar-panel surface-card rounded-2xl"
       data-testid="app-sidebar-nav"
     >
       {NAV_ITEMS.map((item) => (

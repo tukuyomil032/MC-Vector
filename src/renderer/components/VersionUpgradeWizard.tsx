@@ -6,6 +6,7 @@ import { downloadServerJar, onDownloadProgress, updateServer } from '../../lib/s
 import type { UnlistenFn } from '../../lib/tauri-api';
 import { resolveLatestJarUrl } from '../../lib/version-commands';
 import type { MinecraftServer } from '../shared/server declaration';
+import { Button } from './ui/Button';
 
 type WizardStep = 'check' | 'backup' | 'download' | 'done';
 
@@ -114,13 +115,15 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
 
   return (
     <div className="mc-modal-overlay" onClick={onClose}>
-      <div className="mc-modal-panel" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
-        <h3 className="mc-modal-title">{t('serverSettings.versionUpgrade.title')}</h3>
+      <div className="mc-modal-panel w-[520px]" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+          {t('serverSettings.versionUpgrade.title')}
+        </h3>
 
         {/* Step: check */}
         {step === 'check' && (
           <div>
-            <div className="server-settings__row" style={{ marginBottom: 16 }}>
+            <div className="server-settings__row mb-4">
               <div className="server-settings__col">
                 <label className="server-settings__label">
                   {t('serverSettings.versionUpgrade.currentVersion')}
@@ -136,25 +139,25 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
             </div>
 
             {unsupported && (
-              <p style={{ color: '#f87171' }}>{t('serverSettings.versionUpgrade.unsupported')}</p>
+              <p className="text-red-400">{t('serverSettings.versionUpgrade.unsupported')}</p>
             )}
 
             {!unsupported && isLatest && <p>{t('serverSettings.versionUpgrade.alreadyLatest')}</p>}
 
             {!unsupported && !isOffline && (
-              <p style={{ color: '#f87171' }}>
+              <p className="text-red-400">
                 {t('serverSettings.versionUpgrade.serverMustBeOffline')}
               </p>
             )}
 
-            <div className="mc-modal-footer">
-              <button className="mc-modal-btn-secondary" onClick={onClose}>
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button variant="modalSecondary" onClick={onClose}>
                 {t('serverSettings.versionUpgrade.close')}
-              </button>
+              </Button>
               {!unsupported && !isLatest && isOffline && latestVersion !== null && (
-                <button className="mc-modal-btn-primary" onClick={() => setStep('backup')}>
+                <Button variant="modalPrimary" onClick={() => setStep('backup')}>
                   {t('serverSettings.versionUpgrade.startUpgrade')}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -165,33 +168,26 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
           <div>
             <p>{t('serverSettings.versionUpgrade.backupDescription')}</p>
             {backupProgress > 0 && (
-              <div style={{ margin: '12px 0' }}>
-                <div style={{ background: '#3e3e42', borderRadius: 4, height: 6 }}>
+              <div className="my-3">
+                <div className="h-1.5 rounded bg-[#3e3e42]">
                   <div
-                    style={{
-                      background: '#5865F2',
-                      width: `${backupProgress}%`,
-                      height: '100%',
-                      borderRadius: 4,
-                      transition: 'width 0.2s',
-                    }}
+                    style={{ width: `${backupProgress}%` }}
+                    className="h-full rounded bg-[#5865F2] transition-[width] duration-200"
                   />
                 </div>
-                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4, display: 'block' }}>
-                  {backupProgress}%
-                </span>
+                <span className="mt-1 block text-xs text-[#9ca3af]">{backupProgress}%</span>
               </div>
             )}
-            <div className="mc-modal-footer">
-              <button
-                className="mc-modal-btn-primary"
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button
+                variant="modalPrimary"
                 onClick={() => {
                   void handleBackup();
                 }}
                 disabled={processing}
               >
                 {t('serverSettings.versionUpgrade.runBackup')}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -201,36 +197,29 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
           <div>
             <p>{t('serverSettings.versionUpgrade.downloadDescription')}</p>
             {dlProgress > 0 && (
-              <div style={{ margin: '12px 0' }}>
-                <div style={{ background: '#3e3e42', borderRadius: 4, height: 6 }}>
+              <div className="my-3">
+                <div className="h-1.5 rounded bg-[#3e3e42]">
                   <div
-                    style={{
-                      background: '#5865F2',
-                      width: `${dlProgress}%`,
-                      height: '100%',
-                      borderRadius: 4,
-                      transition: 'width 0.2s',
-                    }}
+                    style={{ width: `${dlProgress}%` }}
+                    className="h-full rounded bg-[#5865F2] transition-[width] duration-200"
                   />
                 </div>
-                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4, display: 'block' }}>
-                  {dlProgress}%
-                </span>
+                <span className="mt-1 block text-xs text-[#9ca3af]">{dlProgress}%</span>
               </div>
             )}
-            <div className="mc-modal-footer">
-              <button className="mc-modal-btn-secondary" onClick={onClose} disabled={processing}>
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button variant="modalSecondary" onClick={onClose} disabled={processing}>
                 {t('serverSettings.versionUpgrade.close')}
-              </button>
-              <button
-                className="mc-modal-btn-primary"
+              </Button>
+              <Button
+                variant="modalPrimary"
                 onClick={() => {
                   void handleDownload();
                 }}
                 disabled={processing || !downloadUrl}
               >
                 {t('serverSettings.versionUpgrade.runDownload')}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -239,10 +228,10 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
         {step === 'done' && (
           <div>
             <p>{t('serverSettings.versionUpgrade.doneDescription')}</p>
-            <div className="mc-modal-footer">
-              <button className="mc-modal-btn-primary" onClick={onClose}>
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button variant="modalPrimary" onClick={onClose}>
                 {t('serverSettings.versionUpgrade.close')}
-              </button>
+              </Button>
             </div>
           </div>
         )}
