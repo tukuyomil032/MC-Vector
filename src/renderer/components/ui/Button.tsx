@@ -1,40 +1,43 @@
 import { type VariantProps, cn, cva } from '@/lib/ui';
 import React from 'react';
 
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'start'
+  | 'stop'
+  | 'restart'
+  | 'accent'
+  | 'ghost'
+  | 'danger'
+  | 'modalPrimary'
+  | 'modalSecondary';
+
 const buttonVariants = cva(
   'inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-all focus:outline-none disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         primary: [
-          'text-white',
-          'bg-gradient-to-r from-[#0ea5e9] to-[#06b6d4]',
-          'shadow-[0_8px_20px_rgba(14,165,233,0.22)]',
-          'hover:brightness-105 hover:-translate-y-px',
+          'px-4 py-2 rounded-md font-bold bg-white text-black hover:bg-zinc-200 hover:-translate-y-px',
         ],
         secondary: [
           'border text-text-secondary',
-          'bg-[rgba(39,39,42,0.45)]',
-          'border-[rgba(82,82,91,0.72)]',
+          'px-4 py-2 rounded-md text-sm transition-colors',
+          'border-[var(--mv-border-soft)] bg-[rgba(39,39,42,0.45)]',
           'hover:bg-[rgba(63,63,70,0.45)] hover:text-text-primary',
         ],
         start: [
-          'text-white font-semibold min-w-[100px]',
-          'bg-gradient-to-br from-green-500 to-green-600',
-          'shadow-lg shadow-green-500/25',
-          'hover:brightness-110 hover:-translate-y-0.5',
+          'flex items-center justify-center gap-1.5 min-w-[100px] px-5 py-2 rounded-md font-semibold text-white',
+          'bg-green-600 hover:bg-green-700 hover:-translate-y-0.5',
         ],
         stop: [
-          'text-white font-semibold min-w-[100px]',
-          'bg-gradient-to-br from-red-500 to-red-600',
-          'shadow-lg shadow-red-500/25',
-          'hover:brightness-110 hover:-translate-y-0.5',
+          'flex items-center justify-center gap-1.5 min-w-[100px] px-5 py-2 rounded-md font-semibold text-white',
+          'bg-red-600 hover:bg-red-700 hover:-translate-y-0.5',
         ],
         restart: [
-          'text-white font-semibold min-w-[100px]',
-          'bg-gradient-to-br from-blue-500 to-blue-600',
-          'shadow-lg shadow-blue-500/25',
-          'hover:brightness-110 hover:-translate-y-0.5',
+          'flex items-center justify-center gap-1.5 min-w-[100px] px-5 py-2 rounded-md font-semibold text-white',
+          'border border-zinc-700 bg-zinc-700 hover:bg-zinc-600 hover:-translate-y-0.5',
         ],
         // アクセントカラー (#5865F2) ベースの汎用ボタン（モーダル内主要アクション）
         accent: [
@@ -50,6 +53,14 @@ const buttonVariants = cva(
           'shadow-lg shadow-red-500/25',
           'hover:brightness-110 hover:-translate-y-0.5',
         ],
+        modalPrimary: [
+          'px-4 py-2 rounded-lg border-none bg-accent text-black text-sm font-bold',
+          'hover:bg-accent-hover disabled:opacity-50',
+        ],
+        modalSecondary: [
+          'px-4 py-2 rounded-lg border border-zinc-700 bg-transparent text-zinc-300 text-sm font-bold',
+          'hover:bg-zinc-800',
+        ],
       },
       size: {
         sm: 'h-7 px-3 text-xs',
@@ -63,7 +74,9 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  variant?: ButtonVariant;
+}
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, ...props }, ref) => {
