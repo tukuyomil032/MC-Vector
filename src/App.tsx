@@ -297,7 +297,7 @@ function App() {
       style={appShellStyle}
     >
       <aside
-        className={`z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'w-[260px]' : 'w-[60px]'}`}
+        className={`app-sidebar z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'app-sidebar--open w-[260px]' : 'app-sidebar--collapsed w-[60px]'}`}
         data-testid="app-sidebar"
       >
         <AppSidebarHeader
