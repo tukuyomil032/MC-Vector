@@ -182,9 +182,9 @@ docs-serve:
 install-extensions:
     node scripts/install-extensions.mjs
 
-# Update version numbers across project
-update-versions:
-    node scripts/update-versions.js
+# Update supported Minecraft versions
+update-minecraft-versions:
+    node scripts/update-minecraft-versions.js
 
 # Clean build artifacts
 clean:

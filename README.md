@@ -307,7 +307,7 @@ MC-Vector/
 │   ├── cargo-optional.mjs            # check Cargo dependencies
 │   ├── install-extensions.mjs.       # Install VS Code extensions
 │   ├── prepare-release.mjs           # prepare a release
-│   └── update-versions.js            # Update version numbers
+│   └── update-minecraft-versions.js  # Update supported Minecraft versions
 │
 ├── justfile                          # Modern task runner
 ├── package.json                      # Node.js project manifest
@@ -363,7 +363,9 @@ For a detailed architecture overview, see [Architecture Documentation](docs/src/
 | Clean builds       | `just clean`              | Clean build artifacts                |
 | Install extensions | `just install-extensions` | Install VS Code extensions           |
 | Prepare release    | `just release`            | Prepare a release                    |
-| Update versions    | `just update-versions`    | Update version numbers               |
+| Update Minecraft versions | `just update-minecraft-versions` | Update supported Minecraft versions |
+
+To prepare a release, run `just release` and enter `X.Y.Z` or `vX.Y.Z` when prompted. Copy or run the printed commit command, push `main`, and GitHub Actions creates the tag and release.
 
 For detailed command usage, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).
 
