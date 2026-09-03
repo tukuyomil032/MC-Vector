@@ -306,8 +306,7 @@ MC-Vector/
 ├── scripts/
 │   ├── cargo-optional.mjs            # check Cargo dependencies
 │   ├── install-extensions.mjs.       # Install VS Code extensions
-│   ├── release-publish.mjs           # check version before publish
-│   ├── release-tag.mjs               # create tag
+│   ├── prepare-release.mjs           # prepare a release
 │   └── update-versions.js            # Update version numbers
 │
 ├── justfile                          # Modern task runner
@@ -363,6 +362,7 @@ For a detailed architecture overview, see [Architecture Documentation](docs/src/
 | Full setup         | `just setup`              | Install deps + portless + all checks |
 | Clean builds       | `just clean`              | Clean build artifacts                |
 | Install extensions | `just install-extensions` | Install VS Code extensions           |
+| Prepare release    | `just release`            | Prepare a release                    |
 | Update versions    | `just update-versions`    | Update version numbers               |
 
 For detailed command usage, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).

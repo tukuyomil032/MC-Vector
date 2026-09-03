@@ -111,21 +111,9 @@ test-watch:
 # Release Management
 # ═══════════════════════════════════════════════════════════════
 
-# Prepare release (version bump, changelog)
-release-prepare:
-    @echo "Preparing release..."
-    @echo "Current version: $(node -p "require('./package.json').version")"
-    @echo "Run: just update-versions to bump version"
-    @echo "Then: Update CHANGELOG.md manually"
-    @echo "Finally: just release-tag"
-
-# Create git tag for release
-release-tag:
-    node scripts/release-tag.mjs
-
-# Publish release (triggers GitHub workflow)
-release-publish:
-    node scripts/release-publish.mjs
+# Prepare a release
+release:
+    pnpm release
 
 # ═══════════════════════════════════════════════════════════════
 # Dependency Management
