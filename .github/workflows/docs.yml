@@ -12,6 +12,7 @@ on:
       - 'docs/typedoc.json'
       - 'docs/package.json'
       - 'docs/biome.json'
+      - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'tsconfig.app.json'
