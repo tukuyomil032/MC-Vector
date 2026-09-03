@@ -1,4 +1,5 @@
 import { useTranslation } from '../../i18n';
+import { Button } from './ui/Button';
 
 export default function NgrokGuideView() {
   const { t } = useTranslation();
@@ -8,7 +9,10 @@ export default function NgrokGuideView() {
   };
 
   return (
-    <div className="ngrok-guide-view" data-testid="ngrok-guide-view">
+    <div
+      className="ngrok-guide-view box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
+      data-testid="ngrok-guide-view"
+    >
       <h1 className="ngrok-guide-view__title">🌐 {t('ngrokGuide.title')}</h1>
 
       <div className="ngrok-guide-view__intro">
@@ -62,12 +66,13 @@ export default function NgrokGuideView() {
         <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step1.badge')}</div>
         <h3>{t('ngrokGuide.step1.title')}</h3>
         <p>{t('ngrokGuide.step1.description')}</p>
-        <button
-          className="btn-primary ngrok-guide-view__cta-btn"
+        <Button
+          variant="primary"
+          className="ngrok-guide-view__cta-btn"
           onClick={() => openLink('https://dashboard.ngrok.com/get-started/your-authtoken')}
         >
           {t('ngrokGuide.step1.button')}
-        </button>
+        </Button>
         <div className="ngrok-guide-view__tip-box">{t('ngrokGuide.step1.tip')}</div>
       </div>
 

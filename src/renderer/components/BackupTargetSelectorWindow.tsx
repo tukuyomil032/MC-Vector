@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import { listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
+import { Button } from './ui/Button';
 
 interface SelectorNode {
   name: string;
@@ -326,7 +327,7 @@ export default function BackupTargetSelectorWindow() {
   };
 
   return (
-    <div className="backup-selector-window">
+    <div className="backup-selector-window flex h-screen flex-col gap-3 p-4">
       <header className="backup-selector-window__header">
         <div>
           <h1 className="backup-selector-window__title">{t('backupSelector.title')}</h1>
@@ -344,12 +345,12 @@ export default function BackupTargetSelectorWindow() {
           <span>{t('backupSelector.selectionCount', { count: selected.size })}</span>
         </div>
         <div className="backup-selector-window__toolbar-actions">
-          <button type="button" className="btn-secondary" onClick={handleSelectAll}>
+          <Button type="button" variant="secondary" onClick={handleSelectAll}>
             {t('backupSelector.selectAll')}
-          </button>
-          <button type="button" className="btn-secondary" onClick={handleClear}>
+          </Button>
+          <Button type="button" variant="secondary" onClick={handleClear}>
             {t('backupSelector.clearAll')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -364,22 +365,22 @@ export default function BackupTargetSelectorWindow() {
       </div>
 
       <footer className="backup-selector-window__footer">
-        <button
+        <Button
           type="button"
-          className="btn-secondary"
+          variant="secondary"
           onClick={() => void requestClose()}
           disabled={saving}
         >
           {t('backupSelector.cancel')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn-primary"
+          variant="primary"
           onClick={() => void handleApply()}
           disabled={saving || selected.size === 0}
         >
           {saving ? t('backupSelector.saving') : t('backupSelector.apply')}
-        </button>
+        </Button>
       </footer>
     </div>
   );

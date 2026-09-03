@@ -5,6 +5,8 @@ import { saveAppSettings } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
 import { useSettingsStore } from '../../store/settingsStore';
+import { Button } from './ui/Button';
+import { NativeSelect } from './ui/Field';
 
 interface UpdateState {
   status:
@@ -145,12 +147,15 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
 
   return (
     <div data-testid="app-settings-view">
-      <div className="settings-window" data-testid="settings-window">
+      <div
+        className="settings-window box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
+        data-testid="settings-window"
+      >
         <div className="settings-window__header">
           {onClose && (
-            <button className="btn-secondary text-sm" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               {t('settings.backButton')}
-            </button>
+            </Button>
           )}
           <h1 className="text-2xl font-semibold m-0">{t('settings.title')}</h1>
         </div>
@@ -163,25 +168,25 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
             </div>
             <div className="flex gap-2">
               {['idle', 'not-available', 'error'].includes(updateState.status) && (
-                <button
-                  className="btn-secondary"
+                <Button
+                  variant="secondary"
                   onClick={handleCheck}
                   disabled={updateState.status === 'checking'}
                 >
                   {updateState.status === 'checking'
                     ? t('settings.update.checking')
                     : t('settings.update.checkButton')}
-                </button>
+                </Button>
               )}
               {updateState.status === 'available' && (
-                <button className="btn-secondary" onClick={handleDownload}>
+                <Button variant="secondary" onClick={handleDownload}>
                   {t('settings.update.download')}
-                </button>
+                </Button>
               )}
               {updateState.status === 'downloaded' && (
-                <button className="btn-primary" onClick={handleInstall}>
+                <Button variant="primary" onClick={handleInstall}>
                   {t('settings.update.restart')}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -239,7 +244,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
           <label className="text-sm text-zinc-300 block mb-2" htmlFor="language-select">
             {t('settings.language.label')}
           </label>
-          <select
+          <NativeSelect
             id="language-select"
             className="settings-window__theme-select"
             value={locale}
@@ -247,7 +252,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
           >
             <option value="en">{t('settings.language.options.en')}</option>
             <option value="ja">{t('settings.language.options.ja')}</option>
-          </select>
+          </NativeSelect>
         </section>
 
         <section className="settings-window__section">

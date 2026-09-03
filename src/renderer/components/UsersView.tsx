@@ -4,6 +4,8 @@ import { useTranslation } from '../../i18n';
 import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
 import { sendCommand } from '../../lib/server-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import { Button } from './ui/Button';
+import { Input } from './ui/Field';
 
 interface Props {
   server: MinecraftServer;
@@ -235,7 +237,10 @@ export default function UsersView({ server }: Props) {
   };
 
   return (
-    <div className="users-view" data-testid="users-view">
+    <div
+      className="users-view flex h-full flex-col gap-4 p-5 max-[980px]:p-4"
+      data-testid="users-view"
+    >
       <div className="users-view__grid">
         <UserListCard
           title={t('users.lists.whitelist')}
@@ -369,34 +374,36 @@ function UserListCard({
                   )}
                 </div>
               </div>
-              <button
-                className="btn-stop users-view__remove-btn"
+              <Button
+                variant="stop"
+                className="users-view__remove-btn"
                 onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
               >
                 {removeLabel}
-              </button>
+              </Button>
             </div>
           ))
         )}
       </div>
 
       <div className="users-view__form">
-        <input
+        <Input
           type="text"
-          className="input-field users-view__input"
+          className="users-view__input"
           data-testid={`users-input-${type}`}
           placeholder={type === 'banned-ips' ? placeholderIp : placeholderPlayer}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
         />
-        <button
-          className="btn-primary users-view__add-btn"
+        <Button
+          variant="primary"
+          className="users-view__add-btn"
           data-testid={`users-add-${type}`}
           onClick={handleAddClick}
         >
           {addLabel}
-        </button>
+        </Button>
       </div>
     </div>
   );

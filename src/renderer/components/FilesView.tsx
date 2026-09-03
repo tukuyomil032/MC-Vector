@@ -35,6 +35,8 @@ import {
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import FileEditorWorkspace from './FileEditorWorkspace';
 import SvgMaskIcon from './SvgMaskIcon';
+import { Button } from './ui/Button';
+import { Input } from './ui/Field';
 
 interface Props {
   server: MinecraftServer;
@@ -675,7 +677,11 @@ export default function FilesView({ server }: Props) {
   };
 
   return (
-    <div className="files-view" data-testid="files-view" onClick={() => setContextMenu(null)}>
+    <div
+      className="files-view flex h-full flex-col gap-4 p-5 max-[900px]:p-4"
+      data-testid="files-view"
+      onClick={() => setContextMenu(null)}
+    >
       {/* ツールバー */}
       <div className="files-view__toolbar">
         <button
@@ -938,7 +944,9 @@ export default function FilesView({ server }: Props) {
       {modalType === 'create' && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title">{t('files.modal.createImportTitle')}</h3>
+            <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+              {t('files.modal.createImportTitle')}
+            </h3>
 
             <div className="files-view__create-grid">
               <div
@@ -1003,7 +1011,7 @@ export default function FilesView({ server }: Props) {
             </div>
 
             <label className="files-view__modal-label">{t('files.modal.nameLabel')}</label>
-            <input
+            <Input
               type="text"
               value={newFileName}
               data-testid="files-name-input"
@@ -1013,24 +1021,24 @@ export default function FilesView({ server }: Props) {
                   ? t('files.modal.newFolderPlaceholder')
                   : t('files.modal.newFilePlaceholder')
               }
-              className="mc-modal-input"
+              variant="modal"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreate();
               }}
             />
 
-            <div className="mc-modal-footer">
-              <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleCreate}
-                className="mc-modal-btn-primary"
+                variant="modalPrimary"
                 data-testid="files-create-submit"
                 disabled={!newFileName}
               >
                 {t('common.create')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1040,7 +1048,7 @@ export default function FilesView({ server }: Props) {
       {(modalType === 'move' || modalType === 'moveCurrent') && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title">
+            <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
               {modalType === 'moveCurrent'
                 ? t('files.modal.moveDirectoryTitle')
                 : t('files.modal.moveTitle')}
@@ -1050,21 +1058,21 @@ export default function FilesView({ server }: Props) {
                 ? t('files.modal.moveDirectoryDescription')
                 : t('files.modal.moveDescription', { count: selectedFiles.length })}
             </p>
-            <input
+            <Input
               type="text"
               value={moveDestPath}
               data-testid="files-move-input"
               onChange={(e) => setMoveDestPath(e.target.value)}
               placeholder={t('files.modal.moveDestPlaceholder')}
-              className="mc-modal-input"
+              variant="modal"
             />
-            <div className="mc-modal-footer">
-              <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
-              </button>
-              <button onClick={handleMove} className="mc-modal-btn-primary">
+              </Button>
+              <Button variant="modalPrimary" onClick={handleMove}>
                 {t('files.modal.moveButton')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1074,20 +1082,22 @@ export default function FilesView({ server }: Props) {
       {modalType === 'rename' && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title">{t('files.modal.renameTitle')}</h3>
-            <input
+            <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+              {t('files.modal.renameTitle')}
+            </h3>
+            <Input
               type="text"
               value={renameFileName}
               onChange={(e) => setRenameFileName(e.target.value)}
-              className="mc-modal-input"
+              variant="modal"
             />
-            <div className="mc-modal-footer">
-              <button onClick={() => setModalType(null)} className="mc-modal-btn-secondary">
+            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
-              </button>
-              <button onClick={handleRename} className="mc-modal-btn-primary">
+              </Button>
+              <Button variant="modalPrimary" onClick={handleRename}>
                 {t('files.modal.renameButton')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

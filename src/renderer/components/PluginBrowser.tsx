@@ -60,6 +60,7 @@ import {
 import { useAppFeedback } from './AppFeedbackProvider';
 import InlineError from './InlineError';
 import { createPluginInstallTarget } from './plugin-install-target';
+import { NativeSelect } from './ui/Field';
 
 interface Props {
   server: MinecraftServer;
@@ -2396,7 +2397,7 @@ export default function PluginBrowser({ server }: Props) {
     : { duration: 0.2, ease: 'easeOut' as const };
 
   return (
-    <div className="plugin-browser" data-testid="plugin-browser">
+    <div className="plugin-browser flex h-full flex-col gap-4 p-5" data-testid="plugin-browser">
       <div
         className="plugin-browser__section-switch"
         role="tablist"
@@ -2510,8 +2511,8 @@ export default function PluginBrowser({ server }: Props) {
 
               <div className="plugin-browser__sort-row">
                 <span className="plugin-browser__sort-label">{t('plugins.browser.sortLabel')}</span>
-                <select
-                  className="input-field plugin-browser__sort-select"
+                <NativeSelect
+                  className="plugin-browser__sort-select"
                   value={sortMode}
                   onChange={(event) => setSortMode(event.target.value as SortMode)}
                 >
@@ -2519,7 +2520,7 @@ export default function PluginBrowser({ server }: Props) {
                   <option value="downloads">{t('plugins.browser.sortDownloads')}</option>
                   <option value="name">{t('plugins.browser.sortName')}</option>
                   <option value="compatibility">{t('plugins.browser.sortCompatibility')}</option>
-                </select>
+                </NativeSelect>
               </div>
               {searchQuery.isError && (
                 <InlineError
@@ -2633,8 +2634,6 @@ export default function PluginBrowser({ server }: Props) {
                           className="plugin-browser__result-icon"
                           style={{
                             backgroundImage: item.icon_url ? `url(${item.icon_url})` : 'none',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
                           }}
                         />
 
@@ -2833,8 +2832,6 @@ export default function PluginBrowser({ server }: Props) {
                           className="plugin-browser__result-icon plugin-browser__installed-icon"
                           style={{
                             backgroundImage: entry.iconUrl ? `url(${entry.iconUrl})` : 'none',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
                           }}
                         >
                           {!entry.iconUrl ? (

@@ -20,6 +20,8 @@ import {
 } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import type { MinecraftServer } from '../shared/server declaration';
+import { Button } from './ui/Button';
+import { Input, NativeSelect, Textarea } from './ui/Field';
 
 interface Props {
   server: MinecraftServer;
@@ -751,17 +753,20 @@ export default function BackupsView({ server }: Props) {
   };
 
   return (
-    <div className="backups-view" data-testid="backups-view">
+    <div
+      className="backups-view flex h-full flex-col gap-4 p-5 max-[900px]:p-4"
+      data-testid="backups-view"
+    >
       <div className="backups-view__header">
         <h3>{t('backups.title')}</h3>
-        <button
-          className="btn-primary disabled:opacity-70"
+        <Button
+          variant="primary"
           data-testid="backups-create-button"
           onClick={openCreateModal}
           disabled={processing}
         >
           {processing ? t('backups.processing') : t('backups.createButton')}
-        </button>
+        </Button>
       </div>
 
       <div className="backups-view__list-panel" ref={listParentRef}>
@@ -827,27 +832,30 @@ export default function BackupsView({ server }: Props) {
                   </div>
 
                   <div className="flex gap-2.5">
-                    <button
-                      className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-70"
+                    <Button
+                      variant="secondary"
+                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                       onClick={() => handleRestore(backup.name)}
                       disabled={processing}
                     >
                       {t('backups.actions.restore')}
-                    </button>
-                    <button
-                      className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-70"
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                       onClick={() => openTagEditor(backup.name)}
                       disabled={processing}
                     >
                       {t('backups.actions.tag')}
-                    </button>
-                    <button
-                      className="btn-stop text-sm px-3 py-1.5 disabled:opacity-70"
+                    </Button>
+                    <Button
+                      variant="stop"
+                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                       onClick={() => handleDelete(backup.name)}
                       disabled={processing}
                     >
                       {t('common.delete')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -868,14 +876,15 @@ export default function BackupsView({ server }: Props) {
           worlds.map((worldName) => (
             <div key={worldName} className="backups-view__world-row">
               <div className="backups-view__world-name">🌍 {worldName}</div>
-              <button
+              <Button
                 type="button"
-                className="btn-stop text-sm px-3 py-1.5 disabled:opacity-70"
+                variant="stop"
+                className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                 onClick={() => void handleDeleteWorld(worldName)}
                 disabled={processing}
               >
                 {t('backups.world.deleteButton')}
-              </button>
+              </Button>
             </div>
           ))
         )}
@@ -892,17 +901,16 @@ export default function BackupsView({ server }: Props) {
           >
             <div className="backups-view__create-header">
               <div className="text-lg font-bold">{t('backups.modal.createTitle')}</div>
-              <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>
+              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
                 {t('common.close')}
-              </button>
+              </Button>
             </div>
 
             <div className="backups-view__create-body">
               <div className="backups-view__form-grid">
                 <div className="backups-view__form-group">
                   <label className="backups-view__form-label">{t('backups.modal.fileName')}</label>
-                  <input
-                    className="input-field"
+                  <Input
                     data-testid="backup-name-input"
                     placeholder={defaultName()}
                     value={customName}
@@ -917,8 +925,8 @@ export default function BackupsView({ server }: Props) {
                   <label className="backups-view__form-label">
                     {t('backups.modal.compressionLevel')}
                   </label>
-                  <select
-                    className="input-field w-[120px]"
+                  <NativeSelect
+                    className="w-[120px]"
                     value={compressionLevel}
                     onChange={(e) => setCompressionLevel(Number(e.target.value))}
                   >
@@ -927,7 +935,7 @@ export default function BackupsView({ server }: Props) {
                         {i + 1}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <div className="backups-view__form-help">
                     {t('backups.modal.compressionHelp')}
                   </div>
@@ -935,14 +943,13 @@ export default function BackupsView({ server }: Props) {
 
                 <div className="backups-view__form-group">
                   <label className="backups-view__form-label">{t('backups.modal.modeLabel')}</label>
-                  <select
-                    className="input-field"
+                  <NativeSelect
                     value={backupMode}
                     onChange={(event) => setBackupMode(event.target.value as BackupMode)}
                   >
                     <option value="full">{t('backups.modal.modeFull')}</option>
                     <option value="differential">{t('backups.modal.modeDiff')}</option>
-                  </select>
+                  </NativeSelect>
                   <div className="backups-view__form-help">{t('backups.modal.modeHelp')}</div>
                 </div>
               </div>
@@ -950,16 +957,17 @@ export default function BackupsView({ server }: Props) {
               <div className="backups-view__selection-header">
                 <div className="font-semibold">{t('backups.modal.selectTarget')}</div>
                 <div className="flex gap-2">
-                  <button
-                    className="btn-secondary text-sm"
+                  <Button
+                    variant="secondary"
+                    className="text-sm"
                     data-testid="backups-open-selector-button"
                     onClick={() => void openSelectorWindow()}
                   >
                     {t('backups.modal.openSelector')}
-                  </button>
-                  <button className="btn-secondary text-sm" onClick={clearAll}>
+                  </Button>
+                  <Button variant="secondary" className="text-sm" onClick={clearAll}>
                     {t('backups.modal.clearAll')}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -991,21 +999,21 @@ export default function BackupsView({ server }: Props) {
               </div>
 
               <div className="backups-view__create-actions">
-                <button
-                  className="btn-secondary"
+                <Button
+                  variant="secondary"
                   onClick={() => setShowCreateModal(false)}
                   disabled={processing}
                 >
                   {t('common.cancel')}
-                </button>
-                <button
-                  className="btn-primary"
+                </Button>
+                <Button
+                  variant="primary"
                   data-testid="backups-create-submit"
                   onClick={handleCreateBackup}
                   disabled={processing || selectedPaths.size === 0}
                 >
                   {processing ? t('backups.modal.creating') : t('backups.modal.create')}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1028,8 +1036,7 @@ export default function BackupsView({ server }: Props) {
 
             <div className="backups-view__tag-body">
               <label className="backups-view__form-label">{t('backups.tagEditor.tagsLabel')}</label>
-              <input
-                className="input-field"
+              <Input
                 value={tagInput}
                 onChange={(event) => setTagInput(event.target.value)}
                 placeholder={t('backups.tagEditor.tagsPlaceholder')}
@@ -1038,8 +1045,8 @@ export default function BackupsView({ server }: Props) {
               <label className="backups-view__form-label mt-3">
                 {t('backups.tagEditor.noteLabel')}
               </label>
-              <textarea
-                className="input-field backups-view__tag-note"
+              <Textarea
+                className="backups-view__tag-note"
                 value={noteInput}
                 onChange={(event) => setNoteInput(event.target.value)}
                 placeholder={t('backups.tagEditor.notePlaceholder')}
@@ -1047,12 +1054,12 @@ export default function BackupsView({ server }: Props) {
             </div>
 
             <div className="backups-view__tag-actions">
-              <button className="btn-secondary" onClick={() => setTagEditorTarget(null)}>
+              <Button variant="secondary" onClick={() => setTagEditorTarget(null)}>
                 {t('common.cancel')}
-              </button>
-              <button className="btn-primary" onClick={() => void handleSaveTagEditor()}>
+              </Button>
+              <Button variant="primary" onClick={() => void handleSaveTagEditor()}>
                 {t('common.save')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

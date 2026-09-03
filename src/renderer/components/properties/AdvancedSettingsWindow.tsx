@@ -6,6 +6,8 @@ import {
   type PropertyDefinition,
   serverPropertiesList,
 } from '../../shared/propertiesData';
+import { Button } from '../ui/Button';
+import { Input, NativeSelect } from '../ui/Field';
 import { Switch } from '../ui/Switch';
 
 const CATEGORY_ORDER: PropertyCategory[] = [
@@ -155,7 +157,7 @@ export default function AdvancedSettingsWindow({
     }
     if (prop.type === 'number') {
       return (
-        <input
+        <Input
           type="number"
           className="advanced-settings-window__input"
           value={Number(currentValue ?? 0)}
@@ -165,7 +167,7 @@ export default function AdvancedSettingsWindow({
     }
     if (prop.type === 'select' && prop.options) {
       return (
-        <select
+        <NativeSelect
           className="advanced-settings-window__input"
           value={String(currentValue ?? '')}
           onChange={(e) => handleChange(prop.key, e.target.value)}
@@ -175,11 +177,11 @@ export default function AdvancedSettingsWindow({
               {opt}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       );
     }
     return (
-      <input
+      <Input
         type="text"
         className="advanced-settings-window__input"
         value={String(currentValue ?? '')}
@@ -199,12 +201,12 @@ export default function AdvancedSettingsWindow({
           <span>🛠️ {t('advancedSettings.title')}</span>
         </div>
         <div className="advanced-settings-window__header-actions">
-          <button className="btn-secondary" onClick={handleCancel}>
+          <Button variant="secondary" onClick={handleCancel}>
             {t('common.cancel')}
-          </button>
-          <button className="btn-primary" onClick={handleSave}>
+          </Button>
+          <Button variant="primary" onClick={handleSave}>
             {t('advancedSettings.applyAndClose')}
-          </button>
+          </Button>
         </div>
       </header>
 

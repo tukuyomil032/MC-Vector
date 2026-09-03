@@ -2,6 +2,8 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import { Button } from './ui/Button';
+import { Input, NativeSelect } from './ui/Field';
 
 interface ProxySetupViewProps {
   servers: MinecraftServer[];
@@ -64,7 +66,10 @@ export default function ProxySetupView({
   };
 
   return (
-    <div className="proxy-setup-view" data-testid="proxy-view">
+    <div
+      className="proxy-setup-view box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
+      data-testid="proxy-view"
+    >
       <div className="proxy-setup-view__inner">
         <h2 className="proxy-setup-view__title">{t('proxySetup.title')}</h2>
 
@@ -77,26 +82,24 @@ export default function ProxySetupView({
                 <label className="proxy-setup-view__label" htmlFor={proxySoftwareInputId}>
                   {t('proxySetup.proxySoftware')}
                 </label>
-                <select
+                <NativeSelect
                   id={proxySoftwareInputId}
-                  className="input-field"
                   value={proxySoftware}
                   onChange={(e) => setProxySoftware(e.target.value)}
                 >
                   <option value="Velocity">{t('proxySetup.velocityRecommended')}</option>
                   <option value="Waterfall">{t('proxySetup.waterfall')}</option>
                   <option value="BungeeCord">{t('proxySetup.bungeecord')}</option>
-                </select>
+                </NativeSelect>
               </div>
 
               <div className="proxy-setup-view__field">
                 <label className="proxy-setup-view__label" htmlFor={proxyPortInputId}>
                   {t('proxySetup.proxyPort')}
                 </label>
-                <input
+                <Input
                   id={proxyPortInputId}
                   type="number"
-                  className="input-field"
                   value={proxyPort}
                   min={1}
                   max={65535}
@@ -156,21 +159,23 @@ export default function ProxySetupView({
           </div>
 
           <div className="proxy-setup-view__actions">
-            <button
-              className="btn-start proxy-setup-view__build-btn disabled:opacity-50"
+            <Button
+              variant="start"
+              className="proxy-setup-view__build-btn"
               onClick={handleBuild}
               disabled={isBuilding}
             >
               {isBuilding ? t('proxySetup.building') : t('proxySetup.buildNetwork')}
-            </button>
+            </Button>
 
-            <button
-              className="btn-secondary proxy-setup-view__help-btn"
+            <Button
+              variant="secondary"
+              className="proxy-setup-view__help-btn"
               onClick={onOpenHelp}
               data-testid="proxy-view-help-button"
             >
               {t('proxySetup.viewHelp')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

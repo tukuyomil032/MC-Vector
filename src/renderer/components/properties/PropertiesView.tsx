@@ -5,6 +5,8 @@ import { logError } from '../../../lib/error-utils';
 import { readFileContent, saveFileContent } from '../../../lib/file-commands';
 import { serverPropertiesList } from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
+import { Button } from '../ui/Button';
+import { Input, NativeSelect } from '../ui/Field';
 import { Switch } from '../ui/Switch';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 
@@ -176,29 +178,25 @@ export default function PropertiesView({ server }: Props) {
   }
 
   return (
-    <div className="properties-view" data-testid="properties-view">
+    <div className="properties-view relative h-full overflow-y-auto" data-testid="properties-view">
       <div className="properties-view__container">
         <div className="properties-view__header">
           <h3>{t('properties.title')}</h3>
           <div className="properties-view__actions">
-            <button className="btn-secondary" onClick={openAdvancedWindow}>
+            <Button variant="secondary" onClick={openAdvancedWindow}>
               {t('properties.openAdvanced')}
-            </button>
+            </Button>
 
-            <button
-              className="btn-primary disabled:opacity-50"
-              onClick={handleSave}
-              disabled={!hasChanges}
-            >
+            <Button variant="primary" onClick={handleSave} disabled={!hasChanges}>
               {t('properties.saveChanges')}
-            </button>
+            </Button>
           </div>
         </div>
 
         <div className="properties-view__search-bar">
-          <input
+          <Input
             type="text"
-            className="input-field properties-view__search-input"
+            className="properties-view__search-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('properties.search.placeholder')}
@@ -219,9 +217,9 @@ export default function PropertiesView({ server }: Props) {
                   {t('properties.motd.description')}
                 </span>
               </div>
-              <input
+              <Input
                 type="text"
-                className="input-field properties-view__motd-input"
+                className="properties-view__motd-input"
                 value={props.motd as string}
                 onChange={(e) => handleChange('motd', e.target.value)}
               />
@@ -233,8 +231,7 @@ export default function PropertiesView({ server }: Props) {
               <div className="properties-view__row-info">
                 <span>{t('properties.gameMode.label')}</span>
               </div>
-              <select
-                className="input-field"
+              <NativeSelect
                 value={props.gamemode as string}
                 onChange={(e) => handleChange('gamemode', e.target.value)}
               >
@@ -242,7 +239,7 @@ export default function PropertiesView({ server }: Props) {
                 <option value="creative">{t('properties.gameMode.options.creative')}</option>
                 <option value="adventure">{t('properties.gameMode.options.adventure')}</option>
                 <option value="spectator">{t('properties.gameMode.options.spectator')}</option>
-              </select>
+              </NativeSelect>
             </div>
           )}
 
@@ -251,8 +248,7 @@ export default function PropertiesView({ server }: Props) {
               <div className="properties-view__row-info">
                 <span>{t('properties.difficulty.label')}</span>
               </div>
-              <select
-                className="input-field"
+              <NativeSelect
                 value={props.difficulty as string}
                 onChange={(e) => handleChange('difficulty', e.target.value)}
               >
@@ -260,7 +256,7 @@ export default function PropertiesView({ server }: Props) {
                 <option value="easy">{t('properties.difficulty.options.easy')}</option>
                 <option value="normal">{t('properties.difficulty.options.normal')}</option>
                 <option value="hard">{t('properties.difficulty.options.hard')}</option>
-              </select>
+              </NativeSelect>
             </div>
           )}
         </div>
@@ -301,9 +297,9 @@ export default function PropertiesView({ server }: Props) {
               <div className="properties-view__row-info">
                 <span>{t('properties.maxPlayers')}</span>
               </div>
-              <input
+              <Input
                 type="number"
-                className="input-field properties-view__number-input properties-view__number-input--sm"
+                className="properties-view__number-input properties-view__number-input--sm"
                 value={props['max-players'] as number}
                 onChange={(e) => handleChange('max-players', Number(e.target.value))}
               />
@@ -315,9 +311,9 @@ export default function PropertiesView({ server }: Props) {
               <div className="properties-view__row-info">
                 <span>{t('properties.serverPort')}</span>
               </div>
-              <input
+              <Input
                 type="number"
-                className="input-field properties-view__number-input properties-view__number-input--md"
+                className="properties-view__number-input properties-view__number-input--md"
                 value={props['server-port'] as number}
                 onChange={(e) => handleChange('server-port', Number(e.target.value))}
               />

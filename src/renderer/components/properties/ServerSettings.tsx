@@ -18,6 +18,8 @@ import { VERSION_OPTIONS } from '../../constants/versionOptions';
 import { JVM_PRESETS } from '../../shared/jvm-presets';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
+import { Button } from '../ui/Button';
+import { Input, Textarea } from '../ui/Field';
 import { Select } from '../ui/Select';
 
 interface ServerSettingsProps {
@@ -279,7 +281,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
   };
 
   return (
-    <div className="server-settings" data-testid="server-settings-view">
+    <div
+      className="server-settings box-border h-full overflow-y-auto p-8 max-[980px]:p-4"
+      data-testid="server-settings-view"
+    >
       <div className="server-settings__inner">
         <h2 className="server-settings__title">{t('serverSettings.title')}</h2>
 
@@ -288,35 +293,32 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
 
           <div className="server-settings__field-block">
             <label className="server-settings__label">{t('serverSettings.serverName')}</label>
-            <input
+            <Input
               type="text"
               value={name}
               data-testid="server-settings-name-input"
               onChange={(e) => setName(e.target.value)}
-              className="input-field"
             />
           </div>
 
           <div className="server-settings__row">
             <div className="server-settings__col">
               <label className="server-settings__label">{t('serverSettings.profileName')}</label>
-              <input
+              <Input
                 type="text"
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
                 placeholder={t('serverSettings.profileNamePlaceholder')}
-                className="input-field"
               />
             </div>
 
             <div className="server-settings__col">
               <label className="server-settings__label">{t('serverSettings.groupName')}</label>
-              <input
+              <Input
                 type="text"
                 value={groupName}
                 onChange={(event) => setGroupName(event.target.value)}
                 placeholder={t('serverSettings.groupNamePlaceholder')}
-                className="input-field"
               />
             </div>
           </div>
@@ -370,13 +372,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
 
             <div className="server-settings__col server-settings__col--auto">
               <label className="server-settings__label">&nbsp;</label>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setShowVersionWizard(true)}
-              >
+              <Button variant="secondary" type="button" onClick={() => setShowVersionWizard(true)}>
                 {t('serverSettings.versionUpgrade.buttonLabel')}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -392,8 +390,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   ...installedJava.map((j) => ({ value: j.path, label: `${j.name} (${j.path})` })),
                 ]}
               />
-              <button
-                className="btn-secondary whitespace-nowrap server-settings__java-manage-btn"
+              <Button
+                variant="secondary"
+                className="whitespace-nowrap server-settings__java-manage-btn"
                 data-testid="server-settings-java-manage-button"
                 onClick={() => {
                   setShowJavaManager(true);
@@ -401,28 +400,22 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 }}
               >
                 {t('serverSettings.manageJava')}
-              </button>
+              </Button>
             </div>
           </div>
 
           <div className="server-settings__row server-settings__row--spaced">
             <div className="server-settings__col">
               <label className="server-settings__label">{t('serverSettings.memory')}</label>
-              <input
+              <Input
                 type="number"
                 value={memory}
                 onChange={(e) => setMemory(Number(e.target.value))}
-                className="input-field"
               />
             </div>
             <div className="server-settings__col">
               <label className="server-settings__label">{t('serverSettings.port')}</label>
-              <input
-                type="number"
-                value={port}
-                onChange={(e) => setPort(Number(e.target.value))}
-                className="input-field"
-              />
+              <Input type="number" value={port} onChange={(e) => setPort(Number(e.target.value))} />
             </div>
           </div>
 
@@ -433,7 +426,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 <button
                   key={preset.id}
                   type="button"
-                  className="control-chip server-settings__jvm-preset-btn"
+                  className="control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all server-settings__jvm-preset-btn"
                   onClick={() => setJvmArgs(preset.args)}
                 >
                   {t(preset.labelKey)}
@@ -442,15 +435,15 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
               {jvmArgs && (
                 <button
                   type="button"
-                  className="control-chip server-settings__jvm-preset-btn"
+                  className="control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all server-settings__jvm-preset-btn"
                   onClick={() => setJvmArgs('')}
                 >
                   {t('serverSettings.jvmArgs.clear')}
                 </button>
               )}
             </div>
-            <textarea
-              className="input-field server-settings__jvm-textarea"
+            <Textarea
+              className="server-settings__jvm-textarea"
               value={jvmArgs}
               onChange={(e) => setJvmArgs(e.target.value)}
               placeholder={t('serverSettings.jvmArgs.placeholder')}
@@ -462,12 +455,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
           <div className="server-settings__field-block">
             <label className="server-settings__label">{t('serverSettings.savePath')}</label>
             <div className="server-settings__java-row">
-              <input
-                type="text"
-                value={path}
-                readOnly
-                className="input-field server-settings__path-input"
-              />
+              <Input type="text" value={path} readOnly className="server-settings__path-input" />
             </div>
           </div>
 
@@ -489,13 +477,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 <label className="server-settings__label">
                   {t('serverSettings.autoRestart.maxRetries')}
                 </label>
-                <input
+                <Input
                   type="number"
                   min={0}
                   max={20}
                   value={maxAutoRestarts}
                   onChange={(event) => setMaxAutoRestarts(Number(event.target.value))}
-                  className="input-field"
                 />
               </div>
 
@@ -503,13 +490,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 <label className="server-settings__label">
                   {t('serverSettings.autoRestart.delaySeconds')}
                 </label>
-                <input
+                <Input
                   type="number"
                   min={1}
                   max={300}
                   value={autoRestartDelaySec}
                   onChange={(event) => setAutoRestartDelaySec(Number(event.target.value))}
-                  className="input-field"
                 />
               </div>
             </div>
@@ -555,13 +541,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   <label className="server-settings__label">
                     {t('serverSettings.autoBackup.intervalMinutes')}
                   </label>
-                  <input
+                  <Input
                     type="number"
                     min={1}
                     max={1440}
                     value={autoBackupIntervalMin}
                     onChange={(event) => setAutoBackupIntervalMin(Number(event.target.value))}
-                    className="input-field"
                   />
                 </div>
               ) : (
@@ -569,11 +554,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   <label className="server-settings__label">
                     {t('serverSettings.autoBackup.executionTime')}
                   </label>
-                  <input
+                  <Input
                     type="time"
                     value={autoBackupTime}
                     onChange={(event) => setAutoBackupTime(event.target.value)}
-                    className="input-field"
                   />
                 </div>
               )}
@@ -599,26 +583,24 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                   <label className="server-settings__label">
                     {t('serverSettings.autoBackup.retainCount')}
                   </label>
-                  <input
+                  <Input
                     type="number"
                     min={0}
                     max={999}
                     value={autoBackupRetainCount}
                     onChange={(event) => setAutoBackupRetainCount(Number(event.target.value))}
-                    className="input-field"
                   />
                 </div>
                 <div className="server-settings__col">
                   <label className="server-settings__label">
                     {t('serverSettings.autoBackup.retainDays')}
                   </label>
-                  <input
+                  <Input
                     type="number"
                     min={0}
                     max={365}
                     value={autoBackupRetainDays}
                     onChange={(event) => setAutoBackupRetainDays(Number(event.target.value))}
-                    className="input-field"
                   />
                 </div>
               </div>
@@ -667,30 +649,30 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 <label className="server-settings__label">
                   {t('serverSettings.notifications.cpuThreshold')}
                 </label>
-                <input
+                <Input
                   type="number"
                   min={1}
                   max={100}
                   value={notifyHighCpuThreshold}
                   onChange={(e) => setNotifyHighCpuThreshold(Number(e.target.value))}
-                  className="input-field"
                 />
               </div>
             )}
           </div>
 
           <div className="server-settings__actions">
-            <button
+            <Button
+              variant="start"
               type="button"
               onClick={() => {
                 void handleSubmit();
               }}
-              className="btn-start server-settings__save-btn disabled:opacity-50"
+              className="server-settings__save-btn disabled:opacity-50"
               data-testid="server-settings-save-button"
               disabled={isSaving}
             >
               {t('serverSettings.saveSettings')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -711,22 +693,24 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
             </div>
 
             <div className="server-settings__ngrok-controls">
-              <button
-                className="btn-secondary server-settings__ngrok-btn server-settings__ngrok-btn--with-icon"
+              <Button
+                variant="secondary"
+                className="server-settings__ngrok-btn server-settings__ngrok-btn--with-icon"
                 onClick={handleOpenGuide}
                 title={t('serverSettings.ngrok.connectionGuide')}
                 data-testid="ngrok-connection-guide-button"
               >
                 <span>❓</span> {t('serverSettings.ngrok.connectionGuide')}
-              </button>
+              </Button>
 
-              <button
-                className="btn-secondary server-settings__ngrok-btn"
+              <Button
+                variant="secondary"
+                className="server-settings__ngrok-btn"
                 onClick={handleResetToken}
                 title={t('serverSettings.ngrok.changeToken')}
               >
                 {t('serverSettings.ngrok.changeToken')}
-              </button>
+              </Button>
 
               <label className="server-settings__ngrok-switch">
                 <input
@@ -759,12 +743,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                     <code className="server-settings__address-code">
                       {tunnelUrl.replace('tcp://', '')}
                     </code>
-                    <button
-                      className="btn-secondary server-settings__copy-btn"
+                    <Button
+                      variant="secondary"
+                      className="server-settings__copy-btn"
                       onClick={handleCopyUrl}
                     >
                       {t('common.copy')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -800,29 +785,31 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
             <p className="server-settings__token-text">
               {t('serverSettings.ngrok.tokenRequired.description')}
             </p>
-            <input
+            <Input
               type="text"
-              className="input-field server-settings__token-input"
+              className="server-settings__token-input"
               data-testid="ngrok-token-input"
               placeholder={t('serverSettings.ngrok.tokenRequired.placeholder')}
               value={inputToken}
               onChange={(e) => setInputToken(e.target.value)}
             />
             <div className="server-settings__token-actions">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowTokenModal(false)}
-                className="btn-secondary server-settings__token-cancel"
+                className="server-settings__token-cancel"
               >
                 {t('serverSettings.ngrok.tokenRequired.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleTokenSubmit}
-                className="btn-primary server-settings__token-save disabled:opacity-50"
+                className="server-settings__token-save disabled:opacity-50"
                 data-testid="ngrok-token-save"
                 disabled={!inputToken}
               >
                 {t('serverSettings.ngrok.tokenRequired.saveAndConnect')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

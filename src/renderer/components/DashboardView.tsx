@@ -161,7 +161,7 @@ const ResourceChartCard = memo(function ResourceChartCard({
   yDomain,
 }: ResourceChartCardProps) {
   return (
-    <article className="dashboard-view__chart-card surface-card">
+    <article className="dashboard-view__chart-card surface-card rounded-2xl">
       <h3 className="dashboard-view__chart-title section-title">{title}</h3>
       <div className="dashboard-view__chart-body">
         <ResponsiveContainer width="100%" height="100%">
@@ -191,7 +191,7 @@ const ResourceChartCard = memo(function ResourceChartCard({
 
 const TpsChartCard = memo(function TpsChartCard({ title, data, emptyLabel }: TpsChartCardProps) {
   return (
-    <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card">
+    <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card rounded-2xl">
       <h3 className="dashboard-view__chart-title section-title">{title}</h3>
       <div className="dashboard-view__chart-body">
         {data.length === 0 ? (
@@ -446,8 +446,11 @@ export default function DashboardView({ server }: Props) {
   }, [server.id, server.status, supportsTpsPolling]);
 
   return (
-    <div className="dashboard-view" data-testid="dashboard-view">
-      <header className="dashboard-view__header surface-card">
+    <div
+      className="dashboard-view flex h-full flex-col gap-4 overflow-y-auto p-5 max-[920px]:p-4"
+      data-testid="dashboard-view"
+    >
+      <header className="dashboard-view__header surface-card rounded-2xl">
         <div className="dashboard-view__header-main">
           <h2 className="dashboard-view__title">{t('dashboard.title', { name: server.name })}</h2>
           <p className="dashboard-view__header-meta section-title">
@@ -463,7 +466,7 @@ export default function DashboardView({ server }: Props) {
       </header>
 
       <section className="dashboard-view__kpi-grid">
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--status kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--status kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
           <div className="kpi-tile__label">{t('dashboard.stats.status')}</div>
           <div className="kpi-tile__value" style={{ color: statusColor }}>
             {statusLabel}
@@ -473,7 +476,7 @@ export default function DashboardView({ server }: Props) {
           </div>
         </article>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--tps kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--tps kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
           <div className="kpi-tile__label">{t('dashboard.stats.currentTps')}</div>
           <div className="kpi-tile__value" style={{ color: tpsColor }}>
             {currentTps === null ? '--' : currentTps.toFixed(2)}
@@ -481,23 +484,23 @@ export default function DashboardView({ server }: Props) {
           <div className="kpi-tile__meta">{tpsSamplingLabel}</div>
         </article>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--cpu kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--cpu kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
           <div className="kpi-tile__label">{t('dashboard.stats.currentCpu')}</div>
           <div className="kpi-tile__value">{currentCpu}%</div>
         </article>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--memory kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--memory kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
           <div className="kpi-tile__label">{t('dashboard.stats.currentMemory')}</div>
           <div className="kpi-tile__value">{currentMem} MB</div>
         </article>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--software kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--software kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
           <div className="kpi-tile__label">{t('dashboard.stats.software')}</div>
           <div className="kpi-tile__value dashboard-view__software-value">{server.software}</div>
           <div className="kpi-tile__meta">{server.version}</div>
         </article>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--uptime kpi-tile">
+        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--uptime kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
           <div className="kpi-tile__label">{t('dashboard.stats.uptime')}</div>
           <div className="kpi-tile__value dashboard-view__uptime-value">{uptime}</div>
         </article>

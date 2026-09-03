@@ -653,8 +653,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   };
 
   return (
-    <div className="console-view" data-testid="console-view">
-      <section className="console-view__status-strip surface-card">
+    <div
+      className="console-view flex h-full min-h-0 flex-col gap-3 p-5 max-[1080px]:p-4"
+      data-testid="console-view"
+    >
+      <section className="console-view__status-strip surface-card rounded-2xl">
         <div className="console-view__status-col console-view__status-col--with-divider">
           <div className="console-view__status-label">{t('console.status.address')}</div>
           <button
@@ -687,7 +690,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       </section>
 
       <section
-        className={`console-view__search-strip surface-card ${isSearchOpen ? 'is-open' : 'is-closed'}`}
+        className={`console-view__search-strip surface-card rounded-2xl ${isSearchOpen ? 'is-open' : 'is-closed'}`}
       >
         <span className="console-view__search-label">{t('console.search.label')}</span>
         {isSearchOpen ? (
@@ -721,7 +724,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
             <button
               type="button"
-              className={`console-view__search-mode-btn control-chip ${isRegexSearchMode ? 'is-active' : ''}`}
+              className={`console-view__search-mode-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all ${isRegexSearchMode ? 'is-active' : ''}`}
               onClick={() => {
                 setIsRegexSearchMode((prev) => !prev);
                 setActiveMatchIndex(0);
@@ -732,7 +735,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
             <button
               type="button"
-              className="console-view__search-nav-btn control-chip"
+              className="console-view__search-nav-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
               onClick={() => jumpToMatch(-1)}
               disabled={totalMatches === 0}
             >
@@ -741,7 +744,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
             <button
               type="button"
-              className="console-view__search-nav-btn control-chip"
+              className="console-view__search-nav-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
               onClick={() => jumpToMatch(1)}
               disabled={totalMatches === 0}
             >
@@ -750,7 +753,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
             <button
               type="button"
-              className="console-view__search-close-btn control-chip"
+              className="console-view__search-close-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
               onClick={closeSearch}
             >
               {t('common.close')}
@@ -768,7 +771,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             <button
               type="button"
               data-testid="console-search-open-button"
-              className="console-view__search-open-btn control-chip"
+              className="console-view__search-open-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
               onClick={openSearch}
             >
               {t('console.actions.find')}
@@ -777,7 +780,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         )}
       </section>
 
-      <section className="console-view__log-viewport surface-card">
+      <section className="console-view__log-viewport surface-card rounded-2xl">
         {pinnedLogs.length > 0 && (
           <div className="console-view__pinned-area">
             <div className="console-view__pinned-title">{t('console.pinned.title')}</div>
@@ -932,7 +935,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         {!autoScroll && visibleLogs.length > 0 && (
           <button
             type="button"
-            className="console-view__jump-latest control-chip"
+            className="console-view__jump-latest control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
             onClick={() => {
               setAutoScroll(true);
               logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -943,11 +946,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         )}
       </section>
 
-      <section className="console-view__command-strip surface-card">
+      <section className="console-view__command-strip surface-card rounded-2xl">
         <div className="console-view__command-actions">
           <button
             type="button"
-            className="console-view__save-button control-chip"
+            className="console-view__save-button control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
             data-testid="console-save-button"
             onClick={() => void handleExportLogs()}
           >
@@ -967,7 +970,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                   type="button"
                   role="tab"
                   aria-selected={logFilter === level}
-                  className={`console-view__filter-pill control-chip ${logFilter === level ? 'is-active' : ''}`}
+                  className={`console-view__filter-pill control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all ${logFilter === level ? 'is-active' : ''}`}
                   onClick={() => {
                     setLogFilter(level);
                     setActiveMatchIndex(0);

@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useTranslation } from '../../i18n';
+import { Button } from './ui/Button';
 
 const ProxyHelpView: FC = () => {
   const { t } = useTranslation();
@@ -9,7 +10,10 @@ const ProxyHelpView: FC = () => {
   };
 
   return (
-    <div className="proxy-help-view" data-testid="proxy-help-view">
+    <div
+      className="proxy-help-view box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
+      data-testid="proxy-help-view"
+    >
       <h1 className="proxy-help-view__title">🌐 {t('proxyHelp.title')}</h1>
 
       <div className="proxy-help-view__intro">
@@ -98,18 +102,20 @@ const ProxyHelpView: FC = () => {
           <br />
           <span className="proxy-help-view__muted">{t('proxyHelp.step2DownloadDesc')}</span>
           <div className="proxy-help-view__cta-row">
-            <button
-              className="btn-primary proxy-help-view__cta-btn"
+            <Button
+              variant="primary"
+              className="proxy-help-view__cta-btn"
               onClick={() => openLink('https://papermc.io/downloads/velocity')}
             >
               {t('proxyHelp.openPaperVelocity')}
-            </button>
-            <button
-              className="btn-secondary proxy-help-view__cta-btn-secondary"
+            </Button>
+            <Button
+              variant="secondary"
+              className="proxy-help-view__cta-btn-secondary"
               onClick={() => openLink('https://docs.papermc.io/velocity/')}
             >
               {t('proxyHelp.openVelocityDocs')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
