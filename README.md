@@ -254,7 +254,7 @@ MC-Vector/
 │   ├── App.tsx                       # Main application component
 │   ├── main.tsx                      # React entry point
 │   ├── assets/                       # Static assets (icons, images)
-│   ├── styles/                       # Global and component styles (SCSS)
+│   ├── styles/                       # Plain CSS tokens/components plus Tailwind utilities
 │   │   ├── base/                     # Base styles and resets
 │   │   ├── components/               # Reusable UI component styles
 │   │   ├── layout/                   # App shell and navigation layout
@@ -400,7 +400,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## Technology Stack
 
-- **Frontend:** React 19, TypeScript, Vite, TailwindCSS, SCSS
+- **Frontend:** React 19, TypeScript, Vite, CSS, TailwindCSS
 - **Desktop:** Tauri v2 (Rust backend)
 - **State Management:** Zustand
 - **UI Components:** Lucide React, Framer Motion
