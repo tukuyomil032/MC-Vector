@@ -1,0 +1,32 @@
+@import "./base/design-tokens.css";
+@import "./base/base.css";
+
+@import "./components/ui-components.css";
+@import "./components/surface-primitives.css";
+@import "./components/animations.css";
+@import "./components/modal-primitives.css";
+@import "./components/toast.css";
+@import "./components/command-palette.css";
+
+@import "./layout/app-layout.css";
+@import "./modals/add-server-modal.css";
+
+@import "./views/console-view.css";
+@import "./views/backups-view.css";
+@import "./views/files-view.css";
+@import "./views/dashboard-view.css";
+@import "./views/java-manager-modal.css";
+@import "./views/plugin-browser.css";
+@import "./views/settings-window.css";
+@import "./views/advanced-settings-window.css";
+@import "./views/properties-view.css";
+@import "./views/server-settings.css";
+@import "./views/users-view.css";
+@import "./views/proxy-help-view.css";
+@import "./views/proxy-setup-view.css";
+@import "./views/ngrok-guide-view.css";
+@import "./views/backup-selector-window.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -8,7 +8,7 @@ import 'sonner/dist/styles.css';
 import App from './App';
 import { useI18nStore } from './i18n';
 import { AppFeedbackProvider } from './renderer/components/AppFeedbackProvider';
-import './styles/index.scss';
+import './styles/index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

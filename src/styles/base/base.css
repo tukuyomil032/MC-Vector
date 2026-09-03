@@ -1,30 +1,38 @@
 @layer base {
-  * {
-    @apply box-border select-none;
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+    user-select: none;
   }
 
-  body,
-  html {
-    @apply m-0 p-0 h-full font-sans overflow-hidden;
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     background: var(--mv-surface-base);
     color: var(--mv-surface-text-primary);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
   #root {
-    @apply h-full;
+    height: 100%;
   }
 
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    width: 0.5rem;
+    height: 0.5rem;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply rounded;
+    border-radius: 0.25rem;
     background-color: var(--mv-scrollbar-thumb);
   }
 
@@ -33,13 +41,15 @@
   }
 
   button {
+    cursor: pointer;
+    border: none;
+    outline: none;
     font-family: inherit;
-    @apply cursor-pointer border-none outline-none;
   }
 
   input::-webkit-outer-spin-button,
   input::-webkit-inner-spin-button {
+    margin: 0;
     -webkit-appearance: none;
-    @apply m-0;
   }
 }

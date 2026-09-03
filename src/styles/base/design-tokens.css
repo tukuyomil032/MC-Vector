@@ -64,7 +64,7 @@
   }
 
   .app-shell.theme-dark,
-  .app-shell[data-theme='dark'] {
+  .app-shell[data-theme="dark"] {
     --mv-color-scheme: dark;
 
     --mv-surface-base: #09090b;

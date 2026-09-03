@@ -1,0 +1,82 @@
+@layer components {
+  :root {
+    --mv-font-display: "Avenir Next", "Noto Sans JP", "Segoe UI", sans-serif;
+    --mv-view-glow-a: transparent;
+    --mv-view-glow-b: transparent;
+    --mv-panel-start: #18181b;
+    --mv-panel-end: #18181b;
+    --mv-panel-alt-start: #1c1c1f;
+    --mv-panel-alt-end: #1c1c1f;
+    --mv-accent-start: #ffffff;
+    --mv-accent-end: #ffffff;
+    --mv-success-start: #22c55e;
+    --mv-success-end: #10b981;
+    --mv-warn-start: #f59e0b;
+    --mv-warn-end: #f97316;
+    --mv-view-bg: transparent;
+    --mv-panel-bg: #18181b;
+    --mv-panel-bg-alt: #1c1c1f;
+    --mv-border-soft: #27272a;
+    --mv-border-strong: #3f3f46;
+    --mv-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  .app-svg-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    color: currentColor;
+    background-color: currentColor;
+    -webkit-mask-image: var(--mv-icon-src);
+    mask-image: var(--mv-icon-src);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+
+  .native-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    padding-right: 2.5rem;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6.5l4 4.8 4-4.8' fill='none' stroke='%23cbd5e1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 0.95rem;
+  }
+
+  .native-select:hover {
+    border-color: #3f3f46;
+  }
+
+  .native-select:disabled {
+    cursor: not-allowed;
+  }
+
+  .native-select::-ms-expand {
+    display: none;
+  }
+
+  .native-select option,
+  .native-select optgroup {
+    background-color: #17171c;
+    color: #e5e7eb;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .app-shell.theme-light .native-select option,
+  .app-shell[data-theme="light"] .native-select option,
+  .app-shell.theme-light .native-select optgroup,
+  .app-shell[data-theme="light"] .native-select optgroup {
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+}

@@ -1,23 +1,25 @@
 @layer components {
   .surface-card {
-    @apply rounded-2xl border;
+    border-width: 1px;
     border-color: var(--mv-surface-border);
     background: var(--mv-surface-card-bg);
   }
 
   .section-title {
-    @apply m-0 text-[0.72rem] font-semibold uppercase tracking-[0.12em];
+    margin: 0px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
     color: var(--mv-section-title-color);
   }
 
   .kpi-tile {
-    @apply rounded-xl border p-4 flex flex-col gap-1.5;
+    border-width: 1px;
     border-color: var(--mv-surface-border);
     background: var(--mv-surface-card-alt-bg);
     box-shadow: var(--mv-surface-shadow-soft);
-    transition:
-      transform 0.15s ease,
-      border-color 0.2s ease;
+    transition: transform 0.15s ease, border-color 0.2s ease;
   }
 
   .kpi-tile:hover {
@@ -26,22 +28,27 @@
   }
 
   .kpi-tile__label {
-    @apply text-[0.68rem] uppercase tracking-[0.1em] font-semibold;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     color: var(--mv-kpi-label-color);
   }
 
   .kpi-tile__value {
-    @apply text-2xl font-bold;
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
     color: var(--mv-kpi-value-color);
   }
 
   .kpi-tile__meta {
-    @apply text-xs;
+    font-size: 0.75rem;
+    line-height: 1rem;
     color: var(--mv-kpi-meta-color);
   }
 
   .control-chip {
-    @apply inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all;
     border-color: var(--mv-control-chip-border);
     background: var(--mv-control-chip-bg);
     color: var(--mv-control-chip-text);
@@ -52,12 +59,13 @@
   }
 
   .control-chip:focus-visible {
-    @apply outline-none;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--mv-surface-border-strong);
   }
 
   .control-chip.is-active,
-  .control-chip[aria-pressed='true'] {
+  .control-chip[aria-pressed="true"] {
     border-color: var(--mv-control-chip-active-border);
     background: var(--mv-control-chip-active-bg);
     color: var(--mv-control-chip-active-text);

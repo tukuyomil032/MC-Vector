@@ -1,0 +1,45 @@
+@layer components {
+  .toast {
+    display: flex;
+    min-width: 300px;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    padding: 1rem;
+    --tw-text-opacity: 1;
+    color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+    --tw-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    --tw-shadow-colored: 0 10px 25px -5px var(--tw-shadow-color);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+      var(--tw-shadow);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+    font-weight: 500;
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    border-color: rgba(226, 232, 240, 0.22);
+    backdrop-filter: blur(8px);
+  }
+
+  .toast.is-visible {
+    --tw-translate-x: 0px;
+    --tw-scale-x: 1;
+    --tw-scale-y: 1;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate))
+      skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x))
+      scaleY(var(--tw-scale-y));
+    opacity: 1;
+  }
+
+  .toast.is-hidden {
+    --tw-translate-x: 100%;
+    --tw-scale-x: 0.9;
+    --tw-scale-y: 0.9;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate))
+      skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x))
+      scaleY(var(--tw-scale-y));
+    opacity: 0;
+  }
+}
