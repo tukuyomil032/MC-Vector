@@ -29,7 +29,7 @@ describe('fetchJson', () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
     expect(headers.get('Accept')).toBe('application/json');
-    expect(headers.get('User-Agent')).toBe('MC-Vector/2.0.57');
+    expect(headers.get('User-Agent')).toBe('MC-Vector/2.0.59');
   });
 
   it('does not overwrite existing Accept header', async () => {
