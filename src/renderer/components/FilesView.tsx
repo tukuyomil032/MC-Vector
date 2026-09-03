@@ -944,7 +944,7 @@ export default function FilesView({ server }: Props) {
       {modalType === 'create' && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
               {t('files.modal.createImportTitle')}
             </h3>
 
@@ -1027,7 +1027,7 @@ export default function FilesView({ server }: Props) {
               }}
             />
 
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button variant="modalSecondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
@@ -1048,7 +1048,7 @@ export default function FilesView({ server }: Props) {
       {(modalType === 'move' || modalType === 'moveCurrent') && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
               {modalType === 'moveCurrent'
                 ? t('files.modal.moveDirectoryTitle')
                 : t('files.modal.moveTitle')}
@@ -1066,7 +1066,7 @@ export default function FilesView({ server }: Props) {
               placeholder={t('files.modal.moveDestPlaceholder')}
               variant="modal"
             />
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button variant="modalSecondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
@@ -1082,7 +1082,7 @@ export default function FilesView({ server }: Props) {
       {modalType === 'rename' && (
         <div className="mc-modal-overlay modal-backdrop">
           <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
               {t('files.modal.renameTitle')}
             </h3>
             <Input
@@ -1091,7 +1091,7 @@ export default function FilesView({ server }: Props) {
               onChange={(e) => setRenameFileName(e.target.value)}
               variant="modal"
             />
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button variant="modalSecondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>

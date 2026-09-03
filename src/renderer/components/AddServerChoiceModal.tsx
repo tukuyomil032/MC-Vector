@@ -35,7 +35,7 @@ export default function AddServerChoiceModal({
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
           )}
         >
-          <Dialog.Title className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+          <Dialog.Title className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
             {t('addServer.choice.title')}
           </Dialog.Title>
           <div className="flex flex-col gap-3">
@@ -66,7 +66,7 @@ export default function AddServerChoiceModal({
               </span>
             </button>
           </div>
-          <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+          <div className="flex justify-end gap-2.5 mt-2.5">
             <Dialog.Close asChild>
               <Button type="button" variant="modalSecondary">
                 {t('common.cancel')}

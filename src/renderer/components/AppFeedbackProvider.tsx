@@ -94,7 +94,7 @@ function FeedbackDialogContent({
           {severityIcon(dialog.severity)}
         </div>
         <div className="min-w-0 flex-1">
-          <Dialog.Title className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5 mb-2 border-0 pb-0 pr-8">
+          <Dialog.Title className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5 mb-2 border-0 pb-0 pr-8">
             {dialog.title}
           </Dialog.Title>
           <Dialog.Description className="whitespace-pre-line text-sm leading-6 text-zinc-300">
@@ -114,7 +114,7 @@ function FeedbackDialogContent({
         </Dialog.Close>
       </div>
 
-      <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+      <div className="flex justify-end gap-2.5 mt-2.5">
         {dialog.primaryAction ? (
           <Dialog.Close asChild>
             <Button

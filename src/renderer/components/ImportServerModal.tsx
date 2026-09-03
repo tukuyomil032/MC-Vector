@@ -118,11 +118,11 @@ export default function ImportServerModal({
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
           )}
         >
-          <Dialog.Title className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+          <Dialog.Title className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
             {t('importServer.title')}
           </Dialog.Title>
 
-          <label className="mc-modal-label">{t('importServer.folderLabel')}</label>
+          <label>{t('importServer.folderLabel')}</label>
           <div className="flex gap-2 mb-3">
             <Input
               type="text"
@@ -149,7 +149,7 @@ export default function ImportServerModal({
                 <p className="text-yellow-400 text-sm mb-3">{t('importServer.eulaWarning')}</p>
               )}
 
-              <label className="mc-modal-label">{t('importServer.nameLabel')}</label>
+              <label>{t('importServer.nameLabel')}</label>
               <Input
                 type="text"
                 value={serverName}
@@ -158,7 +158,7 @@ export default function ImportServerModal({
                 className="mb-3"
               />
 
-              <label className="mc-modal-label">{t('importServer.versionLabel')}</label>
+              <label>{t('importServer.versionLabel')}</label>
               <Input
                 type="text"
                 value={version}
@@ -167,7 +167,7 @@ export default function ImportServerModal({
                 className="mb-3"
               />
 
-              <label className="mc-modal-label">{t('importServer.softwareLabel')}</label>
+              <label>{t('importServer.softwareLabel')}</label>
               <Input
                 type="text"
                 value={software}
@@ -178,7 +178,7 @@ export default function ImportServerModal({
             </>
           )}
 
-          <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+          <div className="flex justify-end gap-2.5 mt-2.5">
             <Dialog.Close asChild>
               <Button type="button" variant="modalSecondary" onClick={handleCancel}>
                 {t('common.cancel')}

@@ -116,7 +116,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
   return (
     <div className="mc-modal-overlay" onClick={onClose}>
       <div className="mc-modal-panel w-[520px]" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mc-modal-title mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
+        <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
           {t('serverSettings.versionUpgrade.title')}
         </h3>
 
@@ -150,7 +150,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
               </p>
             )}
 
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button variant="modalSecondary" onClick={onClose}>
                 {t('serverSettings.versionUpgrade.close')}
               </Button>
@@ -178,7 +178,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
                 <span className="mt-1 block text-xs text-[#9ca3af]">{backupProgress}%</span>
               </div>
             )}
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button
                 variant="modalPrimary"
                 onClick={() => {
@@ -207,7 +207,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
                 <span className="mt-1 block text-xs text-[#9ca3af]">{dlProgress}%</span>
               </div>
             )}
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button variant="modalSecondary" onClick={onClose} disabled={processing}>
                 {t('serverSettings.versionUpgrade.close')}
               </Button>
@@ -228,7 +228,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
         {step === 'done' && (
           <div>
             <p>{t('serverSettings.versionUpgrade.doneDescription')}</p>
-            <div className="mc-modal-footer flex justify-end gap-2.5 mt-2.5">
+            <div className="flex justify-end gap-2.5 mt-2.5">
               <Button variant="modalPrimary" onClick={onClose}>
                 {t('serverSettings.versionUpgrade.close')}
               </Button>
