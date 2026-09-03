@@ -103,9 +103,13 @@ export default defineConfig({
         },
       ],
       customCss: ['./src/styles/custom.css'],
-      social: {
-        github: 'https://github.com/tukuyomil032/mc-vector',
-      },
+      social: [
+        {
+          icon: 'github',
+          label: 'GitHub',
+          href: 'https://github.com/tukuyomil032/mc-vector',
+        },
+      ],
     }),
   ],
 });
