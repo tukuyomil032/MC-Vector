@@ -12,6 +12,20 @@ updates:
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: '@biomejs/biome'
+        update-types:
+          - 'version-update:semver-major'
+      - dependency-name: 'tailwindcss'
+        update-types:
+          - 'version-update:semver-major'
+      - dependency-name: 'typescript'
+        update-types:
+          - 'version-update:semver-major'
+      - dependency-name: 'typedoc'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-major'
     groups:
       all-npm-dependencies:
         patterns:
