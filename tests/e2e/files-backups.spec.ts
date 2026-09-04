@@ -59,5 +59,11 @@ test.describe('files and backups', () => {
     });
     await expect.poll(async () => (await app.ipcCalls('create_managed_backup')).length).toBe(1);
     expect(await runtimeFiles(page)).toContain('/mock/app-data/backups/server-1/e2e-backup.zip');
+    expect(await runtimeFiles(page)).toContain(
+      '/mock/app-data/backups/server-1/.mc-vector-backup-meta.json',
+    );
+    expect(await runtimeFiles(page)).not.toContain(
+      '/mock/app-data/servers/server-1/backups/.mc-vector-backup-meta.json',
+    );
   });
 });

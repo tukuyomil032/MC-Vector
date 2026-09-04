@@ -1,24 +1,24 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { ask } from '@tauri-apps/plugin-dialog';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
+  applyBackupRetention,
   createBackup,
   deleteBackup,
+  getBackupNameValidationError,
   listBackupsWithMetadata,
+  normalizeBackupSources,
+  readBackupCatalog,
   restoreBackup,
+  writeBackupCatalog,
 } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
-import {
-  deleteItem,
-  listFiles,
-  listFilesWithMetadata,
-  readJsonFile,
-  writeJsonFile,
-} from '../../lib/file-commands';
+import { deleteItem, listFiles, listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
+import { buildManualBackupName } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
 import { Button } from './ui/Button';
 import { Input, NativeSelect, Textarea } from './ui/Field';
@@ -55,7 +55,14 @@ interface BackupCatalog {
   entries: Record<string, BackupCatalogEntry>;
 }
 
-const BACKUP_META_FILE = '.mc-vector-backup-meta.json';
+interface RetentionResult {
+  catalog: BackupCatalog;
+  deletedCount: number;
+  failedDeleteCount: number;
+  listingFailed: boolean;
+}
+
+type CatalogLoadState = 'loading' | 'ready' | 'error';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -139,6 +146,19 @@ function parseTagsInput(value: string): string[] {
     .filter((tag) => tag.length > 0);
 }
 
+export async function persistBackupCatalogBestEffort(
+  persist: () => Promise<void>,
+  onFailure: (error: unknown) => void,
+): Promise<boolean> {
+  try {
+    await persist();
+    return true;
+  } catch (error) {
+    onFailure(error);
+    return false;
+  }
+}
+
 export default function BackupsView({ server }: Props) {
   const { t } = useTranslation();
   const [backups, setBackups] = useState<Backup[]>([]);
@@ -150,20 +170,35 @@ export default function BackupsView({ server }: Props) {
   const [compressionLevel, setCompressionLevel] = useState(5);
   const [backupMode, setBackupMode] = useState<BackupMode>('full');
   const [backupCatalog, setBackupCatalog] = useState<BackupCatalog>(createEmptyCatalog());
+  const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>('loading');
   const [worlds, setWorlds] = useState<string[]>([]);
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const catalogOperationInFlightRef = useRef(false);
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     if (type === 'success') {
       toast.success(msg);
     } else if (type === 'error') {
       toast.error(msg);
+    } else if (type === 'warning') {
+      toast.warning(msg);
     } else {
       toast(msg);
     }
   };
-  const backupMetaPath = useMemo(() => `${server.path}/backups/${BACKUP_META_FILE}`, [server.path]);
+  const beginCatalogOperation = () => {
+    if (processing || catalogOperationInFlightRef.current) {
+      return false;
+    }
+    catalogOperationInFlightRef.current = true;
+    setProcessing(true);
+    return true;
+  };
+  const endCatalogOperation = () => {
+    catalogOperationInFlightRef.current = false;
+    setProcessing(false);
+  };
   const listParentRef = useRef<HTMLDivElement>(null);
   const backupVirtualizer = useVirtualizer({
     count: backups.length,
@@ -249,20 +284,29 @@ export default function BackupsView({ server }: Props) {
   }, [server.path]);
 
   useEffect(() => {
+    setCatalogLoadState('loading');
+    setBackupCatalog(createEmptyCatalog());
     void (async () => {
       await loadBackups();
       await loadBackupCatalog();
       await loadWorlds();
     })();
-  }, [server.path]);
+  }, [server.id, server.path]);
 
   const persistBackupCatalog = async (catalog: BackupCatalog) => {
-    await writeJsonFile(backupMetaPath, catalog);
+    await writeBackupCatalog(server.id, catalog);
   };
 
   const loadBackupCatalog = async () => {
-    const value = await readJsonFile(backupMetaPath);
-    setBackupCatalog(sanitizeCatalog(value));
+    try {
+      const value = await readBackupCatalog(server.id);
+      setBackupCatalog(sanitizeCatalog(value));
+      setCatalogLoadState('ready');
+    } catch (error) {
+      logError('Failed to load backup catalog', error, { serverPath: server.path });
+      setCatalogLoadState('error');
+      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+    }
   };
 
   const loadBackups = async () => {
@@ -279,13 +323,7 @@ export default function BackupsView({ server }: Props) {
   };
 
   const defaultName = () => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    return `Backup ${server.name} ${yyyy}-${mm}-${dd}-${hh}:${min}.zip`;
+    return buildManualBackupName(server);
   };
 
   const openCreateModal = async () => {
@@ -296,7 +334,7 @@ export default function BackupsView({ server }: Props) {
     try {
       const entries = await listFiles(server.path);
       const initial = entries
-        .filter((entry) => entry.name !== 'backups')
+        .filter((entry) => entry.name.toLowerCase() !== 'backups')
         .map((entry) => entry.name)
         .sort((left, right) => left.localeCompare(right));
       setSelectedPaths(new Set(initial));
@@ -312,7 +350,9 @@ export default function BackupsView({ server }: Props) {
   const loadWorlds = async () => {
     try {
       const entries = await listFiles(server.path);
-      const candidates = entries.filter((entry) => entry.isDirectory && entry.name !== 'backups');
+      const candidates = entries.filter(
+        (entry) => entry.isDirectory && entry.name.toLowerCase() !== 'backups',
+      );
 
       const worldNames: string[] = [];
       await Promise.all(
@@ -497,46 +537,47 @@ export default function BackupsView({ server }: Props) {
     };
   };
 
-  const applyRetentionPolicy = async (serverPath: string, srv: MinecraftServer) => {
+  const applyRetentionPolicy = async (
+    catalog: BackupCatalog,
+    srv: MinecraftServer,
+  ): Promise<RetentionResult> => {
     const retainCount = srv.autoBackupRetainCount ?? 0;
     const retainDays = srv.autoBackupRetainDays ?? 0;
-    if (retainCount === 0 && retainDays === 0) {
-      return;
-    }
+    const retention = await applyBackupRetention(srv.id, retainCount, retainDays);
+    const { deletedNames } = retention;
 
-    const all = await listBackupsWithMetadata(srv.id);
-    const sorted = [...all].sort(
-      (a, b) => b.date.getTime() - a.date.getTime() || a.name.localeCompare(b.name),
-    );
-    const now = Date.now();
-
-    const toDelete = sorted.filter((backup, idx) => {
-      if (retainCount > 0 && idx >= retainCount) {
-        return true;
-      }
-      if (retainDays > 0 && now - backup.date.getTime() > retainDays * 86_400_000) {
-        return true;
-      }
-      return false;
-    });
-    for (const backup of toDelete) {
-      // 直列実行（Promise.all は NG）
-      await deleteBackup(srv.id, backup.name);
-    }
-
-    if (toDelete.length > 0) {
-      const deletedNames = new Set(toDelete.map((b) => b.name));
+    let updatedCatalog = catalog;
+    if (deletedNames.length > 0) {
+      const deletedNameSet = new Set(deletedNames);
       const updatedEntries = Object.fromEntries(
-        Object.entries(backupCatalog.entries).filter(([name]) => !deletedNames.has(name)),
+        Object.entries(catalog.entries).filter(([name]) => !deletedNameSet.has(name)),
       );
-      const updatedCatalog: BackupCatalog = { ...backupCatalog, entries: updatedEntries };
-      await persistBackupCatalog(updatedCatalog);
-      setBackupCatalog(updatedCatalog);
+      const lastBackupDeleted =
+        catalog.lastBackupName !== null && deletedNameSet.has(catalog.lastBackupName);
+      updatedCatalog = {
+        ...catalog,
+        lastBackupName: lastBackupDeleted ? null : catalog.lastBackupName,
+        latestSnapshot: lastBackupDeleted ? {} : catalog.latestSnapshot,
+        entries: updatedEntries,
+      };
+      await loadBackups();
     }
+
+    return {
+      catalog: updatedCatalog,
+      deletedCount: deletedNames.length,
+      failedDeleteCount: retention.failedDeleteCount,
+      listingFailed: retention.listingFailed,
+    };
   };
 
   const handleCreateBackup = async () => {
-    if (processing) {
+    if (processing || catalogOperationInFlightRef.current) {
+      return;
+    }
+
+    if (catalogLoadState !== 'ready') {
+      showToast(t('backups.toast.catalogLoadFailed'), 'error');
       return;
     }
 
@@ -545,11 +586,28 @@ export default function BackupsView({ server }: Props) {
       return;
     }
 
-    setProcessing(true);
+    const requestedName = customName.trim() || defaultName();
+    const normalizedName = normalizeBackupName(requestedName);
+    const nameValidationError = getBackupNameValidationError(normalizedName);
+    if (nameValidationError) {
+      showToast(
+        nameValidationError === 'empty'
+          ? t('backups.toast.invalidNameEmpty')
+          : t('backups.toast.invalidNameCharacters'),
+        'error',
+      );
+      return;
+    }
+
+    if (!beginCatalogOperation()) {
+      return;
+    }
     try {
-      const requestedName = customName.trim() || defaultName();
-      const normalizedName = normalizeBackupName(requestedName);
-      const selected = Array.from(selectedPaths).sort((a, b) => a.localeCompare(b));
+      const selected = normalizeBackupSources(Array.from(selectedPaths));
+      if (selected.length === 0) {
+        showToast(t('backups.toast.selectAtLeastOne'), 'info');
+        return;
+      }
 
       const snapshot = await buildSnapshotForSelection(selected);
       let sourcesForBackup = selected;
@@ -573,10 +631,19 @@ export default function BackupsView({ server }: Props) {
           return;
         }
 
-        sourcesForBackup = changed;
+        sourcesForBackup = normalizeBackupSources(changed);
       }
 
       await createBackup(server.id, normalizedName, sourcesForBackup, compressionLevel);
+      await loadBackups();
+
+      showToast(
+        backupMode === 'differential'
+          ? t('backups.toast.diffCreated', { count: sourcesForBackup.length })
+          : t('backups.toast.created'),
+        'success',
+      );
+      setShowCreateModal(false);
 
       const currentMeta = getBackupMeta(normalizedName);
       const nextCatalog: BackupCatalog = {
@@ -594,23 +661,49 @@ export default function BackupsView({ server }: Props) {
         },
       };
 
-      await persistBackupCatalog(nextCatalog);
-      setBackupCatalog(nextCatalog);
-
-      showToast(
-        backupMode === 'differential'
-          ? t('backups.toast.diffCreated', { count: sourcesForBackup.length })
-          : t('backups.toast.created'),
-        'success',
-      );
-
-      setShowCreateModal(false);
-      await loadBackups();
-      // separate try-catch so retention failures don't mask backup creation success
+      let finalCatalog = nextCatalog;
+      let retentionResult: RetentionResult = {
+        catalog: nextCatalog,
+        deletedCount: 0,
+        failedDeleteCount: 0,
+        listingFailed: false,
+      };
+      // Retention cleanup must operate on the catalog created for this backup,
+      // then the final catalog is persisted exactly once.
       try {
-        await applyRetentionPolicy(server.path, server);
+        retentionResult = await applyRetentionPolicy(nextCatalog, server);
+        finalCatalog = retentionResult.catalog;
+        if (retentionResult.failedDeleteCount > 0) {
+          showToast(
+            t('backups.toast.retentionDeleteFailed', {
+              count: retentionResult.failedDeleteCount,
+            }),
+            'warning',
+          );
+        }
+        if (retentionResult.listingFailed) {
+          showToast(t('backups.toast.retentionListFailed'), 'warning');
+        }
       } catch (error) {
         logError('Failed to apply backup retention policy', error, { serverPath: server.path });
+      }
+
+      setBackupCatalog(finalCatalog);
+      const saved = await persistBackupCatalogBestEffort(
+        () => persistBackupCatalog(finalCatalog),
+        (error) =>
+          logError('Failed to persist backup catalog after backup creation', error, {
+            serverPath: server.path,
+            backupName: finalCatalog.lastBackupName ?? normalizedName,
+          }),
+      );
+      if (!saved) {
+        showToast(
+          retentionResult.deletedCount > 0
+            ? t('backups.toast.retentionMetadataSaveFailed')
+            : t('backups.toast.createMetadataSaveFailed'),
+          'warning',
+        );
       }
     } catch (error) {
       logError('Failed to create backup', error, {
@@ -620,7 +713,7 @@ export default function BackupsView({ server }: Props) {
       });
       showToast(t('backups.toast.createFailed'), 'error');
     } finally {
-      setProcessing(false);
+      endCatalogOperation();
     }
   };
 
@@ -641,27 +734,52 @@ export default function BackupsView({ server }: Props) {
   };
 
   const handleDelete = async (backupName: string) => {
+    if (!beginCatalogOperation()) {
+      return;
+    }
+
     try {
       await deleteBackup(server.id, backupName);
+      await loadBackups();
+
+      if (catalogLoadState !== 'ready') {
+        showToast(t('backups.toast.deleteMetadataSaveFailed'), 'warning');
+        return;
+      }
+
+      const deletingLatest = backupCatalog.lastBackupName === backupName;
       const nextCatalog: BackupCatalog = {
         ...backupCatalog,
-        lastBackupName:
-          backupCatalog.lastBackupName === backupName ? null : backupCatalog.lastBackupName,
+        lastBackupName: deletingLatest ? null : backupCatalog.lastBackupName,
+        latestSnapshot: deletingLatest ? {} : backupCatalog.latestSnapshot,
         entries: {
           ...backupCatalog.entries,
         },
       };
       delete nextCatalog.entries[backupName];
 
-      await persistBackupCatalog(nextCatalog);
       setBackupCatalog(nextCatalog);
-      await loadBackups();
+      const saved = await persistBackupCatalogBestEffort(
+        () => persistBackupCatalog(nextCatalog),
+        (error) =>
+          logError('Failed to persist backup catalog after backup deletion', error, {
+            serverPath: server.path,
+            backupName,
+          }),
+      );
+      if (!saved) {
+        showToast(t('backups.toast.deleteMetadataSaveFailed'), 'warning');
+      } else {
+        showToast(t('backups.toast.deleted'), 'success');
+      }
     } catch (e) {
       logError('Failed to delete backup', e, {
         serverPath: server.path,
         backupName,
       });
       showToast(t('backups.toast.deleteFailed'), 'error');
+    } finally {
+      endCatalogOperation();
     }
   };
 
@@ -673,7 +791,15 @@ export default function BackupsView({ server }: Props) {
   };
 
   const handleSaveTagEditor = async () => {
-    if (!tagEditorTarget) {
+    if (!tagEditorTarget || processing || catalogOperationInFlightRef.current) {
+      return;
+    }
+    if (catalogLoadState !== 'ready') {
+      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      return;
+    }
+
+    if (!beginCatalogOperation()) {
       return;
     }
     try {
@@ -702,6 +828,8 @@ export default function BackupsView({ server }: Props) {
         backupName: tagEditorTarget,
       });
       showToast(t('backups.toast.tagSaveFailed'), 'error');
+    } finally {
+      endCatalogOperation();
     }
   };
 
@@ -1057,7 +1185,11 @@ export default function BackupsView({ server }: Props) {
               <Button variant="secondary" onClick={() => setTagEditorTarget(null)}>
                 {t('common.cancel')}
               </Button>
-              <Button variant="primary" onClick={() => void handleSaveTagEditor()}>
+              <Button
+                variant="primary"
+                onClick={() => void handleSaveTagEditor()}
+                disabled={processing}
+              >
                 {t('common.save')}
               </Button>
             </div>
