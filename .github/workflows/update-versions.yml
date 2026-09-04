@@ -83,22 +83,22 @@ jobs:
           echo "duration_display=${MINUTES}m${SECONDS}s" >> $GITHUB_OUTPUT
 
       - name: Send Discord notification
-        if: always()
+        if: ${{ success() && steps.parse.outputs.changed == 'true' }}
+        env:
+          DETECTED_DISPLAY: ${{ steps.parse.outputs.detected_display }}
+          PR_NUMBER: ${{ steps.pr.outputs.pull-request-number }}
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
         run: |
-          if [ "${{ steps.parse.outputs.changed }}" == "true" ]; then
-            STATUS_COLOR=3066993
-            STATUS_TITLE="✅ バージョン更新検知"
-            STATUS_DESC="新しい Minecraft バージョンが検知されました"
-            PR_LINK="${{ github.server_url }}/${{ github.repository }}/pull/${{ steps.pr.outputs.pull_request_number }}"
-            PR_FIELD="[PR #${{ steps.pr.outputs.pull_request_number }}]($PR_LINK)"
-            DETECTED_FIELD="${{ steps.parse.outputs.detected_display }}"
-          else
-            STATUS_COLOR=9807270
-            STATUS_TITLE="ℹ️ 更新なし"
-            STATUS_DESC="新しいバージョンは検知されませんでした"
-            PR_FIELD="なし"
-            DETECTED_FIELD="なし"
+          if [[ -z "$PR_NUMBER" || -z "$PR_URL" ]]; then
+            echo "create-pull-request did not return a PR number and URL" >&2
+            exit 1
           fi
+
+          STATUS_COLOR=3066993
+          STATUS_TITLE="✅ バージョン更新検知"
+          STATUS_DESC="新しい Minecraft バージョンが検知されました"
+          PR_FIELD="[PR #${PR_NUMBER}](${PR_URL})"
+          DETECTED_FIELD="$DETECTED_DISPLAY"
 
           PAYLOAD=$(cat <<EOF
           {
