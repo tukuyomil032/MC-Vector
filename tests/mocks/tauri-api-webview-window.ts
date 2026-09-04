@@ -6,14 +6,14 @@ export class WebviewWindow {
   constructor(label: string, _options?: unknown) {
     this.label = label;
   }
-  static getByLabel(_label: string): WebviewWindow | null {
+  static async getByLabel(_label: string): Promise<WebviewWindow | null> {
     return null;
   }
   async listen(event: string, _handler: unknown) {
     recordE2eCall('ipc', `webview.listen:${event}`, { label: this.label });
     return () => {};
   }
-  once(event: string, handler: unknown) {
+  async once(event: string, handler: unknown): Promise<() => void> {
     recordE2eCall('ipc', `webview.once:${event}`, { label: this.label });
     if (event === 'tauri://created' && typeof handler === 'function') {
       queueMicrotask(() => (handler as (event: unknown) => void)({}));
