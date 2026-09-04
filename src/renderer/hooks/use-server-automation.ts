@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Translate } from '../../i18n';
-import { createBackup } from '../../lib/backup-commands';
+import { applyBackupRetention, createBackup } from '../../lib/backup-commands';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { isServerRunning, startServer as startServerApi } from '../../lib/server-commands';
 import {
@@ -266,6 +266,28 @@ export function useServerAutomation({
       try {
         await createBackup(targetServer.id, buildAutoBackupName(targetServer));
         showToast(t('server.toast.autoBackupCreated', { name: targetServer.name }), 'success');
+
+        try {
+          const retention = await applyBackupRetention(
+            targetServer.id,
+            targetServer.autoBackupRetainCount ?? 0,
+            targetServer.autoBackupRetainDays ?? 0,
+          );
+          if (retention.failedDeleteCount > 0) {
+            showToast(
+              t('backups.toast.retentionDeleteFailed', {
+                count: retention.failedDeleteCount,
+              }),
+              'warning',
+            );
+          }
+          if (retention.listingFailed) {
+            showToast(t('backups.toast.retentionListFailed'), 'warning');
+          }
+        } catch (error) {
+          console.error('Auto backup retention failed:', error);
+          showToast(t('backups.toast.retentionListFailed'), 'warning');
+        }
         return true;
       } catch (error) {
         console.error('Auto backup failed:', error);

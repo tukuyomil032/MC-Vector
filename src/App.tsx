@@ -1,5 +1,5 @@
 import { useTranslation } from '@/i18n';
-import { createBackup } from '@/lib/backup-commands';
+import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
 import {
@@ -62,7 +62,7 @@ function App() {
   } | null>(null);
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
   const showToast = useCallback(
-    (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
       notify(msg, type);
     },
     [notify],
@@ -234,6 +234,28 @@ function App() {
       try {
         await createBackup(s.id, buildAutoBackupName(s, new Date()));
         showToast(t('server.toast.bulkBackupCreated', { name: s.name }), 'success');
+
+        try {
+          const retention = await applyBackupRetention(
+            s.id,
+            s.autoBackupRetainCount ?? 0,
+            s.autoBackupRetainDays ?? 0,
+          );
+          if (retention.failedDeleteCount > 0) {
+            showToast(
+              t('backups.toast.retentionDeleteFailed', {
+                count: retention.failedDeleteCount,
+              }),
+              'warning',
+            );
+          }
+          if (retention.listingFailed) {
+            showToast(t('backups.toast.retentionListFailed'), 'warning');
+          }
+        } catch (error) {
+          logError('Bulk backup retention failed', error, { serverId: s.id });
+          showToast(t('backups.toast.retentionListFailed'), 'warning');
+        }
       } catch (error) {
         logError('Bulk backup failed', error, { serverId: s.id });
         showToast(t('server.toast.bulkBackupFailed', { name: s.name }), 'error');
