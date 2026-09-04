@@ -5,9 +5,21 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/**'
-      - 'src/**'
-      - 'src-tauri/src/**'
+      - 'docs/src/**'
+      - 'docs/public/**'
+      - 'docs/scripts/**'
+      - 'docs/astro.config.mjs'
+      - 'docs/typedoc.json'
+      - 'docs/package.json'
+      - 'docs/biome.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.app.json'
+      - 'src/lib/**'
+      - 'src/store/**'
+      - 'src/renderer/components/**'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:

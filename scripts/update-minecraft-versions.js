@@ -1,5 +1,5 @@
 /**
- * scripts/update-versions.js
+ * scripts/update-minecraft-versions.js
  * - Fetches Mojang manifest
  * - Extracts type === 'release' version ids
  * - Sorts descending, dedupes
