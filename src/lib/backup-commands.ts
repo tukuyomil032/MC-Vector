@@ -47,12 +47,26 @@ type ManagedJsonReadResult =
       value: unknown;
     };
 
-function isMissingManagedPathError(error: unknown): boolean {
+interface MissingManagedPathErrorOptions {
+  allowMissingDirectory?: boolean;
+  allowMissingManagedPathParent?: boolean;
+}
+
+function isMissingManagedPathError(
+  error: unknown,
+  options: MissingManagedPathErrorOptions = {},
+): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
     /no such file or directory/i.test(message) ||
     /(?:path|file|directory) not found\b/i.test(message) ||
-    /cannot find (?:the )?(?:file|path|directory)\b/i.test(message)
+    /cannot find (?:the )?(?:file|path|directory)\b/i.test(message) ||
+    (options.allowMissingManagedPathParent === true &&
+      /^(?:\[tauri\] read_managed_text_file failed: )?managed path parent does not exist$/i.test(
+        message,
+      )) ||
+    (options.allowMissingDirectory === true &&
+      /^(?:\[tauri\] list_dir_with_metadata failed: )?directory does not exist$/i.test(message))
   );
 }
 
@@ -61,7 +75,7 @@ async function readManagedJson(request: ManagedPathRequest): Promise<ManagedJson
   try {
     content = await tauriInvoke<string>('read_managed_text_file', { request });
   } catch (error) {
-    if (isMissingManagedPathError(error)) {
+    if (isMissingManagedPathError(error, { allowMissingManagedPathParent: true })) {
       return { exists: false };
     }
     throw error;
@@ -190,8 +204,11 @@ export async function listBackups(serverId: string): Promise<string[]> {
       request: backupDirectoryRequest(serverId),
     });
     return entries.filter((entry) => entry.name.endsWith('.zip')).map((entry) => entry.name);
-  } catch {
-    return [];
+  } catch (error) {
+    if (isMissingManagedPathError(error, { allowMissingDirectory: true })) {
+      return [];
+    }
+    throw error;
   }
 }
 
@@ -202,7 +219,7 @@ export async function listBackupsWithMetadata(serverId: string): Promise<BackupI
       request: backupDirectoryRequest(serverId),
     });
   } catch (error) {
-    if (isMissingManagedPathError(error)) {
+    if (isMissingManagedPathError(error, { allowMissingDirectory: true })) {
       return [];
     }
     throw error;

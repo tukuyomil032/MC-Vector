@@ -76,14 +76,44 @@ describe('backup-commands', () => {
     expect(tauriInvokeMock).toHaveBeenCalledTimes(1);
   });
 
-  it('returns an empty catalog when both managed catalog paths are missing', async () => {
+  it('returns an empty catalog when the wrapped current and legacy paths are missing', async () => {
     tauriInvokeMock
-      .mockRejectedValueOnce(new Error('Path not found: .mc-vector-backup-meta.json'))
-      .mockRejectedValueOnce(new Error('Path not found: backups/.mc-vector-backup-meta.json'));
+      .mockRejectedValueOnce(
+        new Error(
+          '[Tauri] read_managed_text_file failed: Failed to read file: No such file or directory (os error 2)',
+        ),
+      )
+      .mockRejectedValueOnce(
+        new Error('[Tauri] read_managed_text_file failed: Managed path parent does not exist'),
+      );
     const { readBackupCatalog } = await import('@/lib/backup-commands');
 
     await expect(readBackupCatalog('server-1')).resolves.toBeNull();
     expect(tauriInvokeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('attempts each missing catalog path exactly once in current-then-legacy order', async () => {
+    tauriInvokeMock
+      .mockRejectedValueOnce(new Error('Managed path parent does not exist'))
+      .mockRejectedValueOnce(new Error('MANAGED PATH PARENT DOES NOT EXIST'));
+    const { readBackupCatalog } = await import('@/lib/backup-commands');
+
+    await expect(readBackupCatalog('server-1')).resolves.toBeNull();
+    expect(tauriInvokeMock).toHaveBeenCalledTimes(2);
+    expect(tauriInvokeMock).toHaveBeenNthCalledWith(1, 'read_managed_text_file', {
+      request: {
+        root: 'backups',
+        serverId: 'server-1',
+        relativePath: '.mc-vector-backup-meta.json',
+      },
+    });
+    expect(tauriInvokeMock).toHaveBeenNthCalledWith(2, 'read_managed_text_file', {
+      request: {
+        root: 'servers',
+        serverId: 'server-1',
+        relativePath: 'backups/.mc-vector-backup-meta.json',
+      },
+    });
   });
 
   it('writes the backup catalog only to the managed backup root', async () => {
@@ -147,18 +177,43 @@ describe('backup-commands', () => {
 
   it('returns an empty metadata list when the managed directory is missing', async () => {
     tauriInvokeMock
-      .mockRejectedValueOnce(new Error('directory not found'))
-      .mockRejectedValueOnce(new Error('directory not found'));
+      .mockRejectedValueOnce(
+        new Error('[Tauri] list_dir_with_metadata failed: Directory does not exist'),
+      )
+      .mockRejectedValueOnce(
+        new Error('[Tauri] list_dir_with_metadata failed: Directory does not exist'),
+      );
     const { listBackups, listBackupsWithMetadata } = await import('@/lib/backup-commands');
     await expect(listBackupsWithMetadata('server-1')).resolves.toEqual([]);
     await expect(listBackups('server-1')).resolves.toEqual([]);
   });
 
+  it('propagates a missing managed path parent from metadata listing', async () => {
+    tauriInvokeMock.mockRejectedValueOnce(new Error('Managed path parent does not exist'));
+    const { listBackupsWithMetadata } = await import('@/lib/backup-commands');
+
+    await expect(listBackupsWithMetadata('server-1')).rejects.toThrow(
+      'Managed path parent does not exist',
+    );
+    expect(tauriInvokeMock).toHaveBeenCalledTimes(1);
+  });
+
   it('propagates genuine errors from metadata listing', async () => {
-    tauriInvokeMock.mockRejectedValueOnce(new Error('Permission denied'));
+    tauriInvokeMock.mockRejectedValueOnce(
+      new Error('[Tauri] list_dir_with_metadata failed: Permission denied'),
+    );
     const { listBackupsWithMetadata } = await import('@/lib/backup-commands');
 
     await expect(listBackupsWithMetadata('server-1')).rejects.toThrow('Permission denied');
+  });
+
+  it('propagates genuine errors from backup listing', async () => {
+    tauriInvokeMock.mockRejectedValueOnce(
+      new Error('[Tauri] list_dir_with_metadata failed: Permission denied'),
+    );
+    const { listBackups } = await import('@/lib/backup-commands');
+
+    await expect(listBackups('server-1')).rejects.toThrow('Permission denied');
   });
 
   it('applies retention with managed deletes after a successful backup', async () => {

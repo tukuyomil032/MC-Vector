@@ -1182,7 +1182,7 @@ pub async fn list_dir_with_metadata(
 
 fn list_directory_entries(dir_path: &Path) -> Result<Vec<FileEntryInfo>, String> {
     let metadata =
-        std::fs::symlink_metadata(&dir_path).map_err(|_| "Directory does not exist".to_string())?;
+        std::fs::symlink_metadata(&dir_path).map_err(|error| directory_metadata_error(&error))?;
     if is_link_or_reparse_point(&metadata) {
         return Err("Refusing to list a symbolic link or reparse point".to_string());
     }
@@ -1227,11 +1227,19 @@ fn list_directory_entries(dir_path: &Path) -> Result<Vec<FileEntryInfo>, String>
     Ok(entries)
 }
 
+fn directory_metadata_error(error: &std::io::Error) -> String {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        "Directory does not exist".to_string()
+    } else {
+        format!("Failed to inspect directory metadata: {error}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        list_directory_entries, move_managed_entry, resolve_managed_request,
-        validated_relative_path, ManagedPathRequest, ManagedRoot,
+        directory_metadata_error, list_directory_entries, move_managed_entry,
+        resolve_managed_request, validated_relative_path, ManagedPathRequest, ManagedRoot,
     };
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -1466,6 +1474,33 @@ mod tests {
         .expect_err("only the final managed path component may be new");
 
         assert_eq!(error, "Managed path parent does not exist");
+    }
+
+    #[test]
+    fn maps_only_not_found_directory_metadata_errors_to_missing() {
+        let missing = std::io::Error::from(std::io::ErrorKind::NotFound);
+        assert_eq!(
+            directory_metadata_error(&missing),
+            "Directory does not exist"
+        );
+
+        let permission_denied =
+            std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+        assert_eq!(
+            directory_metadata_error(&permission_denied),
+            "Failed to inspect directory metadata: permission denied"
+        );
+    }
+
+    #[test]
+    fn reports_a_missing_directory_as_missing() {
+        let app_data = TestDirectory::new();
+        let error = match list_directory_entries(&app_data.path().join("missing")) {
+            Ok(_) => panic!("missing directory should return an error"),
+            Err(error) => error,
+        };
+
+        assert_eq!(error, "Directory does not exist");
     }
 
     #[cfg(unix)]
