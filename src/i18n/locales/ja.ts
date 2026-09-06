@@ -122,6 +122,18 @@ export const ja: TranslationDictionary = {
       title: 'コンソール',
       placeholder: 'コマンドを入力...',
     },
+    eula: {
+      title: 'Minecraft EULA への同意',
+      description: '{name} を起動する前に、Minecraft EULA を確認して同意してください。',
+      fileMissing: 'このサーバーには eula.txt がまだ作成されていません。',
+      fileNotAccepted: 'このサーバーの eula.txt はまだ承認されていません。',
+      explanation: 'サーバーは Minecraft EULA への同意を eula.txt に記録してから起動します。',
+      openLink: '公式の Minecraft EULA を読む',
+      consentLabel: 'Minecraft EULA を読み、内容に同意します。',
+      acceptAndStart: '同意して起動',
+      saving: '保存中...',
+      writeError: 'EULA の同意を保存できませんでした。もう一度試してください。',
+    },
     toast: {
       loadError: 'サーバーリスト読み込みエラー',
       downloadStarting: 'ダウンロード開始...',
@@ -131,6 +143,8 @@ export const ja: TranslationDictionary = {
       autoRestartLimitReached: '{name} の自動再起動は上限に達しました',
       autoRestartScheduled: '{name} を {seconds} 秒後に自動再起動します（試行 {attempt}/{max}）',
       autoRestartTriggered: '{name} の自動再起動を実行します（試行 {attempt}/{max}）',
+      autoRestartEulaRequired:
+        '{name} は Minecraft EULA が未承認のため自動再起動を停止しました。EULA に同意してから手動で起動してください。',
       noServerSelected: 'サーバーが選択されていません',
       startFailed: 'サーバーの起動に失敗しました',
       stopFailed: 'サーバーの停止に失敗しました',
@@ -1111,7 +1125,7 @@ export const ja: TranslationDictionary = {
     nameLabel: 'サーバー名',
     versionLabel: 'バージョン',
     softwareLabel: 'ソフトウェア',
-    eulaWarning: 'EULA が未承認です。インポート後に手動で承認してください。',
+    eulaWarning: 'EULA はまだ未承認です。初回起動時に同意できます。',
     importButton: 'インポート',
     toast: {
       success: 'サーバーをインポートしました',

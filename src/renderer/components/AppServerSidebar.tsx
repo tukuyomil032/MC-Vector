@@ -224,6 +224,7 @@ export default function AppServerSidebar({
               type="button"
               className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
               disabled={isBulkRunning}
+              data-testid="bulk-start-button"
               onClick={() => runBulk(() => onBulkStart(selectedServers))}
             >
               {bulkStartLabel}

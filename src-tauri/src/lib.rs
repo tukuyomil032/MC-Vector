@@ -60,6 +60,8 @@ pub fn run() {
             commands::server::send_command,
             commands::server::is_server_running,
             commands::server::get_server_pid,
+            commands::eula::get_server_eula_status,
+            commands::eula::accept_server_eula,
             // プロセス統計
             commands::process_stats::get_server_stats,
             // ダウンロード

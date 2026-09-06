@@ -122,6 +122,19 @@ export const en: TranslationDictionary = {
       title: 'Console',
       placeholder: 'Enter command...',
     },
+    eula: {
+      title: 'Minecraft EULA agreement',
+      description: 'Before starting {name}, review and accept the Minecraft EULA.',
+      fileMissing: 'This server does not have an eula.txt file yet.',
+      fileNotAccepted: 'This server’s eula.txt file is not accepted yet.',
+      explanation:
+        'The server will create and use eula.txt to record this server’s agreement to the Minecraft EULA.',
+      openLink: 'Read the official Minecraft EULA',
+      consentLabel: 'I have read the Minecraft EULA and agree to it.',
+      acceptAndStart: 'Accept and start',
+      saving: 'Saving...',
+      writeError: 'The EULA agreement could not be saved. Please try again.',
+    },
     toast: {
       loadError: 'Failed to load server list',
       downloadStarting: 'Starting download...',
@@ -132,6 +145,8 @@ export const en: TranslationDictionary = {
       autoRestartScheduled:
         'Auto restart scheduled for {name} in {seconds} seconds (attempt {attempt}/{max})',
       autoRestartTriggered: 'Auto restart triggered for {name} (attempt {attempt}/{max})',
+      autoRestartEulaRequired:
+        'Auto restart for {name} was stopped because the Minecraft EULA is not accepted. Accept it and start the server manually.',
       noServerSelected: 'No server selected',
       startFailed: 'Failed to start server',
       stopFailed: 'Failed to stop server',
@@ -1112,7 +1127,7 @@ export const en: TranslationDictionary = {
     nameLabel: 'Server Name',
     versionLabel: 'Version',
     softwareLabel: 'Software',
-    eulaWarning: 'EULA is not accepted. Please accept it manually after importing.',
+    eulaWarning: 'EULA is not accepted yet. You can accept it when you first start this server.',
     importButton: 'Import',
     toast: {
       success: 'Server imported successfully',

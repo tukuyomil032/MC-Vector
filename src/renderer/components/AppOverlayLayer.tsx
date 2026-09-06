@@ -1,10 +1,12 @@
 import type { Translate } from '../../i18n';
 import type { ServerTemplate } from '../../lib/server-commands';
 import type { UpdatePromptState } from '../hooks/use-app-updater';
+import type { PendingServerEula } from '../hooks/use-server-eula-gate';
 import AddServerModal from './AddServerModal';
 import AppDownloadToast from './AppDownloadToast';
 import AppUpdateModal from './AppUpdateModal';
 import ImportServerModal from './ImportServerModal';
+import ServerEulaModal from './ServerEulaModal';
 
 interface DownloadStatus {
   id: string;
@@ -27,6 +29,9 @@ interface AppOverlayLayerProps {
   onDismissUpdate: () => void;
   onUpdateNow: () => void;
   onInstallUpdate: () => void;
+  pendingEula: PendingServerEula | null;
+  onAcceptEula: () => Promise<boolean>;
+  onCancelEula: () => void;
   t: Translate;
 }
 
@@ -45,6 +50,9 @@ export default function AppOverlayLayer({
   onDismissUpdate,
   onUpdateNow,
   onInstallUpdate,
+  pendingEula,
+  onAcceptEula,
+  onCancelEula,
   t,
 }: AppOverlayLayerProps) {
   return (
@@ -77,6 +85,7 @@ export default function AppOverlayLayer({
         onUpdateNow={onUpdateNow}
         onInstall={onInstallUpdate}
       />
+      <ServerEulaModal pending={pendingEula} onAccept={onAcceptEula} onCancel={onCancelEula} />
     </>
   );
 }
