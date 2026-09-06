@@ -96,6 +96,7 @@ function baseFiles(serverId: string, software: string): Record<string, E2eFileNo
     [`${root}/ops.json`]: { kind: 'file', content: '[]' },
     [`${root}/banned-players.json`]: { kind: 'file', content: '[]' },
     [`${root}/banned-ips.json`]: { kind: 'file', content: '[]' },
+    [`${root}/eula.txt`]: { kind: 'file', content: 'eula=true\n' },
     [`${root}/${pluginDir}`]: { kind: 'directory' },
     [`${root}/world`]: { kind: 'directory' },
     [`${root}/backups`]: { kind: 'directory' },
