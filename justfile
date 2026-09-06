@@ -85,7 +85,8 @@ check-all: check rustfmt
 
 # Format Rust code
 rustfmt:
-	cargo fmt --manifest-path src-tauri/Cargo.toml
+  @echo "Running Rust code formatter (rustfmt)..."
+  cargo fmt --manifest-path src-tauri/Cargo.toml
 
 # ═══════════════════════════════════════════════════════════════
 # Testing
