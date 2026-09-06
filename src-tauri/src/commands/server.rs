@@ -194,6 +194,10 @@ pub async fn start_server(
         "nogui".to_string(),
     ]);
 
+    // Re-check immediately before spawning to narrow the in-process race
+    // between EULA acceptance and process creation.
+    ensure_server_eula_accepted(&app_data_dir, &validated_server_id)?;
+
     let mut child = Command::new(&validated_java_path)
         .args(&jvm_args)
         .current_dir(&validated_server_dir)

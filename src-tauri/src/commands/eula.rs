@@ -1,11 +1,16 @@
-use std::io::ErrorKind;
+use std::fs::{self, File, OpenOptions};
+use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 
 const EULA_FILE_NAME: &str = "eula.txt";
 pub const EULA_REQUIRED_ERROR: &str = "eula-required";
+static EULA_FILE_LOCK: Mutex<()> = Mutex::new(());
+static NEXT_TEMP_FILE: AtomicU64 = AtomicU64::new(0);
 
 #[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -69,11 +74,24 @@ fn parse_eula_content(content: &str) -> ServerEulaStatus {
 }
 
 fn read_eula_content(path: &Path) -> Result<Option<String>, String> {
-    match std::fs::read_to_string(path) {
-        Ok(content) => Ok(Some(content)),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(format!("Failed to read eula.txt: {error}")),
+    let Some(_) = inspect_eula_target(path, true)
+        .map_err(|error| format!("Failed to read eula.txt: {error}"))?
+    else {
+        return Ok(None);
+    };
+
+    let mut file = File::open(path).map_err(|error| format!("Failed to read eula.txt: {error}"))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("Failed to inspect eula.txt: {error}"))?;
+    if !metadata.is_file() {
+        return Err("eula.txt must be a regular file".to_string());
     }
+
+    let mut content = String::new();
+    file.read_to_string(&mut content)
+        .map_err(|error| format!("Failed to read eula.txt: {error}"))?;
+    Ok(Some(content))
 }
 
 fn read_eula_status(path: &Path) -> Result<ServerEulaStatus, String> {
@@ -120,9 +138,126 @@ fn accepted_eula_content(content: &str) -> String {
 }
 
 fn accept_eula_file(path: &Path) -> Result<(), String> {
-    let content = read_eula_content(path)?.unwrap_or_default();
-    std::fs::write(path, accepted_eula_content(&content))
+    let content = read_eula_content(path)
+        .map_err(|error| format!("Failed to write eula.txt: {error}"))?
+        .unwrap_or_default();
+    let accepted_content = accepted_eula_content(&content);
+    let existing_permissions = inspect_eula_target(path, true)
+        .map_err(|error| format!("Failed to write eula.txt: {error}"))?
+        .map(|metadata| metadata.permissions());
+    atomic_write_eula(path, accepted_content.as_bytes(), existing_permissions)
         .map_err(|error| format!("Failed to write eula.txt: {error}"))
+}
+
+fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+
+        return metadata.file_attributes() & 0x0400 != 0;
+    }
+
+    #[cfg(not(windows))]
+    false
+}
+
+fn inspect_eula_target(
+    path: &Path,
+    allow_missing: bool,
+) -> Result<Option<std::fs::Metadata>, String> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            if is_link_or_reparse_point(&metadata) {
+                return Err("eula.txt must not be a symbolic link or reparse point".to_string());
+            }
+            if !metadata.is_file() {
+                return Err("eula.txt must be a regular file".to_string());
+            }
+            Ok(Some(metadata))
+        }
+        Err(error) if error.kind() == ErrorKind::NotFound && allow_missing => Ok(None),
+        Err(error) => Err(format!("Failed to inspect eula.txt: {error}")),
+    }
+}
+
+fn atomic_write_eula(
+    path: &Path,
+    content: &[u8],
+    existing_permissions: Option<std::fs::Permissions>,
+) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "eula.txt has no parent directory".to_string())?;
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| "eula.txt has no file name".to_string())?
+        .to_string_lossy();
+
+    let mut temporary_path = None;
+    let mut temporary_file = None;
+    for _ in 0..32 {
+        let counter = NEXT_TEMP_FILE.fetch_add(1, Ordering::Relaxed);
+        let candidate = parent.join(format!(".{file_name}.tmp-{}-{counter}", std::process::id()));
+        match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(file) => {
+                temporary_path = Some(candidate);
+                temporary_file = Some(file);
+                break;
+            }
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(format!("Failed to create temporary eula.txt: {error}")),
+        }
+    }
+
+    let temporary_path =
+        temporary_path.ok_or_else(|| "Failed to allocate a temporary eula.txt path".to_string())?;
+    let write_result = (|| -> Result<(), String> {
+        let mut file = temporary_file
+            .take()
+            .ok_or_else(|| "Temporary eula.txt handle was not created".to_string())?;
+        file.write_all(content)
+            .map_err(|error| format!("Failed to write eula.txt: {error}"))?;
+        if let Some(permissions) = existing_permissions {
+            fs::set_permissions(&temporary_path, permissions)
+                .map_err(|error| format!("Failed to preserve eula.txt permissions: {error}"))?;
+        }
+        file.sync_all()
+            .map_err(|error| format!("Failed to sync eula.txt: {error}"))?;
+        drop(file);
+
+        // This narrows the in-process race; a hostile external process can still
+        // replace the path after this check and needs a stronger OS-specific API.
+        inspect_eula_target(path, true)?;
+        match fs::rename(&temporary_path, path) {
+            Ok(()) => Ok(()),
+            Err(initial_error) => {
+                let Some(metadata) = inspect_eula_target(path, false)? else {
+                    return Err(format!("Failed to replace eula.txt: {initial_error}"));
+                };
+                if !metadata.is_file() {
+                    return Err("eula.txt must be a regular file".to_string());
+                }
+                fs::remove_file(path)
+                    .map_err(|error| format!("Failed to replace existing eula.txt: {error}"))?;
+                fs::rename(&temporary_path, path).map_err(|error| {
+                    format!("Failed to move updated eula.txt into place: {error}; initial error: {initial_error}")
+                })
+            }
+        }
+    })();
+
+    if write_result.is_err() {
+        let _ = fs::remove_file(&temporary_path);
+    }
+    write_result
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -135,6 +270,9 @@ pub(crate) fn ensure_server_eula_accepted(
     app_data_dir: &Path,
     server_id: &str,
 ) -> Result<(), String> {
+    let _guard = EULA_FILE_LOCK
+        .lock()
+        .map_err(|_| "EULA file lock is poisoned".to_string())?;
     let path = resolve_server_eula_path(app_data_dir, server_id)?;
     let status = read_eula_status(&path)?;
     if status.accepted {
@@ -149,6 +287,9 @@ pub async fn get_server_eula_status(
     app: AppHandle,
     server_id: String,
 ) -> Result<ServerEulaStatus, String> {
+    let _guard = EULA_FILE_LOCK
+        .lock()
+        .map_err(|_| "EULA file lock is poisoned".to_string())?;
     let app_data_dir = app_data_dir(&app)?;
     let path = resolve_server_eula_path(&app_data_dir, &server_id)?;
     read_eula_status(&path)
@@ -156,6 +297,9 @@ pub async fn get_server_eula_status(
 
 #[tauri::command]
 pub async fn accept_server_eula(app: AppHandle, server_id: String) -> Result<(), String> {
+    let _guard = EULA_FILE_LOCK
+        .lock()
+        .map_err(|_| "EULA file lock is poisoned".to_string())?;
     let app_data_dir = app_data_dir(&app)?;
     let path = resolve_server_eula_path(&app_data_dir, &server_id)?;
     accept_eula_file(&path)
@@ -282,6 +426,55 @@ mod tests {
         let eula_path = directory.path().join("missing/eula.txt");
         let error = accept_eula_file(&eula_path).expect_err("missing parent should reject write");
         assert!(error.contains("Failed to write eula.txt"));
+    }
+
+    #[test]
+    fn accepts_eula_and_preserves_existing_content() {
+        let directory = TestDirectory::new();
+        let eula_path = directory.path().join("eula.txt");
+        std::fs::write(&eula_path, "# keep this\neula=false\nlevel-name=world\n")
+            .expect("initial eula should be written");
+
+        accept_eula_file(&eula_path).expect("eula should be accepted");
+
+        assert_eq!(
+            std::fs::read_to_string(&eula_path).expect("updated eula should be readable"),
+            "# keep this\neula=true\nlevel-name=world\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_symbolic_link_eula_target() {
+        use std::os::unix::fs::symlink;
+
+        let directory = TestDirectory::new();
+        let outside = directory.path().join("outside.txt");
+        let eula_path = directory.path().join("eula.txt");
+        std::fs::write(&outside, "eula=false\n").expect("outside file should be written");
+        symlink(&outside, &eula_path).expect("eula symlink should be created");
+
+        let error = accept_eula_file(&eula_path).expect_err("symlink eula must be rejected");
+        assert!(error.contains("symbolic link"));
+        assert_eq!(
+            std::fs::read_to_string(&outside).expect("outside file should remain readable"),
+            "eula=false\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_fifo_eula_target() {
+        let directory = TestDirectory::new();
+        let eula_path = directory.path().join("eula.txt");
+        let status = std::process::Command::new("mkfifo")
+            .arg(&eula_path)
+            .status()
+            .expect("mkfifo should be available on Unix test environments");
+        assert!(status.success(), "mkfifo should create the test FIFO");
+
+        let error = read_eula_status(&eula_path).expect_err("FIFO eula must be rejected");
+        assert!(error.contains("regular file"));
     }
 
     #[test]
