@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
+import { isEulaRequiredError } from '../../lib/eula-commands';
 import {
   isServerRunning,
   startServer as startServerApi,
@@ -8,6 +9,11 @@ import {
 } from '../../lib/server-commands';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
+import {
+  type EulaGateMode,
+  type EulaGateResult,
+  runExclusiveServerStart,
+} from './use-server-eula-gate';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
@@ -22,6 +28,7 @@ interface UseServerProcessActionsOptions {
   resetAutoRestartState: (serverId: string) => void;
   markExpectedOffline: (serverId: string) => void;
   clearAutoRestartTimer: (serverId: string) => void;
+  ensureServerEula: (server: MinecraftServer, mode: EulaGateMode) => Promise<EulaGateResult>;
 }
 
 export function useServerProcessActions({
@@ -34,12 +41,45 @@ export function useServerProcessActions({
   resetAutoRestartState,
   markExpectedOffline,
   clearAutoRestartTimer,
+  ensureServerEula,
 }: UseServerProcessActionsOptions) {
+  const startInFlightRef = useRef<string | null>(null);
+
   const startServerProcess = useCallback(async (server: MinecraftServer) => {
     const javaPath = server.javaPath || 'java';
     const jarFile = server.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
     await startServerApi(server.id, javaPath, server.memory, jarFile, server.jvmArgs);
   }, []);
+
+  const startServerProcessWithEula = useCallback(
+    async (server: MinecraftServer, onReadyToStart: () => void): Promise<EulaGateResult> => {
+      return runExclusiveServerStart(server.id, async () => {
+        const gateResult = await ensureServerEula(server, 'interactive');
+        if (gateResult !== 'accepted') {
+          return gateResult;
+        }
+
+        try {
+          onReadyToStart();
+          await startServerProcess(server);
+        } catch (error) {
+          if (!isEulaRequiredError(error)) {
+            throw error;
+          }
+
+          const retryGateResult = await ensureServerEula(server, 'interactive');
+          if (retryGateResult !== 'accepted') {
+            return retryGateResult;
+          }
+          onReadyToStart();
+          await startServerProcess(server);
+        }
+
+        return 'accepted';
+      });
+    },
+    [ensureServerEula, startServerProcess],
+  );
 
   const resolveStatusAfterStopPhaseFailure = useCallback(
     async (serverId: string): Promise<MinecraftServer['status']> => {
@@ -67,20 +107,39 @@ export function useServerProcessActions({
     }
 
     const serverId = activeServer.id;
+    if (startInFlightRef.current === serverId) {
+      return;
+    }
+    startInFlightRef.current = serverId;
     clearExpectedOffline(serverId);
     resetAutoRestartState(serverId);
-    setServers((prev) =>
-      prev.map((server) => (server.id === serverId ? { ...server, status: 'starting' } : server)),
-    );
 
     try {
-      await startServerProcess(activeServer);
+      const gateResult = await startServerProcessWithEula(activeServer, () => {
+        setServers((prev) =>
+          prev.map((server) =>
+            server.id === serverId ? { ...server, status: 'starting' } : server,
+          ),
+        );
+      });
+      if (gateResult !== 'accepted') {
+        setServers((prev) =>
+          prev.map((server) =>
+            server.id === serverId ? { ...server, status: 'offline' } : server,
+          ),
+        );
+        return;
+      }
     } catch (error) {
       logError('Start server failed', error, { serverId });
       setServers((prev) =>
         prev.map((server) => (server.id === serverId ? { ...server, status: 'offline' } : server)),
       );
       showToast(t('server.toast.startFailed'), 'error');
+    } finally {
+      if (startInFlightRef.current === serverId) {
+        startInFlightRef.current = null;
+      }
     }
   }, [
     activeServer,
@@ -88,7 +147,7 @@ export function useServerProcessActions({
     resetAutoRestartState,
     setServers,
     showToast,
-    startServerProcess,
+    startServerProcessWithEula,
     t,
   ]);
 
@@ -134,6 +193,10 @@ export function useServerProcessActions({
     }
 
     const serverId = activeServer.id;
+    if (startInFlightRef.current === serverId) {
+      return;
+    }
+    startInFlightRef.current = serverId;
     markExpectedOffline(serverId);
     clearAutoRestartTimer(serverId);
     setServers((prev) =>
@@ -157,7 +220,21 @@ export function useServerProcessActions({
         throw new Error('Timed out waiting for server shutdown');
       }
 
-      await startServerProcess(activeServer);
+      const gateResult = await startServerProcessWithEula(activeServer, () => {
+        setServers((prev) =>
+          prev.map((server) =>
+            server.id === serverId ? { ...server, status: 'starting' } : server,
+          ),
+        );
+      });
+      if (gateResult !== 'accepted') {
+        setServers((prev) =>
+          prev.map((server) =>
+            server.id === serverId ? { ...server, status: 'offline' } : server,
+          ),
+        );
+        return;
+      }
     } catch (error) {
       logError('Restart server failed', error, { serverId });
       const fallbackStatus = await resolveStatusAfterStopPhaseFailure(serverId);
@@ -167,6 +244,10 @@ export function useServerProcessActions({
         ),
       );
       showToast(t('server.toast.restartFailed'), 'error');
+    } finally {
+      if (startInFlightRef.current === serverId) {
+        startInFlightRef.current = null;
+      }
     }
   }, [
     activeServer,
@@ -175,7 +256,7 @@ export function useServerProcessActions({
     resolveStatusAfterStopPhaseFailure,
     setServers,
     showToast,
-    startServerProcess,
+    startServerProcessWithEula,
     t,
   ]);
 
