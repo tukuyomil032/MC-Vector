@@ -1,5 +1,6 @@
 pub mod backup;
 pub mod download;
+pub mod eula;
 pub mod file_utils;
 pub mod health_check;
 pub mod java;

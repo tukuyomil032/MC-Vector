@@ -7,6 +7,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{mpsc, Mutex};
 
+use super::eula::ensure_server_eula_accepted;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::java::{validate_java_executable_path, validate_jvm_extra_args};
 
@@ -171,6 +172,8 @@ pub async fn start_server(
     if is_link_or_reparse_point(&jar_metadata) || !jar_metadata.is_file() {
         return Err(format!("Jar file not found: {}", validated_jar_file));
     }
+
+    ensure_server_eula_accepted(&app_data_dir, &validated_server_id)?;
 
     // 既に起動中か確認
     {

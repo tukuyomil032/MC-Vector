@@ -4,6 +4,8 @@ const CORE_COMMANDS = [
   'send_command',
   'is_server_running',
   'get_server_pid',
+  'get_server_eula_status',
+  'accept_server_eula',
   'get_server_stats',
   'download_server_jar',
   'download_plugin_artifact',
