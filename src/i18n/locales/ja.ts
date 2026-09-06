@@ -1125,7 +1125,7 @@ export const ja: TranslationDictionary = {
     nameLabel: 'サーバー名',
     versionLabel: 'バージョン',
     softwareLabel: 'ソフトウェア',
-    eulaWarning: 'EULA が未承認です。インポート後に手動で承認してください。',
+    eulaWarning: 'EULA はまだ未承認です。初回起動時に同意できます。',
     importButton: 'インポート',
     toast: {
       success: 'サーバーをインポートしました',

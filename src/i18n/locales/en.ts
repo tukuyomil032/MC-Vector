@@ -1127,7 +1127,7 @@ export const en: TranslationDictionary = {
     nameLabel: 'Server Name',
     versionLabel: 'Version',
     softwareLabel: 'Software',
-    eulaWarning: 'EULA is not accepted. Please accept it manually after importing.',
+    eulaWarning: 'EULA is not accepted yet. You can accept it when you first start this server.',
     importButton: 'Import',
     toast: {
       success: 'Server imported successfully',
