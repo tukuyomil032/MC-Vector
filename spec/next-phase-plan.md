@@ -36,6 +36,7 @@ Rust Coreの共有・デーモン化は行わない。両実装はデータ契�
 | 13 | Proxy + 静的ドキュメント | 未着手 | Phase 7完了後 |
 | 14 | App Settings + i18n + Command Palette | 未着手 | 他と並行可 |
 | 15 | ダウンロード + Ngrok + ポリッシュ + データ契約文書化 | 未着手 | 最終フェーズ |
+| Cross-cutting | EULA first-start gate for Tauri server lifecycle | ✅ Complete (2026-09-06) | Rust-managed EULA contract, interactive manual/bulk/restart flow, background auto-restart blocking, and E2E coverage in `spec/eula-first-start-design.md` |
 
 ## フェーズ体系改訂について (2026-07-10)
 

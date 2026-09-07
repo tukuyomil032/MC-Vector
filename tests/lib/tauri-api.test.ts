@@ -28,6 +28,21 @@ describe('tauriInvoke', () => {
     });
   });
 
+  it('allows the server EULA commands', async () => {
+    invokeMock.mockResolvedValueOnce({ accepted: false, fileExists: false });
+
+    const { tauriInvoke } = await import('@/lib/tauri-api');
+
+    await expect(tauriInvoke('get_server_eula_status', { serverId: 'server-1' })).resolves.toEqual({
+      accepted: false,
+      fileExists: false,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith('get_server_eula_status', {
+      serverId: 'server-1',
+    });
+  });
+
   it("throws 'Blocked tauri command' for unregistered command", async () => {
     const { tauriInvoke } = await import('@/lib/tauri-api');
 

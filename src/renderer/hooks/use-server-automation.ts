@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Translate } from '../../i18n';
 import { applyBackupRetention, createBackup } from '../../lib/backup-commands';
+import { isEulaRequiredError } from '../../lib/eula-commands';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { isServerRunning, startServer as startServerApi } from '../../lib/server-commands';
 import {
@@ -10,6 +11,11 @@ import {
 } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
+import {
+  type EulaGateMode,
+  type EulaGateResult,
+  runExclusiveServerStart,
+} from './use-server-eula-gate';
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
@@ -19,6 +25,7 @@ interface UseServerAutomationOptions {
   setServers: SetServers;
   showToast: (message: string, type?: ToastKind) => void;
   t: Translate;
+  ensureServerEula: (server: MinecraftServer, mode: EulaGateMode) => Promise<EulaGateResult>;
 }
 
 interface ServerStatusChangeData {
@@ -151,6 +158,7 @@ export function useServerAutomation({
   setServers,
   showToast,
   t,
+  ensureServerEula,
 }: UseServerAutomationOptions) {
   const serversRef = useRef<MinecraftServer[]>([]);
   const expectedOfflineEventsRef = useRef<Record<string, number>>({});
@@ -164,6 +172,39 @@ export function useServerAutomation({
   const automationTickInFlightRef = useRef(false);
   const automationTickRerunRequestedRef = useRef(false);
   const runAutomationTickRef = useRef<() => Promise<void>>(async () => {});
+
+  const startServerForAutomation = useCallback(
+    async (server: MinecraftServer, onReadyToStart: () => void): Promise<EulaGateResult> => {
+      return runExclusiveServerStart(server.id, async () => {
+        const gateResult = await ensureServerEula(server, 'background');
+        if (gateResult !== 'accepted') {
+          return gateResult;
+        }
+
+        const javaPath = server.javaPath || 'java';
+        const jarFile = server.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
+
+        try {
+          onReadyToStart();
+          await startServerApi(server.id, javaPath, server.memory, jarFile, server.jvmArgs);
+        } catch (error) {
+          if (!isEulaRequiredError(error)) {
+            throw error;
+          }
+
+          const retryGateResult = await ensureServerEula(server, 'background');
+          if (retryGateResult !== 'accepted') {
+            return retryGateResult;
+          }
+          onReadyToStart();
+          await startServerApi(server.id, javaPath, server.memory, jarFile, server.jvmArgs);
+        }
+
+        return 'accepted';
+      });
+    },
+    [ensureServerEula],
+  );
 
   const clearAutomationTimer = useCallback(() => {
     if (automationTimerRef.current) {
@@ -334,15 +375,25 @@ export function useServerAutomation({
             continue;
           }
 
-          setServers((prev) =>
-            prev.map((server) =>
-              server.id === serverId ? { ...server, status: 'starting' } : server,
-            ),
-          );
-
-          const javaPath = latestServer.javaPath || 'java';
-          const jarFile = latestServer.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-          await startServerApi(latestServer.id, javaPath, latestServer.memory, jarFile);
+          const gateResult = await startServerForAutomation(latestServer, () => {
+            setServers((prev) =>
+              prev.map((server) =>
+                server.id === serverId ? { ...server, status: 'starting' } : server,
+              ),
+            );
+          });
+          if (gateResult !== 'accepted') {
+            delete autoRestartInProgressRef.current[serverId];
+            setServers((prev) =>
+              prev.map((server) =>
+                server.id === serverId ? { ...server, status: 'offline' } : server,
+              ),
+            );
+            showToast(
+              t('server.toast.autoRestartEulaRequired', { name: latestServer.name }),
+              'error',
+            );
+          }
         } catch (error) {
           console.error('Auto restart failed:', error);
           delete autoRestartInProgressRef.current[serverId];
@@ -421,6 +472,7 @@ export function useServerAutomation({
     scheduleAutomationTick,
     setServers,
     showToast,
+    startServerForAutomation,
     t,
   ]);
 

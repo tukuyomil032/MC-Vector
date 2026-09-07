@@ -142,6 +142,18 @@ export interface TranslationDictionary {
       title: string;
       placeholder: string;
     };
+    eula: {
+      title: string;
+      description: string;
+      fileMissing: string;
+      fileNotAccepted: string;
+      explanation: string;
+      openLink: string;
+      consentLabel: string;
+      acceptAndStart: string;
+      saving: string;
+      writeError: string;
+    };
     toast: {
       loadError: string;
       downloadStarting: string;
@@ -151,6 +163,7 @@ export interface TranslationDictionary {
       autoRestartLimitReached: string;
       autoRestartScheduled: string;
       autoRestartTriggered: string;
+      autoRestartEulaRequired: string;
       noServerSelected: string;
       startFailed: string;
       stopFailed: string;

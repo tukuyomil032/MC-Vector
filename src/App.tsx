@@ -1,6 +1,7 @@
 import { useTranslation } from '@/i18n';
 import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
+import { isEulaRequiredError } from '@/lib/eula-commands';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
 import {
   type ServerTemplate,
@@ -27,6 +28,7 @@ import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action
 import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
 import { useServerContextActions } from '@/renderer/hooks/use-server-context-actions';
 import { useServerCreateAction } from '@/renderer/hooks/use-server-create-action';
+import { runExclusiveServerStart, useServerEulaGate } from '@/renderer/hooks/use-server-eula-gate';
 import { useServerProcessActions } from '@/renderer/hooks/use-server-process-actions';
 import { useServerRuntimeListeners } from '@/renderer/hooks/use-server-runtime-listeners';
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
@@ -137,6 +139,8 @@ function App() {
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);
+  const { pendingEula, ensureServerEula, acceptPendingEula, cancelPendingEula } =
+    useServerEulaGate();
   const {
     clearAutoRestartTimer,
     resetAutoRestartState,
@@ -148,6 +152,7 @@ function App() {
     setServers,
     showToast,
     t,
+    ensureServerEula,
   });
 
   const loadTemplates = async () => {
@@ -197,17 +202,39 @@ function App() {
     resetAutoRestartState,
     markExpectedOffline,
     clearAutoRestartTimer,
+    ensureServerEula,
   });
   serverActionsRef.current = { handleStart, handleStop, handleRestart, activeServer };
 
   const handleBulkStart = async (servers: MinecraftServer[]) => {
     for (const s of servers.filter((srv) => srv.status === 'offline')) {
       try {
-        setServers((prev) =>
-          prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'starting' } : srv)),
-        );
-        const jarFile = s.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-        await startServerApi(s.id, s.javaPath || 'java', s.memory, jarFile, s.jvmArgs);
+        const gateResult = await runExclusiveServerStart(s.id, async () => {
+          let result = await ensureServerEula(s, 'interactive');
+          if (result === 'accepted') {
+            const jarFile = s.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
+            setServers((prev) =>
+              prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'starting' } : srv)),
+            );
+            try {
+              await startServerApi(s.id, s.javaPath || 'java', s.memory, jarFile, s.jvmArgs);
+            } catch (error) {
+              if (!isEulaRequiredError(error)) {
+                throw error;
+              }
+              result = await ensureServerEula(s, 'interactive');
+              if (result === 'accepted') {
+                await startServerApi(s.id, s.javaPath || 'java', s.memory, jarFile, s.jvmArgs);
+              }
+            }
+          }
+          return result;
+        });
+        if (gateResult !== 'accepted') {
+          setServers((prev) =>
+            prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'offline' } : srv)),
+          );
+        }
       } catch (error) {
         logError('Bulk start failed', error, { serverId: s.id });
         setServers((prev) =>
@@ -418,6 +445,9 @@ function App() {
         onDismissUpdate={handleDismissUpdate}
         onUpdateNow={handleUpdateNow}
         onInstallUpdate={handleInstallUpdate}
+        pendingEula={pendingEula}
+        onAcceptEula={acceptPendingEula}
+        onCancelEula={cancelPendingEula}
         t={t}
       />
     </div>

@@ -47,6 +47,59 @@ function pluginDestinationPath(request: Record<string, unknown>): string {
   return resolveRuntimePath({ root: 'servers', serverId, relativePath });
 }
 
+function serverEulaPath(serverId: string): string {
+  return resolveRuntimePath({ root: 'servers', serverId, relativePath: 'eula.txt' });
+}
+
+function getServerEulaStatus(serverId: string): { accepted: boolean; fileExists: boolean } {
+  const node = getE2eState().files[serverEulaPath(serverId)];
+  if (!node || node.kind !== 'file') {
+    return { accepted: false, fileExists: false };
+  }
+
+  const activeAssignments = (node.content ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#') && !line.startsWith(';'))
+    .filter((line) => line.startsWith('eula=') || line.startsWith('eula ='));
+  return {
+    accepted:
+      activeAssignments.length > 0 &&
+      activeAssignments.every(
+        (line) =>
+          line
+            .slice(line.indexOf('=') + 1)
+            .trim()
+            .toLowerCase() === 'true',
+      ),
+    fileExists: true,
+  };
+}
+
+function acceptServerEula(serverId: string): void {
+  const path = serverEulaPath(serverId);
+  const node = getE2eState().files[path];
+  const content = node?.kind === 'file' ? (node.content ?? '') : '';
+  const newline = content.includes('\r\n') ? '\r\n' : '\n';
+  const lines = content.split(/(?<=\n)/);
+  let hasActiveAssignment = false;
+  const updated = lines.map((line) => {
+    const body = line.replace(/\r?\n$/, '');
+    const trimmed = body.trimStart();
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) return line;
+    const equalsIndex = body.indexOf('=');
+    if (equalsIndex < 0 || body.slice(0, equalsIndex).trim() !== 'eula') return line;
+    hasActiveAssignment = true;
+    return `${body.slice(0, equalsIndex + 1)}true${line.endsWith('\r\n') ? '\r\n' : line.endsWith('\n') ? '\n' : ''}`;
+  });
+  let accepted = updated.join('');
+  if (!hasActiveAssignment) {
+    if (accepted && !accepted.endsWith('\n')) accepted += newline;
+    accepted += `eula=true${newline}`;
+  }
+  setRuntimeFile(path, accepted);
+}
+
 async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
   const state = getE2eState();
   const payload = asRecord(args);
@@ -67,6 +120,13 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
 
     case 'write_managed_text_file':
       setRuntimeFile(requestPath(payload.request), String(payload.content ?? ''));
+      return null;
+
+    case 'get_server_eula_status':
+      return getServerEulaStatus(String(payload.serverId ?? ''));
+
+    case 'accept_server_eula':
+      acceptServerEula(String(payload.serverId ?? ''));
       return null;
 
     case 'delete_managed_path':
@@ -169,6 +229,9 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
 
     case 'start_server': {
       const serverId = String(payload.serverId ?? '');
+      if (!getServerEulaStatus(serverId).accepted) {
+        throw errorWithCode('eula-required');
+      }
       state.runningServerIds = [...new Set([...state.runningServerIds, serverId])];
       emitStatus(serverId, 'starting');
       emitStatus(serverId, 'online');
