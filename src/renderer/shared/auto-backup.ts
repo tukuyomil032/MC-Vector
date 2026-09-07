@@ -22,6 +22,19 @@ function resolveAutoBackupWeekday(server: MinecraftServer): number {
   return Math.min(6, Math.max(0, raw));
 }
 
+export function sanitizeBackupServerName(name: string): string {
+  const sanitized = Array.from(name, (character) => {
+    const code = character.charCodeAt(0);
+    return code <= 0x1f || code === 0x7f || /[\\/:*?"<>|]/.test(character) ? '-' : character;
+  })
+    .join('')
+    .replace(/\.{2,}/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+    .replace(/^-+|-+$/g, '');
+  return sanitized || 'server';
+}
+
 export function buildTimeBasedAutoBackupKey(server: MinecraftServer, now: Date): string | null {
   const scheduleType = resolveAutoBackupScheduleType(server);
   if (scheduleType === 'interval') {
@@ -49,6 +62,15 @@ export function buildTimeBasedAutoBackupKey(server: MinecraftServer, now: Date):
   return `${scheduleType}-${yyyy}-${mm}-${dd}-${hourText}-${minuteText}`;
 }
 
+export function buildManualBackupName(server: MinecraftServer, now = new Date()): string {
+  const yyyy = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hour = String(now.getHours()).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+  return `Backup ${sanitizeBackupServerName(server.name)} ${yyyy}-${month}-${day}-${hour}-${minute}.zip`;
+}
+
 export function buildAutoBackupName(server: MinecraftServer, now = new Date()): string {
   const yyyy = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -56,5 +78,5 @@ export function buildAutoBackupName(server: MinecraftServer, now = new Date()): 
   const hour = String(now.getHours()).padStart(2, '0');
   const minute = String(now.getMinutes()).padStart(2, '0');
   const second = String(now.getSeconds()).padStart(2, '0');
-  return `AutoBackup ${server.name} ${yyyy}-${month}-${day}-${hour}-${minute}-${second}.zip`;
+  return `AutoBackup ${sanitizeBackupServerName(server.name)} ${yyyy}-${month}-${day}-${hour}-${minute}-${second}.zip`;
 }

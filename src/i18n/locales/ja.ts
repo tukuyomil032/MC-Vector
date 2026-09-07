@@ -398,15 +398,28 @@ export const ja: TranslationDictionary = {
       selectorOpenError: 'バックアップ選択ウィンドウを開けませんでした',
       targetInitFailed: 'バックアップ対象の初期化に失敗しました',
       loadFailed: 'バックアップ一覧の読み込みに失敗しました',
+      catalogLoadFailed:
+        'バックアップメタデータを読み込めないため、作成とタグ保存を実行できません。状態を確認してください',
       worldLoadFailed: 'ワールド一覧の読み込みに失敗しました',
       selectAtLeastOne: 'バックアップ対象を1つ以上選択してください',
       noDiffSkipped: '前回バックアップから差分がないためスキップしました',
       diffCreated: '差分バックアップを作成しました ({count} 件)',
       created: 'バックアップを作成しました！',
+      createMetadataSaveFailed: 'バックアップは作成しましたが、メタデータの保存に失敗しました',
       createFailed: 'バックアップの作成に失敗しました',
+      invalidNameEmpty: 'バックアップ名を入力してください',
+      invalidNameCharacters:
+        'バックアップ名に使用できない文字が含まれています（/、\\、:、*、?、"、<、>、|、..、制御文字など）',
       restored: '復元が完了しました！',
       restoreFailed: 'バックアップの復元に失敗しました',
+      deleteMetadataSaveFailed: 'バックアップは削除しましたが、メタデータの更新に失敗しました',
+      deleted: 'バックアップを削除しました',
       deleteFailed: 'バックアップの削除に失敗しました',
+      retentionDeleteFailed: '保持処理中に {count} 件のバックアップ削除に失敗しました',
+      retentionListFailed:
+        '保持処理中にバックアップ一覧を取得できなかったため、保持処理をスキップしました。新しいバックアップは作成されています',
+      retentionMetadataSaveFailed:
+        '古いバックアップは削除しましたが、メタデータの更新に失敗しました',
       tagSaved: 'バックアップタグを保存しました',
       tagSaveFailed: 'バックアップタグの保存に失敗しました',
     },

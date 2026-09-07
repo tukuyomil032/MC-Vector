@@ -284,6 +284,8 @@ export function listRuntimeChildren(path: string): Array<{
 export function readRuntimeFile(path: string): string {
   const node = getE2eState().files[path];
   if (node?.kind === 'file') return node.content ?? '';
+  if (path.endsWith('.mc-vector-backup-meta.json'))
+    throw new Error('Managed path parent does not exist');
   if (
     path.endsWith('/whitelist.json') ||
     path.endsWith('/ops.json') ||

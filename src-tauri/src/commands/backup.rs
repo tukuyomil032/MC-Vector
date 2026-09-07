@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Component, Path, PathBuf};
@@ -222,6 +222,12 @@ fn validate_output_file_name(name: &str, policy: ArchivePolicy) -> Result<(), St
     let path = validate_archive_entry_name(name, policy)?;
     if path.components().count() != 1 {
         return Err("Output file name must not contain a directory".to_string());
+    }
+    if name
+        .chars()
+        .any(|character| matches!(character, '*' | '?' | '"' | '<' | '>' | '|'))
+    {
+        return Err("Output file name contains a Windows-invalid character".to_string());
     }
     Ok(())
 }
@@ -524,6 +530,92 @@ fn append_source_entry(
     Ok(())
 }
 
+fn normalize_selected_sources(selected: Vec<String>) -> Result<Vec<PathBuf>, String> {
+    let mut normalized = Vec::with_capacity(selected.len());
+    for rel in selected {
+        let normalized_rel = rel.replace('\\', "/");
+        let safe_path = validate_archive_entry_name(&normalized_rel, ARCHIVE_POLICY)?;
+        let mut path = PathBuf::new();
+        for component in safe_path.components() {
+            let Component::Normal(component) = component else {
+                return Err("Selected source path is not a strict relative path".to_string());
+            };
+            path.push(component);
+        }
+
+        if matches!(
+            path.components().next(),
+            Some(Component::Normal(component))
+                if component.to_string_lossy().eq_ignore_ascii_case("backups")
+        ) {
+            continue;
+        }
+        normalized.push(path);
+    }
+
+    normalized.sort_by(|left, right| {
+        left.components()
+            .count()
+            .cmp(&right.components().count())
+            .then_with(|| left.cmp(right))
+    });
+    normalized.dedup();
+
+    let mut minimal = Vec::with_capacity(normalized.len());
+    for candidate in normalized {
+        if minimal
+            .iter()
+            .any(|ancestor: &PathBuf| candidate.starts_with(ancestor))
+        {
+            continue;
+        }
+        minimal.push(candidate);
+    }
+    Ok(minimal)
+}
+
+fn collect_selected_sources(
+    source_path: &Path,
+    source_canonical: &Path,
+    selected: Vec<String>,
+) -> Result<Vec<PathBuf>, String> {
+    let mut files = Vec::new();
+    for relative in normalize_selected_sources(selected)? {
+        let full_path = source_path.join(&relative);
+        let full_canonical = fs::canonicalize(&full_path)
+            .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
+        if !full_canonical.starts_with(source_canonical) {
+            return Err(format!(
+                "Selected source escapes source directory: {}",
+                relative.display()
+            ));
+        }
+        let metadata = fs::symlink_metadata(&full_path)
+            .map_err(|error| format!("Failed to inspect selected source: {error}"))?;
+        if is_link_or_reparse_point(&metadata) {
+            return Err(format!(
+                "Symlink source entry is not allowed: {}",
+                relative.display()
+            ));
+        }
+        if metadata.is_dir() {
+            files.push(full_path.clone());
+            files.extend(
+                collect_files(&full_path)
+                    .map_err(|error| format!("Failed to collect files: {error}"))?,
+            );
+        } else if metadata.is_file() {
+            files.push(full_path);
+        } else {
+            return Err(format!(
+                "Unsupported selected source type: {}",
+                relative.display()
+            ));
+        }
+    }
+    Ok(files)
+}
+
 pub async fn create_backup(
     app: AppHandle,
     server_id: String,
@@ -556,33 +648,7 @@ pub async fn create_backup(
         let options = compression_options(compression_level);
 
         let entries = if let Some(selected) = sources {
-            let mut files = Vec::new();
-            for rel in selected {
-                let relative = validate_archive_entry_name(&rel, ARCHIVE_POLICY)?;
-                let full_path = source_path.join(relative);
-                let full_canonical = fs::canonicalize(&full_path)
-                    .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
-                if !full_canonical.starts_with(&source_canonical) {
-                    return Err(format!("Selected source escapes source directory: {rel}"));
-                }
-                let metadata = fs::symlink_metadata(&full_path)
-                    .map_err(|error| format!("Failed to inspect selected source: {error}"))?;
-                if is_link_or_reparse_point(&metadata) {
-                    return Err(format!("Symlink source entry is not allowed: {rel}"));
-                }
-                if metadata.is_dir() {
-                    files.push(full_path.clone());
-                    files.extend(
-                        collect_files(&full_path)
-                            .map_err(|error| format!("Failed to collect files: {error}"))?,
-                    );
-                } else if metadata.is_file() {
-                    files.push(full_path);
-                } else {
-                    return Err(format!("Unsupported selected source type: {rel}"));
-                }
-            }
-            files
+            collect_selected_sources(&source_path, &source_canonical, selected)?
         } else {
             collect_files(&source_path)
                 .map_err(|error| format!("Failed to collect files: {error}"))?
@@ -630,8 +696,19 @@ fn validate_archive_file_size(file: &File, policy: ArchivePolicy) -> Result<(), 
     Ok(())
 }
 
-fn preflight_archive(
-    archive: &mut zip::ZipArchive<File>,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ArchiveEntryKind {
+    File,
+    Directory,
+}
+
+struct ArchiveEntryRecord {
+    path: PathBuf,
+    name: String,
+}
+
+fn preflight_archive<R: Read + Seek>(
+    archive: &mut zip::ZipArchive<R>,
     policy: ArchivePolicy,
 ) -> Result<(), String> {
     let entry_count = u64::try_from(archive.len()).map_err(|_| "Archive entry count overflow")?;
@@ -639,32 +716,70 @@ fn preflight_archive(
         return Err("Archive entry count exceeds the configured limit".to_string());
     }
     let mut totals = ResourceTotals::default();
-    let mut paths = HashSet::with_capacity(archive.len());
+    let mut paths = HashMap::with_capacity(archive.len());
+    let mut entries = Vec::with_capacity(archive.len());
     for index in 0..archive.len() {
         let file = archive
             .by_index(index)
             .map_err(|error| format!("Failed to read zip entry: {error}"))?;
         let safe_path = validate_zip_entry(&file, &mut totals, policy)?;
-        if !paths_are_non_conflicting(&mut paths, &safe_path) {
-            return Err(format!(
-                "Archive contains duplicate or colliding entries: {}",
-                file.name()
-            ));
-        }
+        let kind = if file.is_dir() {
+            ArchiveEntryKind::Directory
+        } else {
+            ArchiveEntryKind::File
+        };
+        register_archive_entry(&mut paths, &safe_path, kind)
+            .map_err(|reason| format!("Archive entry '{}' is invalid: {reason}", file.name()))?;
+        entries.push(ArchiveEntryRecord {
+            path: safe_path,
+            name: file.name().to_string(),
+        });
     }
+
+    validate_archive_hierarchy(&paths, &entries)?;
     Ok(())
 }
 
-fn paths_are_non_conflicting(paths: &mut HashSet<PathBuf>, candidate: &Path) -> bool {
-    if paths.contains(candidate)
-        || paths
-            .iter()
-            .any(|existing| candidate.starts_with(existing) || existing.starts_with(candidate))
-    {
-        return false;
+fn register_archive_entry(
+    paths: &mut HashMap<PathBuf, ArchiveEntryKind>,
+    candidate: &Path,
+    kind: ArchiveEntryKind,
+) -> Result<(), String> {
+    if let Some(existing_kind) = paths.get(candidate) {
+        return if *existing_kind == kind {
+            Err("duplicate archive entry path".to_string())
+        } else {
+            Err("archive path has conflicting file and directory entries".to_string())
+        };
     }
-    paths.insert(candidate.to_path_buf());
-    true
+
+    paths.insert(candidate.to_path_buf(), kind);
+    Ok(())
+}
+
+fn validate_archive_hierarchy(
+    paths: &HashMap<PathBuf, ArchiveEntryKind>,
+    entries: &[ArchiveEntryRecord],
+) -> Result<(), String> {
+    for entry in entries {
+        let mut ancestor = PathBuf::new();
+        let mut components = entry.path.components().peekable();
+        while let Some(component) = components.next() {
+            ancestor.push(component);
+            if components.peek().is_none() {
+                break;
+            }
+            if paths.get(&ancestor) == Some(&ArchiveEntryKind::File) {
+                return Err(format!(
+                    "Archive entry '{}' is invalid: file entry '{}' cannot be an ancestor of '{}'",
+                    entry.name,
+                    ancestor.display(),
+                    entry.path.display()
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 struct ExtractionCleanup {
@@ -1086,6 +1201,31 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
+    fn archive_with_entries(
+        entries: &[(&str, ArchiveEntryKind)],
+    ) -> zip::ZipArchive<Cursor<Vec<u8>>> {
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default();
+        for (name, kind) in entries {
+            match kind {
+                ArchiveEntryKind::Directory => writer
+                    .add_directory(*name, options)
+                    .expect("write directory entry"),
+                ArchiveEntryKind::File => {
+                    writer.start_file(*name, options).expect("write file entry");
+                    writer.write_all(b"payload").expect("write file contents");
+                }
+            }
+        }
+        let bytes = writer.finish().expect("finish zip").into_inner();
+        zip::ZipArchive::new(Cursor::new(bytes)).expect("read zip")
+    }
+
+    fn preflight_result(entries: &[(&str, ArchiveEntryKind)]) -> Result<(), String> {
+        let mut archive = archive_with_entries(entries);
+        preflight_archive(&mut archive, ARCHIVE_POLICY)
+    }
+
     fn test_policy() -> ArchivePolicy {
         ArchivePolicy {
             max_entries: 2,
@@ -1126,6 +1266,193 @@ mod tests {
         assert!(validate_archive_entry_name("12345678/file", policy).is_ok());
         assert!(validate_archive_entry_name("123456789/file", policy).is_err());
         assert!(validate_archive_entry_name("a/b/c", policy).is_err());
+    }
+
+    #[test]
+    fn output_file_names_require_safe_single_components() {
+        let policy = ARCHIVE_POLICY;
+        assert!(validate_output_file_name("Backup-Test-2026-09-04-12-30.zip", policy).is_ok());
+        assert!(validate_archive_entry_name("archive*?\"<>|", policy).is_ok());
+
+        for unsafe_name in [
+            "Backup-Test-2026-09-04-12:30.zip",
+            "Backup/Test.zip",
+            "Backup\\Test.zip",
+            "../Backup.zip",
+            "Backup*Test.zip",
+            "Backup?Test.zip",
+            "Backup\"Test.zip",
+            "Backup<Test.zip",
+            "Backup>Test.zip",
+            "Backup|Test.zip",
+        ] {
+            assert!(
+                validate_output_file_name(unsafe_name, policy).is_err(),
+                "{unsafe_name}"
+            );
+        }
+    }
+
+    #[test]
+    fn nested_directory_and_file_entries_are_accepted() {
+        let result = preflight_result(&[
+            ("world/", ArchiveEntryKind::Directory),
+            ("world/level.dat", ArchiveEntryKind::File),
+        ]);
+        assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[test]
+    fn duplicate_archive_paths_are_rejected() {
+        let mut paths = HashMap::new();
+        register_archive_entry(
+            &mut paths,
+            Path::new("world/level.dat"),
+            ArchiveEntryKind::File,
+        )
+        .expect("first path should be accepted");
+        let error = register_archive_entry(
+            &mut paths,
+            Path::new("world/level.dat"),
+            ArchiveEntryKind::File,
+        )
+        .expect_err("duplicate paths must be rejected");
+        assert!(error.contains("duplicate archive entry path"), "{error}");
+    }
+
+    #[test]
+    fn file_ancestor_entries_are_rejected() {
+        let error = preflight_result(&[
+            ("world", ArchiveEntryKind::File),
+            ("world/level.dat", ArchiveEntryKind::File),
+        ])
+        .expect_err("file ancestors must be rejected");
+        assert!(error.contains("cannot be an ancestor"), "{error}");
+    }
+
+    #[test]
+    fn same_path_file_directory_conflicts_are_rejected() {
+        let error = preflight_result(&[
+            ("world", ArchiveEntryKind::File),
+            ("world/", ArchiveEntryKind::Directory),
+        ])
+        .expect_err("file and directory conflicts must be rejected");
+        assert!(
+            error.contains("conflicting file and directory entries"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn archive_conflicts_are_rejected_independent_of_zip_order() {
+        let first_error = preflight_result(&[
+            ("world", ArchiveEntryKind::File),
+            ("world/level.dat", ArchiveEntryKind::File),
+        ])
+        .expect_err("file ancestor must be rejected");
+        let second_error = preflight_result(&[
+            ("world/level.dat", ArchiveEntryKind::File),
+            ("world", ArchiveEntryKind::File),
+        ])
+        .expect_err("file ancestor must be rejected");
+
+        assert!(first_error.contains("file entry"), "{first_error}");
+        assert!(second_error.contains("file entry"), "{second_error}");
+    }
+
+    #[test]
+    fn selected_sources_are_normalized_to_minimal_safe_paths() {
+        let normalized = normalize_selected_sources(vec![
+            "world/region".to_string(),
+            "world".to_string(),
+            "world/level.dat".to_string(),
+            "world".to_string(),
+            "backups".to_string(),
+            "backups/old.zip".to_string(),
+        ])
+        .expect("safe sources should normalize");
+
+        assert_eq!(normalized, vec![PathBuf::from("world")]);
+    }
+
+    #[test]
+    fn reserved_backup_source_exclusion_is_case_insensitive() {
+        let normalized = normalize_selected_sources(vec![
+            "Backups".to_string(),
+            "BACKUPS/old.zip".to_string(),
+            "bAcKuPs/nested/file.dat".to_string(),
+            "world".to_string(),
+        ])
+        .expect("safe sources should normalize");
+
+        assert_eq!(normalized, vec![PathBuf::from("world")]);
+    }
+
+    #[test]
+    fn selected_sources_reject_unsafe_paths() {
+        for unsafe_source in ["../outside", "world/../outside"] {
+            let error = normalize_selected_sources(vec![unsafe_source.to_string()])
+                .expect_err("unsafe source should be rejected");
+            assert!(!error.is_empty(), "{unsafe_source}");
+        }
+    }
+
+    #[test]
+    fn selected_source_backslashes_are_normalized_to_archive_separators() {
+        let normalized = normalize_selected_sources(vec!["world\\level.dat".to_string()])
+            .expect("backslash separators should normalize");
+        assert_eq!(normalized, vec![PathBuf::from("world/level.dat")]);
+    }
+
+    #[test]
+    fn selected_source_create_and_restore_round_trip_handles_nested_entries() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-backup-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(root.join("source/world/region")).expect("create source tree");
+        fs::write(root.join("source/world/level.dat"), b"level data").expect("write level");
+        fs::write(root.join("source/world/region/r.0.0.mca"), b"region data")
+            .expect("write region");
+
+        let source = root.join("source");
+        let archive = root.join("backup.zip");
+        let destination = root.join("destination");
+        let source_canonical = fs::canonicalize(&source).expect("resolve source");
+        let entries = collect_selected_sources(
+            &source,
+            &source_canonical,
+            vec!["world".to_string(), "world/level.dat".to_string()],
+        )
+        .expect("collect normalized sources");
+
+        write_zip_atomically(&archive, |zip, totals| {
+            for entry in &entries {
+                append_source_entry(
+                    zip,
+                    entry,
+                    &source_canonical,
+                    &source_canonical,
+                    totals,
+                    compression_options(Some(5)),
+                )?;
+            }
+            Ok(())
+        })
+        .expect("create archive");
+
+        extract_archive_to_directory(&archive, &destination).expect("restore archive");
+        assert_eq!(
+            fs::read(destination.join("world/level.dat")).expect("read restored level"),
+            b"level data"
+        );
+        assert_eq!(
+            fs::read(destination.join("world/region/r.0.0.mca")).expect("read restored region"),
+            b"region data"
+        );
+
+        fs::remove_dir_all(root).expect("remove test tree");
     }
 
     #[test]

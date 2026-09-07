@@ -3,6 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { normalizeBackupSources } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
 import { listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
@@ -109,7 +110,9 @@ export default function BackupTargetSelectorWindow() {
 
         const nodes = await Promise.all(
           entries
-            .filter((entry) => !(relativeRoot.length === 0 && entry.name === 'backups'))
+            .filter(
+              (entry) => !(relativeRoot.length === 0 && entry.name.toLowerCase() === 'backups'),
+            )
             .map(async (entry) => {
               const relativePath = relativeRoot ? `${relativeRoot}/${entry.name}` : entry.name;
 
@@ -254,7 +257,7 @@ export default function BackupTargetSelectorWindow() {
     try {
       await emit('backup-selector:apply', {
         serverPath,
-        paths: Array.from(selected).sort((left, right) => left.localeCompare(right)),
+        paths: normalizeBackupSources(Array.from(selected)),
       });
       await requestClose();
     } finally {
