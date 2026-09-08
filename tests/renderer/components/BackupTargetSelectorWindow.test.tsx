@@ -157,7 +157,7 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
 
     const worldCheckbox = checkbox('world');
     expect(worldCheckbox).not.toBeChecked();
-    expect(worldCheckbox.indeterminate).toBe(true);
+    await waitFor(() => expect(worldCheckbox.indeterminate).toBe(true));
     expect(worldCheckbox).toHaveAttribute('aria-checked', 'mixed');
     expect(checkbox('world/level.dat')).not.toBeChecked();
   });

@@ -1,7 +1,15 @@
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } from 'lucide-react';
-import { type InputHTMLAttributes, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type InputHTMLAttributes,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from '../../i18n';
 import { normalizeBackupSources } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
@@ -184,7 +192,7 @@ function SelectionCheckbox({
 }: InputHTMLAttributes<HTMLInputElement> & { mixed: boolean }) {
   const checkboxRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (checkboxRef.current) {
       checkboxRef.current.indeterminate = mixed;
     }
