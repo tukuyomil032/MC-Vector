@@ -510,7 +510,7 @@ fn append_source_entry(
     zip.start_file(safe_name.to_string_lossy(), options)
         .map_err(|error| format!("Failed to start file in zip: {error}"))?;
     let mut file =
-        File::open(entry).map_err(|error| format!("Failed to open source file: {error}"))?;
+        File::open(entry).map_err(|error| format_source_file_error("open", entry, &error))?;
     let mut actual_total = totals.uncompressed_bytes.saturating_sub(metadata.len());
     let copied = copy_limited(
         &mut file,
@@ -519,7 +519,7 @@ fn append_source_entry(
         &mut actual_total,
         ARCHIVE_POLICY.max_archive_uncompressed_bytes,
     )
-    .map_err(|error| format!("Failed to stream source file: {error}"))?;
+    .map_err(|error| format_source_file_error("stream", entry, &error))?;
     if copied != metadata.len() {
         return Err(format!(
             "Source file changed while being archived: {}",
@@ -528,6 +528,27 @@ fn append_source_entry(
     }
     totals.uncompressed_bytes = actual_total;
     Ok(())
+}
+
+fn format_source_file_error(action: &str, entry: &Path, error: &io::Error) -> String {
+    format!(
+        "Failed to {action} source file: {}: {error}",
+        entry.display()
+    )
+}
+
+fn is_backup_runtime_file(path: &Path) -> bool {
+    path.file_name()
+        .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("session.lock"))
+}
+
+fn has_backup_files(entries: &[PathBuf]) -> io::Result<bool> {
+    for entry in entries {
+        if fs::symlink_metadata(entry)?.is_file() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn normalize_selected_sources(selected: Vec<String>) -> Result<Vec<PathBuf>, String> {
@@ -601,11 +622,13 @@ fn collect_selected_sources(
         if metadata.is_dir() {
             files.push(full_path.clone());
             files.extend(
-                collect_files(&full_path)
+                collect_backup_files(&full_path)
                     .map_err(|error| format!("Failed to collect files: {error}"))?,
             );
         } else if metadata.is_file() {
-            files.push(full_path);
+            if !is_backup_runtime_file(&full_path) {
+                files.push(full_path);
+            }
         } else {
             return Err(format!(
                 "Unsupported selected source type: {}",
@@ -650,9 +673,16 @@ pub async fn create_backup(
         let entries = if let Some(selected) = sources {
             collect_selected_sources(&source_path, &source_canonical, selected)?
         } else {
-            collect_files(&source_path)
+            collect_backup_files(&source_path)
                 .map_err(|error| format!("Failed to collect files: {error}"))?
         };
+        if !has_backup_files(&entries)
+            .map_err(|error| format!("Failed to inspect backup sources: {error}"))?
+        {
+            return Err(
+                "No backup source files remain after excluding runtime lock files".to_string(),
+            );
+        }
         let total = entries.len() as f32;
         write_zip_atomically(&zip_path, |zip, totals| {
             for (index, entry) in entries.iter().enumerate() {
@@ -1147,9 +1177,25 @@ pub async fn extract_managed_item(
 
 /// Recursively collect regular files and directories without following symlinks.
 fn collect_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    collect_files_with_policy(dir, false)
+}
+
+fn collect_backup_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    collect_files_with_policy(dir, true)
+}
+
+fn collect_files_with_policy(
+    dir: &Path,
+    exclude_backup_runtime_files: bool,
+) -> io::Result<Vec<PathBuf>> {
     let root_canonical = fs::canonicalize(dir)?;
     let mut files = Vec::new();
-    collect_files_internal(&root_canonical, &root_canonical, &mut files)?;
+    collect_files_internal(
+        &root_canonical,
+        &root_canonical,
+        &mut files,
+        exclude_backup_runtime_files,
+    )?;
     Ok(files)
 }
 
@@ -1157,6 +1203,7 @@ fn collect_files_internal(
     canonical_dir: &Path,
     root: &Path,
     files: &mut Vec<PathBuf>,
+    exclude_backup_runtime_files: bool,
 ) -> io::Result<()> {
     if !canonical_dir.is_absolute() || !canonical_dir.starts_with(root) {
         return Err(limit_error("source entry escapes source directory"));
@@ -1181,6 +1228,9 @@ fn collect_files_internal(
         if !entry_canonical.starts_with(root) {
             return Err(limit_error("source entry escapes source directory"));
         }
+        if exclude_backup_runtime_files && metadata.is_file() && is_backup_runtime_file(&path) {
+            continue;
+        }
         files.push(path.clone());
         if u64::try_from(files.len()).unwrap_or(u64::MAX) > ARCHIVE_POLICY.max_entries {
             return Err(limit_error(
@@ -1188,7 +1238,7 @@ fn collect_files_internal(
             ));
         }
         if metadata.is_dir() {
-            collect_files_internal(&entry_canonical, root, files)?;
+            collect_files_internal(&entry_canonical, root, files, exclude_backup_runtime_files)?;
         } else if !metadata.is_file() {
             return Err(limit_error("unsupported source entry type"));
         }
@@ -1386,6 +1436,118 @@ mod tests {
         .expect("safe sources should normalize");
 
         assert_eq!(normalized, vec![PathBuf::from("world")]);
+    }
+
+    #[test]
+    fn backup_collection_excludes_session_locks_but_generic_collection_keeps_them() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-backup-lock-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(root.join("world")).expect("create world directory");
+        fs::create_dir_all(root.join("world_nether")).expect("create nether directory");
+        fs::write(root.join("world/session.lock"), b"lock").expect("write world lock");
+        fs::write(root.join("world/level.dat"), b"level").expect("write world data");
+        fs::write(root.join("world_nether/SESSION.LOCK"), b"lock").expect("write nether lock");
+        fs::write(root.join("server.properties"), b"online-mode=true")
+            .expect("write server properties");
+
+        let backup_entries = collect_backup_files(&root).expect("collect backup files");
+        assert!(
+            backup_entries
+                .iter()
+                .all(|entry| !is_backup_runtime_file(entry)),
+            "backup entries must omit session locks: {backup_entries:?}"
+        );
+        assert!(backup_entries.iter().any(|entry| entry.ends_with("world")));
+        assert!(backup_entries
+            .iter()
+            .any(|entry| entry.ends_with("world/level.dat")));
+        assert!(backup_entries
+            .iter()
+            .any(|entry| entry.ends_with("server.properties")));
+
+        let generic_entries = collect_files(&root).expect("collect generic files");
+        assert!(generic_entries
+            .iter()
+            .any(|entry| entry.ends_with("world/session.lock")));
+        assert!(generic_entries
+            .iter()
+            .any(|entry| entry.ends_with("world_nether/SESSION.LOCK")));
+
+        fs::remove_dir_all(root).expect("remove test tree");
+    }
+
+    #[test]
+    fn selected_backup_sources_exclude_direct_and_nested_session_locks() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-selected-lock-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(root.join("world")).expect("create world directory");
+        fs::write(root.join("world/session.lock"), b"lock").expect("write world lock");
+        fs::write(root.join("world/level.dat"), b"level").expect("write world data");
+        fs::write(root.join("root.lock"), b"ordinary lock file").expect("write root lock");
+
+        let source_canonical = fs::canonicalize(&root).expect("resolve source");
+        let entries = collect_selected_sources(
+            &root,
+            &source_canonical,
+            vec!["world".to_string(), "world/session.lock".to_string()],
+        )
+        .expect("collect selected sources");
+
+        assert!(
+            entries.iter().all(|entry| !is_backup_runtime_file(entry)),
+            "selected entries must omit session locks: {entries:?}"
+        );
+        assert!(entries.iter().any(|entry| entry.ends_with("world")));
+        assert!(entries
+            .iter()
+            .any(|entry| entry.ends_with("world/level.dat")));
+
+        let only_lock = collect_selected_sources(
+            &root,
+            &source_canonical,
+            vec!["world/session.lock".to_string()],
+        )
+        .expect("collect direct session lock source");
+        assert!(only_lock.is_empty());
+
+        let world_with_only_lock = std::env::temp_dir().join(format!(
+            "mc-vector-world-lock-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(world_with_only_lock.join("world"))
+            .expect("create lock-only world directory");
+        fs::write(world_with_only_lock.join("world/session.lock"), b"lock")
+            .expect("write lock-only world lock");
+        let lock_only_canonical =
+            fs::canonicalize(&world_with_only_lock).expect("resolve lock-only source");
+        let lock_only_entries = collect_selected_sources(
+            &world_with_only_lock,
+            &lock_only_canonical,
+            vec!["world".to_string()],
+        )
+        .expect("collect lock-only world");
+        assert!(!has_backup_files(&lock_only_entries).expect("inspect lock-only entries"));
+        fs::remove_dir_all(world_with_only_lock).expect("remove lock-only test tree");
+
+        fs::remove_dir_all(root).expect("remove test tree");
+    }
+
+    #[test]
+    fn source_file_errors_include_the_failing_path() {
+        let error = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
+        let message = format_source_file_error("stream", Path::new("world/session.lock"), &error);
+
+        assert_eq!(
+            message,
+            "Failed to stream source file: world/session.lock: access denied"
+        );
     }
 
     #[test]
