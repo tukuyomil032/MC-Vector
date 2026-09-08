@@ -1,7 +1,7 @@
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type InputHTMLAttributes, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { normalizeBackupSources } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
@@ -76,14 +76,124 @@ const setNodeSelection = (node: SelectorNode, checked: boolean, targetSet: Set<s
   }
 };
 
-const collectAll = (nodes: SelectorNode[], bucket: Set<string>) => {
+type NodeSelectionState = 'checked' | 'mixed' | 'unchecked';
+
+const isPathWithin = (path: string, ancestor: string): boolean => {
+  return path === ancestor || path.startsWith(`${ancestor}/`);
+};
+
+const findSelectedAncestorPath = (path: string, selected: Set<string>): string | null => {
+  let candidate: string | null = null;
+  for (const selectedPath of selected) {
+    if (selectedPath !== path && isPathWithin(path, selectedPath)) {
+      if (!candidate || selectedPath.length > candidate.length) {
+        candidate = selectedPath;
+      }
+    }
+  }
+  return candidate;
+};
+
+const buildSelectionStateMap = (
+  nodes: SelectorNode[],
+  selected: Set<string>,
+): Map<string, NodeSelectionState> => {
+  const states = new Map<string, NodeSelectionState>();
+
+  const markSubtreeChecked = (node: SelectorNode) => {
+    states.set(node.path, 'checked');
+    node.children?.forEach(markSubtreeChecked);
+  };
+
+  const visit = (node: SelectorNode, inheritedSelection: boolean): NodeSelectionState => {
+    if (inheritedSelection || selected.has(node.path)) {
+      markSubtreeChecked(node);
+      return 'checked';
+    }
+
+    if (!node.children || node.children.length === 0) {
+      states.set(node.path, 'unchecked');
+      return 'unchecked';
+    }
+
+    const childStates = node.children.map((child) => visit(child, false));
+    const state = childStates.every((childState) => childState === 'checked')
+      ? 'checked'
+      : childStates.some((childState) => childState !== 'unchecked')
+        ? 'mixed'
+        : 'unchecked';
+    states.set(node.path, state);
+    return state;
+  };
+
+  nodes.forEach((node) => visit(node, false));
+  return states;
+};
+
+const findNodeByPath = (nodes: SelectorNode[], path: string): SelectorNode | null => {
   for (const node of nodes) {
-    bucket.add(node.path);
+    if (node.path === path) {
+      return node;
+    }
     if (node.children) {
-      collectAll(node.children, bucket);
+      const match = findNodeByPath(node.children, path);
+      if (match) {
+        return match;
+      }
+    }
+  }
+  return null;
+};
+
+const clearNodeSelection = (node: SelectorNode, targetSet: Set<string>) => {
+  for (const selectedPath of targetSet) {
+    if (isPathWithin(selectedPath, node.path)) {
+      targetSet.delete(selectedPath);
     }
   }
 };
+
+const expandSelectionForExclusion = (
+  selectedAncestor: SelectorNode,
+  excludedNode: SelectorNode,
+  targetSet: Set<string>,
+) => {
+  clearNodeSelection(selectedAncestor, targetSet);
+
+  const addExceptExcluded = (node: SelectorNode) => {
+    if (isPathWithin(node.path, excludedNode.path)) {
+      return;
+    }
+
+    if (isPathWithin(excludedNode.path, node.path)) {
+      node.children?.forEach(addExceptExcluded);
+      return;
+    }
+
+    targetSet.add(node.path);
+  };
+
+  selectedAncestor.children?.forEach(addExceptExcluded);
+};
+
+function SelectionCheckbox({
+  checked,
+  mixed,
+  onChange,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { mixed: boolean }) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = mixed;
+    }
+  }, [mixed]);
+
+  return (
+    <input ref={checkboxRef} {...props} checked={checked} onChange={onChange} type="checkbox" />
+  );
+}
 
 export default function BackupTargetSelectorWindow() {
   const { t } = useTranslation();
@@ -91,15 +201,28 @@ export default function BackupTargetSelectorWindow() {
   const initial = useMemo(parseInitialPayload, []);
 
   const [serverPath, setServerPath] = useState(initial.serverPath);
-  const [selected, setSelected] = useState<Set<string>>(new Set(initial.selected));
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(normalizeBackupSources(initial.selected)),
+  );
   const [tree, setTree] = useState<SelectorNode[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const treeRequestGenerationRef = useRef(0);
+
+  const selectionStateMap = useMemo(() => buildSelectionStateMap(tree, selected), [selected, tree]);
 
   const loadTree = useCallback(async (basePath: string, preselected: Set<string>) => {
+    const requestGeneration = ++treeRequestGenerationRef.current;
+    const isCurrentRequest = () => treeRequestGenerationRef.current === requestGeneration;
+
     if (!basePath) {
+      if (!isCurrentRequest()) {
+        return;
+      }
       setTree([]);
+      setExpanded(new Set());
+      setLoading(false);
       return;
     }
 
@@ -142,6 +265,9 @@ export default function BackupTargetSelectorWindow() {
       };
 
       const nextTree = await walk(basePath);
+      if (!isCurrentRequest()) {
+        return;
+      }
       setTree(nextTree);
 
       const nextExpanded = new Set<string>();
@@ -168,26 +294,45 @@ export default function BackupTargetSelectorWindow() {
       nextTree.forEach((node) => {
         collectExpanded(node, 0);
       });
+      if (!isCurrentRequest()) {
+        return;
+      }
       setExpanded(nextExpanded);
     } catch (error) {
+      if (!isCurrentRequest()) {
+        return;
+      }
       logError('Failed to load backup selector tree', error, { basePath });
       setTree([]);
+      setExpanded(new Set());
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    const initialSelected = new Set(initial.selected);
+    return () => {
+      treeRequestGenerationRef.current += 1;
+    };
+  }, []);
+
+  const initialSelected = useMemo(
+    () => new Set(normalizeBackupSources(initial.selected)),
+    [initial.selected],
+  );
+
+  useEffect(() => {
     void loadTree(initial.serverPath, initialSelected);
-  }, [initial.selected, initial.serverPath, loadTree]);
+  }, [initial.serverPath, initialSelected, loadTree]);
 
   useEffect(() => {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
 
     void tauriListen<IncomingPayload>('backup-selector:load', (payload) => {
-      const nextSelected = new Set(payload.selected);
+      const nextSelected = new Set(normalizeBackupSources(payload.selected));
       setServerPath(payload.serverPath);
       setSelected(nextSelected);
       void loadTree(payload.serverPath, nextSelected);
@@ -205,13 +350,30 @@ export default function BackupTargetSelectorWindow() {
     };
   }, [loadTree]);
 
-  const handleToggleNode = useCallback((node: SelectorNode, checked: boolean) => {
-    setSelected((previous) => {
-      const next = new Set(previous);
-      setNodeSelection(node, checked, next);
-      return next;
-    });
-  }, []);
+  const handleToggleNode = useCallback(
+    (node: SelectorNode, checked: boolean) => {
+      setSelected((previous) => {
+        const next = new Set(previous);
+        if (checked) {
+          setNodeSelection(node, true, next);
+        } else {
+          const selectedAncestorPath = findSelectedAncestorPath(node.path, previous);
+          if (selectedAncestorPath) {
+            const selectedAncestor = findNodeByPath(tree, selectedAncestorPath);
+            if (selectedAncestor) {
+              expandSelectionForExclusion(selectedAncestor, node, next);
+            } else {
+              clearNodeSelection(node, next);
+            }
+          } else {
+            clearNodeSelection(node, next);
+          }
+        }
+        return new Set(normalizeBackupSources(Array.from(next)));
+      });
+    },
+    [tree],
+  );
 
   const toggleExpanded = (path: string) => {
     const next = new Set(expanded);
@@ -224,9 +386,7 @@ export default function BackupTargetSelectorWindow() {
   };
 
   const handleSelectAll = () => {
-    const all = new Set<string>();
-    collectAll(tree, all);
-    setSelected(all);
+    setSelected(new Set(tree.map((node) => node.path)));
   };
 
   const handleClear = () => {
@@ -266,14 +426,17 @@ export default function BackupTargetSelectorWindow() {
   };
 
   const renderNode = (node: SelectorNode, depth: number) => {
-    const checked = selected.has(node.path);
+    const selectionState = selectionStateMap.get(node.path) ?? 'unchecked';
+    const checked = selectionState === 'checked';
+    const mixed = selectionState === 'mixed';
     const isExpanded = expanded.has(node.path);
     const hasChildren = Boolean(node.children && node.children.length > 0);
 
     return (
       <div
         key={node.path}
-        className={`backup-selector-window__node ${checked ? 'is-selected' : ''}`}
+        className={`backup-selector-window__node ${selectionState !== 'unchecked' ? 'is-selected' : ''}`}
+        data-selection-state={selectionState}
       >
         <div
           className="backup-selector-window__node-row"
@@ -296,12 +459,14 @@ export default function BackupTargetSelectorWindow() {
             <span className="backup-selector-window__expander-spacer" />
           )}
 
-          <input
+          <SelectionCheckbox
             type="checkbox"
             className="backup-selector-window__node-checkbox"
             checked={checked}
+            mixed={mixed}
             onChange={(event) => handleToggleNode(node, event.target.checked)}
             aria-label={`${node.name} (${node.path})`}
+            aria-checked={mixed ? 'mixed' : checked}
           />
 
           <span className="backup-selector-window__kind-icon">

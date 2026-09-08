@@ -50,7 +50,7 @@ const {
       deleteBackup: vi.fn(),
       getBackupNameValidationError: vi.fn(),
       listBackupsWithMetadata: vi.fn(),
-      normalizeBackupSources: vi.fn(),
+      normalizeBackupSources: vi.fn((paths: readonly string[]) => Array.from(new Set(paths))),
       readBackupCatalog: vi.fn(),
       restoreBackup: vi.fn(),
       writeBackupCatalog: vi.fn(),
@@ -174,6 +174,9 @@ beforeEach(() => {
   askMock.mockResolvedValue(false);
   backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   backupCommands.readBackupCatalog.mockResolvedValue({});
+  backupCommands.normalizeBackupSources.mockImplementation((paths: readonly string[]) =>
+    Array.from(new Set(paths)),
+  );
   fileCommands.listFiles.mockResolvedValue([]);
   tauriListenMock.mockResolvedValue(vi.fn());
   webviewWindowMock.getByLabel.mockResolvedValue(null);
@@ -518,6 +521,117 @@ describe('BackupsView initialization', () => {
     expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
     expect(screen.queryByText('old-selection')).not.toBeInTheDocument();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.targetUpdated');
+  });
+
+  it('normalizes selector apply paths before storing them in the create modal', async () => {
+    const normalizedSentinel = 'sentinel/normalized';
+    backupCommands.normalizeBackupSources.mockReturnValue([normalizedSentinel]);
+    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
+      registeredTauriHandlers.push({ event, handler });
+      return Promise.resolve(vi.fn());
+    });
+
+    renderStrictMode();
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const applyHandlers = await waitFor(() => {
+      const registrations = registeredTauriHandlers.filter(
+        ({ event }) => event === 'backup-selector:apply',
+      );
+      expect(registrations.length).toBeGreaterThanOrEqual(2);
+      return registrations.map(
+        ({ handler }) => handler as (payload: { paths: string[]; serverPath: string }) => void,
+      );
+    });
+
+    await act(async () => {
+      for (const applyHandler of applyHandlers) {
+        applyHandler({
+          serverPath: server.path,
+          paths: ['world', 'world', 'plugins'],
+        });
+      }
+      await Promise.resolve();
+    });
+
+    expect(backupCommands.normalizeBackupSources).toHaveBeenCalledWith([
+      'world',
+      'world',
+      'plugins',
+    ]);
+    expect(screen.getByText(normalizedSentinel)).toBeInTheDocument();
+    expect(screen.queryByText('world')).not.toBeInTheDocument();
+    expect(screen.queryByText('plugins')).not.toBeInTheDocument();
+    expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.targetUpdated');
+  });
+
+  it('ignores a stale open-create listing after a selector apply', async () => {
+    const initialListing = deferred<Array<{ name: string; isDirectory: boolean }>>();
+    let rootListingCalls = 0;
+    fileCommands.listFiles.mockImplementation((path: string) => {
+      if (path === server.path) {
+        rootListingCalls += 1;
+        return rootListingCalls === 1 ? Promise.resolve([]) : initialListing.promise;
+      }
+      return Promise.resolve([]);
+    });
+    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
+      registeredTauriHandlers.push({ event, handler });
+      return Promise.resolve(vi.fn());
+    });
+
+    renderStrictMode();
+    await waitFor(() => expect(rootListingCalls).toBe(1));
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
+
+    await waitFor(() =>
+      expect(
+        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    const applyHandler = registeredTauriHandlers
+      .filter(({ event }) => event === 'backup-selector:apply')
+      .at(-1)?.handler as (payload: { paths: string[]; serverPath: string }) => void;
+    await act(async () => {
+      applyHandler({ serverPath: server.path, paths: ['applied-selection'] });
+      await Promise.resolve();
+      initialListing.resolve([{ name: 'stale-selection', isDirectory: false }]);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('applied-selection')).toBeInTheDocument();
+    expect(screen.queryByText('stale-selection')).not.toBeInTheDocument();
+  });
+
+  it('ignores a stale open-create listing after clear-all', async () => {
+    const initialListing = deferred<Array<{ name: string; isDirectory: boolean }>>();
+    let rootListingCalls = 0;
+    fileCommands.listFiles.mockImplementation((path: string) => {
+      if (path === server.path) {
+        rootListingCalls += 1;
+        return rootListingCalls === 1 ? Promise.resolve([]) : initialListing.promise;
+      }
+      return Promise.resolve([]);
+    });
+
+    renderStrictMode();
+    await waitFor(() => expect(rootListingCalls).toBe(1));
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'backups.modal.clearAll' }));
+    await act(async () => {
+      initialListing.resolve([{ name: 'stale-selection', isDirectory: false }]);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
+    expect(screen.queryByText('stale-selection')).not.toBeInTheDocument();
   });
 
   it('clears old backup and world data before a new server listing fails', async () => {

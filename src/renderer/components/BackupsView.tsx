@@ -206,6 +206,7 @@ export default function BackupsView({ server }: Props) {
   const initializationKey = `${server.id}\0${server.path}`;
   const initializationKeyRef = useRef<string | null>(null);
   const initializationGenerationRef = useRef(0);
+  const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(false);
   const pendingUnmountRef = useRef<symbol | null>(null);
   const selectorOnceRegistrationsRef = useRef(new Set<SelectorOnceRegistration>());
@@ -347,11 +348,13 @@ export default function BackupsView({ server }: Props) {
           return;
         }
 
-        setSelectedPaths(new Set(payload.paths));
+        const normalizedPaths = normalizeBackupSources(payload.paths);
+        selectionGenerationRef.current += 1;
+        setSelectedPaths(new Set(normalizedPaths));
         if (cancelled || !isCurrentInitialization(registrationToken)) {
           return;
         }
-        showToast(t('backups.toast.targetUpdated', { count: payload.paths.length }), 'success');
+        showToast(t('backups.toast.targetUpdated', { count: normalizedPaths.length }), 'success');
       },
     ).then(
       (dispose) => {
@@ -492,13 +495,18 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
+    const selectionGeneration = selectionGenerationRef.current + 1;
+    selectionGenerationRef.current = selectionGeneration;
     setShowCreateModal(true);
     setCustomName('');
     setCompressionLevel(5);
     setBackupMode('full');
     try {
       const entries = await listFiles(server.path);
-      if (!isCurrentInitialization(operationToken)) {
+      if (
+        !isCurrentInitialization(operationToken) ||
+        selectionGenerationRef.current !== selectionGeneration
+      ) {
         return;
       }
       const initial = entries
@@ -507,7 +515,10 @@ export default function BackupsView({ server }: Props) {
         .sort((left, right) => left.localeCompare(right));
       setSelectedPaths(new Set(initial));
     } catch (error) {
-      if (!isCurrentInitialization(operationToken)) {
+      if (
+        !isCurrentInitialization(operationToken) ||
+        selectionGenerationRef.current !== selectionGeneration
+      ) {
         return;
       }
       logError('Failed to initialize backup target selection', error, {
@@ -575,7 +586,10 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const clearAll = () => setSelectedPaths(new Set());
+  const clearAll = () => {
+    selectionGenerationRef.current += 1;
+    setSelectedPaths(new Set());
+  };
 
   const openSelectorWindow = async () => {
     const operationToken = getCurrentInitializationToken(initializationKey);
