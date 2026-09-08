@@ -1199,6 +1199,17 @@ export default function BackupsView({ server }: Props) {
     }
 
     try {
+      const confirmed = await ask(t('backups.confirmDelete', { name: backupName }), {
+        title: t('backups.deleteTitle'),
+        kind: 'warning',
+      });
+      if (!confirmed) {
+        return;
+      }
+      if (!isCurrentInitialization(operationToken)) {
+        return;
+      }
+
       await deleteBackup(server.id, backupName);
       if (!isCurrentInitialization(operationToken)) {
         return;

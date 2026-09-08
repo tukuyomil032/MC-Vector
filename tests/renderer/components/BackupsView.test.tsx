@@ -97,7 +97,15 @@ vi.mock('@/i18n', () => ({
   useTranslation: () => ({
     locale: 'en',
     setLocale: vi.fn(),
-    t: (key: string) => key,
+    t: (key: string, params?: { name?: string }) => {
+      if (key === 'backups.confirmDelete') {
+        return `Delete backup "${params?.name}"?`;
+      }
+      if (key === 'backups.deleteTitle') {
+        return 'Delete Backup';
+      }
+      return key;
+    },
   }),
 }));
 
@@ -244,6 +252,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce([{ name: 'backup.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockResolvedValue(undefined);
+    askMock.mockResolvedValue(true);
 
     renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
@@ -251,7 +260,33 @@ describe('BackupsView initialization', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.deleted'));
+    expect(askMock).toHaveBeenCalledOnce();
+    expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
+      title: 'Delete Backup',
+      kind: 'warning',
+    });
+    expect(backupCommands.deleteBackup).toHaveBeenCalledOnce();
     expect(toastErrorMock).not.toHaveBeenCalledWith('backups.toast.catalogLoadFailed');
+  });
+
+  it('does not delete or update metadata when backup deletion is canceled', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'backup.zip', date: new Date(), size: 1 },
+    ]);
+
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+
+    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
+      title: 'Delete Backup',
+      kind: 'warning',
+    });
+    expect(backupCommands.deleteBackup).not.toHaveBeenCalled();
+    expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
+    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
   });
 
   it('blocks delete while the catalog is loading and allows it once ready', async () => {
@@ -261,6 +296,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValue([]);
     backupCommands.readBackupCatalog.mockReturnValue(catalog.promise);
     backupCommands.deleteBackup.mockResolvedValue(undefined);
+    askMock.mockResolvedValue(true);
 
     renderStrictMode();
 
@@ -867,6 +903,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockReturnValue(deletion.promise);
+    askMock.mockResolvedValue(true);
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
@@ -896,6 +933,37 @@ describe('BackupsView initialization', () => {
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(
       listCallsBeforeStaleCompletion,
     );
+    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
+  });
+
+  it('does not delete when confirmation becomes stale before the IPC call', async () => {
+    const confirmation = deferred<boolean>();
+    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'old-a.zip', date: new Date(), size: 1 },
+    ]);
+    askMock.mockReturnValue(confirmation.promise);
+
+    const view = renderKeyedStrictMode('server-a', server);
+    await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+
+    view.rerender(
+      <StrictMode>
+        <BackupsView key="server-b" server={nextServer} />
+      </StrictMode>,
+    );
+    await waitFor(() => expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      confirmation.resolve(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(backupCommands.deleteBackup).not.toHaveBeenCalled();
+    expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
   });
 
@@ -1146,6 +1214,7 @@ describe('BackupsView lifecycle', () => {
       .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockReturnValue(deletion.promise);
+    askMock.mockResolvedValue(true);
 
     const view = renderKeyedStrictMode('server-a', server);
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());

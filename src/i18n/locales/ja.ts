@@ -359,6 +359,8 @@ export const ja: TranslationDictionary = {
     empty: 'バックアップはまだありません',
     processing: '処理中...',
     parent: '親',
+    confirmDelete: 'バックアップ「{name}」を削除しますか？',
+    deleteTitle: 'バックアップ削除',
     mode: {
       full: 'フル',
       differential: '差分',
