@@ -381,6 +381,8 @@ export interface TranslationDictionary {
     empty: string;
     processing: string;
     parent: string;
+    confirmDelete: string;
+    deleteTitle: string;
     mode: {
       full: string;
       differential: string;

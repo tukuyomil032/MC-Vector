@@ -48,9 +48,13 @@ describe('backup-commands', () => {
     });
   });
 
-  it('falls back when Windows reports that the catalog file cannot be found', async () => {
+  it('falls back when localized Windows reports that the catalog file cannot be found', async () => {
     tauriInvokeMock
-      .mockRejectedValueOnce(new Error('The system cannot find the file specified.'))
+      .mockRejectedValueOnce(
+        new Error(
+          '[Tauri] read_managed_text_file failed: 指定されたファイルが見つかりません。 (os error 2)',
+        ),
+      )
       .mockResolvedValueOnce(JSON.stringify({ lastBackupName: 'legacy.zip' }));
     const { readBackupCatalog } = await import('@/lib/backup-commands');
 
@@ -188,13 +192,28 @@ describe('backup-commands', () => {
     await expect(listBackups('server-1')).resolves.toEqual([]);
   });
 
-  it('propagates a missing managed path parent from metadata listing', async () => {
-    tauriInvokeMock.mockRejectedValueOnce(new Error('Managed path parent does not exist'));
+  it('returns an empty metadata list for a missing server backup parent', async () => {
+    tauriInvokeMock
+      .mockRejectedValueOnce(new Error('Managed path parent does not exist'))
+      .mockRejectedValueOnce(
+        new Error('[Tauri] list_dir_with_metadata failed: Managed path parent does not exist'),
+      );
+    const { listBackups, listBackupsWithMetadata } = await import('@/lib/backup-commands');
+
+    await expect(listBackupsWithMetadata('server-1')).resolves.toEqual([]);
+    await expect(listBackups('server-1')).resolves.toEqual([]);
+    expect(tauriInvokeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns an empty metadata list for a localized Windows missing path', async () => {
+    tauriInvokeMock.mockRejectedValueOnce(
+      new Error(
+        '[Tauri] list_dir_with_metadata failed: 指定されたパスが見つかりません。 (os error 3)',
+      ),
+    );
     const { listBackupsWithMetadata } = await import('@/lib/backup-commands');
 
-    await expect(listBackupsWithMetadata('server-1')).rejects.toThrow(
-      'Managed path parent does not exist',
-    );
+    await expect(listBackupsWithMetadata('server-1')).resolves.toEqual([]);
     expect(tauriInvokeMock).toHaveBeenCalledTimes(1);
   });
 

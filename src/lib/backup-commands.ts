@@ -58,11 +58,12 @@ function isMissingManagedPathError(
 ): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
+    /\(os error (?:2|3)\)\s*$/i.test(message) ||
     /no such file or directory/i.test(message) ||
     /(?:path|file|directory) not found\b/i.test(message) ||
     /cannot find (?:the )?(?:file|path|directory)\b/i.test(message) ||
     (options.allowMissingManagedPathParent === true &&
-      /^(?:\[tauri\] read_managed_text_file failed: )?managed path parent does not exist$/i.test(
+      /^(?:\[tauri\] (?:read_managed_text_file|list_dir_with_metadata) failed: )?managed path parent does not exist$/i.test(
         message,
       )) ||
     (options.allowMissingDirectory === true &&
@@ -205,7 +206,12 @@ export async function listBackups(serverId: string): Promise<string[]> {
     });
     return entries.filter((entry) => entry.name.endsWith('.zip')).map((entry) => entry.name);
   } catch (error) {
-    if (isMissingManagedPathError(error, { allowMissingDirectory: true })) {
+    if (
+      isMissingManagedPathError(error, {
+        allowMissingDirectory: true,
+        allowMissingManagedPathParent: true,
+      })
+    ) {
       return [];
     }
     throw error;
@@ -219,7 +225,12 @@ export async function listBackupsWithMetadata(serverId: string): Promise<BackupI
       request: backupDirectoryRequest(serverId),
     });
   } catch (error) {
-    if (isMissingManagedPathError(error, { allowMissingDirectory: true })) {
+    if (
+      isMissingManagedPathError(error, {
+        allowMissingDirectory: true,
+        allowMissingManagedPathParent: true,
+      })
+    ) {
       return [];
     }
     throw error;

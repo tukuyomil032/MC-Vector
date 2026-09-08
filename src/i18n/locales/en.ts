@@ -362,6 +362,8 @@ export const en: TranslationDictionary = {
     empty: 'No backups yet',
     processing: 'Processing...',
     parent: 'Parent',
+    confirmDelete: 'Delete backup "{name}"?',
+    deleteTitle: 'Delete Backup',
     mode: {
       full: 'Full',
       differential: 'Differential',

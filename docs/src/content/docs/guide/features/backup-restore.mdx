@@ -45,6 +45,8 @@ Use differential backups for frequent snapshots and full backups before major ch
 4. Optionally add a **tag** and **notes** for identification.
 5. Click **"Create"** — progress is shown in real-time.
 
+Online backups are supported while the server is running. Minecraft-generated `session.lock` files are automatically excluded from backups. For a static, consistent snapshot of server data, stopping the server before creating the backup is recommended.
+
 ## Restoring a Backup
 
 :::caution[Stop the server first]

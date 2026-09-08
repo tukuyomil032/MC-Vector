@@ -18,6 +18,10 @@ import {
 import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles, listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
+import {
+  getManualBackupOperationId,
+  useBackupOperationStore,
+} from '../../store/backupOperationStore';
 import { buildManualBackupName } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
 import { Button } from './ui/Button';
@@ -66,6 +70,11 @@ type CatalogLoadState = 'loading' | 'ready' | 'error';
 
 interface InitializationToken {
   key: string;
+  generation: number;
+}
+
+interface DataReloadToken {
+  initialization: InitializationToken;
   generation: number;
 }
 
@@ -188,6 +197,12 @@ export async function persistBackupCatalogBestEffort(
 
 export default function BackupsView({ server }: Props) {
   const { t } = useTranslation();
+  const activeManualOperation = useBackupOperationStore(
+    (state) => state.activeManualOperations[server.id],
+  );
+  const manualCompletionRevision = useBackupOperationStore(
+    (state) => state.completionRevisions[server.id] ?? 0,
+  );
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -206,8 +221,14 @@ export default function BackupsView({ server }: Props) {
   const initializationKey = `${server.id}\0${server.path}`;
   const initializationKeyRef = useRef<string | null>(null);
   const initializationGenerationRef = useRef(0);
+  const dataReloadGenerationRef = useRef(0);
+  const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(false);
   const pendingUnmountRef = useRef<symbol | null>(null);
+  const observedManualCompletionRef = useRef({
+    key: initializationKey,
+    revision: manualCompletionRevision,
+  });
   const selectorOnceRegistrationsRef = useRef(new Set<SelectorOnceRegistration>());
   const getCurrentInitializationToken = useCallback((fallbackKey: string): InitializationToken => {
     return {
@@ -222,6 +243,41 @@ export default function BackupsView({ server }: Props) {
       initializationGenerationRef.current === expectedToken.generation
     );
   }, []);
+  const beginDataReload = useCallback(
+    (initializationToken: InitializationToken): DataReloadToken | null => {
+      if (!isCurrentInitialization(initializationToken)) {
+        return null;
+      }
+      const token: DataReloadToken = {
+        initialization: initializationToken,
+        generation: dataReloadGenerationRef.current + 1,
+      };
+      dataReloadGenerationRef.current = token.generation;
+      return token;
+    },
+    [isCurrentInitialization],
+  );
+  const getCurrentDataReloadToken = useCallback(
+    (initializationToken: InitializationToken): DataReloadToken | null => {
+      if (!isCurrentInitialization(initializationToken)) {
+        return null;
+      }
+      return {
+        initialization: initializationToken,
+        generation: dataReloadGenerationRef.current,
+      };
+    },
+    [isCurrentInitialization],
+  );
+  const isCurrentDataReload = useCallback(
+    (expectedToken: DataReloadToken) => {
+      return (
+        isCurrentInitialization(expectedToken.initialization) &&
+        dataReloadGenerationRef.current === expectedToken.generation
+      );
+    },
+    [isCurrentInitialization],
+  );
   const scheduleUnmountInvalidation = useCallback(() => {
     mountedRef.current = false;
     const marker = Symbol('backups-view-unmount');
@@ -260,8 +316,10 @@ export default function BackupsView({ server }: Props) {
       toast(msg);
     }
   };
+  const isManualBackupCreating = activeManualOperation?.kind === 'create';
+  const isProcessing = processing || isManualBackupCreating;
   const beginCatalogOperation = () => {
-    if (processing || catalogOperationInFlightRef.current) {
+    if (isProcessing || catalogOperationInFlightRef.current) {
       return false;
     }
     catalogOperationInFlightRef.current = true;
@@ -314,21 +372,25 @@ export default function BackupsView({ server }: Props) {
     setSelectedPaths(new Set());
     setShowCreateModal(false);
     setTagEditorTarget(null);
+    const dataReloadToken = beginDataReload(initializationToken);
+    if (!dataReloadToken) {
+      return cleanupInitialization;
+    }
     void (async () => {
-      await loadBackups(initializationToken);
-      if (!isCurrentInitialization(initializationToken)) {
+      await loadBackups(dataReloadToken);
+      if (!isCurrentDataReload(dataReloadToken)) {
         return;
       }
 
-      await loadBackupCatalog(initializationToken);
-      if (!isCurrentInitialization(initializationToken)) {
+      await loadBackupCatalog(dataReloadToken);
+      if (!isCurrentDataReload(dataReloadToken)) {
         return;
       }
 
       await loadWorlds(initializationToken);
     })();
     return cleanupInitialization;
-  }, [cleanupInitialization, initializationKey, isCurrentInitialization]);
+  }, [beginDataReload, cleanupInitialization, initializationKey, isCurrentDataReload]);
 
   useEffect(() => {
     let cancelled = false;
@@ -347,11 +409,13 @@ export default function BackupsView({ server }: Props) {
           return;
         }
 
-        setSelectedPaths(new Set(payload.paths));
+        const normalizedPaths = normalizeBackupSources(payload.paths);
+        selectionGenerationRef.current += 1;
+        setSelectedPaths(new Set(normalizedPaths));
         if (cancelled || !isCurrentInitialization(registrationToken)) {
           return;
         }
-        showToast(t('backups.toast.targetUpdated', { count: payload.paths.length }), 'success');
+        showToast(t('backups.toast.targetUpdated', { count: normalizedPaths.length }), 'success');
       },
     ).then(
       (dispose) => {
@@ -438,19 +502,19 @@ export default function BackupsView({ server }: Props) {
     await writeBackupCatalog(server.id, catalog);
   };
 
-  const loadBackupCatalog = async (expectedToken: InitializationToken) => {
-    if (!isCurrentInitialization(expectedToken)) {
+  const loadBackupCatalog = async (expectedToken: DataReloadToken) => {
+    if (!isCurrentDataReload(expectedToken)) {
       return;
     }
     try {
       const value = await readBackupCatalog(server.id);
-      if (!isCurrentInitialization(expectedToken)) {
+      if (!isCurrentDataReload(expectedToken)) {
         return;
       }
       setBackupCatalog(sanitizeCatalog(value));
       setCatalogLoadState('ready');
     } catch (error) {
-      if (!isCurrentInitialization(expectedToken)) {
+      if (!isCurrentDataReload(expectedToken)) {
         return;
       }
       logError('Failed to load backup catalog', error, { serverPath: server.path });
@@ -459,25 +523,25 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const loadBackups = async (expectedToken: InitializationToken) => {
-    if (!isCurrentInitialization(expectedToken)) {
+  const loadBackups = async (expectedToken: DataReloadToken) => {
+    if (!isCurrentDataReload(expectedToken)) {
       return;
     }
     setLoading(true);
     try {
       const list = await listBackupsWithMetadata(server.id);
-      if (!isCurrentInitialization(expectedToken)) {
+      if (!isCurrentDataReload(expectedToken)) {
         return;
       }
       setBackups(list);
     } catch (e) {
-      if (!isCurrentInitialization(expectedToken)) {
+      if (!isCurrentDataReload(expectedToken)) {
         return;
       }
       logError('Failed to load backups', e, { serverPath: server.path });
       showToast(t('backups.toast.loadFailed'), 'error');
     } finally {
-      if (isCurrentInitialization(expectedToken)) {
+      if (isCurrentDataReload(expectedToken)) {
         setLoading(false);
       }
     }
@@ -492,13 +556,18 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
+    const selectionGeneration = selectionGenerationRef.current + 1;
+    selectionGenerationRef.current = selectionGeneration;
     setShowCreateModal(true);
     setCustomName('');
     setCompressionLevel(5);
     setBackupMode('full');
     try {
       const entries = await listFiles(server.path);
-      if (!isCurrentInitialization(operationToken)) {
+      if (
+        !isCurrentInitialization(operationToken) ||
+        selectionGenerationRef.current !== selectionGeneration
+      ) {
         return;
       }
       const initial = entries
@@ -507,7 +576,10 @@ export default function BackupsView({ server }: Props) {
         .sort((left, right) => left.localeCompare(right));
       setSelectedPaths(new Set(initial));
     } catch (error) {
-      if (!isCurrentInitialization(operationToken)) {
+      if (
+        !isCurrentInitialization(operationToken) ||
+        selectionGenerationRef.current !== selectionGeneration
+      ) {
         return;
       }
       logError('Failed to initialize backup target selection', error, {
@@ -575,7 +647,55 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const clearAll = () => setSelectedPaths(new Set());
+  useEffect(() => {
+    const observed = observedManualCompletionRef.current;
+    if (observed.key !== initializationKey) {
+      observedManualCompletionRef.current = {
+        key: initializationKey,
+        revision: manualCompletionRevision,
+      };
+      return;
+    }
+    if (observed.revision === manualCompletionRevision) {
+      return;
+    }
+
+    observedManualCompletionRef.current = {
+      key: initializationKey,
+      revision: manualCompletionRevision,
+    };
+    const completionToken = getCurrentInitializationToken(initializationKey);
+    if (!isCurrentInitialization(completionToken)) {
+      return;
+    }
+    const dataReloadToken = beginDataReload(completionToken);
+    if (!dataReloadToken) {
+      return;
+    }
+    setCatalogLoadState('loading');
+
+    void (async () => {
+      await loadBackups(dataReloadToken);
+      if (!isCurrentDataReload(dataReloadToken)) {
+        return;
+      }
+      await loadBackupCatalog(dataReloadToken);
+    })();
+  }, [
+    beginDataReload,
+    getCurrentInitializationToken,
+    initializationKey,
+    isCurrentDataReload,
+    isCurrentInitialization,
+    loadBackupCatalog,
+    loadBackups,
+    manualCompletionRevision,
+  ]);
+
+  const clearAll = () => {
+    selectionGenerationRef.current += 1;
+    setSelectedPaths(new Set());
+  };
 
   const openSelectorWindow = async () => {
     const operationToken = getCurrentInitializationToken(initializationKey);
@@ -720,30 +840,15 @@ export default function BackupsView({ server }: Props) {
 
   const buildSnapshotForSelection = async (
     paths: string[],
-    expectedToken: InitializationToken,
+    serverPath: string,
   ): Promise<Record<string, BackupSnapshotEntry>> => {
     const snapshot: Record<string, BackupSnapshotEntry> = {};
-    if (!isCurrentInitialization(expectedToken)) {
-      return snapshot;
-    }
-    const rootEntries = await listFilesWithMetadata(server.path);
-    if (!isCurrentInitialization(expectedToken)) {
-      return snapshot;
-    }
+    const rootEntries = await listFilesWithMetadata(serverPath);
     const rootMap = new Map(rootEntries.map((entry) => [entry.name, entry]));
 
     const walkDirectory = async (relativeDir: string) => {
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      const entries = await listFilesWithMetadata(`${server.path}/${relativeDir}`);
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
+      const entries = await listFilesWithMetadata(`${serverPath}/${relativeDir}`);
       for (const entry of entries) {
-        if (!isCurrentInitialization(expectedToken)) {
-          return;
-        }
         const childRelative = `${relativeDir}/${entry.name}`;
         if (entry.isDirectory) {
           await walkDirectory(childRelative);
@@ -757,9 +862,6 @@ export default function BackupsView({ server }: Props) {
     };
 
     for (const selectedPath of paths) {
-      if (!isCurrentInitialization(expectedToken)) {
-        return snapshot;
-      }
       const normalizedPath = selectedPath.replace(/^\/+/, '').replace(/\\/g, '/');
       if (!normalizedPath || normalizedPath === 'backups') {
         continue;
@@ -792,10 +894,7 @@ export default function BackupsView({ server }: Props) {
       const targetName = rest[rest.length - 1];
 
       try {
-        const entries = await listFilesWithMetadata(`${server.path}/${parentRelative}`);
-        if (!isCurrentInitialization(expectedToken)) {
-          return snapshot;
-        }
+        const entries = await listFilesWithMetadata(`${serverPath}/${parentRelative}`);
         const targetEntry = entries.find((entry) => entry.name === targetName);
         if (!targetEntry) {
           continue;
@@ -810,11 +909,8 @@ export default function BackupsView({ server }: Props) {
           };
         }
       } catch (error) {
-        if (!isCurrentInitialization(expectedToken)) {
-          return snapshot;
-        }
         logError('Failed to capture backup snapshot entry', error, {
-          serverPath: server.path,
+          serverPath,
           relativePath: normalizedPath,
         });
       }
@@ -841,27 +937,10 @@ export default function BackupsView({ server }: Props) {
   const applyRetentionPolicy = async (
     catalog: BackupCatalog,
     srv: MinecraftServer,
-    expectedToken: InitializationToken,
   ): Promise<RetentionResult> => {
-    if (!isCurrentInitialization(expectedToken)) {
-      return {
-        catalog,
-        deletedCount: 0,
-        failedDeleteCount: 0,
-        listingFailed: false,
-      };
-    }
     const retainCount = srv.autoBackupRetainCount ?? 0;
     const retainDays = srv.autoBackupRetainDays ?? 0;
     const retention = await applyBackupRetention(srv.id, retainCount, retainDays);
-    if (!isCurrentInitialization(expectedToken)) {
-      return {
-        catalog,
-        deletedCount: 0,
-        failedDeleteCount: 0,
-        listingFailed: false,
-      };
-    }
     const { deletedNames } = retention;
 
     let updatedCatalog = catalog;
@@ -878,7 +957,6 @@ export default function BackupsView({ server }: Props) {
         latestSnapshot: lastBackupDeleted ? {} : catalog.latestSnapshot,
         entries: updatedEntries,
       };
-      await loadBackups(expectedToken);
     }
 
     return {
@@ -894,7 +972,7 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
-    if (processing || catalogOperationInFlightRef.current) {
+    if (isProcessing || catalogOperationInFlightRef.current) {
       return;
     }
 
@@ -908,7 +986,12 @@ export default function BackupsView({ server }: Props) {
       return;
     }
 
-    const requestedName = customName.trim() || defaultName();
+    const capturedServer = { ...server };
+    const capturedSelectedPaths = normalizeBackupSources(Array.from(selectedPaths));
+    const capturedMode = backupMode;
+    const capturedCatalog = backupCatalog;
+    const capturedCompressionLevel = compressionLevel;
+    const requestedName = customName.trim() || buildManualBackupName(capturedServer);
     const normalizedName = normalizeBackupName(requestedName);
     const nameValidationError = getBackupNameValidationError(normalizedName);
     if (nameValidationError) {
@@ -921,31 +1004,37 @@ export default function BackupsView({ server }: Props) {
       return;
     }
 
+    const operationId = getManualBackupOperationId(capturedServer.id);
     if (!beginCatalogOperation()) {
       return;
     }
+    let manualOperationStarted = false;
     try {
-      if (!isCurrentInitialization(operationToken)) {
+      if (
+        !useBackupOperationStore
+          .getState()
+          .beginManualOperation(capturedServer.id, operationId, 'create')
+      ) {
         return;
       }
-      const selected = normalizeBackupSources(Array.from(selectedPaths));
-      if (selected.length === 0) {
-        showToast(t('backups.toast.selectAtLeastOne'), 'info');
+      manualOperationStarted = true;
+
+      if (capturedSelectedPaths.length === 0) {
+        if (isCurrentInitialization(operationToken)) {
+          showToast(t('backups.toast.selectAtLeastOne'), 'info');
+        }
         return;
       }
 
-      const snapshot = await buildSnapshotForSelection(selected, operationToken);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      let sourcesForBackup = selected;
+      const snapshot = await buildSnapshotForSelection(capturedSelectedPaths, capturedServer.path);
+      let sourcesForBackup = capturedSelectedPaths;
       let parentBackupName: string | null = null;
 
-      if (backupMode === 'differential') {
-        parentBackupName = backupCatalog.lastBackupName;
+      if (capturedMode === 'differential') {
+        parentBackupName = capturedCatalog.lastBackupName;
         const changed = Object.entries(snapshot)
           .filter(([path, nextEntry]) => {
-            const previous = backupCatalog.latestSnapshot[path];
+            const previous = capturedCatalog.latestSnapshot[path];
             if (!previous) {
               return true;
             }
@@ -955,40 +1044,39 @@ export default function BackupsView({ server }: Props) {
           .sort((a, b) => a.localeCompare(b));
 
         if (changed.length === 0) {
-          showToast(t('backups.toast.noDiffSkipped'), 'info');
+          if (isCurrentInitialization(operationToken)) {
+            showToast(t('backups.toast.noDiffSkipped'), 'info');
+          }
           return;
         }
 
         sourcesForBackup = normalizeBackupSources(changed);
       }
 
-      await createBackup(server.id, normalizedName, sourcesForBackup, compressionLevel);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      await loadBackups(operationToken);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-
-      showToast(
-        backupMode === 'differential'
-          ? t('backups.toast.diffCreated', { count: sourcesForBackup.length })
-          : t('backups.toast.created'),
-        'success',
+      await createBackup(
+        capturedServer.id,
+        normalizedName,
+        sourcesForBackup,
+        capturedCompressionLevel,
       );
-      setShowCreateModal(false);
 
-      const currentMeta = getBackupMeta(normalizedName);
+      const currentMeta = capturedCatalog.entries[normalizedName] ?? {
+        mode: 'full' as const,
+        parent: null,
+        tags: [],
+        note: '',
+        sourceCount: 0,
+        createdAt: '',
+      };
       const nextCatalog: BackupCatalog = {
         lastBackupName: normalizedName,
         latestSnapshot: snapshot,
         entries: {
-          ...backupCatalog.entries,
+          ...capturedCatalog.entries,
           [normalizedName]: {
             ...currentMeta,
-            mode: backupMode,
-            parent: backupMode === 'differential' ? parentBackupName : null,
+            mode: capturedMode,
+            parent: capturedMode === 'differential' ? parentBackupName : null,
             sourceCount: sourcesForBackup.length,
             createdAt: currentMeta.createdAt || new Date().toISOString(),
           },
@@ -1005,11 +1093,32 @@ export default function BackupsView({ server }: Props) {
       // Retention cleanup must operate on the catalog created for this backup,
       // then the final catalog is persisted exactly once.
       try {
-        retentionResult = await applyRetentionPolicy(nextCatalog, server, operationToken);
-        if (!isCurrentInitialization(operationToken)) {
-          return;
-        }
+        retentionResult = await applyRetentionPolicy(nextCatalog, capturedServer);
         finalCatalog = retentionResult.catalog;
+      } catch (error) {
+        logError('Failed to apply backup retention policy', error, {
+          serverPath: capturedServer.path,
+        });
+      }
+
+      const saved = await persistBackupCatalogBestEffort(
+        () => writeBackupCatalog(capturedServer.id, finalCatalog),
+        (error) =>
+          logError('Failed to persist backup catalog after backup creation', error, {
+            serverPath: capturedServer.path,
+            backupName: finalCatalog.lastBackupName ?? normalizedName,
+          }),
+      );
+
+      if (isCurrentInitialization(operationToken)) {
+        setBackupCatalog(finalCatalog);
+        showToast(
+          capturedMode === 'differential'
+            ? t('backups.toast.diffCreated', { count: sourcesForBackup.length })
+            : t('backups.toast.created'),
+          'success',
+        );
+        setShowCreateModal(false);
         if (retentionResult.failedDeleteCount > 0) {
           showToast(
             t('backups.toast.retentionDeleteFailed', {
@@ -1021,54 +1130,28 @@ export default function BackupsView({ server }: Props) {
         if (retentionResult.listingFailed) {
           showToast(t('backups.toast.retentionListFailed'), 'warning');
         }
-      } catch (error) {
-        if (isCurrentInitialization(operationToken)) {
-          logError('Failed to apply backup retention policy', error, {
-            serverPath: server.path,
-          });
+        if (!saved) {
+          showToast(
+            retentionResult.deletedCount > 0
+              ? t('backups.toast.retentionMetadataSaveFailed')
+              : t('backups.toast.createMetadataSaveFailed'),
+            'warning',
+          );
         }
-      }
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-
-      setBackupCatalog(finalCatalog);
-      const saved = await persistBackupCatalogBestEffort(
-        async () => {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          await persistBackupCatalog(finalCatalog);
-        },
-        (error) =>
-          isCurrentInitialization(operationToken) &&
-          logError('Failed to persist backup catalog after backup creation', error, {
-            serverPath: server.path,
-            backupName: finalCatalog.lastBackupName ?? normalizedName,
-          }),
-      );
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      if (!saved) {
-        showToast(
-          retentionResult.deletedCount > 0
-            ? t('backups.toast.retentionMetadataSaveFailed')
-            : t('backups.toast.createMetadataSaveFailed'),
-          'warning',
-        );
       }
     } catch (error) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to create backup', error, {
-          serverPath: server.path,
-          backupMode,
-          selectedCount: selectedPaths.size,
+          serverPath: capturedServer.path,
+          backupMode: capturedMode,
+          selectedCount: capturedSelectedPaths.length,
         });
         showToast(t('backups.toast.createFailed'), 'error');
       }
     } finally {
+      if (manualOperationStarted) {
+        useBackupOperationStore.getState().finishManualOperation(capturedServer.id, operationId);
+      }
       if (isCurrentInitialization(operationToken)) {
         endCatalogOperation();
       }
@@ -1116,12 +1199,27 @@ export default function BackupsView({ server }: Props) {
     }
 
     try {
+      const confirmed = await ask(t('backups.confirmDelete', { name: backupName }), {
+        title: t('backups.deleteTitle'),
+        kind: 'warning',
+      });
+      if (!confirmed) {
+        return;
+      }
+      if (!isCurrentInitialization(operationToken)) {
+        return;
+      }
+
       await deleteBackup(server.id, backupName);
       if (!isCurrentInitialization(operationToken)) {
         return;
       }
-      await loadBackups(operationToken);
-      if (!isCurrentInitialization(operationToken)) {
+      const dataReloadToken = getCurrentDataReloadToken(operationToken);
+      if (!dataReloadToken) {
+        return;
+      }
+      await loadBackups(dataReloadToken);
+      if (!isCurrentDataReload(dataReloadToken)) {
         return;
       }
 
@@ -1194,7 +1292,7 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
-    if (!tagEditorTarget || processing || catalogOperationInFlightRef.current) {
+    if (!tagEditorTarget || isProcessing || catalogOperationInFlightRef.current) {
       return;
     }
     if (catalogLoadState !== 'ready') {
@@ -1321,9 +1419,9 @@ export default function BackupsView({ server }: Props) {
           variant="primary"
           data-testid="backups-create-button"
           onClick={openCreateModal}
-          disabled={processing}
+          disabled={isProcessing}
         >
-          {processing ? t('backups.processing') : t('backups.createButton')}
+          {isProcessing ? t('backups.processing') : t('backups.createButton')}
         </Button>
       </div>
 
@@ -1394,7 +1492,7 @@ export default function BackupsView({ server }: Props) {
                       variant="secondary"
                       className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                       onClick={() => handleRestore(backup.name)}
-                      disabled={processing}
+                      disabled={isProcessing}
                     >
                       {t('backups.actions.restore')}
                     </Button>
@@ -1402,7 +1500,7 @@ export default function BackupsView({ server }: Props) {
                       variant="secondary"
                       className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                       onClick={() => openTagEditor(backup.name)}
-                      disabled={processing}
+                      disabled={isProcessing}
                     >
                       {t('backups.actions.tag')}
                     </Button>
@@ -1410,7 +1508,7 @@ export default function BackupsView({ server }: Props) {
                       variant="stop"
                       className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                       onClick={() => handleDelete(backup.name)}
-                      disabled={processing || catalogLoadState !== 'ready'}
+                      disabled={isProcessing || catalogLoadState !== 'ready'}
                     >
                       {t('common.delete')}
                     </Button>
@@ -1439,7 +1537,7 @@ export default function BackupsView({ server }: Props) {
                 variant="stop"
                 className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
                 onClick={() => void handleDeleteWorld(worldName)}
-                disabled={processing}
+                disabled={isProcessing}
               >
                 {t('backups.world.deleteButton')}
               </Button>
@@ -1560,7 +1658,7 @@ export default function BackupsView({ server }: Props) {
                 <Button
                   variant="secondary"
                   onClick={() => setShowCreateModal(false)}
-                  disabled={processing}
+                  disabled={isProcessing}
                 >
                   {t('common.cancel')}
                 </Button>
@@ -1568,9 +1666,9 @@ export default function BackupsView({ server }: Props) {
                   variant="primary"
                   data-testid="backups-create-submit"
                   onClick={handleCreateBackup}
-                  disabled={processing || selectedPaths.size === 0}
+                  disabled={isProcessing || selectedPaths.size === 0}
                 >
-                  {processing ? t('backups.modal.creating') : t('backups.modal.create')}
+                  {isProcessing ? t('backups.modal.creating') : t('backups.modal.create')}
                 </Button>
               </div>
             </div>
@@ -1618,7 +1716,7 @@ export default function BackupsView({ server }: Props) {
               <Button
                 variant="primary"
                 onClick={() => void handleSaveTagEditor()}
-                disabled={processing}
+                disabled={isProcessing}
               >
                 {t('common.save')}
               </Button>
