@@ -93,13 +93,13 @@ scoop bucket rm tukuyomil032
 
 ### For Users
 
-- **macOS** 10.15+ / **Windows** 10+ / **Linux** (with GTK3)
+- **macOS** 10.15+ / **Windows** 10+
 - 4GB+ RAM recommended
-- Java 17+ (for running Minecraft servers)
+- Java 17+ - 21 or 25 recommended (for running Minecraft servers)
 
 ### For Developers
 
-- **Node.js** v18 or later (v22 recommended)
+- **Node.js** v22 or later
 - **pnpm** v10.26.2 or later
 - **Rust** v1.77.2 or later
 
@@ -235,8 +235,7 @@ just tauri-build
 Build artifacts will be in `src-tauri/target/release/bundle/`:
 
 - **macOS:** `.dmg` and `.app`
-- **Windows:** `.exe` and `.msi`
-- **Linux:** `.AppImage`, `.deb`, `.rpm`
+- **Windows:** `.exe`
 
 ### Debug Build
 
