@@ -45,7 +45,7 @@ Add an on-demand command:
 pnpm test:tauri:e2e
 ```
 
-The harness uses an unsigned local debug Tauri binary and Tauri's WebDriver integration with `tauri-driver` and `selenium-webdriver`. It does not require a certificate, notarization, paid service, or a cloud browser.
+The harness uses an unsigned local debug Tauri binary and `selenium-webdriver`. On macOS it uses the repository's existing debug-only `tauri-plugin-webdriver-automation` together with the free `tauri-wd` CLI. On Linux and Windows it uses Tauri's native WebDriver integration with `tauri-driver`. It does not require a certificate, notarization, paid service, or a cloud browser.
 
 The real suite covers only high-value paths:
 
@@ -64,15 +64,17 @@ The suite never touches a user's real server directory.
 Tauri-specific setup:
 
 ```typescript
-const capabilities = new Capabilities();
-capabilities.setBrowserName("wry");
-capabilities.set("tauri:options", {
-  application: absoluteDebugBinaryPath,
-});
+const capabilities = {
+  browserName: "tauri",
+  platformName: "mac",
+  "tauri:options": {
+    binary: absoluteDebugBinaryPath,
+  },
+};
 
 const driver = await new Builder()
-  .withCapabilities(capabilities)
-  .usingServer("http://127.0.0.1:4444/")
+    .withCapabilities(capabilities)
+    .usingServer("http://127.0.0.1:4444/")
   .build();
 ```
 
@@ -112,9 +114,10 @@ The expected result is no mutable action reference. Do not change the build matr
 
 ## Implementation Plan
 
-- Add `selenium-webdriver` only if it is not already available and record it in the lockfile.
+- Add `selenium-webdriver` and record it in the lockfile.
 - Add a deterministic debug-binary build step used by the local smoke command.
-- Start and stop `tauri-driver` with guaranteed cleanup.
+- Start and stop `tauri-wd` on macOS or `tauri-driver` on Linux/Windows with guaranteed cleanup.
+- Require the platform-appropriate CLI before the test starts; never silently fall back to mock E2E.
 - Use temporary app data and server fixtures.
 - Add the smallest set of `data-testid` selectors needed by the smoke scenarios.
 - Keep mock E2E fixtures separate from real Tauri fixtures.
@@ -123,6 +126,7 @@ The expected result is no mutable action reference. Do not change the build matr
 ## Failure Handling
 
 - A missing binary fails before the suite starts and cleans up the driver.
+- A missing platform WebDriver CLI fails before the suite starts with an install instruction.
 - A driver startup timeout fails the test; it does not silently fall back to mocks.
 - Fixture cleanup runs on success and failure.
 - A real Tauri test is never reported as passed because the mock suite passed.
