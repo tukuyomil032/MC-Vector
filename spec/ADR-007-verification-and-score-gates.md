@@ -57,7 +57,7 @@ checkout; they do not substitute for Windows or release-signing evidence.
 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | Passed | Rust formatting |
 | `cargo test --manifest-path src-tauri/Cargo.toml --quiet` | 97 passed, 1 ignored | Rust implementation and temporary-files tests |
 | `pnpm e2e` | 54 passed | Mock Tauri UI regression suite |
-| `pnpm test:tauri:e2e` | Passed | Unsigned debug app, real IPC, Rust, ZIP, filesystem, catalog reload, and rollback |
+| `pnpm test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
 | `pnpm tauri:build:debug` | Passed | Unsigned packaged `MC-Vector Debug.app`; `CFBundleIdentifier` verified as `com.tukuyomi032.mcvector.debug` |
 | `pnpm check:workflow-actions` | Passed | All workflow action refs are commit-SHA pinned |
 
@@ -95,7 +95,7 @@ The native suite must execute these through the actual application:
 
 1. App startup and server list rendering.
 2. EULA acceptance, fake-Java lifecycle, console command, and stop.
-3. Managed file create/edit/save/move/delete plus debug-only Rust-side import without source-path exposure.
+3. Managed file create/read/write/move/delete plus debug-only Rust-side import without source-path exposure. The Monaco overlay remains covered by mock UI tests; the real suite verifies the underlying read/write IPC commands against the real filesystem.
 4. Server settings persistence.
 5. Verified loopback plugin artifact installation and checksum-mismatch destination preservation.
 6. Fake ngrok token flow with renderer/config non-leakage checks.
