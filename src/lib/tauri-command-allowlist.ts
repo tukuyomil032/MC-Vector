@@ -15,6 +15,7 @@ const CORE_COMMANDS = [
   'download_ngrok',
   'is_ngrok_installed',
   'create_managed_backup',
+  'list_managed_backups',
   'restore_managed_backup',
   'compress_managed_items',
   'extract_managed_item',

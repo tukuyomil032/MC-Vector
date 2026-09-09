@@ -953,6 +953,11 @@ export default function BackupsView({ server }: Props) {
         capturedCompressionLevel,
       );
 
+      const refreshedBackups = await listBackupsWithMetadata(capturedServer.id);
+      if (isCurrentInitialization(operationToken)) {
+        setBackups(refreshedBackups);
+      }
+
       const currentMeta = capturedCatalog.entries[normalizedName] ?? {
         mode: 'full' as const,
         parent: null,
