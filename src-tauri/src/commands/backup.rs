@@ -498,13 +498,40 @@ fn copy_limited<R: Read, W: Write>(
 
 fn temp_file_for(destination: &Path) -> io::Result<(File, PathBuf)> {
     let parent = destination.parent().unwrap_or_else(|| Path::new("."));
+    let canonical_parent = fs::canonicalize(parent)?;
+    if !canonical_parent.is_absolute() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Temporary file parent must be absolute",
+        ));
+    }
     let file_name = destination
         .file_name()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Destination has no file name"))?
-        .to_string_lossy();
+        .to_string_lossy()
+        .into_owned();
+    if file_name.is_empty()
+        || file_name == "."
+        || file_name == ".."
+        || file_name.contains('/')
+        || file_name.contains('\\')
+        || file_name.chars().any(char::is_control)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Destination has an unsafe file name",
+        ));
+    }
     for _ in 0..32 {
         let counter = TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let path = parent.join(format!(".{file_name}.tmp-{}-{counter}", std::process::id()));
+        let path =
+            canonical_parent.join(format!(".{file_name}.tmp-{}-{counter}", std::process::id()));
+        if !path.starts_with(&canonical_parent) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Temporary file escaped its parent",
+            ));
+        }
         match OpenOptions::new().write(true).create_new(true).open(&path) {
             Ok(file) => return Ok((file, path)),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
@@ -518,12 +545,43 @@ fn temp_file_for(destination: &Path) -> io::Result<(File, PathBuf)> {
 }
 
 fn atomic_install_new(temp: &Path, destination: &Path) -> io::Result<()> {
+    let canonical_temp = fs::canonicalize(temp)?;
+    let destination_parent = destination
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Destination has no parent"))?;
+    let canonical_parent = fs::canonicalize(destination_parent)?;
+    let destination_name = destination
+        .file_name()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Destination has no file name"))?
+        .to_string_lossy()
+        .into_owned();
+    if destination_name.is_empty()
+        || destination_name == "."
+        || destination_name == ".."
+        || destination_name.contains('/')
+        || destination_name.contains('\\')
+        || destination_name.chars().any(char::is_control)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Destination has an unsafe file name",
+        ));
+    }
+    let safe_destination = canonical_parent.join(destination_name);
+    if !safe_destination.starts_with(&canonical_parent)
+        || canonical_temp.parent() != Some(canonical_parent.as_path())
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Atomic install paths must share a canonical parent",
+        ));
+    }
     // A hard link creates the destination directory entry without replacing an
     // existing file. Both paths are allocated in the same directory, so the
     // operation stays on one filesystem and the fully synced temporary file is
     // never exposed as a partial archive.
-    fs::hard_link(temp, destination)?;
-    fs::remove_file(temp)
+    fs::hard_link(&canonical_temp, &safe_destination)?;
+    fs::remove_file(&canonical_temp)
 }
 
 fn write_zip_atomically<F>(destination: &Path, build: F) -> Result<u64, String>
@@ -1184,7 +1242,40 @@ fn read_backup_manifest(
     archive_path: &Path,
     expected_server_id: &str,
 ) -> Result<BackupManifest, String> {
-    let file = File::open(archive_path)
+    let parent = archive_path
+        .parent()
+        .ok_or_else(|| "Backup archive has no parent directory".to_string())?;
+    let canonical_parent = fs::canonicalize(parent)
+        .map_err(|error| format!("Failed to resolve backup archive parent: {error}"))?;
+    let archive_name = archive_path
+        .file_name()
+        .ok_or_else(|| "Backup archive has no file name".to_string())?
+        .to_string_lossy()
+        .into_owned();
+    if archive_name.is_empty()
+        || archive_name == "."
+        || archive_name == ".."
+        || archive_name.contains('/')
+        || archive_name.contains('\\')
+        || archive_name.chars().any(char::is_control)
+    {
+        return Err("Backup archive has an unsafe file name".to_string());
+    }
+    let safe_archive = canonical_parent.join(archive_name);
+    if !safe_archive.starts_with(&canonical_parent) {
+        return Err("Backup archive escaped its parent directory".to_string());
+    }
+    let metadata = fs::symlink_metadata(&safe_archive)
+        .map_err(|error| format!("Failed to inspect backup archive: {error}"))?;
+    if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
+        return Err("Backup archive must be a regular file".to_string());
+    }
+    let canonical_archive = fs::canonicalize(&safe_archive)
+        .map_err(|error| format!("Failed to resolve backup archive: {error}"))?;
+    if !canonical_archive.starts_with(&canonical_parent) {
+        return Err("Backup archive escaped its parent directory".to_string());
+    }
+    let file = File::open(&canonical_archive)
         .map_err(|error| format!("Failed to open backup archive: {error}"))?;
     validate_archive_file_size(&file, ARCHIVE_POLICY)?;
     let mut archive = zip::ZipArchive::new(file)
@@ -1251,8 +1342,41 @@ fn read_backup_manifest(
 }
 
 fn hash_file(path: &Path) -> Result<String, String> {
-    let mut file =
-        File::open(path).map_err(|error| format!("Failed to open file for hashing: {error}"))?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| "File to hash has no parent directory".to_string())?;
+    let canonical_parent = fs::canonicalize(parent)
+        .map_err(|error| format!("Failed to resolve file parent for hashing: {error}"))?;
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| "File to hash has no file name".to_string())?
+        .to_string_lossy()
+        .into_owned();
+    if file_name.is_empty()
+        || file_name == "."
+        || file_name == ".."
+        || file_name.contains('/')
+        || file_name.contains('\\')
+        || file_name.chars().any(char::is_control)
+    {
+        return Err("File to hash has an unsafe file name".to_string());
+    }
+    let safe_path = canonical_parent.join(file_name);
+    if !safe_path.starts_with(&canonical_parent) {
+        return Err("File to hash escaped its parent directory".to_string());
+    }
+    let metadata = fs::symlink_metadata(&safe_path)
+        .map_err(|error| format!("Failed to inspect file for hashing: {error}"))?;
+    if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
+        return Err("File to hash must be a regular file".to_string());
+    }
+    let canonical_path = fs::canonicalize(&safe_path)
+        .map_err(|error| format!("Failed to resolve file for hashing: {error}"))?;
+    if !canonical_path.starts_with(&canonical_parent) {
+        return Err("File to hash escaped its parent directory".to_string());
+    }
+    let mut file = File::open(&canonical_path)
+        .map_err(|error| format!("Failed to open file for hashing: {error}"))?;
     let mut hasher = Sha256::new();
     let mut buffer = [0_u8; COPY_BUFFER_SIZE];
     loop {
@@ -1271,33 +1395,60 @@ fn backup_catalog_path(backup_dir: &Path) -> PathBuf {
     backup_dir.join(".mc-vector-backup-catalog.json")
 }
 
-fn backup_catalog_temp_path(backup_catalog: &Path) -> PathBuf {
-    let file_name = backup_catalog
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("backup-catalog.json");
-    backup_catalog.with_file_name(format!(".{file_name}.old-{}", Uuid::new_v4()))
-}
-
 fn atomic_replace_existing_file(temp: &Path, destination: &Path) -> Result<(), String> {
-    let previous = match fs::symlink_metadata(destination) {
+    let destination_parent = destination
+        .parent()
+        .ok_or_else(|| "Backup catalog has no parent directory".to_string())?;
+    let canonical_parent = fs::canonicalize(destination_parent)
+        .map_err(|error| format!("Failed to resolve backup catalog parent: {error}"))?;
+    let destination_name = destination
+        .file_name()
+        .ok_or_else(|| "Backup catalog has no file name".to_string())?
+        .to_string_lossy()
+        .into_owned();
+    if destination_name.is_empty()
+        || destination_name == "."
+        || destination_name == ".."
+        || destination_name.contains('/')
+        || destination_name.contains('\\')
+        || destination_name.chars().any(char::is_control)
+    {
+        return Err("Backup catalog has an unsafe file name".to_string());
+    }
+    let safe_destination = canonical_parent.join(destination_name.clone());
+    if !safe_destination.starts_with(&canonical_parent) {
+        return Err("Backup catalog escaped its parent directory".to_string());
+    }
+    let canonical_temp = fs::canonicalize(temp)
+        .map_err(|error| format!("Failed to resolve temporary backup catalog: {error}"))?;
+    if !canonical_temp.starts_with(&canonical_parent)
+        || canonical_temp.parent() != Some(canonical_parent.as_path())
+    {
+        return Err("Temporary backup catalog escaped its parent directory".to_string());
+    }
+    let previous_path =
+        canonical_parent.join(format!(".{destination_name}.old-{}", Uuid::new_v4()));
+    if !previous_path.starts_with(&canonical_parent) {
+        return Err("Previous backup catalog escaped its parent directory".to_string());
+    }
+    let previous = match fs::symlink_metadata(&safe_destination) {
         Ok(metadata) if is_link_or_reparse_point(&metadata) => {
             return Err("Backup catalog must not be a symbolic link or reparse point".to_string())
         }
         Ok(metadata) if !metadata.is_file() => {
             return Err("Backup catalog path is not a regular file".to_string())
         }
-        Ok(_) => Some(backup_catalog_temp_path(destination)),
+        Ok(_) => Some(previous_path),
         Err(error) if error.kind() == io::ErrorKind::NotFound => None,
         Err(error) => return Err(format!("Failed to inspect backup catalog: {error}")),
     };
 
     if let Some(previous_path) = previous.as_ref() {
-        fs::rename(destination, previous_path)
+        fs::rename(&safe_destination, previous_path)
             .map_err(|error| format!("Failed to stage previous backup catalog: {error}"))?;
     }
 
-    match fs::rename(temp, destination) {
+    match fs::rename(&canonical_temp, &safe_destination) {
         Ok(()) => {
             if let Some(previous_path) = previous {
                 let _ = fs::remove_file(previous_path);
@@ -1306,7 +1457,7 @@ fn atomic_replace_existing_file(temp: &Path, destination: &Path) -> Result<(), S
         }
         Err(error) => {
             let restore_result = previous.as_ref().map(|previous_path| {
-                fs::rename(previous_path, destination)
+                fs::rename(previous_path, &safe_destination)
                     .map_err(|restore_error| format!("{restore_error}"))
             });
             match restore_result {
@@ -1348,14 +1499,26 @@ fn write_backup_catalog_atomically(
 }
 
 fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupRecord>, String> {
+    let canonical_backup_dir = fs::canonicalize(backup_dir)
+        .map_err(|error| format!("Failed to resolve backup directory: {error}"))?;
+    if !canonical_backup_dir.is_absolute() {
+        return Err("Backup directory must be absolute".to_string());
+    }
     let mut records = Vec::new();
-    let entries = fs::read_dir(backup_dir)
+    let entries = fs::read_dir(&canonical_backup_dir)
         .map_err(|error| format!("Failed to scan backup directory: {error}"))?;
     for entry in entries {
         let entry =
             entry.map_err(|error| format!("Failed to read backup directory entry: {error}"))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|error| format!("Failed to inspect backup directory entry type: {error}"))?;
+        if file_type.is_symlink() {
+            continue;
+        }
         let path = entry.path();
-        let metadata = fs::symlink_metadata(&path)
+        let metadata = entry
+            .metadata()
             .map_err(|error| format!("Failed to inspect backup directory entry: {error}"))?;
         if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
             continue;
@@ -1363,16 +1526,21 @@ fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupR
         if path.extension().and_then(|extension| extension.to_str()) != Some("zip") {
             continue;
         }
+        let canonical_path = fs::canonicalize(&path)
+            .map_err(|error| format!("Failed to resolve backup archive: {error}"))?;
+        if !canonical_path.starts_with(&canonical_backup_dir) {
+            continue;
+        }
 
         // Invalid or incomplete archives remain on disk for repair/quarantine
         // handling, but never enter the normal restore catalog.
-        let Ok(manifest) = read_backup_manifest(&path, server_id) else {
+        let Ok(manifest) = read_backup_manifest(&canonical_path, server_id) else {
             continue;
         };
-        let archive_sha256 = archive_hash(&path)?;
+        let archive_sha256 = archive_hash(&canonical_path)?;
         records.push(backup_record_from_manifest(
             manifest,
-            &path,
+            &canonical_path,
             archive_sha256,
         )?);
     }
@@ -1403,7 +1571,12 @@ fn apply_retention_to_backup_directory(
     retain_days: u32,
     now_millis: u128,
 ) -> Result<BackupRetentionReport, String> {
-    let records = scan_backup_records(backup_dir, server_id)?;
+    let canonical_backup_dir = fs::canonicalize(backup_dir)
+        .map_err(|error| format!("Failed to resolve backup directory: {error}"))?;
+    if !canonical_backup_dir.is_absolute() {
+        return Err("Backup directory must be absolute".to_string());
+    }
+    let records = scan_backup_records(&canonical_backup_dir, server_id)?;
     let mut automatic = records
         .iter()
         .filter(|record| record.origin == "automatic")
@@ -1424,14 +1597,29 @@ fn apply_retention_to_backup_directory(
         if !over_count && !over_age {
             continue;
         }
-        let path = backup_dir.join(&record.archive_path);
+        let archive_name = &record.archive_path;
+        if archive_name.is_empty()
+            || archive_name == "."
+            || archive_name == ".."
+            || archive_name.contains('/')
+            || archive_name.contains('\\')
+            || archive_name.chars().any(char::is_control)
+        {
+            failed_delete_count = failed_delete_count.saturating_add(1);
+            continue;
+        }
+        let path = canonical_backup_dir.join(archive_name);
+        if !path.starts_with(&canonical_backup_dir) {
+            failed_delete_count = failed_delete_count.saturating_add(1);
+            continue;
+        }
         match fs::remove_file(&path) {
             Ok(()) => deleted_names.push(record.archive_path.clone()),
             Err(_) => failed_delete_count = failed_delete_count.saturating_add(1),
         }
     }
 
-    let records = rebuild_backup_catalog(backup_dir, server_id)?;
+    let records = rebuild_backup_catalog(&canonical_backup_dir, server_id)?;
     Ok(BackupRetentionReport {
         deleted_names,
         failed_delete_count,
@@ -2545,7 +2733,7 @@ mod tests {
 
     #[test]
     fn retention_only_deletes_automatic_backups() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-retention-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -2596,7 +2784,7 @@ mod tests {
 
     #[test]
     fn catalog_rebuilds_from_archive_manifests_after_catalog_loss() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-catalog-rebuild-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
