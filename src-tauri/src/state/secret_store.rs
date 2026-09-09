@@ -1,6 +1,8 @@
 use keyring::Entry;
 
-const SERVICE_NAME: &str = "com.mcvector.desktop";
+const LEGACY_SERVICE_NAME: &str = "com.mcvector.desktop";
+const SERVICE_NAME_PREFIX: &str = "com.mcvector.desktop.";
+pub const PRODUCTION_APP_IDENTIFIER: &str = "com.tukuyomi032.mcvector";
 pub const NGROK_TOKEN_KEY: &str = "ngrok-auth-token";
 
 pub trait SecretStore: Send + Sync {
@@ -9,12 +11,20 @@ pub trait SecretStore: Send + Sync {
     fn delete(&self, key: &str) -> Result<(), String>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct OsSecretStore;
+#[derive(Debug, Clone)]
+pub struct OsSecretStore {
+    service_name: String,
+}
 
 impl OsSecretStore {
-    fn entry(key: &str) -> Result<Entry, String> {
-        Entry::new(SERVICE_NAME, key).map_err(|error| {
+    pub fn new(app_identifier: &str) -> Self {
+        Self {
+            service_name: service_name_for_identifier(app_identifier),
+        }
+    }
+
+    fn entry(&self, key: &str) -> Result<Entry, String> {
+        Entry::new(&self.service_name, key).map_err(|error| {
             format!("Failed to open the operating-system credential store: {error}")
         })
     }
@@ -22,7 +32,7 @@ impl OsSecretStore {
 
 impl SecretStore for OsSecretStore {
     fn get(&self, key: &str) -> Result<Option<String>, String> {
-        match Self::entry(key)?.get_password() {
+        match self.entry(key)?.get_password() {
             Ok(value) => Ok(Some(value)),
             Err(keyring::Error::NoEntry) => Ok(None),
             Err(error) => Err(format!(
@@ -35,13 +45,13 @@ impl SecretStore for OsSecretStore {
         if value.trim().is_empty() {
             return Err("Credential value must not be empty".to_string());
         }
-        Self::entry(key)?
+        self.entry(key)?
             .set_password(value)
             .map_err(|_error| "Failed to write the operating-system credential store".to_string())
     }
 
     fn delete(&self, key: &str) -> Result<(), String> {
-        match Self::entry(key)?.delete_credential() {
+        match self.entry(key)?.delete_credential() {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(error) => Err(format!(
                 "Failed to delete the operating-system credential: {error}"
@@ -50,9 +60,49 @@ impl SecretStore for OsSecretStore {
     }
 }
 
+fn service_name_for_identifier(app_identifier: &str) -> String {
+    if app_identifier == PRODUCTION_APP_IDENTIFIER {
+        LEGACY_SERVICE_NAME.to_string()
+    } else {
+        format!("{SERVICE_NAME_PREFIX}{app_identifier}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{SecretStore, NGROK_TOKEN_KEY};
+    use super::{
+        service_name_for_identifier, SecretStore, NGROK_TOKEN_KEY, PRODUCTION_APP_IDENTIFIER,
+    };
+
+    const DEBUG_APP_IDENTIFIER: &str = "com.tukuyomi032.mcvector.debug";
+    const E2E_APP_IDENTIFIER: &str = "com.tukuyomi032.mcvector.e2e";
+
+    #[test]
+    fn service_name_derivation_is_deterministic() {
+        assert_eq!(
+            service_name_for_identifier(PRODUCTION_APP_IDENTIFIER),
+            "com.mcvector.desktop"
+        );
+        assert_eq!(
+            service_name_for_identifier(DEBUG_APP_IDENTIFIER),
+            service_name_for_identifier(DEBUG_APP_IDENTIFIER)
+        );
+        assert_eq!(
+            service_name_for_identifier(DEBUG_APP_IDENTIFIER),
+            "com.mcvector.desktop.com.tukuyomi032.mcvector.debug"
+        );
+    }
+
+    #[test]
+    fn app_identifiers_use_isolated_service_names() {
+        let production = service_name_for_identifier(PRODUCTION_APP_IDENTIFIER);
+        let debug = service_name_for_identifier(DEBUG_APP_IDENTIFIER);
+        let e2e = service_name_for_identifier(E2E_APP_IDENTIFIER);
+
+        assert_ne!(production, debug);
+        assert_ne!(production, e2e);
+        assert_ne!(debug, e2e);
+    }
 
     struct MemorySecretStore(std::sync::Mutex<Option<String>>);
 

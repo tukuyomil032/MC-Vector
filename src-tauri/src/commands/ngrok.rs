@@ -11,7 +11,9 @@ use uuid::Uuid;
 
 use super::download::download_verified_artifact;
 use crate::state::operation_manager::{OperationKind, ServerOperationManager};
-use crate::state::secret_store::{OsSecretStore, SecretStore, NGROK_TOKEN_KEY};
+use crate::state::secret_store::{
+    OsSecretStore, SecretStore, NGROK_TOKEN_KEY, PRODUCTION_APP_IDENTIFIER,
+};
 
 const MAX_NGROK_ARCHIVE_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_NGROK_ARCHIVE_ENTRIES: usize = 32;
@@ -364,7 +366,7 @@ pub async fn start_ngrok(
         &allowed_dir,
     )?;
     let validated_protocol = validate_protocol(&protocol)?;
-    let secret_store = OsSecretStore;
+    let secret_store = OsSecretStore::new(&app.config().identifier);
     migrate_legacy_ngrok_token(&app, &secret_store)?;
     let normalized_token = secret_store
         .get(NGROK_TOKEN_KEY)?
@@ -480,6 +482,10 @@ fn migrate_legacy_ngrok_token(
     app: &AppHandle,
     secret_store: &impl SecretStore,
 ) -> Result<(), String> {
+    if app.config().identifier != PRODUCTION_APP_IDENTIFIER {
+        return Ok(());
+    }
+
     let store = app
         .store("config.json")
         .map_err(|error| format!("Failed to open legacy credential store: {error}"))?;
@@ -513,7 +519,7 @@ pub struct NgrokTokenStatus {
 
 #[tauri::command]
 pub fn get_ngrok_token_status(app: AppHandle) -> Result<NgrokTokenStatus, String> {
-    let secret_store = OsSecretStore;
+    let secret_store = OsSecretStore::new(&app.config().identifier);
     migrate_legacy_ngrok_token(&app, &secret_store)?;
     Ok(NgrokTokenStatus {
         configured: secret_store.get(NGROK_TOKEN_KEY)?.is_some(),
@@ -527,7 +533,7 @@ pub fn set_ngrok_token(app: AppHandle, token: String) -> Result<(), String> {
     {
         return Err("ngrok auth token is invalid".to_string());
     }
-    let secret_store = OsSecretStore;
+    let secret_store = OsSecretStore::new(&app.config().identifier);
     secret_store.set(NGROK_TOKEN_KEY, normalized)?;
     let stored = secret_store
         .get(NGROK_TOKEN_KEY)?
@@ -540,7 +546,7 @@ pub fn set_ngrok_token(app: AppHandle, token: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn clear_ngrok_token(app: AppHandle) -> Result<(), String> {
-    let secret_store = OsSecretStore;
+    let secret_store = OsSecretStore::new(&app.config().identifier);
     secret_store.delete(NGROK_TOKEN_KEY)?;
     let store = app
         .store("config.json")
