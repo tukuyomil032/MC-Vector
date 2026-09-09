@@ -1016,22 +1016,11 @@ describe('BackupsView initialization', () => {
 });
 
 describe('BackupsView lifecycle', () => {
-  it('continues a manual backup through create IPC after its snapshot outlives a keyed unmount', async () => {
-    const snapshotRoot =
-      deferred<Array<{ name: string; isDirectory: boolean; modified: number; size: number }>>();
+  it('continues a manual backup through create IPC after a keyed unmount', async () => {
     const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
     fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
-    fileCommands.listFilesWithMetadata.mockImplementation((path: string) => {
-      if (path === server.path) {
-        return snapshotRoot.promise;
-      }
-      if (path === `${server.path}/world`) {
-        return Promise.resolve([
-          { name: 'level.dat', isDirectory: false, modified: 10, size: 100 },
-        ]);
-      }
-      return Promise.resolve([]);
-    });
+    const createPromise = deferred<void>();
+    backupCommands.createBackup.mockReturnValue(createPromise.promise);
     backupCommands.applyBackupRetention.mockResolvedValue({
       deletedNames: [],
       failedDeleteCount: 0,
@@ -1043,7 +1032,12 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
-      expect(fileCommands.listFilesWithMetadata).toHaveBeenCalledWith(server.path),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(
+        server.id,
+        'backup-name.zip',
+        ['world'],
+        5,
+      ),
     );
 
     view.rerender(
@@ -1053,7 +1047,7 @@ describe('BackupsView lifecycle', () => {
     );
 
     await act(async () => {
-      snapshotRoot.resolve([{ name: 'world', isDirectory: true, modified: 1, size: 0 }]);
+      createPromise.resolve();
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -1073,20 +1067,9 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('shows a remounted server as creating and reloads after its manual operation completes', async () => {
-    const snapshotRoot =
-      deferred<Array<{ name: string; isDirectory: boolean; modified: number; size: number }>>();
     fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
-    fileCommands.listFilesWithMetadata.mockImplementation((path: string) => {
-      if (path === server.path) {
-        return snapshotRoot.promise;
-      }
-      if (path === `${server.path}/world`) {
-        return Promise.resolve([
-          { name: 'level.dat', isDirectory: false, modified: 10, size: 100 },
-        ]);
-      }
-      return Promise.resolve([]);
-    });
+    const createPromise = deferred<void>();
+    backupCommands.createBackup.mockReturnValue(createPromise.promise);
     backupCommands.applyBackupRetention.mockResolvedValue({
       deletedNames: [],
       failedDeleteCount: 0,
@@ -1098,7 +1081,12 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
-      expect(fileCommands.listFilesWithMetadata).toHaveBeenCalledWith(server.path),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(
+        server.id,
+        'backup-name.zip',
+        ['world'],
+        5,
+      ),
     );
 
     view.rerender(
@@ -1114,7 +1102,7 @@ describe('BackupsView lifecycle', () => {
     const catalogLoadsBeforeCompletion = backupCommands.readBackupCatalog.mock.calls.length;
 
     await act(async () => {
-      snapshotRoot.resolve([{ name: 'world', isDirectory: true, modified: 1, size: 0 }]);
+      createPromise.resolve();
       await Promise.resolve();
       await Promise.resolve();
     });

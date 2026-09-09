@@ -185,6 +185,9 @@ function backupFileRequest(serverId: string, backupName: string): ManagedPathReq
 export async function createBackup(
   serverId: string,
   backupName: string,
+  // Kept temporarily so older renderer callers can migrate without changing
+  // the public wrapper in one release. Managed backups are always full
+  // snapshots; the Rust command receives null for this legacy value.
   sources?: string[],
   compressionLevel?: number,
 ): Promise<void> {
@@ -194,7 +197,7 @@ export async function createBackup(
   return tauriInvoke('create_managed_backup', {
     serverId,
     backupName,
-    sources: sources && sources.length > 0 ? sources : null,
+    sources: null,
     compressionLevel: compressionLevel ?? 5,
   });
 }

@@ -3,10 +3,15 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use tauri::{AppHandle, Emitter, Manager};
+use sha2::{Digest, Sha256};
+use tauri::{AppHandle, Emitter, Manager, State};
+use uuid::Uuid;
 
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
+use super::server::ServerManager;
+use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
 const MAX_ARCHIVE_ENTRIES: u64 = 100_000;
 const MAX_ARCHIVE_COMPRESSED_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -69,6 +74,84 @@ struct BackupProgress {
     #[serde(rename = "serverId")]
     server_id: String,
     progress: f32,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupManifest {
+    format_version: u32,
+    backup_id: String,
+    server_id: String,
+    kind: String,
+    consistency: String,
+    origin: String,
+    created_at: String,
+    root_fingerprint: String,
+    file_count: u64,
+    total_bytes: u64,
+    entries: Vec<BackupManifestEntry>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupManifestEntry {
+    path: String,
+    kind: String,
+    size: u64,
+    sha256: String,
+}
+
+struct HashingWriter<'a, W> {
+    inner: &'a mut W,
+    hasher: Sha256,
+}
+
+impl<'a, W: Write> HashingWriter<'a, W> {
+    fn new(inner: &'a mut W) -> Self {
+        Self {
+            inner,
+            hasher: Sha256::new(),
+        }
+    }
+
+    fn finalize(self) -> String {
+        hex_encode(&self.hasher.finalize())
+    }
+}
+
+impl<W: Write> Write for HashingWriter<'_, W> {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        let written = self.inner.write(buffer)?;
+        self.hasher.update(&buffer[..written]);
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+fn hex_encode(bytes: impl AsRef<[u8]>) -> String {
+    bytes
+        .as_ref()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+fn timestamp_millis() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis().to_string())
+        .unwrap_or_else(|_| "0".to_string())
+}
+
+fn manifest_fingerprint(entries: &[BackupManifestEntry]) -> Result<String, String> {
+    let encoded = serde_json::to_vec(entries)
+        .map_err(|error| format!("Failed to serialize manifest entries: {error}"))?;
+    let mut hasher = Sha256::new();
+    hasher.update(encoded);
+    Ok(hex_encode(hasher.finalize()))
 }
 
 static TEMP_FILE_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -365,29 +448,13 @@ fn temp_file_for(destination: &Path) -> io::Result<(File, PathBuf)> {
     ))
 }
 
-fn atomic_replace(temp: &Path, destination: &Path) -> io::Result<()> {
-    match fs::rename(temp, destination) {
-        Ok(()) => Ok(()),
-        Err(rename_error) if destination.exists() => {
-            fs::remove_file(destination).map_err(|error| {
-                io::Error::new(
-                    error.kind(),
-                    format!(
-                        "Failed to replace existing archive: {error}; initial error: {rename_error}"
-                    ),
-                )
-            })?;
-            fs::rename(temp, destination).map_err(|error| {
-                io::Error::new(
-                    error.kind(),
-                    format!(
-                        "Failed to atomically move archive: {error}; initial error: {rename_error}"
-                    ),
-                )
-            })
-        }
-        Err(error) => Err(error),
-    }
+fn atomic_install_new(temp: &Path, destination: &Path) -> io::Result<()> {
+    // A hard link creates the destination directory entry without replacing an
+    // existing file. Both paths are allocated in the same directory, so the
+    // operation stays on one filesystem and the fully synced temporary file is
+    // never exposed as a partial archive.
+    fs::hard_link(temp, destination)?;
+    fs::remove_file(temp)
 }
 
 fn write_zip_atomically<F>(destination: &Path, build: F) -> Result<u64, String>
@@ -417,7 +484,7 @@ where
     file.sync_all()
         .map_err(|error| format!("Failed to sync temporary zip: {error}"))?;
     drop(file);
-    atomic_replace(&temp_path, destination)
+    atomic_install_new(&temp_path, destination)
         .map_err(|error| format!("Failed to install zip atomically: {error}"))?;
     temp_guard.disarm();
     Ok(output_bytes)
@@ -498,13 +565,13 @@ fn append_source_entry(
     archive_root: &Path,
     totals: &mut ResourceTotals,
     options: zip::write::SimpleFileOptions,
-) -> Result<(), String> {
+) -> Result<Option<BackupManifestEntry>, String> {
     let (safe_name, metadata) =
         validate_source_entry(entry, containment_root, archive_root, totals)?;
     if metadata.is_dir() {
         zip.add_directory(format!("{}/", safe_name.to_string_lossy()), options)
             .map_err(|error| format!("Failed to add directory: {error}"))?;
-        return Ok(());
+        return Ok(None);
     }
 
     zip.start_file(safe_name.to_string_lossy(), options)
@@ -512,14 +579,16 @@ fn append_source_entry(
     let mut file =
         File::open(entry).map_err(|error| format_source_file_error("open", entry, &error))?;
     let mut actual_total = totals.uncompressed_bytes.saturating_sub(metadata.len());
+    let mut hashing_zip = HashingWriter::new(zip);
     let copied = copy_limited(
         &mut file,
-        zip,
+        &mut hashing_zip,
         ARCHIVE_POLICY.max_entry_uncompressed_bytes,
         &mut actual_total,
         ARCHIVE_POLICY.max_archive_uncompressed_bytes,
     )
     .map_err(|error| format_source_file_error("stream", entry, &error))?;
+    let sha256 = hashing_zip.finalize();
     if copied != metadata.len() {
         return Err(format!(
             "Source file changed while being archived: {}",
@@ -527,7 +596,12 @@ fn append_source_entry(
         ));
     }
     totals.uncompressed_bytes = actual_total;
-    Ok(())
+    Ok(Some(BackupManifestEntry {
+        path: safe_name.to_string_lossy().replace('\\', "/"),
+        kind: "file".to_string(),
+        size: copied,
+        sha256,
+    }))
 }
 
 fn format_source_file_error(action: &str, entry: &Path, error: &io::Error) -> String {
@@ -683,17 +757,22 @@ pub async fn create_backup(
                 "No backup source files remain after excluding runtime lock files".to_string(),
             );
         }
+        let mut entries = entries;
+        entries.sort();
         let total = entries.len() as f32;
         write_zip_atomically(&zip_path, |zip, totals| {
+            let mut manifest_entries = Vec::new();
             for (index, entry) in entries.iter().enumerate() {
-                append_source_entry(
+                if let Some(manifest_entry) = append_source_entry(
                     zip,
                     entry,
                     &source_canonical,
                     &source_canonical,
                     totals,
                     options,
-                )?;
+                )? {
+                    manifest_entries.push(manifest_entry);
+                }
                 let progress = if total == 0.0 {
                     100.0
                 } else {
@@ -707,6 +786,26 @@ pub async fn create_backup(
                     },
                 );
             }
+            manifest_entries.sort_by(|left, right| left.path.cmp(&right.path));
+            let manifest = BackupManifest {
+                format_version: 2,
+                backup_id: Uuid::new_v4().to_string(),
+                server_id: sid.clone(),
+                kind: "full".to_string(),
+                consistency: "quiesced".to_string(),
+                origin: "manual".to_string(),
+                created_at: timestamp_millis(),
+                root_fingerprint: manifest_fingerprint(&manifest_entries)?,
+                file_count: manifest_entries.len() as u64,
+                total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
+                entries: manifest_entries,
+            };
+            let manifest_bytes = serde_json::to_vec(&manifest)
+                .map_err(|error| format!("Failed to serialize backup manifest: {error}"))?;
+            zip.start_file("manifest.json", options)
+                .map_err(|error| format!("Failed to add backup manifest: {error}"))?;
+            zip.write_all(&manifest_bytes)
+                .map_err(|error| format!("Failed to write backup manifest: {error}"))?;
             Ok(())
         })?;
         Ok(zip_name)
@@ -1008,14 +1107,281 @@ fn extract_archive_to_directory(
     Ok(())
 }
 
+const MAX_MANIFEST_BYTES: u64 = 4 * 1024 * 1024;
+
+fn read_backup_manifest(
+    archive_path: &Path,
+    expected_server_id: &str,
+) -> Result<BackupManifest, String> {
+    let file = File::open(archive_path)
+        .map_err(|error| format!("Failed to open backup archive: {error}"))?;
+    validate_archive_file_size(&file, ARCHIVE_POLICY)?;
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|error| format!("Failed to read backup archive: {error}"))?;
+    preflight_archive(&mut archive, ARCHIVE_POLICY)?;
+    let mut manifest_file = archive
+        .by_name("manifest.json")
+        .map_err(|_| "Backup manifest is missing".to_string())?;
+    if manifest_file.size() > MAX_MANIFEST_BYTES {
+        return Err("Backup manifest exceeds the configured limit".to_string());
+    }
+    let mut manifest_bytes = Vec::new();
+    manifest_file
+        .read_to_end(&mut manifest_bytes)
+        .map_err(|error| format!("Failed to read backup manifest: {error}"))?;
+    let manifest: BackupManifest = serde_json::from_slice(&manifest_bytes)
+        .map_err(|error| format!("Backup manifest is invalid JSON: {error}"))?;
+    if manifest.format_version != 2
+        || manifest.kind != "full"
+        || !matches!(manifest.consistency.as_str(), "quiesced" | "live")
+        || !matches!(manifest.origin.as_str(), "manual" | "automatic")
+        || manifest.backup_id.trim().is_empty()
+        || manifest.server_id.trim().is_empty()
+    {
+        return Err("Backup manifest contains unsupported metadata".to_string());
+    }
+    if manifest.server_id != expected_server_id {
+        return Err("Backup manifest belongs to a different server".to_string());
+    }
+    if manifest.consistency == "live" {
+        return Err("Live snapshots are not restoreable".to_string());
+    }
+    if manifest.entries.len() as u64 != manifest.file_count {
+        return Err("Backup manifest file count does not match entries".to_string());
+    }
+    if manifest.entries.iter().any(|entry| {
+        entry.kind != "file"
+            || entry.sha256.len() != 64
+            || !entry.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || validate_archive_entry_name(&entry.path, ARCHIVE_POLICY).is_err()
+    }) {
+        return Err("Backup manifest contains an unsafe file entry".to_string());
+    }
+    let mut entries = manifest.entries.clone();
+    entries.sort_by(|left, right| left.path.cmp(&right.path));
+    if entries
+        .windows(2)
+        .any(|window| window[0].path == window[1].path)
+    {
+        return Err("Backup manifest contains duplicate file entries".to_string());
+    }
+    if manifest.root_fingerprint != manifest_fingerprint(&entries)? {
+        return Err("Backup manifest fingerprint does not match entries".to_string());
+    }
+    let total_bytes = manifest
+        .entries
+        .iter()
+        .try_fold(0_u64, |total, entry| total.checked_add(entry.size))
+        .ok_or_else(|| "Backup manifest total size overflows".to_string())?;
+    if manifest.total_bytes != total_bytes {
+        return Err("Backup manifest total size does not match entries".to_string());
+    }
+    Ok(manifest)
+}
+
+fn hash_file(path: &Path) -> Result<String, String> {
+    let mut file =
+        File::open(path).map_err(|error| format!("Failed to open file for hashing: {error}"))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; COPY_BUFFER_SIZE];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .map_err(|error| format!("Failed to hash file: {error}"))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(hex_encode(hasher.finalize()))
+}
+
+fn collect_regular_file_hashes(
+    root: &Path,
+    current: &Path,
+    output: &mut HashMap<String, (u64, String)>,
+) -> Result<(), String> {
+    let metadata = fs::symlink_metadata(current)
+        .map_err(|error| format!("Failed to inspect restore tree: {error}"))?;
+    if is_link_or_reparse_point(&metadata) {
+        return Err("Restored tree contains a symbolic link or reparse point".to_string());
+    }
+    if metadata.is_file() {
+        let relative = current
+            .strip_prefix(root)
+            .map_err(|_| "Restored file escaped staging root".to_string())?
+            .to_string_lossy()
+            .replace('\\', "/");
+        output.insert(relative, (metadata.len(), hash_file(current)?));
+        return Ok(());
+    }
+    if !metadata.is_dir() {
+        return Err("Restored tree contains an unsupported filesystem entry".to_string());
+    }
+    for entry in fs::read_dir(current)
+        .map_err(|error| format!("Failed to inspect restored directory: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("Failed to inspect restored entry: {error}"))?;
+        collect_regular_file_hashes(root, &entry.path(), output)?;
+    }
+    Ok(())
+}
+
+fn verify_staged_backup(staging: &Path, manifest: &BackupManifest) -> Result<(), String> {
+    let manifest_path = staging.join("manifest.json");
+    match fs::symlink_metadata(&manifest_path) {
+        Ok(metadata) if is_link_or_reparse_point(&metadata) || !metadata.is_file() => {
+            return Err("Staged backup manifest is not a regular file".to_string());
+        }
+        Ok(_) => fs::remove_file(&manifest_path)
+            .map_err(|error| format!("Failed to remove staged backup manifest: {error}"))?,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Err("Staged backup manifest is missing".to_string())
+        }
+        Err(error) => return Err(format!("Failed to inspect staged manifest: {error}")),
+    }
+
+    let mut actual = HashMap::new();
+    collect_regular_file_hashes(staging, staging, &mut actual)?;
+    if actual.len() != manifest.entries.len() {
+        return Err("Restored file set does not match the backup manifest".to_string());
+    }
+    for expected in &manifest.entries {
+        let Some((actual_size, actual_hash)) = actual.get(&expected.path) else {
+            return Err(format!("Restored file is missing: {}", expected.path));
+        };
+        if *actual_size != expected.size || actual_hash != &expected.sha256 {
+            return Err(format!(
+                "Restored file checksum mismatch: {}",
+                expected.path
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn create_unique_directory(parent: &Path, prefix: &str) -> Result<PathBuf, String> {
+    for _ in 0..32 {
+        let counter = TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let candidate = parent.join(format!(".{prefix}-{}-{counter}", std::process::id()));
+        match fs::create_dir(&candidate) {
+            Ok(()) => return Ok(candidate),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(format!("Failed to create staging directory: {error}")),
+        }
+    }
+    Err("Could not allocate a unique staging directory".to_string())
+}
+
+fn transactional_restore_archive(
+    archive_path: &Path,
+    target_dir: &Path,
+    server_id: &str,
+) -> Result<(), String> {
+    let manifest = read_backup_manifest(archive_path, server_id)?;
+    let parent = target_dir
+        .parent()
+        .ok_or_else(|| "Restore target has no parent directory".to_string())?;
+    let staging = create_unique_directory(parent, "mc-vector-restore-staging")?;
+    let mut staging_guard = TempDirectoryGuard::new(staging.clone());
+
+    if let Err(error) = extract_archive_to_directory(archive_path, &staging)
+        .and_then(|()| verify_staged_backup(&staging, &manifest))
+    {
+        return Err(error);
+    }
+
+    let target_metadata = fs::symlink_metadata(target_dir);
+    let target_exists = match target_metadata {
+        Ok(metadata) if is_link_or_reparse_point(&metadata) => {
+            return Err("Restore target must not be a symbolic link or reparse point".to_string());
+        }
+        Ok(metadata) if !metadata.is_dir() => {
+            return Err("Restore target must be a directory".to_string());
+        }
+        Ok(_) => true,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => false,
+        Err(error) => return Err(format!("Failed to inspect restore target: {error}")),
+    };
+
+    let rollback = if target_exists {
+        Some(create_unique_directory(
+            parent,
+            "mc-vector-restore-rollback",
+        )?)
+    } else {
+        None
+    };
+
+    if let Some(rollback_dir) = rollback.as_ref() {
+        fs::remove_dir(rollback_dir)
+            .map_err(|error| format!("Failed to prepare rollback directory: {error}"))?;
+        fs::rename(target_dir, rollback_dir)
+            .map_err(|error| format!("Failed to stage current server directory: {error}"))?;
+    }
+
+    match fs::rename(&staging, target_dir) {
+        Ok(()) => {
+            staging_guard.disarm();
+            if let Some(rollback_dir) = rollback {
+                let _ = fs::remove_dir_all(rollback_dir);
+            }
+            Ok(())
+        }
+        Err(error) => {
+            let rollback_result = rollback.as_ref().map(|rollback_dir| {
+                fs::rename(rollback_dir, target_dir)
+                    .map_err(|rollback_error| format!("{rollback_error}"))
+            });
+            match rollback_result {
+                Some(Ok(())) | None => Err(format!(
+                    "Failed to commit restored server directory: {error}"
+                )),
+                Some(Err(rollback_error)) => {
+                    staging_guard.disarm();
+                    Err(format!(
+                        "Restore failed and rollback also failed: {error}; {rollback_error}"
+                    ))
+                }
+            }
+        }
+    }
+}
+
+struct TempDirectoryGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl TempDirectoryGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for TempDirectoryGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+}
+
 pub async fn restore_backup(
     _app: AppHandle,
+    server_id: String,
     backup_path: PathBuf,
     target_dir: PathBuf,
 ) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || extract_archive_to_directory(&backup_path, &target_dir))
-        .await
-        .map_err(|error| format!("Task join error: {error}"))?
+    tokio::task::spawn_blocking(move || {
+        transactional_restore_archive(&backup_path, &target_dir, &server_id)
+    })
+    .await
+    .map_err(|error| format!("Task join error: {error}"))?
 }
 
 pub async fn compress_item(sources: Vec<PathBuf>, destination: PathBuf) -> Result<String, String> {
@@ -1084,11 +1450,25 @@ pub async fn extract_item(archive: PathBuf, destination: PathBuf) -> Result<(), 
 #[tauri::command]
 pub async fn create_managed_backup(
     app: AppHandle,
+    server_state: State<'_, ServerManager>,
+    operations: State<'_, ServerOperationManager>,
     server_id: String,
     backup_name: String,
     sources: Option<Vec<String>>,
     compression_level: Option<i64>,
 ) -> Result<String, String> {
+    let _operation_guard = operations
+        .acquire(&server_id, OperationKind::BackupCreate)
+        .await?;
+    if sources
+        .as_ref()
+        .is_some_and(|selected| !selected.is_empty())
+    {
+        return Err("Full managed backups do not accept selected source paths".to_string());
+    }
+    if server_state.servers.lock().await.contains_key(&server_id) {
+        return Err("Cannot create a quiesced backup while the server is running".to_string());
+    }
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -1120,9 +1500,17 @@ pub async fn create_managed_backup(
 #[tauri::command]
 pub async fn restore_managed_backup(
     app: AppHandle,
+    server_state: State<'_, ServerManager>,
+    operations: State<'_, ServerOperationManager>,
     server_id: String,
     backup_name: String,
 ) -> Result<(), String> {
+    let _operation_guard = operations
+        .acquire(&server_id, OperationKind::BackupRestore)
+        .await?;
+    if server_state.servers.lock().await.contains_key(&server_id) {
+        return Err("Cannot restore a backup while the server is running".to_string());
+    }
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -1134,12 +1522,12 @@ pub async fn restore_managed_backup(
     };
     let target_request = ManagedPathRequest {
         root: ManagedRoot::Servers,
-        server_id: Some(server_id),
+        server_id: Some(server_id.clone()),
         relative_path: String::new(),
     };
     let archive = resolve_managed_request(&app_data_dir, &archive_request, false)?;
     let target = resolve_managed_request(&app_data_dir, &target_request, false)?;
-    restore_backup(app, archive, target).await
+    restore_backup(app, server_id, archive, target).await
 }
 
 #[tauri::command]
@@ -1274,6 +1662,49 @@ mod tests {
     fn preflight_result(entries: &[(&str, ArchiveEntryKind)]) -> Result<(), String> {
         let mut archive = archive_with_entries(entries);
         preflight_archive(&mut archive, ARCHIVE_POLICY)
+    }
+
+    fn create_full_manifest_archive(source: &Path, archive: &Path, server_id: &str) {
+        let source_canonical = fs::canonicalize(source).expect("resolve source");
+        let mut entries = collect_backup_files(source).expect("collect backup files");
+        entries.sort();
+        write_zip_atomically(archive, |zip, totals| {
+            let mut manifest_entries = Vec::new();
+            for entry in &entries {
+                if let Some(manifest_entry) = append_source_entry(
+                    zip,
+                    entry,
+                    &source_canonical,
+                    &source_canonical,
+                    totals,
+                    compression_options(Some(5)),
+                )? {
+                    manifest_entries.push(manifest_entry);
+                }
+            }
+            manifest_entries.sort_by(|left, right| left.path.cmp(&right.path));
+            let manifest = BackupManifest {
+                format_version: 2,
+                backup_id: "test-backup".to_string(),
+                server_id: server_id.to_string(),
+                kind: "full".to_string(),
+                consistency: "quiesced".to_string(),
+                origin: "manual".to_string(),
+                created_at: "2026-09-09T00:00:00.000Z".to_string(),
+                root_fingerprint: manifest_fingerprint(&manifest_entries)?,
+                file_count: manifest_entries.len() as u64,
+                total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
+                entries: manifest_entries,
+            };
+            let manifest_bytes = serde_json::to_vec(&manifest)
+                .map_err(|error| format!("Failed to serialize test manifest: {error}"))?;
+            zip.start_file("manifest.json", compression_options(Some(5)))
+                .map_err(|error| format!("Failed to add test manifest: {error}"))?;
+            zip.write_all(&manifest_bytes)
+                .map_err(|error| format!("Failed to write test manifest: {error}"))?;
+            Ok(())
+        })
+        .expect("create full manifest archive");
     }
 
     fn test_policy() -> ArchivePolicy {
@@ -1615,6 +2046,97 @@ mod tests {
         );
 
         fs::remove_dir_all(root).expect("remove test tree");
+    }
+
+    #[test]
+    fn full_snapshot_restore_recovers_deleted_and_stale_files() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-transactional-restore-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        let source = root.join("source");
+        let archive = root.join("backup.zip");
+        let target = root.join("server");
+        fs::create_dir_all(source.join("world")).expect("create source tree");
+        fs::create_dir_all(target.join("world")).expect("create target tree");
+        fs::write(source.join("server.properties"), b"online-mode=true")
+            .expect("write source properties");
+        fs::write(source.join("world/level.dat"), b"restored-level").expect("write source level");
+        fs::write(source.join("session.lock"), b"runtime lock").expect("write source lock");
+        fs::write(target.join("world/level.dat"), b"old-level").expect("write old level");
+        fs::write(target.join("stale.txt"), b"must disappear").expect("write stale file");
+
+        create_full_manifest_archive(&source, &archive, "server-1");
+        transactional_restore_archive(&archive, &target, "server-1").expect("restore snapshot");
+
+        assert_eq!(
+            fs::read(target.join("world/level.dat")).expect("read restored level"),
+            b"restored-level"
+        );
+        assert_eq!(
+            fs::read(target.join("server.properties")).expect("read restored properties"),
+            b"online-mode=true"
+        );
+        assert!(!target.join("stale.txt").exists());
+        assert!(!target.join("session.lock").exists());
+
+        fs::remove_dir_all(root).expect("remove test tree");
+    }
+
+    #[test]
+    fn restore_rejects_a_snapshot_for_another_server_before_touching_target() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-transactional-server-id-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        let source = root.join("source");
+        let archive = root.join("backup.zip");
+        let target = root.join("server");
+        fs::create_dir_all(&source).expect("create source tree");
+        fs::create_dir_all(&target).expect("create target tree");
+        fs::write(source.join("server.properties"), b"source").expect("write source file");
+        fs::write(target.join("server.properties"), b"must remain").expect("write target file");
+
+        create_full_manifest_archive(&source, &archive, "server-a");
+        let error = transactional_restore_archive(&archive, &target, "server-b")
+            .expect_err("cross-server restore must be rejected");
+        assert!(error.contains("different server"), "{error}");
+        assert_eq!(
+            fs::read(target.join("server.properties")).expect("read unchanged target"),
+            b"must remain"
+        );
+
+        fs::remove_dir_all(root).expect("remove test tree");
+    }
+
+    #[test]
+    fn existing_archive_is_never_clobbered_by_atomic_install() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-archive-clobber-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&root).expect("create test directory");
+        let destination = root.join("backup.zip");
+        let temporary = root.join("temporary.zip");
+        fs::write(&destination, b"old archive").expect("write existing archive");
+        fs::write(&temporary, b"new archive").expect("write temporary archive");
+
+        let error = atomic_install_new(&temporary, &destination)
+            .expect_err("existing destination must reject installation");
+        assert_eq!(error.kind(), io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            fs::read(&destination).expect("read existing archive"),
+            b"old archive"
+        );
+        assert_eq!(
+            fs::read(&temporary).expect("read temporary archive"),
+            b"new archive"
+        );
+
+        fs::remove_dir_all(root).expect("remove test directory");
     }
 
     #[test]

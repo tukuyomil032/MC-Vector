@@ -16,7 +16,7 @@ import {
   writeBackupCatalog,
 } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
-import { deleteItem, listFiles, listFilesWithMetadata } from '../../lib/file-commands';
+import { deleteItem, listFiles } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import {
   getManualBackupOperationId,
@@ -210,7 +210,6 @@ export default function BackupsView({ server }: Props) {
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [customName, setCustomName] = useState('');
   const [compressionLevel, setCompressionLevel] = useState(5);
-  const [backupMode, setBackupMode] = useState<BackupMode>('full');
   const [backupCatalog, setBackupCatalog] = useState<BackupCatalog>(createEmptyCatalog());
   const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>('loading');
   const [worlds, setWorlds] = useState<string[]>([]);
@@ -561,7 +560,6 @@ export default function BackupsView({ server }: Props) {
     setShowCreateModal(true);
     setCustomName('');
     setCompressionLevel(5);
-    setBackupMode('full');
     try {
       const entries = await listFiles(server.path);
       if (
@@ -838,87 +836,6 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const buildSnapshotForSelection = async (
-    paths: string[],
-    serverPath: string,
-  ): Promise<Record<string, BackupSnapshotEntry>> => {
-    const snapshot: Record<string, BackupSnapshotEntry> = {};
-    const rootEntries = await listFilesWithMetadata(serverPath);
-    const rootMap = new Map(rootEntries.map((entry) => [entry.name, entry]));
-
-    const walkDirectory = async (relativeDir: string) => {
-      const entries = await listFilesWithMetadata(`${serverPath}/${relativeDir}`);
-      for (const entry of entries) {
-        const childRelative = `${relativeDir}/${entry.name}`;
-        if (entry.isDirectory) {
-          await walkDirectory(childRelative);
-          continue;
-        }
-        snapshot[childRelative] = {
-          size: entry.size,
-          modified: entry.modified,
-        };
-      }
-    };
-
-    for (const selectedPath of paths) {
-      const normalizedPath = selectedPath.replace(/^\/+/, '').replace(/\\/g, '/');
-      if (!normalizedPath || normalizedPath === 'backups') {
-        continue;
-      }
-
-      const [rootName, ...rest] = normalizedPath.split('/');
-      if (!rootName) {
-        continue;
-      }
-
-      if (rest.length === 0) {
-        const rootEntry = rootMap.get(rootName);
-        if (!rootEntry) {
-          continue;
-        }
-
-        if (rootEntry.isDirectory) {
-          await walkDirectory(rootName);
-        } else {
-          snapshot[rootName] = {
-            size: rootEntry.size,
-            modified: rootEntry.modified,
-          };
-        }
-        continue;
-      }
-
-      const parentRelative =
-        rest.length > 1 ? `${rootName}/${rest.slice(0, -1).join('/')}` : rootName;
-      const targetName = rest[rest.length - 1];
-
-      try {
-        const entries = await listFilesWithMetadata(`${serverPath}/${parentRelative}`);
-        const targetEntry = entries.find((entry) => entry.name === targetName);
-        if (!targetEntry) {
-          continue;
-        }
-
-        if (targetEntry.isDirectory) {
-          await walkDirectory(normalizedPath);
-        } else {
-          snapshot[normalizedPath] = {
-            size: targetEntry.size,
-            modified: targetEntry.modified,
-          };
-        }
-      } catch (error) {
-        logError('Failed to capture backup snapshot entry', error, {
-          serverPath,
-          relativePath: normalizedPath,
-        });
-      }
-    }
-
-    return snapshot;
-  };
-
   const getBackupMeta = (backupName: string): BackupCatalogEntry => {
     const existing = backupCatalog.entries[backupName];
     if (existing) {
@@ -988,7 +905,6 @@ export default function BackupsView({ server }: Props) {
 
     const capturedServer = { ...server };
     const capturedSelectedPaths = normalizeBackupSources(Array.from(selectedPaths));
-    const capturedMode = backupMode;
     const capturedCatalog = backupCatalog;
     const capturedCompressionLevel = compressionLevel;
     const requestedName = customName.trim() || buildManualBackupName(capturedServer);
@@ -1026,37 +942,14 @@ export default function BackupsView({ server }: Props) {
         return;
       }
 
-      const snapshot = await buildSnapshotForSelection(capturedSelectedPaths, capturedServer.path);
-      let sourcesForBackup = capturedSelectedPaths;
-      let parentBackupName: string | null = null;
-
-      if (capturedMode === 'differential') {
-        parentBackupName = capturedCatalog.lastBackupName;
-        const changed = Object.entries(snapshot)
-          .filter(([path, nextEntry]) => {
-            const previous = capturedCatalog.latestSnapshot[path];
-            if (!previous) {
-              return true;
-            }
-            return previous.size !== nextEntry.size || previous.modified !== nextEntry.modified;
-          })
-          .map(([path]) => path)
-          .sort((a, b) => a.localeCompare(b));
-
-        if (changed.length === 0) {
-          if (isCurrentInitialization(operationToken)) {
-            showToast(t('backups.toast.noDiffSkipped'), 'info');
-          }
-          return;
-        }
-
-        sourcesForBackup = normalizeBackupSources(changed);
-      }
-
+      // The Rust command owns traversal and always creates a full snapshot.
+      // Keep the legacy selection argument at this boundary for compatibility
+      // with existing renderer tests and callers; backup-commands deliberately
+      // serializes it as null.
       await createBackup(
         capturedServer.id,
         normalizedName,
-        sourcesForBackup,
+        capturedSelectedPaths,
         capturedCompressionLevel,
       );
 
@@ -1070,14 +963,14 @@ export default function BackupsView({ server }: Props) {
       };
       const nextCatalog: BackupCatalog = {
         lastBackupName: normalizedName,
-        latestSnapshot: snapshot,
+        latestSnapshot: {},
         entries: {
           ...capturedCatalog.entries,
           [normalizedName]: {
             ...currentMeta,
-            mode: capturedMode,
-            parent: capturedMode === 'differential' ? parentBackupName : null,
-            sourceCount: sourcesForBackup.length,
+            mode: 'full',
+            parent: null,
+            sourceCount: 0,
             createdAt: currentMeta.createdAt || new Date().toISOString(),
           },
         },
@@ -1112,12 +1005,7 @@ export default function BackupsView({ server }: Props) {
 
       if (isCurrentInitialization(operationToken)) {
         setBackupCatalog(finalCatalog);
-        showToast(
-          capturedMode === 'differential'
-            ? t('backups.toast.diffCreated', { count: sourcesForBackup.length })
-            : t('backups.toast.created'),
-          'success',
-        );
+        showToast(t('backups.toast.created'), 'success');
         setShowCreateModal(false);
         if (retentionResult.failedDeleteCount > 0) {
           showToast(
@@ -1143,7 +1031,6 @@ export default function BackupsView({ server }: Props) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to create backup', error, {
           serverPath: capturedServer.path,
-          backupMode: capturedMode,
           selectedCount: capturedSelectedPaths.length,
         });
         showToast(t('backups.toast.createFailed'), 'error');
@@ -1595,18 +1482,6 @@ export default function BackupsView({ server }: Props) {
                   <div className="backups-view__form-help">
                     {t('backups.modal.compressionHelp')}
                   </div>
-                </div>
-
-                <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">{t('backups.modal.modeLabel')}</label>
-                  <NativeSelect
-                    value={backupMode}
-                    onChange={(event) => setBackupMode(event.target.value as BackupMode)}
-                  >
-                    <option value="full">{t('backups.modal.modeFull')}</option>
-                    <option value="differential">{t('backups.modal.modeDiff')}</option>
-                  </NativeSelect>
-                  <div className="backups-view__form-help">{t('backups.modal.modeHelp')}</div>
                 </div>
               </div>
 

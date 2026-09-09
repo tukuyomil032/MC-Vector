@@ -143,13 +143,13 @@ describe('backup-commands', () => {
     });
   });
 
-  it('creates a backup with server ID and relative sources only', async () => {
+  it('creates a full backup with server ID and ignores legacy source selections', async () => {
     const { createBackup } = await import('@/lib/backup-commands');
     await createBackup('server-1', 'backup-2024', ['world', 'plugins'], 9);
     expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_backup', {
       serverId: 'server-1',
       backupName: 'backup-2024',
-      sources: ['world', 'plugins'],
+      sources: null,
       compressionLevel: 9,
     });
   });
