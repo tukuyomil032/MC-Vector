@@ -1213,19 +1213,35 @@ fn collect_regular_file_hashes(
     if is_link_or_reparse_point(&metadata) {
         return Err("Restored tree contains a symbolic link or reparse point".to_string());
     }
-    if metadata.is_file() {
-        let relative = current
-            .strip_prefix(root)
+
+    let canonical_root = fs::canonicalize(root)
+        .map_err(|error| format!("Failed to resolve restore staging root: {error}"))?;
+    let canonical_current = fs::canonicalize(current)
+        .map_err(|error| format!("Failed to resolve restored entry: {error}"))?;
+    if !canonical_current.starts_with(&canonical_root) {
+        return Err("Restored entry escaped staging root".to_string());
+    }
+    let canonical_metadata = fs::symlink_metadata(&canonical_current)
+        .map_err(|error| format!("Failed to inspect resolved restore tree: {error}"))?;
+    if is_link_or_reparse_point(&canonical_metadata) {
+        return Err("Restored tree contains a symbolic link or reparse point".to_string());
+    }
+    if canonical_metadata.is_file() {
+        let relative = canonical_current
+            .strip_prefix(&canonical_root)
             .map_err(|_| "Restored file escaped staging root".to_string())?
             .to_string_lossy()
             .replace('\\', "/");
-        output.insert(relative, (metadata.len(), hash_file(current)?));
+        output.insert(
+            relative,
+            (canonical_metadata.len(), hash_file(&canonical_current)?),
+        );
         return Ok(());
     }
-    if !metadata.is_dir() {
+    if !canonical_metadata.is_dir() {
         return Err("Restored tree contains an unsupported filesystem entry".to_string());
     }
-    for entry in fs::read_dir(current)
+    for entry in fs::read_dir(&canonical_current)
         .map_err(|error| format!("Failed to inspect restored directory: {error}"))?
     {
         let entry = entry.map_err(|error| format!("Failed to inspect restored entry: {error}"))?;
