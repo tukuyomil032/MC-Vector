@@ -69,6 +69,7 @@ jobs:
         run: |
           pnpm test
           pnpm typecheck:tests
+          pnpm check:workflow-actions
       - name: Run cargo test
         run: cargo test
         working-directory: src-tauri
