@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-backup-capability",
+  "description": "Persistent store permission used by backup and application state",
+  "windows": ["main"],
+  "permissions": ["store:default"]
+}

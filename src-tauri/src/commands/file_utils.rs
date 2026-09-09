@@ -1,9 +1,13 @@
 use std::collections::HashMap;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use uuid::Uuid;
+
+use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
 #[derive(serde::Serialize)]
 pub struct FileEntryInfo {
@@ -119,6 +123,7 @@ fn is_absolute_like(path: &str) -> bool {
         || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
 }
 
+#[cfg(test)]
 fn validated_relative_path(path: &str) -> Result<PathBuf, String> {
     if path.chars().any(char::is_control) {
         return Err("Relative path contains control characters".to_string());
@@ -277,6 +282,191 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 const MAX_IMPORT_TEXT_BYTES: u64 = 1024 * 1024;
+const MAX_IMPORT_TOP_LEVEL_ENTRIES: usize = 1024;
+const MAX_IMPORT_FILES: u64 = 100_000;
+const MAX_IMPORT_TOTAL_BYTES: u64 = 8 * 1024 * 1024 * 1024;
+const MAX_IMPORT_SINGLE_FILE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+const MAX_IMPORT_DEPTH: usize = 32;
+const MAX_IMPORT_DURATION: Duration = Duration::from_secs(5 * 60);
+
+struct ImportBudget {
+    file_count: u64,
+    byte_size: u64,
+    deadline: Instant,
+}
+
+struct ImportDirectoryGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl ImportDirectoryGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for ImportDirectoryGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+}
+
+impl ImportBudget {
+    #[cfg(test)]
+    fn new() -> Self {
+        Self::with_deadline(Instant::now() + MAX_IMPORT_DURATION)
+    }
+
+    fn with_deadline(deadline: Instant) -> Self {
+        Self {
+            file_count: 0,
+            byte_size: 0,
+            deadline,
+        }
+    }
+
+    fn check_deadline(&self) -> Result<(), String> {
+        if Instant::now() > self.deadline {
+            Err("Import exceeded the time limit".to_string())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn reserve_file(&mut self, size: u64) -> Result<(), String> {
+        self.check_deadline()?;
+        if size > MAX_IMPORT_SINGLE_FILE_BYTES {
+            return Err("Import file exceeds the single-file size limit".to_string());
+        }
+        let next_count = self
+            .file_count
+            .checked_add(1)
+            .ok_or_else(|| "Import file count overflowed".to_string())?;
+        if next_count > MAX_IMPORT_FILES {
+            return Err("Import exceeds the file count limit".to_string());
+        }
+        let next_bytes = self
+            .byte_size
+            .checked_add(size)
+            .ok_or_else(|| "Import byte count overflowed".to_string())?;
+        if next_bytes > MAX_IMPORT_TOTAL_BYTES {
+            return Err("Import exceeds the aggregate size limit".to_string());
+        }
+        self.file_count = next_count;
+        self.byte_size = next_bytes;
+        Ok(())
+    }
+}
+
+pub(crate) fn managed_operation_scope(request: &ManagedPathRequest) -> Result<String, String> {
+    match request.root {
+        ManagedRoot::Servers | ManagedRoot::Backups => validate_server_id(
+            request
+                .server_id
+                .as_deref()
+                .ok_or_else(|| "This managed path requires a server ID".to_string())?,
+        ),
+        ManagedRoot::Java => Ok("managed-root-java".to_string()),
+        ManagedRoot::Ngrok => Ok("managed-root-ngrok".to_string()),
+    }
+}
+
+fn managed_text_temp_path(destination: &Path) -> PathBuf {
+    let name = destination
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("managed-file");
+    destination.with_file_name(format!(".{name}.write-{}", Uuid::new_v4()))
+}
+
+fn atomic_write_managed_text_file(destination: &Path, content: &str) -> Result<(), String> {
+    if content.len() as u64 > MAX_IMPORT_TEXT_BYTES * 16 {
+        return Err("Managed text file exceeds the write size limit".to_string());
+    }
+    let parent = destination
+        .parent()
+        .ok_or_else(|| "Managed file has no parent".to_string())?;
+    let parent_metadata = std::fs::symlink_metadata(parent)
+        .map_err(|error| format!("Failed to inspect managed file parent: {error}"))?;
+    if is_link_or_reparse_point(&parent_metadata) || !parent_metadata.is_dir() {
+        return Err("Managed file parent is not a real directory".to_string());
+    }
+
+    let temp = managed_text_temp_path(destination);
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)
+        .map_err(|error| format!("Failed to create managed file staging path: {error}"))?;
+    let write_result = (|| {
+        file.write_all(content.as_bytes())
+            .map_err(|error| format!("Failed to write managed file: {error}"))?;
+        file.flush()
+            .map_err(|error| format!("Failed to flush managed file: {error}"))?;
+        file.sync_all()
+            .map_err(|error| format!("Failed to sync managed file: {error}"))?;
+        Ok::<(), String>(())
+    })();
+    drop(file);
+    if let Err(error) = write_result {
+        let _ = std::fs::remove_file(&temp);
+        return Err(error);
+    }
+
+    let rollback = destination.with_file_name(format!(
+        ".{}rollback-{}",
+        destination
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("managed-file"),
+        Uuid::new_v4()
+    ));
+    let existing = match std::fs::symlink_metadata(destination) {
+        Ok(metadata) => {
+            if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
+                let _ = std::fs::remove_file(&temp);
+                return Err("Managed destination is not a regular file".to_string());
+            }
+            true
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+        Err(error) => {
+            let _ = std::fs::remove_file(&temp);
+            return Err(format!("Failed to inspect managed destination: {error}"));
+        }
+    };
+
+    if existing {
+        std::fs::rename(destination, &rollback).map_err(|error| {
+            let _ = std::fs::remove_file(&temp);
+            format!("Failed to stage existing managed file: {error}")
+        })?;
+    }
+    match std::fs::rename(&temp, destination) {
+        Ok(()) => {
+            if existing {
+                let _ = std::fs::remove_file(rollback);
+            }
+            Ok(())
+        }
+        Err(error) => {
+            let _ = std::fs::remove_file(&temp);
+            if existing && std::fs::rename(&rollback, destination).is_err() {
+                return Err(format!(
+                    "Failed to write managed file and restore the previous file; manual recovery required: {error}"
+                ));
+            }
+            Err(format!("Failed to commit managed file: {error}"))
+        }
+    }
+}
 
 fn read_import_text(path: &Path) -> Option<String> {
     let metadata = std::fs::symlink_metadata(path).ok()?;
@@ -287,6 +477,50 @@ fn read_import_text(path: &Path) -> Option<String> {
         return None;
     }
     std::fs::read_to_string(path).ok()
+}
+
+fn preflight_import_entry(
+    source: &Path,
+    metadata: std::fs::Metadata,
+    depth: usize,
+    budget: &mut ImportBudget,
+) -> Result<(), String> {
+    budget.check_deadline()?;
+    if depth > MAX_IMPORT_DEPTH {
+        return Err("Import directory depth exceeds the limit".to_string());
+    }
+    if is_link_or_reparse_point(&metadata) {
+        return Err(
+            "Selected source must not contain a symbolic link or reparse point".to_string(),
+        );
+    }
+    if metadata.is_dir() {
+        for entry in std::fs::read_dir(source)
+            .map_err(|error| format!("Failed to read selected directory: {error}"))?
+        {
+            let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
+            let child_path = entry.path();
+            let child_metadata = entry
+                .metadata()
+                .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
+            preflight_import_entry(&child_path, child_metadata, depth + 1, budget)?;
+        }
+        Ok(())
+    } else if metadata.is_file() {
+        budget.reserve_file(metadata.len())
+    } else {
+        Err("Selected source must be a regular file or directory".to_string())
+    }
+}
+
+fn preflight_import_tree(source: &Path) -> Result<(), String> {
+    preflight_import_tree_with_deadline(source, Instant::now() + MAX_IMPORT_DURATION)
+}
+
+fn preflight_import_tree_with_deadline(source: &Path, deadline: Instant) -> Result<(), String> {
+    let resolved = resolve_picker_entry(source)?;
+    let mut budget = ImportBudget::with_deadline(deadline);
+    preflight_import_entry(&resolved.path, resolved.metadata, 0, &mut budget)
 }
 
 fn detect_import_software(jar_name: &str) -> &'static str {
@@ -337,6 +571,7 @@ fn detect_import_version(value: &str) -> String {
 }
 
 fn analyze_import_folder(source: &Path, token: String) -> Result<ServerImportAnalysis, String> {
+    preflight_import_tree(source)?;
     let source_metadata = std::fs::symlink_metadata(source)
         .map_err(|error| format!("Failed to inspect selected server folder: {error}"))?;
     if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
@@ -447,9 +682,14 @@ pub async fn pick_server_import(
 pub async fn complete_server_import(
     app: AppHandle,
     state: State<'_, ServerImportManager>,
+    operations: State<'_, ServerOperationManager>,
     token: String,
     server_id: String,
 ) -> Result<CompletedServerImport, String> {
+    let server_id = validate_server_id(&server_id)?;
+    let _operation_guards = operations
+        .acquire_many([server_id.as_str()], OperationKind::FileMutation)
+        .await?;
     let source = state
         .pending
         .lock()
@@ -479,29 +719,60 @@ pub async fn complete_server_import(
         return Err("Managed import destination must be empty".to_string());
     }
 
-    let source_metadata = std::fs::symlink_metadata(&source)
-        .map_err(|error| format!("Failed to inspect selected server folder: {error}"))?;
-    if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
-        return Err("Selected server folder is no longer safe to import".to_string());
-    }
-
-    let mut entry_count = 0;
-    let mut byte_size: u64 = 0;
+    let import_deadline = Instant::now() + MAX_IMPORT_DURATION;
+    preflight_import_tree_with_deadline(&source, import_deadline)?;
+    let staging = destination.with_file_name(format!(".{server_id}.import-{}", Uuid::new_v4()));
+    std::fs::create_dir(&staging)
+        .map_err(|error| format!("Failed to create import staging directory: {error}"))?;
+    let mut staging_guard = ImportDirectoryGuard::new(staging.clone());
+    let mut budget = ImportBudget::with_deadline(import_deadline);
     for entry in std::fs::read_dir(&source)
         .map_err(|error| format!("Failed to read selected server folder: {error}"))?
     {
+        budget.check_deadline()?;
         let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
-        let destination_entry = destination.join(entry.file_name());
-        let (_, size) = copy_external_entry(&entry.path(), &destination_entry, &managed_root)?;
-        entry_count += 1;
-        byte_size = byte_size.saturating_add(size);
+        let destination_entry = staging.join(entry.file_name());
+        copy_external_entry_with_budget(
+            &entry.path(),
+            &destination_entry,
+            &managed_root,
+            &mut budget,
+        )?;
+    }
+
+    if std::fs::read_dir(&destination)
+        .map_err(|error| format!("Failed to recheck managed import destination: {error}"))?
+        .next()
+        .is_some()
+    {
+        return Err("Managed import destination changed during import".to_string());
+    }
+
+    let rollback =
+        destination.with_file_name(format!(".{server_id}.import-rollback-{}", Uuid::new_v4()));
+    std::fs::rename(&destination, &rollback)
+        .map_err(|error| format!("Failed to stage empty import destination: {error}"))?;
+    match std::fs::rename(&staging, &destination) {
+        Ok(()) => {
+            staging_guard.disarm();
+            let _ = std::fs::remove_dir_all(rollback);
+        }
+        Err(error) => {
+            if std::fs::rename(&rollback, &destination).is_err() {
+                staging_guard.disarm();
+                return Err(format!(
+                    "Import commit failed and destination recovery also failed; manual recovery required: {error}"
+                ));
+            }
+            return Err(format!("Failed to commit server import: {error}"));
+        }
     }
 
     Ok(CompletedServerImport {
         server_id,
         relative_path: String::new(),
-        file_count: entry_count,
-        byte_size,
+        file_count: budget.file_count,
+        byte_size: budget.byte_size,
     })
 }
 
@@ -531,22 +802,21 @@ pub async fn resolve_managed_path(
 #[tauri::command]
 pub async fn write_managed_text_file(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     request: ManagedPathRequest,
     content: String,
 ) -> Result<(), String> {
+    let operation_scope = managed_operation_scope(&request)?;
+    let _operation_guards = operations
+        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let resolved = resolve_managed_request(&app_data_dir, &request, true)?;
-    let managed_root = match request.root {
-        ManagedRoot::Servers => app_data_dir.join("servers"),
-        ManagedRoot::Java => app_data_dir.join("java"),
-        ManagedRoot::Ngrok => app_data_dir.join("ngrok"),
-        ManagedRoot::Backups => app_data_dir.join("backups"),
-    };
-    if resolved == managed_root {
+    if request.relative_path.trim().is_empty() {
         return Err("Managed path must identify a file".to_string());
     }
 
-    std::fs::write(&resolved, content).map_err(|error| format!("Failed to write file: {error}"))
+    atomic_write_managed_text_file(&resolved, &content)
 }
 
 struct ResolvedPickerEntry {
@@ -660,22 +930,46 @@ fn resolve_managed_destination(destination: &Path, managed_root: &Path) -> Resul
     Ok(resolved)
 }
 
-fn copy_external_entry(
+fn copy_external_entry_with_budget(
     source: &Path,
     destination: &Path,
     managed_root: &Path,
-) -> Result<(bool, u64), String> {
+    budget: &mut ImportBudget,
+) -> Result<(bool, u64, u64), String> {
     let source = resolve_picker_entry(source)?;
     let destination = resolve_managed_destination(destination, managed_root)?;
-    copy_external_entry_resolved(source.path, source.metadata, destination, managed_root)
+    copy_external_entry_resolved_with_budget(
+        source.path,
+        source.metadata,
+        destination,
+        managed_root,
+        budget,
+        0,
+    )
 }
 
-fn copy_external_entry_resolved(
+fn rollback_import_entries(committed: &[(PathBuf, PathBuf)]) -> bool {
+    let mut success = true;
+    for (destination, staged) in committed.iter().rev() {
+        if std::fs::rename(destination, staged).is_err() {
+            success = false;
+        }
+    }
+    success
+}
+
+fn copy_external_entry_resolved_with_budget(
     source: PathBuf,
     metadata: std::fs::Metadata,
     destination: PathBuf,
     managed_root: &Path,
-) -> Result<(bool, u64), String> {
+    budget: &mut ImportBudget,
+    depth: usize,
+) -> Result<(bool, u64, u64), String> {
+    budget.check_deadline()?;
+    if depth > MAX_IMPORT_DEPTH {
+        return Err("Import directory depth exceeds the limit".to_string());
+    }
     let canonical_source = source
         .canonicalize()
         .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
@@ -683,12 +977,24 @@ fn copy_external_entry_resolved(
         return Err("Selected source resolved to a non-absolute path".to_string());
     }
 
+    let current_metadata = std::fs::symlink_metadata(&source)
+        .map_err(|error| format!("Failed to recheck selected source: {error}"))?;
+    if is_link_or_reparse_point(&current_metadata)
+        || current_metadata.is_dir() != metadata.is_dir()
+        || current_metadata.is_file() != metadata.is_file()
+    {
+        return Err("Selected source changed during import".to_string());
+    }
+
     if metadata.is_dir() {
         std::fs::create_dir(&destination)
             .map_err(|error| format!("Failed to create imported directory: {error}"))?;
+        let mut byte_size = 0_u64;
+        let mut file_count = 0_u64;
         for entry in std::fs::read_dir(&canonical_source)
             .map_err(|error| format!("Failed to read selected directory: {error}"))?
         {
+            budget.check_deadline()?;
             let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
             let file_type = entry
                 .file_type()
@@ -709,25 +1015,87 @@ fn copy_external_entry_resolved(
             let name = entry.file_name();
             let child_destination =
                 resolve_managed_destination(&destination.join(&name), managed_root)?;
-            copy_external_entry_resolved(
+            let (_, child_size, child_count) = copy_external_entry_resolved_with_budget(
                 entry.path(),
                 child_metadata,
                 child_destination,
                 managed_root,
+                budget,
+                depth + 1,
             )?;
+            byte_size = byte_size
+                .checked_add(child_size)
+                .ok_or_else(|| "Import byte count overflowed".to_string())?;
+            file_count = file_count
+                .checked_add(child_count)
+                .ok_or_else(|| "Import file count overflowed".to_string())?;
         }
-        Ok((true, 0))
+        Ok((true, byte_size, file_count))
     } else {
-        std::fs::copy(&canonical_source, &destination)
-            .map_err(|error| format!("Failed to copy selected file: {error}"))?;
+        let expected_size = metadata.len();
+        budget.reserve_file(expected_size)?;
+        let mut input = std::fs::File::open(&canonical_source)
+            .map_err(|error| format!("Failed to open selected file: {error}"))?;
+        let mut output = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&destination)
+            .map_err(|error| format!("Failed to create imported file: {error}"))?;
+        let copy_result = copy_import_file(&mut input, &mut output, expected_size);
+        if let Err(error) = copy_result {
+            drop(output);
+            let _ = std::fs::remove_file(&destination);
+            return Err(error);
+        }
+        output
+            .flush()
+            .map_err(|error| format!("Failed to flush imported file: {error}"))?;
+        output
+            .sync_all()
+            .map_err(|error| format!("Failed to sync imported file: {error}"))?;
+        drop(output);
         let destination_metadata = std::fs::symlink_metadata(&destination)
             .map_err(|error| format!("Failed to verify imported file: {error}"))?;
         if is_link_or_reparse_point(&destination_metadata) || !destination_metadata.is_file() {
             let _ = std::fs::remove_file(&destination);
             return Err("Imported file is not a regular file".to_string());
         }
-        Ok((false, destination_metadata.len()))
+        if destination_metadata.len() != expected_size {
+            let _ = std::fs::remove_file(&destination);
+            return Err("Selected file changed during import".to_string());
+        }
+        Ok((false, expected_size, 1))
     }
+}
+
+fn copy_import_file(
+    input: &mut std::fs::File,
+    output: &mut std::fs::File,
+    expected_size: u64,
+) -> Result<(), String> {
+    let mut buffer = [0_u8; 64 * 1024];
+    let mut copied = 0_u64;
+    loop {
+        let read = input
+            .read(&mut buffer)
+            .map_err(|error| format!("Failed to read selected file: {error}"))?;
+        if read == 0 {
+            break;
+        }
+        copied = copied
+            .checked_add(read as u64)
+            .ok_or_else(|| "Import byte count overflowed".to_string())?;
+        if copied > MAX_IMPORT_SINGLE_FILE_BYTES || copied > expected_size {
+            return Err("Selected file changed during import".to_string());
+        }
+        output
+            .write_all(&buffer[..read])
+            .map_err(|error| format!("Failed to copy selected file: {error}"))?;
+    }
+    if copied != expected_size {
+        return Err("Selected file changed during import".to_string());
+    }
+    Ok(())
 }
 
 /// Opens the native picker and copies the user-selected entries into a
@@ -735,8 +1103,13 @@ fn copy_external_entry_resolved(
 #[tauri::command]
 pub async fn import_managed_files(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     request: ManagedPathRequest,
 ) -> Result<Vec<ImportedManagedFile>, String> {
+    let operation_scope = managed_operation_scope(&request)?;
+    let _operation_guards = operations
+        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let destination = resolve_managed_request(&app_data_dir, &request, true)?;
     let managed_root = match request.root {
@@ -762,22 +1135,39 @@ pub async fn import_managed_files(
     let Some(selected) = selected else {
         return Ok(Vec::new());
     };
+    if selected.len() > MAX_IMPORT_TOP_LEVEL_ENTRIES {
+        return Err("Import exceeds the selected-entry limit".to_string());
+    }
 
     tokio::task::spawn_blocking(move || {
+        let staging = destination.with_file_name(format!(".import-{}", Uuid::new_v4()));
+        std::fs::create_dir(&staging)
+            .map_err(|error| format!("Failed to create import staging directory: {error}"))?;
+        let mut staging_guard = ImportDirectoryGuard::new(staging.clone());
         let mut imported = Vec::with_capacity(selected.len());
+        let import_deadline = Instant::now() + MAX_IMPORT_DURATION;
+        let mut budget = ImportBudget::with_deadline(import_deadline);
+        let mut staged_entries = Vec::with_capacity(selected.len());
         for selected_path in selected {
+            budget.check_deadline()?;
             let source = selected_path
                 .into_path()
                 .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
             let name = source
                 .file_name()
                 .ok_or_else(|| "Selected source has no file name".to_string())?;
-            let destination_path = destination.join(name);
-            let (is_directory, size) =
-                copy_external_entry(&source, &destination_path, &managed_root)?;
+            preflight_import_tree_with_deadline(&source, import_deadline)?;
+            let name = name.to_os_string();
+            let staged_path = staging.join(&name);
+            let (is_directory, size, _) = copy_external_entry_with_budget(
+                &source,
+                &staged_path,
+                &managed_root,
+                &mut budget,
+            )?;
             let name = name.to_string_lossy().to_string();
             let relative_path = if request.relative_path.is_empty() {
-                name
+                name.clone()
             } else {
                 format!("{}/{}", request.relative_path, name)
             };
@@ -787,6 +1177,37 @@ pub async fn import_managed_files(
                 is_directory,
                 size,
             });
+            staged_entries.push((name, staged_path));
+        }
+
+        let mut committed = Vec::with_capacity(staged_entries.len());
+        for (name, staged_path) in staged_entries {
+            budget.check_deadline()?;
+            let destination_path = destination.join(&name);
+            if std::fs::symlink_metadata(&destination_path).is_ok() {
+                if !rollback_import_entries(&committed) {
+                    staging_guard.disarm();
+                    return Err(
+                        "Import destination changed and rollback failed; manual recovery required"
+                            .to_string(),
+                    );
+                }
+                return Err(format!(
+                    "An item with the same name already exists: {}",
+                    destination_path.display()
+                ));
+            }
+            if let Err(error) = std::fs::rename(&staged_path, &destination_path) {
+                let rollback_ok = rollback_import_entries(&committed);
+                if !rollback_ok {
+                    staging_guard.disarm();
+                    return Err(format!(
+                        "Import commit failed and rollback also failed; manual recovery required: {error}"
+                    ));
+                }
+                return Err(format!("Failed to commit imported entry: {error}"));
+            }
+            committed.push((destination_path, staged_path));
         }
         Ok(imported)
     })
@@ -847,8 +1268,13 @@ fn reject_managed_root_target(
 #[tauri::command]
 pub async fn create_managed_directory(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     request: ManagedPathRequest,
 ) -> Result<(), String> {
+    let operation_scope = managed_operation_scope(&request)?;
+    let _operation_guards = operations
+        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let target = resolve_managed_request(&app_data_dir, &request, true)?;
     reject_managed_root_target(&app_data_dir, &request, &target)?;
@@ -860,8 +1286,13 @@ pub async fn create_managed_directory(
 #[tauri::command]
 pub async fn delete_managed_path(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     request: ManagedPathRequest,
 ) -> Result<(), String> {
+    let operation_scope = managed_operation_scope(&request)?;
+    let _operation_guards = operations
+        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let target = resolve_managed_request(&app_data_dir, &request, false)?;
     reject_managed_root_target(&app_data_dir, &request, &target)?;
@@ -884,9 +1315,18 @@ pub async fn delete_managed_path(
 #[tauri::command]
 pub async fn move_managed_path(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     from: ManagedPathRequest,
     to: ManagedPathRequest,
 ) -> Result<(), String> {
+    let from_scope = managed_operation_scope(&from)?;
+    let to_scope = managed_operation_scope(&to)?;
+    let _operation_guards = operations
+        .acquire_many(
+            [from_scope.as_str(), to_scope.as_str()],
+            OperationKind::FileMutation,
+        )
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let source = resolve_managed_request(&app_data_dir, &from, false)?;
     let destination = resolve_managed_request(&app_data_dir, &to, true)?;
@@ -926,8 +1366,15 @@ pub async fn read_managed_text_file(
 }
 
 #[tauri::command]
-pub async fn delete_managed_server_dir(app: AppHandle, server_id: String) -> Result<(), String> {
+pub async fn delete_managed_server_dir(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+    server_id: String,
+) -> Result<(), String> {
     let server_id = validate_server_id(&server_id)?;
+    let _operation_guards = operations
+        .acquire_many([server_id.as_str()], OperationKind::FileMutation)
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let request = ManagedPathRequest {
         root: ManagedRoot::Servers,
@@ -1062,9 +1509,18 @@ fn copy_managed_tree_resolved(
 #[tauri::command]
 pub async fn clone_managed_server(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     source_server_id: String,
     destination_server_id: String,
 ) -> Result<(), String> {
+    let source_server_id = validate_server_id(&source_server_id)?;
+    let destination_server_id = validate_server_id(&destination_server_id)?;
+    let _operation_guards = operations
+        .acquire_many(
+            [source_server_id.as_str(), destination_server_id.as_str()],
+            OperationKind::FileMutation,
+        )
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let source_request = ManagedPathRequest {
         root: ManagedRoot::Servers,
@@ -1102,11 +1558,18 @@ pub async fn clone_managed_server(
 #[tauri::command]
 pub async fn migrate_managed_server_directory(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     legacy_directory_name: String,
     server_id: String,
 ) -> Result<String, String> {
     let legacy_directory_name = validate_server_id(&legacy_directory_name)?;
     let server_id = validate_server_id(&server_id)?;
+    let _operation_guards = operations
+        .acquire_many(
+            [legacy_directory_name.as_str(), server_id.as_str()],
+            OperationKind::FileMutation,
+        )
+        .await?;
     let app_data_dir = app_data_dir(&app)?;
     let source_request = ManagedPathRequest {
         root: ManagedRoot::Servers,
@@ -1238,8 +1701,10 @@ fn directory_metadata_error(error: &std::io::Error) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        directory_metadata_error, list_directory_entries, move_managed_entry,
-        resolve_managed_request, validated_relative_path, ManagedPathRequest, ManagedRoot,
+        atomic_write_managed_text_file, directory_metadata_error, list_directory_entries,
+        move_managed_entry, resolve_managed_request, validated_relative_path, ImportBudget,
+        ManagedPathRequest, ManagedRoot, MAX_IMPORT_FILES, MAX_IMPORT_SINGLE_FILE_BYTES,
+        MAX_IMPORT_TOTAL_BYTES,
     };
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -1372,6 +1837,46 @@ mod tests {
             true,
         )
         .is_err());
+    }
+
+    #[test]
+    fn import_budget_enforces_file_count_and_size_limits() {
+        let mut budget = ImportBudget::new();
+        assert!(budget
+            .reserve_file(MAX_IMPORT_SINGLE_FILE_BYTES + 1)
+            .is_err());
+
+        budget.file_count = MAX_IMPORT_FILES;
+        assert!(budget.reserve_file(1).is_err());
+
+        let mut budget = ImportBudget::new();
+        budget.byte_size = MAX_IMPORT_TOTAL_BYTES;
+        assert!(budget.reserve_file(1).is_err());
+    }
+
+    #[test]
+    fn atomic_managed_text_write_replaces_without_partial_content() {
+        let directory = TestDirectory::new();
+        let destination = directory.path().join("server.properties");
+        atomic_write_managed_text_file(&destination, "first=value")
+            .expect("initial managed write should succeed");
+        atomic_write_managed_text_file(&destination, "second=value")
+            .expect("replacement managed write should succeed");
+
+        assert_eq!(
+            std::fs::read_to_string(&destination).unwrap(),
+            "second=value"
+        );
+        let leftover_names = std::fs::read_dir(directory.path())
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .filter(|name| name.contains("write-") || name.contains("rollback-"))
+            .collect::<Vec<_>>();
+        assert!(
+            leftover_names.is_empty(),
+            "temporary files: {leftover_names:?}"
+        );
     }
 
     #[tokio::test]

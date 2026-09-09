@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
@@ -3067,10 +3066,7 @@ export default function PluginBrowser({ server }: Props) {
                   <div className="plugin-browser__detail-readme-empty is-error">{detailError}</div>
                 ) : detailReadme ? (
                   <div className="plugin-browser__detail-readme-markdown">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                    >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                       {detailReadme}
                     </ReactMarkdown>
                   </div>

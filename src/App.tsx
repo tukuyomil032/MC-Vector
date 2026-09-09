@@ -42,7 +42,20 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+function isBackupSelectorWindow(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('backupSelector') === '1';
+}
+
 function App() {
+  if (isBackupSelectorWindow()) {
+    return <BackupTargetSelectorWindow />;
+  }
+
+  return <MainApp />;
+}
+
+function MainApp() {
   const { t } = useTranslation();
   const { notify } = useAppFeedback();
   const servers = useServerStore((state) => state.servers);
@@ -328,15 +341,6 @@ function App() {
   const handleOpenSettingsWindow = () => {
     setCurrentView('app-settings');
   };
-
-  const isBackupSelectorWindow = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('backupSelector') === '1';
-  }, []);
-
-  if (isBackupSelectorWindow) {
-    return <BackupTargetSelectorWindow />;
-  }
 
   return (
     <div
