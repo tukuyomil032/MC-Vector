@@ -720,7 +720,7 @@ function readZipEntry(archivePath, entryName) {
 
 async function main() {
   const testRoot = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'mc-vector-tauri-e2e-'));
-  const artifactDirectory = process.env.MC_VECTOR_TAURI_E2E_ARTIFACT_DIR;
+  const artifactDirectory = path.join(projectRoot, 'test-results', 'tauri-e2e');
   let succeeded = false;
   let normalDriver;
   let normalWebDriver;
@@ -886,6 +886,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack : error);
+  console.error('[real-tauri-e2e] failed; inspect retained diagnostics for details');
   process.exitCode = 1;
 });

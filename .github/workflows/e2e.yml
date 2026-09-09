@@ -99,8 +99,6 @@ jobs:
       - name: Install macOS WebDriver bridge
         run: cargo install tauri-webdriver-automation --locked
       - name: Run unsigned real Tauri E2E
-        env:
-          MC_VECTOR_TAURI_E2E_ARTIFACT_DIR: ${{ github.workspace }}/test-results/tauri-e2e
         run: pnpm test:tauri:e2e
       - name: Upload real Tauri diagnostics
         if: failure()
@@ -129,8 +127,6 @@ jobs:
       - name: Install Windows Tauri driver
         run: cargo install tauri-driver --locked
       - name: Run unsigned real Tauri E2E
-        env:
-          MC_VECTOR_TAURI_E2E_ARTIFACT_DIR: ${{ github.workspace }}/test-results/tauri-e2e
         run: pnpm test:tauri:e2e
       - name: Upload real Tauri diagnostics
         if: failure()
