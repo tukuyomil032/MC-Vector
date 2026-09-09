@@ -1,170 +1,111 @@
-# ADR-000: Hardening ADR Suite Index
+# ADR-000: MC-Vector Hardening ADR Index
 
-Status: Accepted
+- Status: Proposed
+- Date: 2026-09-09
+- Scope: Tauri v2 desktop application security, reliability, IPC integration, and real Tauri smoke E2E
+- Out of scope: application signing, notarization, stapling, Authenticode, broad build-workflow redesign, SBOM, and provenance requirements
 
-## Decision
+## Purpose
 
-MC-Vector maintains a focused hardening ADR suite for the Tauri application. This
-file is the canonical index: it defines the suite's scope, order, evidence model,
-and release-quality gates. The individual ADRs are normative design records and
-must keep their implementation and verification claims aligned with this index.
+This ADR suite is the canonical implementation specification for raising MC-Vector from a roughly 5-6 point implementation to a release-ready 9.5-10 point implementation for the scoped concerns.
 
-## Scope
+The suite separates implementation from evidence. A passing renderer mock test is not evidence that Rust, the filesystem, a packaged Tauri application, or an operating system behaved correctly.
 
-The suite covers:
+## ADR Order and Dependencies
 
-- Security boundaries around filesystem access, imports, secrets, downloaded
-  artifacts, Tauri capabilities, and the content security policy (CSP).
-- Reliability of server lifecycle operations, concurrent operations, backup
-  creation, restore, replacement, rollback, and retention.
-- IPC integration across React, the `src/lib/` wrappers, Tauri commands, and
-  the Rust filesystem/process boundary.
-- Real Tauri smoke end-to-end (E2E) verification of critical workflows in a
-  packaged or otherwise genuinely launched Tauri application.
+| ADR | Title | Depends on | Primary outcome |
+| --- | --- | --- | --- |
+| ADR-000 | Hardening ADR Index | - | Scope, order, score model, and evidence vocabulary |
+| ADR-001 | Authoritative Operation Boundary | ADR-000 | Rust-owned operation locks, lifecycle generation, and stable errors |
+| ADR-002 | Full Snapshot Backup and Transactional Restore | ADR-001 | Self-contained full backups and failure-safe restore |
+| ADR-003 | Catalog, Retention, Collision, and Recovery | ADR-002 | Rebuildable catalog, safe retention, and collision-free archives |
+| ADR-004 | Verified Artifacts and Secret Storage | ADR-001 | Mandatory artifact verification and OS credential storage |
+| ADR-005 | Capability, CSP, Managed Path, and Import Safety | ADR-001 | Least privilege, path containment, and staged imports |
+| ADR-006 | Build Workflow and Real E2E Boundary | ADR-002, ADR-003 | Preserve existing build flow, pin actions, and add focused real Tauri smoke tests |
+| ADR-007 | Verification and Score Gates | ADR-001 through ADR-006 | Evidence matrix, failure tests, manual QA, and final score gates |
 
-The suite is deliberately about application hardening and its evidence. It is
-not a general roadmap for every feature or platform.
+Implementation proceeds in the numbered order. A dependent ADR is not considered complete until the exit criteria of its dependencies pass.
 
-## Explicitly out of scope
+## Problem-to-ADR Map
 
-The following are not acceptance requirements for this suite:
+| Finding | ADR |
+| --- | --- |
+| Server start check and registration race | ADR-001 |
+| Stale process watcher removing a newer process | ADR-001 |
+| Manual, automatic, and filesystem operations lacking one lock | ADR-001 |
+| Differential archive cannot independently restore complete state | ADR-002 |
+| Restore allowed while a server is running | ADR-002 |
+| Restore truncates existing files before success is known | ADR-002 |
+| Destructive delete-before-replace fallback | ADR-002, ADR-003 |
+| Manual backup filename collision | ADR-003 |
+| Retention deleting manual backups | ADR-003 |
+| Catalog drift after automatic backup or restore | ADR-003 |
+| Catalog write not authoritative or rebuildable | ADR-003 |
+| Server JAR checksum optional | ADR-004 |
+| Java and ngrok downloads not uniformly verified | ADR-004 |
+| ngrok token stored in plaintext renderer Store | ADR-004 |
+| Managed path check/open TOCTOU risk | ADR-005 |
+| Recursive import lacks aggregate limits and staging | ADR-005 |
+| Broad Tauri capabilities | ADR-005 |
+| Broad release CSP and raw HTML surface | ADR-005 |
+| Mock E2E does not exercise real Rust or filesystem | ADR-006 |
+| Mutable GitHub Action references | ADR-006 |
+| Missing failure-injection and packaged-app evidence | ADR-007 |
 
-- Production code signing
-- Apple notarization
-- Apple stapling
-- Windows Authenticode signing
-- A broad rewrite of the build workflow
-- A mandatory software bill of materials (SBOM) or provenance attestation
+## Evidence Vocabulary
 
-Unsigned or ad-hoc artifacts may therefore be used for the real-Tauri testing
-gate, provided that the test records the artifact and runtime conditions. The
-out-of-scope status of signing does not waive application security checks.
+| State | Meaning |
+| --- | --- |
+| Implemented | The code path exists in the current branch. No test claim is implied. |
+| Unit-tested | Pure logic or an isolated function is covered. |
+| Rust integration-tested | Real Rust code operates on real temporary files, archives, processes, or state. |
+| Renderer integration-tested | React wrappers and state transitions are exercised without a real Tauri backend. |
+| Mock-E2E-tested | Playwright exercises a Vite/React app with mocked Tauri APIs. |
+| Real-Tauri-tested | A local unsigned Tauri application crosses React, IPC, Rust, and filesystem boundaries. |
+| Manual OS-tested | A human verifies behavior on the target operating system using a packaged or debug application. |
 
-## ADR order and dependencies
+Only evidence at or above the requested claim may be used for the final score.
 
-The suite is executed in the following dependency order. An ADR may be drafted
-in parallel with another ADR, but its acceptance evidence must not be claimed
-until the listed predecessors are satisfied.
-
-| Order | ADR | Title | Depends on | Why this order matters |
-| --- | --- | --- | --- | --- |
-| 1 | ADR-001 | Transactional Server Lifecycle and Operation Serialization | None | Establishes single-operation ownership, lifecycle state transitions, race handling, and the IPC error contract used by later operations. |
-| 2 | ADR-002 | Managed Paths, Imports, and Tauri Security Boundaries | ADR-001 | Applies the security boundary to IPC requests, managed paths, imports, capabilities, and CSP without weakening lifecycle error propagation. |
-| 3 | ADR-003 | Transactional Backups, Differential Restore, and Recovery | ADR-001, ADR-002 | Makes backup, restore, replacement, collision, retention, catalog, and rollback behavior safe under the serialized lifecycle and managed-path rules. |
-| 4 | ADR-004 | Secrets and Downloaded Artifact Integrity | ADR-002 | Protects ngrok credentials and requires verifiable artifact hashes at the network and storage boundaries. |
-| 5 | ADR-005 | Real Tauri Smoke E2E and IPC Integration Evidence | ADR-001 through ADR-004 | Verifies the integrated application path, not only isolated React mocks or Rust units. |
-| 6 | ADR-006 | CI Supply-Chain and Workflow Integrity | ADR-001 through ADR-005 | Makes automated evidence trustworthy through immutable workflow references and focused checks, without rewriting the build system. |
-| 7 | ADR-007 | Verification Matrix and Score Gates | ADR-001 through ADR-006 | Converts implementation and evidence into a repeatable acceptance decision and records residual risk. |
-
-The practical dependency graph is:
-
-```text
-ADR-001 ──┬──> ADR-002 ──┬──> ADR-003 ──┐
-          │              └──> ADR-004 ──┼──> ADR-005 ──> ADR-006 ──> ADR-007
-          └────────────────────────────┘
-```
-
-## Problem-to-ADR mapping
-
-| Problem or decision area | Primary ADR | Required result |
-| --- | --- | --- |
-| Lifecycle race | ADR-001 | State transitions and last-moment checks cannot be bypassed by a stale or overlapping lifecycle request. |
-| Operation concurrency | ADR-001 | Conflicting operations are serialized or rejected with an explicit, testable result. |
-| Differential restore | ADR-003 | Restore computes and applies only the intended differences, with a recoverable transaction boundary. |
-| Running restore | ADR-001, ADR-003 | Restore while a server is running has an explicit stop/reject policy and cannot mutate live state accidentally. |
-| Rollback | ADR-003 | Failed replacement restores the pre-operation state or reports a bounded, diagnosable recovery failure. |
-| Destructive replacement | ADR-003 | Destructive writes require a protected transaction and never silently turn a partial write into success. |
-| Collision | ADR-003 | Existing targets, duplicate backup names, and path collisions have deterministic refusal or replacement semantics. |
-| Retention | ADR-003 | Retention deletes only eligible managed artifacts and keeps deletion, metadata, and catalog failures distinguishable. |
-| Catalog drift | ADR-003 | Catalog state is reconciled with the filesystem and stale or missing entries cannot cause unsafe operations. |
-| Artifact hashes | ADR-004 | Downloaded plugin or server artifacts are accepted only when an expected hash is available and matches, unless an explicit compatibility opt-in applies. |
-| ngrok plaintext token | ADR-004 | Tokens are not persisted or logged as plaintext in application-managed storage or diagnostics; the chosen secure storage boundary is enforced. |
-| Managed paths and imports | ADR-002 | User-controlled paths and imported server data are validated against the managed-path and special-file policy before filesystem access. |
-| Capability and CSP | ADR-002 | Tauri capabilities and CSP remain least-privilege and are tested against the commands and origins the UI actually uses. |
-| Mock versus real E2E | ADR-005 | Mock E2E is reported as mock evidence; a real Tauri smoke path proves packaged/runtime IPC and filesystem integration separately. |
-| Workflow SHA pinning | ADR-006 | GitHub Actions references are pinned to immutable commit SHAs and the displayed version comments remain auditable. |
-| Score gates | ADR-007 | The same weighted formula, hard caps, evidence rules, and acceptance conditions decide whether hardening is complete. |
-
-## Evidence levels
-
-Evidence levels are cumulative labels for what was actually shown. They are not
-synonyms for implementation completeness.
-
-| Level | Meaning | Does not prove |
-| --- | --- | --- |
-| Implemented | The behavior exists in the reviewed source and is wired into the intended path. | Correctness under all inputs, integration behavior, or real-device behavior. |
-| Unit-tested | A focused isolated test passes for a function, component, or pure policy. | Rust filesystem/process integration, Tauri packaging, OS permissions, or UI-to-backend wiring. |
-| Rust integration-tested | Rust integration tests exercise commands and filesystem/process boundaries using controlled fixtures. | A packaged Tauri application, browser-to-IPC wiring, or every supported operating system. |
-| Mock-E2E-tested | Playwright or equivalent E2E passes with mocked Tauri APIs, services, or external systems. | Real Tauri IPC, Rust commands, filesystem effects, packaging, or OS policy. |
-| Real-Tauri-tested | A genuinely launched Tauri application exercises the critical smoke workflow through the UI, IPC, Rust, and the relevant fixture filesystem. | Broad feature coverage, installer trust, signing, notarization, or every OS. |
-| Manual OS-tested | A human verifies the specified behavior on the target OS and records the OS, artifact, steps, and result. | Security properties that were not tested by the recorded scenario, or other OSes not listed. |
-
-Every completion claim must name the highest evidence level it has reached. A
-green mock E2E run must never be presented as real-Tauri or manual OS evidence.
-
-## Scoring formula
-
-The hardening score is a weighted score out of 10:
+## Score Model
 
 ```text
-Score = (Security × 0.40)
-      + (Implementation Correctness × 0.35)
-      + (Integration/E2E Evidence × 0.15)
-      + (Maintainability/UX × 0.10)
+Overall =
+  Security                       * 0.40
+  + Implementation Correctness  * 0.35
+  + Integration and E2E Evidence * 0.15
+  + Maintainability and UX       * 0.10
 ```
 
-Each dimension is scored from 0.0 to 10.0 using only recorded evidence. A
-dimension cannot receive credit for a higher evidence level than the one shown
-in the verification record.
+Signing and notarization are explicitly not a requirement for this score model. Their absence is not silently used as a blocker.
 
-- **Security (40%)**: managed-path enforcement, import validation, secret
-  handling, artifact integrity, capabilities, CSP, and fail-closed behavior.
-- **Implementation Correctness (35%)**: lifecycle serialization, transaction
-  boundaries, restore/rollback semantics, collision handling, retention, and
-  catalog consistency.
-- **Integration/E2E Evidence (15%)**: IPC contract coverage, Rust integration
-  tests, mock E2E classification, real-Tauri smoke E2E, and manual OS evidence.
-- **Maintainability/UX (10%)**: explicit errors, recoverable user flows,
-  diagnosable logs without secrets, focused changes, and documentation that
-  matches the implementation.
+### Hard caps
 
-## Hard caps
+- Non-transactional restore caps Implementation Correctness at 6.5.
+- Rust does not reject restore while a server is running caps Security and Correctness at 7.0.
+- Unverified executable artifacts cap Security at 8.0.
+- Plaintext credential storage caps Security at 8.0.
+- Unresolved catalog drift caps Correctness at 8.0.
+- Mock E2E without a real Tauri smoke path caps Integration at 7.0.
+- Mutable action references cap Security at 9.0.
+- Missing failure-injection coverage caps Correctness at 9.0.
 
-Hard caps apply after the weighted score is calculated. The lowest applicable
-cap is the maximum final score.
+### 9.5-10 acceptance
 
-| Condition | Maximum final score |
-| --- | ---: |
-| A known critical vulnerability, an unbounded secret exposure, or a path/capability boundary that permits unintended access remains unresolved. | 4.0 |
-| A backup or restore path can silently lose data, leave a destructive replacement partially committed, or report success after an unrecoverable transaction failure. | 5.5 |
-| Lifecycle or IPC concurrency can start, stop, restore, or mutate a server through a stale request without a deterministic refusal or state check. | 6.5 |
-| Critical integrated workflows have no real-Tauri smoke E2E evidence and are supported only by mocks or isolated tests. | 8.0 |
-| Evidence levels are conflated, required verification records are missing, or the score cannot be reproduced from recorded results. | 8.5 |
+At least 9.5 requires zero unresolved Critical or High findings, all ADR exit criteria, green Rust integration tests, green mock E2E, green real Tauri smoke E2E, macOS verification, and Windows verification for the supported Windows-specific paths when a Windows environment is available.
 
-Signing, notarization, stapling, and Authenticode are not hard-cap conditions
-for this suite because they are explicitly out of scope.
+A 10 requires the 9.5 conditions plus real failure recovery and catalog recovery on the supported operating systems, with no unverified behavior presented as verified.
 
-## Acceptance at 9.5/10
+## Phase Order
 
-Hardening is accepted at **9.5/10 or higher** only when all of the following
-conditions hold:
+1. Phase 0: Replace legacy specifications with this ADR suite.
+2. Phase 1: Add the Rust-owned operation boundary and lifecycle generation.
+3. Phase 2: Replace differential Backup with full snapshots and transactional restore.
+4. Phase 3: Make manifests authoritative and repair catalog/retention behavior.
+5. Phase 4: Require verified artifacts and move ngrok secrets to the OS credential store.
+6. Phase 5: Minimize capabilities/CSP and harden managed paths/imports.
+7. Phase 6: Preserve the build workflow, pin action SHAs, and add focused real Tauri smoke E2E.
+8. Phase 7: Run the evidence matrix, OS checks, and final scoring.
 
-1. ADR-001 through ADR-007 have an implementation status and a verification
-   record; no ADR is counted as complete solely because it was documented.
-2. No hard cap applies, and no unresolved critical or high-severity finding
-   remains without an explicitly recorded, time-bounded exception.
-3. Critical lifecycle, IPC, managed-path, backup/restore, secret, artifact,
-   capability, and CSP behaviors have focused automated coverage at the
-   appropriate unit or Rust integration level.
-4. Mock E2E results are labeled as mock, and real-Tauri smoke E2E covers the
-   critical UI-to-IPC-to-Rust path, including at least one successful flow and
-   one expected refusal or failure flow.
-5. The verification record identifies any manual OS-tested scenarios and does
-   not imply coverage for an OS, artifact, or workflow that was not exercised.
-6. The score is reproducible from the formula above, the evidence matrix, and
-   the recorded residual risks; maintainability and UX are assessed rather than
-   assumed from passing tests.
+## Non-Goals
 
-Production signing is explicitly not required for 9.5/10 acceptance. The
-acceptance decision must instead state the unsigned or ad-hoc artifact boundary
-and keep signing-related release work outside this ADR suite.
+This suite does not introduce paid signing certificates, notarization services, a new deployment platform, a complete CI redesign, or a requirement to run the real Tauri suite on every pull request.
