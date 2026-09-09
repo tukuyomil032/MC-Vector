@@ -145,7 +145,9 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                   <div key={v} className="java-manager-modal__version-card">
                     <div className="java-manager-modal__version-title">Java {v}</div>
                     {isInstalled ? (
-                      <div className="text-success font-bold">{t('javaManager.installed')}</div>
+                      <div className="text-success font-bold" data-testid={`java-installed-${v}`}>
+                        {t('javaManager.installed')}
+                      </div>
                     ) : (
                       <Button
                         variant="primary"

@@ -3,11 +3,13 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -123,10 +125,62 @@ async function reservePort() {
   return port;
 }
 
-async function startArtifactFixture() {
+function powershellLiteral(value) {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+async function createJavaFixtureArchive(testRoot) {
+  const javaRoot = path.join(testRoot, 'java-fixture', 'temurin-e2e');
+  const javaRelativePath = isMac
+    ? path.join('Contents', 'Home', 'bin', 'java')
+    : path.join('bin', 'java.exe');
+  const javaFixturePath = path.join(javaRoot, javaRelativePath);
+  mkdirSync(path.dirname(javaFixturePath), { recursive: true });
+  writeFileSync(javaFixturePath, 'fixture java runtime\n');
+  if (!isWindows) {
+    chmodSync(javaFixturePath, 0o755);
+  }
+
+  const archivePath = path.join(testRoot, isWindows ? 'java-fixture.zip' : 'java-fixture.tar.gz');
+  if (isWindows) {
+    await runProcess('powershell.exe', [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `Compress-Archive -LiteralPath ${powershellLiteral(javaRoot)} -DestinationPath ${powershellLiteral(archivePath)} -Force`,
+    ]);
+  } else {
+    await runProcess('tar', [
+      '-czf',
+      archivePath,
+      '-C',
+      path.dirname(javaRoot),
+      path.basename(javaRoot),
+    ]);
+  }
+
+  const body = readFileSync(archivePath);
+  return {
+    body,
+    checksum: createHash('sha256').update(body).digest('hex'),
+    size: body.length,
+    path: isWindows ? '/java.zip' : '/java.tar.gz',
+  };
+}
+
+async function startArtifactFixture(javaFixture) {
   const body = Buffer.from(pluginFixtureContent, 'utf8');
   const checksum = createHash('sha256').update(body).digest('hex');
   const server = createServer((request, response) => {
+    if (request.url === javaFixture.path) {
+      response.writeHead(200, {
+        'content-length': String(javaFixture.size),
+        'content-type': isWindows ? 'application/zip' : 'application/gzip',
+      });
+      response.end(javaFixture.body);
+      return;
+    }
     if (request.url !== '/plugin.jar') {
       response.writeHead(404).end();
       return;
@@ -149,6 +203,9 @@ async function startArtifactFixture() {
   return {
     checksum,
     url: `http://127.0.0.1:${address.port}/plugin.jar`,
+    javaChecksum: javaFixture.checksum,
+    javaSize: javaFixture.size,
+    javaUrl: `http://127.0.0.1:${address.port}${javaFixture.path}`,
     close: () => new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve()))),
   };
 }
@@ -213,11 +270,10 @@ async function createFixture(environment, identifier, testRoot) {
   writeFileSync(path.join(serverPath, 'plugins', 'fixture.txt'), 'fixture-plugin');
   writeFileSync(path.join(serverPath, 'server.jar'), 'not-a-real-jar');
 
-  let javaPath = 'java.exe';
+  const javaPath = path.join(appDataDir, 'java', isWindows ? 'java.exe' : 'java');
   const commandLog = path.join(testRoot, 'fixture-server-commands.log');
   environment.MC_VECTOR_E2E_COMMAND_LOG = commandLog;
   if (!isWindows) {
-    javaPath = path.join(appDataDir, 'java', 'java');
     writeFileSync(
       javaPath,
       '#!/bin/sh\nprintf "fixture-ready\\n"\ntrap "exit 0" TERM INT\nwhile IFS= read -r line; do\n  printf "%s\\n" "$line" >> "$MC_VECTOR_E2E_COMMAND_LOG"\n  printf "fixture-command:%s\\n" "$line"\n  if [ "$line" = "stop" ]; then exit 0; fi\ndone\n',
@@ -250,13 +306,27 @@ async function createFixture(environment, identifier, testRoot) {
 
   const ngrokDirectory = path.join(appDataDir, 'ngrok');
   mkdirSync(ngrokDirectory, { recursive: true });
+  const ngrokPath = path.join(ngrokDirectory, isWindows ? 'ngrok.exe' : 'ngrok');
   if (!isWindows) {
-    const ngrokPath = path.join(ngrokDirectory, 'ngrok');
     writeFileSync(
       ngrokPath,
       '#!/bin/sh\nprintf "lvl=info msg=tunnel url=tcp://127.0.0.1:25565\\n"\ntrap "exit 0" TERM INT\nwhile :; do sleep 1; done\n',
     );
     chmodSync(ngrokPath, 0o755);
+  } else {
+    const ngrokSource = path.join(testRoot, 'fixture-ngrok.rs');
+    writeFileSync(
+      ngrokSource,
+      [
+        'use std::{io::Write, thread, time::Duration};',
+        'fn main() {',
+        '  println!("lvl=info msg=tunnel url=tcp://127.0.0.1:25565");',
+        '  let _ = std::io::stdout().flush();',
+        '  loop { thread::sleep(Duration::from_secs(1)); }',
+        '}',
+      ].join('\n'),
+    );
+    await runProcess('rustc', [ngrokSource, '-O', '-o', ngrokPath]);
   }
 
   const server = {
@@ -282,6 +352,14 @@ async function createFixture(environment, identifier, testRoot) {
 async function buildDebugBinary(identifier, configPath, environment) {
   if (process.env.MC_VECTOR_TAURI_E2E_SKIP_BUILD !== '1') {
     const pnpm = isWindows ? 'pnpm.cmd' : 'pnpm';
+    const buildEnvironment = {
+      ...process.env,
+      MC_VECTOR_E2E: '1',
+      VITE_MC_VECTOR_E2E: '1',
+      VITE_MC_VECTOR_E2E_BUILD: 'debug',
+      VITE_MC_VECTOR_E2E_PLUGIN_URL: environment.VITE_MC_VECTOR_E2E_PLUGIN_URL,
+      VITE_MC_VECTOR_E2E_PLUGIN_SHA256: environment.VITE_MC_VECTOR_E2E_PLUGIN_SHA256,
+    };
     await runProcess(
       pnpm,
       [
@@ -294,7 +372,7 @@ async function buildDebugBinary(identifier, configPath, environment) {
         '--config',
         configPath,
       ],
-      { env: { ...process.env, MC_VECTOR_E2E: '1', VITE_MC_VECTOR_E2E: '1' } },
+      { env: buildEnvironment },
     );
   }
 
@@ -334,7 +412,7 @@ async function startWebDriver(environment, port) {
     const recentOutput = output.join('').trim();
     throw new Error(`${error.message}${recentOutput ? `\n${recentOutput}` : ''}`);
   }
-  return { child, url };
+  return { child, url, output };
 }
 
 async function createWebDriver(serverUrl, binary) {
@@ -424,6 +502,7 @@ async function exerciseLifecycle(driver, fixture) {
   assert.equal(readFileSync(path.join(fixture.serverPath, 'eula.txt'), 'utf8'), 'eula=true\n');
 
   await openServerView(driver, 'console');
+  await visibleElement(driver, '[data-testid="console-view"]');
   await setReactInputValue(driver, '[data-testid="console-command-input"]', 'say real-e2e');
   await click(driver, '[data-testid="console-send-button"]');
   await waitFor(
@@ -446,22 +525,27 @@ async function exerciseFilesAndSettings(driver, fixture) {
   await openServerView(driver, 'files');
   await visibleElement(driver, '[data-testid="files-view"]');
   await click(driver, '[data-testid="files-create-button"]');
+  await click(driver, '[data-testid="files-create-file-option"]');
   await setReactInputValue(driver, '[data-testid="files-name-input"]', 'ui-created.txt');
   await click(driver, '[data-testid="files-create-submit"]');
   const createdPath = path.join(fixture.serverPath, 'ui-created.txt');
   await waitFor(() => existsSync(createdPath), 'UI-created file was not written to managed storage');
 
-  const createdRow = await visibleElement(driver, '[data-testid="file-row-ui-created.txt"]');
-  await driver.actions({ async: true }).doubleClick(createdRow).perform();
-  await visibleElement(driver, '[data-testid="file-editor-workspace"]');
-  const editorInput = await visibleElement(driver, '.monaco-editor textarea.inputarea');
-  await editorInput.sendKeys('saved through the real editor');
-  await click(driver, '[data-testid="file-editor-save-button"]');
+  await visibleElement(driver, '[data-testid="file-row-ui-created.txt"]');
+  const createdRequest = {
+    root: 'servers',
+    serverId,
+    relativePath: 'ui-created.txt',
+  };
+  assert.equal(await invoke(driver, 'read_managed_text_file', { request: createdRequest }), '');
+  await invoke(driver, 'write_managed_text_file', {
+    request: createdRequest,
+    content: 'saved through the real Tauri file command',
+  });
   await waitFor(
-    () => readFileSync(createdPath, 'utf8').includes('saved through the real editor'),
-    'Real editor save did not update the managed file',
+    () => readFileSync(createdPath, 'utf8').includes('saved through the real Tauri file command'),
+    'Real Tauri file command did not update the managed file',
   );
-  await click(driver, '[data-testid="file-editor-close-button"]');
 
   await click(driver, '[data-testid="files-create-button"]');
   await click(driver, '[data-testid="files-import-button"]');
@@ -482,7 +566,7 @@ async function exerciseFilesAndSettings(driver, fixture) {
   });
   await waitFor(() => !existsSync(movedPath), 'Managed file delete failed');
 
-  await openServerView(driver, 'settings');
+  await openServerView(driver, 'general-settings');
   await visibleElement(driver, '[data-testid="server-settings-view"]');
   await setReactInputValue(driver, '[data-testid="server-settings-name-input"]', 'Persisted Real E2E Server');
   await click(driver, '[data-testid="server-settings-save-button"]');
@@ -493,18 +577,23 @@ async function exerciseFilesAndSettings(driver, fixture) {
 }
 
 async function exerciseVerifiedArtifact(driver, fixture, artifact) {
-  const destination = path.join(fixture.serverPath, 'plugins', 'verified-e2e.jar');
-  writeFileSync(destination, 'existing verified artifact');
+  await openServerView(driver, 'plugins');
+  await visibleElement(driver, '[data-testid="plugin-browser"]');
+  await visibleElement(driver, '[data-testid="plugin-result-e2e-verified-plugin"]');
+  await click(driver, '[data-testid="plugin-install-e2e-verified-plugin"]');
+
+  const destination = path.join(fixture.serverPath, 'plugins', 'e2e-verified-plugin.jar');
+  await waitFor(() => existsSync(destination), 'Plugin Browser did not install the fixture artifact');
+  assert.equal(readFileSync(destination, 'utf8'), pluginFixtureContent);
+
   const request = {
     url: artifact.url,
     serverId,
-    relativePath: 'plugins/verified-e2e.jar',
+    relativePath: 'plugins/e2e-verified-plugin.jar',
     provider: 'modrinth',
     checksum: { algorithm: 'sha256', value: artifact.checksum },
     eventId: 'real-e2e-verified-artifact',
   };
-  await invoke(driver, 'download_plugin_artifact', { request });
-  assert.equal(readFileSync(destination, 'utf8'), pluginFixtureContent);
 
   await assert.rejects(
     () =>
@@ -524,15 +613,24 @@ async function exerciseVerifiedArtifact(driver, fixture, artifact) {
   );
 }
 
+async function exerciseJava(driver, fixture) {
+  await openServerView(driver, 'general-settings');
+  await click(driver, '[data-testid="server-settings-java-manage-button"]');
+  await visibleElement(driver, '[data-testid="java-manager-dialog"]');
+  await click(driver, '[data-testid="java-download-21"]');
+  await visibleElement(driver, '[data-testid="java-installed-21"]', 60_000);
+
+  const javaInstallRoot = path.join(fixture.appDataDir, 'java', 'jdk-21');
+  assert.ok(existsSync(javaInstallRoot), 'Java fixture was not installed below managed storage');
+  assert.ok(readdirSync(javaInstallRoot).length > 0, 'Java fixture install directory is empty');
+  await click(driver, '.java-manager-modal__close-button');
+}
+
 async function exerciseNgrok(driver, fixture) {
-  if (isWindows) {
-    logStep('ngrok UI fixture is covered by macOS E2E; Windows keeps the real WebDriver suite');
-    return;
-  }
-  await openServerView(driver, 'settings');
+  await openServerView(driver, 'general-settings');
+  const token = 'real-e2e-ngrok-token-not-a-secret';
   await click(driver, '[data-testid="ngrok-toggle"]');
   await visibleElement(driver, '[data-testid="ngrok-token-input"]');
-  const token = 'real-e2e-ngrok-token-not-a-secret';
   await setReactInputValue(driver, '[data-testid="ngrok-token-input"]', token);
   await click(driver, '[data-testid="ngrok-token-save"]');
   await waitFor(
@@ -621,7 +719,8 @@ function readZipEntry(archivePath, entryName) {
 }
 
 async function main() {
-  const testRoot = mkdtempSync(path.join(os.tmpdir(), 'mc-vector-tauri-e2e-'));
+  const testRoot = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'mc-vector-tauri-e2e-'));
+  const artifactDirectory = process.env.MC_VECTOR_TAURI_E2E_ARTIFACT_DIR;
   let succeeded = false;
   let normalDriver;
   let normalWebDriver;
@@ -638,6 +737,14 @@ async function main() {
     );
     const fixture = await createFixture(environment, identifier, testRoot);
     logStep(`fixture ready (${identifier})`);
+    artifactFixture = await startArtifactFixture(await createJavaFixtureArchive(testRoot));
+    Object.assign(environment, {
+      MC_VECTOR_E2E_JAVA_ARCHIVE_URL: artifactFixture.javaUrl,
+      MC_VECTOR_E2E_JAVA_SHA256: artifactFixture.javaChecksum,
+      MC_VECTOR_E2E_JAVA_SIZE: String(artifactFixture.javaSize),
+      VITE_MC_VECTOR_E2E_PLUGIN_URL: artifactFixture.url,
+      VITE_MC_VECTOR_E2E_PLUGIN_SHA256: artifactFixture.checksum,
+    });
     const binary = await buildDebugBinary(identifier, configPath, environment);
     logStep(`debug binary ready (${binary})`);
 
@@ -650,7 +757,8 @@ async function main() {
     logStep('managed files, E2E-only import, and settings persistence passed');
     await exerciseNgrok(normalWebDriver, fixture);
     logStep('fake ngrok process, token UI, and secret non-leakage passed');
-    artifactFixture = await startArtifactFixture();
+    await exerciseJava(normalWebDriver, fixture);
+    logStep('Java fixture verification, extraction, and managed install passed');
     await exerciseVerifiedArtifact(normalWebDriver, fixture, artifactFixture);
     logStep('verified artifact checksum and atomic destination preservation passed');
     await openBackups(normalWebDriver);
@@ -752,6 +860,20 @@ async function main() {
     });
     if (!succeeded) {
       console.error(`Real Tauri E2E failed; retained diagnostics at ${testRoot}`);
+      if (artifactDirectory) {
+        const destination = path.join(artifactDirectory, path.basename(testRoot));
+        mkdirSync(artifactDirectory, { recursive: true });
+        cpSync(testRoot, destination, { recursive: true });
+        for (const [name, driver] of [
+          ['normal-driver.log', normalDriver],
+          ['failure-driver.log', failureDriver],
+        ]) {
+          if (driver?.output) {
+            writeFileSync(path.join(artifactDirectory, name), driver.output.join(''));
+          }
+        }
+        console.error(`CI diagnostics copied to ${artifactDirectory}`);
+      }
     } else {
       try {
         rmSync(testRoot, { recursive: true, force: true });

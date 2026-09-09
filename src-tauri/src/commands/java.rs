@@ -1,6 +1,6 @@
 use reqwest::{redirect, Client, Url};
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
@@ -71,6 +71,47 @@ const JAVA_DOWNLOAD_HOSTS: &[&str] = &[
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",
 ];
+
+fn e2e_java_fixture() -> Result<Option<(Url, String, u64)>, String> {
+    if !cfg!(debug_assertions) || std::env::var("MC_VECTOR_E2E").ok().as_deref() != Some("1") {
+        return Ok(None);
+    }
+
+    let Some(url) = std::env::var_os("MC_VECTOR_E2E_JAVA_ARCHIVE_URL") else {
+        return Ok(None);
+    };
+    let url = Url::parse(
+        url.to_str()
+            .ok_or_else(|| "E2E Java fixture URL is not valid UTF-8".to_string())?,
+    )
+    .map_err(|_| "E2E Java fixture URL is invalid".to_string())?;
+    if url.scheme() != "http"
+        || !matches!(url.host_str(), Some("127.0.0.1") | Some("localhost"))
+        || url.port().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.fragment().is_some()
+    {
+        return Err("E2E Java fixture URL must be a loopback HTTP URL".to_string());
+    }
+
+    let checksum = std::env::var("MC_VECTOR_E2E_JAVA_SHA256")
+        .map_err(|_| "E2E Java fixture checksum is missing".to_string())?
+        .trim()
+        .to_ascii_lowercase();
+    if checksum.len() != 64 || !checksum.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("E2E Java fixture checksum must be a SHA-256 hex digest".to_string());
+    }
+    let size = std::env::var("MC_VECTOR_E2E_JAVA_SIZE")
+        .map_err(|_| "E2E Java fixture size is missing".to_string())?
+        .parse::<u64>()
+        .map_err(|_| "E2E Java fixture size is invalid".to_string())?;
+    if size == 0 || size > MAX_JAVA_ARCHIVE_BYTES {
+        return Err("E2E Java fixture size is outside the allowed range".to_string());
+    }
+
+    Ok(Some((url, checksum, size)))
+}
 
 fn validate_java_download_url(url: &str) -> Result<Url, String> {
     let parsed = Url::parse(url.trim()).map_err(|_| "Invalid Java download URL".to_string())?;
@@ -396,9 +437,12 @@ pub async fn download_java(
     tokio::fs::create_dir_all(&java_root)
         .await
         .map_err(|error| format!("Failed to create managed Java root: {error}"))?;
-    let client = java_client()?;
-    let (download_url, checksum, expected_size) =
-        resolve_adoptium_package(&client, major_version, os, arch).await?;
+    let (download_url, checksum, expected_size) = if let Some(fixture) = e2e_java_fixture()? {
+        fixture
+    } else {
+        let client = java_client()?;
+        resolve_adoptium_package(&client, major_version, os, arch).await?
+    };
     let managed_root = java_root
         .canonicalize()
         .map_err(|error| format!("Failed to resolve managed Java root: {error}"))?;
@@ -493,6 +537,31 @@ mod tests {
             assert!(validate_jvm_extra_args(arg).is_err(), "{arg}");
         }
     }
+
+    #[test]
+    fn archive_parent_directories_are_allowed_but_file_collisions_are_rejected() {
+        let mut entries = HashMap::new();
+        entries.insert(PathBuf::from("temurin-e2e"), true);
+        entries.insert(PathBuf::from("temurin-e2e/Contents"), true);
+
+        assert!(!archive_entry_conflicts(
+            &entries,
+            Path::new("temurin-e2e/Contents/Home/bin/java"),
+            false,
+        ));
+
+        entries.insert(PathBuf::from("temurin-e2e/file"), false);
+        assert!(archive_entry_conflicts(
+            &entries,
+            Path::new("temurin-e2e/file/child"),
+            false,
+        ));
+        assert!(archive_entry_conflicts(
+            &entries,
+            Path::new("temurin-e2e/file"),
+            false,
+        ));
+    }
 }
 
 fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
@@ -574,6 +643,25 @@ fn archive_ratio_exceeded(uncompressed: u64, compressed: u64) -> bool {
         && (compressed == 0 || uncompressed > compressed.saturating_mul(MAX_JAVA_COMPRESSION_RATIO))
 }
 
+fn archive_entry_conflicts(
+    entries: &HashMap<PathBuf, bool>,
+    relative: &Path,
+    is_directory: bool,
+) -> bool {
+    entries.iter().any(|(existing, existing_is_directory)| {
+        if relative == existing {
+            return true;
+        }
+        if relative.starts_with(existing) {
+            return !existing_is_directory;
+        }
+        if existing.starts_with(relative) {
+            return !is_directory;
+        }
+        false
+    })
+}
+
 fn copy_java_entry<R: Read, W: Write>(
     reader: &mut R,
     writer: &mut W,
@@ -623,7 +711,7 @@ fn extract_tar_gz(archive_path: &str, dest_dir: &str) -> Result<String, String> 
     let destination = Path::new(dest_dir);
     let mut total = 0_u64;
     let mut entries = 0_usize;
-    let mut paths = HashSet::new();
+    let mut paths = HashMap::new();
 
     for entry in archive
         .entries()
@@ -638,16 +726,15 @@ fn extract_tar_gz(archive_path: &str, dest_dir: &str) -> Result<String, String> 
             .path()
             .map_err(|error| format!("Failed to read tar entry path: {error}"))?;
         let relative = safe_archive_entry_name(&raw_path.to_string_lossy())?;
-        if paths.iter().any(|existing: &PathBuf| {
-            relative.starts_with(existing) || existing.starts_with(&relative)
-        }) {
-            return Err("Java archive contains duplicate or colliding entries".to_string());
-        }
-        paths.insert(relative.clone());
         let entry_type = entry.header().entry_type();
         if entry_type.is_symlink() || entry_type.is_hard_link() {
             return Err("Java archive links are not allowed".to_string());
         }
+        let is_directory = entry_type.is_dir();
+        if archive_entry_conflicts(&paths, &relative, is_directory) {
+            return Err("Java archive contains duplicate or colliding entries".to_string());
+        }
+        paths.insert(relative.clone(), is_directory);
         if entry_type.is_dir() {
             ensure_java_directory(destination, Some(&relative))?;
             continue;
@@ -690,21 +777,21 @@ fn extract_zip_archive(archive_path: &str, dest_dir: &str) -> Result<String, Str
     }
 
     let mut totals = 0_u64;
-    let mut paths = HashSet::with_capacity(archive.len());
+    let mut paths = HashMap::with_capacity(archive.len());
     let mut safe_entries = Vec::with_capacity(archive.len());
     for index in 0..archive.len() {
         let file = archive
             .by_index(index)
             .map_err(|error| format!("Zip entry error: {error}"))?;
         let relative = safe_archive_entry_name(file.name())?;
-        if file.is_symlink()
-            || paths.iter().any(|existing: &PathBuf| {
-                relative.starts_with(existing) || existing.starts_with(&relative)
-            })
-        {
+        if file.is_symlink() {
             return Err("Java archive contains a link or colliding entry".to_string());
         }
-        paths.insert(relative.clone());
+        let is_directory = file.is_dir();
+        if archive_entry_conflicts(&paths, &relative, is_directory) {
+            return Err("Java archive contains a link or colliding entry".to_string());
+        }
+        paths.insert(relative.clone(), is_directory);
         totals = totals
             .checked_add(file.size())
             .ok_or_else(|| "Java archive size overflow".to_string())?;
