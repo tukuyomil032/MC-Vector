@@ -1,4 +1,5 @@
 mod commands;
+mod state;
 
 use tauri::Manager;
 
@@ -50,6 +51,7 @@ pub fn run() {
         })
         .manage(commands::server::ServerManager::default())
         .manage(commands::server::CommandLimiter::default())
+        .manage(state::operation_manager::ServerOperationManager::default())
         .manage(commands::ngrok::NgrokManager::default())
         .manage(commands::file_utils::ServerImportManager::default())
         .manage(commands::health_check::ProbeLimiter::default())
