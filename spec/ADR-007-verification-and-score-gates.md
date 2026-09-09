@@ -60,6 +60,7 @@ checkout; they do not substitute for Windows or release-signing evidence.
 | `pnpm test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
 | `pnpm tauri:build:debug` | Passed | Unsigned packaged `MC-Vector Debug.app`; `CFBundleIdentifier` verified as `com.tukuyomi032.mcvector.debug` |
 | `pnpm check:workflow-actions` | Passed | All workflow action refs are commit-SHA pinned |
+| `pnpm test:provider:live` | Skipped locally: restricted network (1 test skipped) | Scheduled read-only provider canary; not local provider evidence |
 
 Computer Use also confirmed that the launched packaged application appeared
 as the separate `MC-Vector Debug` app with bundle identifier
