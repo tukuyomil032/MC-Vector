@@ -74,6 +74,22 @@ impl ServerOperationManager {
             _guard: guard,
         })
     }
+
+    pub async fn acquire_many(
+        &self,
+        server_ids: impl IntoIterator<Item = &str>,
+        kind: OperationKind,
+    ) -> Result<Vec<OperationGuard>, String> {
+        let mut normalized_ids = server_ids.into_iter().map(str::trim).collect::<Vec<_>>();
+        normalized_ids.sort_unstable();
+        normalized_ids.dedup();
+
+        let mut guards = Vec::with_capacity(normalized_ids.len());
+        for server_id in normalized_ids {
+            guards.push(self.acquire(server_id, kind).await?);
+        }
+        Ok(guards)
+    }
 }
 
 #[cfg(test)]
@@ -127,5 +143,26 @@ mod tests {
 
         drop(second);
         drop(first);
+    }
+
+    #[tokio::test]
+    async fn acquires_multiple_server_locks_in_stable_order() {
+        let manager = ServerOperationManager::default();
+        let guards = manager
+            .acquire_many(
+                ["server-b", "server-a", "server-a"],
+                OperationKind::FileMutation,
+            )
+            .await
+            .expect("multiple operation locks should acquire");
+        assert_eq!(guards.len(), 2);
+
+        let contender_manager = manager.clone();
+        let contender = tokio::spawn(async move {
+            contender_manager
+                .acquire("server-a", OperationKind::BackupCreate)
+                .await
+        });
+        assert!(timeout(Duration::from_millis(20), contender).await.is_err());
     }
 }

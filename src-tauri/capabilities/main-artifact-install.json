@@ -1,0 +1,31 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-artifact-install-capability",
+  "description": "Allowlisted network origins used for provider metadata and artifacts",
+  "windows": ["main"],
+  "permissions": [
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://fill.papermc.io/**" },
+        { "url": "https://fill-data.papermc.io/**" },
+        { "url": "https://api.papermc.io/**" },
+        { "url": "https://api.leafmc.one/**" },
+        { "url": "https://piston-meta.mojang.com/**" },
+        { "url": "https://piston-data.mojang.com/**" },
+        { "url": "https://launchermeta.mojang.com/**" },
+        { "url": "https://meta.fabricmc.net/**" },
+        { "url": "https://api.modrinth.com/**" },
+        { "url": "https://cdn.modrinth.com/**" },
+        { "url": "https://hangar.papermc.io/**" },
+        { "url": "https://api.spiget.org/**" },
+        { "url": "https://www.spigotmc.org/**" },
+        { "url": "https://api.adoptium.net/**" },
+        { "url": "https://api.mojang.com/**" },
+        { "url": "https://bin.equinox.io/**" },
+        { "url": "https://dl.equinox.io/**" },
+        { "url": "https://tukuyomil032.github.io/**" }
+      ]
+    }
+  ]
+}

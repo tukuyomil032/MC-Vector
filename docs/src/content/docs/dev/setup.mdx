@@ -91,7 +91,7 @@ pnpm dev:plain
 pnpm tauri:dev
 ```
 
-Starts both the Vite dev server and the Tauri desktop window. Required for any work involving Rust commands (server management, file operations, etc.).
+Starts both the Vite dev server and the Tauri desktop window. Required for any work involving Rust commands (server management, file operations, etc.). The development app is named `MC-Vector Debug` and uses bundle identifier `com.tukuyomi032.mcvector.debug`, keeping its application data and OS permissions separate from the release app.
 
 ### Before Committing
 
@@ -110,6 +110,14 @@ pnpm tauri:build
 
 Artifacts are written to `src-tauri/target/release/bundle/`.
 
+### Packaged Debug Build
+
+```bash
+pnpm tauri:build:debug
+```
+
+This creates an unsigned debug build with the same isolated debug product name and bundle identifier as `pnpm tauri:dev`.
+
 ## Commands Reference
 
 | Command                | Description                                        |
@@ -117,9 +125,10 @@ Artifacts are written to `src-tauri/target/release/bundle/`.
 | `pnpm install`         | Install all dependencies                           |
 | `pnpm dev`             | Frontend dev server (HTTPS via portless)           |
 | `pnpm dev:plain`       | Raw Vite dev server at localhost:5173              |
-| `pnpm tauri:dev`       | Full desktop app in dev mode                       |
+| `pnpm tauri:dev`       | Full desktop app in isolated debug mode            |
 | `pnpm build`           | Build frontend for production                      |
 | `pnpm tauri:build`     | Build production Tauri binary                      |
+| `pnpm tauri:build:debug` | Build unsigned isolated debug Tauri binary       |
 | `pnpm check`           | Run lint + format checks                           |
 | `pnpm check:fix`       | Run checks and auto-fix                            |
 | `pnpm lint`            | Run oxlint                                         |

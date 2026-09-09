@@ -6,7 +6,6 @@
   "permissions": [
     "core:default",
     "core:window:allow-close",
-    "window-state:default",
-    "store:default"
+    "window-state:default"
   ]
 }

@@ -43,8 +43,12 @@ Thanks for your interest in improving MC-Vector. This guide explains how to set 
 For manual QA of the packaged debug application, build a debug bundle instead of using the development server:
 
 ```bash
-pnpm exec tauri build --debug
+pnpm tauri:build:debug
 ```
+
+Development builds use the isolated bundle identifier `com.tukuyomi032.mcvector.debug`
+and product name `MC-Vector Debug`, so their macOS application data and OS permissions
+do not overlap with the release app.
 
 ## Project conventions
 
@@ -107,7 +111,7 @@ git diff --check
 For UI changes, also perform manual verification in the packaged debug application when possible:
 
 ```bash
-pnpm exec tauri build --debug
+pnpm tauri:build:debug
 ```
 
 Record manual test steps, platform details, and any known limitations in the pull request description.

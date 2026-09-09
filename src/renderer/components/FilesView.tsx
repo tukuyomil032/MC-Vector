@@ -972,6 +972,7 @@ export default function FilesView({ server }: Props) {
 
               <div
                 className={`files-view__create-option ${createMode === 'file' ? 'is-active' : ''}`}
+                data-testid="files-create-file-option"
                 onClick={() => setCreateMode('file')}
                 role="button"
                 tabIndex={0}
@@ -993,6 +994,7 @@ export default function FilesView({ server }: Props) {
 
               <div
                 className="files-view__create-option files-view__create-option--import"
+                data-testid="files-import-button"
                 onClick={handleImport}
                 role="button"
                 tabIndex={0}

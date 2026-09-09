@@ -6,7 +6,6 @@ import { copyToClipboard } from '../../../lib/clipboard-commands';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
 import {
   clearNgrokToken,
-  getNgrokToken,
   hasNgrokToken,
   onNgrokStatusChange,
   setNgrokToken,
@@ -239,13 +238,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         setShowTokenModal(true);
         return;
       }
-      const tokenToUse = inputToken || (await getNgrokToken()) || '';
-      if (!tokenToUse) {
-        setShowTokenModal(true);
-        return;
-      }
       setTunnelLog((prev) => [...prev, t('serverSettings.ngrok.initializing')]);
-      await startNgrok('tcp', server.port, tokenToUse, server.id);
+      await startNgrok('tcp', server.port, server.id);
       setInputToken('');
     } else {
       await stopNgrok();
@@ -265,7 +259,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     await setNgrokToken(inputToken);
     setShowTokenModal(false);
     setTunnelLog([t('serverSettings.ngrok.initializingWithNewToken')]);
-    await startNgrok('tcp', server.port, inputToken, server.id);
+    await startNgrok('tcp', server.port, server.id);
     setInputToken('');
   };
 
@@ -786,7 +780,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
               {t('serverSettings.ngrok.tokenRequired.description')}
             </p>
             <Input
-              type="text"
+              type="password"
+              autoComplete="new-password"
               className="server-settings__token-input"
               data-testid="ngrok-token-input"
               placeholder={t('serverSettings.ngrok.tokenRequired.placeholder')}

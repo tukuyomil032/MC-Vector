@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset: data: blob:; img-src 'self' asset: data: blob: https:; style-src 'self'; script-src 'self'; connect-src 'self' https: http://localhost:* ws://localhost:*; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self';"
+      "csp": "default-src 'self' asset:; script-src 'self'; style-src 'self'; img-src 'self' asset: data: blob: https://modrinth.com https://cdn.modrinth.com https://api.modrinth.com https://hangar.papermc.io https://www.spigotmc.org https://www.curseforge.com; connect-src 'self' https://fill.papermc.io https://fill-data.papermc.io https://api.papermc.io https://api.leafmc.one https://piston-meta.mojang.com https://piston-data.mojang.com https://launchermeta.mojang.com https://meta.fabricmc.net https://api.modrinth.com https://cdn.modrinth.com https://hangar.papermc.io https://api.spiget.org https://www.spigotmc.org https://api.adoptium.net https://api.mojang.com https://bin.equinox.io https://dl.equinox.io https://tukuyomil032.github.io; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none';"
     }
   },
   "bundle": {

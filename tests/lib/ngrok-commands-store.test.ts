@@ -1,81 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const getMock = vi.fn();
-const setMock = vi.fn();
-const saveMock = vi.fn();
-const deleteMock = vi.fn();
-
-vi.mock('@tauri-apps/plugin-store', () => ({
-  load: vi.fn().mockResolvedValue({
-    get: getMock,
-    set: setMock,
-    save: saveMock,
-    delete: deleteMock,
-  }),
-}));
+const tauriInvokeMock = vi.fn();
 
 vi.mock('@/lib/tauri-api', () => ({
-  tauriInvoke: vi.fn(),
+  tauriInvoke: tauriInvokeMock,
   tauriListen: vi.fn(),
 }));
 
-describe('ngrok-commands (store)', () => {
+describe('ngrok-commands credential boundary', () => {
   beforeEach(() => {
     vi.resetModules();
-    getMock.mockReset();
-    setMock.mockReset();
-    saveMock.mockReset();
-    deleteMock.mockReset();
+    tauriInvokeMock.mockReset();
   });
 
-  describe('getNgrokToken', () => {
-    it('returns token string when stored', async () => {
-      getMock.mockResolvedValueOnce('ngrok-token-abc');
-      const { getNgrokToken } = await import('@/lib/ngrok-commands');
-      const result = await getNgrokToken();
-      expect(getMock).toHaveBeenCalledWith('ngrokToken');
-      expect(result).toBe('ngrok-token-abc');
-    });
-
-    it('returns null when no token is stored', async () => {
-      getMock.mockResolvedValueOnce(null);
-      const { getNgrokToken } = await import('@/lib/ngrok-commands');
-      const result = await getNgrokToken();
-      expect(result).toBeNull();
-    });
+  it('does not expose a token-valued getter', async () => {
+    const commands = await import('@/lib/ngrok-commands');
+    expect('getNgrokToken' in commands).toBe(false);
   });
 
-  describe('setNgrokToken', () => {
-    it('sets token and saves to store', async () => {
-      const { setNgrokToken } = await import('@/lib/ngrok-commands');
-      await setNgrokToken('my-secret-token');
-      expect(setMock).toHaveBeenCalledWith('ngrokToken', 'my-secret-token');
-      expect(saveMock).toHaveBeenCalled();
-    });
-  });
-
-  describe('clearNgrokToken', () => {
-    it('deletes ngrokToken key and saves', async () => {
-      const { clearNgrokToken } = await import('@/lib/ngrok-commands');
-      await clearNgrokToken();
-      expect(deleteMock).toHaveBeenCalledWith('ngrokToken');
-      expect(saveMock).toHaveBeenCalled();
-    });
-  });
-
-  describe('hasNgrokToken', () => {
-    it('returns true when token exists', async () => {
-      getMock.mockResolvedValueOnce('some-token');
-      const { hasNgrokToken } = await import('@/lib/ngrok-commands');
-      const result = await hasNgrokToken();
-      expect(result).toBe(true);
-    });
-
-    it('returns false when no token exists', async () => {
-      getMock.mockResolvedValueOnce(null);
-      const { hasNgrokToken } = await import('@/lib/ngrok-commands');
-      const result = await hasNgrokToken();
-      expect(result).toBe(false);
-    });
+  it('returns only credential status', async () => {
+    tauriInvokeMock.mockResolvedValueOnce({ configured: false });
+    const { getNgrokTokenStatus } = await import('@/lib/ngrok-commands');
+    await expect(getNgrokTokenStatus()).resolves.toEqual({ configured: false });
+    expect(tauriInvokeMock).toHaveBeenCalledWith('get_ngrok_token_status', {});
   });
 });

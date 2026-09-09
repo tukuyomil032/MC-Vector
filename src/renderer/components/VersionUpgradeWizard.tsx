@@ -88,7 +88,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
 
   // Step 3: download
   const handleDownload = async () => {
-    if (!downloadUrl || !latestVersion) {
+    if (!downloadUrl || !latestVersion || !downloadSha256) {
       return;
     }
     setProcessing(true);
@@ -216,7 +216,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
                 onClick={() => {
                   void handleDownload();
                 }}
-                disabled={processing || !downloadUrl}
+                disabled={processing || !downloadUrl || !downloadSha256}
               >
                 {t('serverSettings.versionUpgrade.runDownload')}
               </Button>

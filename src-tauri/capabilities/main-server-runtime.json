@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-server-runtime-capability",
+  "description": "Process permission required by the server lifecycle runtime",
+  "windows": ["main"],
+  "permissions": ["process:default"]
+}

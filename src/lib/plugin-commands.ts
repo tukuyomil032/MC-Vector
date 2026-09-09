@@ -5,6 +5,17 @@ import { searchSpigotResources } from './adapters/plugin/spigot-adapter';
 import { asString, isRecord } from './guards/json-guards';
 import { tauriInvoke } from './tauri-api';
 
+// Fixture metadata is exposed only by the explicit debug E2E build. A release
+// build with a stray VITE_MC_VECTOR_E2E value must continue to use providers.
+const isRealTauriE2E =
+  import.meta.env.VITE_MC_VECTOR_E2E === '1' &&
+  import.meta.env.VITE_MC_VECTOR_E2E_BUILD === 'debug';
+const e2ePluginUrl = import.meta.env.VITE_MC_VECTOR_E2E_PLUGIN_URL;
+const e2ePluginSha256 = import.meta.env.VITE_MC_VECTOR_E2E_PLUGIN_SHA256;
+const E2E_PLUGIN_PROJECT_ID = 'e2e-verified-plugin';
+const E2E_PLUGIN_VERSION_ID = 'e2e-verified-plugin-version';
+const E2E_PLUGIN_FILE_NAME = 'e2e-verified-plugin.jar';
+
 export interface ModrinthProject {
   slug: string;
   project_id?: string;
@@ -438,6 +449,24 @@ export async function searchModrinth(
   limit = 20,
   signal?: AbortSignal,
 ): Promise<{ hits: ModrinthProject[]; total_hits: number }> {
+  if (isRealTauriE2E) {
+    return {
+      hits: [
+        {
+          slug: 'e2e-verified-plugin',
+          project_id: E2E_PLUGIN_PROJECT_ID,
+          title: 'E2E Verified Plugin',
+          description: 'Deterministic local artifact used by the real Tauri E2E suite.',
+          author: 'MC-Vector E2E',
+          icon_url: '',
+          downloads: 1,
+          project_type: 'plugin',
+        },
+      ],
+      total_hits: 1,
+    };
+  }
+
   const result = await searchModrinthProjects({
     query,
     facets,
@@ -461,6 +490,15 @@ export async function getCompatibleModrinthVersion(params: {
   loader: string;
   minecraftVersion: string;
 }): Promise<ModrinthVersion | null> {
+  if (isRealTauriE2E && params.projectId === E2E_PLUGIN_PROJECT_ID) {
+    return {
+      id: E2E_PLUGIN_VERSION_ID,
+      fileName: E2E_PLUGIN_FILE_NAME,
+      gameVersions: [params.minecraftVersion],
+      dependencies: [],
+    };
+  }
+
   const url = new URL(`https://api.modrinth.com/v2/project/${params.projectId}/version`);
   if (params.loader.trim()) {
     url.searchParams.set('loaders', JSON.stringify([params.loader.trim()]));
@@ -695,6 +733,22 @@ export async function installModrinthProject(
   target: PluginInstallTarget,
 ): Promise<void> {
   validatePluginInstallTarget(target);
+
+  if (isRealTauriE2E && versionId === E2E_PLUGIN_VERSION_ID) {
+    if (!e2ePluginUrl || !e2ePluginSha256) {
+      throw new Error('Real Tauri E2E plugin fixture is not configured');
+    }
+    await downloadPlugin({
+      serverId: target.serverId,
+      relativePath: `${target.relativeDir}/${target.fileName}`,
+      provider: 'modrinth',
+      url: e2ePluginUrl,
+      checksum: { algorithm: 'sha256', value: e2ePluginSha256 },
+      eventId: `plugin-${versionId}`,
+    });
+    return;
+  }
+
   const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/version/${versionId}`);
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new Error('Failed to parse Modrinth version payload');
