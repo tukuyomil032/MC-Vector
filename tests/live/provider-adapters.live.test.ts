@@ -31,7 +31,10 @@ test('production provider adapters expose read-only search results', async (cont
     // The command is a scheduled canary, not a PR gate. A restricted local
     // network should not be represented as a product failure.
     const message = error instanceof Error ? error.message : String(error);
-    if (/fetch failed|network|timeout|ENOTFOUND|ECONN|socket/i.test(message)) {
+    if (
+      process.env.CI !== 'true' &&
+      /fetch failed|network|timeout|ENOTFOUND|ECONN|socket/i.test(message)
+    ) {
       context.skip(`live provider network unavailable: ${message}`);
       return;
     }

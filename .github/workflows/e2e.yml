@@ -99,13 +99,15 @@ jobs:
       - name: Install macOS WebDriver bridge
         run: cargo install tauri-webdriver-automation --locked
       - name: Run unsigned real Tauri E2E
+        env:
+          MC_VECTOR_TAURI_E2E_ARTIFACT_DIR: ${{ github.workspace }}/test-results/tauri-e2e
         run: pnpm test:tauri:e2e
       - name: Upload real Tauri diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: tauri-e2e-macos-diagnostics
-          path: /private/var/folders/**/mc-vector-tauri-e2e-*/
+          path: test-results/tauri-e2e/
           if-no-files-found: warn
           retention-days: 7
 
@@ -127,13 +129,15 @@ jobs:
       - name: Install Windows Tauri driver
         run: cargo install tauri-driver --locked
       - name: Run unsigned real Tauri E2E
+        env:
+          MC_VECTOR_TAURI_E2E_ARTIFACT_DIR: ${{ github.workspace }}/test-results/tauri-e2e
         run: pnpm test:tauri:e2e
       - name: Upload real Tauri diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: tauri-e2e-windows-diagnostics
-          path: ${{ runner.temp }}/mc-vector-tauri-e2e-*/
+          path: test-results/tauri-e2e/
           if-no-files-found: warn
           retention-days: 7
 

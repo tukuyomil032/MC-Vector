@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -10,7 +10,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@tauri-apps/plugin-http': path.resolve(__dirname, './tests/live/tauri-plugin-http.live.ts'),
+      '@tauri-apps/plugin-http': fileURLToPath(
+        new URL('./tests/live/tauri-plugin-http.live.ts', import.meta.url),
+      ),
     },
   },
 });
