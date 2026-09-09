@@ -1722,6 +1722,28 @@ fn create_unique_directory(parent: &Path, prefix: &str) -> Result<PathBuf, Strin
     Err("Could not allocate a unique staging directory".to_string())
 }
 
+fn restore_commit_failure(
+    error: impl std::fmt::Display,
+    rollback: Option<&PathBuf>,
+    target_dir: &Path,
+    staging_guard: &mut TempDirectoryGuard,
+) -> Result<(), String> {
+    let rollback_result = rollback.map(|rollback_dir| {
+        fs::rename(rollback_dir, target_dir).map_err(|rollback_error| format!("{rollback_error}"))
+    });
+    match rollback_result {
+        Some(Ok(())) | None => Err(format!(
+            "Failed to commit restored server directory: {error}"
+        )),
+        Some(Err(rollback_error)) => {
+            staging_guard.disarm();
+            Err(format!(
+                "Restore failed and rollback also failed: {error}; {rollback_error}"
+            ))
+        }
+    }
+}
+
 fn transactional_restore_archive(
     archive_path: &Path,
     target_dir: &Path,
@@ -1769,6 +1791,20 @@ fn transactional_restore_archive(
             .map_err(|error| format!("Failed to stage current server directory: {error}"))?;
     }
 
+    if cfg!(debug_assertions)
+        && std::env::var("MC_VECTOR_TEST_RESTORE_FAILURE")
+            .ok()
+            .as_deref()
+            == Some("after-current-rename")
+    {
+        return restore_commit_failure(
+            "Injected restore failure after moving the current server directory",
+            rollback.as_ref(),
+            target_dir,
+            &mut staging_guard,
+        );
+    }
+
     match fs::rename(&staging, target_dir) {
         Ok(()) => {
             staging_guard.disarm();
@@ -1778,21 +1814,7 @@ fn transactional_restore_archive(
             Ok(())
         }
         Err(error) => {
-            let rollback_result = rollback.as_ref().map(|rollback_dir| {
-                fs::rename(rollback_dir, target_dir)
-                    .map_err(|rollback_error| format!("{rollback_error}"))
-            });
-            match rollback_result {
-                Some(Ok(())) | None => Err(format!(
-                    "Failed to commit restored server directory: {error}"
-                )),
-                Some(Err(rollback_error)) => {
-                    staging_guard.disarm();
-                    Err(format!(
-                        "Restore failed and rollback also failed: {error}; {rollback_error}"
-                    ))
-                }
-            }
+            restore_commit_failure(error, rollback.as_ref(), target_dir, &mut staging_guard)
         }
     }
 }
