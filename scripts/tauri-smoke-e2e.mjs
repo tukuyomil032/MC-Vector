@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   chmodSync,
   existsSync,
@@ -14,6 +15,7 @@ import { once } from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
+import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Builder, By } from 'selenium-webdriver';
@@ -26,6 +28,8 @@ const serverId = 'real-e2e-server';
 const backupName = 'real-e2e-backup.zip';
 const originalProperties = 'online-mode=true\nmotd=real-e2e\n';
 const originalLevel = 'original-level-data';
+const importedFixtureContent = 'imported through the real Tauri E2E fixture\n';
+const pluginFixtureContent = 'verified local plugin fixture\n';
 
 function logStep(message) {
   console.log(`[real-tauri-e2e] ${message}`);
@@ -119,6 +123,36 @@ async function reservePort() {
   return port;
 }
 
+async function startArtifactFixture() {
+  const body = Buffer.from(pluginFixtureContent, 'utf8');
+  const checksum = createHash('sha256').update(body).digest('hex');
+  const server = createServer((request, response) => {
+    if (request.url !== '/plugin.jar') {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, {
+      'content-length': String(body.length),
+      'content-type': 'application/java-archive',
+    });
+    response.end(body);
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  if (typeof address !== 'object' || !address) {
+    server.close();
+    throw new Error('Could not start local artifact fixture');
+  }
+  return {
+    checksum,
+    url: `http://127.0.0.1:${address.port}/plugin.jar`,
+    close: () => new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve()))),
+  };
+}
+
 function assertCommandAvailable(command) {
   const result = spawnSync(command, ['--help'], {
     stdio: 'ignore',
@@ -153,6 +187,7 @@ function createTestEnvironment(testRoot) {
     XDG_CONFIG_HOME: config,
     TMPDIR: temp,
     MC_VECTOR_E2E: '1',
+    VITE_MC_VECTOR_E2E: '1',
   };
 }
 
@@ -166,7 +201,7 @@ function appDataDirectory(environment, identifier) {
   return path.join(environment.XDG_DATA_HOME, identifier);
 }
 
-function createFixture(environment, identifier) {
+async function createFixture(environment, identifier, testRoot) {
   const appDataDir = appDataDirectory(environment, identifier);
   const serverPath = path.join(appDataDir, 'servers', serverId);
   mkdirSync(path.join(serverPath, 'world'), { recursive: true });
@@ -176,17 +211,52 @@ function createFixture(environment, identifier) {
   writeFileSync(path.join(serverPath, 'server.properties'), originalProperties);
   writeFileSync(path.join(serverPath, 'world', 'level.dat'), originalLevel);
   writeFileSync(path.join(serverPath, 'plugins', 'fixture.txt'), 'fixture-plugin');
-  writeFileSync(path.join(serverPath, 'eula.txt'), 'eula=true\n');
   writeFileSync(path.join(serverPath, 'server.jar'), 'not-a-real-jar');
 
   let javaPath = 'java.exe';
+  const commandLog = path.join(testRoot, 'fixture-server-commands.log');
+  environment.MC_VECTOR_E2E_COMMAND_LOG = commandLog;
   if (!isWindows) {
     javaPath = path.join(appDataDir, 'java', 'java');
     writeFileSync(
       javaPath,
-      '#!/bin/sh\ntrap "exit 0" TERM INT\nwhile IFS= read -r line; do\n  if [ "$line" = "stop" ]; then exit 0; fi\ndone\n',
+      '#!/bin/sh\nprintf "fixture-ready\\n"\ntrap "exit 0" TERM INT\nwhile IFS= read -r line; do\n  printf "%s\\n" "$line" >> "$MC_VECTOR_E2E_COMMAND_LOG"\n  printf "fixture-command:%s\\n" "$line"\n  if [ "$line" = "stop" ]; then exit 0; fi\ndone\n',
     );
     chmodSync(javaPath, 0o755);
+  } else {
+    const javaSource = path.join(testRoot, 'fixture-java.rs');
+    writeFileSync(
+      javaSource,
+      [
+        'use std::{env, fs::OpenOptions, io::{self, BufRead, Write}};',
+        'fn main() {',
+        '  println!("fixture-ready");',
+        '  let log = env::var("MC_VECTOR_E2E_COMMAND_LOG").expect("command log");',
+        '  for line in io::stdin().lock().lines() {',
+        '    let line = line.expect("stdin");',
+        '    writeln!(OpenOptions::new().create(true).append(true).open(&log).expect("log"), "{}", line).expect("write");',
+        '    println!("fixture-command:{}", line);',
+        '    if line == "stop" { break; }',
+        '  }',
+        '}',
+      ].join('\n'),
+    );
+    await runProcess('rustc', [javaSource, '-O', '-o', javaPath]);
+  }
+
+  const importSource = path.join(testRoot, 'external-import-fixture.txt');
+  writeFileSync(importSource, importedFixtureContent);
+  environment.MC_VECTOR_E2E_IMPORT_SOURCE = importSource;
+
+  const ngrokDirectory = path.join(appDataDir, 'ngrok');
+  mkdirSync(ngrokDirectory, { recursive: true });
+  if (!isWindows) {
+    const ngrokPath = path.join(ngrokDirectory, 'ngrok');
+    writeFileSync(
+      ngrokPath,
+      '#!/bin/sh\nprintf "lvl=info msg=tunnel url=tcp://127.0.0.1:25565\\n"\ntrap "exit 0" TERM INT\nwhile :; do sleep 1; done\n',
+    );
+    chmodSync(ngrokPath, 0o755);
   }
 
   const server = {
@@ -206,7 +276,7 @@ function createFixture(environment, identifier) {
   mkdirSync(appDataDir, { recursive: true });
   writeFileSync(path.join(appDataDir, 'servers.json'), JSON.stringify({ servers: [server] }, null, 2));
 
-  return { appDataDir, serverPath, server };
+  return { appDataDir, serverPath, server, commandLog, importSource };
 }
 
 async function buildDebugBinary(identifier, configPath, environment) {
@@ -224,7 +294,7 @@ async function buildDebugBinary(identifier, configPath, environment) {
         '--config',
         configPath,
       ],
-      { env: process.env },
+      { env: { ...process.env, MC_VECTOR_E2E: '1', VITE_MC_VECTOR_E2E: '1' } },
     );
   }
 
@@ -313,11 +383,173 @@ async function setReactInputValue(driver, selector, value) {
   assert.equal(actualValue, value, `React input did not accept value for ${selector}`);
 }
 
+async function invoke(driver, command, args = {}) {
+  const result = await driver.executeAsyncScript(
+    `
+      const done = arguments[arguments.length - 1];
+      window.__TAURI_INTERNALS__.invoke(arguments[0], arguments[1])
+        .then((value) => done({ ok: true, value }))
+        .catch((error) => done({ ok: false, error: String(error) }));
+    `,
+    command,
+    args,
+  );
+  if (!result?.ok) {
+    throw new Error(`Tauri IPC ${command} failed: ${result?.error ?? 'unknown error'}`);
+  }
+  return result.value;
+}
+
 async function openBackups(driver) {
   await visibleElement(driver, '[data-testid="app-root"]');
   await click(driver, `[data-testid="server-card-${serverId}"]`);
   await click(driver, '[data-testid="nav-item-backups"]');
   await visibleElement(driver, '[data-testid="backups-view"]');
+}
+
+async function openServerView(driver, view) {
+  await click(driver, `[data-testid="server-card-${serverId}"]`);
+  await click(driver, `[data-testid="nav-item-${view}"]`);
+}
+
+async function exerciseLifecycle(driver, fixture) {
+  await click(driver, '[data-testid="server-start-button"]');
+  await visibleElement(driver, '[data-testid="server-eula-modal"]');
+  await click(driver, '[data-testid="server-eula-checkbox"]');
+  await click(driver, '[data-testid="server-eula-accept"]');
+  await waitFor(
+    async () => (await visibleElement(driver, '[data-testid="server-stop-button"]')).isEnabled(),
+    'Fixture server did not enter the running state after EULA acceptance',
+  );
+  assert.equal(readFileSync(path.join(fixture.serverPath, 'eula.txt'), 'utf8'), 'eula=true\n');
+
+  await openServerView(driver, 'console');
+  await setReactInputValue(driver, '[data-testid="console-command-input"]', 'say real-e2e');
+  await click(driver, '[data-testid="console-send-button"]');
+  await waitFor(
+    () => existsSync(fixture.commandLog) && readFileSync(fixture.commandLog, 'utf8').includes('say real-e2e'),
+    'Console command did not reach the fixture Java process',
+  );
+  await waitFor(
+    async () => (await driver.executeScript('return document.body?.innerText ?? "";')).includes('fixture-command:say real-e2e'),
+    'Fixture Java output did not return through the console event stream',
+  );
+
+  await click(driver, '[data-testid="server-stop-button"]');
+  await waitFor(
+    async () => (await visibleElement(driver, '[data-testid="server-start-button"]')).isEnabled(),
+    'Fixture server did not stop cleanly after the stop command',
+  );
+}
+
+async function exerciseFilesAndSettings(driver, fixture) {
+  await openServerView(driver, 'files');
+  await visibleElement(driver, '[data-testid="files-view"]');
+  await click(driver, '[data-testid="files-create-button"]');
+  await setReactInputValue(driver, '[data-testid="files-name-input"]', 'ui-created.txt');
+  await click(driver, '[data-testid="files-create-submit"]');
+  const createdPath = path.join(fixture.serverPath, 'ui-created.txt');
+  await waitFor(() => existsSync(createdPath), 'UI-created file was not written to managed storage');
+
+  const createdRow = await visibleElement(driver, '[data-testid="file-row-ui-created.txt"]');
+  await driver.actions({ async: true }).doubleClick(createdRow).perform();
+  await visibleElement(driver, '[data-testid="file-editor-workspace"]');
+  const editorInput = await visibleElement(driver, '.monaco-editor textarea.inputarea');
+  await editorInput.sendKeys('saved through the real editor');
+  await click(driver, '[data-testid="file-editor-save-button"]');
+  await waitFor(
+    () => readFileSync(createdPath, 'utf8').includes('saved through the real editor'),
+    'Real editor save did not update the managed file',
+  );
+  await click(driver, '[data-testid="file-editor-close-button"]');
+
+  await click(driver, '[data-testid="files-create-button"]');
+  await click(driver, '[data-testid="files-import-button"]');
+  const importedPath = path.join(fixture.serverPath, path.basename(fixture.importSource));
+  await waitFor(() => existsSync(importedPath), 'Debug E2E import fixture was not committed');
+  assert.equal(readFileSync(importedPath, 'utf8'), importedFixtureContent);
+  const bodyText = await driver.executeScript('return document.body?.innerText ?? "";');
+  assert.equal(bodyText.includes(fixture.importSource), false, 'Import source path leaked to renderer DOM');
+
+  await invoke(driver, 'move_managed_path', {
+    from: { root: 'servers', serverId, relativePath: 'ui-created.txt' },
+    to: { root: 'servers', serverId, relativePath: 'moved-ui-created.txt' },
+  });
+  const movedPath = path.join(fixture.serverPath, 'moved-ui-created.txt');
+  await waitFor(() => existsSync(movedPath) && !existsSync(createdPath), 'Managed file move failed');
+  await invoke(driver, 'delete_managed_path', {
+    request: { root: 'servers', serverId, relativePath: 'moved-ui-created.txt' },
+  });
+  await waitFor(() => !existsSync(movedPath), 'Managed file delete failed');
+
+  await openServerView(driver, 'settings');
+  await visibleElement(driver, '[data-testid="server-settings-view"]');
+  await setReactInputValue(driver, '[data-testid="server-settings-name-input"]', 'Persisted Real E2E Server');
+  await click(driver, '[data-testid="server-settings-save-button"]');
+  await waitFor(
+    () => readFileSync(path.join(fixture.appDataDir, 'servers.json'), 'utf8').includes('Persisted Real E2E Server'),
+    'Server settings were not persisted to real app storage',
+  );
+}
+
+async function exerciseVerifiedArtifact(driver, fixture, artifact) {
+  const destination = path.join(fixture.serverPath, 'plugins', 'verified-e2e.jar');
+  writeFileSync(destination, 'existing verified artifact');
+  const request = {
+    url: artifact.url,
+    serverId,
+    relativePath: 'plugins/verified-e2e.jar',
+    provider: 'modrinth',
+    checksum: { algorithm: 'sha256', value: artifact.checksum },
+    eventId: 'real-e2e-verified-artifact',
+  };
+  await invoke(driver, 'download_plugin_artifact', { request });
+  assert.equal(readFileSync(destination, 'utf8'), pluginFixtureContent);
+
+  await assert.rejects(
+    () =>
+      invoke(driver, 'download_plugin_artifact', {
+        request: {
+          ...request,
+          checksum: { algorithm: 'sha256', value: '0'.repeat(64) },
+          eventId: 'real-e2e-checksum-mismatch',
+        },
+      }),
+    /checksum-mismatch|checksum mismatch/,
+  );
+  assert.equal(
+    readFileSync(destination, 'utf8'),
+    pluginFixtureContent,
+    'Checksum mismatch replaced the existing destination',
+  );
+}
+
+async function exerciseNgrok(driver, fixture) {
+  if (isWindows) {
+    logStep('ngrok UI fixture is covered by macOS E2E; Windows keeps the real WebDriver suite');
+    return;
+  }
+  await openServerView(driver, 'settings');
+  await click(driver, '[data-testid="ngrok-toggle"]');
+  await visibleElement(driver, '[data-testid="ngrok-token-input"]');
+  const token = 'real-e2e-ngrok-token-not-a-secret';
+  await setReactInputValue(driver, '[data-testid="ngrok-token-input"]', token);
+  await click(driver, '[data-testid="ngrok-token-save"]');
+  await waitFor(
+    async () => (await driver.executeScript('return document.body?.innerText ?? "";')).includes('127.0.0.1:25565'),
+    'Fake ngrok process did not report its tunnel URL through IPC',
+  );
+  const bodyText = await driver.executeScript('return document.body?.innerText ?? "";');
+  assert.equal(bodyText.includes(token), false, 'ngrok token leaked to renderer DOM');
+  const configPath = path.join(fixture.appDataDir, 'config.json');
+  if (existsSync(configPath)) {
+    assert.equal(readFileSync(configPath, 'utf8').includes(token), false, 'ngrok token leaked to config');
+  }
+  await click(driver, '[data-testid="ngrok-toggle"]');
+  await waitFor(
+    () => driver.executeScript('return document.querySelector("[data-testid=ngrok-toggle]")?.checked === false;'),
+    'Fake ngrok process did not stop through IPC',
+  );
 }
 
 async function createBackupThroughUi(driver, serverPath) {
@@ -390,10 +622,12 @@ function readZipEntry(archivePath, entryName) {
 
 async function main() {
   const testRoot = mkdtempSync(path.join(os.tmpdir(), 'mc-vector-tauri-e2e-'));
+  let succeeded = false;
   let normalDriver;
   let normalWebDriver;
   let failureDriver;
   let failureWebDriver;
+  let artifactFixture;
   try {
     const identifier = 'com.tukuyomi032.mcvector.e2e';
     const environment = createTestEnvironment(testRoot);
@@ -402,7 +636,7 @@ async function main() {
       configPath,
       JSON.stringify({ identifier, productName: 'MC-Vector E2E' }, null, 2),
     );
-    const fixture = createFixture(environment, identifier);
+    const fixture = await createFixture(environment, identifier, testRoot);
     logStep(`fixture ready (${identifier})`);
     const binary = await buildDebugBinary(identifier, configPath, environment);
     logStep(`debug binary ready (${binary})`);
@@ -410,6 +644,15 @@ async function main() {
     normalDriver = await startWebDriver(environment, await reservePort());
     logStep('WebDriver ready');
     normalWebDriver = await createWebDriver(normalDriver.url, binary);
+    await exerciseLifecycle(normalWebDriver, fixture);
+    logStep('EULA, lifecycle, console command, and process state passed');
+    await exerciseFilesAndSettings(normalWebDriver, fixture);
+    logStep('managed files, E2E-only import, and settings persistence passed');
+    await exerciseNgrok(normalWebDriver, fixture);
+    logStep('fake ngrok process, token UI, and secret non-leakage passed');
+    artifactFixture = await startArtifactFixture();
+    await exerciseVerifiedArtifact(normalWebDriver, fixture, artifactFixture);
+    logStep('verified artifact checksum and atomic destination preservation passed');
     await openBackups(normalWebDriver);
     logStep('real application loaded');
 
@@ -498,12 +741,25 @@ async function main() {
     logStep('injected restore failure rollback passed');
 
     console.log(`Real Tauri smoke E2E passed on ${platform}`);
+    succeeded = true;
   } finally {
     await failureWebDriver?.quit().catch(() => undefined);
     await normalWebDriver?.quit().catch(() => undefined);
     await stopProcess(failureDriver?.child);
     await stopProcess(normalDriver?.child);
-    rmSync(testRoot, { recursive: true, force: true });
+    await artifactFixture?.close().catch((error) => {
+      console.error(`Failed to close real Tauri E2E artifact fixture: ${error}`);
+    });
+    if (!succeeded) {
+      console.error(`Real Tauri E2E failed; retained diagnostics at ${testRoot}`);
+    } else {
+      try {
+        rmSync(testRoot, { recursive: true, force: true });
+      } catch (error) {
+        console.error(`Real Tauri E2E cleanup failed for ${testRoot}: ${error}`);
+        throw error;
+      }
+    }
   }
 }
 

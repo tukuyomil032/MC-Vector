@@ -245,11 +245,28 @@ fn required_sha256(checksum: Option<ExpectedChecksum>) -> Result<String, String>
     Ok(value)
 }
 
+fn is_e2e_fixture_url(parsed: &Url) -> bool {
+    // A loopback HTTP fixture is intentionally available only to an explicitly
+    // opted-in debug process. Release binaries retain the HTTPS/provider-host
+    // policy below, including for redirects.
+    cfg!(debug_assertions)
+        && std::env::var("MC_VECTOR_E2E").ok().as_deref() == Some("1")
+        && parsed.scheme() == "http"
+        && matches!(parsed.host_str(), Some("127.0.0.1") | Some("localhost"))
+        && parsed.port().is_some()
+        && parsed.username().is_empty()
+        && parsed.password().is_none()
+        && parsed.fragment().is_none()
+}
+
 fn validate_https_url(url: &str, allowed_hosts: Option<&[&str]>) -> Result<Url, String> {
     if url.chars().any(char::is_control) {
         return Err("Download URL contains control characters".to_string());
     }
     let parsed = Url::parse(url.trim()).map_err(|_| "Invalid download URL".to_string())?;
+    if is_e2e_fixture_url(&parsed) {
+        return Ok(parsed);
+    }
     if parsed.scheme() != "https" {
         return Err("Download URL must use HTTPS".to_string());
     }

@@ -1133,6 +1133,25 @@ fn copy_import_file(
     Ok(())
 }
 
+fn e2e_import_sources() -> Result<Option<Vec<PathBuf>>, String> {
+    // This bypass exists solely for real debug E2E: it keeps the source path in
+    // the backend while exercising the same preflight, staging, and commit path
+    // used after a native picker selection. It is unreachable from release
+    // binaries and requires the explicit E2E opt-in as well as a source value.
+    if !cfg!(debug_assertions) || std::env::var("MC_VECTOR_E2E").ok().as_deref() != Some("1") {
+        return Ok(None);
+    }
+
+    let Some(source) = std::env::var_os("MC_VECTOR_E2E_IMPORT_SOURCE") else {
+        return Ok(None);
+    };
+    let source = PathBuf::from(source);
+    if source.as_os_str().is_empty() {
+        return Err("E2E import source is empty".to_string());
+    }
+    Ok(Some(vec![source]))
+}
+
 /// Opens the native picker and copies the user-selected entries into a
 /// managed directory. Source paths never cross the renderer IPC boundary.
 #[tauri::command]
@@ -1161,14 +1180,27 @@ pub async fn import_managed_files(
         return Err("Import destination must be a managed directory".to_string());
     }
 
-    let selected = tokio::task::spawn_blocking({
-        let app = app.clone();
-        move || app.dialog().file().blocking_pick_files()
-    })
-    .await
-    .map_err(|error| format!("File picker task failed: {error}"))?;
-    let Some(selected) = selected else {
-        return Ok(Vec::new());
+    let selected = match e2e_import_sources()? {
+        Some(paths) => paths,
+        None => {
+            let selected = tokio::task::spawn_blocking({
+                let app = app.clone();
+                move || app.dialog().file().blocking_pick_files()
+            })
+            .await
+            .map_err(|error| format!("File picker task failed: {error}"))?;
+            let Some(selected) = selected else {
+                return Ok(Vec::new());
+            };
+            selected
+                .into_iter()
+                .map(|selected_path| {
+                    selected_path
+                        .into_path()
+                        .map_err(|error| format!("Failed to resolve selected source: {error}"))
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        }
     };
     if selected.len() > MAX_IMPORT_TOP_LEVEL_ENTRIES {
         return Err("Import exceeds the selected-entry limit".to_string());
@@ -1183,11 +1215,8 @@ pub async fn import_managed_files(
         let import_deadline = Instant::now() + MAX_IMPORT_DURATION;
         let mut budget = ImportBudget::with_deadline(import_deadline);
         let mut staged_entries = Vec::with_capacity(selected.len());
-        for selected_path in selected {
+        for source in selected {
             budget.check_deadline()?;
-            let source = selected_path
-                .into_path()
-                .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
             let name = source
                 .file_name()
                 .ok_or_else(|| "Selected source has no file name".to_string())?;

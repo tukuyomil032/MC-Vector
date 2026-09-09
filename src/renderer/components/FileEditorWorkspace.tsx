@@ -42,12 +42,17 @@ export default function FileEditorWorkspace({
   const parentPath = file.path.split(/[\\/]/).slice(-2, -1)[0] ?? '';
 
   return (
-    <section className="files-view__editor-overlay" aria-label={file.name}>
+    <section
+      className="files-view__editor-overlay"
+      aria-label={file.name}
+      data-testid="file-editor-workspace"
+    >
       <header className="files-view__editor-header">
         <div className="files-view__editor-identity">
           <button
             type="button"
             className="files-view__editor-icon-button"
+            data-testid="file-editor-close-button"
             onClick={onClose}
             aria-label={t('files.editor.close')}
             title={t('files.editor.close')}
@@ -78,6 +83,7 @@ export default function FileEditorWorkspace({
           <button
             type="button"
             className="files-view__editor-save-button"
+            data-testid="file-editor-save-button"
             onClick={onSave}
             disabled={!isDirty || isSaving}
             aria-label={isSaving ? t('files.editor.saving') : t('common.save')}

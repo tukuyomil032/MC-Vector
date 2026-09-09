@@ -993,6 +993,7 @@ export default function FilesView({ server }: Props) {
 
               <div
                 className="files-view__create-option files-view__create-option--import"
+                data-testid="files-import-button"
                 onClick={handleImport}
                 role="button"
                 tabIndex={0}
