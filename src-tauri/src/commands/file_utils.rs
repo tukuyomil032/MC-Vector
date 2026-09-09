@@ -481,6 +481,7 @@ fn read_import_text(path: &Path) -> Option<String> {
 
 fn preflight_import_entry(
     source: &Path,
+    source_root: &Path,
     metadata: std::fs::Metadata,
     depth: usize,
     budget: &mut ImportBudget,
@@ -494,16 +495,30 @@ fn preflight_import_entry(
             "Selected source must not contain a symbolic link or reparse point".to_string(),
         );
     }
+    let canonical_source = source
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve selected directory: {error}"))?;
+    if !canonical_source.starts_with(source_root) {
+        return Err("Selected source escaped its import root".to_string());
+    }
     if metadata.is_dir() {
-        for entry in std::fs::read_dir(source)
+        for entry in std::fs::read_dir(&canonical_source)
             .map_err(|error| format!("Failed to read selected directory: {error}"))?
         {
             let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
             let child_path = entry.path();
+            let file_type = entry
+                .file_type()
+                .map_err(|error| format!("Failed to inspect selected entry type: {error}"))?;
+            if file_type.is_symlink() {
+                return Err(
+                    "Selected source must not contain a symbolic link or reparse point".to_string(),
+                );
+            }
             let child_metadata = entry
                 .metadata()
                 .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
-            preflight_import_entry(&child_path, child_metadata, depth + 1, budget)?;
+            preflight_import_entry(&child_path, source_root, child_metadata, depth + 1, budget)?;
         }
         Ok(())
     } else if metadata.is_file() {
@@ -519,8 +534,18 @@ fn preflight_import_tree(source: &Path) -> Result<(), String> {
 
 fn preflight_import_tree_with_deadline(source: &Path, deadline: Instant) -> Result<(), String> {
     let resolved = resolve_picker_entry(source)?;
+    let source_root = resolved
+        .path
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve selected source root: {error}"))?;
     let mut budget = ImportBudget::with_deadline(deadline);
-    preflight_import_entry(&resolved.path, resolved.metadata, 0, &mut budget)
+    preflight_import_entry(
+        &resolved.path,
+        &source_root,
+        resolved.metadata,
+        0,
+        &mut budget,
+    )
 }
 
 fn detect_import_software(jar_name: &str) -> &'static str {
@@ -937,12 +962,17 @@ fn copy_external_entry_with_budget(
     budget: &mut ImportBudget,
 ) -> Result<(bool, u64, u64), String> {
     let source = resolve_picker_entry(source)?;
+    let source_root = source
+        .path
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve selected source root: {error}"))?;
     let destination = resolve_managed_destination(destination, managed_root)?;
     copy_external_entry_resolved_with_budget(
         source.path,
         source.metadata,
         destination,
         managed_root,
+        source_root,
         budget,
         0,
     )
@@ -963,6 +993,7 @@ fn copy_external_entry_resolved_with_budget(
     metadata: std::fs::Metadata,
     destination: PathBuf,
     managed_root: &Path,
+    source_root: PathBuf,
     budget: &mut ImportBudget,
     depth: usize,
 ) -> Result<(bool, u64, u64), String> {
@@ -976,8 +1007,11 @@ fn copy_external_entry_resolved_with_budget(
     if !canonical_source.is_absolute() {
         return Err("Selected source resolved to a non-absolute path".to_string());
     }
+    if !canonical_source.starts_with(&source_root) {
+        return Err("Selected source escaped its import root".to_string());
+    }
 
-    let current_metadata = std::fs::symlink_metadata(&source)
+    let current_metadata = std::fs::symlink_metadata(&canonical_source)
         .map_err(|error| format!("Failed to recheck selected source: {error}"))?;
     if is_link_or_reparse_point(&current_metadata)
         || current_metadata.is_dir() != metadata.is_dir()
@@ -1020,6 +1054,7 @@ fn copy_external_entry_resolved_with_budget(
                 child_metadata,
                 child_destination,
                 managed_root,
+                source_root.clone(),
                 budget,
                 depth + 1,
             )?;
