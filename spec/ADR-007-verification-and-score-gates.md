@@ -55,7 +55,7 @@ checkout; they do not substitute for Windows or release-signing evidence.
 | `pnpm check` | Passed | Biome checks for `src/` and `tests/` |
 | `pnpm build` | Passed | Vite production frontend build |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | Passed | Rust formatting |
-| `cargo test --manifest-path src-tauri/Cargo.toml --quiet` | 97 passed, 1 ignored | Rust implementation and temporary-files tests |
+| `cargo test --manifest-path src-tauri/Cargo.toml --quiet` | 100 passed, 1 ignored | Rust implementation and temporary-files tests |
 | `pnpm e2e` | 54 passed | Mock Tauri UI regression suite |
 | `pnpm test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
 | `pnpm tauri:build:debug` | Passed | Unsigned packaged `MC-Vector Debug.app`; `CFBundleIdentifier` verified as `com.tukuyomi032.mcvector.debug` |
