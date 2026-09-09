@@ -1,9 +1,16 @@
 use keyring::Entry;
+#[cfg(debug_assertions)]
+use std::collections::HashMap;
+#[cfg(debug_assertions)]
+use std::sync::{Mutex, OnceLock};
 
 const LEGACY_SERVICE_NAME: &str = "com.mcvector.desktop";
 const SERVICE_NAME_PREFIX: &str = "com.mcvector.desktop.";
 pub const PRODUCTION_APP_IDENTIFIER: &str = "com.tukuyomi032.mcvector";
 pub const NGROK_TOKEN_KEY: &str = "ngrok-auth-token";
+
+#[cfg(debug_assertions)]
+static E2E_SECRETS: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
 
 pub trait SecretStore: Send + Sync {
     fn get(&self, key: &str) -> Result<Option<String>, String>;
@@ -28,10 +35,32 @@ impl OsSecretStore {
             format!("Failed to open the operating-system credential store: {error}")
         })
     }
+
+    #[cfg(debug_assertions)]
+    fn e2e_key(&self, key: &str) -> String {
+        format!("{}\0{key}", self.service_name)
+    }
+
+    #[cfg(debug_assertions)]
+    fn use_e2e_memory_backend() -> bool {
+        // CI real-Tauri tests use a process-local, identifier-scoped backend so
+        // deterministic tests do not read or mutate a developer's credential
+        // store. Packaged OS QA still exercises Keychain/Credential Manager.
+        std::env::var("MC_VECTOR_E2E").ok().as_deref() == Some("1")
+    }
 }
 
 impl SecretStore for OsSecretStore {
     fn get(&self, key: &str) -> Result<Option<String>, String> {
+        #[cfg(debug_assertions)]
+        if Self::use_e2e_memory_backend() {
+            let secrets = E2E_SECRETS.get_or_init(|| Mutex::new(HashMap::new()));
+            return secrets
+                .lock()
+                .map_err(|_| "E2E secret backend lock was poisoned".to_string())
+                .map(|values| values.get(&self.e2e_key(key)).cloned());
+        }
+
         match self.entry(key)?.get_password() {
             Ok(value) => Ok(Some(value)),
             Err(keyring::Error::NoEntry) => Ok(None),
@@ -45,12 +74,32 @@ impl SecretStore for OsSecretStore {
         if value.trim().is_empty() {
             return Err("Credential value must not be empty".to_string());
         }
+        #[cfg(debug_assertions)]
+        if Self::use_e2e_memory_backend() {
+            let secrets = E2E_SECRETS.get_or_init(|| Mutex::new(HashMap::new()));
+            secrets
+                .lock()
+                .map_err(|_| "E2E secret backend lock was poisoned".to_string())?
+                .insert(self.e2e_key(key), value.to_string());
+            return Ok(());
+        }
+
         self.entry(key)?
             .set_password(value)
             .map_err(|_error| "Failed to write the operating-system credential store".to_string())
     }
 
     fn delete(&self, key: &str) -> Result<(), String> {
+        #[cfg(debug_assertions)]
+        if Self::use_e2e_memory_backend() {
+            let secrets = E2E_SECRETS.get_or_init(|| Mutex::new(HashMap::new()));
+            secrets
+                .lock()
+                .map_err(|_| "E2E secret backend lock was poisoned".to_string())?
+                .remove(&self.e2e_key(key));
+            return Ok(());
+        }
+
         match self.entry(key)?.delete_credential() {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(error) => Err(format!(

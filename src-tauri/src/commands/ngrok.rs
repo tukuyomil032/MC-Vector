@@ -548,6 +548,9 @@ pub fn set_ngrok_token(app: AppHandle, token: String) -> Result<(), String> {
 pub fn clear_ngrok_token(app: AppHandle) -> Result<(), String> {
     let secret_store = OsSecretStore::new(&app.config().identifier);
     secret_store.delete(NGROK_TOKEN_KEY)?;
+    if app.config().identifier != PRODUCTION_APP_IDENTIFIER {
+        return Ok(());
+    }
     let store = app
         .store("config.json")
         .map_err(|error| format!("Failed to open legacy credential store: {error}"))?;
