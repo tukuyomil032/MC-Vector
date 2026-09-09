@@ -301,7 +301,7 @@ fn validate_archive_entry_name(name: &str, policy: ArchivePolicy) -> Result<Path
     Ok(path.to_path_buf())
 }
 
-fn validate_output_file_name(name: &str, policy: ArchivePolicy) -> Result<(), String> {
+fn validate_output_file_name(name: &str, policy: ArchivePolicy) -> Result<PathBuf, String> {
     let path = validate_archive_entry_name(name, policy)?;
     if path.components().count() != 1 {
         return Err("Output file name must not contain a directory".to_string());
@@ -312,7 +312,7 @@ fn validate_output_file_name(name: &str, policy: ArchivePolicy) -> Result<(), St
     {
         return Err("Output file name contains a Windows-invalid character".to_string());
     }
-    Ok(())
+    Ok(path)
 }
 
 fn exceeds_compression_ratio(uncompressed: u64, compressed: u64, ratio: u64) -> bool {
@@ -378,14 +378,21 @@ fn validate_zip_entry(
     totals: &mut ResourceTotals,
     policy: ArchivePolicy,
 ) -> Result<PathBuf, String> {
-    validate_entry_limits(
+    let validated_name = validate_entry_limits(
         file.name(),
         file.is_symlink(),
         file.compressed_size(),
         file.size(),
         totals,
         policy,
-    )
+    )?;
+    let enclosed_name = file
+        .enclosed_name()
+        .ok_or_else(|| "Archive entry is not enclosed by the extraction root".to_string())?;
+    if validated_name != enclosed_name {
+        return Err("Archive entry path normalization changed its meaning".to_string());
+    }
+    Ok(enclosed_name)
 }
 
 fn copy_limited<R: Read, W: Write>(
@@ -740,7 +747,7 @@ pub async fn create_backup(
         } else {
             format!("{backup_name}.zip")
         };
-        validate_output_file_name(&zip_name, ARCHIVE_POLICY)?;
+        let zip_name = validate_output_file_name(&zip_name, ARCHIVE_POLICY)?;
         let zip_path = backup_path.join(&zip_name);
         let options = compression_options(compression_level);
 
@@ -808,7 +815,7 @@ pub async fn create_backup(
                 .map_err(|error| format!("Failed to write backup manifest: {error}"))?;
             Ok(())
         })?;
-        Ok(zip_name)
+        Ok(zip_name.to_string_lossy().into_owned())
     })
     .await
     .map_err(|error| format!("Task join error: {error}"))?
@@ -1639,6 +1646,12 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
+    fn test_temp_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join("mc-vector-backup-tests")
+    }
+
     fn archive_with_entries(
         entries: &[(&str, ArchiveEntryKind)],
     ) -> zip::ZipArchive<Cursor<Vec<u8>>> {
@@ -1871,7 +1884,7 @@ mod tests {
 
     #[test]
     fn backup_collection_excludes_session_locks_but_generic_collection_keeps_them() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-backup-lock-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -1912,7 +1925,7 @@ mod tests {
 
     #[test]
     fn selected_backup_sources_exclude_direct_and_nested_session_locks() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-selected-lock-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -1947,7 +1960,7 @@ mod tests {
         .expect("collect direct session lock source");
         assert!(only_lock.is_empty());
 
-        let world_with_only_lock = std::env::temp_dir().join(format!(
+        let world_with_only_lock = test_temp_dir().join(format!(
             "mc-vector-world-lock-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -1999,7 +2012,7 @@ mod tests {
 
     #[test]
     fn selected_source_create_and_restore_round_trip_handles_nested_entries() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-backup-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -2050,7 +2063,7 @@ mod tests {
 
     #[test]
     fn full_snapshot_restore_recovers_deleted_and_stale_files() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-transactional-restore-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -2086,7 +2099,7 @@ mod tests {
 
     #[test]
     fn restore_rejects_a_snapshot_for_another_server_before_touching_target() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-transactional-server-id-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -2113,7 +2126,7 @@ mod tests {
 
     #[test]
     fn existing_archive_is_never_clobbered_by_atomic_install() {
-        let root = std::env::temp_dir().join(format!(
+        let root = test_temp_dir().join(format!(
             "mc-vector-archive-clobber-test-{}-{}",
             std::process::id(),
             TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
