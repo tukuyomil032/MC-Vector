@@ -68,7 +68,9 @@ export function buildManualBackupName(server: MinecraftServer, now = new Date())
   const day = String(now.getDate()).padStart(2, '0');
   const hour = String(now.getHours()).padStart(2, '0');
   const minute = String(now.getMinutes()).padStart(2, '0');
-  return `Backup ${sanitizeBackupServerName(server.name)} ${yyyy}-${month}-${day}-${hour}-${minute}.zip`;
+  const second = String(now.getSeconds()).padStart(2, '0');
+  const millisecond = String(now.getMilliseconds()).padStart(3, '0');
+  return `Backup ${sanitizeBackupServerName(server.name)} ${yyyy}-${month}-${day}-${hour}-${minute}-${second}-${millisecond}.zip`;
 }
 
 export function buildAutoBackupName(server: MinecraftServer, now = new Date()): string {
@@ -78,5 +80,6 @@ export function buildAutoBackupName(server: MinecraftServer, now = new Date()): 
   const hour = String(now.getHours()).padStart(2, '0');
   const minute = String(now.getMinutes()).padStart(2, '0');
   const second = String(now.getSeconds()).padStart(2, '0');
-  return `AutoBackup ${sanitizeBackupServerName(server.name)} ${yyyy}-${month}-${day}-${hour}-${minute}-${second}.zip`;
+  const millisecond = String(now.getMilliseconds()).padStart(3, '0');
+  return `AutoBackup ${sanitizeBackupServerName(server.name)} ${yyyy}-${month}-${day}-${hour}-${minute}-${second}-${millisecond}.zip`;
 }

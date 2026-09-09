@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Translate } from '../../i18n';
-import { applyBackupRetention, createBackup } from '../../lib/backup-commands';
+import { applyBackupRetention, createAutomaticBackup } from '../../lib/backup-commands';
 import { isEulaRequiredError } from '../../lib/eula-commands';
 import { sendServerNotification } from '../../lib/notification-commands';
-import { isServerRunning, startServer as startServerApi } from '../../lib/server-commands';
+import {
+  isServerRunning,
+  startServer as startServerApi,
+  stopServer as stopServerApi,
+} from '../../lib/server-commands';
 import {
   type AutoBackupScheduleType,
   buildAutoBackupName,
@@ -52,6 +56,8 @@ interface AutoBackupTimeParts {
 }
 
 const AUTO_BACKUP_RETRY_DELAY_MS = 60_000;
+const SAFE_BACKUP_STOP_TIMEOUT_MS = 30 * 1000;
+const SAFE_BACKUP_POLL_INTERVAL_MS = 100;
 
 function resolveAutoBackupTimeParts(server: MinecraftServer): AutoBackupTimeParts {
   const raw = typeof server.autoBackupTime === 'string' ? server.autoBackupTime.trim() : '';
@@ -112,6 +118,17 @@ function computeNextTimeBasedAutoBackupRunAt(
 
 function resolveAutoBackupIntervalMinutes(server: MinecraftServer): number {
   return Math.min(1440, Math.max(1, Math.floor(server.autoBackupIntervalMin ?? 60)));
+}
+
+async function waitForServerStopped(serverId: string): Promise<void> {
+  const deadline = Date.now() + SAFE_BACKUP_STOP_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (!(await isServerRunning(serverId))) {
+      return;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, SAFE_BACKUP_POLL_INTERVAL_MS));
+  }
+  throw new Error('Timed out waiting for the server to stop before backup');
 }
 
 function buildAutoBackupScheduleSignature(server: MinecraftServer): string {
@@ -304,8 +321,27 @@ export function useServerAutomation({
       }
 
       autoBackupRunningRef.current[serverId] = true;
+      let runningBeforeBackup = false;
+      let stoppedForBackup = false;
       try {
-        await createBackup(targetServer.id, buildAutoBackupName(targetServer));
+        runningBeforeBackup = await isServerRunning(targetServer.id);
+        if (runningBeforeBackup) {
+          setServers((prev) =>
+            prev.map((server) =>
+              server.id === serverId ? { ...server, status: 'stopping' } : server,
+            ),
+          );
+          await stopServerApi(targetServer.id);
+          await waitForServerStopped(targetServer.id);
+          stoppedForBackup = true;
+          setServers((prev) =>
+            prev.map((server) =>
+              server.id === serverId ? { ...server, status: 'offline' } : server,
+            ),
+          );
+        }
+
+        await createAutomaticBackup(targetServer.id, buildAutoBackupName(targetServer));
         showToast(t('server.toast.autoBackupCreated', { name: targetServer.name }), 'success');
 
         try {
@@ -335,10 +371,44 @@ export function useServerAutomation({
         showToast(t('server.toast.autoBackupFailed', { name: targetServer.name }), 'error');
         return false;
       } finally {
+        if (stoppedForBackup && targetServer.backupRestartAfterSafeBackup !== false) {
+          try {
+            const restartResult = await startServerForAutomation(targetServer, () => {
+              setServers((prev) =>
+                prev.map((server) =>
+                  server.id === serverId ? { ...server, status: 'starting' } : server,
+                ),
+              );
+            });
+            if (restartResult !== 'accepted') {
+              setServers((prev) =>
+                prev.map((server) =>
+                  server.id === serverId ? { ...server, status: 'offline' } : server,
+                ),
+              );
+            }
+          } catch (error) {
+            console.error('Failed to restart server after safe backup:', error);
+            setServers((prev) =>
+              prev.map((server) =>
+                server.id === serverId ? { ...server, status: 'offline' } : server,
+              ),
+            );
+            showToast(t('server.toast.autoRestartTriggered', { name: targetServer.name }), 'error');
+          }
+        } else if (runningBeforeBackup && !stoppedForBackup) {
+          // If graceful stop failed, do not create a live snapshot and leave
+          // the process running for the retry path.
+          setServers((prev) =>
+            prev.map((server) =>
+              server.id === serverId ? { ...server, status: 'online' } : server,
+            ),
+          );
+        }
         autoBackupRunningRef.current[serverId] = false;
       }
     },
-    [showToast, t],
+    [setServers, showToast, startServerForAutomation, t],
   );
 
   const runAutomationTick = useCallback(async () => {

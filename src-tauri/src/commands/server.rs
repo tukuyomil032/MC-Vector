@@ -10,6 +10,7 @@ use tokio::sync::{mpsc, Mutex};
 use super::eula::ensure_server_eula_accepted;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::java::{validate_java_executable_path, validate_jvm_extra_args};
+use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
 const MAX_RUNNING_SERVERS: usize = 8;
 const MIN_MEMORY_MB: u32 = 256;
@@ -38,6 +39,7 @@ fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
 pub(crate) struct RunningServer {
     command_tx: mpsc::Sender<String>,
     pub(crate) pid: u32,
+    pub(crate) generation: u64,
     // child は tokio::spawn 内で管理されるため、ここには保持しない
 }
 
@@ -45,6 +47,7 @@ pub(crate) struct RunningServer {
 #[derive(Default)]
 pub struct ServerManager {
     pub servers: Arc<Mutex<HashMap<String, RunningServer>>>,
+    next_generation: Arc<std::sync::atomic::AtomicU64>,
 }
 
 /// サーバーごとのコマンド送信間隔を制御する State
@@ -131,6 +134,7 @@ pub async fn start_server(
     app: AppHandle,
     state: State<'_, ServerManager>,
     limiter: State<'_, CommandLimiter>,
+    operations: State<'_, ServerOperationManager>,
     server_id: String,
     java_path: String,
     memory: u32,
@@ -175,7 +179,11 @@ pub async fn start_server(
 
     ensure_server_eula_accepted(&app_data_dir, &validated_server_id)?;
 
-    // 既に起動中か確認
+    let _operation_guard = operations
+        .acquire(&validated_server_id, OperationKind::Start)
+        .await?;
+
+    // 既に起動中か確認。spawnから登録までoperation guardを保持する。
     {
         let servers = state.servers.lock().await;
         if servers.contains_key(&validated_server_id) {
@@ -208,6 +216,10 @@ pub async fn start_server(
         .map_err(|e| format!("Failed to start server: {}", e))?;
 
     let pid = child.id().unwrap_or(0);
+    let generation = state
+        .next_generation
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        .saturating_add(1);
 
     let stdin = child
         .stdin
@@ -251,7 +263,11 @@ pub async fn start_server(
         let mut servers = state.servers.lock().await;
         servers.insert(
             validated_server_id.clone(),
-            RunningServer { command_tx, pid },
+            RunningServer {
+                command_tx,
+                pid,
+                generation,
+            },
         );
     }
 
@@ -385,12 +401,20 @@ pub async fn start_server(
     let sid_exit = validated_server_id;
     let servers_ref = state.servers.clone();
     let limiter_ref = limiter.last_command_at.clone();
+    let generation_exit = generation;
+    let pid_exit = pid;
     tokio::spawn(async move {
         let status = child.wait().await;
         // 管理マップから削除
         {
             let mut servers = servers_ref.lock().await;
-            servers.remove(&sid_exit);
+            let should_remove = servers
+                .get(&sid_exit)
+                .map(|server| server.pid == pid_exit && server.generation == generation_exit)
+                .unwrap_or(false);
+            if should_remove {
+                servers.remove(&sid_exit);
+            }
         }
         {
             let mut last_map = limiter_ref.lock().await;
@@ -420,8 +444,15 @@ pub async fn start_server(
 
 /// stdin に "stop\n" を送信してサーバーを停止
 #[tauri::command]
-pub async fn stop_server(state: State<'_, ServerManager>, server_id: String) -> Result<(), String> {
+pub async fn stop_server(
+    state: State<'_, ServerManager>,
+    operations: State<'_, ServerOperationManager>,
+    server_id: String,
+) -> Result<(), String> {
     let validated_server_id = validate_server_id(&server_id)?;
+    let _operation_guard = operations
+        .acquire(&validated_server_id, OperationKind::Stop)
+        .await?;
     let command_tx = {
         let servers = state.servers.lock().await;
         servers
