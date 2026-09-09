@@ -1042,11 +1042,7 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
-      expect(backupCommands.createBackup).toHaveBeenCalledWith(
-        server.id,
-        'backup-name.zip',
-        5,
-      ),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(server.id, 'backup-name.zip', 5),
     );
 
     view.rerender(
@@ -1062,11 +1058,7 @@ describe('BackupsView lifecycle', () => {
     });
 
     await waitFor(() =>
-      expect(backupCommands.createBackup).toHaveBeenCalledWith(
-        server.id,
-        'backup-name.zip',
-        5,
-      ),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(server.id, 'backup-name.zip', 5),
     );
     expect(backupCommands.applyBackupRetention).toHaveBeenCalledWith(server.id, 0, 0);
     await waitFor(() => expect(backupCommands.writeBackupCatalog).toHaveBeenCalledOnce());
@@ -1089,11 +1081,7 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
-      expect(backupCommands.createBackup).toHaveBeenCalledWith(
-        server.id,
-        'backup-name.zip',
-        5,
-      ),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(server.id, 'backup-name.zip', 5),
     );
 
     view.rerender(
