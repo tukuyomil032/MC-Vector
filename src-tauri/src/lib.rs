@@ -5,7 +5,7 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
@@ -22,7 +22,17 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
             }
-        }))
+        }));
+
+    // Register this before Tauri creates the configured windows so its JS init
+    // script is injected into the main webview. The plugin is debug-only and
+    // macOS-only because it exists solely to drive real local smoke E2E tests.
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    {
+        builder = builder.plugin(tauri_plugin_webdriver_automation::init());
+    }
+
+    builder
         .setup(|app| {
             // Only register the updater in release builds. Debug builds (including E2E
             // CI tests) skip it so the update-check error dialog cannot block the UI.
@@ -34,11 +44,6 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_theme(Some(tauri::Theme::Dark));
             }
-
-            // macOS debug builds: enable WKWebView WebDriver via community plugin
-            #[cfg(all(debug_assertions, target_os = "macos"))]
-            app.handle()
-                .plugin(tauri_plugin_webdriver_automation::init())?;
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(
