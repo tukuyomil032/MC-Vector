@@ -191,6 +191,7 @@ export async function createBackup(
   sources?: string[],
   compressionLevel?: number,
 ): Promise<void> {
+  void sources;
   if (getBackupNameValidationError(backupName) !== null) {
     throw new Error('Invalid backup name');
   }
