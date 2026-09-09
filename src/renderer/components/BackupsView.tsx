@@ -943,15 +943,7 @@ export default function BackupsView({ server }: Props) {
       }
 
       // The Rust command owns traversal and always creates a full snapshot.
-      // Keep the legacy selection argument at this boundary for compatibility
-      // with existing renderer tests and callers; backup-commands deliberately
-      // serializes it as null.
-      await createBackup(
-        capturedServer.id,
-        normalizedName,
-        capturedSelectedPaths,
-        capturedCompressionLevel,
-      );
+      await createBackup(capturedServer.id, normalizedName, capturedCompressionLevel);
 
       const refreshedBackups = await listBackupsWithMetadata(capturedServer.id);
       if (isCurrentInitialization(operationToken)) {

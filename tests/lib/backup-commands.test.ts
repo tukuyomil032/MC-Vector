@@ -143,9 +143,9 @@ describe('backup-commands', () => {
     });
   });
 
-  it('creates a full backup with server ID and ignores legacy source selections', async () => {
+  it('creates a full backup with server ID and compression level', async () => {
     const { createBackup } = await import('@/lib/backup-commands');
-    await createBackup('server-1', 'backup-2024', ['world', 'plugins'], 9);
+    await createBackup('server-1', 'backup-2024', 9);
     expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_backup', {
       serverId: 'server-1',
       backupName: 'backup-2024',
@@ -154,9 +154,9 @@ describe('backup-commands', () => {
     });
   });
 
-  it('normalizes an empty source list to null', async () => {
+  it('uses the default compression level when omitted', async () => {
     const { createBackup } = await import('@/lib/backup-commands');
-    await createBackup('server-1', 'backup-2024', []);
+    await createBackup('server-1', 'backup-2024');
     expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_backup', {
       serverId: 'server-1',
       backupName: 'backup-2024',

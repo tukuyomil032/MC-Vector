@@ -257,7 +257,12 @@ describe('BackupsView initialization', () => {
     renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+    const deleteButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'common.delete' });
+      expect(button).not.toBeDisabled();
+      return button;
+    });
+    fireEvent.click(deleteButton);
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.deleted'));
     expect(askMock).toHaveBeenCalledOnce();
@@ -277,7 +282,12 @@ describe('BackupsView initialization', () => {
     renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+    const deleteButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'common.delete' });
+      expect(button).not.toBeDisabled();
+      return button;
+    });
+    fireEvent.click(deleteButton);
 
     await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
     expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
@@ -1035,7 +1045,6 @@ describe('BackupsView lifecycle', () => {
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
         server.id,
         'backup-name.zip',
-        ['world'],
         5,
       ),
     );
@@ -1056,7 +1065,6 @@ describe('BackupsView lifecycle', () => {
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
         server.id,
         'backup-name.zip',
-        ['world'],
         5,
       ),
     );
@@ -1084,7 +1092,6 @@ describe('BackupsView lifecycle', () => {
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
         server.id,
         'backup-name.zip',
-        ['world'],
         5,
       ),
     );

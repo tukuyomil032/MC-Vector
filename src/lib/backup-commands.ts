@@ -201,10 +201,6 @@ function backupFileRequest(serverId: string, backupName: string): ManagedPathReq
 export async function createBackup(
   serverId: string,
   backupName: string,
-  // Kept temporarily so older renderer callers can migrate without changing
-  // the public wrapper in one release. Managed backups are always full
-  // snapshots; the Rust command receives null for this legacy value.
-  sources?: string[],
   compressionLevel?: number,
 ): Promise<void> {
   void sources;
