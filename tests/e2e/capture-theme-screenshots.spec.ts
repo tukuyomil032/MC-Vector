@@ -5,7 +5,7 @@ import { expect, test } from './support/app-fixture';
 /**
  * This spec does not assert theme correctness — it is a design-review utility
  * that captures every screen so a human/agent can decide where to apply the
- * Liquid Glass effect in a follow-up phase. See docs/next-phase-plan.md.
+ * Liquid Glass effect in a follow-up phase. See spec/ADR-007-verification-and-score-gates.md.
  */
 
 const SCREENSHOT_DIR = path.join(process.cwd(), 'playwright', 'screenshots');

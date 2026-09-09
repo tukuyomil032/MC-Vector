@@ -187,5 +187,3 @@ apps/native-macos/*.trace/
 .agents/**
 .claude/skills/**
 .vscode/launch.json
-
-spec/**
