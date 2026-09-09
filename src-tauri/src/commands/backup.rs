@@ -1208,12 +1208,6 @@ fn collect_regular_file_hashes(
     current: &Path,
     output: &mut HashMap<String, (u64, String)>,
 ) -> Result<(), String> {
-    let metadata = fs::symlink_metadata(current)
-        .map_err(|error| format!("Failed to inspect restore tree: {error}"))?;
-    if is_link_or_reparse_point(&metadata) {
-        return Err("Restored tree contains a symbolic link or reparse point".to_string());
-    }
-
     let canonical_root = fs::canonicalize(root)
         .map_err(|error| format!("Failed to resolve restore staging root: {error}"))?;
     let canonical_current = fs::canonicalize(current)
@@ -1245,6 +1239,12 @@ fn collect_regular_file_hashes(
         .map_err(|error| format!("Failed to inspect restored directory: {error}"))?
     {
         let entry = entry.map_err(|error| format!("Failed to inspect restored entry: {error}"))?;
+        let metadata = entry
+            .metadata()
+            .map_err(|error| format!("Failed to inspect restored entry metadata: {error}"))?;
+        if is_link_or_reparse_point(&metadata) {
+            return Err("Restored tree contains a symbolic link or reparse point".to_string());
+        }
         collect_regular_file_hashes(root, &entry.path(), output)?;
     }
     Ok(())
