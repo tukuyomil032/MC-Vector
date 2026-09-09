@@ -203,7 +203,6 @@ export async function createBackup(
   backupName: string,
   compressionLevel?: number,
 ): Promise<void> {
-  void sources;
   return createBackupWithOrigin(serverId, backupName, compressionLevel, 'manual');
 }
 
