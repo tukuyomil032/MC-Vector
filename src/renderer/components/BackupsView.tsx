@@ -898,11 +898,6 @@ export default function BackupsView({ server }: Props) {
       return;
     }
 
-    if (selectedPaths.size === 0) {
-      showToast(t('backups.toast.selectAtLeastOne'), 'info');
-      return;
-    }
-
     const capturedServer = { ...server };
     const capturedSelectedPaths = normalizeBackupSources(Array.from(selectedPaths));
     const capturedCatalog = backupCatalog;
@@ -934,13 +929,6 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       manualOperationStarted = true;
-
-      if (capturedSelectedPaths.length === 0) {
-        if (isCurrentInitialization(operationToken)) {
-          showToast(t('backups.toast.selectAtLeastOne'), 'info');
-        }
-        return;
-      }
 
       // The Rust command owns traversal and always creates a full snapshot.
       await createBackup(capturedServer.id, normalizedName, capturedCompressionLevel);
@@ -1538,7 +1526,7 @@ export default function BackupsView({ server }: Props) {
                   variant="primary"
                   data-testid="backups-create-submit"
                   onClick={handleCreateBackup}
-                  disabled={isProcessing || selectedPaths.size === 0}
+                  disabled={isProcessing}
                 >
                   {isProcessing ? t('backups.modal.creating') : t('backups.modal.create')}
                 </Button>
