@@ -72,6 +72,9 @@ pub fn run() {
             // バックアップ
             commands::backup::create_managed_backup,
             commands::backup::restore_managed_backup,
+            commands::backup::list_managed_backups,
+            commands::backup::delete_managed_backup,
+            commands::backup::apply_managed_backup_retention,
             commands::backup::compress_managed_items,
             commands::backup::extract_managed_item,
             // Java

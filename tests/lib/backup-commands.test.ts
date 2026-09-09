@@ -167,16 +167,29 @@ describe('backup-commands', () => {
 
   it('lists backups through the managed metadata command', async () => {
     tauriInvokeMock.mockResolvedValueOnce([
-      { name: 'backup1.zip', isDirectory: false, size: 10, modified: 100 },
-      { name: 'notes.txt', isDirectory: false, size: 2, modified: 200 },
+      {
+        backupId: 'backup-1',
+        archivePath: 'backup1.zip',
+        origin: 'manual',
+        consistency: 'quiesced',
+        createdAt: '100000',
+        totalBytes: 10,
+        restoreEligible: true,
+      },
     ]);
     const { listBackupsWithMetadata } = await import('@/lib/backup-commands');
     await expect(listBackupsWithMetadata('server-1')).resolves.toEqual([
-      { name: 'backup1.zip', date: new Date(100_000), size: 10 },
+      {
+        name: 'backup1.zip',
+        date: new Date(100_000),
+        size: 10,
+        backupId: 'backup-1',
+        origin: 'manual',
+        consistency: 'quiesced',
+        restoreEligible: true,
+      },
     ]);
-    expect(tauriInvokeMock).toHaveBeenCalledWith('list_dir_with_metadata', {
-      request: { root: 'backups', serverId: 'server-1', relativePath: '' },
-    });
+    expect(tauriInvokeMock).toHaveBeenCalledWith('list_managed_backups', { serverId: 'server-1' });
   });
 
   it('returns an empty metadata list when the managed directory is missing', async () => {
@@ -235,15 +248,10 @@ describe('backup-commands', () => {
     await expect(listBackups('server-1')).rejects.toThrow('Permission denied');
   });
 
-  it('applies retention with managed deletes after a successful backup', async () => {
-    const entries = [
-      { name: 'new.zip', isDirectory: false, size: 10, modified: 300 },
-      { name: 'middle.zip', isDirectory: false, size: 10, modified: 200 },
-      { name: 'old.zip', isDirectory: false, size: 10, modified: 100 },
-    ];
+  it('applies retention through the authoritative managed command', async () => {
     tauriInvokeMock.mockImplementation(async (command: string) => {
-      if (command === 'list_dir_with_metadata') {
-        return entries;
+      if (command === 'apply_managed_backup_retention') {
+        return { deletedNames: ['old.zip'], failedDeleteCount: 0, records: [] };
       }
       return undefined;
     });
@@ -254,17 +262,19 @@ describe('backup-commands', () => {
       failedDeleteCount: 0,
       listingFailed: false,
     });
-    expect(tauriInvokeMock).toHaveBeenNthCalledWith(2, 'delete_managed_path', {
-      request: { root: 'backups', serverId: 'server-1', relativePath: 'old.zip' },
+    expect(tauriInvokeMock).toHaveBeenCalledWith('apply_managed_backup_retention', {
+      serverId: 'server-1',
+      retainCount: 2,
+      retainDays: 0,
     });
   });
 
   it('keeps retention failures separate from the backup operation', async () => {
     tauriInvokeMock.mockImplementation(async (command: string) => {
-      if (command === 'list_dir_with_metadata') {
-        return [{ name: 'old.zip', isDirectory: false, size: 10, modified: 100 }];
+      if (command === 'apply_managed_backup_retention') {
+        return { deletedNames: [], failedDeleteCount: 1, records: [] };
       }
-      throw new Error('delete failed');
+      return undefined;
     });
     const { applyBackupRetention } = await import('@/lib/backup-commands');
 
@@ -367,8 +377,9 @@ describe('backup-commands', () => {
   it('deletes a backup using a typed managed request', async () => {
     const { deleteBackup } = await import('@/lib/backup-commands');
     await deleteBackup('server-1', 'backup-2024.zip');
-    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_path', {
-      request: { root: 'backups', serverId: 'server-1', relativePath: 'backup-2024.zip' },
+    expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_backup', {
+      serverId: 'server-1',
+      backupName: 'backup-2024.zip',
     });
   });
 

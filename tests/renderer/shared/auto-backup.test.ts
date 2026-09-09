@@ -106,20 +106,22 @@ describe('buildAutoBackupName', () => {
   it('generates filename with server name and formatted datetime', () => {
     const now = new Date(2025, 4, 23, 14, 30, 59);
     const server = makeServer({ name: 'MySurvival' });
-    expect(buildAutoBackupName(server, now)).toBe('AutoBackup MySurvival 2025-05-23-14-30-59.zip');
+    expect(buildAutoBackupName(server, now)).toBe(
+      'AutoBackup MySurvival 2025-05-23-14-30-59-000.zip',
+    );
   });
 
   it('pads single-digit month, day, hour, minute, second with zero', () => {
     const now = new Date(2025, 0, 5, 3, 7, 9);
     const server = makeServer({ name: 'S' });
-    expect(buildAutoBackupName(server, now)).toBe('AutoBackup S 2025-01-05-03-07-09.zip');
+    expect(buildAutoBackupName(server, now)).toBe('AutoBackup S 2025-01-05-03-07-09-000.zip');
   });
 
   it('sanitizes unsafe server-name components', () => {
     const now = new Date(2025, 4, 23, 14, 30, 59);
     const server = makeServer({ name: 'My/Survival:Prod' });
     expect(buildAutoBackupName(server, now)).toBe(
-      'AutoBackup My-Survival-Prod 2025-05-23-14-30-59.zip',
+      'AutoBackup My-Survival-Prod 2025-05-23-14-30-59-000.zip',
     );
   });
 
@@ -128,14 +130,14 @@ describe('buildAutoBackupName', () => {
     const server = makeServer({ name: 'My*?"<>|Server' });
     const name = buildAutoBackupName(server, now);
 
-    expect(name).toBe('AutoBackup My-Server 2025-05-23-14-30-59.zip');
+    expect(name).toBe('AutoBackup My-Server 2025-05-23-14-30-59-000.zip');
     expect(getBackupNameValidationError(name)).toBeNull();
   });
 
   it('uses a fallback component when the server name is empty after sanitizing', () => {
     const now = new Date(2025, 4, 23, 14, 30, 59);
     const server = makeServer({ name: ' /:\\ ' });
-    expect(buildAutoBackupName(server, now)).toBe('AutoBackup server 2025-05-23-14-30-59.zip');
+    expect(buildAutoBackupName(server, now)).toBe('AutoBackup server 2025-05-23-14-30-59-000.zip');
   });
 
   it('removes consecutive dots from generated names', () => {
@@ -151,7 +153,9 @@ describe('buildManualBackupName', () => {
   it('uses a safe server-name component and a hyphen-separated timestamp', () => {
     const now = new Date(2025, 4, 23, 14, 30, 59);
     const server = makeServer({ name: 'My/Survival:Prod' });
-    expect(buildManualBackupName(server, now)).toBe('Backup My-Survival-Prod 2025-05-23-14-30.zip');
+    expect(buildManualBackupName(server, now)).toBe(
+      'Backup My-Survival-Prod 2025-05-23-14-30-59-000.zip',
+    );
   });
 
   it('always produces a name accepted by backup-name validation', () => {
@@ -164,6 +168,6 @@ describe('buildManualBackupName', () => {
     const now = new Date(2025, 4, 23, 14, 30, 59);
     const server = makeServer({ name: 'My*?"<>|Server' });
 
-    expect(buildManualBackupName(server, now)).toBe('Backup My-Server 2025-05-23-14-30.zip');
+    expect(buildManualBackupName(server, now)).toBe('Backup My-Server 2025-05-23-14-30-59-000.zip');
   });
 });

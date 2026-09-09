@@ -28,6 +28,7 @@ export interface MinecraftServer {
   autoBackupWeekday?: number;
   autoBackupRetainCount?: number;
   autoBackupRetainDays?: number;
+  backupRestartAfterSafeBackup?: boolean;
   createdDate?: string;
   jvmArgs?: string;
   notifyOnCrash?: boolean;

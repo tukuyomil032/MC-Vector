@@ -283,6 +283,43 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       return null;
     }
 
+    case 'list_managed_backups': {
+      const serverId = String(payload.serverId ?? '');
+      return (getE2eState().backups[serverId] ?? []).map((value, index) => {
+        const archivePath = String(value);
+        return {
+          backupId: `e2e-backup-${index + 1}`,
+          serverId,
+          archivePath,
+          kind: 'full',
+          consistency: 'quiesced',
+          origin: 'manual',
+          createdAt: String(Date.now() + index),
+          fileCount: 1,
+          totalBytes: 1,
+          archiveSha256: '0'.repeat(64),
+          manifestVersion: 2,
+          restoreEligible: true,
+        };
+      });
+    }
+
+    case 'delete_managed_backup': {
+      const serverId = String(payload.serverId ?? '');
+      const backupName = String(payload.backupName ?? '');
+      const state = getE2eState();
+      state.backups[serverId] = (state.backups[serverId] ?? []).filter(
+        (name) => name !== backupName,
+      );
+      removeRuntimePath(
+        resolveRuntimePath({ root: 'backups', serverId, relativePath: backupName }),
+      );
+      return [];
+    }
+
+    case 'apply_managed_backup_retention':
+      return { deletedNames: [], failedDeleteCount: 0, records: [] };
+
     case 'restore_managed_backup':
       return null;
 

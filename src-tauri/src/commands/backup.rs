@@ -101,6 +101,39 @@ struct BackupManifestEntry {
     sha256: String,
 }
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupRecord {
+    pub backup_id: String,
+    pub server_id: String,
+    pub archive_path: String,
+    pub kind: String,
+    pub consistency: String,
+    pub origin: String,
+    pub created_at: String,
+    pub file_count: u64,
+    pub total_bytes: u64,
+    pub archive_sha256: String,
+    pub manifest_version: u32,
+    pub restore_eligible: bool,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupRetentionReport {
+    pub deleted_names: Vec<String>,
+    pub failed_delete_count: u32,
+    pub records: Vec<BackupRecord>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BackupCatalogFile {
+    format_version: u32,
+    server_id: String,
+    records: Vec<BackupRecord>,
+}
+
 struct HashingWriter<'a, W> {
     inner: &'a mut W,
     hasher: Sha256,
@@ -144,6 +177,35 @@ fn timestamp_millis() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_millis().to_string())
         .unwrap_or_else(|_| "0".to_string())
+}
+
+fn archive_hash(path: &Path) -> Result<String, String> {
+    hash_file(path)
+}
+
+fn backup_record_from_manifest(
+    manifest: BackupManifest,
+    archive_path: &Path,
+    archive_sha256: String,
+) -> Result<BackupRecord, String> {
+    let archive_name = archive_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Backup archive has no valid file name".to_string())?;
+    Ok(BackupRecord {
+        backup_id: manifest.backup_id,
+        server_id: manifest.server_id,
+        archive_path: archive_name.to_string(),
+        kind: manifest.kind,
+        consistency: manifest.consistency.clone(),
+        origin: manifest.origin,
+        created_at: manifest.created_at,
+        file_count: manifest.file_count,
+        total_bytes: manifest.total_bytes,
+        archive_sha256,
+        manifest_version: manifest.format_version,
+        restore_eligible: manifest.consistency == "quiesced",
+    })
 }
 
 fn manifest_fingerprint(entries: &[BackupManifestEntry]) -> Result<String, String> {
@@ -728,9 +790,11 @@ pub async fn create_backup(
     backup_path: PathBuf,
     sources: Option<Vec<String>>,
     compression_level: Option<i64>,
+    origin: String,
 ) -> Result<String, String> {
     let sid = server_id.clone();
     let backup_name = backup_name.clone();
+    let origin = origin.clone();
     let app_clone = app.clone();
     tokio::task::spawn_blocking(move || {
         let source_metadata = fs::symlink_metadata(&source_path)
@@ -800,7 +864,7 @@ pub async fn create_backup(
                 server_id: sid.clone(),
                 kind: "full".to_string(),
                 consistency: "quiesced".to_string(),
-                origin: "manual".to_string(),
+                origin: origin.clone(),
                 created_at: timestamp_millis(),
                 root_fingerprint: manifest_fingerprint(&manifest_entries)?,
                 file_count: manifest_entries.len() as u64,
@@ -1203,6 +1267,178 @@ fn hash_file(path: &Path) -> Result<String, String> {
     Ok(hex_encode(hasher.finalize()))
 }
 
+fn backup_catalog_path(backup_dir: &Path) -> PathBuf {
+    backup_dir.join(".mc-vector-backup-catalog.json")
+}
+
+fn backup_catalog_temp_path(backup_catalog: &Path) -> PathBuf {
+    let file_name = backup_catalog
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("backup-catalog.json");
+    backup_catalog.with_file_name(format!(".{file_name}.old-{}", Uuid::new_v4()))
+}
+
+fn atomic_replace_existing_file(temp: &Path, destination: &Path) -> Result<(), String> {
+    let previous = match fs::symlink_metadata(destination) {
+        Ok(metadata) if is_link_or_reparse_point(&metadata) => {
+            return Err("Backup catalog must not be a symbolic link or reparse point".to_string())
+        }
+        Ok(metadata) if !metadata.is_file() => {
+            return Err("Backup catalog path is not a regular file".to_string())
+        }
+        Ok(_) => Some(backup_catalog_temp_path(destination)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+        Err(error) => return Err(format!("Failed to inspect backup catalog: {error}")),
+    };
+
+    if let Some(previous_path) = previous.as_ref() {
+        fs::rename(destination, previous_path)
+            .map_err(|error| format!("Failed to stage previous backup catalog: {error}"))?;
+    }
+
+    match fs::rename(temp, destination) {
+        Ok(()) => {
+            if let Some(previous_path) = previous {
+                let _ = fs::remove_file(previous_path);
+            }
+            Ok(())
+        }
+        Err(error) => {
+            let restore_result = previous.as_ref().map(|previous_path| {
+                fs::rename(previous_path, destination)
+                    .map_err(|restore_error| format!("{restore_error}"))
+            });
+            match restore_result {
+                Some(Ok(())) | None => Err(format!(
+                    "Failed to install backup catalog atomically: {error}"
+                )),
+                Some(Err(restore_error)) => Err(format!(
+                    "Backup catalog replacement and recovery failed: {error}; {restore_error}"
+                )),
+            }
+        }
+    }
+}
+
+fn write_backup_catalog_atomically(
+    backup_dir: &Path,
+    server_id: &str,
+    records: &[BackupRecord],
+) -> Result<(), String> {
+    let catalog = BackupCatalogFile {
+        format_version: 1,
+        server_id: server_id.to_string(),
+        records: records.to_vec(),
+    };
+    let bytes = serde_json::to_vec_pretty(&catalog)
+        .map_err(|error| format!("Failed to serialize backup catalog: {error}"))?;
+    let catalog_path = backup_catalog_path(backup_dir);
+    let (mut file, temp_path) = temp_file_for(&catalog_path)
+        .map_err(|error| format!("Failed to create temporary backup catalog: {error}"))?;
+    let mut temp_guard = TempFileGuard::new(temp_path.clone());
+    file.write_all(&bytes)
+        .map_err(|error| format!("Failed to write temporary backup catalog: {error}"))?;
+    file.sync_all()
+        .map_err(|error| format!("Failed to sync temporary backup catalog: {error}"))?;
+    drop(file);
+    atomic_replace_existing_file(&temp_path, &catalog_path)?;
+    temp_guard.disarm();
+    Ok(())
+}
+
+fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupRecord>, String> {
+    let mut records = Vec::new();
+    let entries = fs::read_dir(backup_dir)
+        .map_err(|error| format!("Failed to scan backup directory: {error}"))?;
+    for entry in entries {
+        let entry =
+            entry.map_err(|error| format!("Failed to read backup directory entry: {error}"))?;
+        let path = entry.path();
+        let metadata = fs::symlink_metadata(&path)
+            .map_err(|error| format!("Failed to inspect backup directory entry: {error}"))?;
+        if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
+            continue;
+        }
+        if path.extension().and_then(|extension| extension.to_str()) != Some("zip") {
+            continue;
+        }
+
+        // Invalid or incomplete archives remain on disk for repair/quarantine
+        // handling, but never enter the normal restore catalog.
+        let Ok(manifest) = read_backup_manifest(&path, server_id) else {
+            continue;
+        };
+        let archive_sha256 = archive_hash(&path)?;
+        records.push(backup_record_from_manifest(
+            manifest,
+            &path,
+            archive_sha256,
+        )?);
+    }
+
+    records.sort_by(|left, right| {
+        right
+            .created_at
+            .cmp(&left.created_at)
+            .then_with(|| left.archive_path.cmp(&right.archive_path))
+    });
+    Ok(records)
+}
+
+fn rebuild_backup_catalog(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupRecord>, String> {
+    let records = scan_backup_records(backup_dir, server_id)?;
+    write_backup_catalog_atomically(backup_dir, server_id, &records)?;
+    Ok(records)
+}
+
+fn backup_created_at_millis(record: &BackupRecord) -> u128 {
+    record.created_at.parse::<u128>().unwrap_or(0)
+}
+
+fn apply_retention_to_backup_directory(
+    backup_dir: &Path,
+    server_id: &str,
+    retain_count: u32,
+    retain_days: u32,
+    now_millis: u128,
+) -> Result<BackupRetentionReport, String> {
+    let records = scan_backup_records(backup_dir, server_id)?;
+    let mut automatic = records
+        .iter()
+        .filter(|record| record.origin == "automatic")
+        .collect::<Vec<_>>();
+    automatic.sort_by(|left, right| {
+        backup_created_at_millis(right)
+            .cmp(&backup_created_at_millis(left))
+            .then_with(|| left.archive_path.cmp(&right.archive_path))
+    });
+
+    let max_age_millis = u128::from(retain_days).saturating_mul(86_400_000);
+    let mut deleted_names = Vec::new();
+    let mut failed_delete_count = 0_u32;
+    for (index, record) in automatic.iter().enumerate() {
+        let over_count = retain_count > 0 && index >= retain_count as usize;
+        let over_age = retain_days > 0
+            && now_millis.saturating_sub(backup_created_at_millis(record)) > max_age_millis;
+        if !over_count && !over_age {
+            continue;
+        }
+        let path = backup_dir.join(&record.archive_path);
+        match fs::remove_file(&path) {
+            Ok(()) => deleted_names.push(record.archive_path.clone()),
+            Err(_) => failed_delete_count = failed_delete_count.saturating_add(1),
+        }
+    }
+
+    let records = rebuild_backup_catalog(backup_dir, server_id)?;
+    Ok(BackupRetentionReport {
+        deleted_names,
+        failed_delete_count,
+        records,
+    })
+}
+
 fn collect_regular_file_hashes(
     root: &Path,
     current: &Path,
@@ -1471,6 +1707,99 @@ pub async fn extract_item(archive: PathBuf, destination: PathBuf) -> Result<(), 
 }
 
 #[tauri::command]
+pub async fn list_managed_backups(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+    server_id: String,
+) -> Result<Vec<BackupRecord>, String> {
+    let _operation_guard = operations
+        .acquire(&server_id, OperationKind::BackupCreate)
+        .await?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let backup_request = ManagedPathRequest {
+        root: ManagedRoot::Backups,
+        server_id: Some(server_id.clone()),
+        relative_path: String::new(),
+    };
+    let backup_dir = resolve_managed_request(&app_data_dir, &backup_request, true)?;
+    tokio::task::spawn_blocking(move || rebuild_backup_catalog(&backup_dir, &server_id))
+        .await
+        .map_err(|error| format!("Task join error: {error}"))?
+}
+
+#[tauri::command]
+pub async fn delete_managed_backup(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+    server_id: String,
+    backup_name: String,
+) -> Result<Vec<BackupRecord>, String> {
+    let _operation_guard = operations
+        .acquire(&server_id, OperationKind::BackupDelete)
+        .await?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let archive_request = ManagedPathRequest {
+        root: ManagedRoot::Backups,
+        server_id: Some(server_id.clone()),
+        relative_path: backup_name,
+    };
+    let archive = resolve_managed_request(&app_data_dir, &archive_request, false)?;
+    let backup_dir_request = ManagedPathRequest {
+        root: ManagedRoot::Backups,
+        server_id: Some(server_id.clone()),
+        relative_path: String::new(),
+    };
+    let backup_dir = resolve_managed_request(&app_data_dir, &backup_dir_request, true)?;
+    tokio::task::spawn_blocking(move || {
+        let _manifest = read_backup_manifest(&archive, &server_id)?;
+        fs::remove_file(&archive).map_err(|error| format!("Failed to delete backup: {error}"))?;
+        rebuild_backup_catalog(&backup_dir, &server_id)
+    })
+    .await
+    .map_err(|error| format!("Task join error: {error}"))?
+}
+
+#[tauri::command]
+pub async fn apply_managed_backup_retention(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+    server_id: String,
+    retain_count: u32,
+    retain_days: u32,
+) -> Result<BackupRetentionReport, String> {
+    let _operation_guard = operations
+        .acquire(&server_id, OperationKind::BackupDelete)
+        .await?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to resolve app data directory".to_string())?;
+    let backup_request = ManagedPathRequest {
+        root: ManagedRoot::Backups,
+        server_id: Some(server_id.clone()),
+        relative_path: String::new(),
+    };
+    let backup_dir = resolve_managed_request(&app_data_dir, &backup_request, true)?;
+    tokio::task::spawn_blocking(move || {
+        apply_retention_to_backup_directory(
+            &backup_dir,
+            &server_id,
+            retain_count,
+            retain_days,
+            timestamp_millis().parse::<u128>().unwrap_or(0),
+        )
+    })
+    .await
+    .map_err(|error| format!("Task join error: {error}"))?
+}
+
+#[tauri::command]
 pub async fn create_managed_backup(
     app: AppHandle,
     server_state: State<'_, ServerManager>,
@@ -1479,6 +1808,7 @@ pub async fn create_managed_backup(
     backup_name: String,
     sources: Option<Vec<String>>,
     compression_level: Option<i64>,
+    origin: Option<String>,
 ) -> Result<String, String> {
     let _operation_guard = operations
         .acquire(&server_id, OperationKind::BackupCreate)
@@ -1491,6 +1821,10 @@ pub async fn create_managed_backup(
     }
     if server_state.servers.lock().await.contains_key(&server_id) {
         return Err("Cannot create a quiesced backup while the server is running".to_string());
+    }
+    let origin = origin.unwrap_or_else(|| "manual".to_string());
+    if !matches!(origin.as_str(), "manual" | "automatic") {
+        return Err("Backup origin is unsupported".to_string());
     }
     let app_data_dir = app
         .path()
@@ -1508,7 +1842,9 @@ pub async fn create_managed_backup(
     };
     let source = resolve_managed_request(&app_data_dir, &server_request, false)?;
     let backup = resolve_managed_request(&app_data_dir, &backup_request, true)?;
-    create_backup(
+    let catalog_backup = backup.clone();
+    let catalog_server_id = server_id.clone();
+    let created_name = create_backup(
         app,
         server_id,
         backup_name,
@@ -1516,8 +1852,15 @@ pub async fn create_managed_backup(
         backup,
         sources,
         compression_level,
+        origin,
     )
+    .await?;
+    tokio::task::spawn_blocking(move || {
+        rebuild_backup_catalog(&catalog_backup, &catalog_server_id)
+    })
     .await
+    .map_err(|error| format!("Task join error: {error}"))??;
+    Ok(created_name)
 }
 
 #[tauri::command]
@@ -1550,7 +1893,21 @@ pub async fn restore_managed_backup(
     };
     let archive = resolve_managed_request(&app_data_dir, &archive_request, false)?;
     let target = resolve_managed_request(&app_data_dir, &target_request, false)?;
-    restore_backup(app, server_id, archive, target).await
+    let catalog_server_id = server_id.clone();
+    restore_backup(app, server_id, archive, target).await?;
+    let backup_dir = resolve_managed_request(
+        &app_data_dir,
+        &ManagedPathRequest {
+            root: ManagedRoot::Backups,
+            server_id: Some(catalog_server_id.clone()),
+            relative_path: String::new(),
+        },
+        true,
+    )?;
+    tokio::task::spawn_blocking(move || rebuild_backup_catalog(&backup_dir, &catalog_server_id))
+        .await
+        .map_err(|error| format!("Task join error: {error}"))??;
+    Ok(())
 }
 
 #[tauri::command]
@@ -1694,6 +2051,24 @@ mod tests {
     }
 
     fn create_full_manifest_archive(source: &Path, archive: &Path, server_id: &str) {
+        create_full_manifest_archive_with_metadata(
+            source,
+            archive,
+            server_id,
+            "test-backup",
+            "manual",
+            "2026-09-09T00:00:00.000Z",
+        );
+    }
+
+    fn create_full_manifest_archive_with_metadata(
+        source: &Path,
+        archive: &Path,
+        server_id: &str,
+        backup_id: &str,
+        origin: &str,
+        created_at: &str,
+    ) {
         let source_canonical = fs::canonicalize(source).expect("resolve source");
         let mut entries = collect_backup_files(source).expect("collect backup files");
         entries.sort();
@@ -1714,12 +2089,12 @@ mod tests {
             manifest_entries.sort_by(|left, right| left.path.cmp(&right.path));
             let manifest = BackupManifest {
                 format_version: 2,
-                backup_id: "test-backup".to_string(),
+                backup_id: backup_id.to_string(),
                 server_id: server_id.to_string(),
                 kind: "full".to_string(),
                 consistency: "quiesced".to_string(),
-                origin: "manual".to_string(),
-                created_at: "2026-09-09T00:00:00.000Z".to_string(),
+                origin: origin.to_string(),
+                created_at: created_at.to_string(),
                 root_fingerprint: manifest_fingerprint(&manifest_entries)?,
                 file_count: manifest_entries.len() as u64,
                 total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
@@ -2164,6 +2539,87 @@ mod tests {
             fs::read(&temporary).expect("read temporary archive"),
             b"new archive"
         );
+
+        fs::remove_dir_all(root).expect("remove test directory");
+    }
+
+    #[test]
+    fn retention_only_deletes_automatic_backups() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-retention-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        let source = root.join("source");
+        let backup_dir = root.join("backups");
+        fs::create_dir_all(&source).expect("create source directory");
+        fs::create_dir_all(&backup_dir).expect("create backup directory");
+        fs::write(source.join("server.properties"), b"fixture").expect("write source file");
+
+        create_full_manifest_archive_with_metadata(
+            &source,
+            &backup_dir.join("automatic-old.zip"),
+            "server-1",
+            "automatic-old",
+            "automatic",
+            "1000",
+        );
+        create_full_manifest_archive_with_metadata(
+            &source,
+            &backup_dir.join("automatic-new.zip"),
+            "server-1",
+            "automatic-new",
+            "automatic",
+            "2000",
+        );
+        create_full_manifest_archive_with_metadata(
+            &source,
+            &backup_dir.join("manual-old.zip"),
+            "server-1",
+            "manual-old",
+            "manual",
+            "500",
+        );
+
+        let report = apply_retention_to_backup_directory(&backup_dir, "server-1", 1, 0, 3000)
+            .expect("apply retention");
+        assert_eq!(report.deleted_names, vec!["automatic-old.zip"]);
+        assert_eq!(report.failed_delete_count, 0);
+        assert!(!backup_dir.join("automatic-old.zip").exists());
+        assert!(backup_dir.join("automatic-new.zip").exists());
+        assert!(backup_dir.join("manual-old.zip").exists());
+        assert_eq!(report.records.len(), 2);
+        assert!(backup_catalog_path(&backup_dir).is_file());
+
+        fs::remove_dir_all(root).expect("remove test directory");
+    }
+
+    #[test]
+    fn catalog_rebuilds_from_archive_manifests_after_catalog_loss() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-catalog-rebuild-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        let source = root.join("source");
+        let backup_dir = root.join("backups");
+        fs::create_dir_all(&source).expect("create source directory");
+        fs::create_dir_all(&backup_dir).expect("create backup directory");
+        fs::write(source.join("server.properties"), b"fixture").expect("write source file");
+        create_full_manifest_archive(&source, &backup_dir.join("survivable.zip"), "server-1");
+
+        let records = rebuild_backup_catalog(&backup_dir, "server-1").expect("build catalog");
+        assert_eq!(records.len(), 1);
+        fs::remove_file(backup_catalog_path(&backup_dir)).expect("remove catalog");
+
+        let rebuilt = rebuild_backup_catalog(&backup_dir, "server-1").expect("rebuild catalog");
+        assert_eq!(rebuilt.len(), 1);
+        let catalog: BackupCatalogFile = serde_json::from_str(
+            &fs::read_to_string(backup_catalog_path(&backup_dir)).expect("read rebuilt catalog"),
+        )
+        .expect("parse rebuilt catalog");
+        assert_eq!(catalog.server_id, "server-1");
+        assert_eq!(catalog.records[0].archive_path, "survivable.zip");
 
         fs::remove_dir_all(root).expect("remove test directory");
     }

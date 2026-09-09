@@ -5,6 +5,20 @@ export interface BackupInfo {
   name: string;
   date: Date;
   size: number;
+  backupId?: string;
+  origin?: 'manual' | 'automatic';
+  consistency?: 'quiesced' | 'live';
+  restoreEligible?: boolean;
+}
+
+interface ManagedBackupRecord {
+  backupId: string;
+  archivePath: string;
+  origin: 'manual' | 'automatic';
+  consistency: 'quiesced' | 'live';
+  createdAt: string;
+  totalBytes: number;
+  restoreEligible: boolean;
 }
 
 export interface BackupRetentionResult {
@@ -63,11 +77,13 @@ function isMissingManagedPathError(
     /(?:path|file|directory) not found\b/i.test(message) ||
     /cannot find (?:the )?(?:file|path|directory)\b/i.test(message) ||
     (options.allowMissingManagedPathParent === true &&
-      /^(?:\[tauri\] (?:read_managed_text_file|list_dir_with_metadata) failed: )?managed path parent does not exist$/i.test(
+      /^(?:\[tauri\] (?:read_managed_text_file|list_dir_with_metadata|list_managed_backups) failed: )?managed path parent does not exist$/i.test(
         message,
       )) ||
     (options.allowMissingDirectory === true &&
-      /^(?:\[tauri\] list_dir_with_metadata failed: )?directory does not exist$/i.test(message))
+      /^(?:\[tauri\] (?:list_dir_with_metadata|list_managed_backups) failed: )?directory does not exist$/i.test(
+        message,
+      ))
   );
 }
 
@@ -192,15 +208,36 @@ export async function createBackup(
   compressionLevel?: number,
 ): Promise<void> {
   void sources;
+  return createBackupWithOrigin(serverId, backupName, compressionLevel, 'manual');
+}
+
+async function createBackupWithOrigin(
+  serverId: string,
+  backupName: string,
+  compressionLevel: number | undefined,
+  origin: 'manual' | 'automatic',
+): Promise<void> {
   if (getBackupNameValidationError(backupName) !== null) {
     throw new Error('Invalid backup name');
   }
-  return tauriInvoke('create_managed_backup', {
+  const payload: Record<string, unknown> = {
     serverId,
     backupName,
     sources: null,
     compressionLevel: compressionLevel ?? 5,
-  });
+  };
+  if (origin === 'automatic') {
+    payload.origin = origin;
+  }
+  return tauriInvoke('create_managed_backup', payload);
+}
+
+export async function createAutomaticBackup(
+  serverId: string,
+  backupName: string,
+  compressionLevel?: number,
+): Promise<void> {
+  return createBackupWithOrigin(serverId, backupName, compressionLevel, 'automatic');
 }
 
 export async function listBackups(serverId: string): Promise<string[]> {
@@ -223,10 +260,22 @@ export async function listBackups(serverId: string): Promise<string[]> {
 }
 
 export async function listBackupsWithMetadata(serverId: string): Promise<BackupInfo[]> {
-  let entries: FileEntryWithMeta[];
   try {
-    entries = await tauriInvoke<FileEntryWithMeta[]>('list_dir_with_metadata', {
-      request: backupDirectoryRequest(serverId),
+    const records = await tauriInvoke<ManagedBackupRecord[]>('list_managed_backups', { serverId });
+    return records.map((record) => {
+      const numericTimestamp = Number(record.createdAt);
+      const date = Number.isFinite(numericTimestamp)
+        ? new Date(numericTimestamp)
+        : new Date(record.createdAt);
+      return {
+        name: record.archivePath,
+        date,
+        size: record.totalBytes,
+        backupId: record.backupId,
+        origin: record.origin,
+        consistency: record.consistency,
+        restoreEligible: record.restoreEligible,
+      };
     });
   } catch (error) {
     if (
@@ -239,58 +288,30 @@ export async function listBackupsWithMetadata(serverId: string): Promise<BackupI
     }
     throw error;
   }
-  return entries
-    .filter((e) => e.name.endsWith('.zip'))
-    .map((e) => ({
-      name: e.name,
-      date: new Date(e.modified * 1000),
-      size: e.size,
-    }));
 }
 
 export async function applyBackupRetention(
   serverId: string,
   retainCount: number,
   retainDays: number,
-  now = Date.now(),
 ): Promise<BackupRetentionResult> {
-  if (retainCount <= 0 && retainDays <= 0) {
-    return { deletedNames: [], failedDeleteCount: 0, listingFailed: false };
-  }
-
-  let all: BackupInfo[];
   try {
-    all = await listBackupsWithMetadata(serverId);
+    const result = await tauriInvoke<{
+      deletedNames: string[];
+      failedDeleteCount: number;
+    }>('apply_managed_backup_retention', {
+      serverId,
+      retainCount: Math.max(0, Math.floor(retainCount)),
+      retainDays: Math.max(0, Math.floor(retainDays)),
+    });
+    return {
+      deletedNames: result.deletedNames,
+      failedDeleteCount: result.failedDeleteCount,
+      listingFailed: false,
+    };
   } catch {
     return { deletedNames: [], failedDeleteCount: 0, listingFailed: true };
   }
-
-  const sorted = [...all].sort(
-    (left, right) =>
-      right.date.getTime() - left.date.getTime() || left.name.localeCompare(right.name),
-  );
-  const toDelete = sorted.filter((backup, index) => {
-    if (retainCount > 0 && index >= retainCount) {
-      return true;
-    }
-    return retainDays > 0 && now - backup.date.getTime() > retainDays * 86_400_000;
-  });
-
-  const deletedNames: string[] = [];
-  for (const backup of toDelete) {
-    try {
-      await deleteBackup(serverId, backup.name);
-      deletedNames.push(backup.name);
-    } catch {
-      // Retention is best effort; a failed cleanup must not mask a successful backup.
-    }
-  }
-
-  return {
-    deletedNames,
-    failedDeleteCount: toDelete.length - deletedNames.length,
-    listingFailed: false,
-  };
 }
 
 export async function restoreBackup(serverId: string, backupName: string): Promise<void> {
@@ -299,9 +320,8 @@ export async function restoreBackup(serverId: string, backupName: string): Promi
 }
 
 export async function deleteBackup(serverId: string, backupName: string): Promise<void> {
-  await tauriInvoke('delete_managed_path', {
-    request: backupFileRequest(serverId, backupName),
-  });
+  backupFileRequest(serverId, backupName);
+  await tauriInvoke('delete_managed_backup', { serverId, backupName });
 }
 
 export function onBackupProgress(
