@@ -94,12 +94,13 @@ Add tests for:
 The native suite must execute these through the actual application:
 
 1. App startup and server list rendering.
-2. Offline Full backup creation.
-3. Fixture mutation followed by UI restore.
-4. File and manifest verification after restore.
-5. Catalog reload after app restart.
-6. Running-server restore rejection.
-7. Restore failure with unchanged old directory.
+2. EULA acceptance, fake-Java lifecycle, console command, and stop.
+3. Managed file create/edit/save/move/delete plus debug-only Rust-side import without source-path exposure.
+4. Server settings persistence.
+5. Verified loopback plugin artifact installation and checksum-mismatch destination preservation.
+6. Fake ngrok token flow with renderer/config non-leakage checks.
+7. Offline Full backup creation, fixture mutation, and UI restore.
+8. File and manifest verification after restore, catalog reload after app restart, running-server restore rejection, and restore failure with unchanged old directory.
 
 ## Manual OS checklist
 
