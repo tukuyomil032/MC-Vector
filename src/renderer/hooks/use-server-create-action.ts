@@ -90,6 +90,9 @@ export function useServerCreateAction({
           resolution = await resolveRequestedJarUrl(software, version);
 
           if (resolution) {
+            if (!resolution.sha256) {
+              throw new Error('Official server JAR checksum is unavailable; installation blocked');
+            }
             setDownloadStatus({
               id: newServer.id,
               progress: 0,

@@ -341,6 +341,17 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       });
       return null;
 
+    case 'get_ngrok_token_status':
+      return { configured: state.config.ngrokTokenConfigured === true };
+
+    case 'set_ngrok_token':
+      state.config.ngrokTokenConfigured = true;
+      return null;
+
+    case 'clear_ngrok_token':
+      state.config.ngrokTokenConfigured = false;
+      return null;
+
     case 'stop_ngrok':
       state.ngrokStatus = 'offline';
       void emit('ngrok-status-change', { status: 'stopped', serverId: payload.serverId });

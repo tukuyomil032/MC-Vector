@@ -3,9 +3,15 @@ use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tauri_plugin_store::StoreExt;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
+use uuid::Uuid;
+
+use super::download::download_verified_artifact;
+use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+use crate::state::secret_store::{OsSecretStore, SecretStore, NGROK_TOKEN_KEY};
 
 const MAX_NGROK_ARCHIVE_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_NGROK_ARCHIVE_ENTRIES: usize = 32;
@@ -14,6 +20,8 @@ const MAX_NGROK_ENTRY_NAME_BYTES: usize = 255;
 const MAX_NGROK_ENTRY_DEPTH: usize = 32;
 const MAX_NGROK_COMPRESSION_RATIO: u64 = 100;
 const COPY_BUFFER_SIZE: usize = 64 * 1024;
+const MAX_NGROK_METADATA_BYTES: u64 = 4 * 1024 * 1024;
+const NGROK_ARCHIVE_INDEX_URL: &str = "https://dl.equinox.io/ngrok/ngrok-v3/stable/archive";
 
 struct DownloadTempGuard {
     path: PathBuf,
@@ -37,8 +45,30 @@ impl Drop for DownloadTempGuard {
         }
     }
 }
+
+struct DirectoryTempGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl DirectoryTempGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for DirectoryTempGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+}
 const NGROK_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(20);
-const NGROK_INACTIVITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
 #[derive(Default)]
 pub struct NgrokManager {
@@ -219,6 +249,79 @@ fn validate_protocol(protocol: &str) -> Result<String, String> {
     }
 }
 
+fn ngrok_platform() -> Option<&'static str> {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => Some("darwin-arm64"),
+        ("macos", "x86_64") => Some("darwin-amd64"),
+        ("windows", "x86_64") => Some("windows-amd64"),
+        ("windows", "aarch64") => Some("windows-arm64"),
+        ("linux", "x86_64") => Some("linux-amd64"),
+        ("linux", "aarch64") => Some("linux-arm64"),
+        _ => None,
+    }
+}
+
+fn parse_ngrok_archive_index(body: &str, platform: &str) -> Result<(String, String), String> {
+    let suffix = format!("-{platform}.zip");
+    let mut cursor = 0;
+    while let Some(relative_start) = body[cursor..].find("href=\"") {
+        let href_start = cursor + relative_start + "href=\"".len();
+        let Some(relative_end) = body[href_start..].find('"') else {
+            break;
+        };
+        let href_end = href_start + relative_end;
+        let href = &body[href_start..href_end];
+        if href.ends_with(&suffix) {
+            let hash_marker = "value=\"";
+            let rest = &body[href_end..];
+            let entry = &rest[..rest.find("href=\"").unwrap_or(rest.len())];
+            let hash_start = entry
+                .find(hash_marker)
+                .map(|offset| offset + hash_marker.len())
+                .ok_or_else(|| "ngrok provider did not supply a SHA-256 checksum".to_string())?;
+            let hash_end = entry[hash_start..]
+                .find('"')
+                .map(|offset| hash_start + offset)
+                .ok_or_else(|| "ngrok provider returned malformed checksum metadata".to_string())?;
+            let checksum = &entry[hash_start..hash_end];
+            if checksum.len() != 64 || !checksum.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return Err("ngrok provider returned an invalid SHA-256 checksum".to_string());
+            }
+            return Ok((href.to_string(), checksum.to_ascii_lowercase()));
+        }
+        cursor = href_end;
+    }
+    Err("ngrok provider did not publish a checksum for this platform".to_string())
+}
+
+async fn resolve_ngrok_artifact(client: &reqwest::Client) -> Result<(String, String), String> {
+    let platform = ngrok_platform().ok_or_else(|| "Unsupported platform".to_string())?;
+    let response = client
+        .get(NGROK_ARCHIVE_INDEX_URL)
+        .send()
+        .await
+        .map_err(|error| format!("Failed to resolve ngrok artifact metadata: {error}"))?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "ngrok metadata request failed with HTTP {}",
+            response.status()
+        ));
+    }
+    if response.content_length().unwrap_or(0) > MAX_NGROK_METADATA_BYTES {
+        return Err("ngrok artifact metadata exceeds the size limit".to_string());
+    }
+    let body = response
+        .text()
+        .await
+        .map_err(|error| format!("Failed to read ngrok artifact metadata: {error}"))?;
+    if body.len() as u64 > MAX_NGROK_METADATA_BYTES {
+        return Err("ngrok artifact metadata exceeds the size limit".to_string());
+    }
+    let (url, checksum) = parse_ngrok_archive_index(&body, platform)?;
+    validate_ngrok_download_url(&url)?;
+    Ok((url, checksum))
+}
+
 fn extract_ngrok_url(log_line: &str) -> Option<String> {
     let marker = "url=";
     let start = log_line.find(marker)? + marker.len();
@@ -235,13 +338,19 @@ fn extract_ngrok_url(log_line: &str) -> Option<String> {
     Some(candidate.to_string())
 }
 
+fn redact_secret(value: &str, secret: &str) -> String {
+    if secret.is_empty() {
+        return value.to_string();
+    }
+    value.replace(secret, "[REDACTED]")
+}
+
 #[tauri::command]
 pub async fn start_ngrok(
     app: AppHandle,
     state: State<'_, NgrokManager>,
     protocol: String,
     port: u16,
-    authtoken: String,
     server_id: String,
 ) -> Result<(), String> {
     let app_data_dir = app
@@ -255,7 +364,13 @@ pub async fn start_ngrok(
         &allowed_dir,
     )?;
     let validated_protocol = validate_protocol(&protocol)?;
-    let normalized_token = authtoken.trim().to_string();
+    let secret_store = OsSecretStore;
+    migrate_legacy_ngrok_token(&app, &secret_store)?;
+    let normalized_token = secret_store
+        .get(NGROK_TOKEN_KEY)?
+        .unwrap_or_default()
+        .trim()
+        .to_string();
     if normalized_token.is_empty() {
         return Err("ngrok auth token is required".to_string());
     }
@@ -302,16 +417,18 @@ pub async fn start_ngrok(
     let app_clone = app.clone();
     let sid = server_id.clone();
     let process_ref = state.process.clone();
+    let token_for_redaction = normalized_token.clone();
 
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
 
         while let Ok(Some(line)) = lines.next_line().await {
+            let safe_line = redact_secret(&line, &token_for_redaction);
             // ngrok ログを転送
             let _ = app_clone.emit(
                 "ngrok-log",
-                serde_json::json!({ "line": &line, "serverId": &sid }),
+                serde_json::json!({ "line": &safe_line, "serverId": &sid }),
             );
 
             // トンネル URL を検出 (ngrok の stdout ログ形式)
@@ -359,6 +476,81 @@ pub async fn start_ngrok(
     Ok(())
 }
 
+fn migrate_legacy_ngrok_token(
+    app: &AppHandle,
+    secret_store: &impl SecretStore,
+) -> Result<(), String> {
+    let store = app
+        .store("config.json")
+        .map_err(|error| format!("Failed to open legacy credential store: {error}"))?;
+    let legacy = store
+        .get("ngrokToken")
+        .and_then(|value| value.as_str().map(str::to_owned));
+    let Some(legacy) = legacy.filter(|value| !value.trim().is_empty()) else {
+        return Ok(());
+    };
+    if secret_store.get(NGROK_TOKEN_KEY)?.is_none() {
+        secret_store.set(NGROK_TOKEN_KEY, legacy.trim())?;
+        let stored = secret_store
+            .get(NGROK_TOKEN_KEY)?
+            .ok_or_else(|| "Credential store did not retain the ngrok token".to_string())?;
+        if stored != legacy.trim() {
+            return Err("Credential store verification failed for the ngrok token".to_string());
+        }
+    }
+    store.delete("ngrokToken");
+    store
+        .save()
+        .map_err(|error| format!("Failed to save legacy credential migration: {error}"))?;
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NgrokTokenStatus {
+    configured: bool,
+}
+
+#[tauri::command]
+pub fn get_ngrok_token_status(app: AppHandle) -> Result<NgrokTokenStatus, String> {
+    let secret_store = OsSecretStore;
+    migrate_legacy_ngrok_token(&app, &secret_store)?;
+    Ok(NgrokTokenStatus {
+        configured: secret_store.get(NGROK_TOKEN_KEY)?.is_some(),
+    })
+}
+
+#[tauri::command]
+pub fn set_ngrok_token(app: AppHandle, token: String) -> Result<(), String> {
+    let normalized = token.trim();
+    if normalized.is_empty() || normalized.len() > 4096 || normalized.chars().any(char::is_control)
+    {
+        return Err("ngrok auth token is invalid".to_string());
+    }
+    let secret_store = OsSecretStore;
+    secret_store.set(NGROK_TOKEN_KEY, normalized)?;
+    let stored = secret_store
+        .get(NGROK_TOKEN_KEY)?
+        .ok_or_else(|| "Credential store did not retain the ngrok token".to_string())?;
+    if stored != normalized {
+        return Err("Credential store verification failed for the ngrok token".to_string());
+    }
+    migrate_legacy_ngrok_token(&app, &secret_store)
+}
+
+#[tauri::command]
+pub fn clear_ngrok_token(app: AppHandle) -> Result<(), String> {
+    let secret_store = OsSecretStore;
+    secret_store.delete(NGROK_TOKEN_KEY)?;
+    let store = app
+        .store("config.json")
+        .map_err(|error| format!("Failed to open legacy credential store: {error}"))?;
+    store.delete("ngrokToken");
+    store
+        .save()
+        .map_err(|error| format!("Failed to save credential removal: {error}"))
+}
+
 #[tauri::command]
 pub async fn stop_ngrok(state: State<'_, NgrokManager>) -> Result<(), String> {
     let mut proc = state.process.lock().await;
@@ -377,13 +569,68 @@ pub async fn stop_ngrok(state: State<'_, NgrokManager>) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-pub async fn download_ngrok(app: AppHandle) -> Result<String, String> {
-    // OS/arch に応じた URL を決定
-    let (url, file_name) =
-        get_ngrok_download_url().ok_or_else(|| "Unsupported platform".to_string())?;
-    let url = validate_ngrok_download_url(&url)?;
+fn replace_ngrok_binary_preserving_existing(
+    staging: &Path,
+    destination: &Path,
+    managed_root: &Path,
+) -> Result<(), String> {
+    let root = managed_root
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve managed ngrok root: {error}"))?;
+    let staging = staging
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve staged ngrok binary: {error}"))?;
+    if !staging.starts_with(&root) || !destination.starts_with(&root) {
+        return Err("ngrok installation must remain inside managed storage".to_string());
+    }
+    match std::fs::symlink_metadata(destination) {
+        Ok(metadata) => {
+            if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
+                return Err("Existing ngrok binary is not a regular file".to_string());
+            }
+            let name = destination
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("ngrok");
+            let rollback =
+                destination.with_file_name(format!(".{name}.rollback-{}", Uuid::new_v4()));
+            std::fs::rename(destination, &rollback)
+                .map_err(|error| format!("Failed to stage existing ngrok binary: {error}"))?;
+            match std::fs::rename(&staging, destination) {
+                Ok(()) => {
+                    let _ = std::fs::remove_file(rollback);
+                    Ok(())
+                }
+                Err(error) => {
+                    let recovery = std::fs::rename(&rollback, destination);
+                    if recovery.is_ok() {
+                        Err(format!(
+                            "Failed to install ngrok and restored the existing binary: {error}"
+                        ))
+                    } else {
+                        Err(format!(
+                            "Failed to install ngrok and restore the existing binary; manual recovery required: {error}"
+                        ))
+                    }
+                }
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            std::fs::rename(staging, destination)
+                .map_err(|error| format!("Failed to install ngrok: {error}"))
+        }
+        Err(error) => Err(format!("Failed to inspect existing ngrok binary: {error}")),
+    }
+}
 
+#[tauri::command]
+pub async fn download_ngrok(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+) -> Result<String, String> {
+    let _operation = operations
+        .acquire("ngrok-runtime", OperationKind::ArtifactInstall)
+        .await?;
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -394,82 +641,54 @@ pub async fn download_ngrok(app: AppHandle) -> Result<String, String> {
             return Err("Managed ngrok directory is not a real directory".to_string());
         }
     }
-    let dest_dir = managed_dir.to_string_lossy().to_string();
-    let dest_archive = managed_dir.join(format!(".{file_name}"));
-
-    // ディレクトリ作成
-    tokio::fs::create_dir_all(&dest_dir)
+    tokio::fs::create_dir_all(&managed_dir)
         .await
-        .map_err(|e| format!("Failed to create directory: {}", e))?;
-
-    // ダウンロード
+        .map_err(|error| format!("Failed to create directory: {error}"))?;
+    let managed_root = managed_dir
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve managed ngrok root: {error}"))?;
     let client = reqwest::Client::builder()
         .connect_timeout(NGROK_CONNECT_TIMEOUT)
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| format!("Failed to create ngrok download client: {e}"))?;
-    let response = client
-        .get(url)
-        .send()
+    let (url, checksum) = resolve_ngrok_artifact(&client).await?;
+    let file_name = format!(
+        "ngrok-v3-stable-{}.zip",
+        ngrok_platform().ok_or_else(|| "Unsupported platform".to_string())?
+    );
+    let verified = download_verified_artifact(
+        &url,
+        &managed_dir.join(&file_name),
+        &managed_root,
+        &checksum,
+        None,
+        MAX_NGROK_ARCHIVE_BYTES,
+        Some(&["bin.equinox.io"]),
+        |downloaded, total| {
+            let progress = if total > 0 {
+                ((downloaded as f64 / total as f64) * 100.0) as u32
+            } else {
+                0
+            };
+            app.emit(
+                "ngrok-download-progress",
+                serde_json::json!({ "progress": progress }),
+            )
+            .map_err(|error| format!("Failed to emit ngrok download progress: {error}"))
+        },
+    )
+    .await?;
+    debug_assert_eq!(verified.sha256, checksum);
+    debug_assert!(verified.size > 0);
+    let mut archive_guard = DownloadTempGuard::new(verified.path.clone());
+    let staging_dir = managed_dir.join(format!(".staging-{}", Uuid::new_v4()));
+    tokio::fs::create_dir_all(&staging_dir)
         .await
-        .map_err(|e| format!("HTTP request failed: {}", e))?;
-
-    if !response.status().is_success() {
-        return Err(format!("HTTP error: {}", response.status()));
-    }
-    let total = response.content_length().unwrap_or(0);
-    if total > MAX_NGROK_ARCHIVE_BYTES {
-        return Err("ngrok archive exceeds the download size limit".to_string());
-    }
-    if tokio::fs::symlink_metadata(&dest_archive).await.is_ok() {
-        return Err("ngrok temporary archive already exists".to_string());
-    }
-    let mut file = tokio::fs::File::create(&dest_archive)
-        .await
-        .map_err(|e| format!("Failed to create file: {}", e))?;
-    let mut archive_guard = DownloadTempGuard::new(dest_archive.clone());
-
-    let mut downloaded: u64 = 0;
-    let mut stream = futures_util::StreamExt::fuse(response.bytes_stream());
-
-    use futures_util::StreamExt as _;
-    while let Some(chunk) = tokio::time::timeout(NGROK_INACTIVITY_TIMEOUT, stream.next())
-        .await
-        .map_err(|_| "ngrok download stalled while waiting for data".to_string())?
-    {
-        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
-        if downloaded
-            .checked_add(chunk.len() as u64)
-            .ok_or_else(|| "ngrok download size overflow".to_string())?
-            > MAX_NGROK_ARCHIVE_BYTES
-        {
-            return Err("ngrok archive exceeds the download size limit".to_string());
-        }
-        tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
-            .await
-            .map_err(|e| format!("Write error: {}", e))?;
-        downloaded += chunk.len() as u64;
-
-        let progress = if total > 0 {
-            ((downloaded as f64 / total as f64) * 100.0) as u32
-        } else {
-            0
-        };
-        let _ = app.emit(
-            "ngrok-download-progress",
-            serde_json::json!({ "progress": progress }),
-        );
-    }
-    file.flush()
-        .await
-        .map_err(|e| format!("Flush error: {}", e))?;
-    file.sync_all()
-        .await
-        .map_err(|e| format!("Sync error: {}", e))?;
-
-    // ZIP を展開
-    let dest = managed_dir.clone();
-    let archive = dest_archive.clone();
+        .map_err(|error| format!("Failed to create ngrok staging directory: {error}"))?;
+    let mut staging_guard = DirectoryTempGuard::new(staging_dir.clone());
+    let archive = verified.path.clone();
+    let dest = staging_dir.clone();
     let extraction_result = tokio::task::spawn_blocking(move || {
         let file =
             std::fs::File::open(&archive).map_err(|e| format!("Failed to open zip: {}", e))?;
@@ -533,7 +752,10 @@ pub async fn download_ngrok(app: AppHandle) -> Result<String, String> {
                     return Err("ngrok archive destination is unsafe".to_string());
                 }
             }
-            let mut outfile = std::fs::File::create(&output_path)
+            let mut outfile = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output_path)
                 .map_err(|e| format!("Failed to create: {}", e))?;
             let expected_size = file.size();
             copy_ngrok_entry(&mut file, &mut outfile, expected_size, &mut extracted_bytes)?;
@@ -543,26 +765,26 @@ pub async fn download_ngrok(app: AppHandle) -> Result<String, String> {
     .await
     .map_err(|e| format!("Task error: {}", e))?;
 
-    // アーカイブを削除
-    if extraction_result.is_ok() {
-        if tokio::fs::remove_file(&dest_archive).await.is_ok() {
-            archive_guard.disarm();
-        }
-    }
     extraction_result?;
+    tokio::fs::remove_file(&verified.path)
+        .await
+        .map_err(|error| format!("Failed to remove verified ngrok archive: {error}"))?;
+    archive_guard.disarm();
 
-    // macOS/Linux の場合、実行権限を付与
     let ngrok_binary = managed_dir.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
+    let staged_binary = staging_dir.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(metadata) = std::fs::metadata(&ngrok_binary) {
+        if let Ok(metadata) = std::fs::metadata(&staged_binary) {
             let mut perms = metadata.permissions();
             perms.set_mode(0o755);
-            let _ = std::fs::set_permissions(&ngrok_binary, perms);
+            std::fs::set_permissions(&staged_binary, perms)
+                .map_err(|error| format!("Failed to set ngrok executable permission: {error}"))?;
         }
     }
-
+    replace_ngrok_binary_preserving_existing(&staged_binary, &ngrok_binary, &managed_root)?;
+    staging_guard.disarm();
     validate_ngrok_path(&ngrok_binary, &managed_dir)
 }
 
@@ -578,28 +800,6 @@ pub async fn is_ngrok_installed(app: AppHandle) -> Result<bool, String> {
     Ok(validate_ngrok_path(&binary, &app_data_dir.join("ngrok")).is_ok())
 }
 
-fn get_ngrok_download_url() -> Option<(String, String)> {
-    let os = std::env::consts::OS;
-    let arch = std::env::consts::ARCH;
-
-    let platform = match (os, arch) {
-        ("macos", "aarch64") => "darwin-arm64",
-        ("macos", "x86_64") => "darwin-amd64",
-        ("windows", "x86_64") => "windows-amd64",
-        ("linux", "x86_64") => "linux-amd64",
-        ("linux", "aarch64") => "linux-arm64",
-        _ => return None,
-    };
-
-    let url = format!(
-        "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-{}.zip",
-        platform
-    );
-    let file_name = format!("ngrok-v3-stable-{}.zip", platform);
-
-    Some((url, file_name))
-}
-
 fn validate_ngrok_download_url(url: &str) -> Result<reqwest::Url, String> {
     let parsed = reqwest::Url::parse(url.trim())
         .map_err(|error| format!("Invalid ngrok download URL: {error}"))?;
@@ -612,7 +812,10 @@ fn validate_ngrok_download_url(url: &str) -> Result<reqwest::Url, String> {
         || parsed.port().is_some()
         || parsed.fragment().is_some()
         || host.parse::<std::net::IpAddr>().is_ok()
-        || !host.eq_ignore_ascii_case("bin.equinox.io")
+        || !matches!(
+            host.to_ascii_lowercase().as_str(),
+            "bin.equinox.io" | "dl.equinox.io"
+        )
     {
         return Err("ngrok download URL is not an approved HTTPS URL".to_string());
     }
@@ -621,7 +824,7 @@ fn validate_ngrok_download_url(url: &str) -> Result<reqwest::Url, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_ngrok_url, MAX_NGROK_ARCHIVE_BYTES};
+    use super::{extract_ngrok_url, parse_ngrok_archive_index, MAX_NGROK_ARCHIVE_BYTES};
 
     #[test]
     fn extract_ngrok_url_accepts_tcp_url() {
@@ -660,7 +863,37 @@ mod tests {
     }
 
     #[test]
+    fn ngrok_logs_redact_the_auth_token() {
+        assert_eq!(
+            super::redact_secret("token=secret-value", "secret-value"),
+            "token=[REDACTED]"
+        );
+        assert_eq!(super::redact_secret("no-secret", ""), "no-secret");
+    }
+
+    #[test]
     fn ngrok_download_limit_is_reasonable_and_fixed() {
         assert_eq!(MAX_NGROK_ARCHIVE_BYTES, 100 * 1024 * 1024);
+    }
+
+    #[test]
+    fn ngrok_archive_index_returns_the_platform_url_and_sha256() {
+        let body = r#"
+          <a href="https://bin.equinox.io/a/release/ngrok-v3-3.0.0-darwin-arm64.zip">download</a>
+          <input readonly value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+        "#;
+        assert_eq!(
+            parse_ngrok_archive_index(body, "darwin-arm64").unwrap(),
+            (
+                "https://bin.equinox.io/a/release/ngrok-v3-3.0.0-darwin-arm64.zip".to_string(),
+                "a".repeat(64)
+            )
+        );
+    }
+
+    #[test]
+    fn ngrok_archive_index_rejects_missing_checksum() {
+        let body = r#"<a href="https://bin.equinox.io/a/release/ngrok-v3-3.0.0-darwin-arm64.zip">download</a>"#;
+        assert!(parse_ngrok_archive_index(body, "darwin-arm64").is_err());
     }
 }

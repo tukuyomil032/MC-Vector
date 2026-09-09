@@ -84,6 +84,9 @@ pub fn run() {
             commands::ngrok::stop_ngrok,
             commands::ngrok::download_ngrok,
             commands::ngrok::is_ngrok_installed,
+            commands::ngrok::get_ngrok_token_status,
+            commands::ngrok::set_ngrok_token,
+            commands::ngrok::clear_ngrok_token,
             // ファイルユーティリティ
             commands::file_utils::list_dir_with_metadata,
             commands::file_utils::resolve_managed_path,

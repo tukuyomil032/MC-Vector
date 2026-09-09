@@ -1,11 +1,14 @@
-use futures_util::StreamExt;
 use reqwest::{redirect, Client, Url};
+use serde::Deserialize;
 use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::io::AsyncWriteExt;
+use tauri::{AppHandle, Emitter, Manager, State};
+use uuid::Uuid;
+
+use super::download::download_verified_artifact;
+use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
 const MAX_JAVA_ARCHIVE_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_JAVA_ARCHIVE_ENTRIES: usize = 100_000;
@@ -14,6 +17,7 @@ const MAX_JAVA_ENTRY_NAME_BYTES: usize = 255;
 const MAX_JAVA_ENTRY_DEPTH: usize = 32;
 const MAX_JAVA_COMPRESSION_RATIO: u64 = 100;
 const COPY_BUFFER_SIZE: usize = 64 * 1024;
+const MAX_JAVA_METADATA_BYTES: u64 = 4 * 1024 * 1024;
 
 struct DownloadTempGuard {
     path: PathBuf,
@@ -37,8 +41,30 @@ impl Drop for DownloadTempGuard {
         }
     }
 }
+
+struct DirectoryTempGuard {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl DirectoryTempGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for DirectoryTempGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+}
 const JAVA_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
-const JAVA_INACTIVITY_TIMEOUT: Duration = Duration::from_secs(60);
 const JAVA_DOWNLOAD_HOSTS: &[&str] = &[
     "api.adoptium.net",
     "github.com",
@@ -80,6 +106,70 @@ fn java_client() -> Result<Client, String> {
         .map_err(|error| format!("Failed to create Java download client: {error}"))
 }
 
+#[derive(Debug, Deserialize)]
+struct AdoptiumAsset {
+    binary: AdoptiumBinary,
+}
+
+#[derive(Debug, Deserialize)]
+struct AdoptiumBinary {
+    package: AdoptiumPackage,
+}
+
+#[derive(Debug, Deserialize)]
+struct AdoptiumPackage {
+    checksum: Option<String>,
+    link: String,
+    size: Option<u64>,
+}
+
+async fn resolve_adoptium_package(
+    client: &Client,
+    major_version: u16,
+    os: &str,
+    arch: &str,
+) -> Result<(Url, String, u64), String> {
+    let metadata_url = format!(
+        "https://api.adoptium.net/v3/assets/latest/{major_version}/hotspot?architecture={arch}&image_type=jdk&jvm_impl=hotspot&os={os}&project=jdk&release_type=ga"
+    );
+    let response = client
+        .get(&metadata_url)
+        .send()
+        .await
+        .map_err(|error| format!("Failed to resolve Java artifact metadata: {error}"))?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "Java metadata request failed with HTTP {}",
+            response.status()
+        ));
+    }
+    if response.content_length().unwrap_or(0) > MAX_JAVA_METADATA_BYTES {
+        return Err("Java artifact metadata exceeds the size limit".to_string());
+    }
+    let body = response
+        .bytes()
+        .await
+        .map_err(|error| format!("Failed to read Java artifact metadata: {error}"))?;
+    if body.len() as u64 > MAX_JAVA_METADATA_BYTES {
+        return Err("Java artifact metadata exceeds the size limit".to_string());
+    }
+    let assets: Vec<AdoptiumAsset> = serde_json::from_slice(&body)
+        .map_err(|error| format!("Invalid Java artifact metadata: {error}"))?;
+    let package = assets
+        .into_iter()
+        .map(|asset| asset.binary.package)
+        .find(|package| package.checksum.is_some() && package.size.is_some())
+        .ok_or_else(|| "Java provider did not supply a SHA-256 checksum and size".to_string())?;
+    let url = validate_java_download_url(&package.link)?;
+    let checksum = package
+        .checksum
+        .ok_or_else(|| "Java provider did not supply a SHA-256 checksum".to_string())?;
+    let size = package
+        .size
+        .ok_or_else(|| "Java provider did not supply an artifact size".to_string())?;
+    Ok((url, checksum, size))
+}
+
 fn validate_managed_java_install_dir(
     app_data_dir: &Path,
     install_dir: &Path,
@@ -110,6 +200,62 @@ fn validate_managed_java_install_dir(
         }
     }
     Ok(candidate.to_path_buf())
+}
+
+fn replace_java_install_preserving_existing(
+    staging: &Path,
+    destination: &Path,
+    managed_root: &Path,
+) -> Result<(), String> {
+    let staging = staging
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve staged Java installation: {error}"))?;
+    let root = managed_root
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve managed Java root: {error}"))?;
+    if !staging.starts_with(&root) || !destination.starts_with(&root) {
+        return Err("Java installation must remain inside managed storage".to_string());
+    }
+    match std::fs::symlink_metadata(destination) {
+        Ok(metadata) => {
+            if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+                return Err("Existing Java installation is not a real directory".to_string());
+            }
+            let name = destination
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("java");
+            let rollback =
+                destination.with_file_name(format!(".{name}.rollback-{}", Uuid::new_v4()));
+            std::fs::rename(destination, &rollback)
+                .map_err(|error| format!("Failed to stage existing Java installation: {error}"))?;
+            match std::fs::rename(&staging, destination) {
+                Ok(()) => {
+                    let _ = std::fs::remove_dir_all(rollback);
+                    Ok(())
+                }
+                Err(error) => {
+                    let recovery = std::fs::rename(&rollback, destination);
+                    if recovery.is_ok() {
+                        Err(format!(
+                            "Failed to install Java and restored the existing installation: {error}"
+                        ))
+                    } else {
+                        Err(format!(
+                            "Failed to install Java and restore the existing installation; manual recovery required: {error}"
+                        ))
+                    }
+                }
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            std::fs::rename(staging, destination)
+                .map_err(|error| format!("Failed to install Java: {error}"))
+        }
+        Err(error) => Err(format!(
+            "Failed to inspect existing Java installation: {error}"
+        )),
+    }
 }
 
 /// Validates paths that the server launcher can adopt once its command boundary
@@ -215,7 +361,14 @@ pub fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub async fn download_java(app: AppHandle, major_version: u16) -> Result<String, String> {
+pub async fn download_java(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+    major_version: u16,
+) -> Result<String, String> {
+    let _operation = operations
+        .acquire("java-runtime", OperationKind::ArtifactInstall)
+        .await?;
     if !(1..=99).contains(&major_version) {
         return Err("Unsupported Java major version".to_string());
     }
@@ -231,9 +384,6 @@ pub async fn download_java(app: AppHandle, major_version: u16) -> Result<String,
         _ => return Err("Unsupported CPU architecture".to_string()),
     };
     let archive_type = if os == "windows" { "zip" } else { "tar.gz" };
-    let download_url = format!(
-        "https://api.adoptium.net/v3/binary/latest/{major_version}/ga/{os}/{arch}/jdk/hotspot/normal/eclipse?project=jdk"
-    );
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -242,73 +392,49 @@ pub async fn download_java(app: AppHandle, major_version: u16) -> Result<String,
         .join("java")
         .join(format!("jdk-{major_version}"));
     let install_path = validate_managed_java_install_dir(&app_data_dir, &install_dir)?;
-    let download_url = validate_java_download_url(&download_url)?;
+    let java_root = app_data_dir.join("java");
+    tokio::fs::create_dir_all(&java_root)
+        .await
+        .map_err(|error| format!("Failed to create managed Java root: {error}"))?;
     let client = java_client()?;
-    let response = client
-        .get(download_url)
-        .send()
+    let (download_url, checksum, expected_size) =
+        resolve_adoptium_package(&client, major_version, os, arch).await?;
+    let managed_root = java_root
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve managed Java root: {error}"))?;
+    let verified = download_verified_artifact(
+        download_url.as_str(),
+        &java_root.join(format!("jdk-{major_version}.{archive_type}")),
+        &managed_root,
+        &checksum,
+        Some(expected_size),
+        MAX_JAVA_ARCHIVE_BYTES,
+        Some(JAVA_DOWNLOAD_HOSTS),
+        |downloaded, total| {
+            let progress = if total > 0 {
+                ((downloaded as f64 / total as f64) * 100.0) as u32
+            } else {
+                0
+            };
+            app.emit(
+                "java-download-progress",
+                serde_json::json!({ "progress": progress }),
+            )
+            .map_err(|error| format!("Failed to emit Java download progress: {error}"))
+        },
+    )
+    .await?;
+    debug_assert_eq!(verified.sha256, checksum.to_ascii_lowercase());
+    debug_assert!(verified.size > 0);
+    let mut archive_guard = DownloadTempGuard::new(verified.path.clone());
+    let staging_dir = java_root.join(format!(".jdk-{major_version}.staging-{}", Uuid::new_v4()));
+    tokio::fs::create_dir_all(&staging_dir)
         .await
-        .map_err(|e| format!("HTTP request failed: {}", e))?;
+        .map_err(|error| format!("Failed to create Java staging directory: {error}"))?;
+    let mut staging_guard = DirectoryTempGuard::new(staging_dir.clone());
 
-    if !response.status().is_success() {
-        return Err(format!("HTTP error: {}", response.status()));
-    }
-
-    let total = response.content_length().unwrap_or(0);
-    if total > MAX_JAVA_ARCHIVE_BYTES {
-        return Err("Java archive exceeds the download size limit".to_string());
-    }
-    let temp_file = install_path.join(format!(".java_download_temp.{archive_type}"));
-
-    // インストールディレクトリを作成
-    tokio::fs::create_dir_all(&install_path)
-        .await
-        .map_err(|e| format!("Failed to create directory: {}", e))?;
-
-    let mut file = tokio::fs::File::create(&temp_file)
-        .await
-        .map_err(|e| format!("Failed to create temp file: {}", e))?;
-    let mut archive_guard = DownloadTempGuard::new(temp_file.clone());
-
-    let mut downloaded: u64 = 0;
-    let mut stream = response.bytes_stream();
-
-    while let Some(chunk) = tokio::time::timeout(JAVA_INACTIVITY_TIMEOUT, stream.next())
-        .await
-        .map_err(|_| "Java download stalled while waiting for data".to_string())?
-    {
-        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
-        if downloaded
-            .checked_add(chunk.len() as u64)
-            .ok_or_else(|| "Java download size overflow".to_string())?
-            > MAX_JAVA_ARCHIVE_BYTES
-        {
-            return Err("Java archive exceeds the download size limit".to_string());
-        }
-        file.write_all(&chunk)
-            .await
-            .map_err(|e| format!("Write error: {}", e))?;
-        downloaded += chunk.len() as u64;
-
-        let progress = if total > 0 {
-            ((downloaded as f64 / total as f64) * 100.0) as u32
-        } else {
-            0
-        };
-        let _ = app.emit(
-            "java-download-progress",
-            serde_json::json!({ "progress": progress }),
-        );
-    }
-
-    file.flush()
-        .await
-        .map_err(|e| format!("Flush error: {}", e))?;
-    drop(file);
-
-    // 2. 展開
-    let install = install_path.to_string_lossy().to_string();
-    let temp = temp_file.to_string_lossy().to_string();
+    let install = staging_dir.to_string_lossy().to_string();
+    let temp = verified.path.to_string_lossy().to_string();
     let atype = archive_type.to_string();
 
     let extraction_result = tokio::task::spawn_blocking(move || {
@@ -321,14 +447,22 @@ pub async fn download_java(app: AppHandle, major_version: u16) -> Result<String,
     .await
     .map_err(|e| format!("Task join error: {}", e))?;
 
-    // 一時ファイル削除
-    if extraction_result.is_ok() {
-        if tokio::fs::remove_file(&temp_file).await.is_ok() {
-            archive_guard.disarm();
-        }
-    }
-
-    extraction_result
+    let extracted_java_home = extraction_result?;
+    let extracted_java_home = PathBuf::from(extracted_java_home);
+    let relative_java_home = extracted_java_home
+        .strip_prefix(&staging_dir)
+        .map_err(|_| "Java extraction returned a path outside staging".to_string())?
+        .to_path_buf();
+    tokio::fs::remove_file(&verified.path)
+        .await
+        .map_err(|error| format!("Failed to remove verified Java archive: {error}"))?;
+    archive_guard.disarm();
+    replace_java_install_preserving_existing(&staging_dir, &install_path, &managed_root)?;
+    staging_guard.disarm();
+    Ok(install_path
+        .join(relative_java_home)
+        .to_string_lossy()
+        .to_string())
 }
 
 #[cfg(test)]

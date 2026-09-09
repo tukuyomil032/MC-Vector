@@ -4,11 +4,13 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_store::StoreExt;
 use tokio::io::AsyncWriteExt;
+use uuid::Uuid;
 
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
+use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
 const USER_AGENT: &str = "MC-Vector/2.0.61 (https://github.com/tukuyomil032/MC-Vector)";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
@@ -61,6 +63,13 @@ pub struct PluginArtifactRequest {
 pub struct ExpectedChecksum {
     pub algorithm: String,
     pub value: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct VerifiedArtifact {
+    pub path: PathBuf,
+    pub sha256: String,
+    pub size: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -226,6 +235,16 @@ fn validated_checksum(checksum: &ExpectedChecksum) -> Result<(ChecksumAlgorithm,
     Ok((algorithm, value))
 }
 
+fn required_sha256(checksum: Option<ExpectedChecksum>) -> Result<String, String> {
+    let checksum = checksum
+        .ok_or_else(|| "Verified artifact installation requires a SHA-256 checksum".to_string())?;
+    if !checksum.algorithm.trim().eq_ignore_ascii_case("sha256") {
+        return Err("Verified artifact installation requires a SHA-256 checksum".to_string());
+    }
+    let (_, value) = validated_checksum(&checksum)?;
+    Ok(value)
+}
+
 fn validate_https_url(url: &str, allowed_hosts: Option<&[&str]>) -> Result<Url, String> {
     if url.chars().any(char::is_control) {
         return Err("Download URL contains control characters".to_string());
@@ -286,7 +305,11 @@ fn temporary_path(destination: &Path, attempt: usize) -> PathBuf {
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("download");
-    destination.with_file_name(format!(".{name}.part-{}-{attempt}", std::process::id()))
+    destination.with_file_name(format!(
+        ".{name}.part-{}-{attempt}-{}",
+        std::process::id(),
+        Uuid::new_v4()
+    ))
 }
 
 fn managed_servers_root(app_data_dir: &Path) -> Result<PathBuf, String> {
@@ -336,34 +359,56 @@ async fn replace_destination(
     {
         return Err("Download directories must remain inside managed storage".to_string());
     }
-    if let Ok(metadata) = tokio::fs::symlink_metadata(destination).await {
-        if is_link_or_reparse_point(&metadata) {
+    match tokio::fs::symlink_metadata(destination).await {
+        Ok(metadata) if is_link_or_reparse_point(&metadata) => {
             return Err(
                 "Download destination must not be a symbolic link or reparse point".to_string(),
-            );
+            )
         }
-    }
-    match tokio::fs::rename(temp, destination).await {
-        Ok(()) => Ok(()),
-        Err(initial) => match tokio::fs::symlink_metadata(destination).await {
-            Ok(metadata) if !is_link_or_reparse_point(&metadata) && metadata.is_file() => {
-                tokio::fs::remove_file(destination)
-                    .await
-                    .map_err(|error| format!("Failed to replace existing destination: {error}"))?;
-                tokio::fs::rename(temp, destination).await.map_err(|error| {
-                    format!(
-                        "Failed to atomically move downloaded file: {error}; initial error: {initial}"
-                    )
-                })
+        Ok(metadata) if !metadata.is_file() => {
+            return Err("Download destination is not a regular file".to_string())
+        }
+        Ok(_) => {
+            let destination_name = destination
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("download");
+            let rollback = destination
+                .with_file_name(format!(".{destination_name}.rollback-{}", Uuid::new_v4()));
+            tokio::fs::rename(destination, &rollback)
+                .await
+                .map_err(|error| {
+                    format!("Failed to stage existing download destination: {error}")
+                })?;
+            match tokio::fs::rename(temp, destination).await {
+                Ok(()) => {
+                    // Keeping the rollback file is safe if cleanup fails: the new verified
+                    // artifact is already installed and the previous bytes remain recoverable.
+                    let _ = tokio::fs::remove_file(&rollback).await;
+                    Ok(())
+                }
+                Err(install_error) => {
+                    let recovery = tokio::fs::rename(&rollback, destination).await;
+                    if recovery.is_ok() {
+                        Err(format!(
+                            "Failed to install verified artifact; existing destination restored: {install_error}"
+                        ))
+                    } else {
+                        Err(format!(
+                            "Failed to install verified artifact and restore existing destination; manual recovery required: {install_error}"
+                        ))
+                    }
+                }
             }
-            Ok(_) => Err("Download destination is not a regular file".to_string()),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Err(format!(
-                "Failed to atomically move downloaded file: {initial}"
-            )),
-            Err(error) => Err(format!(
-                "Failed to inspect existing download destination: {error}"
-            )),
-        },
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            tokio::fs::rename(temp, destination)
+                .await
+                .map_err(|error| format!("Failed to atomically move downloaded file: {error}"))
+        }
+        Err(error) => Err(format!(
+            "Failed to inspect existing download destination: {error}"
+        )),
     }
 }
 
@@ -373,6 +418,7 @@ async fn download_once<F>(
     destination: &Path,
     managed_root: &Path,
     checksum: Option<&ExpectedChecksum>,
+    expected_size: Option<u64>,
     max_bytes: u64,
     mut report: F,
 ) -> Result<(), String>
@@ -407,6 +453,13 @@ where
     if total > max_bytes {
         return Err(format!("Download exceeds the {max_bytes}-byte limit"));
     }
+    if let Some(expected_size) = expected_size {
+        if total != 0 && total != expected_size {
+            return Err(format!(
+                "Download size mismatch: expected {expected_size} bytes, got {total}"
+            ));
+        }
+    }
     let mut hasher = checksum
         .map(validated_checksum)
         .transpose()?
@@ -418,7 +471,10 @@ where
             );
         }
     }
-    let mut file = tokio::fs::File::create(destination)
+    let mut file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(destination)
         .await
         .map_err(|error| format!("Failed to create temporary file: {error}"))?;
     let mut stream = response.bytes_stream();
@@ -449,6 +505,13 @@ where
     file.sync_all()
         .await
         .map_err(|error| format!("Failed to sync temporary file: {error}"))?;
+    if let Some(expected_size) = expected_size {
+        if downloaded != expected_size {
+            return Err(format!(
+                "Download size mismatch: expected {expected_size} bytes, got {downloaded}"
+            ));
+        }
+    }
     if let (Some(checksum), Some(hasher)) = (checksum, hasher) {
         let (_, expected) = validated_checksum(checksum)?;
         let actual = hasher.finalize();
@@ -466,6 +529,7 @@ async fn download_with_retry<F>(
     destination: PathBuf,
     managed_root: &Path,
     checksum: Option<ExpectedChecksum>,
+    expected_size: Option<u64>,
     max_bytes: u64,
     allowed_hosts: Option<&[&str]>,
     mut report: F,
@@ -499,6 +563,7 @@ where
             &temp,
             managed_root,
             checksum.as_ref(),
+            expected_size,
             max_bytes,
             &mut report,
         )
@@ -523,6 +588,61 @@ where
         }
     }
     Err(last_error)
+}
+
+pub async fn download_verified_artifact<F>(
+    url: &str,
+    staging_hint: &Path,
+    managed_root: &Path,
+    expected_sha256: &str,
+    expected_size: Option<u64>,
+    max_bytes: u64,
+    allowed_hosts: Option<&[&str]>,
+    report: F,
+) -> Result<VerifiedArtifact, String>
+where
+    F: FnMut(u64, u64) -> Result<(), String>,
+{
+    let url = validate_https_url(url, allowed_hosts)?;
+    let checksum = ExpectedChecksum {
+        algorithm: "sha256".to_string(),
+        value: expected_sha256.to_string(),
+    };
+    let (_, normalized_sha256) = validated_checksum(&checksum)?;
+    let staging = staging_hint.with_file_name(format!(
+        ".{}-verified-{}.part",
+        staging_hint
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("artifact"),
+        Uuid::new_v4()
+    ));
+
+    download_with_retry(
+        url,
+        staging.clone(),
+        managed_root,
+        Some(checksum),
+        expected_size,
+        max_bytes,
+        allowed_hosts,
+        report,
+    )
+    .await
+    .map_err(|error| {
+        let _ = std::fs::remove_file(&staging);
+        error
+    })?;
+
+    let size = tokio::fs::metadata(&staging)
+        .await
+        .map_err(|error| format!("Failed to inspect verified artifact: {error}"))?
+        .len();
+    Ok(VerifiedArtifact {
+        path: staging,
+        sha256: normalized_sha256,
+        size,
+    })
 }
 
 fn validate_event_id(event_id: &str) -> Result<String, String> {
@@ -738,6 +858,7 @@ pub async fn download_plugin_artifact(
         destination,
         &managed_root,
         request.checksum,
+        None,
         MAX_PLUGIN_DOWNLOAD_BYTES,
         Some(hosts),
         |downloaded, total| {
@@ -755,15 +876,20 @@ pub struct ServerJarDownloadRequest {
     pub relative_path: String,
     pub url: String,
     pub checksum: Option<ExpectedChecksum>,
+    pub expected_size: Option<u64>,
 }
 
 #[tauri::command]
 pub async fn download_server_jar(
     app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
     request: ServerJarDownloadRequest,
 ) -> Result<(), String> {
     let url = validate_https_url(&request.url, Some(SERVER_JAR_HOSTS))?;
     let server_id = validate_server_id(&request.server_id)?;
+    let _operation = operations
+        .acquire(&server_id, OperationKind::ArtifactInstall)
+        .await?;
     let jar_path = Path::new(request.relative_path.trim());
     let components = jar_path.components().collect::<Vec<_>>();
     if jar_path.is_absolute()
@@ -808,13 +934,23 @@ pub async fn download_server_jar(
     tokio::fs::create_dir_all(parent)
         .await
         .map_err(|error| format!("Failed to create directory: {error}"))?;
+    let normalized_checksum = required_sha256(request.checksum)?;
     let progress_app = app.clone();
     let progress_server_id = server_id.clone();
-    download_with_retry(
-        url,
-        destination,
+    let staging = destination.with_file_name(format!(
+        ".{}.verified-{}",
+        destination
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("server.jar"),
+        Uuid::new_v4()
+    ));
+    let verified = download_verified_artifact(
+        url.as_str(),
+        &staging,
         &managed_root,
-        request.checksum,
+        &normalized_checksum,
+        request.expected_size,
         MAX_SERVER_JAR_BYTES,
         Some(SERVER_JAR_HOSTS),
         move |downloaded, total| {
@@ -836,6 +972,7 @@ pub async fn download_server_jar(
         },
     )
     .await?;
+    replace_destination(&verified.path, &destination, &managed_root).await?;
     app.emit(
         "download-progress",
         serde_json::json!({
@@ -1014,6 +1151,7 @@ mod tests {
             destination,
             managed_root,
             checksum,
+            None,
             max_bytes,
             None,
             |_, _| Ok(()),
@@ -1311,6 +1449,19 @@ mod tests {
             .is_err());
         }
         assert!(ChecksumAlgorithm::parse("md5").is_err());
+    }
+
+    #[test]
+    fn executable_artifacts_require_sha256() {
+        assert!(required_sha256(None).is_err());
+        assert!(required_sha256(Some(ExpectedChecksum {
+            algorithm: "sha1".to_string(),
+            value: "0".repeat(40),
+        }))
+        .is_err());
+        let checksum = test_checksum("sha256", b"artifact");
+        let expected = checksum.value.clone();
+        assert_eq!(required_sha256(Some(checksum)).unwrap(), expected);
     }
 
     #[test]
