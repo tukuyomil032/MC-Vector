@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
-const USER_AGENT: &str = "MC-Vector/2.0.61 (https://github.com/tukuyomil032/MC-Vector)";
+const USER_AGENT: &str = "MC-Vector/2.0.62 (https://github.com/tukuyomil032/MC-Vector)";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_ATTEMPTS: usize = 2;
