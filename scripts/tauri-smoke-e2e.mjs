@@ -41,6 +41,10 @@ function describeError(error) {
   return error instanceof Error ? (error.stack ?? error.message) : String(error);
 }
 
+function errorFingerprint(error) {
+  return createHash('sha256').update(describeError(error)).digest('hex').slice(0, 12);
+}
+
 function platformBinaryPath(root) {
   return path.join(root, 'src-tauri', 'target', 'debug', isWindows ? 'mc-vector.exe' : 'mc-vector');
 }
@@ -936,7 +940,7 @@ async function main() {
 
 main().catch((error) => {
   console.error(
-    `[real-tauri-e2e] failed: ${describeError(error)}; inspect retained diagnostics for details`,
+    `[real-tauri-e2e] failed (error ${errorFingerprint(error)}); inspect retained diagnostics for details`,
   );
   process.exitCode = 1;
 });
