@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "jsx-a11y", "vitest", "node", "typescript", "unicorn", "oxc"],
+  "rules": {
+    "react/exhaustive-deps": "warn",
+    "typescript/no-non-null-assertion": "warn",
+    "react/no-array-index-key": "warn",
+    "react/refs": "off",
+    "react/no-did-update-set-state": "off",
+    "react/immutability": "off",
+    "react/incompatible-library": "off",
+    "react/set-state-in-effect": "off",
+    "react/preserve-manual-memoization": "off",
+    "react/use-memo": "off",
+    "react/purity": "off",
+    "jsx-a11y/no-static-element-interactions": "off",
+    "jsx-a11y/interactive-supports-focus": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/require-to-throw-message": "off",
+    "vitest/valid-expect": "off",
+    "vitest/expect-expect": "off",
+    "unicorn/no-array-for-each": "off",
+    "jsx-a11y/label-has-associated-control": "off",
+    "react/button-has-type": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "jsx-a11y/click-events-have-key-events": "off"
+  },
+  "env": {
+    "builtin": true
+  }
+}

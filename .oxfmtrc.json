@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "ignorePatterns": [
+    "**/*.md",
+    "**/*.mdx",
+    "**/*.yml",
+    "**/*.yaml",
+    ".github/**",
+    ".agents/**",
+    ".claude/**",
+    "spec/**",
+    "src-tauri/**",
+    "docs/src/content/docs/**",
+    "docs/public/**",
+    "dist/**",
+    "build/**"
+  ]
+}
