@@ -37,6 +37,10 @@ function logStep(message) {
   console.log(`[real-tauri-e2e] ${message}`);
 }
 
+function describeError(error) {
+  return error instanceof Error ? (error.stack ?? error.message) : String(error);
+}
+
 function platformBinaryPath(root) {
   return path.join(root, 'src-tauri', 'target', 'debug', isWindows ? 'mc-vector.exe' : 'mc-vector');
 }
@@ -901,7 +905,7 @@ async function main() {
     await stopProcess(failureDriver?.child);
     await stopProcess(normalDriver?.child);
     await artifactFixture?.close().catch((error) => {
-      console.error(`Failed to close real Tauri E2E artifact fixture: ${error}`);
+      console.error(`Failed to close real Tauri E2E artifact fixture: ${describeError(error)}`);
     });
     if (!succeeded) {
       console.error(`Real Tauri E2E failed; retained diagnostics at ${testRoot}`);
@@ -922,15 +926,17 @@ async function main() {
     } else {
       try {
         rmSync(testRoot, { recursive: true, force: true });
-      } catch {
-        console.error(`Real Tauri E2E cleanup failed for ${testRoot}`);
+      } catch (error) {
+        console.error(`Real Tauri E2E cleanup failed for ${testRoot}: ${describeError(error)}`);
         process.exitCode = 1;
       }
     }
   }
 }
 
-main().catch(() => {
-  console.error('[real-tauri-e2e] failed; inspect retained diagnostics for details');
+main().catch((error) => {
+  console.error(
+    `[real-tauri-e2e] failed: ${describeError(error)}; inspect retained diagnostics for details`,
+  );
   process.exitCode = 1;
 });
