@@ -26,7 +26,11 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'HOST=127.0.0.1 VITE_PLAYWRIGHT=true pnpm dev:plain',
+    command: 'bun run dev:plain',
+    env: {
+      HOST: '127.0.0.1',
+      VITE_PLAYWRIGHT: 'true',
+    },
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
