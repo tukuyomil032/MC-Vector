@@ -11,6 +11,7 @@ on:
       - tests/**
       - docs/src/**
       - docs/scripts/**
+      - scripts/**
       - public/**
       - package.json
       - pnpm-lock.yaml
@@ -18,6 +19,7 @@ on:
       - .oxlintrc.json
       - .oxfmtrc.json
       - lefthook.yml
+      - justfile
       - index.html
       - postcss.config.js
       - tailwind.config.js
