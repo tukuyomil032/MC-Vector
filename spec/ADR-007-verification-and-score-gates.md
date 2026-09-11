@@ -52,9 +52,9 @@ checkout; they do not substitute for Windows or release-signing evidence.
 | --- | --- | --- |
 | `pnpm test` | 42 files and 395 tests passed | Renderer and unit behavior |
 | `pnpm typecheck:tests` | Passed | TypeScript test sources |
-| `pnpm check` | Passed | Biome checks for `src/` and `tests/` |
+| `pnpm check` | Passed | Oxlint and Oxfmt checks for configured source paths |
 | `pnpm build` | Passed | Vite production frontend build |
-| `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | Passed | Rust formatting |
+| `pnpm rustfmt:check` | Passed | Rust formatting |
 | `cargo test --manifest-path src-tauri/Cargo.toml --quiet` | 100 passed, 1 ignored | Rust implementation and temporary-files tests |
 | `pnpm e2e` | 54 passed | Mock Tauri UI regression suite |
 | `pnpm test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
