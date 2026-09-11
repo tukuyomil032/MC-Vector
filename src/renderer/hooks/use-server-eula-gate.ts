@@ -132,13 +132,14 @@ export function useServerEulaGate(): UseServerEulaGateResult {
     clearPendingRequest();
   }, [clearPendingRequest]);
 
-  useEffect(() => {
-    return () => {
-      pendingRequestRef.current?.resolve('cancelled');
-      pendingRequestRef.current = null;
-      requestsRef.current.clear();
-    };
+  const dispose = useCallback(() => {
+    const pendingRequest = pendingRequestRef.current;
+    pendingRequest?.resolve('cancelled');
+    pendingRequestRef.current = null;
+    requestsRef.current.clear();
   }, []);
+
+  useEffect(() => dispose, [dispose]);
 
   return {
     pendingEula,

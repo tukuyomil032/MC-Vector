@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
@@ -92,11 +92,7 @@ export default function UsersView({ server }: Props) {
     setTimeout(() => loadAllLists(), 500);
   };
 
-  useEffect(() => {
-    loadAllLists();
-  }, [server.path]);
-
-  const loadAllLists = async () => {
+  const loadAllLists = useCallback(async () => {
     const [whitelistData, opsData, bannedPlayersData, bannedIpsData] = await Promise.all([
       readJsonFile(`${server.path}${sep}whitelist.json`) as Promise<PlayerEntry[] | null>,
       readJsonFile(`${server.path}${sep}ops.json`) as Promise<PlayerEntry[] | null>,
@@ -108,7 +104,11 @@ export default function UsersView({ server }: Props) {
     setOps(opsData || []);
     setBannedPlayers(bannedPlayersData || []);
     setBannedIps(bannedIpsData || []);
-  };
+  }, [sep, server.path]);
+
+  useEffect(() => {
+    void loadAllLists();
+  }, [loadAllLists]);
 
   const handleAdd = async (type: ListType, nameOrIp: string) => {
     if (!nameOrIp) {
@@ -348,8 +348,8 @@ function UserListCard({
         {data.length === 0 ? (
           <div className="users-view__empty">{emptyLabel}</div>
         ) : (
-          data.map((item, idx) => (
-            <div key={idx} className="users-view__item">
+          data.map((item) => (
+            <div key={`${type}:${item.uuid ?? item.ip ?? item.name}`} className="users-view__item">
               <div className="users-view__item-main">
                 {type !== 'banned-ips' && (
                   <img

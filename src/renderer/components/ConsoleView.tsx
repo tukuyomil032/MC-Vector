@@ -827,7 +827,13 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                 <div className="console-view__log-line-content break-words">
                   {(() => {
                     const severityStyle = getSeverityStyle(entry.level);
-                    return entry.segments.map((seg, i) => {
+                    const segmentKeyCounts = new Map<string, number>();
+
+                    return entry.segments.map((seg) => {
+                      const segmentKeyBase = `${seg.text}:${JSON.stringify(seg.style)}`;
+                      const segmentOccurrence = segmentKeyCounts.get(segmentKeyBase) ?? 0;
+                      segmentKeyCounts.set(segmentKeyBase, segmentOccurrence + 1);
+                      const segmentKey = `${segmentKeyBase}:${segmentOccurrence}`;
                       const style = { ...seg.style } as AnsiStyle;
                       if (severityStyle) {
                         if (!style.color) {
@@ -838,7 +844,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
                       if (!normalizedSearchQuery || !activeSearchRegex) {
                         return (
-                          <span key={i} style={style}>
+                          <span key={segmentKey} style={style}>
                             {seg.text}
                           </span>
                         );
@@ -864,7 +870,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                         const end = start + matchedText.length;
                         if (start > cursor) {
                           renderedParts.push(
-                            <span key={`${i}-${sequence}-text`}>
+                            <span key={`${segmentKey}-${sequence}-text`}>
                               {seg.text.slice(cursor, start)}
                             </span>,
                           );
@@ -877,7 +883,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                         const isActive = currentMatchIndex === activeMatchIndex;
                         renderedParts.push(
                           <mark
-                            key={`${i}-${sequence}-match`}
+                            key={`${segmentKey}-${sequence}-match`}
                             ref={(element) => {
                               matchRefs.current[refKey] = element;
                             }}
@@ -892,12 +898,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
                       if (cursor < seg.text.length) {
                         renderedParts.push(
-                          <span key={`${i}-${sequence}-tail`}>{seg.text.slice(cursor)}</span>,
+                          <span key={`${segmentKey}-${sequence}-tail`}>
+                            {seg.text.slice(cursor)}
+                          </span>,
                         );
                       }
 
                       return (
-                        <span key={i} style={style}>
+                        <span key={segmentKey} style={style}>
                           {renderedParts}
                         </span>
                       );

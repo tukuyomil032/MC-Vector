@@ -24,8 +24,8 @@
     padding: 1.5rem;
     --tw-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
     --tw-shadow-colored: 0 20px 50px var(--tw-shadow-color);
-    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
-      var(--tw-shadow);
+    box-shadow:
+      var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
     width: min(680px, calc(100vw - 2rem));
     font-family: var(--mv-font-display);
     border-color: var(--mv-border-soft);

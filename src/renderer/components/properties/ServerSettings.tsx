@@ -274,6 +274,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     onOpenNgrokGuide();
   };
 
+  const tunnelLogKeys = new Map<string, number>();
+
   return (
     <div
       className="server-settings box-border h-full overflow-y-auto p-8 max-[980px]:p-4"
@@ -750,11 +752,19 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
 
               <div className="server-settings__log-panel">
                 {tunnelLog.length === 0 && <div>{t('serverSettings.ngrok.ready')}</div>}
-                {tunnelLog.map((line, i) => (
-                  <div key={i} className="server-settings__log-line">
-                    {line}
-                  </div>
-                ))}
+                {tunnelLog.map((line) => {
+                  const occurrence = tunnelLogKeys.get(line) ?? 0;
+                  tunnelLogKeys.set(line, occurrence + 1);
+
+                  return (
+                    <div
+                      key={JSON.stringify([line, occurrence])}
+                      className="server-settings__log-line"
+                    >
+                      {line}
+                    </div>
+                  );
+                })}
                 <div ref={logEndRef} />
               </div>
             </div>

@@ -85,8 +85,8 @@
   transition: background 0.1s;
 }
 
-.cmd-palette__item[data-selected="true"],
-.cmd-palette__item[aria-selected="true"] {
+.cmd-palette__item[data-selected='true'],
+.cmd-palette__item[aria-selected='true'] {
   background: rgba(88, 101, 242, 0.2);
   color: #fff;
 }

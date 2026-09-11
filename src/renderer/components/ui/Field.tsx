@@ -21,20 +21,17 @@ export const fieldVariants = cva(
 );
 
 export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement>,
-    VariantProps<typeof fieldVariants> {
+  extends React.InputHTMLAttributes<HTMLInputElement>, VariantProps<typeof fieldVariants> {
   variant?: FieldVariant;
 }
 
 export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-    VariantProps<typeof fieldVariants> {
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement>, VariantProps<typeof fieldVariants> {
   variant?: FieldVariant;
 }
 
 export interface NativeSelectProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement>,
-    VariantProps<typeof fieldVariants> {
+  extends React.SelectHTMLAttributes<HTMLSelectElement>, VariantProps<typeof fieldVariants> {
   variant?: FieldVariant;
 }
 

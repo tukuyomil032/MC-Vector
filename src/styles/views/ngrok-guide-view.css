@@ -165,7 +165,12 @@
     border-radius: 0.25rem;
     border-width: 1px;
     padding: 0.625rem;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     --tw-text-opacity: 1;
     color: rgb(161 161 170 / var(--tw-text-opacity, 1));
     border-color: #27272a;

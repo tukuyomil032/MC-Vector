@@ -184,7 +184,7 @@
   }
 
   .backup-selector-window__node-checkbox::before {
-    content: "";
+    content: '';
     width: 0.58rem;
     height: 0.58rem;
     transform: scale(0);
@@ -229,7 +229,12 @@
 
   .backup-selector-window__size {
     padding-right: 0.5rem;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 0.75rem;
     line-height: 1rem;
     --tw-text-opacity: 1;

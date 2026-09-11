@@ -88,11 +88,7 @@ export default function PropertiesView({ server }: Props) {
     };
 
     loadProperties();
-  }, [propFilePath, server.port]);
-
-  useEffect(() => {
-    // Advanced settings changes are now handled inline, no separate window IPC needed
-  }, [showToast]);
+  }, [propFilePath, server.port, t]);
 
   const matchesSearch = useMemo(() => {
     if (!searchQuery.trim()) return (_key: string) => true;
