@@ -28,6 +28,7 @@ Calling out non-goals helps reviewers understand the intended boundaries.
 ### Automated checks
 
 - [ ] `pnpm check`
+- [ ] `pnpm rustfmt:check`
 - [ ] `pnpm test`
 - [ ] `pnpm build`
 - [ ] `cd src-tauri && cargo test`

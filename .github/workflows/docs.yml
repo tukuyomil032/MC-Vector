@@ -11,7 +11,9 @@ on:
       - 'docs/astro.config.mjs'
       - 'docs/typedoc.json'
       - 'docs/package.json'
-      - 'docs/biome.json'
+      - '.oxlintrc.json'
+      - '.oxfmtrc.json'
+      - 'lefthook.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -40,7 +42,7 @@ jobs:
           version: 10.26.2
 
       - name: Install docs dependencies
-        run: pnpm install --filter @mc-vector/docs...
+        run: pnpm install --filter @mc-vector/docs... --frozen-lockfile
 
       - name: Build TypeDoc + Astro
         run: pnpm --filter @mc-vector/docs build:full

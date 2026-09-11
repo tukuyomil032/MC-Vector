@@ -13,9 +13,6 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 10
     ignore:
-      - dependency-name: '@biomejs/biome'
-        update-types:
-          - 'version-update:semver-major'
       - dependency-name: 'tailwindcss'
         update-types:
           - 'version-update:semver-major'
