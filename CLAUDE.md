@@ -8,7 +8,7 @@ MC-Vector is a cross-platform desktop app (Tauri v2 + React 19 + TypeScript) for
 
 The hardening ADR suite is indexed by `spec/ADR-000-index.md`, which is the canonical specification for security, reliability, IPC integration, and real Tauri smoke E2E work.
 
-After any refactor: run `pnpm build` and confirm it succeeds before finishing.
+After any refactor: run `bun run build` and confirm it succeeds before finishing.
 
 ## Architecture
 

@@ -106,10 +106,10 @@ At startup and through an explicit repair command:
 
 ```bash
 cargo test --quiet
-pnpm test
-pnpm typecheck:tests
-pnpm build
-pnpm e2e
+bun run test
+bun run typecheck:tests
+bun run build
+bun run e2e
 ```
 
 Required tests include manual retention protection, automatic retention, same-second naming collision, catalog corruption recovery, missing archive recovery, automatic backup synchronization, and failed replacement with the old destination intact.

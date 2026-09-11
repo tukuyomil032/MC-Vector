@@ -20,7 +20,7 @@ Thanks for your interest in improving MC-Vector. This guide explains how to set 
 ### Requirements
 
 - Node.js 20.19+ or 22.12+ (Node.js 22 is recommended)
-- pnpm 10.26.2
+- Bun 1.4.2
 - Rust 1.77.2 or later
 - The platform dependencies required by Tauri
 
@@ -33,17 +33,17 @@ Thanks for your interest in improving MC-Vector. This guide explains how to set 
    ```
 2. Install JavaScript dependencies:
    ```bash
-   pnpm install
+   bun install
    ```
 3. Start the application during development:
    ```bash
-   pnpm tauri:dev
+   bun run tauri:dev
    ```
 
 For manual QA of the packaged debug application, build a debug bundle instead of using the development server:
 
 ```bash
-pnpm tauri:build:debug
+bun run tauri:build:debug
 ```
 
 Development builds use the isolated bundle identifier `com.tukuyomi032.mcvector.debug`
@@ -103,28 +103,28 @@ Prefer one commit per logical task. Do not add a `Co-Authored-By` trailer unless
 When migrating another checkout or updating the project toolchain, use the following order:
 
 ```bash
-pnpm add -D oxlint oxfmt -w
-pnpm exec oxfmt --migrate=biome
+bun add -d oxlint oxfmt
+bunx --no-install oxfmt --migrate=biome
 # Review .oxlintrc.json and map the existing lint rules and plugins manually.
 # Update package scripts, Lefthook, CI workflows, and documentation.
-pnpm exec oxfmt
-pnpm lint
-pnpm rustfmt:check
-pnpm test
-pnpm build
+bun run fmt
+bun run lint
+bun run rustfmt:check
+bun run test
+bun run build
 ```
 
 Oxfmt can migrate formatter settings from Biome, but lint rules and plugins must be reviewed manually because Oxlint and Biome do not share the same configuration format. Remove the old Biome configuration and dependency only after the new checks pass.
 
-This migration keeps pnpm `10.26.2` as the supported package manager and workspace runner. Migrating from pnpm to Bun is out of scope and should be handled in a separate pull request.
+The repository uses Bun `1.4.2` as its package manager and workspace runner. Keep the root `package.json` workspace definition and `bun.lock` synchronized when changing dependencies.
 
 Before opening a pull request, run the checks relevant to the change. For a full local validation:
 
 ```bash
-pnpm check
-pnpm rustfmt:check
-pnpm test
-pnpm build
+bun run check
+bun run rustfmt:check
+bun run test
+bun run build
 (cd src-tauri && cargo test)
 git diff --check
 ```
@@ -132,7 +132,7 @@ git diff --check
 For UI changes, also perform manual verification in the packaged debug application when possible:
 
 ```bash
-pnpm tauri:build:debug
+bun run tauri:build:debug
 ```
 
 Record manual test steps, platform details, and any known limitations in the pull request description.

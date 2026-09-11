@@ -155,9 +155,9 @@ Add Rust tests for concurrent start, stale watcher removal, backup/restore/file-
 
 ```bash
 cargo test --quiet
-pnpm test
-pnpm typecheck:tests
-pnpm build
+bun run test
+bun run typecheck:tests
+bun run build
 ```
 
 ## Exit Criteria

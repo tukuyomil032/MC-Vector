@@ -27,11 +27,11 @@ Claims in reports must identify the highest evidence layer actually executed.
 Existing gates remain:
 
 ```bash
-pnpm test
-pnpm typecheck:tests
-pnpm build
-pnpm check
-pnpm e2e
+bun run test
+bun run typecheck:tests
+bun run build
+bun run check
+bun run e2e
 cargo test --quiet
 git diff --check
 ```
@@ -39,7 +39,7 @@ git diff --check
 The new focused native gate is:
 
 ```bash
-pnpm test:tauri:e2e
+bun run test:tauri:e2e
 ```
 
 ## Current macOS evidence
@@ -50,17 +50,17 @@ checkout; they do not substitute for Windows or release-signing evidence.
 
 | Gate | Result | Evidence boundary |
 | --- | --- | --- |
-| `pnpm test` | 42 files and 395 tests passed | Renderer and unit behavior |
-| `pnpm typecheck:tests` | Passed | TypeScript test sources |
-| `pnpm check` | Passed | Oxlint and Oxfmt checks for configured source paths |
-| `pnpm build` | Passed | Vite production frontend build |
-| `pnpm rustfmt:check` | Passed | Rust formatting |
+| `bun run test` | 42 files and 395 tests passed | Renderer and unit behavior |
+| `bun run typecheck:tests` | Passed | TypeScript test sources |
+| `bun run check` | Passed | Oxlint and Oxfmt checks for configured source paths |
+| `bun run build` | Passed | Vite production frontend build |
+| `bun run rustfmt:check` | Passed | Rust formatting |
 | `cargo test --manifest-path src-tauri/Cargo.toml --quiet` | 100 passed, 1 ignored | Rust implementation and temporary-files tests |
-| `pnpm e2e` | 54 passed | Mock Tauri UI regression suite |
-| `pnpm test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
-| `pnpm tauri:build:debug` | Passed | Unsigned packaged `MC-Vector Debug.app`; `CFBundleIdentifier` verified as `com.tukuyomi032.mcvector.debug` |
-| `pnpm check:workflow-actions` | Passed | All workflow action refs are commit-SHA pinned |
-| `pnpm test:provider:live` | Skipped locally: restricted network (1 test skipped) | Scheduled read-only provider canary; not local provider evidence |
+| `bun run e2e` | 54 passed | Mock Tauri UI regression suite |
+| `bun run test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
+| `bun run tauri:build:debug` | Passed | Unsigned packaged `MC-Vector Debug.app`; `CFBundleIdentifier` verified as `com.tukuyomi032.mcvector.debug` |
+| `bun run check:workflow-actions` | Passed | All workflow action refs are commit-SHA pinned |
+| `bun run test:provider:live` | Skipped locally: restricted network (1 test skipped) | Scheduled read-only provider canary; not local provider evidence |
 
 Computer Use also confirmed that the launched packaged application appeared
 as the separate `MC-Vector Debug` app with bundle identifier

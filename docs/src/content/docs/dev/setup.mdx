@@ -13,7 +13,7 @@ sidebar:
 | Tool        | Version            | Notes                             |
 | ----------- | ------------------ | --------------------------------- |
 | **Node.js** | v20.19+ or v22.12+ (v22 recommended) | [nodejs.org](https://nodejs.org/) |
-| **pnpm**    | v10.26.2           | `npm install -g pnpm@10.26.2`     |
+| **Bun**      | v1.4.2             | Version-pinned install below      |
 | **Rust**    | stable (1.77+)     | [rustup.rs](https://rustup.rs/)   |
 
 **macOS only:** Xcode Command Line Tools are required:
@@ -26,31 +26,36 @@ xcode-select --install
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-### 1. Install Node.js and pnpm
+### 1. Install Node.js and Bun
 
 <Tabs>
   <TabItem label="macOS">
     ```bash
     brew install node@22
-    npm install -g pnpm@10.26.2
+    curl -fsSL https://bun.com/install | bash -s "bun-v1.4.2"
+    bun --version
     ```
   </TabItem>
   <TabItem label="Linux (nvm)">
     ```bash
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
     nvm install 22
-    npm install -g pnpm@10.26.2
+    curl -fsSL https://bun.com/install | bash -s "bun-v1.4.2"
+    bun --version
     ```
   </TabItem>
   <TabItem label="Windows">
-    Download Node.js from [nodejs.org](https://nodejs.org/), then:
+    Download Node.js from [nodejs.org](https://nodejs.org/), then run this in PowerShell:
 
-    ```bash
-    npm install -g pnpm@10.26.2
+    ```powershell
+    iex "& {$(irm https://bun.com/install.ps1)} -Version 1.4.2"
+    bun --version
     ```
 
   </TabItem>
 </Tabs>
+
+Make sure Bun is available on your `PATH`. Node.js and Rust are still required for the Vite/Tauri toolchain, and each platform also needs the build tools listed in the Tauri prerequisites.
 
 ### 2. Install Rust
 
@@ -65,7 +70,7 @@ rustc --version
 ```bash
 git clone https://github.com/tukuyomil032/mc-vector.git
 cd mc-vector
-pnpm install
+bun install
 ```
 
 ## Development Workflow
@@ -73,7 +78,7 @@ pnpm install
 ### Frontend Only (browser)
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 Opens the Vite dev server at `https://mc-vector.localhost` via portless. Use this for UI-only work that doesn't require Rust backend functionality.
@@ -81,14 +86,14 @@ Opens the Vite dev server at `https://mc-vector.localhost` via portless. Use thi
 For a plain HTTP server without portless:
 
 ```bash
-pnpm dev:plain
+bun run dev:plain
 # → http://localhost:5173
 ```
 
 ### Full Desktop App
 
 ```bash
-pnpm tauri:dev
+bun run tauri:dev
 ```
 
 Starts both the Vite dev server and the Tauri desktop window. Required for any work involving Rust commands (server management, file operations, etc.). The development app is named `MC-Vector Debug` and uses bundle identifier `com.tukuyomi032.mcvector.debug`, keeping its application data and OS permissions separate from the release app.
@@ -96,19 +101,19 @@ Starts both the Vite dev server and the Tauri desktop window. Required for any w
 ### Before Committing
 
 ```bash
-pnpm lint       # Oxlint
-pnpm fmt        # Oxfmt
-pnpm check      # Oxlint + Oxfmt check
-pnpm check:fix  # Format and auto-fix lint issues
-pnpm rustfmt:check
+bun run lint       # Oxlint
+bun run fmt        # Oxfmt
+bun run check      # Oxlint + Oxfmt check
+bun run check:fix  # Format and auto-fix lint issues
+bun run rustfmt:check
 ```
 
-[Lefthook](https://github.com/evilmartians/lefthook) runs Oxfmt and Oxlint with staged JavaScript/TypeScript files and runs a check-only Rustfmt gate for staged Rust changes. Use `pnpm rustfmt` to apply Rust formatting explicitly.
+[Lefthook](https://github.com/evilmartians/lefthook) runs Oxfmt and Oxlint with staged JavaScript/TypeScript files and runs a check-only Rustfmt gate for staged Rust changes. Use `bun run rustfmt` to apply Rust formatting explicitly.
 
 ### Production Build
 
 ```bash
-pnpm tauri:build
+bun run tauri:build
 ```
 
 Artifacts are written to `src-tauri/target/release/bundle/`.
@@ -116,32 +121,32 @@ Artifacts are written to `src-tauri/target/release/bundle/`.
 ### Packaged Debug Build
 
 ```bash
-pnpm tauri:build:debug
+bun run tauri:build:debug
 ```
 
-This creates an unsigned debug build with the same isolated debug product name and bundle identifier as `pnpm tauri:dev`.
+This creates an unsigned debug build with the same isolated debug product name and bundle identifier as `bun run tauri:dev`.
 
 ## Commands Reference
 
 | Command                | Description                                        |
 | ---------------------- | -------------------------------------------------- |
-| `pnpm install`         | Install all dependencies                           |
-| `pnpm dev`             | Frontend dev server (HTTPS via portless)           |
-| `pnpm dev:plain`       | Raw Vite dev server at localhost:5173              |
-| `pnpm tauri:dev`       | Full desktop app in isolated debug mode            |
-| `pnpm build`           | Build frontend for production                      |
-| `pnpm tauri:build`     | Build production Tauri binary                      |
-| `pnpm tauri:build:debug` | Build unsigned isolated debug Tauri binary       |
-| `pnpm check`           | Run Oxlint + Oxfmt checks                         |
-| `pnpm check:fix`       | Format and auto-fix lint issues                   |
-| `pnpm lint`            | Run Oxlint                                         |
-| `pnpm lint:fix`        | Run Oxlint with auto-fix                          |
-| `pnpm fmt`             | Format code with Oxfmt                            |
-| `pnpm fmt:check`       | Check Oxfmt output without changes                |
-| `pnpm format`          | Compatibility alias for `pnpm fmt`                |
-| `pnpm rustfmt`         | Format Rust code (`cargo fmt`)                   |
-| `pnpm rustfmt:check`   | Check Rust formatting without changes             |
-| `pnpm clean:artifacts` | Delete `dist/`, build output, `node_modules/.vite` |
+| `bun install`                 | Install all dependencies                           |
+| `bun run dev`                 | Frontend dev server (HTTPS via portless)           |
+| `bun run dev:plain`           | Raw Vite dev server at localhost:5173              |
+| `bun run tauri:dev`           | Full desktop app in isolated debug mode            |
+| `bun run build`               | Build frontend for production                      |
+| `bun run tauri:build`         | Build production Tauri binary                      |
+| `bun run tauri:build:debug`   | Build unsigned isolated debug Tauri binary         |
+| `bun run check`               | Run Oxlint + Oxfmt checks                           |
+| `bun run check:fix`           | Format and auto-fix lint issues                     |
+| `bun run lint`                | Run Oxlint                                          |
+| `bun run lint:fix`            | Run Oxlint with auto-fix                            |
+| `bun run fmt`                 | Format code with Oxfmt                              |
+| `bun run fmt:check`           | Check Oxfmt output without changes                  |
+| `bun run format`              | Compatibility alias for `bun run fmt`              |
+| `bun run rustfmt`             | Format Rust code (`cargo fmt`)                      |
+| `bun run rustfmt:check`       | Check Rust formatting without changes               |
+| `bun run clean:artifacts`     | Delete `dist/`, build output, `node_modules/.vite` |
 
 ## Coding Conventions
 
@@ -164,7 +169,7 @@ Before opening a PR:
 
 ```bash
 # Frontend: lint + format check + build
-pnpm check && pnpm build
+bun run check && bun run build
 
 # Rust: format check + compile check + unit tests
 cd src-tauri && cargo check -q && cargo test -q
@@ -175,11 +180,11 @@ cd src-tauri && cargo check -q && cargo test -q
 **`https://mc-vector.localhost` not accessible:**
 
 ```bash
-pnpm exec portless trust
-pnpm exec portless hosts sync   # requires sudo
+bunx --no-install portless trust
+bunx --no-install portless hosts sync   # requires sudo
 ```
 
-Or use the plain dev server: `pnpm dev:plain`
+Or use the plain dev server: `bun run dev:plain`
 
 **Tauri build fails on macOS:**
 
@@ -190,12 +195,12 @@ xcode-select --install
 **Build errors after pulling:**
 
 ```bash
-pnpm clean:artifacts
-pnpm install
+bun run clean:artifacts
+bun install
 ```
 
 **Lefthook not running:**
 
 ```bash
-pnpm lefthook install
+bunx --no-install lefthook install
 ```

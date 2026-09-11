@@ -6,8 +6,8 @@
 
 version: 2
 updates:
-  # pnpm /
-  - package-ecosystem: 'npm'
+  # Bun / npm registry dependencies
+  - package-ecosystem: 'bun'
     directory: '/'
     schedule:
       interval: 'daily'

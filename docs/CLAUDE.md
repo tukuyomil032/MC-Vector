@@ -3,11 +3,11 @@
 ## Commands
 
 ```bash
-pnpm --filter @mc-vector/docs dev          # Dev server → http://localhost:4321
-pnpm --filter @mc-vector/docs build        # Production build → docs/dist/
-pnpm --filter @mc-vector/docs build:full   # TypeDoc + Astro full build
-pnpm --filter @mc-vector/docs preview      # Preview production build
-pnpm --filter @mc-vector/docs typedoc      # Regenerate TypeScript API docs
+bun run --filter @mc-vector/docs dev          # Dev server → http://localhost:4321
+bun run --filter @mc-vector/docs build        # Production build → docs/dist/
+bun run --filter @mc-vector/docs build:full   # TypeDoc + Astro full build
+bun run --filter @mc-vector/docs preview      # Preview production build
+bun run --filter @mc-vector/docs typedoc      # Regenerate TypeScript API docs
 ```
 
 ## Content Guidelines
@@ -32,7 +32,7 @@ pnpm --filter @mc-vector/docs typedoc      # Regenerate TypeScript API docs
 
 ## After changes
 
-Run `pnpm --filter @mc-vector/docs build` — catches broken links and build errors.
+Run `bun run --filter @mc-vector/docs build` — catches broken links and build errors.
 
 ## Deployment
 

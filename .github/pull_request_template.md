@@ -27,10 +27,10 @@ Calling out non-goals helps reviewers understand the intended boundaries.
 
 ### Automated checks
 
-- [ ] `pnpm check`
-- [ ] `pnpm rustfmt:check`
-- [ ] `pnpm test`
-- [ ] `pnpm build`
+- [ ] `bun run check`
+- [ ] `bun run rustfmt:check`
+- [ ] `bun run test`
+- [ ] `bun run build`
 - [ ] `cd src-tauri && cargo test`
 - [ ] `git diff --check`
 

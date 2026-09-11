@@ -15,7 +15,7 @@ Application signing, notarization, stapling, Authenticode, SBOM, provenance, and
 
 ## Current E2E boundary
 
-The existing `pnpm e2e` path is conceptually:
+The existing `bun run e2e` path is conceptually:
 
 ```text
 Playwright
@@ -42,7 +42,7 @@ The mock suite remains in place.
 Add an on-demand command:
 
 ```bash
-pnpm test:tauri:e2e
+bun run test:tauri:e2e
 ```
 
 The harness uses an unsigned local debug Tauri binary and `selenium-webdriver`. On macOS it uses the repository's existing debug-only `tauri-plugin-webdriver-automation` together with the free `tauri-wd` CLI. On Linux and Windows it uses Tauri's native WebDriver integration with `tauri-driver`. It does not require a certificate, notarization, paid service, or a cloud browser.
@@ -99,17 +99,17 @@ Add stable `data-testid` attributes only where the real smoke suite needs them. 
 Keep the existing fast checks for normal development:
 
 ```text
-pnpm test
-pnpm typecheck:tests
-pnpm build
+bun run test
+bun run typecheck:tests
+bun run build
 cargo test --quiet
-pnpm e2e
+bun run e2e
 ```
 
 Run the real Tauri suite locally before releases and after backup, restore, capability, or IPC changes. CI runs its unsigned macOS variant on pull requests and manual dispatch; Windows runs on the daily schedule or manual dispatch. The read-only provider canary also runs only on the daily schedule or manual dispatch:
 
 ```text
-pnpm test:tauri:e2e
+bun run test:tauri:e2e
 ```
 
 The pull-request macOS job is the required native boundary for this scope. Windows and
@@ -119,7 +119,7 @@ second operating system or on external provider availability.
 The provider canary is exposed as:
 
 ```bash
-pnpm test:provider:live
+bun run test:provider:live
 ```
 
 It performs read-only HTTPS, status, schema, and adapter-parse checks for Modrinth,
@@ -162,7 +162,7 @@ The expected result is no mutable action reference. Do not change the build matr
 ## Exit Criteria
 
 - Existing mock E2E remains green and fast.
-- `pnpm test:tauri:e2e` crosses React, Tauri IPC, Rust, and filesystem boundaries.
+- `bun run test:tauri:e2e` crosses React, Tauri IPC, Rust, and filesystem boundaries.
 - Backup and restore are verified through the real application.
 - Server lifecycle, managed files/import/settings, artifact installation, Java verification, and ngrok token handling are also verified through the real application.
 - The real suite uses only temporary test data.

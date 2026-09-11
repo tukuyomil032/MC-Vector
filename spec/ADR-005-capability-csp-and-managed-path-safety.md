@@ -104,11 +104,11 @@ The same single-file budget applies to managed text reads.
 ## Verification Plan
 
 ```bash
-pnpm check
-pnpm test
-pnpm build
+bun run check
+bun run test
+bun run build
 cargo test --quiet
-pnpm e2e
+bun run e2e
 ```
 
 Add tests for path traversal, symlink escape, Windows reparse points, aggregate import limits, cancellation, timeout, partial-import cleanup, capability overpermission, and release CSP policy.

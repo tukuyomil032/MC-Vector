@@ -15,8 +15,7 @@ on:
       - '.oxfmtrc.json'
       - 'lefthook.yml'
       - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
+      - 'bun.lock'
       - 'tsconfig.app.json'
       - 'src/lib/**'
       - 'src/store/**'
@@ -37,15 +36,15 @@ jobs:
         with:
           node-version: '22'
 
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
 
       - name: Install docs dependencies
-        run: pnpm install --filter @mc-vector/docs... --frozen-lockfile
+        run: bun ci
 
       - name: Build TypeDoc + Astro
-        run: pnpm --filter @mc-vector/docs build:full
+        run: bun run --filter @mc-vector/docs build:full
 
       - name: Prepare Vercel output
         run: |
@@ -57,4 +56,4 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DOCS }}
-        run: npx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: bunx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes

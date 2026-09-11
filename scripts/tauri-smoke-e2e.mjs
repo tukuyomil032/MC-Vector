@@ -365,7 +365,7 @@ async function createFixture(environment, identifier, testRoot) {
 
 async function buildDebugBinary(identifier, configPath, environment) {
   if (process.env.MC_VECTOR_TAURI_E2E_SKIP_BUILD !== '1') {
-    const pnpm = isWindows ? 'pnpm.cmd' : 'pnpm';
+    const bun = isWindows ? 'bun.exe' : 'bun';
     const buildEnvironment = {
       ...process.env,
       MC_VECTOR_E2E: '1',
@@ -375,8 +375,8 @@ async function buildDebugBinary(identifier, configPath, environment) {
       VITE_MC_VECTOR_E2E_PLUGIN_SHA256: environment.VITE_MC_VECTOR_E2E_PLUGIN_SHA256,
     };
     await runProcess(
-      pnpm,
-      ['exec', 'tauri', 'build', '--debug', '--no-bundle', '--no-sign', '--config', configPath],
+      bun,
+      ['run', 'tauri', 'build', '--debug', '--no-bundle', '--no-sign', '--config', configPath],
       { env: buildEnvironment },
     );
   }

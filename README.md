@@ -100,7 +100,7 @@ scoop bucket rm tukuyomil032
 ### For Developers
 
 - **Node.js** v20.19+ or v22.12+ (v22 recommended)
-- **pnpm** v10.26.2
+- **Bun** v1.4.2
 - **Rust** v1.77.2 or later
 
 Optional:
@@ -141,8 +141,8 @@ just dev-app  # Start Tauri app with dev server
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
 
-# Install dependencies (Node.js 20.19+ or 22.12+; pnpm 10.26.2, Rust required)
-pnpm install
+# Install dependencies (Bun 1.4.2; Node.js 20.19+ or 22.12+ and Rust required)
+bun install
 
 # Optional but recommended: Run full setup with portless
 just setup
@@ -150,21 +150,21 @@ just setup
 # Start development
 just dev-app
 # or
-pnpm tauri:dev
+bun run tauri:dev
 ```
 
 **What does `just setup` do?**
 
 `just setup` automates your development environment setup:
 
-1. 📦 Installs all project dependencies via `pnpm install`
+1. 📦 Installs all project dependencies via `bun install`
 2. ✅ Runs all quality checks (lint, format, rustfmt)
 3. 🔒 Configures portless CA certificate for HTTPS development (may require system password)
 4. 🌐 Adds `mc-vector.localhost` to your hosts file for local HTTPS access
    - Windows: `C:\Windows\System32\drivers\etc\hosts` (**requires Administrator**)
    - macOS/Linux: `/etc/hosts` (**requires sudo password**)
 
-**Note:** Steps 3-4 are for portless HTTPS development and are optional. If you skip these steps, you can still develop using `pnpm tauri:dev` with standard `http://localhost:5173`.
+**Note:** Steps 3-4 are for portless HTTPS development and are optional. If you skip these steps, you can still develop using `bun run tauri:dev` with standard `http://localhost:5173`.
 
 **Development server options:**
 
@@ -182,16 +182,16 @@ For detailed development instructions, see the [Development Guide](docs/src/cont
 Install dependencies manually:
 
 ```bash
-# Install Node.js, pnpm, Rust
+# Install Node.js, Bun, and Rust
 # (See Development Guide for detailed instructions)
 
 # Install project dependencies and configure environment
-pnpm install
+bun install
 just setup
 
 # Alternative: Skip portless setup and use standard localhost
-pnpm install
-pnpm check
+bun install
+bun run check
 ```
 
 ### Development Workflow
@@ -209,7 +209,7 @@ This starts both the Vite dev server and the Tauri application window.
 ```bash
 just dev-web
 # or
-pnpm dev
+bun run dev
 ```
 
 This starts the Vite dev server via portless at `https://mc-vector.localhost` (requires `just setup` first).
@@ -310,7 +310,7 @@ MC-Vector/
 │
 ├── justfile                          # Modern task runner
 ├── package.json                      # Node.js project manifest
-├── pnpm-lock.yaml                    # pnpm lock file
+├── bun.lock                          # Bun text lock file
 ├── vite.config.ts                    # Vite build configuration
 ├── tailwind.config.js                # Tailwind CSS configuration
 ├── postcss.config.js                 # postcss configuration
@@ -409,7 +409,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Code Editor:** Monaco Editor
 - **Charts:** Recharts
 - **Terminal:** xterm.js
-- **Package Manager:** pnpm 10.26.2
+- **Package Manager:** Bun 1.4.2
 - **Build Tool:** Vite
 - **Task Runner:** just
 - **Linter:** Oxlint
