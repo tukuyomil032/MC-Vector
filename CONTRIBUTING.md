@@ -116,6 +116,8 @@ pnpm build
 
 Oxfmt can migrate formatter settings from Biome, but lint rules and plugins must be reviewed manually because Oxlint and Biome do not share the same configuration format. Remove the old Biome configuration and dependency only after the new checks pass.
 
+This migration keeps pnpm `10.26.2` as the supported package manager and workspace runner. Migrating from pnpm to Bun is out of scope and should be handled in a separate pull request.
+
 Before opening a pull request, run the checks relevant to the change. For a full local validation:
 
 ```bash
