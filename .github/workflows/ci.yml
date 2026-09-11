@@ -11,11 +11,11 @@ on:
       - tests/**
       - docs/src/**
       - docs/scripts/**
+      - docs/package.json
       - scripts/**
       - public/**
       - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
+      - bun.lock
       - .oxlintrc.json
       - .oxfmtrc.json
       - lefthook.yml
@@ -39,19 +39,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
-          cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun ci
       - name: Oxlint and Oxfmt check
         run: |
-          pnpm check
-          pnpm rustfmt:check
+          bun run check
+          bun run rustfmt:check
           git diff --exit-code
 
   build-check:
@@ -62,30 +61,29 @@ jobs:
         platform: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
-          cache: 'pnpm'
       - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: ./src-tauri -> target
       - name: Install just
         uses: taiki-e/install-action@ae666e311a8d98d0043e81161903fc9f9beb8689 # just
-      - run: pnpm install --frozen-lockfile
+      - run: bun ci
       - name: Run Vitest and test typecheck
         run: |
-          pnpm test
-          pnpm typecheck:tests
-          pnpm check:workflow-actions
+          bun run test
+          bun run typecheck:tests
+          bun run check:workflow-actions
       - name: Run cargo test
         run: cargo test
         working-directory: src-tauri
       - name: Build (debug mode)
-        run: pnpm exec tauri build --debug --no-bundle
+        run: bun run tauri build --debug --no-bundle
 
   cargo-audit:
     runs-on: ubuntu-latest

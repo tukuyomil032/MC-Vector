@@ -16,8 +16,7 @@ on:
       - .oxlintrc.json
       - .oxfmtrc.json
       - lefthook.yml
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
+      - bun.lock
       - index.html
       - postcss.config.js
       - tailwind.config.js
@@ -42,8 +41,7 @@ on:
       - .oxlintrc.json
       - .oxfmtrc.json
       - lefthook.yml
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
+      - bun.lock
       - index.html
       - postcss.config.js
       - tailwind.config.js
@@ -66,19 +64,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
-          cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun ci
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: bunx --no-install playwright install --with-deps chromium
       - name: Run Playwright E2E tests
-        run: pnpm e2e
+        run: bun run e2e
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -97,19 +94,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
-          cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun ci
       - name: Install macOS WebDriver bridge
         run: cargo install tauri-webdriver-automation --locked
       - name: Run unsigned real Tauri E2E
-        run: pnpm test:tauri:e2e
+        run: bun run test:tauri:e2e
       - name: Upload real Tauri diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -127,19 +123,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
-          cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun ci
       - name: Install Windows Tauri driver
         run: cargo install tauri-driver --locked
       - name: Run unsigned real Tauri E2E
-        run: pnpm test:tauri:e2e
+        run: bun run test:tauri:e2e
       - name: Upload real Tauri diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -157,14 +152,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          version: 10.26.2
+          bun-version: 1.4.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
-          cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun ci
       - name: Run read-only provider canary
-        run: pnpm test:provider:live
+        run: bun run test:provider:live
