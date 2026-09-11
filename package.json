@@ -10,17 +10,21 @@
     "dev:plain": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "biome check --diagnostic-level=error src tests",
-    "check:fix": "biome check --write --diagnostic-level=error src",
-    "lint": "biome lint --diagnostic-level=error src",
-    "format": "biome format --write src",
+    "lint": "oxlint . --deny-warnings",
+    "lint:fix": "oxlint . --fix --deny-warnings",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "check": "pnpm lint && pnpm fmt:check",
+    "check:fix": "pnpm fmt && pnpm lint:fix",
+    "format": "pnpm fmt",
     "tauri": "tauri",
     "tauri:dev": "tauri dev --config src-tauri/tauri.debug.conf.json",
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug --no-sign --config src-tauri/tauri.debug.conf.json",
     "clean:artifacts": "rimraf dist build src-tauri/target node_modules/.vite",
     "release": "node scripts/prepare-release.mjs",
-    "rustfmt": "cargo fmt --all",
+    "rustfmt": "cargo fmt --all --manifest-path src-tauri/Cargo.toml",
+    "rustfmt:check": "cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check",
     "install:extensions": "node scripts/install-extensions.mjs",
     "prepare": "lefthook install",
     "test": "vitest run",
@@ -85,7 +89,6 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
     "@playwright/test": "^1.62.1",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/jest-dom": "^7.0.1",
@@ -98,6 +101,8 @@
     "autoprefixer": "^10.5.4",
     "jsdom": "^30.0.1",
     "lefthook": "^2.1.12",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
     "portless": "^0.15.6",
     "postcss": "^8.5.26",
     "rimraf": "^6.1.3",
@@ -108,13 +113,12 @@
     "vitest": "^5.0.0"
   },
   "packageManager": "pnpm@10.26.2",
-  "productName": "MC-Vector",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@biomejs/biome",
       "@parcel/watcher",
       "lefthook",
       "sharp"
     ]
-  }
+  },
+  "productName": "MC-Vector"
 }

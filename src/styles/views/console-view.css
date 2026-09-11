@@ -284,7 +284,12 @@
     padding-right: 1rem;
     padding-top: 1rem;
     padding-bottom: 1rem;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 13px;
     line-height: 1.625;
     color: var(--mv-console-log-text);
@@ -447,7 +452,12 @@
     padding-right: 0.75rem;
     padding-top: 0.625rem;
     padding-bottom: 0.625rem;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 0.875rem;
     line-height: 1.25rem;
     --tw-text-opacity: 1;

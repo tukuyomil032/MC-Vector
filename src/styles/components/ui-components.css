@@ -1,6 +1,6 @@
 @layer components {
   :root {
-    --mv-font-display: "Avenir Next", "Noto Sans JP", "Segoe UI", sans-serif;
+    --mv-font-display: 'Avenir Next', 'Noto Sans JP', 'Segoe UI', sans-serif;
     --mv-view-glow-a: transparent;
     --mv-view-glow-b: transparent;
     --mv-panel-start: #18181b;
@@ -73,9 +73,9 @@
   }
 
   .app-shell.theme-light .native-select option,
-  .app-shell[data-theme="light"] .native-select option,
+  .app-shell[data-theme='light'] .native-select option,
   .app-shell.theme-light .native-select optgroup,
-  .app-shell[data-theme="light"] .native-select optgroup {
+  .app-shell[data-theme='light'] .native-select optgroup {
     background-color: #f8fafc;
     color: #0f172a;
   }

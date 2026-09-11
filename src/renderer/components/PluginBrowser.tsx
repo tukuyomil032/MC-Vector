@@ -642,12 +642,14 @@ export default function PluginBrowser({ server }: Props) {
     return options;
   }, [isModServer, isPaper]);
 
+  // Keep the current query when the available platform set changes.
   useEffect(() => {
     if (!platformOptions.some((option) => option.key === platform)) {
       setPlatform(platformOptions[0]?.key ?? 'Modrinth');
       setPage(0);
       setCommittedQuery(query);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform, platformOptions]);
 
   const selectedPlatform =
@@ -675,10 +677,12 @@ export default function PluginBrowser({ server }: Props) {
     setPageInput(String(page + 1));
   }, [page]);
 
+  // Refresh only when the selected server or plugin folder changes.
   useEffect(() => {
     void refreshInstalled();
     setKnownItemsByInstalledFile({});
     installedMetadataLookupStateRef.current = {};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server.id, server.path, isModServer]);
 
   // React Query: search results
@@ -753,10 +757,7 @@ export default function PluginBrowser({ server }: Props) {
   const totalPages = searchData?.totalPages ?? null;
 
   // React Query: Hangar compatibility checks (parallel, auto-cached)
-  const hangarItems = useMemo(
-    () => results.filter((item) => item.platform === 'Hangar'),
-    [results],
-  );
+  const hangarItems = results.filter((item) => item.platform === 'Hangar');
 
   const compatibilityQueries = useQueries({
     queries: hangarItems.map((item) => ({
@@ -772,6 +773,7 @@ export default function PluginBrowser({ server }: Props) {
     })),
   });
 
+  // Compatibility calculation intentionally uses render-local helpers and query results.
   const { compatibilityByItemId, compatibilityDetailByItemId } = useMemo(() => {
     const byId: Record<string, CompatibilityStatus> = {};
     const detailById: Record<string, CompatibilityDetail> = {};
@@ -811,8 +813,10 @@ export default function PluginBrowser({ server }: Props) {
     });
 
     return { compatibilityByItemId: byId, compatibilityDetailByItemId: detailById };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, hangarItems, compatibilityQueries, server.version]);
 
+  // Update checks are keyed by the current search and installed-file snapshots.
   useEffect(() => {
     let cancelled = false;
     const requestId = updateStatusRequestIdRef.current + 1;
@@ -924,6 +928,7 @@ export default function PluginBrowser({ server }: Props) {
         updateStatusRequestIdRef.current += 1;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInAppSearch, results, installedFiles, server.software, server.version]);
 
   const normalize = (text?: unknown) =>
@@ -1074,6 +1079,7 @@ export default function PluginBrowser({ server }: Props) {
     return null;
   };
 
+  // Matching intentionally uses the current installed-file resolver closures.
   const currentResultMatchesByInstalledFile = useMemo(() => {
     const candidatesByInstalledFile: Record<
       string,
@@ -1101,6 +1107,7 @@ export default function PluginBrowser({ server }: Props) {
     }
 
     return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, installedFiles]);
 
   const installedEntries = useMemo<InstalledPluginEntry[]>(() => {
@@ -1161,6 +1168,7 @@ export default function PluginBrowser({ server }: Props) {
     t,
   ]);
 
+  // Installed metadata checks are keyed by the derived installed entries.
   useEffect(() => {
     if (activeSection !== 'installed') return;
     let cancelled = false;
@@ -1215,7 +1223,11 @@ export default function PluginBrowser({ server }: Props) {
           if (!cancelled) {
             setUpdateStatusByItemId((prev) => ({ ...prev, [item.id]: status }));
             if (latestFileName) {
-              setLatestFileByItemId((prev) => ({ ...prev, [item.id]: latestFileName! }));
+              const resolvedLatestFileName = latestFileName;
+              setLatestFileByItemId((prev) => ({
+                ...prev,
+                [item.id]: resolvedLatestFileName,
+              }));
             }
           }
         } catch (error) {
@@ -1231,6 +1243,7 @@ export default function PluginBrowser({ server }: Props) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, installedEntries, server.software, server.version]);
 
   useEffect(() => {
@@ -2214,6 +2227,7 @@ export default function PluginBrowser({ server }: Props) {
     return 1;
   };
 
+  // Sorting intentionally uses the current compatibility lookup closure.
   const sortedResults = useMemo(() => {
     if (sortMode === 'relevance') {
       return results;
@@ -2239,6 +2253,7 @@ export default function PluginBrowser({ server }: Props) {
       return (right.downloads ?? 0) - (left.downloads ?? 0);
     });
     return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, sortMode, compatibilityByItemId]);
 
   const updateAvailableCount = useMemo(() => {

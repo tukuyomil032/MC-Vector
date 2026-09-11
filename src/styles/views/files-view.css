@@ -66,13 +66,13 @@
   }
 
   .app-shell.theme-light .files-view__toolbar-btn,
-  .app-shell[data-theme="light"] .files-view__toolbar-btn {
+  .app-shell[data-theme='light'] .files-view__toolbar-btn {
     border-color: rgba(148, 163, 184, 0.55);
     background: rgba(248, 250, 252, 0.92);
   }
 
   .app-shell.theme-light .files-view__toolbar-btn:hover,
-  .app-shell[data-theme="light"] .files-view__toolbar-btn:hover {
+  .app-shell[data-theme='light'] .files-view__toolbar-btn:hover {
     border-color: rgba(14, 165, 233, 0.45);
     background: rgba(226, 232, 240, 0.9);
   }
@@ -93,7 +93,12 @@
   .files-view__breadcrumbs {
     display: flex;
     align-items: center;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     --tw-text-opacity: 1;
     color: rgb(212 212 216 / var(--tw-text-opacity, 1));
   }
@@ -195,7 +200,7 @@
     background-color: rgb(39 39 42 / 0.45);
   }
 
-  .files-view__row[aria-pressed="true"] {
+  .files-view__row[aria-pressed='true'] {
     outline-offset: -2px;
   }
 
@@ -372,7 +377,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 0.75rem;
     line-height: 1rem;
     --tw-text-opacity: 1;
@@ -388,7 +398,12 @@
 
   .files-view__editor-shortcut {
     display: none;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 0.75rem;
     line-height: 1rem;
     --tw-text-opacity: 1;
@@ -466,7 +481,12 @@
     border-top-width: 1px;
     padding-left: 1rem;
     padding-right: 1rem;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 0.75rem;
     line-height: 1rem;
     --tw-text-opacity: 1;

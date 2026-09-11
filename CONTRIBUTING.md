@@ -19,8 +19,8 @@ Thanks for your interest in improving MC-Vector. This guide explains how to set 
 
 ### Requirements
 
-- Node.js 18 or later (Node.js 22 is recommended)
-- pnpm 10.26.2 or later
+- Node.js 20.19+ or 22.12+ (Node.js 22 is recommended)
+- pnpm 10.26.2
 - Rust 1.77.2 or later
 - The platform dependencies required by Tauri
 
@@ -89,7 +89,7 @@ Prefer one commit per logical task. Do not add a `Co-Authored-By` trailer unless
 ### Coding guidelines
 
 - Keep TypeScript changes compatible with the existing strict configuration.
-- Run Biome through the project scripts rather than hand-formatting large unrelated areas.
+- Run Oxlint and Oxfmt through the project scripts rather than hand-formatting large unrelated areas.
 - Keep Tauri commands and their frontend wrappers aligned; update capability allowlists when adding IPC commands.
 - Never swallow errors silently. Preserve actionable context for users and logs.
 - Add or update tests for behavior changes and regression fixes.
@@ -98,10 +98,31 @@ Prefer one commit per logical task. Do not add a `Co-Authored-By` trailer unless
 
 ## Validation
 
+### Migrating from Biome to Oxlint and Oxfmt
+
+When migrating another checkout or updating the project toolchain, use the following order:
+
+```bash
+pnpm add -D oxlint oxfmt -w
+pnpm exec oxfmt --migrate=biome
+# Review .oxlintrc.json and map the existing lint rules and plugins manually.
+# Update package scripts, Lefthook, CI workflows, and documentation.
+pnpm exec oxfmt
+pnpm lint
+pnpm rustfmt:check
+pnpm test
+pnpm build
+```
+
+Oxfmt can migrate formatter settings from Biome, but lint rules and plugins must be reviewed manually because Oxlint and Biome do not share the same configuration format. Remove the old Biome configuration and dependency only after the new checks pass.
+
+This migration keeps pnpm `10.26.2` as the supported package manager and workspace runner. Migrating from pnpm to Bun is out of scope and should be handled in a separate pull request.
+
 Before opening a pull request, run the checks relevant to the change. For a full local validation:
 
 ```bash
 pnpm check
+pnpm rustfmt:check
 pnpm test
 pnpm build
 (cd src-tauri && cargo test)

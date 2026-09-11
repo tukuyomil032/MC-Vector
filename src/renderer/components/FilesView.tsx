@@ -156,10 +156,13 @@ export default function FilesView({ server }: Props) {
     loadRoot();
   }, []);
 
+  // loadFiles is a render-local async helper; this effect is keyed by the current path.
   useEffect(() => {
     loadFiles(currentPath);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPath]);
 
+  // The drag/drop subscription is keyed by the path and translation function it uses.
   useEffect(() => {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
@@ -215,6 +218,7 @@ export default function FilesView({ server }: Props) {
       setIsExternalDropActive(false);
       unlisten?.();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPath, t]);
 
   const loadFiles = async (path: string) => {
@@ -251,6 +255,12 @@ export default function FilesView({ server }: Props) {
     }
 
     const segments = relativePath.split('/').filter(Boolean);
+    const breadcrumbEntries: Array<{ segment: string; path: string }> = [];
+    let path = normalizedRoot;
+    for (const segment of segments) {
+      path = `${path}/${segment}`;
+      breadcrumbEntries.push({ segment, path });
+    }
 
     return (
       <div className="files-view__breadcrumbs">
@@ -262,13 +272,12 @@ export default function FilesView({ server }: Props) {
           {t('nav.servers')}
         </button>
 
-        {segments.map((seg, index) => {
-          const pathUpToHere = `${normalizedRoot}/${segments.slice(0, index + 1).join('/')}`;
+        {breadcrumbEntries.map(({ segment, path: pathUpToHere }) => {
           const normalizedServerPath = server.path.replace(/\\/g, '/');
           const isWithinServerPath = pathUpToHere.startsWith(normalizedServerPath);
 
           return (
-            <span key={index} className="flex items-center">
+            <span key={pathUpToHere} className="flex items-center">
               <span className="files-view__breadcrumb-separator">/</span>
               <button
                 type="button"
@@ -279,7 +288,7 @@ export default function FilesView({ server }: Props) {
                   }
                 }}
               >
-                {seg}
+                {segment}
               </button>
             </span>
           );

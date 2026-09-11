@@ -19,13 +19,6 @@ const RELEASE_FILE_ORDER = [
   'src-tauri/src/commands/download.rs',
   'tests/lib/adapters/plugin/http-client.test.ts',
 ];
-const AUTHORITATIVE_FILES = [
-  'package.json',
-  'src-tauri/Cargo.toml',
-  'src-tauri/Cargo.lock',
-  'src-tauri/tauri.conf.json',
-];
-
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -77,7 +70,13 @@ function parseJson(relativePath, text) {
   }
 }
 
-function assertOnlyRootVersionChanged(relativePath, beforeText, afterText, currentVersion, nextVersion) {
+function assertOnlyRootVersionChanged(
+  relativePath,
+  beforeText,
+  afterText,
+  currentVersion,
+  nextVersion,
+) {
   const before = parseJson(relativePath, beforeText);
   const after = parseJson(relativePath, afterText);
 
@@ -127,7 +126,6 @@ function getCargoLockPackageBlocks(text) {
   const headings = [...text.matchAll(/^\[\[package\]\]\r?$/gm)];
   return headings.map((heading, index) => {
     const blockStart = heading.index;
-    const bodyStart = blockStart + heading[0].length;
     const blockEnd = index + 1 < headings.length ? headings[index + 1].index : text.length;
     return { block: text.slice(blockStart, blockEnd), blockEnd, blockStart };
   });
@@ -139,7 +137,9 @@ function updateCargoLock(text, currentVersion, nextVersion) {
   );
 
   if (matchingBlocks.length !== 1) {
-    fail(`src-tauri/Cargo.lock: expected exactly one mc-vector package block, found ${matchingBlocks.length}.`);
+    fail(
+      `src-tauri/Cargo.lock: expected exactly one mc-vector package block, found ${matchingBlocks.length}.`,
+    );
   }
 
   const { block, blockEnd, blockStart } = matchingBlocks[0];
@@ -223,14 +223,19 @@ function getVersions(files) {
     ({ block }) => /^name = "mc-vector"\r?$/m.test(block),
   );
   if (cargoLockMatches.length !== 1) {
-    fail(`src-tauri/Cargo.lock: expected exactly one mc-vector package block, found ${cargoLockMatches.length}.`);
+    fail(
+      `src-tauri/Cargo.lock: expected exactly one mc-vector package block, found ${cargoLockMatches.length}.`,
+    );
   }
   const cargoLockVersion = /^version = "([^"]+)"\r?$/m.exec(cargoLockMatches[0].block)?.[1];
   if (!cargoLockVersion) {
     fail('src-tauri/Cargo.lock: mc-vector package version is missing.');
   }
 
-  const tauriJson = parseJson('src-tauri/tauri.conf.json', files.get('src-tauri/tauri.conf.json').text);
+  const tauriJson = parseJson(
+    'src-tauri/tauri.conf.json',
+    files.get('src-tauri/tauri.conf.json').text,
+  );
   if (typeof tauriJson.version !== 'string' || tauriJson.version.length === 0) {
     fail('src-tauri/tauri.conf.json: version is missing or not a string.');
   }
@@ -243,7 +248,9 @@ function getVersions(files) {
   ]);
   const uniqueVersions = new Set(versions.values());
   if (uniqueVersions.size !== 1) {
-    const details = [...versions.entries()].map(([file, version]) => `${file}=${version}`).join(', ');
+    const details = [...versions.entries()]
+      .map(([file, version]) => `${file}=${version}`)
+      .join(', ');
     fail(`Authoritative versions do not agree: ${details}.`);
   }
 
@@ -263,7 +270,9 @@ function assertTargetIsClean() {
     fail(`Git status failed with exit code ${result.status}.`);
   }
   if (result.stdout.trim().length > 0) {
-    fail('Release targets are dirty; commit or stash these allowlisted files before preparing a release.');
+    fail(
+      'Release targets are dirty; commit or stash these allowlisted files before preparing a release.',
+    );
   }
 }
 
@@ -273,7 +282,10 @@ function computeUpdates(files, currentVersion, nextVersion) {
     'package.json',
     updateJsonVersion('package.json', files.get('package.json').text, currentVersion, nextVersion),
   );
-  updates.set('README.md', updateReadmeVersion(files.get('README.md').text, currentVersion, nextVersion));
+  updates.set(
+    'README.md',
+    updateReadmeVersion(files.get('README.md').text, currentVersion, nextVersion),
+  );
 
   for (const relativePath of [
     'src/lib/adapters/plugin/http-client.ts',
@@ -322,7 +334,9 @@ function rollback(files, writtenPaths) {
     try {
       fs.writeFileSync(files.get(relativePath).absolutePath, files.get(relativePath).original);
     } catch (error) {
-      rollbackErrors.push(`${relativePath}: ${error instanceof Error ? error.message : String(error)}`);
+      rollbackErrors.push(
+        `${relativePath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
   return rollbackErrors;
@@ -338,7 +352,8 @@ function writeUpdates(files, updates) {
   } catch (error) {
     const rollbackErrors = rollback(files, writtenPaths);
     const detail = error instanceof Error ? error.message : String(error);
-    const rollbackDetail = rollbackErrors.length > 0 ? ` Rollback failures: ${rollbackErrors.join('; ')}` : '';
+    const rollbackDetail =
+      rollbackErrors.length > 0 ? ` Rollback failures: ${rollbackErrors.join('; ')}` : '';
     fail(`Release preparation failed while writing files: ${detail}.${rollbackDetail}`);
   }
 }
@@ -350,7 +365,10 @@ function copyToClipboard(value) {
       : process.platform === 'win32'
         ? [['clip', []]]
         : process.platform === 'linux'
-          ? [['wl-copy', []], ['xclip', ['-selection', 'clipboard']]]
+          ? [
+              ['wl-copy', []],
+              ['xclip', ['-selection', 'clipboard']],
+            ]
           : [];
 
   for (const [command, args] of candidates) {
@@ -389,9 +407,13 @@ async function main() {
     fail(`Invalid version "${requestedVersion}". Use stable X.Y.Z or vX.Y.Z.`);
   }
 
-  const nextVersion = requestedVersion.startsWith('v') ? requestedVersion.slice(1) : requestedVersion;
+  const nextVersion = requestedVersion.startsWith('v')
+    ? requestedVersion.slice(1)
+    : requestedVersion;
   const nextTag = `v${nextVersion}`;
-  const files = new Map(RELEASE_FILE_ORDER.map((relativePath) => [relativePath, readTarget(relativePath)]));
+  const files = new Map(
+    RELEASE_FILE_ORDER.map((relativePath) => [relativePath, readTarget(relativePath)]),
+  );
   const currentVersion = getVersions(files);
 
   if (currentVersion === nextVersion) {

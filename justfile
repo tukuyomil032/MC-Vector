@@ -71,22 +71,27 @@ tauri-build *ARGS='':
 lint:
     pnpm lint
 
-# Format code (oxfmt via vite+)
+# Format JavaScript, TypeScript, JSON, CSS, and Astro code with Oxfmt
 format:
-    pnpm format
+    pnpm fmt
 
 # Run lint and format checks
 check:
-    pnpm check:fix
+    pnpm check
 
-# Run all quality checks (check + rustfmt)
-check-all: check rustfmt
+# Run all quality checks (JavaScript/TypeScript + Rust)
+check-all: check rustfmt-check
     @echo "✅ All quality checks passed!"
 
 # Format Rust code
 rustfmt:
   @echo "Running Rust code formatter (rustfmt)..."
-  cargo fmt --manifest-path src-tauri/Cargo.toml
+  pnpm rustfmt
+
+# Check Rust formatting without changing files
+rustfmt-check:
+  @echo "Checking Rust formatting (rustfmt --check)..."
+  pnpm rustfmt:check
 
 # ═══════════════════════════════════════════════════════════════
 # Testing

@@ -19,7 +19,9 @@
     border-color: var(--mv-surface-border);
     background: var(--mv-surface-card-alt-bg);
     box-shadow: var(--mv-surface-shadow-soft);
-    transition: transform 0.15s ease, border-color 0.2s ease;
+    transition:
+      transform 0.15s ease,
+      border-color 0.2s ease;
   }
 
   .kpi-tile:hover {
@@ -65,7 +67,7 @@
   }
 
   .control-chip.is-active,
-  .control-chip[aria-pressed="true"] {
+  .control-chip[aria-pressed='true'] {
     border-color: var(--mv-control-chip-active-border);
     background: var(--mv-control-chip-active-bg);
     color: var(--mv-control-chip-active-text);

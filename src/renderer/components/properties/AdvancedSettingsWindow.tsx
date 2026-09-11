@@ -101,7 +101,7 @@ export default function AdvancedSettingsWindow({
       });
     });
     return inferred;
-  }, [formData]);
+  }, [formData, t]);
 
   const allDefinitions = useMemo(
     () => [...serverPropertiesList, ...inferredDefinitions],

@@ -99,8 +99,8 @@ scoop bucket rm tukuyomil032
 
 ### For Developers
 
-- **Node.js** v22 or later
-- **pnpm** v10.26.2 or later
+- **Node.js** v20.19+ or v22.12+ (v22 recommended)
+- **pnpm** v10.26.2
 - **Rust** v1.77.2 or later
 
 Optional:
@@ -141,7 +141,7 @@ just dev-app  # Start Tauri app with dev server
 git clone https://github.com/tukuyomil032/MC-Vector.git
 cd MC-Vector
 
-# Install dependencies (Node.js 18+; 22 recommended, pnpm 10.26.2+, Rust required)
+# Install dependencies (Node.js 20.19+ or 22.12+; pnpm 10.26.2, Rust required)
 pnpm install
 
 # Optional but recommended: Run full setup with portless
@@ -348,10 +348,11 @@ For a detailed architecture overview, see [Architecture Documentation](docs/src/
 
 | Task        | justfile         | Description               |
 | ----------- | ---------------- | -------------------------- |
-| Lint code   | `just lint`      | Run Biome linter           |
-| Format code | `just format`    | Format code with Biome     |
+| Lint code   | `just lint`      | Run Oxlint                 |
+| Format code | `just format`    | Format code with Oxfmt     |
 | Check all   | `just check`     | Run lint & format checks   |
 | Format Rust | `just rustfmt`   | Format Rust code           |
+| Rust check  | `just rustfmt-check` | Check Rust formatting without changes |
 | All checks  | `just check-all` | Run all quality checks     |
 
 ### Utilities
@@ -408,9 +409,13 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Code Editor:** Monaco Editor
 - **Charts:** Recharts
 - **Terminal:** xterm.js
-- **Package Manager:** pnpm
+- **Package Manager:** pnpm 10.26.2
 - **Build Tool:** Vite
 - **Task Runner:** just
+- **Linter:** Oxlint
+- **Formatter:** Oxfmt
+- **Git Hooks:** Lefthook
+- **Rust Formatter:** rustfmt
 
 For more details, see the [Architecture Documentation](docs/src/content/docs/dev/architecture.mdx) and [Development Guide](docs/src/content/docs/dev/setup.mdx).
 

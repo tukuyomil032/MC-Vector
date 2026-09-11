@@ -53,9 +53,8 @@ describe('managed file commands', () => {
   });
 
   it('writes, creates, deletes, and moves using managed requests', async () => {
-    const { saveFileContent, createFile, createFolder, deleteItem, moveItem } = await import(
-      '@/lib/file-commands'
-    );
+    const { saveFileContent, createFile, createFolder, deleteItem, moveItem } =
+      await import('@/lib/file-commands');
     await saveFileContent(`${serverRoot}/server.properties`, 'level-name=world');
     await createFile(serverRoot, 'new.txt');
     await createFolder(serverRoot, 'world');

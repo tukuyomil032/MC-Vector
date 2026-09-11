@@ -349,6 +349,7 @@ export default function BackupsView({ server }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  // The initialization callbacks intentionally capture the current server lifecycle.
   useLayoutEffect(() => {
     mountedRef.current = true;
     pendingUnmountRef.current = null;
@@ -389,6 +390,7 @@ export default function BackupsView({ server }: Props) {
       await loadWorlds(initializationToken);
     })();
     return cleanupInitialization;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [beginDataReload, cleanupInitialization, initializationKey, isCurrentDataReload]);
 
   useEffect(() => {
@@ -440,6 +442,7 @@ export default function BackupsView({ server }: Props) {
     };
   }, [getCurrentInitializationToken, initializationKey, isCurrentInitialization, server.path, t]);
 
+  // The completion reload intentionally uses the lifecycle callbacks from this render.
   useEffect(() => {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
@@ -685,7 +688,9 @@ export default function BackupsView({ server }: Props) {
     initializationKey,
     isCurrentDataReload,
     isCurrentInitialization,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     loadBackupCatalog,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     loadBackups,
     manualCompletionRevision,
   ]);
@@ -1458,9 +1463,9 @@ export default function BackupsView({ server }: Props) {
                     value={compressionLevel}
                     onChange={(e) => setCompressionLevel(Number(e.target.value))}
                   >
-                    {Array.from({ length: 9 }).map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
+                      <option key={level} value={level}>
+                        {level}
                       </option>
                     ))}
                   </NativeSelect>

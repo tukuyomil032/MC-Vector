@@ -40,7 +40,7 @@ import { useConsoleStore } from '@/store/consoleStore';
 import { useServerStore } from '@/store/serverStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 function isBackupSelectorWindow(): boolean {
   const params = new URLSearchParams(window.location.search);

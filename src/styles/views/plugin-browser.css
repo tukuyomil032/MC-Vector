@@ -1,6 +1,6 @@
 @layer components {
   .plugin-browser {
-    font-family: "Avenir Next", "Noto Sans JP", "Segoe UI", sans-serif;
+    font-family: 'Avenir Next', 'Noto Sans JP', 'Segoe UI', sans-serif;
     background: transparent;
   }
 
@@ -913,7 +913,7 @@
     color: rgb(212 212 216 / var(--tw-text-opacity, 1));
 
     background: rgba(39, 39, 42, 0.65);
-    font-family: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
   }
 
   .plugin-browser__detail-readme-markdown pre {
@@ -1118,7 +1118,12 @@
   .plugin-browser__installed-meta-value {
     min-width: 0px;
     overflow-wrap: break-word;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 11px;
     line-height: 1rem;
     --tw-text-opacity: 1;
@@ -1360,8 +1365,8 @@
     color: rgb(255 255 255 / var(--tw-text-opacity, 1));
     --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
     --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
-    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
-      var(--tw-shadow);
+    box-shadow:
+      var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 
     background-color: #1f1f22;
   }
@@ -1390,7 +1395,12 @@
     --tw-border-opacity: 1;
     border-color: rgb(63 63 70 / var(--tw-border-opacity, 1));
     padding: 0.75rem;
-    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Consolas,
+      Courier New,
+      monospace;
     font-size: 0.75rem;
     line-height: 1rem;
     --tw-text-opacity: 1;
