@@ -183,9 +183,9 @@ Add failure injection at extraction, checksum verification, current-directory re
 
 ```bash
 cargo test --quiet
-pnpm test
-pnpm build
-pnpm e2e
+bun run test
+bun run build
+bun run e2e
 ```
 
 ## Exit Criteria

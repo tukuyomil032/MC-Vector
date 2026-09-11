@@ -145,8 +145,8 @@ The token must not appear in renderer state, console output, Rust logs, event pa
 
 ```bash
 cargo test --quiet
-pnpm test
-pnpm build
+bun run test
+bun run build
 ```
 
 Add tests for missing/wrong hashes, partial download cleanup, preserving an old artifact after replacement failure, token migration, token absence from logs, and renderer status-only behavior.
