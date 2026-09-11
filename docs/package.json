@@ -10,7 +10,7 @@
     "astro": "astro",
     "check": "astro check",
     "typedoc": "typedoc && node scripts/generate-api-docs.mjs",
-    "build:full": "pnpm typedoc && astro build"
+    "build:full": "bun run typedoc && astro build"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.41.10",
