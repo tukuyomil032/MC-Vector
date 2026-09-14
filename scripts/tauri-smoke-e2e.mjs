@@ -45,6 +45,23 @@ function errorFingerprint(error) {
   return createHash('sha256').update(describeError(error)).digest('hex').slice(0, 12);
 }
 
+function redactDiagnostic(value, sensitiveValues = []) {
+  return sensitiveValues
+    .filter((sensitiveValue) => typeof sensitiveValue === 'string' && sensitiveValue.length > 0)
+    .reduce(
+      (result, sensitiveValue) => result.replaceAll(sensitiveValue, '<redacted>'),
+      String(value),
+    );
+}
+
+function summarizeDriver(session, sensitiveValues) {
+  return {
+    exitCode: session?.exitCode ?? session?.child?.exitCode ?? null,
+    signal: session?.signal ?? session?.child?.signalCode ?? null,
+    output: redactDiagnostic(session?.output?.join('') ?? '', sensitiveValues),
+  };
+}
+
 function platformBinaryPath(root) {
   return path.join(root, 'src-tauri', 'target', 'debug', isWindows ? 'mc-vector.exe' : 'mc-vector');
 }
@@ -69,7 +86,7 @@ function runProcess(command, args, options = {}) {
 }
 
 async function stopProcess(child) {
-  if (!child || child.exitCode !== null) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
     return;
   }
   child.kill('SIGTERM');
@@ -388,28 +405,35 @@ async function buildDebugBinary(identifier, configPath, environment) {
   return binary;
 }
 
-async function startWebDriver(environment, port) {
+async function startWebDriver(environment, port, onSession) {
   const command = isMac ? 'tauri-wd' : 'tauri-driver';
+  const args = ['--port', String(port), '--log-level', 'debug'];
+  if (isWindows && environment.MC_VECTOR_E2E_NATIVE_DRIVER) {
+    args.push('--native-driver', environment.MC_VECTOR_E2E_NATIVE_DRIVER);
+  }
   assertCommandAvailable(command);
-  const child = spawn(command, ['--port', String(port), '--log-level', 'debug'], {
+  const child = spawn(command, args, {
     cwd: projectRoot,
     env: environment,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
   const output = [];
+  const url = `http://127.0.0.1:${port}`;
+  const session = { child, url, output, exitCode: null, signal: null };
+  child.once('exit', (code, signal) => {
+    session.exitCode = code;
+    session.signal = signal;
+  });
   for (const stream of [child.stdout, child.stderr]) {
     stream.on('data', (chunk) => {
       output.push(chunk.toString());
       if (process.env.MC_VECTOR_TAURI_E2E_VERBOSE === '1') {
         process.stderr.write(chunk);
       }
-      if (output.length > 40) {
-        output.shift();
-      }
     });
   }
-  const url = `http://127.0.0.1:${port}`;
+  onSession?.(session);
   try {
     await waitForDriverServer(url, child);
   } catch (error) {
@@ -417,7 +441,7 @@ async function startWebDriver(environment, port) {
     const recentOutput = output.join('').trim();
     throw new Error(`${error.message}${recentOutput ? `\n${recentOutput}` : ''}`);
   }
-  return { child, url, output };
+  return session;
 }
 
 async function createWebDriver(serverUrl, binary) {
@@ -768,16 +792,22 @@ async function main() {
   let failureDriver;
   let failureWebDriver;
   let artifactFixture;
+  let failureStage = 'initialization';
+  let failureError;
+  let diagnosticEnvironment;
   try {
     const identifier = 'com.tukuyomi032.mcvector.e2e';
     const environment = createTestEnvironment(testRoot);
+    diagnosticEnvironment = environment;
     const configPath = path.join(testRoot, 'tauri.e2e.conf.json');
     writeFileSync(
       configPath,
       JSON.stringify({ identifier, productName: 'MC-Vector E2E' }, null, 2),
     );
+    failureStage = 'fixture preparation';
     const fixture = await createFixture(environment, identifier, testRoot);
     logStep(`fixture ready (${identifier})`);
+    failureStage = 'artifact fixture';
     artifactFixture = await startArtifactFixture(await createJavaFixtureArchive(testRoot));
     Object.assign(environment, {
       MC_VECTOR_E2E_JAVA_ARCHIVE_URL: artifactFixture.javaUrl,
@@ -786,22 +816,33 @@ async function main() {
       VITE_MC_VECTOR_E2E_PLUGIN_URL: artifactFixture.url,
       VITE_MC_VECTOR_E2E_PLUGIN_SHA256: artifactFixture.checksum,
     });
+    failureStage = 'debug build';
     const binary = await buildDebugBinary(identifier, configPath, environment);
     logStep(`debug binary ready (${binary})`);
 
-    normalDriver = await startWebDriver(environment, await reservePort());
+    failureStage = 'normal WebDriver startup';
+    normalDriver = await startWebDriver(environment, await reservePort(), (session) => {
+      normalDriver = session;
+    });
     logStep('WebDriver ready');
+    failureStage = 'WebDriver session creation';
     normalWebDriver = await createWebDriver(normalDriver.url, binary);
+    failureStage = 'lifecycle';
     await exerciseLifecycle(normalWebDriver, fixture);
     logStep('EULA, lifecycle, console command, and process state passed');
+    failureStage = 'files/settings';
     await exerciseFilesAndSettings(normalWebDriver, fixture);
     logStep('managed files, E2E-only import, and settings persistence passed');
+    failureStage = 'ngrok';
     await exerciseNgrok(normalWebDriver, fixture);
     logStep('fake ngrok process, token UI, and secret non-leakage passed');
+    failureStage = 'Java';
     await exerciseJava(normalWebDriver, fixture);
     logStep('Java fixture verification, extraction, and managed install passed');
+    failureStage = 'artifact';
     await exerciseVerifiedArtifact(normalWebDriver, fixture, artifactFixture);
     logStep('verified artifact checksum and atomic destination preservation passed');
+    failureStage = 'backup/restore';
     await openBackups(normalWebDriver);
     logStep('real application loaded');
 
@@ -857,7 +898,9 @@ async function main() {
     await normalWebDriver.quit();
     normalWebDriver = undefined;
     await delay(500);
+    failureStage = 'WebDriver session creation';
     normalWebDriver = await createWebDriver(normalDriver.url, binary);
+    failureStage = 'backup/restore';
     await openBackups(normalWebDriver);
     await visibleElement(normalWebDriver, `[data-testid="backup-row-${backupName}"]`);
     logStep('catalog reload after app restart passed');
@@ -874,10 +917,14 @@ async function main() {
     await normalWebDriver.quit();
     normalWebDriver = undefined;
     await stopProcess(normalDriver.child);
-    normalDriver = undefined;
 
-    failureDriver = await startWebDriver(failureEnvironment, await reservePort());
+    failureStage = 'failure WebDriver startup';
+    failureDriver = await startWebDriver(failureEnvironment, await reservePort(), (session) => {
+      failureDriver = session;
+    });
+    failureStage = 'WebDriver session creation';
     failureWebDriver = await createWebDriver(failureDriver.url, binary);
+    failureStage = 'backup/restore';
     await openBackups(failureWebDriver);
     const failureRow = await visibleElement(
       failureWebDriver,
@@ -903,28 +950,70 @@ async function main() {
 
     console.log(`Real Tauri smoke E2E passed on ${platform}`);
     succeeded = true;
+  } catch (error) {
+    failureError = error;
+    throw error;
   } finally {
     await failureWebDriver?.quit().catch(() => undefined);
     await normalWebDriver?.quit().catch(() => undefined);
-    await stopProcess(failureDriver?.child);
-    await stopProcess(normalDriver?.child);
+    await stopProcess(failureDriver?.child).catch((error) => {
+      console.error(`Failed to stop failure WebDriver (error ${errorFingerprint(error)})`);
+    });
+    await stopProcess(normalDriver?.child).catch((error) => {
+      console.error(`Failed to stop normal WebDriver (error ${errorFingerprint(error)})`);
+    });
     await artifactFixture?.close().catch((error) => {
-      console.error(`Failed to close real Tauri E2E artifact fixture: ${describeError(error)}`);
+      console.error(
+        `Failed to close real Tauri E2E artifact fixture (error ${errorFingerprint(error)})`,
+      );
     });
     if (!succeeded) {
+      const diagnosticValues = [
+        testRoot,
+        diagnosticEnvironment?.HOME,
+        diagnosticEnvironment?.USERPROFILE,
+        diagnosticEnvironment?.APPDATA,
+        diagnosticEnvironment?.LOCALAPPDATA,
+        diagnosticEnvironment?.XDG_DATA_HOME,
+        diagnosticEnvironment?.XDG_CONFIG_HOME,
+        diagnosticEnvironment?.TMPDIR,
+        diagnosticEnvironment?.TEMP,
+        diagnosticEnvironment?.TMP,
+        diagnosticEnvironment?.MC_VECTOR_E2E_NATIVE_DRIVER,
+        diagnosticEnvironment?.MC_VECTOR_E2E_PLUGIN_URL,
+        diagnosticEnvironment?.MC_VECTOR_E2E_JAVA_ARCHIVE_URL,
+        'real-e2e-ngrok-token-not-a-secret',
+      ];
+      const normalDriverSummary = summarizeDriver(normalDriver, diagnosticValues);
+      const failureDriverSummary = summarizeDriver(failureDriver, diagnosticValues);
+      const primaryDriverSummary = failureDriver ? failureDriverSummary : normalDriverSummary;
+      writeFileSync(
+        path.join(testRoot, 'failure-summary.json'),
+        JSON.stringify(
+          {
+            stage: failureStage,
+            errorFingerprint: failureError ? errorFingerprint(failureError) : null,
+            error: redactDiagnostic(
+              failureError ? describeError(failureError) : 'Unknown real Tauri E2E failure',
+              diagnosticValues,
+            ),
+            driver: primaryDriverSummary,
+            drivers: {
+              normal: normalDriverSummary,
+              failure: failureDriverSummary,
+            },
+          },
+          null,
+          2,
+        ),
+      );
+      writeFileSync(path.join(testRoot, 'normal-driver.log'), normalDriverSummary.output);
+      writeFileSync(path.join(testRoot, 'failure-driver.log'), failureDriverSummary.output);
       console.error(`Real Tauri E2E failed; retained diagnostics at ${testRoot}`);
       if (artifactDirectory) {
         const destination = path.join(artifactDirectory, path.basename(testRoot));
         mkdirSync(artifactDirectory, { recursive: true });
         cpSync(testRoot, destination, { recursive: true });
-        for (const [name, driver] of [
-          ['normal-driver.log', normalDriver],
-          ['failure-driver.log', failureDriver],
-        ]) {
-          if (driver?.output) {
-            writeFileSync(path.join(artifactDirectory, name), driver.output.join(''));
-          }
-        }
         console.error(`CI diagnostics copied to ${artifactDirectory}`);
       }
     } else {
