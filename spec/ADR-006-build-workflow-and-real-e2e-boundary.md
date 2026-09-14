@@ -116,6 +116,12 @@ The pull-request macOS job is the required native boundary for this scope. Windo
 live provider checks remain scheduled/manual jobs so pull requests do not depend on a
 second operating system or on external provider availability.
 
+The scheduled and manual Windows Real Tauri E2E job first downloads the Microsoft Edge
+WebDriver matching the Edge version on the runner. It verifies `msedgedriver.exe`, adds
+its directory to `PATH`, and passes its absolute path to `tauri-driver` through
+`MC_VECTOR_E2E_NATIVE_DRIVER`. This is a required Windows native WebDriver prerequisite,
+not an optional convenience for local runs.
+
 The provider canary is exposed as:
 
 ```bash

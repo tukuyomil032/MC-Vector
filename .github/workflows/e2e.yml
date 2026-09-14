@@ -131,6 +131,25 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: bun ci
+      - name: Install matching Microsoft Edge driver
+        shell: pwsh
+        run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool
+          $driverDirectory = Join-Path $env:RUNNER_TEMP 'msedgedriver'
+          New-Item -ItemType Directory -Force -Path $driverDirectory | Out-Null
+          Push-Location $driverDirectory
+          try {
+            & "$HOME/.cargo/bin/msedgedriver-tool.exe"
+            $driverPath = [System.IO.Path]::GetFullPath((Join-Path $driverDirectory 'msedgedriver.exe'))
+            if (-not (Test-Path -LiteralPath $driverPath)) {
+              throw "msedgedriver.exe was not created at $driverPath"
+            }
+            & $driverPath --version
+            $driverDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            "MC_VECTOR_E2E_NATIVE_DRIVER=$driverPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } finally {
+            Pop-Location
+          }
       - name: Install Windows Tauri driver
         run: cargo install tauri-driver --locked
       - name: Run unsigned real Tauri E2E
