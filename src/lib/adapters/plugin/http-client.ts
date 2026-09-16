@@ -8,7 +8,7 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
     headers.set('Accept', 'application/json');
   }
   if (!headers.has('User-Agent')) {
-    headers.set('User-Agent', 'MC-Vector/2.0.62');
+    headers.set('User-Agent', 'MC-Vector/2.0.63');
   }
 
   const controller = new AbortController();
