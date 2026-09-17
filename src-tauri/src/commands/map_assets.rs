@@ -4,12 +4,12 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use fastanvil::tex::{Blockstate, Model, Render, Renderer, Texture};
 use fastanvil::Block;
-use image::imageops::FilterType;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
+
+use crate::map::assets::AssetResolver;
 
 const ASSET_CONFIG_NAME: &str = "map-assets.json";
 const VANILLA_VERSION_PREFIX: &str = "1.21";
@@ -21,7 +21,7 @@ pub(crate) struct AssetConfig {
 }
 
 pub(crate) struct MapAssets {
-    renderer: Mutex<Renderer>,
+    resolver: AssetResolver,
     top_color_cache: Mutex<HashMap<String, [u8; 4]>>,
     pub(crate) identity: String,
 }
@@ -59,13 +59,9 @@ impl MapAssets {
             return colour;
         }
 
-        let (block_id, properties) = encoded.split_once('|').unwrap_or((encoded, ""));
         let colour = self
-            .renderer
-            .lock()
-            .ok()
-            .and_then(|mut renderer| renderer.get_top(block_id, properties).ok())
-            .map(|texture| average_texture(&texture))
+            .resolver
+            .sample_top(encoded)
             .unwrap_or_else(|| fallback_block_colour(block_name));
 
         if let Ok(mut cache) = self.top_color_cache.lock() {
@@ -239,38 +235,10 @@ fn load_from_source(source: &Path) -> Result<MapAssets, String> {
         load_archive_entries(source)?
     };
 
-    let mut blockstates = HashMap::<String, Blockstate>::new();
-    let mut models = HashMap::<String, Model>::new();
-    let mut textures = HashMap::<String, Texture>::new();
-
-    for (path, bytes) in entries {
-        if let Some(key) = asset_key(&path, "blockstates", ".json") {
-            let state = serde_json::from_slice(&bytes)
-                .map_err(|error| format!("Invalid blockstate {path}: {error}"))?;
-            blockstates.insert(key, state);
-        } else if let Some(key) = asset_key(&path, "models", ".json") {
-            let model = serde_json::from_slice(&bytes)
-                .map_err(|error| format!("Invalid block model {path}: {error}"))?;
-            models.insert(key, model);
-        } else if let Some(key) = asset_key(&path, "textures", ".png") {
-            let texture = image::load_from_memory(&bytes)
-                .map_err(|error| format!("Invalid texture {path}: {error}"))?
-                .resize_exact(16, 16, FilterType::Nearest)
-                .to_rgba8()
-                .into_raw();
-            textures.insert(key, texture);
-        }
-    }
-
-    if blockstates.is_empty() || models.is_empty() || textures.is_empty() {
-        return Err(
-            "Map asset source does not contain Minecraft blockstates, models, and textures"
-                .to_string(),
-        );
-    }
+    let resolver = AssetResolver::from_entries(&entries)?;
 
     Ok(MapAssets {
-        renderer: Mutex::new(Renderer::new(blockstates, models, textures)),
+        resolver,
         top_color_cache: Mutex::new(HashMap::new()),
         identity,
     })
@@ -394,17 +362,6 @@ fn is_interesting_asset(path: &str) -> bool {
         && (path.ends_with(".json") || path.ends_with(".png"))
 }
 
-fn asset_key(path: &str, category: &str, suffix: &str) -> Option<String> {
-    let relative = path.strip_prefix("assets/")?;
-    let (namespace, path) = relative.split_once('/')?;
-    let category_prefix = format!("{category}/");
-    let path = path.strip_prefix(&category_prefix)?.strip_suffix(suffix)?;
-    if path.is_empty() || path.contains("..") || path.contains('\\') {
-        return None;
-    }
-    Some(format!("{namespace}:{path}"))
-}
-
 fn asset_identity(source: &Path) -> Result<String, String> {
     let mut hasher = Sha256::new();
     if source.is_file() {
@@ -438,30 +395,6 @@ fn asset_identity(source: &Path) -> Result<String, String> {
         }
     }
     Ok(format!("sha256:{:x}", hasher.finalize()))
-}
-
-fn average_texture(texture: &[u8]) -> [u8; 4] {
-    let mut red = 0u64;
-    let mut green = 0u64;
-    let mut blue = 0u64;
-    let mut alpha = 0u64;
-    let mut count = 0u64;
-    for rgba in texture.chunks_exact(4) {
-        red += u64::from(rgba[0]);
-        green += u64::from(rgba[1]);
-        blue += u64::from(rgba[2]);
-        alpha += u64::from(rgba[3]);
-        count += 1;
-    }
-    if count == 0 {
-        return [127, 127, 127, 255];
-    }
-    [
-        (red / count) as u8,
-        (green / count) as u8,
-        (blue / count) as u8,
-        (alpha / count).max(1) as u8,
-    ]
 }
 
 pub(crate) fn fallback_block_colour(block_name: &str) -> [u8; 4] {
@@ -538,26 +471,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn asset_keys_keep_the_namespace_and_category_path() {
-        assert_eq!(
-            asset_key(
-                "assets/minecraft/blockstates/grass_block.json",
-                "blockstates",
-                ".json"
-            ),
-            Some("minecraft:grass_block".to_string())
-        );
-        assert_eq!(
-            asset_key(
-                "assets/minecraft/models/block/cube_all.json",
-                "models",
-                ".json"
-            ),
-            Some("minecraft:block/cube_all".to_string())
-        );
-    }
-
-    #[test]
     fn fallback_colours_are_stable_and_non_green_placeholder_like() {
         assert_eq!(
             fallback_block_colour("minecraft:water"),
@@ -566,14 +479,6 @@ mod tests {
         assert_ne!(
             fallback_block_colour("minecraft:stone"),
             fallback_block_colour("minecraft:grass_block")
-        );
-    }
-
-    #[test]
-    fn average_texture_reads_rgba_pixels() {
-        assert_eq!(
-            average_texture(&[10, 20, 30, 255, 30, 40, 50, 255]),
-            [20, 30, 40, 255]
         );
     }
 }

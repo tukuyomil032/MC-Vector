@@ -127,6 +127,10 @@ export interface MapWorldInfo {
   maxChunkZ?: number | null;
   centerX: number;
   centerZ: number;
+  spawnX?: number | null;
+  spawnY?: number | null;
+  spawnZ?: number | null;
+  dataVersion?: number | null;
   recommendedZoom: number;
 }
 

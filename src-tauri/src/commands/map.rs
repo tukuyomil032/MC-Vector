@@ -1,13 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use base64::Engine;
 use fastanvil::complete::Chunk as CompleteChunk;
-use fastanvil::{Chunk as DimensionChunk, HeightMode, Region};
+use fastanvil::{Chunk as DimensionChunk, HeightMode};
 use flate2::{write::ZlibEncoder, Compression};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -22,6 +21,12 @@ use uuid::Uuid;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::map_assets::{self, MapAssets};
 use super::server::ServerManager;
+use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
+use crate::map::tile_buffer::RgbaTileBuffer;
+use crate::map::world::{
+    decode_live_snapshot as decode_world_snapshot, enumerate_region_files,
+    present_chunks_for_bounds, read_complete_chunk, read_level_metadata, ChunkKey, ChunkView,
+};
 
 const MAP_PROTOCOL_VERSION: u32 = 2;
 const CORE_PLUGIN_VERSION: &str = "0.1.0";
@@ -33,7 +38,10 @@ const MAX_BRIDGE_LINE_BYTES: usize = 1024 * 1024;
 const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
 const TILE_ASSET_VERSION: &str = "terrain-textured-v2";
-const TILE_RENDERER_VERSION: &str = "topdown-textured-v4";
+// This version intentionally invalidates the earlier representative-colour
+// tiles. The renderer now resolves blockstate/model parents and samples the
+// resolved top face before the tile path aggregates chunk footprints.
+const TILE_RENDERER_VERSION: &str = "model-texture-surface-v6";
 const MAX_TILE_CACHE_ENTRIES: usize = 256;
 
 #[derive(Clone, Debug, Serialize)]
@@ -85,6 +93,10 @@ pub struct MapWorldInfo {
     pub max_chunk_z: Option<i64>,
     pub center_x: i64,
     pub center_z: i64,
+    pub spawn_x: Option<i64>,
+    pub spawn_y: Option<i64>,
+    pub spawn_z: Option<i64>,
+    pub data_version: Option<i64>,
     pub recommended_zoom: u8,
 }
 
@@ -93,6 +105,8 @@ pub struct MapWorldInfo {
 struct TileRenderResult {
     png: Vec<u8>,
     rendered_chunk_count: usize,
+    has_terrain: bool,
+    coverage_ratio: f32,
 }
 
 #[derive(Clone, Debug)]
@@ -124,7 +138,7 @@ struct LiveChunkKey {
 #[derive(Clone, Debug)]
 struct CachedLiveChunk {
     received_at: u64,
-    snapshot: LiveChunkSnapshot,
+    snapshot: ChunkView,
 }
 
 pub struct MapBridgeManager {
@@ -207,26 +221,8 @@ struct BridgeStatusPayload {
     message: Option<String>,
 }
 
-#[derive(Clone, Debug)]
-struct LiveChunkLayer {
-    y: i32,
-    state: String,
-    biome: String,
-    sky_light: u8,
-    block_light: u8,
-}
-
-#[derive(Clone, Debug)]
-struct LiveChunkSnapshot {
-    chunk_x: i64,
-    chunk_z: i64,
-    min_height: i32,
-    max_height: i32,
-    columns: Vec<Vec<LiveChunkLayer>>,
-}
-
 type BridgeSender = mpsc::Sender<String>;
-type PendingSnapshotSender = oneshot::Sender<Result<LiveChunkSnapshot, String>>;
+type PendingSnapshotSender = oneshot::Sender<Result<ChunkView, String>>;
 
 fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -1106,138 +1102,8 @@ where
     Ok(Some(line))
 }
 
-fn decode_string(data: &[u8], cursor: &mut usize) -> Result<String, String> {
-    let length = read_u16(data, cursor)? as usize;
-    let end = cursor
-        .checked_add(length)
-        .ok_or_else(|| "Snapshot string length overflowed".to_string())?;
-    let bytes = data
-        .get(*cursor..end)
-        .ok_or_else(|| "Snapshot string exceeded payload".to_string())?;
-    *cursor = end;
-    String::from_utf8(bytes.to_vec()).map_err(|_| "Snapshot string was not UTF-8".to_string())
-}
-
-fn read_u8(data: &[u8], cursor: &mut usize) -> Result<u8, String> {
-    let value = *data
-        .get(*cursor)
-        .ok_or_else(|| "Snapshot payload ended unexpectedly".to_string())?;
-    *cursor += 1;
-    Ok(value)
-}
-
-fn read_u16(data: &[u8], cursor: &mut usize) -> Result<u16, String> {
-    let bytes = data
-        .get(*cursor..(*cursor).saturating_add(2))
-        .ok_or_else(|| "Snapshot payload ended unexpectedly".to_string())?;
-    *cursor += 2;
-    Ok(u16::from_be_bytes([bytes[0], bytes[1]]))
-}
-
-fn read_i16(data: &[u8], cursor: &mut usize) -> Result<i16, String> {
-    Ok(read_u16(data, cursor)? as i16)
-}
-
-fn read_i32(data: &[u8], cursor: &mut usize) -> Result<i32, String> {
-    let bytes = data
-        .get(*cursor..(*cursor).saturating_add(4))
-        .ok_or_else(|| "Snapshot payload ended unexpectedly".to_string())?;
-    *cursor += 4;
-    Ok(i32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
-}
-
-fn decode_live_snapshot(value: &Value) -> Result<LiveChunkSnapshot, String> {
-    if value.get("codec").and_then(Value::as_str) != Some("deflate-base64") {
-        return Err("Unsupported live chunk snapshot codec".to_string());
-    }
-    let payload = value
-        .get("payload")
-        .and_then(Value::as_str)
-        .ok_or_else(|| "Live chunk snapshot is missing payload".to_string())?;
-    let compressed = base64::engine::general_purpose::STANDARD
-        .decode(payload)
-        .map_err(|_| "Live chunk snapshot payload is not valid base64".to_string())?;
-    if compressed.len() > 256 * 1024 {
-        return Err("Live chunk snapshot payload is too large".to_string());
-    }
-    let mut decoder = flate2::read::ZlibDecoder::new(compressed.as_slice());
-    let mut data = Vec::new();
-    decoder
-        .read_to_end(&mut data)
-        .map_err(|_| "Live chunk snapshot payload could not be decompressed".to_string())?;
-    if data.len() > 2 * 1024 * 1024 {
-        return Err("Live chunk snapshot decompressed payload is too large".to_string());
-    }
-
-    let mut cursor = 0;
-    let magic = read_i32(&data, &mut cursor)? as u32;
-    if magic != 0x4D43_5653 || read_u8(&data, &mut cursor)? != 1 {
-        return Err("Unsupported live chunk snapshot format".to_string());
-    }
-    let chunk_x = i64::from(read_i32(&data, &mut cursor)?);
-    let chunk_z = i64::from(read_i32(&data, &mut cursor)?);
-    let min_height = read_i32(&data, &mut cursor)?;
-    let max_height = read_i32(&data, &mut cursor)?;
-    if min_height >= max_height {
-        return Err("Live chunk snapshot height range is invalid".to_string());
-    }
-
-    let state_count = usize::from(read_u16(&data, &mut cursor)?);
-    let biome_count = usize::from(read_u16(&data, &mut cursor)?);
-    if state_count > 4096 || biome_count > 4096 {
-        return Err("Live chunk snapshot dictionary is too large".to_string());
-    }
-    let mut states = Vec::with_capacity(state_count);
-    for _ in 0..state_count {
-        states.push(decode_string(&data, &mut cursor)?);
-    }
-    let mut biomes = Vec::with_capacity(biome_count);
-    for _ in 0..biome_count {
-        biomes.push(decode_string(&data, &mut cursor)?);
-    }
-
-    let mut columns = Vec::with_capacity(256);
-    for _ in 0..256 {
-        let layer_count = usize::from(read_u8(&data, &mut cursor)?);
-        if layer_count > 16 {
-            return Err("Live chunk snapshot exceeds the surface layer limit".to_string());
-        }
-        let mut layers = Vec::with_capacity(layer_count);
-        for _ in 0..layer_count {
-            let y = i32::from(read_i16(&data, &mut cursor)?);
-            let state_index = usize::from(read_u16(&data, &mut cursor)?);
-            let biome_index = usize::from(read_u16(&data, &mut cursor)?);
-            let sky_light = read_u8(&data, &mut cursor)?;
-            let block_light = read_u8(&data, &mut cursor)?;
-            let state = states
-                .get(state_index)
-                .ok_or_else(|| "Live chunk snapshot state index is invalid".to_string())?
-                .clone();
-            let biome = biomes
-                .get(biome_index)
-                .ok_or_else(|| "Live chunk snapshot biome index is invalid".to_string())?
-                .clone();
-            layers.push(LiveChunkLayer {
-                y,
-                state,
-                biome,
-                sky_light,
-                block_light,
-            });
-        }
-        columns.push(layers);
-    }
-
-    if cursor != data.len() {
-        return Err("Live chunk snapshot contains trailing bytes".to_string());
-    }
-    Ok(LiveChunkSnapshot {
-        chunk_x,
-        chunk_z,
-        min_height,
-        max_height,
-        columns,
-    })
+fn decode_live_snapshot(value: &Value) -> Result<ChunkView, String> {
+    decode_world_snapshot(value)
 }
 
 async fn request_live_chunk(
@@ -1246,7 +1112,7 @@ async fn request_live_chunk(
     dimension: &str,
     chunk_x: i64,
     chunk_z: i64,
-) -> Option<LiveChunkSnapshot> {
+) -> Option<ChunkView> {
     let cache_key = LiveChunkKey {
         server_id: server_id.to_string(),
         dimension: dimension.to_string(),
@@ -1284,7 +1150,11 @@ async fn request_live_chunk(
     }
 
     match timeout(Duration::from_millis(750), response_receiver).await {
-        Ok(Ok(Ok(snapshot))) => {
+        Ok(Ok(Ok(snapshot)))
+            if snapshot.key.dimension == dimension
+                && snapshot.key.chunk_x == chunk_x
+                && snapshot.key.chunk_z == chunk_z =>
+        {
             manager.live_snapshots.lock().await.insert(
                 cache_key,
                 CachedLiveChunk {
@@ -1798,8 +1668,9 @@ fn emit_map_tile_ready(
     png: &[u8],
     rendered_chunk_count: usize,
     asset_missing: bool,
+    coverage: Option<(bool, f32)>,
 ) {
-    let (has_terrain, coverage_ratio) = png_coverage(png);
+    let (has_terrain, coverage_ratio) = coverage.unwrap_or_else(|| png_coverage(png));
     let render_state = if asset_missing {
         "asset_missing"
     } else if has_terrain {
@@ -2112,7 +1983,7 @@ pub async fn get_map_tile(
     };
 
     if let Some(tile) = manager.tile_cache.lock().await.get(&key).cloned() {
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none());
+        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None);
         return Ok(tauri::ipc::Response::new(tile));
     }
     if let Some(tile) = read_disk_tile(&server_root, &key)? {
@@ -2123,7 +1994,7 @@ pub async fn get_map_tile(
             }
         }
         cache.insert(key.clone(), tile.clone());
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none());
+        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None);
         return Ok(tauri::ipc::Response::new(tile));
     }
 
@@ -2183,6 +2054,7 @@ pub async fn get_map_tile(
             &tile,
             rendered.rendered_chunk_count,
             asset_missing,
+            Some((rendered.has_terrain, rendered.coverage_ratio)),
         );
 
         let mut cache = manager.tile_cache.lock().await;
@@ -2420,129 +2292,28 @@ fn write_disk_tile(server_root: &Path, key: &TileCacheKey, bytes: &[u8]) -> Resu
 
 type Rgba = [u8; 4];
 
-fn floor_div(value: i64, divisor: i64) -> i64 {
-    debug_assert!(divisor > 0);
-    let quotient = value / divisor;
-    if value % divisor < 0 {
-        quotient - 1
-    } else {
-        quotient
-    }
-}
-
-fn floor_mod(value: i64, divisor: i64) -> i64 {
-    value - floor_div(value, divisor) * divisor
-}
-
-fn parse_region_file_name(path: &Path) -> Option<(i64, i64)> {
-    let name = path.file_name()?.to_str()?;
-    let stem = name.strip_suffix(".mca")?;
-    let mut parts = stem.split('.');
-    if parts.next()? != "r" {
-        return None;
-    }
-    Some((parts.next()?.parse().ok()?, parts.next()?.parse().ok()?))
-}
-
-fn region_files(world_root: &Path) -> Result<Vec<(i64, i64, PathBuf)>, String> {
-    let region_dir = world_root.join("region");
-    let metadata = match fs::symlink_metadata(&region_dir) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(error) => return Err(format!("Failed to inspect world region directory: {error}")),
-    };
-    if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
-        return Err("World region path is not a normal directory".to_string());
-    }
-
-    let mut files = Vec::new();
-    for entry in fs::read_dir(&region_dir)
-        .map_err(|error| format!("Failed to read world region directory: {error}"))?
-    {
-        let entry = entry.map_err(|error| format!("Failed to read world region entry: {error}"))?;
-        let path = entry.path();
-        let entry_metadata = fs::symlink_metadata(&path)
-            .map_err(|error| format!("Failed to inspect world region entry: {error}"))?;
-        if is_link_or_reparse_point(&entry_metadata) || !entry_metadata.is_file() {
-            continue;
-        }
-        let Some((region_x, region_z)) = parse_region_file_name(&path) else {
-            continue;
-        };
-        files.push((region_x, region_z, path));
-    }
-    Ok(files)
-}
-
-fn present_chunks_in_region(
-    path: &Path,
-    region_x: i64,
-    region_z: i64,
-) -> Result<Vec<(i64, i64)>, String> {
-    let mut file = fs::File::open(path)
-        .map_err(|error| format!("Failed to open world region file: {error}"))?;
-    let mut header = [0u8; 8192];
-    file.read_exact(&mut header)
-        .map_err(|error| format!("Failed to read world region header: {error}"))?;
-    let mut chunks = Vec::new();
-    for index in 0..1024 {
-        let offset = index * 4;
-        let has_location = header[offset] != 0
-            || header[offset + 1] != 0
-            || header[offset + 2] != 0
-            || header[offset + 3] != 0;
-        if !has_location {
-            continue;
-        }
-        let local_x = (index % 32) as i64;
-        let local_z = (index / 32) as i64;
-        chunks.push((region_x * 32 + local_x, region_z * 32 + local_z));
-    }
-    Ok(chunks)
-}
-
 fn existing_chunk_coordinates_for_tile(
     world_root: &Path,
     zoom: u8,
     tile_x: i32,
     tile_y: i32,
 ) -> Result<Vec<(i64, i64)>, String> {
-    let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
-    let tile_min_x = i64::from(tile_x) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let tile_min_z = i64::from(tile_y) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let tile_max_x = tile_min_x + i64::from(TILE_SIZE) * blocks_per_pixel - 1;
-    let tile_max_z = tile_min_z + i64::from(TILE_SIZE) * blocks_per_pixel - 1;
+    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    let tile_min_x = bounds.origin_x;
+    let tile_min_z = bounds.origin_z;
+    let tile_max_x = bounds.max_x();
+    let tile_max_z = bounds.max_z();
     let min_chunk_x = floor_div(tile_min_x, 16);
     let max_chunk_x = floor_div(tile_max_x, 16);
     let min_chunk_z = floor_div(tile_min_z, 16);
     let max_chunk_z = floor_div(tile_max_z, 16);
-    let mut chunks = HashSet::new();
-
-    for (region_x, region_z, path) in region_files(world_root)? {
-        let region_min_x = region_x * 32;
-        let region_max_x = region_min_x + 31;
-        let region_min_z = region_z * 32;
-        let region_max_z = region_min_z + 31;
-        if region_max_x < min_chunk_x
-            || region_min_x > max_chunk_x
-            || region_max_z < min_chunk_z
-            || region_min_z > max_chunk_z
-        {
-            continue;
-        }
-        if let Ok(present) = present_chunks_in_region(&path, region_x, region_z) {
-            chunks.extend(present.into_iter().filter(|(chunk_x, chunk_z)| {
-                *chunk_x >= min_chunk_x
-                    && *chunk_x <= max_chunk_x
-                    && *chunk_z >= min_chunk_z
-                    && *chunk_z <= max_chunk_z
-            }));
-        }
-    }
-
-    let mut chunks: Vec<_> = chunks.into_iter().collect();
-    chunks.sort_unstable();
-    Ok(chunks)
+    present_chunks_for_bounds(
+        world_root,
+        min_chunk_x,
+        max_chunk_x,
+        min_chunk_z,
+        max_chunk_z,
+    )
 }
 
 fn recommended_zoom(min_chunk_x: i64, max_chunk_x: i64, min_chunk_z: i64, max_chunk_z: i64) -> u8 {
@@ -2559,10 +2330,8 @@ fn recommended_zoom(min_chunk_x: i64, max_chunk_x: i64, min_chunk_z: i64, max_ch
 
 fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo, String> {
     let mut chunks = Vec::new();
-    for (region_x, region_z, path) in region_files(world_root)? {
-        if let Ok(present) = present_chunks_in_region(&path, region_x, region_z) {
-            chunks.extend(present);
-        }
+    for index in enumerate_region_files(world_root)? {
+        chunks.extend(index.present_chunks().iter().copied());
     }
     chunks.sort_unstable();
     chunks.dedup();
@@ -2570,13 +2339,24 @@ fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo,
     let max_chunk_x = chunks.iter().map(|(x, _)| *x).max();
     let min_chunk_z = chunks.iter().map(|(_, z)| *z).min();
     let max_chunk_z = chunks.iter().map(|(_, z)| *z).max();
+    let metadata = read_level_metadata(world_root)?;
     let (center_x, center_z, recommended_zoom) =
         match (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z) {
-            (Some(min_x), Some(max_x), Some(min_z), Some(max_z)) => (
-                ((min_x + max_x + 1) * 16) / 2,
-                ((min_z + max_z + 1) * 16) / 2,
-                recommended_zoom(min_x, max_x, min_z, max_z),
-            ),
+            (Some(min_x), Some(max_x), Some(min_z), Some(max_z)) => {
+                let generated_center = (
+                    ((min_x + max_x + 1) * 16) / 2,
+                    ((min_z + max_z + 1) * 16) / 2,
+                );
+                let center = metadata
+                    .as_ref()
+                    .and_then(|metadata| metadata.spawn_x.zip(metadata.spawn_z))
+                    .unwrap_or(generated_center);
+                (
+                    center.0,
+                    center.1,
+                    recommended_zoom(min_x, max_x, min_z, max_z),
+                )
+            }
             _ => (0, 0, MAX_ZOOM),
         };
     Ok(MapWorldInfo {
@@ -2589,61 +2369,23 @@ fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo,
         max_chunk_z,
         center_x,
         center_z,
+        spawn_x: metadata.as_ref().and_then(|metadata| metadata.spawn_x),
+        spawn_y: metadata.as_ref().and_then(|metadata| metadata.spawn_y),
+        spawn_z: metadata.as_ref().and_then(|metadata| metadata.spawn_z),
+        data_version: metadata.as_ref().and_then(|metadata| metadata.data_version),
         recommended_zoom,
     })
-}
-
-fn open_region(world_root: &Path, region_x: i64, region_z: i64) -> Option<Region<fs::File>> {
-    let region_dir = world_root.join("region");
-    let region_metadata = fs::symlink_metadata(&region_dir).ok()?;
-    if !region_metadata.is_dir() || is_link_or_reparse_point(&region_metadata) {
-        return None;
-    }
-
-    let path = region_dir.join(format!("r.{region_x}.{region_z}.mca"));
-    let metadata = fs::symlink_metadata(&path).ok()?;
-    if !metadata.is_file() || is_link_or_reparse_point(&metadata) {
-        return None;
-    }
-    let file = fs::File::open(path).ok()?;
-    Region::from_stream(file).ok()
-}
-
-fn read_region_chunk(
-    region: &mut Region<fs::File>,
-    local_x: usize,
-    local_z: usize,
-) -> Option<Vec<u8>> {
-    for attempt in 0..3 {
-        match region.read_chunk(local_x, local_z) {
-            Ok(chunk) => return chunk,
-            Err(_) if attempt < 2 => std::thread::sleep(std::time::Duration::from_millis(8)),
-            Err(_) => return None,
-        }
-    }
-    None
 }
 
 fn render_chunk<'a>(
     world_root: &Path,
     chunk_x: i64,
     chunk_z: i64,
-    regions: &mut HashMap<(i64, i64), Option<Region<fs::File>>>,
     chunks: &'a mut HashMap<(i64, i64), Option<CompleteChunk>>,
 ) -> Option<&'a CompleteChunk> {
     if !chunks.contains_key(&(chunk_x, chunk_z)) {
-        let region_x = floor_div(chunk_x, 32);
-        let region_z = floor_div(chunk_z, 32);
-        let local_x = floor_mod(chunk_x, 32) as usize;
-        let local_z = floor_mod(chunk_z, 32) as usize;
-        let region = regions
-            .entry((region_x, region_z))
-            .or_insert_with(|| open_region(world_root, region_x, region_z));
-
-        let rendered = region.as_mut().and_then(|region| {
-            let bytes = read_region_chunk(region, local_x, local_z)?;
-            CompleteChunk::from_bytes(&bytes).ok()
-        });
+        let key = ChunkKey::new("minecraft:overworld", chunk_x, chunk_z);
+        let rendered = read_complete_chunk(world_root, &key).ok().flatten();
         chunks.insert((chunk_x, chunk_z), rendered);
     }
     chunks.get(&(chunk_x, chunk_z)).and_then(Option::as_ref)
@@ -2681,7 +2423,7 @@ fn surface_colour(
 }
 
 fn live_surface_colour(
-    snapshot: &LiveChunkSnapshot,
+    snapshot: &ChunkView,
     local_x: usize,
     local_z: usize,
     assets: Option<&MapAssets>,
@@ -2690,12 +2432,16 @@ fn live_surface_colour(
     let Some(layers) = snapshot.columns.get(index) else {
         return fallback_terrain_colour(0, 0);
     };
-    let Some(layer) = layers.iter().find(|layer| {
-        !layer.state.starts_with("minecraft:air")
-            && !layer.state.starts_with("minecraft:cave_air")
-            && layer.y >= snapshot.min_height
-            && layer.y < snapshot.max_height
-    }) else {
+    let Some(layer) = layers
+        .iter()
+        .filter(|layer| {
+            !layer.state.starts_with("minecraft:air")
+                && !layer.state.starts_with("minecraft:cave_air")
+                && layer.y >= snapshot.min_y
+                && layer.y < snapshot.max_y
+        })
+        .max_by_key(|layer| layer.y)
+    else {
         return fallback_terrain_colour(0, 0);
     };
     let base = assets
@@ -2789,34 +2535,25 @@ fn render_overview_tile(
     tile_x: i32,
     tile_y: i32,
     assets: Option<&MapAssets>,
-    live_chunk: Option<&LiveChunkSnapshot>,
+    live_chunk: Option<&ChunkView>,
 ) -> Result<TileRenderResult, String> {
-    let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
-    let tile_origin_x = i64::from(tile_x) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let tile_origin_z = i64::from(tile_y) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let mut regions = HashMap::new();
+    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Option<CompleteChunk>> = HashMap::new();
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
     if let Some(snapshot) = live_chunk {
-        if !coordinates.contains(&(snapshot.chunk_x, snapshot.chunk_z))
-            && tile_coordinates_intersect_bounds(
-                tile_origin_x,
-                tile_origin_z,
-                blocks_per_pixel,
-                snapshot.chunk_x,
-                snapshot.chunk_z,
-            )
+        if !coordinates.contains(&(snapshot.key.chunk_x, snapshot.key.chunk_z))
+            && bounds.intersects_chunk(snapshot.key.chunk_x, snapshot.key.chunk_z)
         {
-            coordinates.push((snapshot.chunk_x, snapshot.chunk_z));
+            coordinates.push((snapshot.key.chunk_x, snapshot.key.chunk_z));
         }
     }
 
-    let mut pixels = vec![0u8; TILE_SIZE as usize * (1 + TILE_SIZE as usize * 4)];
+    let mut tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
     let mut rendered_chunk_count = 0;
     for (chunk_x, chunk_z) in coordinates {
-        let colour = if live_chunk
-            .is_some_and(|snapshot| snapshot.chunk_x == chunk_x && snapshot.chunk_z == chunk_z)
-        {
+        let colour = if live_chunk.is_some_and(|snapshot| {
+            snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
+        }) {
             let snapshot = live_chunk.expect("checked live chunk presence");
             average_surface_colours((0..16).step_by(4).flat_map(|local_z| {
                 (0..16)
@@ -2824,7 +2561,7 @@ fn render_overview_tile(
                     .map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
             }))
         } else {
-            render_chunk(world_root, chunk_x, chunk_z, &mut regions, &mut chunks)
+            render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
                 .map(|chunk| chunk_representative_colour(chunk, assets))
                 .unwrap_or_else(|| fallback_terrain_colour(0, 0))
         };
@@ -2832,46 +2569,27 @@ fn render_overview_tile(
             continue;
         }
         rendered_chunk_count += 1;
-        let pixel_x = floor_div(chunk_x * 16 + 8 - tile_origin_x, blocks_per_pixel)
-            .clamp(0, i64::from(TILE_SIZE - 1)) as usize;
-        let pixel_z = floor_div(chunk_z * 16 + 8 - tile_origin_z, blocks_per_pixel)
-            .clamp(0, i64::from(TILE_SIZE - 1)) as usize;
-        let offset = pixel_z * (1 + TILE_SIZE as usize * 4) + 1 + pixel_x * 4;
-        let existing = [
-            pixels[offset],
-            pixels[offset + 1],
-            pixels[offset + 2],
-            pixels[offset + 3],
-        ];
-        let blended = if existing[3] == 0 {
-            colour
-        } else {
-            average_surface_colours([existing, colour])
+
+        // A chunk can cover less than one output pixel at overview zooms. The
+        // old implementation wrote only the chunk centre, which made sparse
+        // generated terrain disappear whenever the fixed sample missed it.
+        // Rasterize the complete chunk footprint instead and aggregate all
+        // present chunks landing in the same overview pixel.
+        let Some((pixel_x, pixel_z)) = bounds.chunk_pixel_range(chunk_x, chunk_z) else {
+            continue;
         };
-        pixels[offset..offset + 4].copy_from_slice(&blended);
+        tile_buffer.add_rect(pixel_x, pixel_z, colour);
     }
 
+    let has_terrain = tile_buffer.covered_pixels() > 0;
+    let coverage_ratio = tile_buffer.coverage_ratio();
+    let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &tile_buffer.into_scanlines())?;
     Ok(TileRenderResult {
-        png: encode_png_rgba(TILE_SIZE, TILE_SIZE, &pixels)?,
+        png,
         rendered_chunk_count,
+        has_terrain,
+        coverage_ratio,
     })
-}
-
-fn tile_coordinates_intersect_bounds(
-    tile_origin_x: i64,
-    tile_origin_z: i64,
-    blocks_per_pixel: i64,
-    chunk_x: i64,
-    chunk_z: i64,
-) -> bool {
-    let tile_max_x = tile_origin_x + i64::from(TILE_SIZE) * blocks_per_pixel - 1;
-    let tile_max_z = tile_origin_z + i64::from(TILE_SIZE) * blocks_per_pixel - 1;
-    let chunk_min_x = chunk_x * 16;
-    let chunk_min_z = chunk_z * 16;
-    tile_origin_x <= chunk_min_x + 15
-        && tile_max_x >= chunk_min_x
-        && tile_origin_z <= chunk_min_z + 15
-        && tile_max_z >= chunk_min_z
 }
 
 fn render_world_tile_detailed(
@@ -2880,7 +2598,7 @@ fn render_world_tile_detailed(
     tile_x: i32,
     tile_y: i32,
     assets: Option<&MapAssets>,
-    live_chunk: Option<&LiveChunkSnapshot>,
+    live_chunk: Option<&ChunkView>,
 ) -> Result<TileRenderResult, String> {
     let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
     if blocks_per_pixel >= 16 {
@@ -2889,7 +2607,6 @@ fn render_world_tile_detailed(
 
     let tile_origin_x = i64::from(tile_x) * i64::from(TILE_SIZE) * blocks_per_pixel;
     let tile_origin_z = i64::from(tile_y) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let mut regions = HashMap::new();
     let mut chunks: HashMap<(i64, i64), Option<CompleteChunk>> = HashMap::new();
     let mut pixels = Vec::with_capacity(TILE_SIZE as usize * (1 + TILE_SIZE as usize * 4));
 
@@ -2920,7 +2637,7 @@ fn render_world_tile_detailed(
                     let local_x = floor_mod(world_x, 16) as usize;
                     let local_z = floor_mod(world_z, 16) as usize;
                     let colour = if live_chunk.is_some_and(|snapshot| {
-                        snapshot.chunk_x == chunk_x && snapshot.chunk_z == chunk_z
+                        snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
                     }) {
                         live_surface_colour(
                             live_chunk.expect("checked live chunk presence"),
@@ -2929,7 +2646,7 @@ fn render_world_tile_detailed(
                             assets,
                         )
                     } else {
-                        render_chunk(world_root, chunk_x, chunk_z, &mut regions, &mut chunks)
+                        render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
                             .map(|chunk| surface_colour(chunk, local_x, local_z, assets))
                             .unwrap_or_else(|| fallback_terrain_colour(world_x, world_z))
                     };
@@ -2949,9 +2666,13 @@ fn render_world_tile_detailed(
         }
     }
 
+    let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &pixels)?;
+    let (has_terrain, coverage_ratio) = png_coverage(&png);
     Ok(TileRenderResult {
-        png: encode_png_rgba(TILE_SIZE, TILE_SIZE, &pixels)?,
+        png,
         rendered_chunk_count: chunks.values().filter(|chunk| chunk.is_some()).count(),
+        has_terrain,
+        coverage_ratio,
     })
 }
 
@@ -3007,6 +2728,9 @@ fn crc32(bytes: &[u8]) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::map::world::{ChunkLayer, ChunkSourceKind};
+    use base64::Engine;
+
     use super::*;
 
     fn test_config() -> BridgeConfig {
@@ -3038,15 +2762,14 @@ mod tests {
         )
     }
 
-    fn live_test_snapshot(chunk_x: i64, chunk_z: i64) -> LiveChunkSnapshot {
-        LiveChunkSnapshot {
-            chunk_x,
-            chunk_z,
-            min_height: -64,
-            max_height: 320,
-            columns: (0..256)
+    fn live_test_snapshot(chunk_x: i64, chunk_z: i64) -> ChunkView {
+        ChunkView::new(
+            ChunkKey::new("minecraft:overworld", chunk_x, chunk_z),
+            -64,
+            320,
+            (0..256)
                 .map(|_| {
-                    vec![LiveChunkLayer {
+                    vec![ChunkLayer {
                         y: 64,
                         state: "minecraft:grass_block".to_string(),
                         biome: "minecraft:plains".to_string(),
@@ -3055,7 +2778,11 @@ mod tests {
                     }]
                 })
                 .collect(),
-        }
+            0,
+            None,
+            ChunkSourceKind::LiveSnapshot,
+        )
+        .expect("live test snapshot should be valid")
     }
 
     #[test]
@@ -3342,11 +3069,12 @@ mod tests {
         let payload = base64::engine::general_purpose::STANDARD
             .encode(encoder.finish().expect("compressed payload should finish"));
         let snapshot = decode_live_snapshot(&serde_json::json!({
+            "dimension": "minecraft:overworld",
             "codec": "deflate-base64",
             "payload": payload,
         }))
         .expect("snapshot should decode");
-        assert_eq!((snapshot.chunk_x, snapshot.chunk_z), (12, -4));
+        assert_eq!((snapshot.key.chunk_x, snapshot.key.chunk_z), (12, -4));
         assert_eq!(snapshot.columns.len(), 256);
         assert_eq!(snapshot.columns[0][0].state, "minecraft:grass_block");
         assert_eq!(snapshot.columns[0][0].sky_light, 15);

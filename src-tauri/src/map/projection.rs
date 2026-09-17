@@ -1,0 +1,141 @@
+use std::ops::RangeInclusive;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TileWorldBounds {
+    pub tile_size: usize,
+    pub zoom: u8,
+    pub max_zoom: u8,
+    pub tile_x: i32,
+    pub tile_y: i32,
+    pub blocks_per_pixel: i64,
+    pub origin_x: i64,
+    pub origin_z: i64,
+}
+
+impl TileWorldBounds {
+    pub fn new(
+        tile_size: usize,
+        max_zoom: u8,
+        zoom: u8,
+        tile_x: i32,
+        tile_y: i32,
+    ) -> Result<Self, String> {
+        if zoom > max_zoom {
+            return Err(format!("Map zoom {zoom} exceeds maximum {max_zoom}"));
+        }
+        let blocks_per_pixel = 1_i64 << (max_zoom - zoom);
+        let tile_world_size = tile_size as i64 * blocks_per_pixel;
+        Ok(Self {
+            tile_size,
+            zoom,
+            max_zoom,
+            tile_x,
+            tile_y,
+            blocks_per_pixel,
+            origin_x: i64::from(tile_x) * tile_world_size,
+            origin_z: i64::from(tile_y) * tile_world_size,
+        })
+    }
+
+    pub fn max_x(self) -> i64 {
+        self.origin_x + self.tile_size as i64 * self.blocks_per_pixel - 1
+    }
+
+    pub fn max_z(self) -> i64 {
+        self.origin_z + self.tile_size as i64 * self.blocks_per_pixel - 1
+    }
+
+    pub fn intersects_chunk(self, chunk_x: i64, chunk_z: i64) -> bool {
+        let chunk_min_x = chunk_x * 16;
+        let chunk_min_z = chunk_z * 16;
+        self.origin_x <= chunk_min_x + 15
+            && self.max_x() >= chunk_min_x
+            && self.origin_z <= chunk_min_z + 15
+            && self.max_z() >= chunk_min_z
+    }
+
+    pub fn chunk_pixel_range(
+        self,
+        chunk_x: i64,
+        chunk_z: i64,
+    ) -> Option<(RangeInclusive<usize>, RangeInclusive<usize>)> {
+        if !self.intersects_chunk(chunk_x, chunk_z) {
+            return None;
+        }
+        let chunk_min_x = chunk_x * 16;
+        let chunk_max_x = chunk_min_x + 15;
+        let chunk_min_z = chunk_z * 16;
+        let chunk_max_z = chunk_min_z + 15;
+        let min_x = floor_div(chunk_min_x - self.origin_x, self.blocks_per_pixel)
+            .clamp(0, self.tile_size as i64 - 1) as usize;
+        let max_x = floor_div(chunk_max_x - self.origin_x, self.blocks_per_pixel)
+            .clamp(0, self.tile_size as i64 - 1) as usize;
+        let min_z = floor_div(chunk_min_z - self.origin_z, self.blocks_per_pixel)
+            .clamp(0, self.tile_size as i64 - 1) as usize;
+        let max_z = floor_div(chunk_max_z - self.origin_z, self.blocks_per_pixel)
+            .clamp(0, self.tile_size as i64 - 1) as usize;
+        Some((min_x..=max_x, min_z..=max_z))
+    }
+}
+
+pub fn floor_div(value: i64, divisor: i64) -> i64 {
+    debug_assert!(divisor > 0);
+    let quotient = value / divisor;
+    let remainder = value % divisor;
+    if remainder < 0 {
+        quotient - 1
+    } else {
+        quotient
+    }
+}
+
+pub fn floor_mod(value: i64, divisor: i64) -> i64 {
+    let remainder = value % divisor;
+    if remainder < 0 {
+        remainder + divisor
+    } else {
+        remainder
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn negative_coordinates_use_mathematical_floor() {
+        assert_eq!(floor_div(-1, 16), -1);
+        assert_eq!(floor_div(-16, 16), -1);
+        assert_eq!(floor_div(-17, 16), -2);
+        assert_eq!(floor_mod(-1, 16), 15);
+        assert_eq!(floor_mod(-16, 16), 0);
+    }
+
+    #[test]
+    fn chunk_range_covers_sparse_chunk_at_overview_zoom() {
+        let bounds = TileWorldBounds::new(256, 8, 0, 0, 0).expect("valid bounds");
+        let (x, z) = bounds
+            .chunk_pixel_range(0, 0)
+            .expect("origin chunk intersects the tile");
+        assert_eq!(x, 0..=0);
+        assert_eq!(z, 0..=0);
+    }
+
+    #[test]
+    fn negative_tile_range_does_not_wrap() {
+        let bounds = TileWorldBounds::new(256, 8, 8, -1, -1).expect("valid bounds");
+        assert!(
+            (-1 >= bounds.origin_x && -1 <= bounds.max_x())
+                && (-1 >= bounds.origin_z && -1 <= bounds.max_z())
+        );
+        assert_eq!(bounds.origin_x, -256);
+        assert_eq!(bounds.origin_z, -256);
+        assert!(bounds.chunk_pixel_range(-1, -1).is_some());
+        assert!(bounds.chunk_pixel_range(0, 0).is_none());
+    }
+
+    #[test]
+    fn out_of_range_zoom_is_rejected() {
+        assert!(TileWorldBounds::new(256, 8, 9, 0, 0).is_err());
+    }
+}
