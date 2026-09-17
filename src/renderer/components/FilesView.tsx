@@ -315,7 +315,7 @@ export default function FilesView({ server }: Props) {
     }
   };
 
-  const handleCheckboxClick = (fileName: string, e: React.MouseEvent) => {
+  const handleCheckboxChange = (fileName: string, e: React.SyntheticEvent) => {
     e.stopPropagation();
     toggleSelect(fileName);
   };
@@ -849,7 +849,7 @@ export default function FilesView({ server }: Props) {
                   type="checkbox"
                   checked={selectedFiles.includes(file.name)}
                   aria-label={file.name}
-                  onClick={(e) => handleCheckboxClick(file.name, e)}
+                  onChange={(e) => handleCheckboxChange(file.name, e)}
                   className="cursor-pointer mr-2.5 ml-2.5"
                 />
                 <SvgMaskIcon

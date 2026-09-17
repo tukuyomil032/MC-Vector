@@ -2,10 +2,12 @@ import type { Translate } from '../../i18n';
 import type { ServerTemplate } from '../../lib/server-commands';
 import type { UpdatePromptState } from '../hooks/use-app-updater';
 import type { PendingServerEula } from '../hooks/use-server-eula-gate';
+import type { MinecraftServer } from '../shared/server declaration';
 import AddServerModal from './AddServerModal';
 import AppDownloadToast from './AppDownloadToast';
 import AppUpdateModal from './AppUpdateModal';
 import ImportServerModal from './ImportServerModal';
+import MapSetupModal from './MapSetupModal';
 import ServerEulaModal from './ServerEulaModal';
 
 interface DownloadStatus {
@@ -33,6 +35,9 @@ interface AppOverlayLayerProps {
   onAcceptEula: () => Promise<boolean>;
   onCancelEula: () => void;
   t: Translate;
+  mapSetupServer: MinecraftServer | null;
+  onEnableMap: () => Promise<void>;
+  onSkipMap: () => Promise<void>;
 }
 
 export default function AppOverlayLayer({
@@ -54,6 +59,9 @@ export default function AppOverlayLayer({
   onAcceptEula,
   onCancelEula,
   t,
+  mapSetupServer,
+  onEnableMap,
+  onSkipMap,
 }: AppOverlayLayerProps) {
   return (
     <>
@@ -86,6 +94,7 @@ export default function AppOverlayLayer({
         onInstall={onInstallUpdate}
       />
       <ServerEulaModal pending={pendingEula} onAccept={onAcceptEula} onCancel={onCancelEula} />
+      <MapSetupModal server={mapSetupServer} onEnable={onEnableMap} onSkip={onSkipMap} />
     </>
   );
 }

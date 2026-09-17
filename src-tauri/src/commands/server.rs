@@ -133,6 +133,7 @@ fn audit_server_action(action: &str, server_id: &str) {
 pub async fn start_server(
     app: AppHandle,
     state: State<'_, ServerManager>,
+    map_manager: State<'_, super::map::MapBridgeManager>,
     limiter: State<'_, CommandLimiter>,
     operations: State<'_, ServerOperationManager>,
     server_id: String,
@@ -153,6 +154,13 @@ pub async fn start_server(
     };
     let validated_server_dir = resolve_managed_request(&app_data_dir, &server_request, false)
         .map_err(|error| format!("Invalid managed server directory: {error}"))?;
+    super::map::prepare_bridge_for_server(
+        app.clone(),
+        &map_manager,
+        &app_data_dir,
+        &validated_server_id,
+    )
+    .await;
     let validated_java_path =
         validate_java_executable_path(&java_path, &app_data_dir.join("java"))?
             .to_string_lossy()

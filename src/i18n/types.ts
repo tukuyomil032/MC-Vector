@@ -682,6 +682,7 @@ export interface TranslationDictionary {
     backups: string;
     properties: string;
     generalSettings: string;
+    map: string;
     proxyNetwork: string;
     addServer: string;
     importServer: string;
@@ -692,6 +693,111 @@ export interface TranslationDictionary {
     bulkBackupSelected: string;
     bulkClearSelection: string;
     bulkSelectedCount: string;
+  };
+
+  /** MC-Vector Map integration translations */
+  map: {
+    title: string;
+    tabMap: string;
+    tabManagement: string;
+    setupTitle: string;
+    setupDescription: string;
+    setupEnable: string;
+    setupSkip: string;
+    featureTitle: string;
+    featureDescription: string;
+    enabled: string;
+    disabled: string;
+    status: {
+      absent: string;
+      active: string;
+      paused: string;
+      waitingRestart: string;
+      removePending: string;
+      conflict: string;
+    };
+    bridge: {
+      notApplicable: string;
+      connecting: string;
+      connected: string;
+      disconnected: string;
+      incompatible: string;
+      error: string;
+      statusError: string;
+      statusErrorDescription: string;
+      configurationRequired: string;
+      configurationRequiredDescription: string;
+      repair: string;
+    };
+    actions: {
+      enable: string;
+      pause: string;
+      restore: string;
+      remove: string;
+      refresh: string;
+      recenter: string;
+      zoomIn: string;
+      zoomOut: string;
+      openSettings: string;
+      confirmRemove: string;
+      cancel: string;
+    };
+    asset: {
+      title: string;
+      notApplicable: string;
+      missing: string;
+      detected: string;
+      configured: string;
+      invalid: string;
+      choose: string;
+    };
+    surface: {
+      overworld: string;
+      loading: string;
+      placeholder: string;
+      notAvailable: string;
+      loadingTiles: string;
+      noTile: string;
+      noTileDescription: string;
+      noGeneratedTerrain: string;
+      noGeneratedTerrainDescription: string;
+      tileError: string;
+      tileAlt: string;
+      noPlayers: string;
+      playerCount: string;
+      zoom: string;
+    };
+    management: {
+      componentTitle: string;
+      componentDescription: string;
+      componentName: string;
+      managed: string;
+      paperPluginNote: string;
+      version: string;
+      protocol: string;
+      port: string;
+      lastHeartbeat: string;
+      noHeartbeat: string;
+      configState: string;
+      configReason: string;
+      restartRequired: string;
+      artifactMissing: string;
+      pausedDescription: string;
+      removalDescription: string;
+      conflictDescription: string;
+      removeConfirmTitle: string;
+      removeConfirmDescription: string;
+    };
+    toast: {
+      enabled: string;
+      paused: string;
+      restored: string;
+      removePending: string;
+      removed: string;
+      failed: string;
+      assetsSelected: string;
+      bridgeRepaired: string;
+    };
   };
 
   /** Proxy configuration translations */

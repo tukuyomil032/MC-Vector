@@ -1,0 +1,44 @@
+name: Paper Bridge Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 18 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  paper-bridge-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Build MC-Vector Core
+        run: ./gradlew --no-daemon clean test jar
+        working-directory: bridge/mc-vector-core
+      - name: Download pinned Paper 1.21.10
+        run: |
+          curl -fL --retry 3 -o paper-1.21.10-130.jar \
+            https://fill-data.papermc.io/v1/objects/158703f75a26f842ea656b3dc6d75bf3d1ec176b97a2c36384d0b80b3871af53/paper-1.21.10-130.jar
+          printf '%s  %s\n' \
+            158703f75a26f842ea656b3dc6d75bf3d1ec176b97a2c36384d0b80b3871af53 \
+            paper-1.21.10-130.jar | sha256sum --check --strict
+      - name: Run Paper bridge smoke
+        env:
+          PAPER_JAR: ${{ github.workspace }}/paper-1.21.10-130.jar
+          SMOKE_LOG_DIR: ${{ github.workspace }}/paper-smoke-logs
+          SMOKE_TIMEOUT_MS: '180000'
+        run: node scripts/paper-bridge-smoke.mjs
+        working-directory: bridge/mc-vector-core
+      - name: Upload Paper smoke logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: paper-bridge-smoke-logs
+          path: bridge/mc-vector-core/paper-smoke-logs
+          if-no-files-found: warn

@@ -15,6 +15,7 @@ interface AppMainContentProps {
   ngrokData: Record<string, string | null>;
   onBuildProxyNetwork: (config: ProxyNetworkConfig) => Promise<void>;
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
+  onOpenMap: () => void;
   t: Translate;
 }
 
@@ -27,6 +28,7 @@ export default function AppMainContent({
   ngrokData,
   onBuildProxyNetwork,
   onUpdateServer,
+  onOpenMap,
   t,
 }: AppMainContentProps) {
   const prefersReducedMotion = useReducedMotion();
@@ -66,6 +68,7 @@ export default function AppMainContent({
                 ngrokData={ngrokData}
                 onBuildProxyNetwork={onBuildProxyNetwork}
                 onUpdateServer={onUpdateServer}
+                onOpenMap={onOpenMap}
                 t={t}
               />
             </Suspense>

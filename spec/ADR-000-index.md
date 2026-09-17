@@ -66,6 +66,10 @@ Implementation proceeds in the numbered order. A dependent ADR is not considered
 
 Only evidence at or above the requested claim may be used for the final score.
 
+## Feature Specifications
+
+- [MC-Vector Map Integration Requirements](./map-integration-requirements.md)
+
 ## Score Model
 
 ```text

@@ -1,6 +1,7 @@
 import { useTranslation } from '@/i18n';
 import type { AppView, MinecraftServer } from '@/renderer/shared/server declaration';
 import { Command } from 'cmdk';
+import { Map as MapIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface CommandPaletteProps {
@@ -130,6 +131,15 @@ export function CommandPalette({
               <span className="cmd-palette__item-icon">⚙️</span>
               <span className="cmd-palette__item-label">{t('nav.generalSettings')}</span>
             </Command.Item>
+            {activeServer?.map?.consent === 'enabled' && (
+              <Command.Item
+                className="cmd-palette__item"
+                onSelect={() => runAndClose(() => setCurrentView('map'))}
+              >
+                <MapIcon size={16} aria-hidden="true" className="cmd-palette__item-icon" />
+                <span className="cmd-palette__item-label">{t('nav.map')}</span>
+              </Command.Item>
+            )}
           </Command.Group>
 
           {activeServer && (

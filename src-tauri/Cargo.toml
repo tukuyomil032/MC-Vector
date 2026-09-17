@@ -44,6 +44,10 @@ reqwest = { version = "0.12", features = ["stream"] }
 futures-util = "0.3"
 sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
+fastanvil = "0.32"
+fastnbt = "2"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png"] }
 keyring = { version = "3.6.3", default-features = false, features = ["apple-native", "windows-native", "linux-native-sync-persistent"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

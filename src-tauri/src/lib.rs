@@ -58,6 +58,7 @@ pub fn run() {
         .manage(commands::server::CommandLimiter::default())
         .manage(state::operation_manager::ServerOperationManager::default())
         .manage(commands::ngrok::NgrokManager::default())
+        .manage(commands::map::MapBridgeManager::default())
         .manage(commands::file_utils::ServerImportManager::default())
         .manage(commands::health_check::ProbeLimiter::default())
         .invoke_handler(tauri::generate_handler![
@@ -115,6 +116,17 @@ pub fn run() {
             commands::perf::parse_ansi_lines,
             // ヘルスチェック
             commands::health_check::ping_server,
+            // Map integration
+            commands::map::get_map_status,
+            commands::map::get_map_world_info,
+            commands::map::repair_map_bridge,
+            commands::map::get_map_asset_status,
+            commands::map::select_map_asset,
+            commands::map::get_map_tile,
+            commands::map::enable_map,
+            commands::map::pause_map,
+            commands::map::restore_map,
+            commands::map::remove_map_component,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

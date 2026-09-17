@@ -23,6 +23,7 @@ interface UseServerCreateActionOptions {
   setDownloadStatus: SetDownloadStatus;
   showToast: (message: string, type?: ToastKind) => void;
   t: Translate;
+  onMapSetupRequested: (server: MinecraftServer) => void;
 }
 
 export function useServerCreateAction({
@@ -32,6 +33,7 @@ export function useServerCreateAction({
   setDownloadStatus,
   showToast,
   t,
+  onMapSetupRequested,
 }: UseServerCreateActionOptions) {
   const handleAddServer = useCallback(
     async (serverData: unknown) => {
@@ -78,6 +80,7 @@ export function useServerCreateAction({
           autoBackupWeekday:
             typeof source.autoBackupWeekday === 'number' ? Math.floor(source.autoBackupWeekday) : 0,
           createdDate: new Date().toISOString(),
+          map: { consent: 'undecided' },
         };
         const software = (source.software as string) || 'Vanilla';
         const version = (source.version as string) || '';
@@ -123,6 +126,7 @@ export function useServerCreateAction({
         setServers((prev) => [...prev, newServer]);
         setSelectedServerId(newServer.id);
         setShowAddServerModal(false);
+        onMapSetupRequested(newServer);
         showToast(t('server.toast.created'), 'success');
         setDownloadStatus(null);
         if (!resolution) {
@@ -147,7 +151,15 @@ export function useServerCreateAction({
         setDownloadStatus(null);
       }
     },
-    [setDownloadStatus, setSelectedServerId, setServers, setShowAddServerModal, showToast, t],
+    [
+      onMapSetupRequested,
+      setDownloadStatus,
+      setSelectedServerId,
+      setServers,
+      setShowAddServerModal,
+      showToast,
+      t,
+    ],
   );
 
   return { handleAddServer };

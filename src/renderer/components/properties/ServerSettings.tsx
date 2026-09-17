@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
 import { copyToClipboard } from '../../../lib/clipboard-commands';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
+import { enableMap } from '../../../lib/map-commands';
 import {
   clearNgrokToken,
   hasNgrokToken,
@@ -25,9 +26,15 @@ interface ServerSettingsProps {
   server: MinecraftServer;
   onSave: (updatedServer: MinecraftServer) => Promise<void>;
   onOpenNgrokGuide: () => void;
+  onOpenMap: () => void;
 }
 
-const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenNgrokGuide }) => {
+const ServerSettings: React.FC<ServerSettingsProps> = ({
+  server,
+  onSave,
+  onOpenNgrokGuide,
+  onOpenMap,
+}) => {
   const { t } = useTranslation();
 
   const WEEKDAY_OPTIONS: Array<{ value: number; label: string }> = [
@@ -75,6 +82,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
     server.notifyHighCpuThreshold ?? 90,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreparingMap, setIsPreparingMap] = useState(false);
 
   const [showJavaManager, setShowJavaManager] = useState(false);
   const [showVersionWizard, setShowVersionWizard] = useState(false);
@@ -226,6 +234,25 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEnableMap = async () => {
+    if (isPreparingMap) {
+      return;
+    }
+    setIsPreparingMap(true);
+    try {
+      await enableMap(server.id);
+      await onSave({ ...server, map: { consent: 'enabled' } });
+      showToast(t('map.toast.enabled'), 'success');
+    } catch (error) {
+      showToast(
+        `${t('map.toast.failed')}: ${error instanceof Error ? error.message : String(error)}`,
+        'error',
+      );
+    } finally {
+      setIsPreparingMap(false);
     }
   };
 
@@ -601,6 +628,28 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="server-settings__section">
+            <h3 className="server-settings__section-title">{t('map.featureTitle')}</h3>
+            <p className="server-settings__form-help">{t('map.featureDescription')}</p>
+            {server.map?.consent === 'enabled' ? (
+              <div className="server-settings__map-status-row">
+                <span>{t('map.enabled')}</span>
+                <Button type="button" variant="secondary" onClick={onOpenMap}>
+                  {t('map.title')}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void handleEnableMap()}
+                disabled={isPreparingMap}
+              >
+                {isPreparingMap ? t('common.loading') : t('map.actions.enable')}
+              </Button>
+            )}
           </div>
 
           <div className="server-settings__section">

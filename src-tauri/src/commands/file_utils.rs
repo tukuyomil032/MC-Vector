@@ -1537,6 +1537,75 @@ fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> 
     copy_managed_tree_resolved(source, destination, managed_root)
 }
 
+fn remove_verified_map_component_from_clone(
+    source: &Path,
+    destination: &Path,
+) -> Result<(), String> {
+    let source_metadata_path = source.join("plugins/mc-vector-core.managed.json");
+    let source_metadata = match std::fs::read(&source_metadata_path) {
+        Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).ok(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => {
+            return Err(format!(
+                "Failed to inspect source Map metadata while cloning: {error}"
+            ));
+        }
+    };
+    let Some(source_metadata) = source_metadata else {
+        return Ok(());
+    };
+    let verified = source_metadata
+        .get("managedBy")
+        .and_then(|value| value.as_str())
+        == Some("MC-Vector")
+        && source_metadata
+            .get("artifactName")
+            .and_then(|value| value.as_str())
+            == Some("mc-vector-core.jar");
+    if !verified {
+        return Ok(());
+    }
+
+    let artifact_is_managed = source_metadata
+        .get("artifactProvenance")
+        .and_then(|value| value.as_str())
+        == Some("managed");
+    let relative_files = [
+        ("plugins/mc-vector-core.jar", artifact_is_managed),
+        ("plugins/mc-vector-core.jar.disabled", artifact_is_managed),
+        ("plugins/mc-vector-core.yml", true),
+        ("plugins/mc-vector-core.managed.json", true),
+    ];
+    for (relative_path, should_remove) in relative_files {
+        if !should_remove {
+            continue;
+        }
+        let path = destination.join(relative_path);
+        match std::fs::symlink_metadata(&path) {
+            Ok(metadata) if is_link_or_reparse_point(&metadata) => {
+                return Err(
+                    "Refusing to remove a symbolic link from a cloned Map component".to_string(),
+                );
+            }
+            Ok(metadata) if metadata.is_file() => {
+                std::fs::remove_file(&path).map_err(|error| {
+                    format!("Failed to remove cloned Map component file: {error}")
+                })?;
+            }
+            Ok(_) => {
+                return Err("Cloned Map component entry is not a regular file".to_string());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(format!(
+                    "Failed to inspect cloned Map component file: {error}"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn copy_managed_tree_resolved(
     source: PathBuf,
     destination: PathBuf,
@@ -1613,7 +1682,8 @@ pub async fn clone_managed_server(
         .ok_or_else(|| "Destination server has no parent".to_string())?;
     std::fs::create_dir_all(parent)
         .map_err(|error| format!("Failed to create managed server root: {error}"))?;
-    copy_managed_tree(&source, &destination, &managed_root)
+    copy_managed_tree(&source, &destination, &managed_root)?;
+    remove_verified_map_component_from_clone(&source, &destination)
 }
 
 /// Safely migrates a legacy `servers/<name>` directory to `servers/<id>`.

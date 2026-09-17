@@ -1,0 +1,7 @@
+name: MC-Vector-Core
+version: 0.1.0
+main: com.mcvector.core.MCVectorCorePlugin
+api-version: '1.21'
+description: Lightweight bridge for the MC-Vector Map integration
+authors:
+  - MC-Vector

@@ -15,6 +15,10 @@ export function useAppUpdater() {
   const updateReady = false;
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      return;
+    }
+
     const doUpdateCheck = async () => {
       try {
         const result = await checkForUpdates();

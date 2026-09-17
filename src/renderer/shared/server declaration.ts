@@ -6,6 +6,12 @@ export type ServerStatus =
   | 'restarting'
   | 'crashed';
 
+export type MapConsent = 'undecided' | 'enabled' | 'disabled';
+
+export interface MapSettings {
+  consent: MapConsent;
+}
+
 export interface MinecraftServer {
   id: string;
   name: string;
@@ -36,6 +42,7 @@ export interface MinecraftServer {
   notifyOnHighCpu?: boolean;
   notifyHighCpuThreshold?: number;
   unavailableReason?: string;
+  map?: MapSettings;
 }
 
 export type AppView =
@@ -46,8 +53,13 @@ export type AppView =
   | 'plugins'
   | 'backups'
   | 'general-settings'
+  | 'map'
   | 'app-settings'
   | 'proxy'
   | 'proxy-help'
   | 'ngrok-guide'
   | 'users';
+
+export function isMapEnabled(server: MinecraftServer | undefined): boolean {
+  return server?.map?.consent === 'enabled';
+}
