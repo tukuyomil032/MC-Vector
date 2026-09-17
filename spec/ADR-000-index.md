@@ -69,6 +69,7 @@ Only evidence at or above the requested claim may be used for the final score.
 ## Feature Specifications
 
 - [MC-Vector Map Integration Requirements](./map-integration-requirements.md)
+- [Dynmap v3.0 renderer research corpus](./dynmap/README.md)
 
 ## Score Model
 

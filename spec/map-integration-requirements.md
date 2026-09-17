@@ -1,6 +1,13 @@
 # MC-Vector Map Integration Requirements
 
-Status: Draft implementation contract
+Status: Draft implementation contract; renderer parity is specified by
+the [Dynmap v3.0 research corpus](./dynmap/README.md)
+
+> The current terrain renderer is a prototype. Its bridge, server lifecycle,
+> asset selection, and tile-management behavior are reusable foundations, but
+> its representative-colour and sparse-sampling path is not Dynmap-equivalent.
+> The renderer parity work is tracked in `spec/dynmap/` and must not be marked
+> complete until its verification gates pass.
 
 This document defines the first-party map integration between MC-Vector and a
 Paper 1.21.x server. It intentionally does not depend on Dynmap. Dynmap is a
