@@ -109,7 +109,11 @@ jobs:
         working-directory: bridge/mc-vector-core
         run: |
           test -f build/libs/mc-vector-core.jar
-          jar tf build/libs/mc-vector-core.jar | rg -n '(^|/)plugin\.yml$|com/mcvector/core/MCVectorCorePlugin\.class'
+          jar tf build/libs/mc-vector-core.jar | awk '
+            $0 == "plugin.yml" || $0 ~ /\/plugin\.yml$/ { plugin = 1 }
+            $0 == "com/mcvector/core/MCVectorCorePlugin.class" { main = 1 }
+            END { exit !(plugin && main) }
+          '
 
   cargo-audit:
     runs-on: ubuntu-latest
