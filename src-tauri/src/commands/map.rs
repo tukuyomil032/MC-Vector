@@ -44,10 +44,10 @@ const TILE_SIZE: u32 = 256;
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
 const MAX_LIVE_CHUNKS_PER_AXIS: i64 = 8;
 const RAY_CHUNK_PADDING_BLOCKS: i64 = 512;
-// This version intentionally invalidates the earlier representative-colour
-// tiles. The renderer now resolves blockstate/model parents and samples the
-// resolved top face before the tile path aggregates chunk footprints.
-const TILE_RENDERER_VERSION: &str = "model-texture-surface-v6";
+// Bump this whenever the rasterisation algorithm or its source data contract
+// changes. In particular, the earlier representative-colour/surface tiles
+// must never be reused by the Iso ray renderer.
+const TILE_RENDERER_VERSION: &str = "iso-ray-model-texture-v7";
 const MAX_TILE_CACHE_ENTRIES: usize = 256;
 
 #[derive(Clone, Debug, Serialize)]
