@@ -73,7 +73,7 @@ function createFixture() {
   let server;
   let helloResolve;
   let snapshotResolve;
-  let telemetryResolve;
+  let heartbeatResolve;
   let chunkSnapshotResolve;
   let unavailableResolve;
   let connectedSocket;
@@ -83,8 +83,8 @@ function createFixture() {
   const snapshotPromise = new Promise((resolvePromise) => {
     snapshotResolve = resolvePromise;
   });
-  const telemetryPromise = new Promise((resolvePromise) => {
-    telemetryResolve = resolvePromise;
+  const heartbeatPromise = new Promise((resolvePromise) => {
+    heartbeatResolve = resolvePromise;
   });
   const chunkSnapshotPromise = new Promise((resolvePromise) => {
     chunkSnapshotResolve = resolvePromise;
@@ -98,7 +98,7 @@ function createFixture() {
     connectionErrors,
     helloPromise,
     snapshotPromise,
-    telemetryPromise,
+    heartbeatPromise,
     chunkSnapshotPromise,
     unavailablePromise,
     async listen() {
@@ -132,10 +132,9 @@ function createFixture() {
             }
             if (message.type === 'player_snapshot') {
               snapshotResolve(message);
-              telemetryResolve(message);
             }
             if (message.type === 'heartbeat') {
-              telemetryResolve(message);
+              heartbeatResolve(message);
             }
             if (message.type === 'chunk_snapshot') {
               chunkSnapshotResolve(message);
@@ -303,6 +302,7 @@ async function runConnected() {
     if (
       hello.serverId !== serverId ||
       hello.protocolVersion !== protocolVersion ||
+      hello.minecraftVersion !== '1.21.10' ||
       hello.token !== bridgeToken ||
       !Array.isArray(hello.capabilities) ||
       !hello.capabilities.includes('player_snapshot') ||
@@ -314,13 +314,19 @@ async function runConnected() {
     processHandle.child.stdin.write('forceload add 0 0\n');
     await delay(1_000);
     fixture.requestSnapshots();
-    const telemetry = await withTimeout(
-      fixture.telemetryPromise,
-      'heartbeat or player snapshot',
-      15_000,
-    );
-    if (telemetry.type !== 'heartbeat' && telemetry.type !== 'player_snapshot') {
-      throw new Error(`Unexpected telemetry message: ${JSON.stringify(telemetry)}`);
+    const [playerSnapshot, heartbeat] = await Promise.all([
+      withTimeout(fixture.snapshotPromise, 'player snapshot', 15_000),
+      withTimeout(fixture.heartbeatPromise, 'heartbeat', 15_000),
+    ]);
+    if (
+      playerSnapshot.type !== 'player_snapshot' ||
+      !Array.isArray(playerSnapshot.players) ||
+      !Number.isFinite(playerSnapshot.capturedAt)
+    ) {
+      throw new Error(`Unexpected player snapshot: ${JSON.stringify(playerSnapshot)}`);
+    }
+    if (heartbeat.type !== 'heartbeat' || !Number.isFinite(heartbeat.capturedAt)) {
+      throw new Error(`Unexpected heartbeat: ${JSON.stringify(heartbeat)}`);
     }
     const chunkSnapshot = await withTimeout(
       fixture.chunkSnapshotPromise,
@@ -332,7 +338,12 @@ async function runConnected() {
       'unloaded chunk response',
       5_000,
     );
-    if (chunkSnapshot.requestId !== 'loaded-0-0' || chunkSnapshot.codec !== 'deflate-base64') {
+    if (
+      chunkSnapshot.requestId !== 'loaded-0-0' ||
+      chunkSnapshot.codec !== 'deflate-base64' ||
+      typeof chunkSnapshot.payload !== 'string' ||
+      chunkSnapshot.payload.length === 0
+    ) {
       throw new Error(`Unexpected chunk snapshot: ${JSON.stringify(chunkSnapshot)}`);
     }
     if (unavailable.requestId !== 'unloaded-100000' || unavailable.reason !== 'not_loaded') {
