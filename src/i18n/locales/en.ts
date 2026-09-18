@@ -747,6 +747,10 @@ export const en: TranslationDictionary = {
       missing: 'No Minecraft client JAR or resource pack is configured',
       detected: 'Auto-detected',
       configured: 'Selected',
+      autoDetected: 'Auto-detected',
+      userSelected: 'Selected by user',
+      versionMismatch: 'Minecraft asset version does not match the server',
+      fallback: 'Low-quality fallback rendering',
       invalid: 'Assets could not be loaded',
       choose: 'Choose assets',
     },
@@ -762,6 +766,21 @@ export const en: TranslationDictionary = {
       noGeneratedTerrainDescription:
         'Move the player or navigate to a generated chunk range, then refresh the map.',
       tileError: 'Terrain tile generation failed',
+      tileState: {
+        rendering: 'Generating terrain tile',
+        renderingDescription: 'Visible tiles are prioritized while terrain data is loaded.',
+        stale: 'Showing the previous map',
+        staleDescription:
+          'A fresh tile is being generated. The previous image stays visible until it is ready.',
+        error: 'Terrain tile generation failed',
+        errorDescription: 'The tile could not be generated. Refresh and try again.',
+        assetMissing: 'Minecraft assets are not configured',
+        assetMissingDescription:
+          'Choose assets to render block textures and models instead of the low-quality fallback.',
+        paperChunkUnavailable: 'Paper chunk data is unavailable',
+        paperChunkUnavailableDescription:
+          'Unloaded chunks are not generated. Saved data is used when it is available.',
+      },
       tileAlt: 'Minecraft terrain tile',
       noPlayers: 'No players are online',
       playerCount: '{count} online',

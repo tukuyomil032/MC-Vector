@@ -248,25 +248,9 @@
   cursor: grab;
   touch-action: none;
   background:
-    linear-gradient(
-      45deg,
-      rgb(148 163 184 / 4%) 25%,
-      transparent 25%,
-      transparent 75%,
-      rgb(148 163 184 / 4%) 75%
-    ),
-    linear-gradient(
-      45deg,
-      rgb(148 163 184 / 4%) 25%,
-      transparent 25%,
-      transparent 75%,
-      rgb(148 163 184 / 4%) 75%
-    ),
-    #111827;
-  background-position:
-    0 0,
-    0.5rem 0.5rem;
-  background-size: 1rem 1rem;
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px), #101318;
+  background-size: 2rem 2rem;
 }
 
 .map-view__canvas:active {
@@ -322,6 +306,52 @@
 
 .map-view__empty-state span {
   max-width: 25rem;
+}
+
+.map-view__tile-diagnostic {
+  position: absolute;
+  z-index: 3;
+  top: 0.75rem;
+  left: 50%;
+  display: flex;
+  max-width: min(28rem, calc(100% - 1.5rem));
+  flex-direction: column;
+  gap: 0.18rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--mv-surface-border);
+  border-radius: 0.55rem;
+  background: rgb(2 6 23 / 84%);
+  padding: 0.52rem 0.7rem;
+  color: var(--mv-surface-text-secondary);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 0.45rem 1.2rem rgb(2 6 23 / 22%);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.map-view__tile-diagnostic strong {
+  color: var(--mv-surface-text-primary);
+  font-size: 0.72rem;
+}
+
+.map-view__tile-diagnostic span {
+  color: var(--mv-surface-text-muted);
+}
+
+.map-view__tile-diagnostic--error {
+  border-color: rgb(239 68 68 / 42%);
+}
+
+.map-view__tile-diagnostic--asset_missing,
+.map-view__tile-diagnostic--paper_chunk_unavailable {
+  border-color: rgb(245 158 11 / 42%);
+}
+
+.map-view__tile-diagnostic--stale,
+.map-view__tile-diagnostic--rendering {
+  border-color: rgb(96 165 250 / 42%);
 }
 
 .map-view__canvas-center {

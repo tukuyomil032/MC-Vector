@@ -34,6 +34,7 @@ import {
   getMapWorldInfo,
   getMapStatus,
   getMapTile,
+  isMapAssetWarningState,
   normalizeMapTileBytes,
   onMapBridgeStatus,
   onMapPlayersUpdated,
@@ -43,6 +44,7 @@ import {
   repairMapBridge,
   removeMapComponent,
   restoreMap,
+  resolveMapTileDiagnosticState,
   selectMapAsset,
 } from '../../lib/map-commands';
 import type { MinecraftServer } from '../shared/server declaration';
@@ -390,9 +392,15 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       case 'missing':
         return t('map.asset.missing');
       case 'detected':
+      case 'auto_detected':
         return t('map.asset.detected');
       case 'configured':
+      case 'user_selected':
         return t('map.asset.configured');
+      case 'version_mismatch':
+        return t('map.asset.versionMismatch');
+      case 'fallback':
+        return t('map.asset.fallback');
       case 'invalid':
         return t('map.asset.invalid');
       default:
@@ -571,9 +579,10 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const artifactIsActive = status?.artifact === 'active';
   const artifactIsPaused = status?.artifact === 'paused';
   const assetState = status?.assetState ?? 'not_applicable';
-  const terrainTiles = requestedTileKeys
+  const viewportTileStates = requestedTileKeys
     .map((key) => tileStates[key])
-    .filter((tile): tile is MapTileReadyEvent => Boolean(tile?.hasTerrain));
+    .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
+  const terrainTiles = viewportTileStates.filter((tile) => tile.hasTerrain);
   const allReceivedTilesEmpty =
     requestedTileKeys.length > 0 &&
     requestedTileKeys.every((key) => Boolean(tileStates[key])) &&
@@ -585,6 +594,52 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     !status ||
     status.configState !== 'valid' ||
     !isManagedArtifactAvailable;
+
+  const tileDiagnosticState = resolveMapTileDiagnosticState({
+    assetState,
+    isLoading: isTileLoading,
+    requestedTileKeys,
+    statusError,
+    tileError,
+    tileStates,
+  });
+
+  const tileDiagnostic = (() => {
+    switch (tileDiagnosticState) {
+      case 'asset_missing':
+        return {
+          title: t('map.surface.tileState.assetMissing'),
+          description: t('map.surface.tileState.assetMissingDescription'),
+        };
+      case 'error':
+        return {
+          title: t('map.surface.tileState.error'),
+          description: tileError ?? t('map.surface.tileState.errorDescription'),
+        };
+      case 'paper_chunk_unavailable':
+        return {
+          title: t('map.surface.tileState.paperChunkUnavailable'),
+          description: t('map.surface.tileState.paperChunkUnavailableDescription'),
+        };
+      case 'empty':
+        return {
+          title: t('map.surface.noGeneratedTerrain'),
+          description: t('map.surface.noGeneratedTerrainDescription'),
+        };
+      case 'stale':
+        return {
+          title: t('map.surface.tileState.stale'),
+          description: t('map.surface.tileState.staleDescription'),
+        };
+      case 'rendering':
+        return {
+          title: t('map.surface.tileState.rendering'),
+          description: t('map.surface.tileState.renderingDescription'),
+        };
+      default:
+        return null;
+    }
+  })();
 
   return (
     <div className="map-view" data-testid="map-view">
@@ -720,7 +775,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                       }}
                     />
                   ))
-                ) : (
+                ) : !allReceivedTilesEmpty ? (
                   <div className="map-view__empty-state" role={tileError ? 'alert' : undefined}>
                     <MapIcon size={25} aria-hidden="true" />
                     <strong>
@@ -740,12 +795,21 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                         : (tileError ?? t('map.surface.noTileDescription'))}
                     </span>
                   </div>
-                )}
+                ) : null}
                 {allReceivedTilesEmpty && (
                   <div className="map-view__empty-state" role="status">
                     <MapIcon size={25} aria-hidden="true" />
                     <strong>{t('map.surface.noGeneratedTerrain')}</strong>
                     <span>{t('map.surface.noGeneratedTerrainDescription')}</span>
+                  </div>
+                )}
+                {tileDiagnostic && !allReceivedTilesEmpty && tiles.length > 0 && (
+                  <div
+                    className={`map-view__tile-diagnostic map-view__tile-diagnostic--${tileDiagnosticState}`}
+                    role={tileDiagnosticState === 'error' ? 'alert' : 'status'}
+                  >
+                    <strong>{tileDiagnostic.title}</strong>
+                    <span>{tileDiagnostic.description}</span>
                   </div>
                 )}
                 {players.map((player) => (
@@ -789,12 +853,18 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               )}
             </div>
 
-            {(assetState === 'missing' || assetState === 'invalid') && (
+            {isMapAssetWarningState(assetState) && (
               <div className="map-view__notice map-view__notice--warning" role="status">
                 <AlertTriangle size={17} aria-hidden="true" />
                 <span>
                   {status?.assetMessage ??
-                    (assetState === 'missing' ? t('map.asset.missing') : t('map.asset.invalid'))}
+                    (assetState === 'missing'
+                      ? t('map.asset.missing')
+                      : assetState === 'version_mismatch'
+                        ? t('map.asset.versionMismatch')
+                        : assetState === 'fallback'
+                          ? t('map.asset.fallback')
+                          : t('map.asset.invalid'))}
                   <Button variant="ghost" size="sm" onClick={() => void handleSelectAsset()}>
                     {t('map.asset.choose')}
                   </Button>
@@ -964,6 +1034,22 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   disabled={isActing}
                 >
                   {t('map.bridge.repair')}
+                </Button>
+              </span>
+            </div>
+          )}
+          {statusError && (
+            <div className="map-view__notice map-view__notice--error" role="alert">
+              <AlertTriangle size={17} aria-hidden="true" />
+              <span>
+                {t('map.bridge.statusErrorDescription')}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void refreshStatus()}
+                  disabled={isLoading}
+                >
+                  {t('map.actions.refresh')}
                 </Button>
               </span>
             </div>

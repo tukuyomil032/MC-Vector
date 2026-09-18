@@ -748,6 +748,10 @@ export interface TranslationDictionary {
       missing: string;
       detected: string;
       configured: string;
+      autoDetected: string;
+      userSelected: string;
+      versionMismatch: string;
+      fallback: string;
       invalid: string;
       choose: string;
     };
@@ -762,6 +766,18 @@ export interface TranslationDictionary {
       noGeneratedTerrain: string;
       noGeneratedTerrainDescription: string;
       tileError: string;
+      tileState: {
+        rendering: string;
+        renderingDescription: string;
+        stale: string;
+        staleDescription: string;
+        error: string;
+        errorDescription: string;
+        assetMissing: string;
+        assetMissingDescription: string;
+        paperChunkUnavailable: string;
+        paperChunkUnavailableDescription: string;
+      };
       tileAlt: string;
       noPlayers: string;
       playerCount: string;

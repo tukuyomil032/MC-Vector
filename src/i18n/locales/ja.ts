@@ -744,6 +744,10 @@ export const ja: TranslationDictionary = {
       missing: 'MinecraftクライアントJARまたはリソースパックが未設定です',
       detected: '自動検出済み',
       configured: '選択済み',
+      autoDetected: '自動検出済み',
+      userSelected: 'ユーザーが選択済み',
+      versionMismatch: 'Minecraft資産のバージョンがサーバーと一致しません',
+      fallback: '低品質のフォールバック描画中',
       invalid: '資産を読み込めません',
       choose: '資産を選択',
     },
@@ -759,6 +763,20 @@ export const ja: TranslationDictionary = {
       noGeneratedTerrainDescription:
         'プレイヤーを移動するか、生成済みチャンクの範囲へ移動してから再読み込みしてください。',
       tileError: '地形タイルの生成に失敗しました',
+      tileState: {
+        rendering: '地形タイルを生成中です',
+        renderingDescription: '表示範囲を優先して地形を読み込んでいます。しばらくお待ちください。',
+        stale: '前回の地図を表示中です',
+        staleDescription: '新しいタイルを生成しています。完了するまで前回の画像を表示します。',
+        error: '地形タイルの生成に失敗しました',
+        errorDescription: 'タイルを生成できませんでした。再読み込みしてもう一度試してください。',
+        assetMissing: 'Minecraft資産が未設定です',
+        assetMissingDescription:
+          '資産を選択すると、ブロックのテクスチャとモデルを使った描画になります。',
+        paperChunkUnavailable: 'Paper側のチャンクを取得できません',
+        paperChunkUnavailableDescription:
+          '未ロードのチャンクは生成せず、保存済みデータが利用できる場合だけ描画します。',
+      },
       tileAlt: 'Minecraft地形タイル',
       noPlayers: 'オンラインのプレイヤーはいません',
       playerCount: '{count}人がオンライン',
