@@ -63,8 +63,7 @@ where
     let perspective = IsoHDPerspective::default();
     let blocks_per_pixel = bounds.blocks_per_pixel.max(1) as f64;
     let tile_world_size = bounds.tile_size as i64 * bounds.blocks_per_pixel.max(1);
-    let center_x = bounds.origin_x as f64 + tile_world_size as f64 / 2.0;
-    let center_z = bounds.origin_z as f64 + tile_world_size as f64 / 2.0;
+    let reference_y = 64.0_f64.clamp(min_y as f64, (max_y - 1) as f64);
     let vertical_span = i64::from(max_y - min_y).unsigned_abs() as usize;
     let max_distance = (vertical_span as f32 + tile_world_size as f32 * 1.5).max(512.0);
     let max_steps = vertical_span
@@ -76,25 +75,17 @@ where
 
     for pixel_y in 0..height as u32 {
         for pixel_x in 0..width as u32 {
-            let mut ray = perspective.ray_for_pixel(
+            let ray = perspective.ray_for_pixel(
                 pixel_x,
                 pixel_y,
                 width as u32,
-                center_x,
-                center_z,
+                bounds.origin_x as f64 + tile_world_size as f64 / 2.0,
+                bounds.origin_z as f64 + tile_world_size as f64 / 2.0,
                 blocks_per_pixel,
+                reference_y,
+                min_y as f64,
+                max_y as f64,
             );
-            // The screen-space center is a world X/Z coordinate at a
-            // reference surface, not at the camera's elevated origin. Keep
-            // the center ray aligned with the tile center when it reaches
-            // the Overworld surface plane; without this correction every ray
-            // drifts diagonally by the camera height before it can hit terrain.
-            let reference_y = 64.0_f32.clamp(min_y as f32, (max_y - 1) as f32);
-            let reference_distance = (ray.origin.y - reference_y) / -ray.direction.y;
-            if reference_distance.is_finite() && reference_distance > 0.0 {
-                ray.origin.x -= ray.direction.x * reference_distance;
-                ray.origin.z -= ray.direction.z * reference_distance;
-            }
             let mut pixel = [0_u8; 4];
             let mut hit_count = 0usize;
             traverse(ray, max_distance, max_steps, |voxel, distance| {

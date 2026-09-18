@@ -185,11 +185,19 @@ impl IsoHDPerspective {
             tile_x as f64 * f64::from(tile_size) + (f64::from(pixel_x) + 0.5) * map_units_per_pixel;
         let y =
             tile_y as f64 * f64::from(tile_size) + (f64::from(pixel_y) + 0.5) * map_units_per_pixel;
-        let top = self.map_to_world([x, y, max_height + 0.5]);
-        let direction = self.map_to_world([0.0, 0.0, (min_height - 0.5) - (max_height + 0.5)]);
+        self.ray_for_map_pixel(x, y, min_height, max_height)
+    }
+
+    fn ray_for_map_pixel(
+        &self,
+        map_x: f64,
+        map_y: f64,
+        min_height: f64,
+        max_height: f64,
+    ) -> WorldRay {
         WorldRay {
-            origin: top,
-            direction,
+            origin: self.map_to_world([map_x, map_y, max_height + 0.5]),
+            direction: self.map_to_world([0.0, 0.0, (min_height - 0.5) - (max_height + 0.5)]),
         }
     }
 
@@ -212,15 +220,12 @@ impl IsoHDPerspective {
         let local_x = f64::from(pixel_x) + 0.5 - f64::from(tile_size) / 2.0;
         let local_y = f64::from(pixel_y) + 0.5 - f64::from(tile_size) / 2.0;
         let map_units_per_block = self.scale;
-        let top = self.map_to_world([
-            center_map[0] + local_x * blocks_per_pixel * map_units_per_block,
-            center_map[1] + local_y * blocks_per_pixel * map_units_per_block,
-            max_height + 0.5,
-        ]);
-        let direction = self.map_to_world([0.0, 0.0, (min_height - 0.5) - (max_height + 0.5)]);
+        let top_x = center_map[0] + local_x * blocks_per_pixel * map_units_per_block;
+        let top_y = center_map[1] + local_y * blocks_per_pixel * map_units_per_block;
+        let ray = self.ray_for_map_pixel(top_x, top_y, min_height, max_height);
         WorldRay {
-            origin: top,
-            direction: normalize(direction),
+            origin: ray.origin,
+            direction: normalize(ray.direction),
         }
     }
 }
