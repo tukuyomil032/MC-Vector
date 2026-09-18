@@ -9,4 +9,5 @@
  */
 
 pub(crate) mod iso_hd;
+pub(crate) mod patch;
 pub(crate) mod texture;

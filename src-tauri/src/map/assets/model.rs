@@ -150,8 +150,8 @@ fn face_vertices(direction: FaceDirection, from: [f32; 3], to: [f32; 3]) -> [[f3
     let (x0, y0, z0) = (from[0], from[1], from[2]);
     let (x1, y1, z1) = (to[0], to[1], to[2]);
     match direction {
-        FaceDirection::Up => [[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]],
-        FaceDirection::Down => [[x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0]],
+        FaceDirection::Up => [[x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0]],
+        FaceDirection::Down => [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]],
         FaceDirection::North => [[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]],
         FaceDirection::South => [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]],
         FaceDirection::West => [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]],
@@ -266,7 +266,7 @@ mod tests {
         let faces = model.resolve_faces(0, 0, false);
         assert_eq!(faces.len(), 1);
         assert_eq!(faces[0].0, FaceDirection::Up);
-        assert_eq!(faces[0].2[0], [0.0, 16.0, 0.0]);
+        assert_eq!(faces[0].2[0], [0.0, 16.0, 16.0]);
     }
 
     #[test]

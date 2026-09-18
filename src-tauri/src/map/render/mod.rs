@@ -4,7 +4,7 @@ mod iso;
 mod lighting;
 mod perspective;
 mod png;
-mod ray;
+pub(crate) mod ray;
 mod shader;
 mod voxel_traversal;
 
@@ -15,10 +15,11 @@ pub(crate) use self::geometry::Face;
 use self::iso::IsoHDPerspective;
 use self::perspective::PerspectiveRenderer;
 use self::png::validate_rgba;
-use self::ray::{Ray, Vec3};
+use self::ray::Ray;
 pub(crate) use self::shader::shade_surface;
 use self::voxel_traversal::{traverse, TraversalAction};
 use super::projection::TileWorldBounds;
+use crate::map::renderer::dynmap::patch::{PatchDefinition, PatchHit as ModelFaceHit};
 
 #[derive(Clone, Debug)]
 pub(crate) struct SurfaceSample {
@@ -201,13 +202,6 @@ fn distance_to_plane(origin: f32, direction: f32, plane: f32) -> f32 {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct ModelFaceHit {
-    distance: f32,
-    u: f32,
-    v: f32,
-}
-
 fn intersect_model_face(
     ray: Ray,
     block_x: i64,
@@ -215,81 +209,9 @@ fn intersect_model_face(
     block_z: i64,
     face: &RenderFace,
 ) -> Option<ModelFaceHit> {
-    let vertices = face.vertices.map(|point| {
-        Vec3::new(
-            block_x as f32 + point[0] / 16.0,
-            block_y as f32 + point[1] / 16.0,
-            block_z as f32 + point[2] / 16.0,
-        )
-    });
-    let uv = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
-    let first = intersect_triangle(
-        ray,
-        vertices[0],
-        vertices[1],
-        vertices[2],
-        uv[0],
-        uv[1],
-        uv[2],
-    );
-    let second = intersect_triangle(
-        ray,
-        vertices[0],
-        vertices[2],
-        vertices[3],
-        uv[0],
-        uv[2],
-        uv[3],
-    );
-    match (first, second) {
-        (Some(first), Some(second)) if first.distance <= second.distance => Some(first),
-        (Some(_), Some(second)) => Some(second),
-        (Some(first), None) => Some(first),
-        (None, Some(second)) => Some(second),
-        (None, None) => None,
-    }
-}
-
-fn intersect_triangle(
-    ray: Ray,
-    first: Vec3,
-    second: Vec3,
-    third: Vec3,
-    first_uv: [f32; 2],
-    second_uv: [f32; 2],
-    third_uv: [f32; 2],
-) -> Option<ModelFaceHit> {
-    let edge_one = second.sub(first);
-    let edge_two = third.sub(first);
-    let cross = ray.direction.cross(edge_two);
-    let determinant = edge_one.dot(cross);
-    if determinant.abs() < 0.000_001 {
-        return None;
-    }
-    let inverse = 1.0 / determinant;
-    let offset = ray.origin.sub(first);
-    let barycentric_u = inverse * offset.dot(cross);
-    if !(0.0..=1.0).contains(&barycentric_u) {
-        return None;
-    }
-    let offset_cross = offset.cross(edge_one);
-    let barycentric_v = inverse * ray.direction.dot(offset_cross);
-    if barycentric_v < 0.0 || barycentric_u + barycentric_v > 1.0 {
-        return None;
-    }
-    let distance = inverse * edge_two.dot(offset_cross);
-    if distance <= 0.0001 {
-        return None;
-    }
-    Some(ModelFaceHit {
-        distance,
-        u: first_uv[0]
-            + barycentric_u * (second_uv[0] - first_uv[0])
-            + barycentric_v * (third_uv[0] - first_uv[0]),
-        v: first_uv[1]
-            + barycentric_u * (second_uv[1] - first_uv[1])
-            + barycentric_v * (third_uv[1] - first_uv[1]),
-    })
+    PatchDefinition::from_quad(block_x, block_y, block_z, face.vertices)
+        .with_side_visible(PatchDefinition::side_visible_for_model_uv(face.uv))
+        .intersect(ray)
 }
 
 pub(crate) fn default_cube_faces() -> Vec<RenderFace> {
@@ -317,16 +239,16 @@ pub(crate) fn default_cube_faces() -> Vec<RenderFace> {
 fn cube_face_vertices(direction: RenderFaceDirection) -> [[f32; 3]; 4] {
     match direction {
         RenderFaceDirection::Up => [
-            [0.0, 16.0, 0.0],
-            [16.0, 16.0, 0.0],
-            [16.0, 16.0, 16.0],
             [0.0, 16.0, 16.0],
+            [16.0, 16.0, 16.0],
+            [16.0, 16.0, 0.0],
+            [0.0, 16.0, 0.0],
         ],
         RenderFaceDirection::Down => [
-            [0.0, 0.0, 16.0],
-            [16.0, 0.0, 16.0],
-            [16.0, 0.0, 0.0],
             [0.0, 0.0, 0.0],
+            [16.0, 0.0, 0.0],
+            [16.0, 0.0, 16.0],
+            [0.0, 0.0, 16.0],
         ],
         RenderFaceDirection::North => [
             [16.0, 0.0, 0.0],
