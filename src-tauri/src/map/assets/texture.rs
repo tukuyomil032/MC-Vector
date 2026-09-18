@@ -35,12 +35,8 @@ impl TextureImage {
             270 => (v, 1.0 - u),
             _ => (u, v),
         };
-        let min_u = uv[0].min(uv[2]);
-        let max_u = uv[0].max(uv[2]);
-        let min_v = uv[1].min(uv[3]);
-        let max_v = uv[1].max(uv[3]);
-        let texture_u = min_u + (max_u - min_u) * u.clamp(0.0, 1.0);
-        let texture_v = min_v + (max_v - min_v) * v.clamp(0.0, 1.0);
+        let texture_u = uv[0] + (uv[2] - uv[0]) * u.clamp(0.0, 1.0);
+        let texture_v = uv[1] + (uv[3] - uv[1]) * v.clamp(0.0, 1.0);
         let x = ((texture_u / 16.0) * self.width as f32).floor() as i32;
         // Minecraft animated textures are stored as a vertical strip of
         // square frames. Phase 2 intentionally renders a deterministic
@@ -137,5 +133,32 @@ mod tests {
         };
 
         assert_eq!(image.sample_uv(DEFAULT_UV, 0, 0.5, 0.9), [255, 0, 0, 255]);
+    }
+
+    #[test]
+    fn preserves_reversed_face_uv_axes_with_rotation() {
+        let mut pixels = vec![0_u8; 16 * 16 * 4];
+        let mark = |pixels: &mut [u8], x: usize, y: usize, color: [u8; 4]| {
+            let offset = (y * 16 + x) * 4;
+            pixels[offset..offset + 4].copy_from_slice(&color);
+        };
+        mark(&mut pixels, 12, 4, [12, 4, 0, 255]);
+        mark(&mut pixels, 4, 4, [4, 4, 0, 255]);
+
+        let image = TextureImage {
+            width: 16,
+            height: 16,
+            pixels,
+            animated: false,
+        };
+
+        assert_eq!(
+            image.sample_uv([16.0, 0.0, 0.0, 16.0], 0, 0.25, 0.25),
+            [12, 4, 0, 255]
+        );
+        assert_eq!(
+            image.sample_uv([16.0, 0.0, 0.0, 16.0], 90, 0.25, 0.25),
+            [4, 4, 0, 255]
+        );
     }
 }

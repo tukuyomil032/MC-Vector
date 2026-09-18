@@ -98,14 +98,8 @@ impl Model {
         textures.extend(child.textures);
         child.textures = textures;
 
-        match (parent.elements, child.elements.take()) {
-            (Some(mut parent_elements), Some(child_elements)) => {
-                parent_elements.extend(child_elements);
-                child.elements = Some(parent_elements);
-            }
-            (Some(parent_elements), None) => child.elements = Some(parent_elements),
-            (None, Some(child_elements)) => child.elements = Some(child_elements),
-            (None, None) => {}
+        if child.elements.is_none() {
+            child.elements = parent.elements;
         }
         child.parent = None;
         child
@@ -285,5 +279,33 @@ mod tests {
         assert!((point[0] - 8.0).abs() < 0.001);
         assert!(point[1].abs() < 0.001);
         assert!(point[2].abs() < 0.001);
+    }
+
+    #[test]
+    fn child_elements_replace_parent_elements_when_both_are_defined() {
+        let parent: Model = serde_json::from_value(serde_json::json!({
+            "elements": [{
+                "from": [0, 0, 0],
+                "to": [16, 16, 16],
+                "faces": {"up": {"texture": "#parent"}}
+            }]
+        }))
+        .expect("parent model fixture");
+        let child: Model = serde_json::from_value(serde_json::json!({
+            "parent": "minecraft:block/parent",
+            "elements": [{
+                "from": [2, 2, 2],
+                "to": [14, 14, 14],
+                "faces": {"down": {"texture": "#child"}}
+            }]
+        }))
+        .expect("child model fixture");
+
+        let merged = Model::merge_parent(child, parent);
+        let faces = merged.resolve_faces(0, 0);
+
+        assert_eq!(faces.len(), 1);
+        assert_eq!(faces[0].0, FaceDirection::Down);
+        assert_eq!(faces[0].1.texture, "#child");
     }
 }

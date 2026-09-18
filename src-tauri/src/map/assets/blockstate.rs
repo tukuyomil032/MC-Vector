@@ -89,13 +89,28 @@ fn matches_condition(condition: &Value, properties: &HashMap<&str, &str>) -> boo
     let Some(object) = condition.as_object() else {
         return true;
     };
-    if let Some(or_conditions) = object.get("OR").and_then(Value::as_array) {
-        return or_conditions
-            .iter()
-            .any(|candidate| matches_condition(candidate, properties));
-    }
 
     object.iter().all(|(key, expected)| {
+        if key == "OR" {
+            return expected
+                .as_array()
+                .map(|conditions| {
+                    conditions
+                        .iter()
+                        .any(|candidate| matches_condition(candidate, properties))
+                })
+                .unwrap_or(false);
+        }
+        if key == "AND" {
+            return expected
+                .as_array()
+                .map(|conditions| {
+                    conditions
+                        .iter()
+                        .all(|candidate| matches_condition(candidate, properties))
+                })
+                .unwrap_or(false);
+        }
         let Some(actual) = properties.get(key.as_str()) else {
             return false;
         };
@@ -142,5 +157,45 @@ mod tests {
         assert_eq!(models.len(), 2);
         assert_eq!(models[0].model, "minecraft:block/powered");
         assert_eq!(models[1].model, "minecraft:block/side");
+    }
+
+    #[test]
+    fn multipart_combines_or_with_other_when_properties_as_and() {
+        let value = serde_json::json!({
+            "multipart": [{
+                "when": {
+                    "OR": [{"facing": "north"}, {"facing": "south"}],
+                    "powered": "true"
+                },
+                "apply": {"model": "minecraft:block/conditional"}
+            }]
+        });
+
+        assert!(model_references(&value, "facing=north,powered=false").is_empty());
+        assert_eq!(
+            model_references(&value, "facing=north,powered=true")[0].model,
+            "minecraft:block/conditional"
+        );
+    }
+
+    #[test]
+    fn multipart_honours_explicit_and_conditions() {
+        let value = serde_json::json!({
+            "multipart": [{
+                "when": {
+                    "AND": [
+                        {"facing": "north"},
+                        {"powered": "true"}
+                    ]
+                },
+                "apply": {"model": "minecraft:block/and"}
+            }]
+        });
+
+        assert!(model_references(&value, "facing=north,powered=false").is_empty());
+        assert_eq!(
+            model_references(&value, "facing=north,powered=true")[0].model,
+            "minecraft:block/and"
+        );
     }
 }
