@@ -18,7 +18,9 @@ use self::resolver::ResourcePackStack;
 use self::texture::TextureImage;
 
 pub(crate) use self::custom_renderer::{is_air, material_kind, MaterialKind};
-pub(crate) use self::discovery::{discover_asset_candidates, AssetDiscoveryOptions};
+pub(crate) use self::discovery::{
+    discover_asset_candidates, AssetCandidate, AssetDiscoveryOptions, AssetLauncher,
+};
 pub(crate) use self::manifest::{AssetManifest, ASSET_MANIFEST_VERSION};
 pub(crate) use self::model::{FaceDirection as RenderFaceDirection, ResolvedFace as RenderFace};
 pub(crate) use self::resolver::{manifest_quality, source_version};

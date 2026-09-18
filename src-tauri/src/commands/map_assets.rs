@@ -9,8 +9,8 @@ use zip::ZipArchive;
 
 use crate::map::assets::{
     discover_asset_candidates, is_air, manifest_quality, material_kind, source_version,
-    AssetDiscoveryOptions, AssetManifest, AssetResolver, MaterialKind, RenderFace,
-    ASSET_MANIFEST_VERSION,
+    AssetCandidate, AssetDiscoveryOptions, AssetLauncher, AssetManifest, AssetResolver,
+    MaterialKind, RenderFace, ASSET_MANIFEST_VERSION,
 };
 
 const ASSET_CONFIG_NAME: &str = "map-assets.json";
@@ -292,9 +292,27 @@ fn detect_vanilla_source() -> Option<PathBuf> {
             .push(PathBuf::from(config_dir).join("minecraft"));
     }
 
-    discover_asset_candidates(&options)
+    let mut candidates = discover_asset_candidates(&options)
         .into_iter()
         .filter(|candidate| candidate.is_usable())
+        .filter(|candidate| {
+            candidate
+                .minecraft_version
+                .as_deref()
+                .is_none_or(|version| version.starts_with(VANILLA_VERSION_PREFIX))
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(|left, right| {
+        launcher_priority(left.launcher)
+            .cmp(&launcher_priority(right.launcher))
+            .then_with(|| {
+                version_key(&right.minecraft_version).cmp(&version_key(&left.minecraft_version))
+            })
+            .then_with(|| candidate_path(left).cmp(&candidate_path(right)))
+    });
+
+    candidates
+        .into_iter()
         .filter_map(|candidate| {
             candidate
                 .client_jar
@@ -307,11 +325,47 @@ fn detect_vanilla_source() -> Option<PathBuf> {
                         .map(|artifact| artifact.path)
                 })
         })
-        .find(|path| {
-            source_version(&path.display().to_string())
-                .as_deref()
-                .is_none_or(|version| version.starts_with(VANILLA_VERSION_PREFIX))
+        .next()
+}
+
+fn launcher_priority(launcher: AssetLauncher) -> u8 {
+    match launcher {
+        AssetLauncher::PrismLauncherStandard
+        | AssetLauncher::PrismLauncherCustom
+        | AssetLauncher::PrismLauncherPortable => 0,
+        AssetLauncher::OfficialLauncher => 1,
+        AssetLauncher::Manual => 2,
+    }
+}
+
+fn version_key(candidate: &Option<String>) -> [u32; 4] {
+    let Some(version) = candidate.as_deref() else {
+        return [0; 4];
+    };
+    let mut key = [0; 4];
+    for (index, part) in version
+        .split(|character: char| !character.is_ascii_digit())
+        .filter(|part| !part.is_empty())
+        .take(4)
+        .enumerate()
+    {
+        key[index] = part.parse().unwrap_or_default();
+    }
+    key
+}
+
+fn candidate_path(candidate: &AssetCandidate) -> String {
+    candidate
+        .client_jar
+        .as_ref()
+        .map(|artifact| artifact.path.display().to_string())
+        .or_else(|| {
+            candidate
+                .resource_packs
+                .first()
+                .map(|artifact| artifact.path.display().to_string())
         })
+        .unwrap_or_else(|| candidate.launcher_root.display().to_string())
 }
 
 fn validate_asset_source(path: &Path) -> Result<(), String> {
@@ -607,5 +661,14 @@ mod tests {
             fallback_block_colour("minecraft:stone"),
             fallback_block_colour("minecraft:grass_block")
         );
+    }
+
+    #[test]
+    fn auto_detection_prefers_prism_and_newer_numeric_versions() {
+        assert!(
+            version_key(&Some("1.21.10".to_string())) > version_key(&Some("1.21.9".to_string()))
+        );
+        assert_eq!(launcher_priority(AssetLauncher::PrismLauncherStandard), 0);
+        assert_eq!(launcher_priority(AssetLauncher::OfficialLauncher), 1);
     }
 }
