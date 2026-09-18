@@ -2160,7 +2160,21 @@ async fn render_map_tile(
             .lock()
             .await
             .insert(tile_key.clone(), cached.clone());
-        write_disk_tile(&server_root, &tile_key, &cached)?;
+        if let Err(error) = write_disk_tile(&server_root, &tile_key, &cached) {
+            // A completed render is still usable when the optional persistent
+            // cache cannot be written (for example, a read-only server root or
+            // a transient filesystem error). Keep the in-memory tile and make
+            // the cache failure observable without turning a valid PNG into a
+            // render failure.
+            let _ = app.emit(
+                "map-error",
+                serde_json::json!({
+                    "serverId": tile_key.server_id,
+                    "scope": "tile_cache",
+                    "message": error,
+                }),
+            );
+        }
         Ok(tile)
     }
     .await;
