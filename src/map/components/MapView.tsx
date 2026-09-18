@@ -35,7 +35,6 @@ import {
   pauseMap,
   repairMapBridge,
   removeMapComponent,
-  requestMapRender,
   restoreMap,
   selectMapAsset,
 } from '../api/map-commands';
@@ -404,23 +403,6 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         })),
       ).flat();
       setRequestedTileKeys(requests.map(({ x, y }) => `${zoom}:${x}:${y}`));
-
-      const renderKey = `${server.id}:overworld:${zoom}:${mapCenter.x}:${mapCenter.z}:${tileRevision}`;
-      void mapRequestsRef.current
-        .requestRender(renderKey, () =>
-          requestMapRender(server.id, 'overworld', {
-            centerX: mapCenter.x,
-            centerZ: mapCenter.z,
-            zoom,
-            width: 768,
-            height: 512,
-          }).then(() => undefined),
-        )
-        .catch((error) => {
-          if (!cancelled) {
-            setTileError(error instanceof Error ? error.message : String(error));
-          }
-        });
 
       void Promise.all(
         requests.map(async ({ x, y }): Promise<MapTile | null> => {
