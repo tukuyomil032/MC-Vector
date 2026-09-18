@@ -40,6 +40,10 @@ Phase 02 path contract and Tauri v2 command registration rules.
   Tauri-facing call and test boundary while the Anvil/live source traversal,
   overview aggregation, model sampling, and PNG encoding are owned by the
   feature renderer path.
+- `TileRenderResult` now lives in `src-tauri/src/map/renderer/mod.rs`, so tile
+  bytes and render diagnostics are owned by the renderer boundary instead of
+  being declared in the Tauri command module. The serialized camelCase shape
+  is unchanged.
 - Managed bridge configuration now lives at
   `src-tauri/src/map/bridge/config.rs`. Loopback validation, protocol/token
   checks, stale/conflict inspection, and safe v2 configuration regeneration
@@ -49,11 +53,11 @@ Phase 02 path contract and Tauri v2 command registration rules.
   reasons, world-status validation, and chat payload limits are feature-owned
   pure protocol code; socket orchestration remains in the command parent.
 - `cargo check`, `cargo fmt --check`, and the focused `map::` test slice pass
-  with 115 tests after the renderer extraction. The module is currently
-  compiled through a path-qualified child of `commands::map` to preserve the
-  existing private dependency contract; the remaining bridge, application,
-  and command orchestration extraction is still open, so the Phase 03 gate is
-  not closed.
+  with 115 tests after the renderer and result-contract extraction. The module
+  is currently compiled through a path-qualified child of `commands::map` to
+  preserve the existing private dependency contract; the remaining bridge,
+  application, and command orchestration extraction is still open, so the
+  Phase 03 gate is not closed.
 
 ## Focused tests
 
