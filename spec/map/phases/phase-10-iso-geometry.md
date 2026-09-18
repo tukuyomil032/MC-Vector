@@ -1,0 +1,50 @@
+# Phase 10: Iso Geometry
+
+## Goal
+
+Implement a real `IsoHDPerspective`-class projection, ray traversal, patch
+intersection, UV geometry, and tile-boundary behavior.
+
+## Scope
+
+Coordinate transforms, floor semantics, ray generation, section/voxel traversal,
+chunk boundaries, patch faces, side visibility, and rotated UVs.
+
+## Owned files
+
+Agent B: Rust renderer geometry. Agent A: geometry fixtures and UI projection
+contract review.
+
+## Dependencies
+
+Phase 05 normalized chunk data, Phase 08 models, Phase 09 port manifest.
+
+## Implementation tasks
+
+- port/translate matrix and ray math from the pinned source;
+- implement deterministic traversal and patch intersection;
+- support negative coordinates and boundary continuity;
+- remove representative-colour-only success path;
+- return render metadata alongside pixels.
+
+## Focused tests
+
+Exact transforms, axis-parallel rays, negative coordinates, chunk boundaries,
+non-cube patches, rotations, and tile edge continuity.
+
+## Diff review checklist
+
+No off-by-one floor division, no world iteration on Paper thread, no skipped
+transparent hit semantics, and no unexplained divergence from source math.
+
+## Phase gate
+
+Geometry produces recognizable oblique fixture output independent of UI.
+
+## Known non-goals
+
+Full shader fidelity and custom renderers follow in Phase 11.
+
+## Follow-up phases
+
+Phase 11 adds texture sampling and lighting.
