@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -22,6 +22,7 @@ use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot
 use super::map_assets::{self, MapAssets};
 use super::server::ServerManager;
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
+use crate::map::render::{render_surface_tile, shade_surface, Face, SurfaceSample};
 use crate::map::tile_buffer::RgbaTileBuffer;
 use crate::map::world::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files,
@@ -1977,7 +1978,7 @@ pub async fn get_map_tile(
         tile_y,
         asset_version: assets
             .as_ref()
-            .map(|assets| assets.identity.clone())
+            .map(|assets| assets.cache_identity())
             .unwrap_or_else(|| TILE_ASSET_VERSION.to_string()),
         renderer_version: TILE_RENDERER_VERSION,
     };
@@ -2395,31 +2396,114 @@ fn fallback_terrain_colour(_world_x: i64, _world_z: i64) -> Rgba {
     [0, 0, 0, 0]
 }
 
+fn chunk_surface_sample(
+    chunk: &CompleteChunk,
+    local_x: usize,
+    local_z: usize,
+) -> Option<SurfaceSample> {
+    let range = chunk.y_range();
+    let trusted_top = chunk.surface_height(local_x, local_z, HeightMode::Trust);
+    let calculated_top = if trusted_top <= range.start || trusted_top > range.end {
+        chunk.surface_height(local_x, local_z, HeightMode::Calculate)
+    } else {
+        trusted_top
+    };
+    let top = calculated_top.clamp(range.start, range.end);
+    for y in (range.start..top).rev() {
+        let Some(block) = chunk.block(local_x, y, local_z) else {
+            continue;
+        };
+        if matches!(
+            block.name(),
+            "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
+        ) {
+            continue;
+        }
+        let biome = chunk
+            .biome(local_x, y, local_z)
+            .map(|biome| format!("{biome:?}").to_ascii_lowercase())
+            .unwrap_or_default();
+        return Some(SurfaceSample {
+            state: block.encoded_description().to_string(),
+            biome,
+            y: y as i32,
+            sky_light: 15,
+            block_light: 0,
+        });
+    }
+    None
+}
+
+fn live_surface_sample(
+    snapshot: &ChunkView,
+    local_x: usize,
+    local_z: usize,
+) -> Option<SurfaceSample> {
+    snapshot
+        .surface_layer(local_x, local_z)
+        .map(|layer| SurfaceSample {
+            state: layer.state.clone(),
+            biome: layer.biome.clone(),
+            y: layer.y,
+            sky_light: layer.sky_light,
+            block_light: layer.block_light,
+        })
+}
+
+fn surface_base_colour(sample: &SurfaceSample, assets: Option<&MapAssets>, u: f32, v: f32) -> Rgba {
+    surface_face_colour(sample, assets, Face::Up, u, v)
+}
+
+fn surface_face_colour(
+    sample: &SurfaceSample,
+    assets: Option<&MapAssets>,
+    face: Face,
+    u: f32,
+    v: f32,
+) -> Rgba {
+    let face_name = match face {
+        Face::Down => "down",
+        Face::Up => "up",
+        Face::North => "north",
+        Face::South => "south",
+        Face::West => "west",
+        Face::East => "east",
+    };
+    assets
+        .map(|assets| {
+            assets.sample_state_face_at_with_biome(&sample.state, &sample.biome, face_name, u, v)
+        })
+        .unwrap_or_else(|| map_assets::fallback_block_colour(&sample.state))
+}
+
+fn shaded_surface_colour(
+    sample: &SurfaceSample,
+    assets: Option<&MapAssets>,
+    u: f32,
+    v: f32,
+    face: Face,
+    height_gradient: f32,
+) -> Rgba {
+    shade_surface(
+        surface_base_colour(sample, assets, u, v),
+        sample.y,
+        sample.sky_light,
+        sample.block_light,
+        face,
+        height_gradient,
+    )
+}
+
 fn surface_colour(
     chunk: &CompleteChunk,
     local_x: usize,
     local_z: usize,
     assets: Option<&MapAssets>,
 ) -> Rgba {
-    let surface_height = chunk.surface_height(local_x, local_z, HeightMode::Trust);
-    let mut y = surface_height - 1;
-    let y_min = chunk.y_range().start;
-    while y >= y_min {
-        if let Some(block) = chunk.block(local_x, y, local_z) {
-            if block.name() != "minecraft:air" && block.name() != "minecraft:cave_air" {
-                let base = assets
-                    .map(|assets| assets.sample(block))
-                    .unwrap_or_else(|| map_assets::fallback_block_colour(block.name()));
-                let biome = chunk
-                    .biome(local_x, y, local_z)
-                    .map(|biome| format!("{biome:?}"))
-                    .unwrap_or_default();
-                return shade_surface(apply_biome_tint(base, &biome, block.name()), surface_height);
-            }
-        }
-        y -= 1;
-    }
-    fallback_terrain_colour(0, 0)
+    let Some(sample) = chunk_surface_sample(chunk, local_x, local_z) else {
+        return fallback_terrain_colour(0, 0);
+    };
+    shaded_surface_colour(&sample, assets, 0.5, 0.5, Face::Up, 1.0)
 }
 
 fn live_surface_colour(
@@ -2428,72 +2512,10 @@ fn live_surface_colour(
     local_z: usize,
     assets: Option<&MapAssets>,
 ) -> Rgba {
-    let index = local_z * 16 + local_x;
-    let Some(layers) = snapshot.columns.get(index) else {
+    let Some(sample) = live_surface_sample(snapshot, local_x, local_z) else {
         return fallback_terrain_colour(0, 0);
     };
-    let Some(layer) = layers
-        .iter()
-        .filter(|layer| {
-            !layer.state.starts_with("minecraft:air")
-                && !layer.state.starts_with("minecraft:cave_air")
-                && layer.y >= snapshot.min_y
-                && layer.y < snapshot.max_y
-        })
-        .max_by_key(|layer| layer.y)
-    else {
-        return fallback_terrain_colour(0, 0);
-    };
-    let base = assets
-        .map(|assets| assets.sample_state(&layer.state))
-        .unwrap_or_else(|| map_assets::fallback_block_colour(&layer.state));
-    let base = apply_biome_tint(base, &layer.biome, &layer.state);
-    let light = i16::from(layer.sky_light.max(layer.block_light)) - 8;
-    let colour = [
-        (i16::from(base[0]) + light).clamp(0, 255) as u8,
-        (i16::from(base[1]) + light).clamp(0, 255) as u8,
-        (i16::from(base[2]) + light).clamp(0, 255) as u8,
-        base[3],
-    ];
-    shade_surface(colour, layer.y as isize)
-}
-
-fn apply_biome_tint(mut colour: Rgba, biome: &str, state: &str) -> Rgba {
-    let tinted = state.contains("grass")
-        || state.contains("leaves")
-        || state.contains("vine")
-        || state.contains("water");
-    if !tinted {
-        return colour;
-    }
-    let tint = if biome.contains("swamp") {
-        [106, 137, 67]
-    } else if biome.contains("jungle") {
-        [71, 171, 76]
-    } else if biome.contains("desert") || biome.contains("badlands") {
-        [188, 173, 92]
-    } else if biome.contains("snow") || biome.contains("ice") || biome.contains("grove") {
-        [164, 196, 184]
-    } else {
-        [92, 164, 77]
-    };
-    for (value, tint_value) in colour[..3].iter_mut().zip(tint) {
-        *value = ((*value as u16 * 2 + tint_value as u16) / 3) as u8;
-    }
-    colour
-}
-
-fn shade_surface(colour: Rgba, height: isize) -> Rgba {
-    // Keep the light response monotonic with elevation. A modulo-based shade
-    // creates visible bands every 32 blocks and makes tall builds look like
-    // repeated stripes at overview zooms.
-    let shade = ((height - 64).clamp(-64, 128) / 4) as i16;
-    [
-        (i16::from(colour[0]) + shade).clamp(0, 255) as u8,
-        (i16::from(colour[1]) + shade).clamp(0, 255) as u8,
-        (i16::from(colour[2]) + shade).clamp(0, 255) as u8,
-        colour[3],
-    ]
+    shaded_surface_colour(&sample, assets, 0.5, 0.5, Face::Up, 1.0)
 }
 
 fn average_surface_colours(colours: impl IntoIterator<Item = Rgba>) -> Rgba {
@@ -2520,13 +2542,9 @@ fn average_surface_colours(colours: impl IntoIterator<Item = Rgba>) -> Rgba {
 }
 
 fn chunk_representative_colour(chunk: &CompleteChunk, assets: Option<&MapAssets>) -> Rgba {
-    average_surface_colours([
-        surface_colour(chunk, 2, 2, assets),
-        surface_colour(chunk, 13, 2, assets),
-        surface_colour(chunk, 2, 13, assets),
-        surface_colour(chunk, 13, 13, assets),
-        surface_colour(chunk, 8, 8, assets),
-    ])
+    average_surface_colours((0..16).flat_map(|local_z| {
+        (0..16).map(move |local_x| surface_colour(chunk, local_x, local_z, assets))
+    }))
 }
 
 fn render_overview_tile(
@@ -2555,10 +2573,8 @@ fn render_overview_tile(
             snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
         }) {
             let snapshot = live_chunk.expect("checked live chunk presence");
-            average_surface_colours((0..16).step_by(4).flat_map(|local_z| {
-                (0..16)
-                    .step_by(4)
-                    .map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
+            average_surface_colours((0..16).flat_map(|local_z| {
+                (0..16).map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
             }))
         } else {
             render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
@@ -2605,75 +2621,55 @@ fn render_world_tile_detailed(
         return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunk);
     }
 
-    let tile_origin_x = i64::from(tile_x) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let tile_origin_z = i64::from(tile_y) * i64::from(TILE_SIZE) * blocks_per_pixel;
+    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Option<CompleteChunk>> = HashMap::new();
-    let mut pixels = Vec::with_capacity(TILE_SIZE as usize * (1 + TILE_SIZE as usize * 4));
-
-    for pixel_z in 0..TILE_SIZE {
-        pixels.push(0);
-        for pixel_x in 0..TILE_SIZE {
-            // Sampling every block in a zoomed-out tile would turn a single
-            // viewport request into a large world scan. Two deterministic
-            // samples still preserve coastlines and structures at overview
-            // zooms, while close zooms get up to a 4x4 sample grid.
-            let sample_count = if blocks_per_pixel >= 16 {
-                2
-            } else {
-                blocks_per_pixel.min(4)
-            };
-            let mut colour_sum = [0u64; 4];
-            let mut colour_count = 0u64;
-            for sample_z in 0..sample_count {
-                for sample_x in 0..sample_count {
-                    let world_x = tile_origin_x
-                        + i64::from(pixel_x) * blocks_per_pixel
-                        + (sample_x * blocks_per_pixel / sample_count);
-                    let world_z = tile_origin_z
-                        + i64::from(pixel_z) * blocks_per_pixel
-                        + (sample_z * blocks_per_pixel / sample_count);
-                    let chunk_x = floor_div(world_x, 16);
-                    let chunk_z = floor_div(world_z, 16);
-                    let local_x = floor_mod(world_x, 16) as usize;
-                    let local_z = floor_mod(world_z, 16) as usize;
-                    let colour = if live_chunk.is_some_and(|snapshot| {
-                        snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
-                    }) {
-                        live_surface_colour(
-                            live_chunk.expect("checked live chunk presence"),
-                            local_x,
-                            local_z,
-                            assets,
-                        )
-                    } else {
-                        render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
-                            .map(|chunk| surface_colour(chunk, local_x, local_z, assets))
-                            .unwrap_or_else(|| fallback_terrain_colour(world_x, world_z))
-                    };
-                    for (sum, value) in colour_sum.iter_mut().zip(colour) {
-                        *sum += u64::from(value);
-                    }
-                    colour_count += 1;
+    let mut rendered_chunks = HashSet::new();
+    let live_chunk = live_chunk.cloned();
+    let rendered = render_surface_tile(
+        bounds,
+        |world_x, world_z| {
+            let chunk_x = floor_div(world_x, 16);
+            let chunk_z = floor_div(world_z, 16);
+            let local_x = floor_mod(world_x, 16) as usize;
+            let local_z = floor_mod(world_z, 16) as usize;
+            if live_chunk.as_ref().is_some_and(|snapshot| {
+                snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
+            }) {
+                let sample = live_chunk
+                    .as_ref()
+                    .and_then(|snapshot| live_surface_sample(snapshot, local_x, local_z));
+                if sample.is_some() {
+                    rendered_chunks.insert((chunk_x, chunk_z));
                 }
+                return sample;
             }
-            let colour = [
-                (colour_sum[0] / colour_count) as u8,
-                (colour_sum[1] / colour_count) as u8,
-                (colour_sum[2] / colour_count) as u8,
-                (colour_sum[3] / colour_count) as u8,
-            ];
-            pixels.extend_from_slice(&colour);
-        }
-    }
-
+            let sample = render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
+                .and_then(|chunk| chunk_surface_sample(chunk, local_x, local_z));
+            if sample.is_some() {
+                rendered_chunks.insert((chunk_x, chunk_z));
+            }
+            sample
+        },
+        |sample, face, u, v| surface_face_colour(sample, assets, face, u, v),
+    )?;
+    let pixels = rgba_pixels_to_scanlines(&rendered.pixels, TILE_SIZE as usize, TILE_SIZE as usize);
     let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &pixels)?;
-    let (has_terrain, coverage_ratio) = png_coverage(&png);
+    let has_terrain = rendered.coverage_ratio > 0.0;
     Ok(TileRenderResult {
         png,
-        rendered_chunk_count: chunks.values().filter(|chunk| chunk.is_some()).count(),
+        rendered_chunk_count: rendered_chunks.len(),
         has_terrain,
-        coverage_ratio,
+        coverage_ratio: rendered.coverage_ratio,
     })
+}
+
+fn rgba_pixels_to_scanlines(pixels: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let mut scanlines = Vec::with_capacity(height * (1 + width * 4));
+    for row in pixels.chunks_exact(width * 4).take(height) {
+        scanlines.push(0);
+        scanlines.extend_from_slice(row);
+    }
+    scanlines
 }
 
 fn encode_png_rgba(width: u32, height: u32, raw_scanlines: &[u8]) -> Result<Vec<u8>, String> {
