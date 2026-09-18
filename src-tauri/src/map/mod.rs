@@ -26,7 +26,6 @@ pub(crate) mod sources {
     };
 }
 
-/// Renderer-facing boundary for projection-independent rasterization.
-pub(crate) mod renderer {
-    pub(crate) use super::render::{render_iso_tile, shade_surface, Face, SurfaceSample};
-}
+/// Renderer-facing boundary for projection-independent rasterization and
+/// source-derived perspective geometry.
+pub(crate) mod renderer;
