@@ -134,6 +134,7 @@ export function isMapAssetWarningState(state: MapAssetState): boolean {
 
 export function resolveMapTileDiagnosticState(input: {
   assetState: MapAssetState;
+  hasPreviousTiles?: boolean;
   isLoading: boolean;
   requestedTileKeys: string[];
   statusError: string | null;
@@ -170,7 +171,7 @@ export function resolveMapTileDiagnosticState(input: {
     return 'stale';
   }
   if (input.isLoading || visibleStates.some((tile) => tile.renderState === 'rendering')) {
-    return 'rendering';
+    return input.hasPreviousTiles ? 'stale' : 'rendering';
   }
   return null;
 }

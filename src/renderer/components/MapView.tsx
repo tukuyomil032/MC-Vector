@@ -630,6 +630,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
   const tileDiagnosticState = resolveMapTileDiagnosticState({
     assetState,
+    hasPreviousTiles: tiles.length > 0,
     isLoading: isTileLoading,
     requestedTileKeys,
     statusError,

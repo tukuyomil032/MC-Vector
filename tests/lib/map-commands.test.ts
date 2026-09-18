@@ -100,5 +100,16 @@ describe('map tile diagnostics', () => {
         tileStates: {},
       }),
     ).toBe('rendering');
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'auto_detected',
+        hasPreviousTiles: true,
+        isLoading: true,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: {},
+      }),
+    ).toBe('stale');
   });
 });
