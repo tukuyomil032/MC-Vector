@@ -246,6 +246,15 @@ mod tests {
         bytes.into_inner()
     }
 
+    fn png_with_dimensions(width: u32, height: u32, pixel: [u8; 4]) -> Vec<u8> {
+        let image = RgbaImage::from_pixel(width, height, Rgba(pixel));
+        let mut bytes = Cursor::new(Vec::new());
+        image
+            .write_to(&mut bytes, ImageFormat::Png)
+            .expect("PNG fixture should encode");
+        bytes.into_inner()
+    }
+
     #[test]
     fn resolves_variant_parent_texture_variable_and_alpha() {
         let entries = HashMap::from([
@@ -303,6 +312,20 @@ mod tests {
         assert_eq!(
             resolver.sample_face_at("minecraft:test|facing=north,half=top", "up", 0.5, 0.5,),
             Some([9, 8, 7, 255])
+        );
+    }
+
+    #[test]
+    fn prefers_vanilla_grass_colormap_when_the_asset_is_available() {
+        let entries = HashMap::from([(
+            "assets/minecraft/textures/colormap/grass.png".to_string(),
+            png_with_dimensions(256, 256, [17, 29, 43, 255]),
+        )]);
+        let resolver = AssetResolver::from_entries(&entries).expect("colormap should load");
+
+        assert_eq!(
+            resolver.biome_tint("minecraft:grass_block", "minecraft:plains"),
+            Some([17, 29, 43])
         );
     }
 }
