@@ -7,8 +7,6 @@ use super::tile_key::TileKey;
 pub(crate) enum TilePriority {
     Viewport = 0,
     Adjacent = 1,
-    Player = 2,
-    Background = 3,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -150,10 +148,10 @@ mod tests {
     }
 
     #[test]
-    fn viewport_work_wins_over_background_and_fifo_is_stable() {
+    fn viewport_work_wins_over_adjacent_and_fifo_is_stable() {
         let mut queue = TileQueue::new(3);
         assert!(matches!(
-            queue.enqueue(key(1), TilePriority::Background),
+            queue.enqueue(key(1), TilePriority::Adjacent),
             EnqueueResult::Inserted { .. }
         ));
         assert!(matches!(
@@ -174,7 +172,7 @@ mod tests {
     fn duplicate_requests_coalesce_and_can_be_promoted() {
         let mut queue = TileQueue::new(1);
         assert!(matches!(
-            queue.enqueue(key(1), TilePriority::Background),
+            queue.enqueue(key(1), TilePriority::Adjacent),
             EnqueueResult::Inserted { .. }
         ));
         assert_eq!(
@@ -196,7 +194,7 @@ mod tests {
     fn higher_priority_admission_evicts_the_oldest_lowest_priority_tile() {
         let mut queue = TileQueue::new(2);
         assert!(matches!(
-            queue.enqueue(key(1), TilePriority::Background),
+            queue.enqueue(key(1), TilePriority::Adjacent),
             EnqueueResult::Inserted { .. }
         ));
         assert!(matches!(
@@ -206,7 +204,7 @@ mod tests {
 
         let admission = queue.enqueue(key(3), TilePriority::Viewport);
         let EnqueueResult::Inserted { evicted, .. } = admission else {
-            panic!("viewport admission should evict background work");
+            panic!("viewport admission should evict adjacent work");
         };
         assert_eq!(evicted.expect("evicted tile").key.tile_x, 1);
         assert_eq!(queue.len(), 2);

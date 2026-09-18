@@ -21,7 +21,6 @@ impl ChunkKey {
 pub enum ChunkSourceKind {
     LiveSnapshot,
     CachedLive,
-    SavedAnvil,
 }
 
 impl ChunkSourceKind {
@@ -29,7 +28,6 @@ impl ChunkSourceKind {
         match self {
             Self::LiveSnapshot => "live_snapshot",
             Self::CachedLive => "cached_live",
-            Self::SavedAnvil => "saved_anvil",
         }
     }
 }
@@ -174,7 +172,7 @@ mod tests {
             columns(layer(70, "minecraft:air")),
             0,
             None,
-            ChunkSourceKind::SavedAnvil,
+            ChunkSourceKind::LiveSnapshot,
         )
         .expect("fixture should be valid");
         assert!(view.surface_layer(0, 0).is_none());
@@ -191,7 +189,7 @@ mod tests {
             Vec::new(),
             0,
             None,
-            ChunkSourceKind::SavedAnvil,
+            ChunkSourceKind::LiveSnapshot,
         )
         .is_err());
         assert!(ChunkView::new(
@@ -201,7 +199,7 @@ mod tests {
             Vec::new(),
             0,
             None,
-            ChunkSourceKind::SavedAnvil,
+            ChunkSourceKind::LiveSnapshot,
         )
         .is_err());
     }

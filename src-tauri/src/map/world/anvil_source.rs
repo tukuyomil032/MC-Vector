@@ -2,7 +2,7 @@ use std::fs;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 use std::thread;
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::Duration;
 
 use fastanvil::complete::Chunk as CompleteChunk;
 use fastanvil::Region;
@@ -55,15 +55,6 @@ pub fn read_complete_chunk(
         .map_err(|error| format!("Failed to decode Minecraft chunk NBT: {error}"))
 }
 
-pub fn region_modified_at(world_root: &Path, chunk_x: i64, chunk_z: i64) -> Option<u64> {
-    let (region_x, region_z, _, _) = region_for_chunk(chunk_x, chunk_z);
-    fs::metadata(region_path(world_root, region_x, region_z))
-        .ok()
-        .and_then(|metadata| metadata.modified().ok())
-        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
-        .map(|duration| duration.as_millis() as u64)
-}
-
 fn region_path(world_root: &Path, region_x: i64, region_z: i64) -> PathBuf {
     world_root
         .join("region")
@@ -88,7 +79,7 @@ mod tests {
     }
 
     #[test]
-    fn reads_a_written_chunk_and_reports_region_revision() {
+    fn reads_a_written_chunk() {
         let root = std::env::temp_dir().join(format!("mc-vector-anvil-{}", Uuid::new_v4()));
         let region_dir = root.join("region");
         fs::create_dir_all(&region_dir).expect("region directory");
@@ -109,7 +100,6 @@ mod tests {
             read_chunk_bytes(&root, &key).expect("read"),
             Some(vec![10, 0, 0, 0])
         );
-        assert!(region_modified_at(&root, 0, 0).is_some());
         fs::remove_dir_all(root).expect("cleanup");
     }
 }

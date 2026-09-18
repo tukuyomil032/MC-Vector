@@ -6,12 +6,8 @@ pub(crate) enum TileRenderState {
     Terrain,
     Empty,
     Rendering,
-    Stale,
     Error,
     AssetMissing,
-    BridgeIncompatible,
-    PaperChunkUnavailable,
-    Paused,
 }
 
 #[derive(Clone, Debug, Serialize)]

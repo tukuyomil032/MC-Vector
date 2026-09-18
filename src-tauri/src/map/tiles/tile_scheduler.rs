@@ -176,7 +176,7 @@ mod tests {
     async fn scheduler_releases_a_bounded_worker_in_priority_order() {
         let scheduler = Arc::new(TileScheduler::new(4, 1));
         let first = scheduler
-            .acquire(key(1), TilePriority::Background)
+            .acquire(key(1), TilePriority::Adjacent)
             .await
             .expect("first permit");
         let scheduler_for_waiter = Arc::clone(&scheduler);
@@ -202,7 +202,7 @@ mod tests {
         let scheduler_for_waiter = Arc::clone(&scheduler);
         let waiting = tokio::spawn(async move {
             scheduler_for_waiter
-                .acquire(key(2), TilePriority::Background)
+                .acquire(key(2), TilePriority::Adjacent)
                 .await
         });
         tokio::task::yield_now().await;
@@ -223,10 +223,10 @@ mod tests {
             .acquire(key(1), TilePriority::Viewport)
             .await
             .expect("first permit");
-        let scheduler_for_background = Arc::clone(&scheduler);
-        let background = tokio::spawn(async move {
-            scheduler_for_background
-                .acquire(key(2), TilePriority::Background)
+        let scheduler_for_adjacent = Arc::clone(&scheduler);
+        let adjacent = tokio::spawn(async move {
+            scheduler_for_adjacent
+                .acquire(key(2), TilePriority::Adjacent)
                 .await
         });
         tokio::task::yield_now().await;
@@ -237,15 +237,15 @@ mod tests {
                 .acquire(key(3), TilePriority::Viewport)
                 .await
         });
-        let background_result = tokio::time::timeout(std::time::Duration::from_secs(1), background)
+        let adjacent_result = tokio::time::timeout(std::time::Duration::from_secs(1), adjacent)
             .await
             .expect("evicted waiter should wake")
-            .expect("background task should not panic");
-        let background_error = match background_result {
+            .expect("adjacent task should not panic");
+        let adjacent_error = match adjacent_result {
             Ok(_) => panic!("evicted request must not acquire a permit"),
             Err(error) => error,
         };
-        assert!(background_error.contains("evicted"));
+        assert!(adjacent_error.contains("evicted"));
 
         drop(first);
         let viewport_permit = viewport
@@ -291,7 +291,7 @@ mod tests {
         let scheduler_for_waiter = Arc::clone(&scheduler);
         let waiting = tokio::spawn(async move {
             scheduler_for_waiter
-                .acquire(key(2), TilePriority::Background)
+                .acquire(key(2), TilePriority::Adjacent)
                 .await
         });
         tokio::task::yield_now().await;
