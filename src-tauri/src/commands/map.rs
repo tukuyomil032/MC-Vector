@@ -13,7 +13,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, oneshot, Mutex, Semaphore};
+use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
@@ -24,6 +24,9 @@ use super::server::ServerManager;
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
 use crate::map::render::{render_surface_tile, shade_surface, Face, SurfaceSample};
 use crate::map::tile_buffer::RgbaTileBuffer;
+use crate::map::tiles::{
+    MemoryTileCache, TileKey, TilePriority, TileScheduler, DEFAULT_PERSPECTIVE,
+};
 use crate::map::world::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files,
     present_chunks_for_bounds, read_complete_chunk, read_level_metadata, ChunkKey, ChunkView,
@@ -38,7 +41,6 @@ const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
 const MAX_BRIDGE_LINE_BYTES: usize = 1024 * 1024;
 const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
-const TILE_ASSET_VERSION: &str = "terrain-textured-v2";
 // This version intentionally invalidates the earlier representative-colour
 // tiles. The renderer now resolves blockstate/model parents and samples the
 // resolved top face before the tile path aggregates chunk footprints.
@@ -116,17 +118,7 @@ struct RuntimeBridgeStatus {
     last_heartbeat: Option<u64>,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-struct TileCacheKey {
-    server_id: String,
-    world_id: String,
-    minecraft_version: String,
-    zoom: u8,
-    tile_x: i32,
-    tile_y: i32,
-    asset_version: String,
-    renderer_version: &'static str,
-}
+type TileCacheKey = TileKey;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 struct LiveChunkKey {
@@ -145,14 +137,14 @@ struct CachedLiveChunk {
 pub struct MapBridgeManager {
     listeners: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
     statuses: Arc<Mutex<HashMap<String, RuntimeBridgeStatus>>>,
-    tile_cache: Arc<Mutex<HashMap<TileCacheKey, Vec<u8>>>>,
+    tile_cache: Arc<Mutex<MemoryTileCache>>,
     inflight_tiles:
         Arc<Mutex<HashMap<TileCacheKey, Vec<oneshot::Sender<Result<Vec<u8>, String>>>>>>,
     asset_cache: Arc<StdMutex<HashMap<String, Arc<MapAssets>>>>,
     sessions: Arc<Mutex<HashMap<String, BridgeSender>>>,
     pending_snapshots: Arc<Mutex<HashMap<String, PendingSnapshotSender>>>,
     live_snapshots: Arc<Mutex<HashMap<LiveChunkKey, CachedLiveChunk>>>,
-    render_gate: Arc<Semaphore>,
+    tile_scheduler: Arc<TileScheduler>,
 }
 
 impl Default for MapBridgeManager {
@@ -160,13 +152,13 @@ impl Default for MapBridgeManager {
         Self {
             listeners: Arc::default(),
             statuses: Arc::default(),
-            tile_cache: Arc::default(),
+            tile_cache: Arc::new(Mutex::new(MemoryTileCache::new(MAX_TILE_CACHE_ENTRIES))),
             inflight_tiles: Arc::default(),
             asset_cache: Arc::default(),
             sessions: Arc::default(),
             pending_snapshots: Arc::default(),
             live_snapshots: Arc::default(),
-            render_gate: Arc::new(Semaphore::new(2)),
+            tile_scheduler: Arc::new(TileScheduler::new(64, 2)),
         }
     }
 }
@@ -921,10 +913,6 @@ fn dimension_matches_world(world_id: &str, dimension: &str) -> bool {
     ) || world_id == dimension
 }
 
-fn tile_intersects_chunk(key: &TileCacheKey, chunk_x: i64, chunk_z: i64) -> bool {
-    tile_coordinates_intersect_chunk(key.zoom, key.tile_x, key.tile_y, chunk_x, chunk_z)
-}
-
 fn tile_coordinates_intersect_chunk(
     zoom: u8,
     tile_x: i32,
@@ -990,70 +978,93 @@ fn invalidate_disk_chunk_tiles(
             continue;
         };
         for version_entry in version_entries {
-            let Some(asset_entries) = normal_directory_entries(&version_entry.path())? else {
+            let Some(resource_entries) = normal_directory_entries(&version_entry.path())? else {
                 continue;
             };
-            for asset_entry in asset_entries {
-                let Some(renderer_entries) = normal_directory_entries(&asset_entry.path())? else {
+            for resource_entry in resource_entries {
+                let Some(manifest_entries) = normal_directory_entries(&resource_entry.path())?
+                else {
                     continue;
                 };
-                for renderer_entry in renderer_entries {
-                    let Some(zoom_entries) = normal_directory_entries(&renderer_entry.path())?
+                for manifest_entry in manifest_entries {
+                    let Some(renderer_entries) = normal_directory_entries(&manifest_entry.path())?
                     else {
                         continue;
                     };
-                    for zoom_entry in zoom_entries {
-                        let Some(zoom) = zoom_entry
-                            .file_name()
-                            .to_str()
-                            .and_then(|value| value.parse::<u8>().ok())
+                    for renderer_entry in renderer_entries {
+                        let Some(perspective_entries) =
+                            normal_directory_entries(&renderer_entry.path())?
                         else {
                             continue;
                         };
-                        let Some(tile_x_entries) = normal_directory_entries(&zoom_entry.path())?
-                        else {
-                            continue;
-                        };
-                        for tile_x_entry in tile_x_entries {
-                            let Some(tile_x) = tile_x_entry
-                                .file_name()
-                                .to_str()
-                                .and_then(|value| value.parse::<i32>().ok())
+                        for perspective_entry in perspective_entries {
+                            let Some(zoom_entries) =
+                                normal_directory_entries(&perspective_entry.path())?
                             else {
                                 continue;
                             };
-                            let tile_x_path = tile_x_entry.path();
-                            let Some(tile_y_entries) = normal_directory_entries(&tile_x_path)?
-                            else {
-                                continue;
-                            };
-                            for tile_y_entry in tile_y_entries {
-                                let path = tile_y_entry.path();
-                                let metadata = fs::symlink_metadata(&path).map_err(|error| {
-                                    format!("Failed to inspect cached map tile: {error}")
-                                })?;
-                                if is_link_or_reparse_point(&metadata) {
-                                    return Err(format!(
-                                        "Refusing to inspect a symbolic cached map tile: {}",
-                                        path.display()
-                                    ));
-                                }
-                                let Some(tile_y) = path
-                                    .file_stem()
-                                    .and_then(|value| value.to_str())
-                                    .filter(|_| {
-                                        path.extension().and_then(|ext| ext.to_str()) == Some("png")
-                                    })
-                                    .and_then(|value| value.parse::<i32>().ok())
+                            for zoom_entry in zoom_entries {
+                                let Some(zoom) = zoom_entry
+                                    .file_name()
+                                    .to_str()
+                                    .and_then(|value| value.parse::<u8>().ok())
                                 else {
                                     continue;
                                 };
-                                if tile_coordinates_intersect_chunk(
-                                    zoom, tile_x, tile_y, chunk_x, chunk_z,
-                                ) {
-                                    fs::remove_file(&path).map_err(|error| {
-                                        format!("Failed to invalidate cached map tile: {error}")
-                                    })?;
+                                let Some(tile_x_entries) =
+                                    normal_directory_entries(&zoom_entry.path())?
+                                else {
+                                    continue;
+                                };
+                                for tile_x_entry in tile_x_entries {
+                                    let Some(tile_x) = tile_x_entry
+                                        .file_name()
+                                        .to_str()
+                                        .and_then(|value| value.parse::<i32>().ok())
+                                    else {
+                                        continue;
+                                    };
+                                    let tile_x_path = tile_x_entry.path();
+                                    let Some(tile_y_entries) =
+                                        normal_directory_entries(&tile_x_path)?
+                                    else {
+                                        continue;
+                                    };
+                                    for tile_y_entry in tile_y_entries {
+                                        let path = tile_y_entry.path();
+                                        let metadata =
+                                            fs::symlink_metadata(&path).map_err(|error| {
+                                                format!(
+                                                    "Failed to inspect cached map tile: {error}"
+                                                )
+                                            })?;
+                                        if is_link_or_reparse_point(&metadata) {
+                                            return Err(format!(
+                                                "Refusing to inspect a symbolic cached map tile: {}",
+                                                path.display()
+                                            ));
+                                        }
+                                        let Some(tile_y) = path
+                                            .file_stem()
+                                            .and_then(|value| value.to_str())
+                                            .filter(|_| {
+                                                path.extension().and_then(|ext| ext.to_str())
+                                                    == Some("png")
+                                            })
+                                            .and_then(|value| value.parse::<i32>().ok())
+                                        else {
+                                            continue;
+                                        };
+                                        if tile_coordinates_intersect_chunk(
+                                            zoom, tile_x, tile_y, chunk_x, chunk_z,
+                                        ) {
+                                            fs::remove_file(&path).map_err(|error| {
+                                                format!(
+                                                    "Failed to invalidate cached map tile: {error}"
+                                                )
+                                            })?;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1072,10 +1083,10 @@ async fn invalidate_chunk_tiles(
     chunk_x: i64,
     chunk_z: i64,
 ) {
-    manager.tile_cache.lock().await.retain(|key, _| {
+    manager.tile_cache.lock().await.remove_where(|key| {
         !(key.server_id == server_id
             && dimension_matches_world(&key.world_id, dimension)
-            && tile_intersects_chunk(key, chunk_x, chunk_z))
+            && crate::map::tiles::tile_intersects_chunk(key, chunk_x, chunk_z))
     });
     manager.live_snapshots.lock().await.retain(|key, _| {
         !(key.server_id == server_id
@@ -1543,7 +1554,7 @@ impl MapBridgeManager {
             sessions: Arc::clone(&self.sessions),
             pending_snapshots: Arc::clone(&self.pending_snapshots),
             live_snapshots: Arc::clone(&self.live_snapshots),
-            render_gate: Arc::clone(&self.render_gate),
+            tile_scheduler: Arc::clone(&self.tile_scheduler),
         }
     }
 }
@@ -1732,7 +1743,7 @@ pub async fn select_map_asset(
         .tile_cache
         .lock()
         .await
-        .retain(|key, _| key.server_id != server_id);
+        .remove_where(|key| key.server_id == server_id);
     tokio::task::spawn_blocking(move || map_assets::source_status(&root))
         .await
         .map_err(|error| format!("Map asset status worker failed: {error}"))?
@@ -1894,7 +1905,7 @@ pub async fn remove_map_component(
         .tile_cache
         .lock()
         .await
-        .retain(|key, _| key.server_id != server_id);
+        .remove_where(|key| key.server_id == server_id);
     manager
         .live_snapshots
         .lock()
@@ -1969,32 +1980,37 @@ pub async fn get_map_tile(
     .await
     .map_err(|error| format!("Map asset worker failed: {error}"))??;
 
-    let key = TileCacheKey {
+    let resource_pack_hash = assets
+        .as_ref()
+        .map(|assets| assets.identity.clone())
+        .unwrap_or_else(|| "fallback".to_string());
+    let asset_manifest_version = assets
+        .as_ref()
+        .map(|assets| format!("v{}", assets.manifest.manifest_version))
+        .unwrap_or_else(|| "fallback".to_string());
+    let key = TileCacheKey::new(
         server_id,
         world_id,
         minecraft_version,
+        resource_pack_hash,
+        asset_manifest_version,
+        TILE_RENDERER_VERSION,
+        DEFAULT_PERSPECTIVE,
         zoom,
         tile_x,
         tile_y,
-        asset_version: assets
-            .as_ref()
-            .map(|assets| assets.cache_identity())
-            .unwrap_or_else(|| TILE_ASSET_VERSION.to_string()),
-        renderer_version: TILE_RENDERER_VERSION,
-    };
+    );
 
-    if let Some(tile) = manager.tile_cache.lock().await.get(&key).cloned() {
+    if let Some(tile) = manager.tile_cache.lock().await.get(&key) {
         emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None);
         return Ok(tauri::ipc::Response::new(tile));
     }
     if let Some(tile) = read_disk_tile(&server_root, &key)? {
-        let mut cache = manager.tile_cache.lock().await;
-        if cache.len() >= MAX_TILE_CACHE_ENTRIES {
-            if let Some(oldest_key) = cache.keys().next().cloned() {
-                cache.remove(&oldest_key);
-            }
-        }
-        cache.insert(key.clone(), tile.clone());
+        manager
+            .tile_cache
+            .lock()
+            .await
+            .insert(key.clone(), tile.clone());
         emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None);
         return Ok(tauri::ipc::Response::new(tile));
     }
@@ -2008,11 +2024,12 @@ pub async fn get_map_tile(
     }
 
     let tile_key = key.clone();
+    let tile_permit = manager
+        .tile_scheduler
+        .acquire(key.clone(), TilePriority::Viewport)
+        .await;
     let tile_result: Result<Vec<u8>, String> = async {
-        let render_permit = Arc::clone(&manager.render_gate)
-            .acquire_owned()
-            .await
-            .map_err(|_| "Map tile renderer is shutting down".to_string())?;
+        let _tile_permit = tile_permit?;
 
         let asset_missing = assets.is_none();
         let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
@@ -2035,7 +2052,6 @@ pub async fn get_map_tile(
         .await;
 
         let rendered = tokio::task::spawn_blocking(move || {
-            let _render_permit = render_permit;
             render_world_tile_detailed(
                 &world_root,
                 zoom,
@@ -2058,14 +2074,11 @@ pub async fn get_map_tile(
             Some((rendered.has_terrain, rendered.coverage_ratio)),
         );
 
-        let mut cache = manager.tile_cache.lock().await;
-        if cache.len() >= MAX_TILE_CACHE_ENTRIES {
-            if let Some(oldest_key) = cache.keys().next().cloned() {
-                cache.remove(&oldest_key);
-            }
-        }
-        cache.insert(tile_key.clone(), tile.clone());
-        drop(cache);
+        manager
+            .tile_cache
+            .lock()
+            .await
+            .insert(tile_key.clone(), tile.clone());
         write_disk_tile(&server_root, &tile_key, &tile)?;
         Ok(tile)
     }
@@ -2159,14 +2172,16 @@ fn cache_segment(value: &str) -> String {
     }
 }
 
-fn cache_directory_segments(key: &TileCacheKey) -> [String; 8] {
+fn cache_directory_segments(key: &TileCacheKey) -> [String; 10] {
     [
         "map-cache".to_string(),
         cache_segment(&key.server_id),
         cache_segment(&key.world_id),
         cache_segment(&key.minecraft_version),
-        cache_segment(&key.asset_version),
-        cache_segment(key.renderer_version),
+        cache_segment(&key.resource_pack_hash),
+        cache_segment(&key.asset_manifest_version),
+        cache_segment(&key.renderer_version),
+        cache_segment(&key.perspective),
         key.zoom.to_string(),
         key.tile_x.to_string(),
     ]
@@ -2227,26 +2242,7 @@ fn read_disk_tile(server_root: &Path, key: &TileCacheKey) -> Result<Option<Vec<u
         return Ok(None);
     };
     let path = directory.join(format!("{}.png", key.tile_y));
-    let metadata = match fs::symlink_metadata(&path) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(format!("Failed to inspect cached map tile: {error}")),
-    };
-    if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
-        return Err(format!(
-            "Cached map tile is not a normal file: {}",
-            path.display()
-        ));
-    }
-    if metadata.len() > 16 * 1024 * 1024 {
-        return Err("Cached map tile is too large".to_string());
-    }
-    let bytes =
-        fs::read(&path).map_err(|error| format!("Failed to read cached map tile: {error}"))?;
-    if !bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
-        return Ok(None);
-    }
-    Ok(Some(bytes))
+    crate::map::tiles::read_png(&path)
 }
 
 fn remove_map_cache(server_root: &Path) -> Result<(), String> {
@@ -2266,9 +2262,6 @@ fn remove_map_cache(server_root: &Path) -> Result<(), String> {
 }
 
 fn write_disk_tile(server_root: &Path, key: &TileCacheKey, bytes: &[u8]) -> Result<(), String> {
-    if !bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
-        return Err("Refusing to cache a non-PNG map tile".to_string());
-    }
     let Some(directory) = tile_cache_directory(server_root, key, true)? else {
         return Err("Map tile cache directory could not be created".to_string());
     };
@@ -2281,14 +2274,7 @@ fn write_disk_tile(server_root: &Path, key: &TileCacheKey, bytes: &[u8]) -> Resu
             ));
         }
     }
-    let temporary = directory.join(format!(".{}.tmp-{}", key.tile_y, Uuid::new_v4()));
-    fs::write(&temporary, bytes)
-        .map_err(|error| format!("Failed to write temporary map tile: {error}"))?;
-    if let Err(error) = fs::rename(&temporary, &path) {
-        let _ = fs::remove_file(&temporary);
-        return Err(format!("Failed to atomically replace map tile: {error}"));
-    }
-    Ok(())
+    crate::map::tiles::write_png_atomic(&path, bytes)
 }
 
 type Rgba = [u8; 4];
@@ -2955,20 +2941,22 @@ mod tests {
 
     #[test]
     fn dirty_chunk_invalidation_is_limited_to_intersecting_tiles() {
-        let key = TileCacheKey {
-            server_id: "server-1".to_string(),
-            world_id: "overworld".to_string(),
-            minecraft_version: "1.21.10".to_string(),
-            zoom: MAX_ZOOM,
-            tile_x: 0,
-            tile_y: 0,
-            asset_version: "sha256:test".to_string(),
-            renderer_version: TILE_RENDERER_VERSION,
-        };
-        assert!(tile_intersects_chunk(&key, 0, 0));
-        assert!(tile_intersects_chunk(&key, 15, 15));
-        assert!(!tile_intersects_chunk(&key, 16, 0));
-        assert!(!tile_intersects_chunk(&key, 0, -1));
+        let key = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "sha256:test",
+            "v1",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            MAX_ZOOM,
+            0,
+            0,
+        );
+        assert!(crate::map::tiles::tile_intersects_chunk(&key, 0, 0));
+        assert!(crate::map::tiles::tile_intersects_chunk(&key, 15, 15));
+        assert!(!crate::map::tiles::tile_intersects_chunk(&key, 16, 0));
+        assert!(!crate::map::tiles::tile_intersects_chunk(&key, 0, -1));
         assert!(dimension_matches_world("overworld", "minecraft:overworld"));
         assert!(!dimension_matches_world(
             "overworld",
@@ -2981,16 +2969,18 @@ mod tests {
         let root =
             std::env::temp_dir().join(format!("mc-vector-map-cache-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&root).expect("test root should be created");
-        let key = TileCacheKey {
-            server_id: "server-1".to_string(),
-            world_id: "overworld".to_string(),
-            minecraft_version: "1.21.10".to_string(),
-            zoom: 4,
-            tile_x: -2,
-            tile_y: 3,
-            asset_version: "sha256:test".to_string(),
-            renderer_version: TILE_RENDERER_VERSION,
-        };
+        let key = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "sha256:test",
+            "v1",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            4,
+            -2,
+            3,
+        );
         let png = b"\x89PNG\r\n\x1a\nfixture";
         write_disk_tile(&root, &key, png).expect("tile should be written");
         assert_eq!(
@@ -3007,16 +2997,18 @@ mod tests {
         let root =
             std::env::temp_dir().join(format!("mc-vector-map-cache-race-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&root).expect("test root should be created");
-        let key = TileCacheKey {
-            server_id: "server-race".to_string(),
-            world_id: "overworld".to_string(),
-            minecraft_version: "1.21.10".to_string(),
-            zoom: 2,
-            tile_x: 0,
-            tile_y: 0,
-            asset_version: "fallback".to_string(),
-            renderer_version: TILE_RENDERER_VERSION,
-        };
+        let key = TileCacheKey::new(
+            "server-race",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            2,
+            0,
+            0,
+        );
 
         std::thread::scope(|scope| {
             let handles = (0..8)

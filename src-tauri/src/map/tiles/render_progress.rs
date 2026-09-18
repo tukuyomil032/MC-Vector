@@ -1,0 +1,35 @@
+use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum TileRenderState {
+    Terrain,
+    Empty,
+    Rendering,
+    Stale,
+    Error,
+    AssetMissing,
+    BridgeIncompatible,
+    PaperChunkUnavailable,
+    Paused,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RenderProgress {
+    pub(crate) state: TileRenderState,
+    pub(crate) completed: usize,
+    pub(crate) total: usize,
+    pub(crate) message: Option<String>,
+}
+
+impl RenderProgress {
+    pub(crate) fn rendering(completed: usize, total: usize) -> Self {
+        Self {
+            state: TileRenderState::Rendering,
+            completed,
+            total,
+            message: None,
+        }
+    }
+}
