@@ -109,6 +109,7 @@ impl Model {
         &self,
         model_rotation_x: u32,
         model_rotation_y: u32,
+        uvlock: bool,
     ) -> Vec<(FaceDirection, ModelFace, [[f32; 3]; 4], bool)> {
         self.elements
             .iter()
@@ -122,11 +123,27 @@ impl Model {
                     }
                     vertices = vertices
                         .map(|point| rotate_model(point, model_rotation_x, model_rotation_y));
-                    Some((direction, face.clone(), vertices, element.shade))
+                    let mut face = face.clone();
+                    if uvlock {
+                        face.rotation =
+                            uv_lock_rotation(face.rotation, model_rotation_x, model_rotation_y);
+                    }
+                    Some((direction, face, vertices, element.shade))
                 })
             })
             .collect()
     }
+}
+
+/// Keep the face texture aligned to world orientation for the blockstate's
+/// supported quarter-turn model rotations. Geometry applies x then y; the
+/// texture receives the inverse accumulated turn, while an explicit face
+/// rotation remains part of the final result. Non-quarter input is rounded
+/// down to the nearest supported turn, matching blockstate's integer contract.
+fn uv_lock_rotation(face_rotation: u32, model_rotation_x: u32, model_rotation_y: u32) -> u32 {
+    let model_turns = (model_rotation_x / 90 + model_rotation_y / 90) % 4;
+    let inverse_turns = (4 - model_turns) % 4;
+    (face_rotation + inverse_turns * 90) % 360
 }
 
 fn face_vertices(direction: FaceDirection, from: [f32; 3], to: [f32; 3]) -> [[f32; 3]; 4] {
@@ -246,7 +263,7 @@ mod tests {
             }]
         }))
         .expect("model fixture");
-        let faces = model.resolve_faces(0, 0);
+        let faces = model.resolve_faces(0, 0, false);
         assert_eq!(faces.len(), 1);
         assert_eq!(faces[0].0, FaceDirection::Up);
         assert_eq!(faces[0].2[0], [0.0, 16.0, 0.0]);
@@ -262,7 +279,7 @@ mod tests {
             }]
         }))
         .expect("model fixture");
-        let faces = model.resolve_faces(0, 90);
+        let faces = model.resolve_faces(0, 90, false);
         assert_ne!(faces[0].2[0], [0.0, 4.0, 0.0]);
     }
 
@@ -302,10 +319,29 @@ mod tests {
         .expect("child model fixture");
 
         let merged = Model::merge_parent(child, parent);
-        let faces = merged.resolve_faces(0, 0);
+        let faces = merged.resolve_faces(0, 0, false);
 
         assert_eq!(faces.len(), 1);
         assert_eq!(faces[0].0, FaceDirection::Down);
         assert_eq!(faces[0].1.texture, "#child");
+    }
+
+    #[test]
+    fn uvlock_compensates_model_rotation_but_false_preserves_face_rotation() {
+        let model: Model = serde_json::from_value(serde_json::json!({
+            "elements": [{
+                "from": [0, 0, 0],
+                "to": [16, 16, 16],
+                "faces": {"up": {"texture": "#all", "rotation": 90}}
+            }]
+        }))
+        .expect("model fixture");
+
+        let unlocked = model.resolve_faces(0, 90, false);
+        let locked = model.resolve_faces(0, 90, true);
+
+        assert_eq!(unlocked[0].1.rotation, 90);
+        assert_eq!(locked[0].1.rotation, 0);
+        assert_eq!(unlocked[0].2, locked[0].2);
     }
 }

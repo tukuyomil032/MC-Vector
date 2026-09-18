@@ -78,7 +78,8 @@ impl AssetResolver {
             let model = self
                 .flatten_model(&reference.model, &mut HashSet::new())
                 .ok()?;
-            for (direction, face, vertices, shade) in model.resolve_faces(reference.x, reference.y)
+            for (direction, face, vertices, shade) in
+                model.resolve_faces(reference.x, reference.y, reference.uvlock)
             {
                 let texture = resolve_texture_reference(&face.texture, &model.textures).ok()?;
                 if !self.textures.contains_key(&texture) {
@@ -317,6 +318,40 @@ mod tests {
             resolver.sample_face_at("minecraft:test|facing=north,half=top", "up", 0.5, 0.5,),
             Some([9, 8, 7, 255])
         );
+    }
+
+    #[test]
+    fn blockstate_uvlock_changes_resolved_face_rotation_only_when_enabled() {
+        let entries = HashMap::from([
+            (
+                "assets/minecraft/blockstates/locked.json".to_string(),
+                br#"{"variants":{"":{"model":"minecraft:block/test","y":90,"uvlock":true}}}"#.to_vec(),
+            ),
+            (
+                "assets/minecraft/blockstates/unlocked.json".to_string(),
+                br#"{"variants":{"":{"model":"minecraft:block/test","y":90,"uvlock":false}}}"#.to_vec(),
+            ),
+            (
+                "assets/minecraft/models/block/test.json".to_string(),
+                br##"{"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"up":{"texture":"#all","rotation":90}}}],"textures":{"all":"minecraft:block/test_texture"}}"##.to_vec(),
+            ),
+            (
+                "assets/minecraft/textures/block/test_texture.png".to_string(),
+                png([11, 22, 33, 255]),
+            ),
+        ]);
+
+        let resolver = AssetResolver::from_entries(&entries).expect("fixture should load");
+        let locked = resolver
+            .appearance("minecraft:locked|")
+            .expect("locked face");
+        let unlocked = resolver
+            .appearance("minecraft:unlocked|")
+            .expect("unlocked face");
+
+        assert_eq!(locked[0].rotation, 0);
+        assert_eq!(unlocked[0].rotation, 90);
+        assert_eq!(locked[0].vertices, unlocked[0].vertices);
     }
 
     #[test]
