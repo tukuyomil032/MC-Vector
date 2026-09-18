@@ -47,9 +47,11 @@ import {
   type MapStatus,
   type MapTileReadyEvent,
   isMapAssetWarningState,
+  isMapTileRequestReady,
   normalizeMapTileBytes,
   resolveMapTileDiagnosticState,
 } from '../state/map-types';
+import { createMapRequestCoordinator } from '../state/map-request-coordinator';
 
 interface MapViewProps {
   server: MinecraftServer;
@@ -78,6 +80,7 @@ interface MapTile {
 const MAX_ZOOM = 8;
 const TILE_SIZE = 256;
 const TILES_PER_VIEW = 3;
+const VIEWPORT_DEBOUNCE_MS = 120;
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 
 function bridgeIcon(state: MapBridgeState) {
@@ -110,6 +113,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [worldHasTerrain, setWorldHasTerrain] = useState<boolean | null>(null);
   const tilesRef = useRef<MapTile[]>([]);
+  const mapRequestsRef = useRef(createMapRequestCoordinator());
   const centerInitializedRef = useRef(false);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; pan: PanState }>();
 
@@ -136,6 +140,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
   useEffect(() => {
     setStatus(null);
+    mapRequestsRef.current.clear();
     setPlayers([]);
     setStatusError(null);
     revokeTiles(tilesRef.current);
@@ -220,15 +225,16 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         return;
       }
       setRenderProgress(event);
+      if (event.state === 'error' || event.state === 'paper_chunk_unavailable') {
+        setTileError(event.message ?? `Map render reported ${event.state}`);
+      }
     },
   });
 
+  const mapTileRequestReady = isMapTileRequestReady(status, statusError);
+
   useEffect(() => {
-    if (
-      statusError ||
-      status?.configState !== 'valid' ||
-      (status?.component !== 'active' && status?.component !== 'waiting_restart')
-    ) {
+    if (!mapTileRequestReady) {
       revokeTiles(tilesRef.current);
       tilesRef.current = [];
       setTiles([]);
@@ -240,80 +246,93 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     }
     let cancelled = false;
     const nextUrls: string[] = [];
-    const previousTiles = tilesRef.current;
-    setIsTileLoading(true);
-    setTileError(null);
-    setRenderProgress(null);
-    setTileStates({});
-    const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
-    const tileWorldSize = TILE_SIZE * blocksPerPixel;
-    const centerTileX = Math.floor(mapCenter.x / tileWorldSize);
-    const centerTileY = Math.floor(mapCenter.z / tileWorldSize);
-    const requests = Array.from({ length: TILES_PER_VIEW }, (_, row) =>
-      Array.from({ length: TILES_PER_VIEW }, (_, column) => ({
-        x: centerTileX + column - 1,
-        y: centerTileY + row - 1,
-      })),
-    ).flat();
-    setRequestedTileKeys(requests.map(({ x, y }) => `${zoom}:${x}:${y}`));
+    const timeout = window.setTimeout(() => {
+      const previousTiles = tilesRef.current;
+      setIsTileLoading(true);
+      setTileError(null);
+      setRenderProgress(null);
+      setTileStates({});
+      const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
+      const tileWorldSize = TILE_SIZE * blocksPerPixel;
+      const centerTileX = Math.floor(mapCenter.x / tileWorldSize);
+      const centerTileY = Math.floor(mapCenter.z / tileWorldSize);
+      const requests = Array.from({ length: TILES_PER_VIEW }, (_, row) =>
+        Array.from({ length: TILES_PER_VIEW }, (_, column) => ({
+          x: centerTileX + column - 1,
+          y: centerTileY + row - 1,
+        })),
+      ).flat();
+      setRequestedTileKeys(requests.map(({ x, y }) => `${zoom}:${x}:${y}`));
 
-    void requestMapRender(server.id, 'overworld', {
-      centerX: mapCenter.x,
-      centerZ: mapCenter.z,
-      zoom,
-      width: 768,
-      height: 512,
-    }).catch(() => {
-      // Individual tile requests below still provide the image and diagnostic
-      // state. Prefetch failures are surfaced by getMapTile or map-tile-ready.
-    });
-
-    void Promise.all(
-      requests.map(async ({ x, y }): Promise<MapTile | null> => {
-        try {
-          const buffer = await getMapTile(server.id, 'overworld', zoom, x, y);
-          if (cancelled) {
-            return null;
-          }
-          const bytes = normalizeMapTileBytes(buffer);
-          if (
-            bytes.length < 8 ||
-            !bytes.slice(0, 8).every((value, index) => value === PNG_SIGNATURE[index])
-          ) {
-            throw new Error('Map tile response was not a valid PNG');
-          }
-          const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
-          nextUrls.push(url);
-          return { x, y, url };
-        } catch (error) {
+      const renderKey = `${server.id}:overworld:${zoom}:${mapCenter.x}:${mapCenter.z}:${tileRevision}`;
+      void mapRequestsRef.current
+        .requestRender(renderKey, () =>
+          requestMapRender(server.id, 'overworld', {
+            centerX: mapCenter.x,
+            centerZ: mapCenter.z,
+            zoom,
+            width: 768,
+            height: 512,
+          }).then(() => undefined),
+        )
+        .catch((error) => {
           if (!cancelled) {
             setTileError(error instanceof Error ? error.message : String(error));
           }
-          return null;
-        }
-      }),
-    ).then((loadedTiles) => {
-      if (!cancelled) {
-        const merged = new Map(previousTiles.map((tile) => [`${tile.x}:${tile.y}`, tile]));
-        loadedTiles.forEach((tile) => {
-          if (!tile) {
-            return;
-          }
-          const key = `${tile.x}:${tile.y}`;
-          const previous = merged.get(key);
-          if (previous && previous.url !== tile.url) {
-            URL.revokeObjectURL(previous.url);
-          }
-          merged.set(key, tile);
         });
-        setTiles([...merged.values()]);
-        nextUrls.length = 0;
-        setIsTileLoading(false);
-      }
-    });
+
+      void Promise.all(
+        requests.map(async ({ x, y }): Promise<MapTile | null> => {
+          const tileKey = `${server.id}:overworld:${zoom}:${x}:${y}`;
+          try {
+            const bytes = await mapRequestsRef.current.requestTile(tileKey, async () => {
+              const buffer = await getMapTile(server.id, 'overworld', zoom, x, y);
+              const nextBytes = normalizeMapTileBytes(buffer);
+              if (
+                nextBytes.length < 8 ||
+                !nextBytes.slice(0, 8).every((value, index) => value === PNG_SIGNATURE[index])
+              ) {
+                throw new Error('Map tile response was not a valid PNG');
+              }
+              return nextBytes;
+            });
+            if (cancelled) {
+              return null;
+            }
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+            nextUrls.push(url);
+            return { x, y, url };
+          } catch (error) {
+            if (!cancelled) {
+              setTileError(error instanceof Error ? error.message : String(error));
+            }
+            return null;
+          }
+        }),
+      ).then((loadedTiles) => {
+        if (!cancelled) {
+          const merged = new Map(previousTiles.map((tile) => [`${tile.x}:${tile.y}`, tile]));
+          loadedTiles.forEach((tile) => {
+            if (!tile) {
+              return;
+            }
+            const key = `${tile.x}:${tile.y}`;
+            const previous = merged.get(key);
+            if (previous && previous.url !== tile.url) {
+              URL.revokeObjectURL(previous.url);
+            }
+            merged.set(key, tile);
+          });
+          setTiles([...merged.values()]);
+          nextUrls.length = 0;
+          setIsTileLoading(false);
+        }
+      });
+    }, VIEWPORT_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
       nextUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [
@@ -322,7 +341,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     server.id,
     status?.component,
     status?.configState,
+    status?.assetState,
     statusError,
+    mapTileRequestReady,
     tileRevision,
     zoom,
   ]);

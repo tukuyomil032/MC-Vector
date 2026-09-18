@@ -130,6 +130,19 @@ export function isMapAssetWarningState(state: MapAssetState): boolean {
   return ['missing', 'invalid', 'version_mismatch', 'fallback'].includes(state);
 }
 
+export function isMapTileRequestReady(
+  status: MapStatus | null,
+  statusError: string | null,
+): boolean {
+  return (
+    !statusError &&
+    status !== null &&
+    status.configState === 'valid' &&
+    (status.component === 'active' || status.component === 'waiting_restart') &&
+    status.assetState !== 'not_applicable'
+  );
+}
+
 export function resolveMapTileDiagnosticState(input: {
   assetState: MapAssetState;
   hasPreviousTiles?: boolean;
@@ -140,7 +153,7 @@ export function resolveMapTileDiagnosticState(input: {
   tileStates: Record<string, MapTileReadyEvent>;
 }): MapTileRenderState | null {
   if (input.statusError) {
-    return null;
+    return 'error';
   }
   const visibleStates = input.requestedTileKeys
     .map((key) => input.tileStates[key])

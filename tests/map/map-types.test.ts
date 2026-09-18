@@ -47,7 +47,7 @@ describe('map tile diagnostics', () => {
         tileError: null,
         tileStates: {},
       }),
-    ).toBeNull();
+    ).toBe('error');
   });
 
   it('distinguishes a fully empty viewport from a render failure', async () => {
