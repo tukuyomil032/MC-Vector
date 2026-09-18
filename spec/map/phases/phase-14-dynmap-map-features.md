@@ -25,7 +25,27 @@ Phase 13 real Map UI, Phase 06 bridge, and marker research corpus.
 - persist markers safely under server ownership;
 - add player following and interpolation separate from terrain tiles;
 - add world border/spawn/search and overlay state with clear availability;
+- publish a protocol v2 `world_status` snapshot from Paper and expose it as a
+  server-scoped Tauri event for time/weather overlays;
 - document what is not compatible with Dynmap's external API.
+
+## Implemented evidence (2026-09-18)
+
+- `get_map_world_info` reads the Java Edition `Data.BorderCenterX`,
+  `Data.BorderCenterZ`, `Data.BorderSize`, `Data.BorderWarningBlocks`, and
+  `Data.BorderWarningTime` fields and the React Map canvas renders a validated
+  border rectangle.
+- Map supports dimension-aware world selection, coordinate jumps, player
+  interpolation, and server-scoped persistent markers.
+- Paper protocol v2 emits one `world_status` message per periodic snapshot with
+  a `worlds` array containing world id, dimension, time, full time, storm state,
+  thunder state, weather durations, and capture time.
+- Rust validates and forwards that message as `map-world-status`; React displays
+  Minecraft time and weather for the selected dimension.
+
+These are focused implementation slices, not the Phase 14 completion gate.
+Chat overlay, full marker-group management, spawn visualization, and real
+Paper/Tauri live-session evidence remain open.
 
 ## Focused tests
 

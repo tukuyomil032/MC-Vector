@@ -19,3 +19,15 @@ of PluginBrowser. Pause, restore, and destructive removal remain distinct.
 
 React tests must cover error states and listener cleanup. A connected bridge
 alone is never sufficient to enable rendering.
+
+## Overlay contract
+
+World overlays remain separate from tile rendering. Paper emits a protocol v2
+`world_status` JSON Lines message containing a `worlds` array. Rust validates
+the message and emits a server-scoped `map-world-status` event; React matches
+each entry by dimension before displaying time/weather. A malformed status is
+ignored with a diagnostic and never treated as successful map data.
+
+World-border metadata is read from the Java Edition `level.dat` `Data` fields,
+not from an invented nested compound. Missing or invalid fields produce no
+border overlay and do not make world inspection fail.
