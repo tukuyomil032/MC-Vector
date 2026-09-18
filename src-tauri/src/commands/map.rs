@@ -11,7 +11,7 @@ use flate2::{write::ZlibEncoder, Compression};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::task::{JoinHandle, JoinSet};
@@ -29,6 +29,7 @@ use crate::map::bridge::config::{
     config_read_error, inspect_bridge_config, read_bridge_config, validate_bridge_config,
     write_bridge_config, BridgeConfig, BridgeConfigInspection, MAP_PROTOCOL_VERSION,
 };
+use crate::map::bridge::framing::read_bridge_line;
 use crate::map::bridge::protocol::{
     hello_ack, hello_rejection_reason, parse_chat_message, parse_hello, parse_world_status_message,
     validate_hello, BridgeStatusPayload, ChatMessageEventPayload, WorldStatusEventPayload,
@@ -69,7 +70,6 @@ const CORE_JAR_NAME: &str = "mc-vector-core.jar";
 const CORE_DISABLED_JAR_NAME: &str = "mc-vector-core.jar.disabled";
 const CORE_CONFIG_NAME: &str = "mc-vector-core.yml";
 const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
-const MAX_BRIDGE_LINE_BYTES: usize = 1024 * 1024;
 const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
@@ -812,24 +812,6 @@ async fn invalidate_chunk_tiles(
         .lock()
         .await
         .remove(server_id, &ChunkKey::new(dimension, chunk_x, chunk_z));
-}
-
-async fn read_bridge_line<R>(reader: &mut R) -> Result<Option<Vec<u8>>, String>
-where
-    R: AsyncBufRead + Unpin,
-{
-    let mut line = Vec::new();
-    let bytes = reader
-        .read_until(b'\n', &mut line)
-        .await
-        .map_err(|error| format!("Bridge read failed: {error}"))?;
-    if bytes == 0 {
-        return Ok(None);
-    }
-    if line.len() > MAX_BRIDGE_LINE_BYTES {
-        return Err("Bridge message is too large".to_string());
-    }
-    Ok(Some(line))
 }
 
 fn decode_live_snapshot(value: &Value) -> Result<ChunkView, String> {
@@ -2701,7 +2683,7 @@ mod tests {
 
     #[test]
     fn oversized_lines_are_rejected_by_the_contract() {
-        assert!(MAX_BRIDGE_LINE_BYTES >= 64 * 1024);
+        assert!(crate::map::bridge::framing::MAX_BRIDGE_LINE_BYTES >= 64 * 1024);
     }
 
     #[test]
