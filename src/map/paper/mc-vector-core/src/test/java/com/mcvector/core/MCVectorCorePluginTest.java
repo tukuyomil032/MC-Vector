@@ -5,9 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Set;
+
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.junit.jupiter.api.AfterEach;
@@ -101,6 +104,28 @@ class MCVectorCorePluginTest {
         assertNotNull(quit);
         assertEquals(BridgeEventQueue.Kind.IMMEDIATE, quit.kind());
         assertTrue(quit.message().contains("\"type\":\"player_quit\""));
+    }
+
+    @Test
+    void enqueuesAsyncChatMessagesImmediatelyWithoutWorldAccess() throws InterruptedException {
+        PlayerMock player = server.addPlayer("Alex");
+        plugin.eventQueueForTests().poll(0);
+        AsyncPlayerChatEvent chat = new AsyncPlayerChatEvent(
+                true,
+                player,
+                "Hello \"world\"",
+                Set.of());
+
+        plugin.onAsyncPlayerChat(chat);
+
+        BridgeEventQueue.Event event = plugin.eventQueueForTests().poll(0);
+        assertNotNull(event);
+        assertEquals(BridgeEventQueue.Kind.IMMEDIATE, event.kind());
+        assertTrue(event.message().contains("\"type\":\"chat_message\""));
+        assertTrue(event.message().contains("\"playerId\":\"" + player.getUniqueId() + "\""));
+        assertTrue(event.message().contains("\"name\":\"Alex\""));
+        assertTrue(event.message().contains("\"message\":\"Hello \\\"world\\\"\""));
+        assertTrue(event.message().contains("\"capturedAt\":"));
     }
 
     @Test

@@ -27,6 +27,7 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -173,7 +174,7 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
                 BridgeJson.field("paperVersion", paperVersion),
                 BridgeJson.field(
                         "capabilities",
-                        BridgeJson.raw("[\"player_snapshot\",\"world_status\",\"chunk_dirty\",\"chunk_surface_snapshot_v1\"]")),
+                        BridgeJson.raw("[\"player_snapshot\",\"world_status\",\"chat_messages\",\"chunk_dirty\",\"chunk_surface_snapshot_v1\"]")),
                 BridgeJson.field("token", config.token()));
     }
 
@@ -265,6 +266,15 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
                 BridgeJson.field("type", "player_quit"),
                 BridgeJson.field("playerId", event.getPlayer().getUniqueId().toString()),
                 BridgeJson.field("capturedAt", Instant.now().toEpochMilli())));
+    }
+
+    @EventHandler
+    public void onAsyncPlayerChat(AsyncPlayerChatEvent event) {
+        enqueueImmediate(new ChatMessage(
+                event.getPlayer().getUniqueId(),
+                event.getPlayer().getName(),
+                event.getMessage(),
+                Instant.now().toEpochMilli()).toJson());
     }
 
     @EventHandler
