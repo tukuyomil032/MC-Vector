@@ -15,8 +15,8 @@ yarn-error.log*
 lerna-debug.log*
 build/*
 .gradle/
-/bridge/mc-vector-core/.gradle/
-/bridge/mc-vector-core/build/
+/src/map/paper/mc-vector-core/.gradle/
+/src/map/paper/mc-vector-core/build/
 temp/**/*
 .agents/skills/ci-monitoring/node_modules
 

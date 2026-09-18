@@ -21,5 +21,5 @@ pre-commit:
       run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
     gradlew-check:
       glob:
-        - 'bridge/mc-vector-core/src/main/java/com/mcvector/core/*.java'
-      run: cd bridge/mc-vector-core && ./gradlew check
+        - 'src/map/paper/mc-vector-core/src/main/java/com/mcvector/core/*.java'
+      run: cd src/map/paper/mc-vector-core && ./gradlew check

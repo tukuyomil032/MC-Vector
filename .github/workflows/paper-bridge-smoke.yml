@@ -20,7 +20,7 @@ jobs:
           cache: gradle
       - name: Build MC-Vector Core
         run: ./gradlew --no-daemon clean test jar
-        working-directory: bridge/mc-vector-core
+        working-directory: src/map/paper/mc-vector-core
       - name: Download pinned Paper 1.21.10
         run: |
           curl -fL --retry 3 -o paper-1.21.10-130.jar \
@@ -34,11 +34,11 @@ jobs:
           SMOKE_LOG_DIR: ${{ github.workspace }}/paper-smoke-logs
           SMOKE_TIMEOUT_MS: '180000'
         run: node scripts/paper-bridge-smoke.mjs
-        working-directory: bridge/mc-vector-core
+        working-directory: src/map/paper/mc-vector-core
       - name: Upload Paper smoke logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: paper-bridge-smoke-logs
-          path: bridge/mc-vector-core/paper-smoke-logs
+          path: src/map/paper/mc-vector-core/paper-smoke-logs
           if-no-files-found: warn

@@ -6,10 +6,7 @@ on:
     branches:
       - '**'
     paths:
-      - bridge/**
-      - bridge/mc-vector-core/gradle/**
-      - bridge/mc-vector-core/gradlew
-      - bridge/mc-vector-core/gradlew.bat
+      - src/map/**
       - src/**
       - src-tauri/**
       - tests/**
@@ -104,9 +101,9 @@ jobs:
           cache: gradle
       - name: Build and test MC-Vector Core
         run: ./gradlew --no-daemon clean test jar
-        working-directory: bridge/mc-vector-core
+        working-directory: src/map/paper/mc-vector-core
       - name: Verify plugin artifact
-        working-directory: bridge/mc-vector-core
+        working-directory: src/map/paper/mc-vector-core
         run: |
           test -f build/libs/mc-vector-core.jar
           jar tf build/libs/mc-vector-core.jar | awk '
