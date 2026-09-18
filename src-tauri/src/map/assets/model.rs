@@ -170,7 +170,42 @@ fn face_vertices(direction: FaceDirection, from: [f32; 3], to: [f32; 3]) -> [[f3
 }
 
 fn rotate_element(point: [f32; 3], rotation: &ModelRotation) -> [f32; 3] {
-    let _rescale = rotation.rescale;
+    let mut point = point;
+    if rotation.rescale {
+        let angle = rotation.angle.abs();
+        let factor = if (angle - 22.5).abs() < f32::EPSILON {
+            1.0 / 22.5_f32.to_radians().cos()
+        } else if (angle - 45.0).abs() < f32::EPSILON {
+            1.0 / 45.0_f32.to_radians().cos()
+        } else {
+            1.0
+        };
+        let mut translated = [
+            point[0] - rotation.origin[0],
+            point[1] - rotation.origin[1],
+            point[2] - rotation.origin[2],
+        ];
+        match rotation.axis.as_str() {
+            "x" => {
+                translated[1] *= factor;
+                translated[2] *= factor;
+            }
+            "y" => {
+                translated[0] *= factor;
+                translated[2] *= factor;
+            }
+            "z" => {
+                translated[0] *= factor;
+                translated[1] *= factor;
+            }
+            _ => return point,
+        }
+        point = [
+            translated[0] + rotation.origin[0],
+            translated[1] + rotation.origin[1],
+            translated[2] + rotation.origin[2],
+        ];
+    }
     rotate_around(
         point,
         rotation.origin,
@@ -256,5 +291,20 @@ mod tests {
         .expect("model fixture");
         let faces = model.resolve_faces(0, 90);
         assert_ne!(faces[0].2[0], [0.0, 4.0, 0.0]);
+    }
+
+    #[test]
+    fn rescales_rotated_element_on_axes_perpendicular_to_rotation_axis() {
+        let rotation = ModelRotation {
+            origin: [8.0, 8.0, 8.0],
+            axis: "x".to_string(),
+            angle: 45.0,
+            rescale: true,
+        };
+        let point = rotate_element([8.0, 0.0, 8.0], &rotation);
+
+        assert!((point[0] - 8.0).abs() < 0.001);
+        assert!(point[1].abs() < 0.001);
+        assert!(point[2].abs() < 0.001);
     }
 }
