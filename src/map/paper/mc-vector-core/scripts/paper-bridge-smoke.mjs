@@ -74,6 +74,7 @@ function createFixture() {
   let helloResolve;
   let snapshotResolve;
   let heartbeatResolve;
+  let worldStatusResolve;
   let chunkSnapshotResolve;
   let unavailableResolve;
   let connectedSocket;
@@ -85,6 +86,9 @@ function createFixture() {
   });
   const heartbeatPromise = new Promise((resolvePromise) => {
     heartbeatResolve = resolvePromise;
+  });
+  const worldStatusPromise = new Promise((resolvePromise) => {
+    worldStatusResolve = resolvePromise;
   });
   const chunkSnapshotPromise = new Promise((resolvePromise) => {
     chunkSnapshotResolve = resolvePromise;
@@ -99,6 +103,7 @@ function createFixture() {
     helloPromise,
     snapshotPromise,
     heartbeatPromise,
+    worldStatusPromise,
     chunkSnapshotPromise,
     unavailablePromise,
     async listen() {
@@ -135,6 +140,9 @@ function createFixture() {
             }
             if (message.type === 'heartbeat') {
               heartbeatResolve(message);
+            }
+            if (message.type === 'world_status') {
+              worldStatusResolve(message);
             }
             if (message.type === 'chunk_snapshot') {
               chunkSnapshotResolve(message);
@@ -306,6 +314,8 @@ async function runConnected() {
       hello.token !== bridgeToken ||
       !Array.isArray(hello.capabilities) ||
       !hello.capabilities.includes('player_snapshot') ||
+      !hello.capabilities.includes('world_status') ||
+      !hello.capabilities.includes('chat_messages') ||
       !hello.capabilities.includes('chunk_dirty') ||
       !hello.capabilities.includes('chunk_surface_snapshot_v1')
     ) {
@@ -314,9 +324,10 @@ async function runConnected() {
     processHandle.child.stdin.write('forceload add 0 0\n');
     await delay(1_000);
     fixture.requestSnapshots();
-    const [playerSnapshot, heartbeat] = await Promise.all([
+    const [playerSnapshot, heartbeat, worldStatus] = await Promise.all([
       withTimeout(fixture.snapshotPromise, 'player snapshot', 15_000),
       withTimeout(fixture.heartbeatPromise, 'heartbeat', 15_000),
+      withTimeout(fixture.worldStatusPromise, 'world status', 15_000),
     ]);
     if (
       playerSnapshot.type !== 'player_snapshot' ||
@@ -327,6 +338,30 @@ async function runConnected() {
     }
     if (heartbeat.type !== 'heartbeat' || !Number.isFinite(heartbeat.capturedAt)) {
       throw new Error(`Unexpected heartbeat: ${JSON.stringify(heartbeat)}`);
+    }
+    if (
+      worldStatus.type !== 'world_status' ||
+      !Array.isArray(worldStatus.worlds) ||
+      worldStatus.worlds.length === 0 ||
+      !Number.isFinite(worldStatus.capturedAt) ||
+      worldStatus.worlds.some(
+        (world) =>
+          world === null ||
+          typeof world !== 'object' ||
+          typeof world.worldId !== 'string' ||
+          world.worldId.length === 0 ||
+          typeof world.dimension !== 'string' ||
+          world.dimension.length === 0 ||
+          !Number.isFinite(world.time) ||
+          !Number.isFinite(world.fullTime) ||
+          typeof world.hasStorm !== 'boolean' ||
+          typeof world.thundering !== 'boolean' ||
+          !Number.isFinite(world.weatherDuration) ||
+          !Number.isFinite(world.thunderDuration) ||
+          !Number.isFinite(world.capturedAt),
+      )
+    ) {
+      throw new Error(`Unexpected world status: ${JSON.stringify(worldStatus)}`);
     }
     const chunkSnapshot = await withTimeout(
       fixture.chunkSnapshotPromise,
@@ -348,6 +383,11 @@ async function runConnected() {
     }
     if (unavailable.requestId !== 'unloaded-100000' || unavailable.reason !== 'not_loaded') {
       throw new Error(`Unexpected unavailable snapshot: ${JSON.stringify(unavailable)}`);
+    }
+    if (fixture.connectionErrors.length > 0) {
+      throw new Error(
+        `Bridge fixture reported connection errors: ${fixture.connectionErrors.join('; ')}`,
+      );
     }
     log = await processHandle.readLog();
     await stopPaper(processHandle);
