@@ -12,7 +12,7 @@ use zip::ZipArchive;
 
 use super::{manifest::AssetSourceState, resolver::source_version};
 
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum AssetLauncher {
     Manual,
@@ -20,6 +20,11 @@ pub(crate) enum AssetLauncher {
     PrismLauncherCustom,
     PrismLauncherPortable,
     OfficialLauncher,
+    MultiMc,
+    ModrinthApp,
+    CurseForge,
+    GdLauncher,
+    AtLauncher,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -58,6 +63,11 @@ pub(crate) struct AssetDiscoveryOptions {
     pub(crate) prism_custom_roots: Vec<PathBuf>,
     pub(crate) prism_portable_roots: Vec<PathBuf>,
     pub(crate) official_launcher_roots: Vec<PathBuf>,
+    pub(crate) multimc_roots: Vec<PathBuf>,
+    pub(crate) modrinth_roots: Vec<PathBuf>,
+    pub(crate) curseforge_roots: Vec<PathBuf>,
+    pub(crate) gdlauncher_roots: Vec<PathBuf>,
+    pub(crate) atlauncher_roots: Vec<PathBuf>,
     pub(crate) manual_paths: Vec<PathBuf>,
     pub(crate) expected_minecraft_version: Option<String>,
 }
@@ -69,6 +79,11 @@ impl AssetDiscoveryOptions {
             prism_custom_roots: Vec::new(),
             prism_portable_roots: Vec::new(),
             official_launcher_roots: Vec::new(),
+            multimc_roots: Vec::new(),
+            modrinth_roots: Vec::new(),
+            curseforge_roots: Vec::new(),
+            gdlauncher_roots: Vec::new(),
+            atlauncher_roots: Vec::new(),
             manual_paths: Vec::new(),
             expected_minecraft_version: None,
         }
@@ -107,6 +122,93 @@ pub(crate) fn discover_asset_candidates(options: &AssetDiscoveryOptions) -> Vec<
         );
     }
 
+    for root in standard_multimc_roots(&options.home) {
+        discover_instance_root(
+            &root,
+            AssetLauncher::MultiMc,
+            &["instances"],
+            &[".minecraft", "minecraft"],
+            options,
+            &mut candidates,
+        );
+    }
+    for root in &options.multimc_roots {
+        discover_instance_root(
+            root,
+            AssetLauncher::MultiMc,
+            &["instances"],
+            &[".minecraft", "minecraft"],
+            options,
+            &mut candidates,
+        );
+    }
+    for (roots, launcher, instance_directories) in [
+        (
+            standard_modrinth_roots(&options.home),
+            AssetLauncher::ModrinthApp,
+            vec!["profiles", "instances"],
+        ),
+        (
+            standard_curseforge_roots(&options.home),
+            AssetLauncher::CurseForge,
+            vec!["minecraft/Instances", "Instances", "instances"],
+        ),
+        (
+            standard_gdlauncher_roots(&options.home),
+            AssetLauncher::GdLauncher,
+            vec!["instances", "profiles"],
+        ),
+        (
+            standard_atlauncher_roots(&options.home),
+            AssetLauncher::AtLauncher,
+            vec!["instances"],
+        ),
+    ] {
+        for root in roots {
+            discover_instance_root(
+                &root,
+                launcher,
+                &instance_directories,
+                &[".minecraft", "minecraft", "game"],
+                options,
+                &mut candidates,
+            );
+        }
+    }
+    for (roots, launcher, instance_directories) in [
+        (
+            &options.modrinth_roots,
+            AssetLauncher::ModrinthApp,
+            vec!["profiles", "instances"],
+        ),
+        (
+            &options.curseforge_roots,
+            AssetLauncher::CurseForge,
+            vec!["minecraft/Instances", "Instances", "instances"],
+        ),
+        (
+            &options.gdlauncher_roots,
+            AssetLauncher::GdLauncher,
+            vec!["instances", "profiles"],
+        ),
+        (
+            &options.atlauncher_roots,
+            AssetLauncher::AtLauncher,
+            vec!["instances"],
+        ),
+    ] {
+        for root in roots {
+            discover_instance_root(
+                root,
+                launcher,
+                &instance_directories,
+                &[".minecraft", "minecraft", "game"],
+                options,
+                &mut candidates,
+            );
+        }
+    }
+
     let mut official_roots = standard_official_roots(&options.home);
     official_roots.extend(options.official_launcher_roots.iter().cloned());
     for root in official_roots {
@@ -121,6 +223,47 @@ fn standard_prism_roots(home: &Path) -> Vec<PathBuf> {
         home.join("Library/Application Support/PrismLauncher"),
         home.join(".local/share/PrismLauncher"),
         home.join("AppData/Roaming/PrismLauncher"),
+    ]
+}
+
+fn standard_multimc_roots(home: &Path) -> Vec<PathBuf> {
+    vec![
+        home.join("Library/Application Support/MultiMC"),
+        home.join(".local/share/MultiMC"),
+        home.join("AppData/Roaming/MultiMC"),
+        home.join("MultiMC"),
+    ]
+}
+
+fn standard_modrinth_roots(home: &Path) -> Vec<PathBuf> {
+    vec![
+        home.join("Library/Application Support/ModrinthApp"),
+        home.join(".local/share/ModrinthApp"),
+        home.join("AppData/Roaming/ModrinthApp"),
+    ]
+}
+
+fn standard_curseforge_roots(home: &Path) -> Vec<PathBuf> {
+    vec![
+        home.join("Library/Application Support/CurseForge"),
+        home.join(".local/share/CurseForge"),
+        home.join("AppData/Roaming/CurseForge"),
+    ]
+}
+
+fn standard_gdlauncher_roots(home: &Path) -> Vec<PathBuf> {
+    vec![
+        home.join("Library/Application Support/gdlauncher_next"),
+        home.join(".local/share/gdlauncher_next"),
+        home.join("AppData/Roaming/gdlauncher_next"),
+    ]
+}
+
+fn standard_atlauncher_roots(home: &Path) -> Vec<PathBuf> {
+    vec![
+        home.join("Library/Application Support/ATLauncher"),
+        home.join(".local/share/ATLauncher"),
+        home.join("AppData/Roaming/ATLauncher"),
     ]
 }
 
@@ -199,6 +342,88 @@ fn discover_prism_root(
                 options,
                 pack_error.clone(),
             ));
+        }
+    }
+}
+
+fn discover_instance_root(
+    root: &Path,
+    launcher: AssetLauncher,
+    instance_directories: &[&str],
+    game_directories: &[&str],
+    options: &AssetDiscoveryOptions,
+    candidates: &mut Vec<AssetCandidate>,
+) {
+    let Ok(root) = canonical_directory(root) else {
+        return;
+    };
+    let mut instance_roots = Vec::new();
+    for relative in instance_directories {
+        let instance_root = if Path::new(relative)
+            .file_name()
+            .and_then(|name| name.to_str())
+            == root.file_name().and_then(|name| name.to_str())
+        {
+            root.clone()
+        } else {
+            root.join(relative)
+        };
+        let Ok(instance_root) = canonical_directory(&instance_root) else {
+            continue;
+        };
+        if !instance_roots.contains(&instance_root) {
+            instance_roots.push(instance_root);
+        }
+    }
+
+    for instances in instance_roots {
+        for instance in safe_directories(&instances) {
+            let Some(instance_id) = instance
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(ToOwned::to_owned)
+            else {
+                continue;
+            };
+            let game_directory = game_directories
+                .iter()
+                .map(|relative| instance.join(relative))
+                .find(|path| is_normal_directory(path))
+                .and_then(|path| canonical_directory(&path).ok())
+                .unwrap_or_else(|| instance.clone());
+            let metadata_version = instance_metadata_version(&game_directory);
+            let (jars, packs, pack_error) = discover_game_sources(&game_directory);
+
+            if jars.is_empty() {
+                candidates.push(build_candidate(
+                    launcher,
+                    root.clone(),
+                    Some(instance_id),
+                    Some(game_directory),
+                    None,
+                    packs,
+                    metadata_version,
+                    options,
+                    pack_error,
+                ));
+                continue;
+            }
+
+            for jar in jars {
+                let version =
+                    source_version(&jar.display().to_string()).or_else(|| metadata_version.clone());
+                candidates.push(build_candidate(
+                    launcher,
+                    root.clone(),
+                    Some(instance_id.clone()),
+                    Some(game_directory.clone()),
+                    Some((version, jar)),
+                    packs.clone(),
+                    metadata_version.clone(),
+                    options,
+                    pack_error.clone(),
+                ));
+            }
         }
     }
 }
@@ -826,6 +1051,22 @@ mod tests {
         game
     }
 
+    fn launcher_instance(
+        root: &Path,
+        relative_instances: &str,
+        id: &str,
+        game_directory: &str,
+        version: &str,
+    ) -> PathBuf {
+        let game = root.join(relative_instances).join(id).join(game_directory);
+        let jar_path = game
+            .join("versions")
+            .join(version)
+            .join(format!("{version}.jar"));
+        jar(&jar_path);
+        game
+    }
+
     #[test]
     fn discovers_prism_variants_and_official_versions_with_stable_identity() {
         let fixture = TempFixture::new("launchers");
@@ -875,6 +1116,59 @@ mod tests {
             .unwrap()
             .identity
             .starts_with("sha256:"));
+    }
+
+    #[test]
+    fn discovers_supported_non_prism_launcher_instance_layouts() {
+        let fixture = TempFixture::new("launcher-family");
+        let multimc_root = fixture.path("MultiMC");
+        let modrinth_root = fixture.path("ModrinthApp");
+        let curseforge_root = fixture.path("CurseForge");
+        let gdlauncher_root = fixture.path("gdlauncher_next");
+        let atlauncher_root = fixture.path("ATLauncher");
+        launcher_instance(&multimc_root, "instances", "multi", ".minecraft", "1.20.1");
+        launcher_instance(
+            &modrinth_root,
+            "profiles",
+            "modrinth",
+            "minecraft",
+            "1.20.2",
+        );
+        launcher_instance(
+            &curseforge_root,
+            "minecraft/Instances",
+            "curse",
+            ".minecraft",
+            "1.20.3",
+        );
+        launcher_instance(&gdlauncher_root, "instances", "gd", "game", "1.20.4");
+        launcher_instance(&atlauncher_root, "instances", "at", ".minecraft", "1.20.5");
+
+        let mut options = AssetDiscoveryOptions::for_home(fixture.root.clone());
+        options.multimc_roots.push(multimc_root);
+        options.modrinth_roots.push(modrinth_root);
+        options.curseforge_roots.push(curseforge_root);
+        options.gdlauncher_roots.push(gdlauncher_root);
+        options.atlauncher_roots.push(atlauncher_root);
+        let candidates = discover_asset_candidates(&options);
+        let launchers = candidates
+            .iter()
+            .map(|candidate| candidate.launcher)
+            .collect::<HashSet<_>>();
+
+        assert!(launchers.contains(&AssetLauncher::MultiMc));
+        assert!(launchers.contains(&AssetLauncher::ModrinthApp));
+        assert!(launchers.contains(&AssetLauncher::CurseForge));
+        assert!(launchers.contains(&AssetLauncher::GdLauncher));
+        assert!(launchers.contains(&AssetLauncher::AtLauncher));
+        assert!(candidates.iter().all(AssetCandidate::is_usable));
+
+        options.expected_minecraft_version = Some("1.21.10".to_string());
+        let mismatched = discover_asset_candidates(&options);
+        assert!(mismatched
+            .iter()
+            .filter(|candidate| candidate.launcher != AssetLauncher::OfficialLauncher)
+            .all(|candidate| candidate.state == AssetSourceState::VersionMismatch));
     }
 
     #[test]

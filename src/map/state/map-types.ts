@@ -82,7 +82,12 @@ export type MapAssetLauncher =
   | 'prism_launcher_standard'
   | 'prism_launcher_custom'
   | 'prism_launcher_portable'
-  | 'official_launcher';
+  | 'official_launcher'
+  | 'multi_mc'
+  | 'modrinth_app'
+  | 'curse_forge'
+  | 'gd_launcher'
+  | 'at_launcher';
 
 export type MapAssetSourceState = 'valid' | 'version_mismatch' | 'invalid';
 

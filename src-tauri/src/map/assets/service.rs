@@ -360,7 +360,12 @@ fn launcher_priority(launcher: AssetLauncher) -> u8 {
         | AssetLauncher::PrismLauncherCustom
         | AssetLauncher::PrismLauncherPortable => 0,
         AssetLauncher::OfficialLauncher => 1,
-        AssetLauncher::Manual => 2,
+        AssetLauncher::MultiMc => 2,
+        AssetLauncher::ModrinthApp => 3,
+        AssetLauncher::CurseForge => 4,
+        AssetLauncher::GdLauncher => 5,
+        AssetLauncher::AtLauncher => 6,
+        AssetLauncher::Manual => 7,
     }
 }
 
@@ -696,5 +701,6 @@ mod tests {
         );
         assert_eq!(launcher_priority(AssetLauncher::PrismLauncherStandard), 0);
         assert_eq!(launcher_priority(AssetLauncher::OfficialLauncher), 1);
+        assert_eq!(launcher_priority(AssetLauncher::AtLauncher), 6);
     }
 }
