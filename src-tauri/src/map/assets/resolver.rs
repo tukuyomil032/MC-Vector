@@ -10,7 +10,9 @@ pub(crate) struct ResourcePackStack {
 
 impl ResourcePackStack {
     pub(crate) fn from_entries(entries: HashMap<String, Vec<u8>>) -> Self {
-        Self { entries }
+        let mut stack = Self::default();
+        stack.overlay(entries);
+        stack
     }
 
     pub(crate) fn overlay(&mut self, entries: HashMap<String, Vec<u8>>) {

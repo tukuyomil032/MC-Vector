@@ -8,8 +8,8 @@ use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
 use crate::map::assets::{
-    manifest_quality, source_version, AssetManifest, AssetResolver, RenderFace,
-    ASSET_MANIFEST_VERSION,
+    is_air, manifest_quality, material_kind, source_version, AssetManifest, AssetResolver,
+    MaterialKind, RenderFace, ASSET_MANIFEST_VERSION,
 };
 
 const ASSET_CONFIG_NAME: &str = "map-assets.json";
@@ -28,23 +28,6 @@ pub(crate) struct MapAssets {
 }
 
 impl MapAssets {
-    pub(crate) fn cache_identity(&self) -> String {
-        format!(
-            "{}:manifest-v{}",
-            self.identity, self.manifest.manifest_version
-        )
-    }
-
-    pub(crate) fn sample_state_at_with_biome(
-        &self,
-        state: &str,
-        biome: &str,
-        u: f32,
-        v: f32,
-    ) -> [u8; 4] {
-        self.sample_state_face_at_with_biome(state, biome, "up", u, v)
-    }
-
     pub(crate) fn sample_state_face_at_with_biome(
         &self,
         state: &str,
@@ -538,6 +521,9 @@ fn asset_identity(source: &Path) -> Result<String, String> {
 }
 
 pub(crate) fn fallback_block_colour(block_name: &str) -> [u8; 4] {
+    if is_air(block_name) {
+        return [0, 0, 0, 0];
+    }
     let name = block_name.strip_prefix("minecraft:").unwrap_or(block_name);
     let named = if name.contains("water") {
         Some([52, 126, 196, 255])
@@ -591,7 +577,7 @@ pub(crate) fn fallback_block_colour(block_name: &str) -> [u8; 4] {
         None
     };
 
-    named.unwrap_or_else(|| {
+    let mut colour = named.unwrap_or_else(|| {
         let mut hash = 2_166_136_261u32;
         for byte in name.bytes() {
             hash ^= u32::from(byte);
@@ -603,7 +589,11 @@ pub(crate) fn fallback_block_colour(block_name: &str) -> [u8; 4] {
             48 + (((hash >> 16) & 0x7f) as u8),
             255,
         ]
-    })
+    });
+    if matches!(material_kind(block_name), MaterialKind::Translucent) {
+        colour[3] = 190;
+    }
+    colour
 }
 
 #[cfg(test)]
@@ -614,7 +604,7 @@ mod tests {
     fn fallback_colours_are_stable_and_non_green_placeholder_like() {
         assert_eq!(
             fallback_block_colour("minecraft:water"),
-            [52, 126, 196, 255]
+            [52, 126, 196, 190]
         );
         assert_ne!(
             fallback_block_colour("minecraft:stone"),

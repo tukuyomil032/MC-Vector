@@ -78,10 +78,12 @@ impl TileQueue {
             .min_by_key(|tile| (tile.priority, tile.sequence))
     }
 
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.pending.len()
     }
 
+    #[cfg(test)]
     pub(crate) fn is_empty(&self) -> bool {
         self.pending.is_empty()
     }

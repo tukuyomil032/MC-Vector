@@ -16,12 +16,11 @@ use self::model::{default_uv, FaceDirection, Model, ResolvedFace};
 use self::resolver::ResourcePackStack;
 use self::texture::TextureImage;
 
-pub(crate) use self::custom_renderer::MaterialKind;
-pub(crate) use self::manifest::{AssetManifest, AssetQuality, ASSET_MANIFEST_VERSION};
+pub(crate) use self::custom_renderer::{is_air, material_kind, MaterialKind};
+pub(crate) use self::manifest::{AssetManifest, ASSET_MANIFEST_VERSION};
 pub(crate) use self::model::{FaceDirection as RenderFaceDirection, ResolvedFace as RenderFace};
 pub(crate) use self::resolver::{manifest_quality, source_version};
-pub(crate) use self::resource_pack::is_resource_pack_path;
-pub(crate) use self::tint::{apply_tint, tint_for};
+pub(crate) use self::tint::apply_tint;
 
 #[derive(Debug)]
 pub(crate) struct AssetResolver {
@@ -63,14 +62,6 @@ impl AssetResolver {
         self.blockstates.len()
     }
 
-    pub(crate) fn model_count(&self) -> usize {
-        self.models.len()
-    }
-
-    pub(crate) fn texture_count(&self) -> usize {
-        self.textures.len()
-    }
-
     pub(crate) fn appearance(&self, encoded_state: &str) -> Option<Vec<ResolvedFace>> {
         let (block_id, properties) = encoded_state.split_once('|').unwrap_or((encoded_state, ""));
         let blockstate = self.blockstates.get(block_id)?;
@@ -101,14 +92,6 @@ impl AssetResolver {
             }
         }
         (!faces.is_empty()).then_some(faces)
-    }
-
-    pub(crate) fn sample_top(&self, encoded_state: &str) -> Option<[u8; 4]> {
-        self.sample_top_at(encoded_state, 0.5, 0.5)
-    }
-
-    pub(crate) fn sample_top_at(&self, encoded_state: &str, u: f32, v: f32) -> Option<[u8; 4]> {
-        self.sample_face_at(encoded_state, "up", u, v)
     }
 
     pub(crate) fn sample_face_at(
@@ -168,11 +151,6 @@ impl AssetResolver {
             .filter(|color| color[3] > 0)
             .map(|color| [color[0], color[1], color[2]])
             .or_else(|| self::tint::tint_for(&state, biome))
-    }
-
-    pub(crate) fn has_blockstate(&self, state: &str) -> bool {
-        let block_id = state.split_once('|').map_or(state, |(id, _)| id);
-        self.blockstates.contains_key(block_id)
     }
 
     fn flatten_model(&self, name: &str, stack: &mut HashSet<String>) -> Result<Model, String> {
@@ -290,7 +268,7 @@ mod tests {
         ]);
         let resolver = AssetResolver::from_entries(&entries).expect("fixture should load");
         assert_eq!(
-            resolver.sample_top("minecraft:test|"),
+            resolver.sample_face_at("minecraft:test|", "up", 0.5, 0.5),
             Some([11, 22, 33, 77])
         );
         assert_eq!(resolver.appearance("minecraft:test|").unwrap().len(), 1);
@@ -323,7 +301,7 @@ mod tests {
         ]);
         let resolver = AssetResolver::from_entries(&entries).expect("fixture should load");
         assert_eq!(
-            resolver.sample_top("minecraft:test|facing=north,half=top"),
+            resolver.sample_face_at("minecraft:test|facing=north,half=top", "up", 0.5, 0.5,),
             Some([9, 8, 7, 255])
         );
     }

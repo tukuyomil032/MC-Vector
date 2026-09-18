@@ -71,7 +71,8 @@ impl TextureImage {
     }
 }
 
-pub(crate) fn sample(texture: &[u8], uv: [f32; 4], rotation: u32) -> Option<[u8; 4]> {
+#[cfg(test)]
+fn sample(texture: &[u8], uv: [f32; 4], rotation: u32) -> Option<[u8; 4]> {
     if texture.len() < 16 * 16 * 4 {
         return None;
     }

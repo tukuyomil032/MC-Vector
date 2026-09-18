@@ -57,10 +57,7 @@ impl MemoryTileCache {
         self.entries.retain(|key, _| !predicate(key));
     }
 
-    pub(crate) fn clear(&mut self) {
-        self.entries.clear();
-    }
-
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.entries.len()
     }

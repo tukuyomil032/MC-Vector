@@ -32,7 +32,6 @@ pub(crate) struct SurfaceSample {
 #[derive(Clone, Debug)]
 pub(crate) struct RenderedSurfaceTile {
     pub(crate) pixels: Vec<u8>,
-    pub(crate) rendered_column_count: usize,
     pub(crate) coverage_ratio: f32,
 }
 
@@ -161,7 +160,6 @@ where
     validate_rgba(width as u32, height as u32, &pixels)?;
     Ok(RenderedSurfaceTile {
         pixels,
-        rendered_column_count: rendered_pixel_count,
         coverage_ratio: rendered_pixel_count as f32 / (width * height).max(1) as f32,
     })
 }

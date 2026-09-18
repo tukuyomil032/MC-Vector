@@ -1,4 +1,4 @@
-use super::perspective::{world_center_ray, PerspectiveRenderer};
+use super::perspective::PerspectiveRenderer;
 use super::ray::{Ray, Vec3};
 
 /// The camera constants mirror Dynmap's default HD isometric orientation:
@@ -17,48 +17,6 @@ impl Default for IsoHDPerspective {
             azimuth_degrees: 45.0,
             elevation_degrees: 55.0,
         }
-    }
-}
-
-impl IsoHDPerspective {
-    pub(crate) fn height_shade(self, height: i32, neighbour_height: Option<i32>) -> f32 {
-        let height_delta = neighbour_height
-            .map(|neighbour| (height - neighbour) as f32)
-            .unwrap_or(0.0);
-        let elevation = self.elevation_degrees.to_radians().sin() as f32;
-        (1.0 + (height_delta * 0.025 * elevation)).clamp(0.65, 1.35)
-    }
-
-    pub(crate) fn project_point(
-        self,
-        world_x: f64,
-        world_y: f64,
-        world_z: f64,
-        center_x: f64,
-        center_y: f64,
-        center_z: f64,
-        scale: f64,
-    ) -> (f32, f32) {
-        let azimuth = self.azimuth_degrees.to_radians();
-        let elevation = self.elevation_degrees.to_radians();
-        let dx = world_x - center_x;
-        let dz = world_z - center_z;
-        let screen_x = (dx * azimuth.cos() - dz * azimuth.sin()) * scale;
-        let screen_y = (dx * azimuth.sin() + dz * azimuth.cos()) * scale
-            - ((world_y - center_y) * elevation.sin() * scale);
-        (screen_x as f32, screen_y as f32)
-    }
-
-    pub(crate) fn project_block(
-        self,
-        world_x: f64,
-        world_y: f64,
-        world_z: f64,
-        center_x: f64,
-        center_z: f64,
-        scale: f64,
-    ) -> (f32, f32) {
-        self.project_point(world_x, world_y, world_z, center_x, 0.0, center_z, scale)
     }
 }
 
@@ -88,10 +46,6 @@ impl PerspectiveRenderer for IsoHDPerspective {
             ),
         }
     }
-}
-
-pub(crate) fn top_down_ray(x: f64, z: f64) -> Ray {
-    world_center_ray(x, z, 384.0)
 }
 
 #[cfg(test)]

@@ -9,14 +9,6 @@ pub(crate) fn overlay_entries(
     base.extend(overlay);
 }
 
-pub(crate) fn is_resource_pack_path(path: &str) -> bool {
-    path.starts_with("assets/")
-        && (path.contains("/blockstates/")
-            || path.contains("/models/")
-            || path.contains("/textures/"))
-        && (path.ends_with(".json") || path.ends_with(".png"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

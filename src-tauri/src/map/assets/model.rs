@@ -27,15 +27,6 @@ impl FaceDirection {
             _ => None,
         }
     }
-
-    pub(crate) const fn shade_factor(self) -> f32 {
-        match self {
-            Self::Up => 1.0,
-            Self::Down => 0.5,
-            Self::North | Self::South => 0.78,
-            Self::West | Self::East => 0.88,
-        }
-    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -141,18 +132,6 @@ impl Model {
                 })
             })
             .collect()
-    }
-
-    pub(crate) fn top_faces(&self) -> impl Iterator<Item = &ModelFace> {
-        self.elements
-            .iter()
-            .flat_map(|elements| elements.iter())
-            .filter(|element| {
-                element.to[0] > element.from[0]
-                    && element.to[1] > element.from[1]
-                    && element.to[2] > element.from[2]
-            })
-            .filter_map(|element| element.faces.get("up"))
     }
 }
 
