@@ -2422,6 +2422,22 @@ mod tests {
     }
 
     #[test]
+    fn detailed_tile_keeps_live_generated_chunk_visible() {
+        let root =
+            std::env::temp_dir().join(format!("mc-vector-map-detailed-test-{}", Uuid::new_v4()));
+        let snapshot = live_test_snapshot(0, 0);
+        let live_chunks = HashMap::from([((0, 0), snapshot)]);
+
+        let detailed = render_world_tile_detailed(&root, MAX_ZOOM, 0, 0, None, Some(&live_chunks))
+            .expect("detailed tile should render");
+        let (has_terrain, coverage) = png_coverage(&detailed.png);
+
+        assert!(has_terrain);
+        assert!(coverage > 0.0);
+        assert_eq!(detailed.rendered_chunk_count, 1);
+    }
+
+    #[test]
     fn region_header_enumeration_supports_sparse_and_negative_chunks() {
         let root =
             std::env::temp_dir().join(format!("mc-vector-map-region-test-{}", Uuid::new_v4()));

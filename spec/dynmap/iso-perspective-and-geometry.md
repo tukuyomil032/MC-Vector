@@ -13,6 +13,14 @@ traversal, sub-block models, face visibility, UV coordinates, and water patch
 handling. These details are the reason that a CSS grid or top-surface colour
 sample is not an Iso HD renderer.
 
+Tile coordinates are coordinates on the projected map plane. They are not a
+world-X/world-Z bounding-box origin. A tile pixel is first expressed as a map
+plane coordinate using the tile index, tile size, and map-units-per-pixel, then
+the inverse transform creates the world-space ray. A renderer that centers an
+Iso tile on `(tileX * tileWorldSize, tileY * tileWorldSize)` in world X/Z space
+will move terrain into neighboring tiles or make a generated chunk appear
+empty.
+
 ## Porting boundary
 
 Port to Rust only the platform-neutral mathematics and data contracts:

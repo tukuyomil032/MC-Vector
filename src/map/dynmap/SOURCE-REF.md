@@ -64,22 +64,24 @@ Rust rather than copied verbatim:
 
 The translated destination is
 `src-tauri/src/map/renderer/dynmap/iso_hd.rs`. The module carries its own SPDX,
-origin, source-ref, destination, and change metadata. It is a geometry slice,
-not a complete port of Dynmap's voxel traversal or asset pipeline.
+origin, source-ref, destination, and change metadata. Its production ray
+boundary uses projected map-plane tile coordinates, floor semantics, and the
+source matrix order; it is still not a complete port of Dynmap's full voxel
+traversal or asset pipeline.
 
 The additional snapshots for `IsoHDPerspective`, `TexturePack`,
 `HDBlockModels`, `HDShader`, `HDLighting`, `Matrix3D`, and `shaders.txt` are
-kept as source evidence. They make the remaining renderer gap measurable: the
-current Rust implementation has translated the matrix/ray boundary, while
-texture-pack rules, patch registries, and shader coefficients still require
-feature-specific work and fixtures.
+kept as source evidence. The Rust implementation has translated the
+matrix/ray boundary, selected patch intersection rules, and the currently
+verified lighting coefficients. Texture-pack parity, the full patch registry,
+custom renderers, and golden-world evidence remain open.
 
 ## Intentionally not runtime-linked
 
 The upstream snapshots are never added to the Paper Gradle source set or the
-frontend bundle. `IsoHDPerspective` has a tracked geometry translation, while
-its full voxel/patch traversal and `TexturePack` remain unported. Their exact
-paths and future port destinations remain registered in
+frontend bundle. `IsoHDPerspective` has a tracked geometry translation and
+selected patch/lighting translations, while full voxel/asset/custom-renderer
+parity remains unported. Their exact paths and future port destinations remain registered in
 [porting-manifest.md](porting-manifest.md). No snapshot is evidence that the
 corresponding MC-Vector feature is complete.
 

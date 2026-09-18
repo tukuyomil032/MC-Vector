@@ -64,7 +64,6 @@ where
     let perspective = IsoHDPerspective::default();
     let blocks_per_pixel = bounds.blocks_per_pixel.max(1) as f64;
     let tile_world_size = bounds.tile_size as i64 * bounds.blocks_per_pixel.max(1);
-    let reference_y = 64.0_f64.clamp(min_y as f64, (max_y - 1) as f64);
     let vertical_span = i64::from(max_y - min_y).unsigned_abs() as usize;
     let max_distance = (vertical_span as f32 + tile_world_size as f32 * 1.5).max(512.0);
     let max_steps = vertical_span
@@ -76,14 +75,14 @@ where
 
     for pixel_y in 0..height as u32 {
         for pixel_x in 0..width as u32 {
-            let ray = perspective.ray_for_pixel(
+            let ray = PerspectiveRenderer::ray_for_tile_pixel(
+                &perspective,
                 pixel_x,
                 pixel_y,
                 width as u32,
-                bounds.origin_x as f64 + tile_world_size as f64 / 2.0,
-                bounds.origin_z as f64 + tile_world_size as f64 / 2.0,
+                bounds.tile_x as i64,
+                bounds.tile_y as i64,
                 blocks_per_pixel,
-                reference_y,
                 min_y as f64,
                 max_y as f64,
             );

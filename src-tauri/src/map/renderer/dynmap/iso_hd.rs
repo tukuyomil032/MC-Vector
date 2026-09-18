@@ -98,7 +98,6 @@ pub(crate) struct WorldRay {
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct IsoHDPerspective {
-    pub(crate) scale: f64,
     world_to_map_matrix: Matrix3,
     map_to_world_matrix: Matrix3,
 }
@@ -139,7 +138,6 @@ impl IsoHDPerspective {
         ]));
 
         Self {
-            scale,
             world_to_map_matrix: world_to_map,
             map_to_world_matrix: map_to_world,
         }
@@ -169,8 +167,7 @@ impl IsoHDPerspective {
 
     /// Build the same map-coordinate ray used by Dynmap's tile loop.
     /// `map_units_per_pixel` is `1 / sizescale` in the source renderer.
-    #[cfg(test)]
-    fn ray_for_tile_pixel(
+    pub(crate) fn ray_for_map_tile_pixel(
         &self,
         pixel_x: u32,
         pixel_y: u32,
@@ -200,34 +197,6 @@ impl IsoHDPerspective {
             direction: self.map_to_world([0.0, 0.0, (min_height - 0.5) - (max_height + 0.5)]),
         }
     }
-
-    /// Anchor a Dynmap-contract ray at the existing world-tile center.
-    /// This adapter keeps MC-Vector's current tile addressing while routing
-    /// orientation and vertical projection through the source-derived matrix.
-    pub(crate) fn ray_for_world_tile_pixel(
-        &self,
-        pixel_x: u32,
-        pixel_y: u32,
-        tile_size: u32,
-        center_x: f64,
-        center_z: f64,
-        blocks_per_pixel: f64,
-        reference_y: f64,
-        min_height: f64,
-        max_height: f64,
-    ) -> WorldRay {
-        let center_map = self.world_to_map([center_x, reference_y, center_z]);
-        let local_x = f64::from(pixel_x) + 0.5 - f64::from(tile_size) / 2.0;
-        let local_y = f64::from(pixel_y) + 0.5 - f64::from(tile_size) / 2.0;
-        let map_units_per_block = self.scale;
-        let top_x = center_map[0] + local_x * blocks_per_pixel * map_units_per_block;
-        let top_y = center_map[1] + local_y * blocks_per_pixel * map_units_per_block;
-        let ray = self.ray_for_map_pixel(top_x, top_y, min_height, max_height);
-        WorldRay {
-            origin: ray.origin,
-            direction: normalize(ray.direction),
-        }
-    }
 }
 
 fn normalize_configuration(
@@ -252,14 +221,6 @@ fn normalize_configuration(
         MIN_SCALE
     };
     (azimuth, inclination, scale)
-}
-
-fn normalize(vector: [f64; 3]) -> [f64; 3] {
-    let length = (vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]).sqrt();
-    if length <= f64::EPSILON {
-        return vector;
-    }
-    [vector[0] / length, vector[1] / length, vector[2] / length]
 }
 
 #[cfg(test)]
@@ -305,7 +266,7 @@ mod tests {
     #[test]
     fn tile_pixel_ray_is_fixed_by_the_source_map_to_world_contract() {
         let perspective = IsoHDPerspective::new(135.0, 60.0, 1.0);
-        let ray = perspective.ray_for_tile_pixel(0, 0, 128, -1, -2, -64.0, 320.0, 1.0);
+        let ray = perspective.ray_for_map_tile_pixel(0, 0, 128, -1, -2, -64.0, 320.0, 1.0);
 
         assert_close(
             ray.origin,
@@ -339,12 +300,10 @@ mod tests {
     }
 
     #[test]
-    fn world_tile_ray_has_a_fixed_direction_and_downward_y() {
+    fn map_tile_ray_has_a_fixed_direction_and_downward_y() {
         let perspective = IsoHDPerspective::default();
-        let center =
-            perspective.ray_for_world_tile_pixel(128, 128, 256, 0.0, 0.0, 1.0, 64.0, -64.0, 320.0);
-        let corner =
-            perspective.ray_for_world_tile_pixel(0, 0, 256, 0.0, 0.0, 1.0, 64.0, -64.0, 320.0);
+        let center = perspective.ray_for_map_tile_pixel(128, 128, 256, 0, 0, -64.0, 320.0, 1.0);
+        let corner = perspective.ray_for_map_tile_pixel(0, 0, 256, 0, 0, -64.0, 320.0, 1.0);
 
         assert_close(center.direction, corner.direction);
         assert!(center.direction[1] < 0.0);

@@ -32,6 +32,14 @@ Phase 05 normalized chunk data, Phase 08 models, Phase 09 port manifest.
 - remove representative-colour-only success path;
 - return render metadata alongside pixels.
 
+The tile address passed to the Iso renderer is a Dynmap map-plane address, not
+the minimum world X/Z coordinate of an axis-aligned rectangle. For a tile at
+`(tileX, tileY)`, the ray origin for pixel `(px, py)` is derived from
+`tileX * tileSize + (px + 0.5) * blocksPerPixel` and the corresponding map-plane
+Y coordinate, then transformed back into world space. Keeping this contract at
+the renderer boundary prevents a generated chunk from being projected outside
+the tile that requested it.
+
 ## Focused tests
 
 Exact transforms, axis-parallel rays, negative coordinates, chunk boundaries,
