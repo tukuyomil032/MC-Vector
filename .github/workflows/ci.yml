@@ -111,6 +111,21 @@ jobs:
             $0 == "com/mcvector/core/MCVectorCorePlugin.class" { main = 1 }
             END { exit !(plugin && main) }
           '
+      - name: Verify Map source and distribution boundary
+        run: |
+          test -f src/map/dynmap/LICENSE-APACHE-2.0
+          test -f src/map/dynmap/NOTICE
+          test -f src/map/dynmap/SOURCE-REF.md
+          test -f src/map/dynmap/porting-manifest.md
+          test ! -d bridge
+          if rg -n 'bridge/mc-vector-core' .github src src-tauri package.json justfile; then
+            echo 'Found a stale root bridge path reference'
+            exit 1
+          fi
+          if jar tf src/map/paper/mc-vector-core/build/libs/mc-vector-core.jar | awk '/dynmap|minecraft/ { found = 1 } END { exit found ? 0 : 1 }'; then
+            echo 'Paper plugin must not bundle Dynmap sources or Minecraft assets'
+            exit 1
+          fi
 
   cargo-audit:
     runs-on: ubuntu-latest
