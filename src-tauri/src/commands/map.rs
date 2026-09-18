@@ -43,6 +43,7 @@ const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
 const MAX_LIVE_CHUNKS_PER_AXIS: i64 = 8;
+const RAY_CHUNK_PADDING_BLOCKS: i64 = 512;
 // This version intentionally invalidates the earlier representative-colour
 // tiles. The renderer now resolves blockstate/model parents and samples the
 // resolved top face before the tile path aggregates chunk footprints.
@@ -2530,6 +2531,26 @@ fn existing_chunk_coordinates_for_tile(
     )
 }
 
+fn ray_chunk_coordinates_for_tile(
+    world_root: &Path,
+    zoom: u8,
+    tile_x: i32,
+    tile_y: i32,
+) -> Result<Vec<(i64, i64)>, String> {
+    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    let min_chunk_x = floor_div(bounds.origin_x - RAY_CHUNK_PADDING_BLOCKS, 16);
+    let max_chunk_x = floor_div(bounds.max_x() + RAY_CHUNK_PADDING_BLOCKS, 16);
+    let min_chunk_z = floor_div(bounds.origin_z - RAY_CHUNK_PADDING_BLOCKS, 16);
+    let max_chunk_z = floor_div(bounds.max_z() + RAY_CHUNK_PADDING_BLOCKS, 16);
+    present_chunks_for_bounds(
+        world_root,
+        min_chunk_x,
+        max_chunk_x,
+        min_chunk_z,
+        max_chunk_z,
+    )
+}
+
 fn recommended_zoom(min_chunk_x: i64, max_chunk_x: i64, min_chunk_z: i64, max_chunk_z: i64) -> u8 {
     let span_x = (max_chunk_x - min_chunk_x + 1).max(1) * 16;
     let span_z = (max_chunk_z - min_chunk_z + 1).max(1) * 16;
@@ -2691,6 +2712,52 @@ fn complete_block_sample(
         sky_light: 15,
         block_light: 0,
     })
+}
+
+fn complete_chunk_max_surface_y(chunk: &CompleteChunk) -> Option<i32> {
+    let range = chunk.y_range();
+    if range.start >= range.end {
+        return None;
+    }
+    let trusted_maximum = chunk.heightmap.iter().copied().max().unwrap_or_default() as i32;
+    if trusted_maximum > range.start as i32
+        && trusted_maximum <= range.end as i32
+        && !(trusted_maximum == 0 && range.start < 0)
+    {
+        return Some(trusted_maximum.clamp(range.start as i32, range.end as i32 - 1));
+    }
+
+    // Partial Paper saves can contain block data while omitting or zeroing the
+    // persisted motion-blocking heightmap. The renderer must not treat those
+    // chunks as empty, otherwise the traversal fast-forward skips all terrain.
+    // Scan only the highest non-air block in each column; this is slower than a
+    // valid heightmap but still bounded to 256 columns and is done once per
+    // render request through the chunk cache.
+    let mut maximum = None;
+    for local_z in 0..16 {
+        for local_x in 0..16 {
+            let Some(y) = (range.start..range.end).rev().find(|y| {
+                chunk
+                    .block(local_x, *y, local_z)
+                    .map(|block| !is_air_state(block.name()))
+                    .unwrap_or(false)
+            }) else {
+                continue;
+            };
+            maximum = Some(maximum.map_or(y as i32, |current: i32| current.max(y as i32)));
+        }
+    }
+    maximum
+}
+
+fn live_chunk_max_surface_y(snapshot: &ChunkView) -> Option<i32> {
+    snapshot
+        .columns
+        .iter()
+        .flat_map(|column| column.iter())
+        .filter(|layer| !is_air_state(&layer.state))
+        .map(|layer| layer.y)
+        .max()
 }
 
 fn live_block_sample(
@@ -2908,9 +2975,8 @@ fn render_world_tile_detailed(
     if blocks_per_pixel >= 16 {
         return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
     }
-    if live_chunks.is_none_or(HashMap::is_empty)
-        && existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?.is_empty()
-    {
+    let saved_chunk_coordinates = ray_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
+    if live_chunks.is_none_or(HashMap::is_empty) && saved_chunk_coordinates.is_empty() {
         // Avoid walking tens of thousands of air voxels for a tile whose
         // region headers already prove that no saved chunk intersects it.
         return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
@@ -2921,6 +2987,19 @@ fn render_world_tile_detailed(
     let mut diagnostic = None;
     let mut rendered_chunks = HashSet::new();
     let live_chunks = live_chunks.cloned().unwrap_or_default();
+    let all_saved_chunk_coordinates = enumerate_region_files(world_root)?
+        .into_iter()
+        .flat_map(|index| index.present_chunks().iter().copied().collect::<Vec<_>>())
+        .collect::<HashSet<_>>();
+    let mut max_surface_cache = HashMap::new();
+    for &(chunk_x, chunk_z) in &saved_chunk_coordinates {
+        let max_surface = render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
+            .and_then(complete_chunk_max_surface_y);
+        max_surface_cache.insert((chunk_x, chunk_z), max_surface);
+    }
+    for ((chunk_x, chunk_z), snapshot) in &live_chunks {
+        max_surface_cache.insert((*chunk_x, *chunk_z), live_chunk_max_surface_y(snapshot));
+    }
     let mut model_cache: HashMap<(String, String), Option<Vec<crate::map::assets::RenderFace>>> =
         HashMap::new();
     let assets_for_models = assets;
@@ -2956,6 +3035,13 @@ fn render_world_tile_detailed(
                 rendered_chunks.insert((chunk_x, chunk_z));
             }
             sample
+        },
+        |world_x, world_z| {
+            let key = (floor_div(world_x, 16), floor_div(world_z, 16));
+            max_surface_cache.get(&key).copied().map_or_else(
+                || (!all_saved_chunk_coordinates.contains(&key)).then_some(min_y - 1),
+                |max_surface| max_surface.or(Some(min_y - 1)),
+            )
         },
         |sample| {
             let Some(assets) = assets_for_models else {

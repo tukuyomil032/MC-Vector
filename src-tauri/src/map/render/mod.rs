@@ -17,7 +17,7 @@ use self::perspective::PerspectiveRenderer;
 use self::png::validate_rgba;
 use self::ray::{Ray, Vec3};
 pub(crate) use self::shader::shade_surface;
-use self::voxel_traversal::traverse;
+use self::voxel_traversal::{traverse, TraversalAction};
 use super::projection::TileWorldBounds;
 
 #[derive(Clone, Debug)]
@@ -40,16 +40,18 @@ pub(crate) struct RenderedSurfaceTile {
 /// pixel. The source callback is deliberately block-oriented so Paper live
 /// snapshots and Anvil data can share the renderer without leaking Bukkit or
 /// NBT types into this module.
-pub(crate) fn render_iso_tile<F, M, MC>(
+pub(crate) fn render_iso_tile<F, S, M, MC>(
     bounds: TileWorldBounds,
     min_y: i32,
     max_y: i32,
     mut block_at: F,
+    mut max_surface_at: S,
     mut model_for: M,
     mut sample_model_color: MC,
 ) -> Result<RenderedSurfaceTile, String>
 where
     F: FnMut(i64, i32, i64) -> Option<SurfaceSample>,
+    S: FnMut(i64, i64) -> Option<i32>,
     M: FnMut(&SurfaceSample) -> Option<Vec<RenderFace>>,
     MC: FnMut(&SurfaceSample, &RenderFace, f32, f32) -> [u8; 4],
 {
@@ -75,7 +77,7 @@ where
 
     for pixel_y in 0..height as u32 {
         for pixel_x in 0..width as u32 {
-            let ray = perspective.ray_for_pixel(
+            let mut ray = perspective.ray_for_pixel(
                 pixel_x,
                 pixel_y,
                 width as u32,
@@ -83,17 +85,37 @@ where
                 center_z,
                 blocks_per_pixel,
             );
+            // The screen-space center is a world X/Z coordinate at a
+            // reference surface, not at the camera's elevated origin. Keep
+            // the center ray aligned with the tile center when it reaches
+            // the Overworld surface plane; without this correction every ray
+            // drifts diagonally by the camera height before it can hit terrain.
+            let reference_y = 64.0_f32.clamp(min_y as f32, (max_y - 1) as f32);
+            let reference_distance = (ray.origin.y - reference_y) / -ray.direction.y;
+            if reference_distance.is_finite() && reference_distance > 0.0 {
+                ray.origin.x -= ray.direction.x * reference_distance;
+                ray.origin.z -= ray.direction.z * reference_distance;
+            }
             let mut pixel = [0_u8; 4];
             let mut hit_count = 0usize;
-            traverse(ray, max_distance, max_steps, |voxel, _distance| {
+            traverse(ray, max_distance, max_steps, |voxel, distance| {
                 if voxel.y < i64::from(min_y) {
-                    return false;
+                    return TraversalAction::Stop;
                 }
                 if voxel.y >= i64::from(max_y) {
-                    return true;
+                    return TraversalAction::Continue;
+                }
+                if let Some(max_surface_y) = max_surface_at(voxel.x, voxel.z) {
+                    if voxel.y > i64::from(max_surface_y) {
+                        if let Some(skip_to) =
+                            skip_above_surface(ray, voxel.x, voxel.z, distance, max_surface_y)
+                        {
+                            return TraversalAction::SkipTo(skip_to);
+                        }
+                    }
                 }
                 let Some(sample) = block_at(voxel.x, voxel.y as i32, voxel.z) else {
-                    return true;
+                    return TraversalAction::Continue;
                 };
                 let model_faces = model_for(&sample)
                     .filter(|faces| !faces.is_empty())
@@ -123,10 +145,10 @@ where
                     pixel = alpha_over(pixel, color);
                     hit_count += 1;
                     if pixel[3] >= 250 || hit_count >= 8 {
-                        return false;
+                        return TraversalAction::Stop;
                     }
                 }
-                true
+                TraversalAction::Continue
             });
             if pixel[3] > 0 {
                 rendered_pixel_count += 1;
@@ -142,6 +164,42 @@ where
         rendered_column_count: rendered_pixel_count,
         coverage_ratio: rendered_pixel_count as f32 / (width * height).max(1) as f32,
     })
+}
+
+fn skip_above_surface(
+    ray: Ray,
+    voxel_x: i64,
+    voxel_z: i64,
+    distance: f32,
+    max_surface_y: i32,
+) -> Option<f32> {
+    let chunk_x = voxel_x.div_euclid(16);
+    let chunk_z = voxel_z.div_euclid(16);
+    let next_x_boundary = if ray.direction.x >= 0.0 {
+        (chunk_x + 1) * 16
+    } else {
+        chunk_x * 16
+    };
+    let next_z_boundary = if ray.direction.z >= 0.0 {
+        (chunk_z + 1) * 16
+    } else {
+        chunk_z * 16
+    };
+    let x_distance = distance_to_plane(ray.origin.x, ray.direction.x, next_x_boundary as f32);
+    let z_distance = distance_to_plane(ray.origin.z, ray.direction.z, next_z_boundary as f32);
+    let y_distance = distance_to_plane(ray.origin.y, ray.direction.y, max_surface_y as f32 + 0.999);
+    [x_distance, z_distance, y_distance]
+        .into_iter()
+        .filter(|candidate| candidate.is_finite() && *candidate > distance + 0.0001)
+        .min_by(|left, right| left.total_cmp(right))
+}
+
+fn distance_to_plane(origin: f32, direction: f32, plane: f32) -> f32 {
+    if direction.abs() < f32::EPSILON {
+        f32::INFINITY
+    } else {
+        (plane - origin) / direction
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -333,6 +391,7 @@ mod tests {
                     None
                 }
             },
+            |_x, _z| Some(64),
             |_sample| Some(default_cube_faces()),
             |_sample, _face, _u, _v| [120, 140, 180, 255],
         )

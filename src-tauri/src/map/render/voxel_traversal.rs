@@ -7,11 +7,18 @@ pub(crate) struct Voxel {
     pub(crate) z: i64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum TraversalAction {
+    Continue,
+    Stop,
+    SkipTo(f32),
+}
+
 /// Amanatides-Woo style traversal for the ray path used by the Iso renderer.
 /// The callback may stop traversal by returning false.
 pub(crate) fn traverse<F>(ray: Ray, max_distance: f32, max_steps: usize, mut visit: F)
 where
-    F: FnMut(Voxel, f32) -> bool,
+    F: FnMut(Voxel, f32) -> TraversalAction,
 {
     let mut voxel = Voxel {
         x: ray.origin.x.floor() as i64,
@@ -36,8 +43,26 @@ where
     let mut distance = 0.0;
 
     for _ in 0..max_steps {
-        if distance > max_distance || !visit(voxel, distance) {
+        if distance > max_distance {
             break;
+        }
+        match visit(voxel, distance) {
+            TraversalAction::Stop => break,
+            TraversalAction::SkipTo(target) if target > distance + 0.0001 => {
+                distance = target;
+                voxel = Voxel {
+                    x: (ray.origin.x + ray.direction.x * distance).floor() as i64,
+                    y: (ray.origin.y + ray.direction.y * distance).floor() as i64,
+                    z: (ray.origin.z + ray.direction.z * distance).floor() as i64,
+                };
+                next = Vec3::new(
+                    boundary_distance(ray.origin.x, voxel.x, step.x, ray.direction.x),
+                    boundary_distance(ray.origin.y, voxel.y, step.y, ray.direction.y),
+                    boundary_distance(ray.origin.z, voxel.z, step.z, ray.direction.z),
+                );
+                continue;
+            }
+            TraversalAction::Continue | TraversalAction::SkipTo(_) => {}
         }
         if next.x <= next.y && next.x <= next.z {
             distance = next.x;
@@ -91,7 +116,7 @@ mod tests {
             8,
             |voxel, distance| {
                 visited.push((voxel.y, distance));
-                true
+                TraversalAction::Continue
             },
         );
         assert_eq!(visited[0].0, 3);
