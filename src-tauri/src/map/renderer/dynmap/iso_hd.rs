@@ -100,6 +100,7 @@ pub(crate) struct WorldRay {
 pub(crate) struct IsoHDPerspective {
     world_to_map_matrix: Matrix3,
     map_to_world_matrix: Matrix3,
+    scale: f64,
 }
 
 impl Default for IsoHDPerspective {
@@ -140,6 +141,7 @@ impl IsoHDPerspective {
         Self {
             world_to_map_matrix: world_to_map,
             map_to_world_matrix: map_to_world,
+            scale,
         }
     }
 
@@ -166,7 +168,9 @@ impl IsoHDPerspective {
     }
 
     /// Build the same map-coordinate ray used by Dynmap's tile loop.
-    /// `map_units_per_pixel` is `1 / sizescale` in the source renderer.
+    /// `blocks_per_pixel` is the world-space resolution of the requested tile.
+    /// Dynmap's matrix scales world coordinates before projecting them, so the
+    /// corresponding map-plane distance is multiplied by `self.scale`.
     pub(crate) fn ray_for_map_tile_pixel(
         &self,
         pixel_x: u32,
@@ -176,13 +180,116 @@ impl IsoHDPerspective {
         tile_y: i64,
         min_height: f64,
         max_height: f64,
-        map_units_per_pixel: f64,
+        blocks_per_pixel: f64,
     ) -> WorldRay {
+        let map_units_per_pixel = blocks_per_pixel * self.scale;
         let x =
             tile_x as f64 * f64::from(tile_size) + (f64::from(pixel_x) + 0.5) * map_units_per_pixel;
         let y =
             tile_y as f64 * f64::from(tile_size) + (f64::from(pixel_y) + 0.5) * map_units_per_pixel;
         self.ray_for_map_pixel(x, y, min_height, max_height)
+    }
+
+    /// Return a conservative world-space X/Z bound for one projected tile.
+    ///
+    /// `IsoHDPerspective` tiles live on the projected map plane, not on a
+    /// world X/Z rectangle. Dynmap derives required chunks by transforming
+    /// the projected tile volume back into world space and then clipping the
+    /// candidate chunks against that volume. This helper intentionally keeps
+    /// the first step conservative: all eight inverse-transformed volume
+    /// corners are included, so no chunk that can intersect a ray is lost.
+    pub(crate) fn world_xz_bounds_for_map_tile(
+        &self,
+        tile_x: i64,
+        tile_y: i64,
+        tile_size: u32,
+        blocks_per_pixel: f64,
+        min_height: f64,
+        max_height: f64,
+    ) -> (i64, i64, i64, i64) {
+        let map_units_per_pixel = blocks_per_pixel * self.scale;
+        let tile_map_size = f64::from(tile_size) * map_units_per_pixel;
+        let min_map_x = tile_x as f64 * tile_map_size - self.scale;
+        let max_map_x = (tile_x as f64 + 1.0) * tile_map_size + self.scale;
+        let min_map_y = tile_y as f64 * tile_map_size - self.scale;
+        let max_map_y = (tile_y as f64 + 1.0) * tile_map_size + self.scale;
+        let (min_height, max_height) = (min_height.min(max_height), min_height.max(max_height));
+        let mut min_world_x = f64::INFINITY;
+        let mut max_world_x = f64::NEG_INFINITY;
+        let mut min_world_z = f64::INFINITY;
+        let mut max_world_z = f64::NEG_INFINITY;
+
+        for map_x in [min_map_x, max_map_x] {
+            for map_y in [min_map_y, max_map_y] {
+                for world_height in [min_height, max_height] {
+                    let world = self.map_to_world([map_x, map_y, world_height]);
+                    min_world_x = min_world_x.min(world[0]);
+                    max_world_x = max_world_x.max(world[0]);
+                    min_world_z = min_world_z.min(world[2]);
+                    max_world_z = max_world_z.max(world[2]);
+                }
+            }
+        }
+
+        // Include the boundary block on both sides. The extra block also
+        // keeps floor-division from dropping a chunk when the inverse
+        // transform lands exactly on a chunk edge.
+        (
+            min_world_x.floor() as i64 - 1,
+            max_world_x.ceil() as i64 + 1,
+            min_world_z.floor() as i64 - 1,
+            max_world_z.ceil() as i64 + 1,
+        )
+    }
+
+    /// Check the projected map-plane overlap between a world chunk volume and
+    /// one tile. The required-chunk scan first uses the conservative X/Z bound
+    /// above, then applies this inexpensive projection filter before reading a
+    /// chunk payload. This mirrors Dynmap's later polygon clipping step while
+    /// keeping the first Rust port independent of its polygon classes.
+    pub(crate) fn projected_tile_intersects_chunk(
+        &self,
+        tile_x: i64,
+        tile_y: i64,
+        tile_size: u32,
+        blocks_per_pixel: f64,
+        min_height: f64,
+        max_height: f64,
+        chunk_x: i64,
+        chunk_z: i64,
+    ) -> bool {
+        let map_units_per_pixel = blocks_per_pixel * self.scale;
+        let tile_map_size = f64::from(tile_size) * map_units_per_pixel;
+        let tile_min_x = tile_x as f64 * tile_map_size - self.scale;
+        let tile_max_x = (tile_x as f64 + 1.0) * tile_map_size + self.scale;
+        let tile_min_y = tile_y as f64 * tile_map_size - self.scale;
+        let tile_max_y = (tile_y as f64 + 1.0) * tile_map_size + self.scale;
+        let (min_height, max_height) = (min_height.min(max_height), min_height.max(max_height));
+        let world_min_x = chunk_x as f64 * 16.0;
+        let world_max_x = world_min_x + 16.0;
+        let world_min_z = chunk_z as f64 * 16.0;
+        let world_max_z = world_min_z + 16.0;
+        let mut min_map_x = f64::INFINITY;
+        let mut max_map_x = f64::NEG_INFINITY;
+        let mut min_map_y = f64::INFINITY;
+        let mut max_map_y = f64::NEG_INFINITY;
+
+        for world_x in [world_min_x, world_max_x] {
+            for world_z in [world_min_z, world_max_z] {
+                for world_height in [min_height, max_height] {
+                    let map = self.world_to_map([world_x, world_height, world_z]);
+                    min_map_x = min_map_x.min(map[0]);
+                    max_map_x = max_map_x.max(map[0]);
+                    min_map_y = min_map_y.min(map[1]);
+                    max_map_y = max_map_y.max(map[1]);
+                }
+            }
+        }
+
+        min_map_x <= tile_max_x
+            && max_map_x >= tile_min_x
+            && min_map_y <= tile_max_y
+            && max_map_y >= tile_min_y
     }
 
     fn ray_for_map_pixel(
@@ -309,5 +416,40 @@ mod tests {
         assert!(center.direction[1] < 0.0);
         assert!(center.direction[0].abs() > 0.0);
         assert!(center.direction[2].abs() > 0.0);
+    }
+
+    #[test]
+    fn projected_tile_world_bounds_cover_origin_chunk() {
+        let perspective = IsoHDPerspective::default();
+        let (min_x, max_x, min_z, max_z) =
+            perspective.world_xz_bounds_for_map_tile(0, 0, 256, 1.0, -64.0, 320.0);
+
+        assert!(min_x <= 0 && max_x >= 15, "{min_x}..{max_x}");
+        assert!(min_z <= 0 && max_z >= 15, "{min_z}..{max_z}");
+        assert!(min_x < max_x);
+        assert!(min_z < max_z);
+    }
+
+    #[test]
+    fn projected_tile_world_bounds_are_ordered_for_negative_tiles() {
+        let perspective = IsoHDPerspective::new(135.0, 60.0, 2.0);
+        let (min_x, max_x, min_z, max_z) =
+            perspective.world_xz_bounds_for_map_tile(-3, -2, 256, 8.0, 320.0, -64.0);
+
+        assert!(min_x < max_x);
+        assert!(min_z < max_z);
+        assert!(min_x < 0 || max_x < 0);
+        assert!(min_z != 0 || max_z != 0);
+    }
+
+    #[test]
+    fn projected_tile_chunk_filter_accepts_chunk_under_map_plane_center() {
+        let perspective = IsoHDPerspective::default();
+        let world = perspective.map_to_world([128.0, 128.0, 0.0]);
+        let chunk_x = (world[0].floor() as i64).div_euclid(16);
+        let chunk_z = (world[2].floor() as i64).div_euclid(16);
+
+        assert!(perspective
+            .projected_tile_intersects_chunk(0, 0, 256, 1.0, -64.0, 320.0, chunk_x, chunk_z));
     }
 }

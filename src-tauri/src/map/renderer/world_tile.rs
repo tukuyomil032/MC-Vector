@@ -16,9 +16,11 @@ use crate::map::sources::{
 };
 use crate::map::tile_buffer::{Rgba, RgbaTileBuffer};
 
-use super::{render_iso_tile, LiveChunkMap, TileRenderResult, MAX_ZOOM, TILE_SIZE};
+use super::{
+    render_iso_tile, IsoHDPerspective, LiveChunkMap, TileRenderResult, MAX_ZOOM, TILE_SIZE,
+};
 
-const RAY_CHUNK_PADDING_BLOCKS: i64 = 512;
+const RAY_CHUNK_PADDING_BLOCKS: i64 = 16;
 
 fn render_chunk<'a>(
     world_root: &Path,
@@ -316,18 +318,43 @@ pub(crate) fn ray_chunk_coordinates_for_tile(
     tile_x: i32,
     tile_y: i32,
 ) -> Result<Vec<(i64, i64)>, String> {
-    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let min_chunk_x = floor_div(bounds.origin_x - RAY_CHUNK_PADDING_BLOCKS, 16);
-    let max_chunk_x = floor_div(bounds.max_x() + RAY_CHUNK_PADDING_BLOCKS, 16);
-    let min_chunk_z = floor_div(bounds.origin_z - RAY_CHUNK_PADDING_BLOCKS, 16);
-    let max_chunk_z = floor_div(bounds.max_z() + RAY_CHUNK_PADDING_BLOCKS, 16);
-    present_chunks_for_bounds(
+    let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
+    let (min_world_x, max_world_x, min_world_z, max_world_z) = IsoHDPerspective::default()
+        .world_xz_bounds_for_map_tile(
+            i64::from(tile_x),
+            i64::from(tile_y),
+            TILE_SIZE,
+            blocks_per_pixel as f64,
+            -64.0,
+            320.0,
+        );
+    let min_chunk_x = floor_div(min_world_x - RAY_CHUNK_PADDING_BLOCKS, 16);
+    let max_chunk_x = floor_div(max_world_x + RAY_CHUNK_PADDING_BLOCKS, 16);
+    let min_chunk_z = floor_div(min_world_z - RAY_CHUNK_PADDING_BLOCKS, 16);
+    let max_chunk_z = floor_div(max_world_z + RAY_CHUNK_PADDING_BLOCKS, 16);
+    let candidates = present_chunks_for_bounds(
         world_root,
         min_chunk_x,
         max_chunk_x,
         min_chunk_z,
         max_chunk_z,
-    )
+    )?;
+    let perspective = IsoHDPerspective::default();
+    Ok(candidates
+        .into_iter()
+        .filter(|&(chunk_x, chunk_z)| {
+            perspective.projected_tile_intersects_chunk(
+                i64::from(tile_x),
+                i64::from(tile_y),
+                TILE_SIZE,
+                blocks_per_pixel as f64,
+                -64.0,
+                320.0,
+                chunk_x,
+                chunk_z,
+            )
+        })
+        .collect())
 }
 
 pub(crate) fn render_overview_tile(

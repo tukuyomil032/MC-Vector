@@ -32,7 +32,9 @@ use crate::map::bridge::protocol::{
 };
 use crate::map::domain::{ChunkKey, ChunkView};
 use crate::map::projection::{floor_div, TileWorldBounds};
-use crate::map::renderer::{render_world_tile_detailed, LiveChunkMap, MAX_ZOOM, TILE_SIZE};
+use crate::map::renderer::{
+    render_world_tile_detailed, IsoHDPerspective, LiveChunkMap, MAX_ZOOM, TILE_SIZE,
+};
 use crate::map::sources::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files, read_level_metadata,
     LiveSnapshotCache,
@@ -871,18 +873,8 @@ async fn request_live_chunks_for_tile(
     dimension: &str,
     bounds: TileWorldBounds,
 ) -> LiveChunkMap {
-    let (min_chunk_x, max_chunk_x) = limited_chunk_range(
-        floor_div(bounds.origin_x, 16),
-        floor_div(bounds.max_x(), 16),
-        floor_div(bounds.origin_x + bounds.max_x(), 32),
-    );
-    let (min_chunk_z, max_chunk_z) = limited_chunk_range(
-        floor_div(bounds.origin_z, 16),
-        floor_div(bounds.max_z(), 16),
-        floor_div(bounds.origin_z + bounds.max_z(), 32),
-    );
-    let center_chunk_x = floor_div(bounds.origin_x + bounds.max_x(), 32);
-    let center_chunk_z = floor_div(bounds.origin_z + bounds.max_z(), 32);
+    let (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z, center_chunk_x, center_chunk_z) =
+        live_chunk_bounds_for_tile(bounds);
     let mut candidates = (min_chunk_z..=max_chunk_z)
         .flat_map(|chunk_z| (min_chunk_x..=max_chunk_x).map(move |chunk_x| (chunk_x, chunk_z)))
         .collect::<Vec<_>>();
@@ -914,6 +906,49 @@ async fn request_live_chunks_for_tile(
         }
     }
     snapshots
+}
+
+fn live_chunk_bounds_for_tile(bounds: TileWorldBounds) -> (i64, i64, i64, i64, i64, i64) {
+    // Overview tiles are still rasterized on the world X/Z plane. Detailed
+    // Iso tiles use projected map-plane coordinates, so their live request
+    // range must be inverse-transformed just like the renderer's rays.
+    let (min_world_x, max_world_x, min_world_z, max_world_z) = if bounds.blocks_per_pixel >= 16 {
+        (
+            bounds.origin_x,
+            bounds.max_x(),
+            bounds.origin_z,
+            bounds.max_z(),
+        )
+    } else {
+        IsoHDPerspective::default().world_xz_bounds_for_map_tile(
+            i64::from(bounds.tile_x),
+            i64::from(bounds.tile_y),
+            bounds.tile_size as u32,
+            bounds.blocks_per_pixel as f64,
+            -64.0,
+            320.0,
+        )
+    };
+    let (min_chunk_x, max_chunk_x) = limited_chunk_range(
+        floor_div(min_world_x, 16),
+        floor_div(max_world_x, 16),
+        floor_div(min_world_x + max_world_x, 32),
+    );
+    let (min_chunk_z, max_chunk_z) = limited_chunk_range(
+        floor_div(min_world_z, 16),
+        floor_div(max_world_z, 16),
+        floor_div(min_world_z + max_world_z, 32),
+    );
+    let center_chunk_x = floor_div(min_world_x + max_world_x, 32);
+    let center_chunk_z = floor_div(min_world_z + max_world_z, 32);
+    (
+        min_chunk_x,
+        max_chunk_x,
+        min_chunk_z,
+        max_chunk_z,
+        center_chunk_x,
+        center_chunk_z,
+    )
 }
 
 fn limited_chunk_range(minimum: i64, maximum: i64, center: i64) -> (i64, i64) {
@@ -2471,6 +2506,33 @@ mod tests {
         assert_eq!(floor_mod(-1, 16), 15);
         assert_eq!(floor_div(-16, 16), -1);
         assert_eq!(floor_mod(-16, 16), 0);
+    }
+
+    #[test]
+    fn detailed_live_chunk_bounds_use_projected_tile_volume() {
+        let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, MAX_ZOOM, 0, 0)
+            .expect("valid detailed tile bounds");
+        let (min_x, max_x, min_z, max_z, center_x, center_z) = live_chunk_bounds_for_tile(bounds);
+        let projected_center = IsoHDPerspective::default().map_to_world([128.0, 128.0, 0.0]);
+        let projected_chunk_x = floor_div(projected_center[0].floor() as i64, 16);
+        let projected_chunk_z = floor_div(projected_center[2].floor() as i64, 16);
+
+        assert!((min_x..=max_x).contains(&projected_chunk_x));
+        assert!((min_z..=max_z).contains(&projected_chunk_z));
+        assert!((min_x..=max_x).contains(&center_x));
+        assert!((min_z..=max_z).contains(&center_z));
+    }
+
+    #[test]
+    fn overview_live_chunk_bounds_keep_world_plane_contract() {
+        let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, 0, 0, 0)
+            .expect("valid overview tile bounds");
+        let (min_x, max_x, min_z, max_z, center_x, center_z) = live_chunk_bounds_for_tile(bounds);
+
+        assert!((min_x..=max_x).contains(&center_x));
+        assert!((min_z..=max_z).contains(&center_z));
+        assert_eq!(max_x - min_x + 1, MAX_LIVE_CHUNKS_PER_AXIS);
+        assert_eq!(max_z - min_z + 1, MAX_LIVE_CHUNKS_PER_AXIS);
     }
 
     #[test]
