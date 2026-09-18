@@ -679,7 +679,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     hasPreviousTiles: tiles.length > 0,
     isLoading: isTileLoading,
     requestedTileKeys,
-    diagnosticStatusError,
+    statusError: diagnosticStatusError,
     tileError,
     tileStates,
   });
