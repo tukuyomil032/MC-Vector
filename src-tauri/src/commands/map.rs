@@ -41,6 +41,8 @@ use crate::map::tile_buffer::RgbaTileBuffer;
 pub mod assets;
 #[path = "map/lifecycle.rs"]
 pub mod lifecycle;
+#[path = "map/markers.rs"]
+pub mod markers;
 #[path = "map/status.rs"]
 pub mod status;
 #[path = "map/tiles.rs"]
