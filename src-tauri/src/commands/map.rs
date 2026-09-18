@@ -110,6 +110,7 @@ struct TileRenderResult {
     rendered_chunk_count: usize,
     has_terrain: bool,
     coverage_ratio: f32,
+    message: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -1705,10 +1706,13 @@ fn emit_map_tile_ready(
     rendered_chunk_count: usize,
     asset_missing: bool,
     coverage: Option<(bool, f32)>,
+    diagnostic: Option<&str>,
 ) {
     let (has_terrain, coverage_ratio) = coverage.unwrap_or_else(|| png_coverage(png));
     let render_state = if asset_missing {
         "asset_missing"
+    } else if diagnostic.is_some() {
+        "error"
     } else if has_terrain {
         "terrain"
     } else {
@@ -1726,9 +1730,16 @@ fn emit_map_tile_ready(
             "renderState": render_state,
             "coverageRatio": coverage_ratio,
             "renderedChunkCount": rendered_chunk_count,
-            "message": if has_terrain { serde_json::Value::Null } else {
-                serde_json::Value::String("No generated terrain intersects this tile".to_string())
-            },
+            "message": diagnostic.map_or_else(
+                || {
+                    if has_terrain {
+                        serde_json::Value::Null
+                    } else {
+                        serde_json::Value::String("No generated terrain intersects this tile".to_string())
+                    }
+                },
+                |message| serde_json::Value::String(message.to_string()),
+            ),
         }),
     );
 }
@@ -2026,7 +2037,7 @@ pub async fn get_map_tile(
     );
 
     if let Some(tile) = manager.tile_cache.lock().await.get(&key) {
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None);
+        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None, None);
         return Ok(tauri::ipc::Response::new(tile));
     }
     if let Some(tile) = read_disk_tile(&server_root, &key)? {
@@ -2035,7 +2046,7 @@ pub async fn get_map_tile(
             .lock()
             .await
             .insert(key.clone(), tile.clone());
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None);
+        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None, None);
         return Ok(tauri::ipc::Response::new(tile));
     }
 
@@ -2096,6 +2107,7 @@ pub async fn get_map_tile(
             rendered.rendered_chunk_count,
             asset_missing,
             Some((rendered.has_terrain, rendered.coverage_ratio)),
+            rendered.message.as_deref(),
         );
 
         manager
@@ -2392,14 +2404,25 @@ fn render_chunk<'a>(
     world_root: &Path,
     chunk_x: i64,
     chunk_z: i64,
-    chunks: &'a mut HashMap<(i64, i64), Option<CompleteChunk>>,
+    chunks: &'a mut HashMap<(i64, i64), Result<Option<CompleteChunk>, String>>,
+    diagnostic: &mut Option<String>,
 ) -> Option<&'a CompleteChunk> {
     if !chunks.contains_key(&(chunk_x, chunk_z)) {
         let key = ChunkKey::new("minecraft:overworld", chunk_x, chunk_z);
-        let rendered = read_complete_chunk(world_root, &key).ok().flatten();
+        let rendered = read_complete_chunk(world_root, &key);
+        if let Err(error) = &rendered {
+            if diagnostic.is_none() {
+                *diagnostic = Some(format!(
+                    "Failed to read chunk ({chunk_x}, {chunk_z}): {error}"
+                ));
+            }
+        }
         chunks.insert((chunk_x, chunk_z), rendered);
     }
-    chunks.get(&(chunk_x, chunk_z)).and_then(Option::as_ref)
+    chunks
+        .get(&(chunk_x, chunk_z))
+        .and_then(|result| result.as_ref().ok())
+        .and_then(Option::as_ref)
 }
 
 fn fallback_terrain_colour(_world_x: i64, _world_z: i64) -> Rgba {
@@ -2412,13 +2435,24 @@ fn chunk_surface_sample(
     local_z: usize,
 ) -> Option<SurfaceSample> {
     let range = chunk.y_range();
+    if range.start >= range.end {
+        return None;
+    }
+
+    // `fastanvil::complete::Chunk::surface_height(..., Calculate)` is still a
+    // `todo!()` in fastanvil 0.32. The real Paper 1.21 chunks can contain a
+    // heightmap that is absent or outside the decoded section range, so never
+    // call that implementation here. Trust a valid persisted heightmap and
+    // otherwise scan the decoded section ourselves.
     let trusted_top = chunk.surface_height(local_x, local_z, HeightMode::Trust);
-    let calculated_top = if trusted_top <= range.start || trusted_top > range.end {
-        chunk.surface_height(local_x, local_z, HeightMode::Calculate)
-    } else {
+    let top = if trusted_top > range.start
+        && trusted_top <= range.end
+        && !(trusted_top == 0 && range.start < 0)
+    {
         trusted_top
+    } else {
+        range.end
     };
-    let top = calculated_top.clamp(range.start, range.end);
     for y in (range.start..top).rev() {
         let Some(block) = chunk.block(local_x, y, local_z) else {
             continue;
@@ -2566,7 +2600,8 @@ fn render_overview_tile(
     live_chunk: Option<&ChunkView>,
 ) -> Result<TileRenderResult, String> {
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let mut chunks: HashMap<(i64, i64), Option<CompleteChunk>> = HashMap::new();
+    let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
+    let mut diagnostic = None;
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
     if let Some(snapshot) = live_chunk {
         if !coordinates.contains(&(snapshot.key.chunk_x, snapshot.key.chunk_z))
@@ -2587,7 +2622,7 @@ fn render_overview_tile(
                 (0..16).map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
             }))
         } else {
-            render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
+            render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
                 .map(|chunk| chunk_representative_colour(chunk, assets))
                 .unwrap_or_else(|| fallback_terrain_colour(0, 0))
         };
@@ -2615,6 +2650,7 @@ fn render_overview_tile(
         rendered_chunk_count,
         has_terrain,
         coverage_ratio,
+        message: diagnostic,
     })
 }
 
@@ -2632,7 +2668,8 @@ fn render_world_tile_detailed(
     }
 
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let mut chunks: HashMap<(i64, i64), Option<CompleteChunk>> = HashMap::new();
+    let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
+    let mut diagnostic = None;
     let mut rendered_chunks = HashSet::new();
     let live_chunk = live_chunk.cloned();
     let rendered = render_surface_tile(
@@ -2653,7 +2690,7 @@ fn render_world_tile_detailed(
                 }
                 return sample;
             }
-            let sample = render_chunk(world_root, chunk_x, chunk_z, &mut chunks)
+            let sample = render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
                 .and_then(|chunk| chunk_surface_sample(chunk, local_x, local_z));
             if sample.is_some() {
                 rendered_chunks.insert((chunk_x, chunk_z));
@@ -2670,6 +2707,7 @@ fn render_world_tile_detailed(
         rendered_chunk_count: rendered_chunks.len(),
         has_terrain,
         coverage_ratio: rendered.coverage_ratio,
+        message: diagnostic,
     })
 }
 

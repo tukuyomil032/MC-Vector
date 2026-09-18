@@ -1,4 +1,5 @@
 use std::fs;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, UNIX_EPOCH};
@@ -48,7 +49,8 @@ pub fn read_complete_chunk(
     let Some(bytes) = read_chunk_bytes(world_root, key)? else {
         return Ok(None);
     };
-    CompleteChunk::from_bytes(&bytes)
+    catch_unwind(AssertUnwindSafe(|| CompleteChunk::from_bytes(&bytes)))
+        .map_err(|_| "Failed to decode Minecraft chunk NBT: parser panicked".to_string())?
         .map(Some)
         .map_err(|error| format!("Failed to decode Minecraft chunk NBT: {error}"))
 }

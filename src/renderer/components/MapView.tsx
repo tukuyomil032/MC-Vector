@@ -603,6 +603,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     tileError,
     tileStates,
   });
+  const tileDiagnosticMessage = viewportTileStates.find(
+    (tile) => tile.renderState === tileDiagnosticState && tile.message,
+  )?.message;
 
   const tileDiagnostic = (() => {
     switch (tileDiagnosticState) {
@@ -614,7 +617,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       case 'error':
         return {
           title: t('map.surface.tileState.error'),
-          description: tileError ?? t('map.surface.tileState.errorDescription'),
+          description:
+            tileError ?? tileDiagnosticMessage ?? t('map.surface.tileState.errorDescription'),
         };
       case 'paper_chunk_unavailable':
         return {
