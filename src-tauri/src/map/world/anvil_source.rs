@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::Duration;
 
-use fastanvil::complete::Chunk as CompleteChunk;
-use fastanvil::Region;
+use fastanvil::{JavaChunk, Region};
 
 use super::region_index::region_for_chunk;
 use super::ChunkKey;
@@ -42,14 +41,11 @@ pub fn read_chunk_bytes(world_root: &Path, key: &ChunkKey) -> Result<Option<Vec<
     Ok(None)
 }
 
-pub fn read_complete_chunk(
-    world_root: &Path,
-    key: &ChunkKey,
-) -> Result<Option<CompleteChunk>, String> {
+pub fn read_java_chunk(world_root: &Path, key: &ChunkKey) -> Result<Option<JavaChunk>, String> {
     let Some(bytes) = read_chunk_bytes(world_root, key)? else {
         return Ok(None);
     };
-    catch_unwind(AssertUnwindSafe(|| CompleteChunk::from_bytes(&bytes)))
+    catch_unwind(AssertUnwindSafe(|| JavaChunk::from_bytes(&bytes)))
         .map_err(|_| "Failed to decode Minecraft chunk NBT: parser panicked".to_string())?
         .map(Some)
         .map_err(|error| format!("Failed to decode Minecraft chunk NBT: {error}"))
@@ -63,10 +59,13 @@ fn region_path(world_root: &Path, region_x: i64, region_z: i64) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::fs;
     use std::fs::OpenOptions;
 
+    use fastanvil::Chunk;
     use fastanvil::Region;
+    use fastnbt::Value;
     use uuid::Uuid;
 
     use super::*;
@@ -101,5 +100,18 @@ mod tests {
             Some(vec![10, 0, 0, 0])
         );
         fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn keeps_sparse_post18_chunk_without_complete_section_conversion() {
+        let bytes = fastnbt::to_bytes(&HashMap::from([
+            ("DataVersion".to_string(), Value::Int(3953)),
+            ("Status".to_string(), Value::String("full".to_string())),
+            ("sections".to_string(), Value::List(Vec::new())),
+        ]))
+        .expect("minimal chunk NBT should encode");
+
+        let chunk = JavaChunk::from_bytes(&bytes).expect("sparse chunk should decode");
+        assert_eq!(chunk.y_range(), 0..0);
     }
 }

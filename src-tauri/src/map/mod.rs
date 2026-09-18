@@ -12,7 +12,7 @@ pub mod world;
 pub(crate) mod sources {
     pub(crate) use super::world::{
         decode_live_snapshot, enumerate_region_files, is_air_state, present_chunks_for_bounds,
-        read_complete_chunk, read_level_metadata, LiveSnapshotCache,
+        read_java_chunk, read_level_metadata, LiveSnapshotCache,
     };
 }
 

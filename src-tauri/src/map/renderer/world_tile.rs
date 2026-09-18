@@ -4,8 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::Path;
 
-use fastanvil::complete::Chunk as CompleteChunk;
-use fastanvil::{Chunk as DimensionChunk, HeightMode};
+use fastanvil::{Chunk as DimensionChunk, HeightMode, JavaChunk};
 use flate2::{write::ZlibEncoder, Compression};
 
 use crate::map::assets::{self as map_assets, MapAssets, RenderFace};
@@ -13,7 +12,7 @@ use crate::map::domain::{ChunkKey, ChunkView};
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
 use crate::map::render::{shade_surface, Face, SurfaceSample};
 use crate::map::sources::{
-    enumerate_region_files, is_air_state, present_chunks_for_bounds, read_complete_chunk,
+    enumerate_region_files, is_air_state, present_chunks_for_bounds, read_java_chunk,
 };
 use crate::map::tile_buffer::{Rgba, RgbaTileBuffer};
 
@@ -25,13 +24,13 @@ fn render_chunk<'a>(
     world_root: &Path,
     chunk_x: i64,
     chunk_z: i64,
-    chunks: &'a mut HashMap<(i64, i64), Result<Option<CompleteChunk>, String>>,
+    chunks: &'a mut HashMap<(i64, i64), Result<Option<JavaChunk>, String>>,
     diagnostic: &mut Option<String>,
     decode_failed_chunk_count: &mut usize,
-) -> Option<&'a CompleteChunk> {
+) -> Option<&'a JavaChunk> {
     if !chunks.contains_key(&(chunk_x, chunk_z)) {
         let key = ChunkKey::new("minecraft:overworld", chunk_x, chunk_z);
-        let rendered = read_complete_chunk(world_root, &key);
+        let rendered = read_java_chunk(world_root, &key);
         if let Err(error) = &rendered {
             *decode_failed_chunk_count += 1;
             if diagnostic.is_none() {
@@ -53,7 +52,7 @@ fn fallback_terrain_colour(_world_x: i64, _world_z: i64) -> Rgba {
 }
 
 fn chunk_surface_sample(
-    chunk: &CompleteChunk,
+    chunk: &JavaChunk,
     local_x: usize,
     local_z: usize,
 ) -> Option<SurfaceSample> {
@@ -102,7 +101,7 @@ fn chunk_surface_sample(
 }
 
 fn complete_block_sample(
-    chunk: &CompleteChunk,
+    chunk: &JavaChunk,
     local_x: usize,
     y: i32,
     local_z: usize,
@@ -125,25 +124,15 @@ fn complete_block_sample(
     })
 }
 
-fn complete_chunk_max_surface_y(chunk: &CompleteChunk) -> Option<i32> {
+fn chunk_max_surface_y(chunk: &JavaChunk) -> Option<i32> {
     let range = chunk.y_range();
     if range.start >= range.end {
         return None;
     }
-    let trusted_maximum = chunk.heightmap.iter().copied().max().unwrap_or_default() as i32;
-    if trusted_maximum > range.start as i32
-        && trusted_maximum <= range.end as i32
-        && !(trusted_maximum == 0 && range.start < 0)
-    {
-        return Some(trusted_maximum.clamp(range.start as i32, range.end as i32 - 1));
-    }
-
-    // Partial Paper saves can contain block data while omitting or zeroing the
-    // persisted motion-blocking heightmap. The renderer must not treat those
-    // chunks as empty, otherwise the traversal fast-forward skips all terrain.
-    // Scan only the highest non-air block in each column; this is slower than a
-    // valid heightmap but still bounded to 256 columns and is done once per
-    // render request through the chunk cache.
+    // Keep the JavaChunk representation so sparse/partial 1.21 saves do not
+    // pass through the complete-chunk conversion's section unwrap. Scan the
+    // decoded sections here and retain terrain even when the heightmap is
+    // absent or stale.
     let mut maximum = None;
     for local_z in 0..16 {
         for local_x in 0..16 {
@@ -251,7 +240,7 @@ fn shaded_surface_colour(
 }
 
 fn surface_colour(
-    chunk: &CompleteChunk,
+    chunk: &JavaChunk,
     local_x: usize,
     local_z: usize,
     assets: Option<&MapAssets>,
@@ -297,7 +286,7 @@ fn average_surface_colours(colours: impl IntoIterator<Item = Rgba>) -> Rgba {
     ]
 }
 
-fn chunk_representative_colour(chunk: &CompleteChunk, assets: Option<&MapAssets>) -> Rgba {
+fn chunk_representative_colour(chunk: &JavaChunk, assets: Option<&MapAssets>) -> Rgba {
     average_surface_colours((0..16).flat_map(|local_z| {
         (0..16).map(move |local_x| surface_colour(chunk, local_x, local_z, assets))
     }))
@@ -352,7 +341,7 @@ pub(crate) fn render_overview_tile(
     live_chunks: Option<&LiveChunkMap>,
 ) -> Result<TileRenderResult, String> {
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
+    let mut chunks: HashMap<(i64, i64), Result<Option<JavaChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
@@ -436,7 +425,7 @@ pub(crate) fn render_world_tile_detailed(
     }
 
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
+    let mut chunks: HashMap<(i64, i64), Result<Option<JavaChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
     let mut rendered_chunks = HashSet::new();
@@ -455,7 +444,7 @@ pub(crate) fn render_world_tile_detailed(
             &mut diagnostic,
             &mut decode_failed_chunk_count,
         )
-        .and_then(complete_chunk_max_surface_y);
+        .and_then(chunk_max_surface_y);
         max_surface_cache.insert((chunk_x, chunk_z), max_surface);
     }
     for ((chunk_x, chunk_z), snapshot) in &live_chunks {
