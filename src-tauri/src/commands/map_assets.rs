@@ -8,8 +8,9 @@ use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
 use crate::map::assets::{
-    is_air, manifest_quality, material_kind, source_version, AssetManifest, AssetResolver,
-    MaterialKind, RenderFace, ASSET_MANIFEST_VERSION,
+    discover_asset_candidates, is_air, manifest_quality, material_kind, source_version,
+    AssetDiscoveryOptions, AssetManifest, AssetResolver, MaterialKind, RenderFace,
+    ASSET_MANIFEST_VERSION,
 };
 
 const ASSET_CONFIG_NAME: &str = "map-assets.json";
@@ -284,37 +285,33 @@ fn configured_source(server_root: &Path) -> Result<Option<PathBuf>, String> {
 
 fn detect_vanilla_source() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").map(PathBuf::from)?;
-    let mut roots = vec![home.join("Library/Application Support/minecraft/versions")];
+    let mut options = AssetDiscoveryOptions::for_home(home);
     if let Some(config_dir) = std::env::var_os("XDG_CONFIG_HOME") {
-        roots.push(PathBuf::from(config_dir).join("minecraft/versions"));
-    } else {
-        roots.push(home.join(".minecraft/versions"));
+        options
+            .official_launcher_roots
+            .push(PathBuf::from(config_dir).join("minecraft"));
     }
 
-    let mut candidates = Vec::new();
-    for root in roots {
-        let Ok(entries) = fs::read_dir(root) else {
-            continue;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            let Some(version) = path.file_name().and_then(|name| name.to_str()) else {
-                continue;
-            };
-            if !version.starts_with(VANILLA_VERSION_PREFIX) {
-                continue;
-            }
-            let jar = path.join(format!("{version}.jar"));
-            if jar.is_file() {
-                candidates.push((version.to_string(), jar));
-            }
-        }
-    }
-    candidates.sort_by(|left, right| left.0.cmp(&right.0));
-    candidates.pop().map(|(_, path)| path)
+    discover_asset_candidates(&options)
+        .into_iter()
+        .filter(|candidate| candidate.is_usable())
+        .filter_map(|candidate| {
+            candidate
+                .client_jar
+                .map(|artifact| artifact.path)
+                .or_else(|| {
+                    candidate
+                        .resource_packs
+                        .into_iter()
+                        .next()
+                        .map(|artifact| artifact.path)
+                })
+        })
+        .find(|path| {
+            source_version(&path.display().to_string())
+                .as_deref()
+                .is_none_or(|version| version.starts_with(VANILLA_VERSION_PREFIX))
+        })
 }
 
 fn validate_asset_source(path: &Path) -> Result<(), String> {

@@ -2,6 +2,14 @@ use serde::{Deserialize, Serialize};
 
 pub(crate) const ASSET_MANIFEST_VERSION: u32 = 1;
 
+#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum AssetSourceState {
+    Valid,
+    VersionMismatch,
+    Invalid,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AssetManifest {
