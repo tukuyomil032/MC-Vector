@@ -791,6 +791,7 @@ export const en: TranslationDictionary = {
       coordinateJumpAction: 'Go',
       coordinateInvalid: 'Enter X and Z between -30,000,000 and 30,000,000.',
       worldBorder: 'World border',
+      spawn: 'World spawn ({x}, {z})',
     },
     worldStatus: {
       title: 'World status',

@@ -511,6 +511,11 @@
   pointer-events: none;
 }
 
+.map-view__spawn-marker {
+  z-index: 3;
+  color: #fef3c7;
+}
+
 .map-view__marker-dot,
 .map-view__marker-list-dot {
   display: inline-block;
@@ -520,6 +525,11 @@
   border: 2px solid #f8fafc;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgb(15 23 42 / 34%);
+}
+
+.map-view__spawn-marker-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 30%);
 }
 
 .map-view__marker-name {

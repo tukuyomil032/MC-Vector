@@ -132,6 +132,24 @@ function playerBelongsToWorld(player: MapPlayer, worldId: string): boolean {
   }
 }
 
+export function getValidMapWorldSpawn(
+  worldInfo: Pick<MapWorldInfo, 'worldId' | 'spawnX' | 'spawnZ'> | null | undefined,
+  worldId: string,
+): { x: number; z: number } | null {
+  const spawnX = worldInfo?.spawnX;
+  const spawnZ = worldInfo?.spawnZ;
+  if (
+    worldInfo?.worldId !== worldId ||
+    typeof spawnX !== 'number' ||
+    typeof spawnZ !== 'number' ||
+    !Number.isFinite(spawnX) ||
+    !Number.isFinite(spawnZ)
+  ) {
+    return null;
+  }
+  return { x: spawnX, z: spawnZ };
+}
+
 function revokeTiles(tiles: MapTile[]) {
   tiles.forEach((tile) => URL.revokeObjectURL(tile.url));
 }
@@ -996,6 +1014,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const worldBorderSizePercentage = validWorldBorder
     ? (validWorldBorder.size / (TILES_PER_VIEW * tileWorldSize)) * 100
     : 0;
+  const validWorldSpawn = getValidMapWorldSpawn(worldInfo, worldId);
 
   const artifactIsActive = status?.artifact === 'active';
   const artifactIsPaused = status?.artifact === 'paused';
@@ -1337,6 +1356,35 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                       height: `${worldBorderSizePercentage}%`,
                     }}
                   />
+                )}
+                {validWorldSpawn && (
+                  <div
+                    className="map-view__marker map-view__spawn-marker"
+                    role="img"
+                    aria-label={t('map.surface.spawn', {
+                      x: Math.round(validWorldSpawn.x),
+                      z: Math.round(validWorldSpawn.z),
+                    })}
+                    title={t('map.surface.spawn', {
+                      x: Math.round(validWorldSpawn.x),
+                      z: Math.round(validWorldSpawn.z),
+                    })}
+                    style={{
+                      left: `${playerPosition(validWorldSpawn.x, mapCenter.x)}%`,
+                      top: `${playerPosition(validWorldSpawn.z, mapCenter.z)}%`,
+                    }}
+                  >
+                    <span
+                      className="map-view__marker-dot map-view__spawn-marker-dot"
+                      aria-hidden="true"
+                    />
+                    <span className="map-view__marker-name">
+                      {t('map.surface.spawn', {
+                        x: Math.round(validWorldSpawn.x),
+                        z: Math.round(validWorldSpawn.z),
+                      })}
+                    </span>
+                  </div>
                 )}
                 {visibleMarkers.map((marker) => (
                   <div

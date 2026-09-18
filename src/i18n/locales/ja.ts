@@ -787,6 +787,7 @@ export const ja: TranslationDictionary = {
       coordinateJumpAction: '移動',
       coordinateInvalid: 'XとZには-30,000,000から30,000,000までの値を入力してください。',
       worldBorder: 'ワールド境界',
+      spawn: 'ワールドスポーン地点 ({x}, {z})',
     },
     worldStatus: {
       title: 'ワールド情報',
