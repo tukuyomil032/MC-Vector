@@ -22,6 +22,7 @@ impl RegionIndex {
         &self.present_chunks
     }
 
+    #[cfg(test)]
     pub fn contains_chunk(&self, chunk_x: i64, chunk_z: i64) -> bool {
         self.present_chunks
             .iter()

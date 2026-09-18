@@ -77,6 +77,7 @@ impl LiveSnapshotCache {
         self.entries.retain(|key, _| key.server_id != server_id);
     }
 
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
