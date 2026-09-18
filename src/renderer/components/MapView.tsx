@@ -29,6 +29,7 @@ import { useTranslation } from '../../i18n';
 import {
   type MapBridgeState,
   type MapPlayer,
+  type MapRenderProgressEvent,
   type MapStatus,
   type MapTileReadyEvent,
   getMapWorldInfo,
@@ -38,6 +39,7 @@ import {
   normalizeMapTileBytes,
   onMapBridgeStatus,
   onMapPlayersUpdated,
+  onMapRenderProgress,
   onMapTileInvalidated,
   onMapTileReady,
   pauseMap,
@@ -102,6 +104,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [requestedTileKeys, setRequestedTileKeys] = useState<string[]>([]);
   const [tileError, setTileError] = useState<string | null>(null);
   const [isTileLoading, setIsTileLoading] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<MapRenderProgressEvent | null>(null);
   const [zoom, setZoom] = useState(2);
   const [mapCenter, setMapCenter] = useState<MapCenter>({ x: 0, z: 0 });
   const [tileRevision, setTileRevision] = useState(0);
@@ -141,6 +144,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     tilesRef.current = [];
     setTiles([]);
     setTileError(null);
+    setRenderProgress(null);
     setTileStates({});
     setRequestedTileKeys([]);
     setIsTileLoading(false);
@@ -179,6 +183,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     let unlistenPlayers: (() => void) | undefined;
     let unlistenTiles: (() => void) | undefined;
     let unlistenTileReady: (() => void) | undefined;
+    let unlistenRenderProgress: (() => void) | undefined;
 
     void onMapBridgeStatus((event) => {
       if (event.serverId !== server.id) {
@@ -251,12 +256,26 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       unlistenTileReady = unlisten;
     });
 
+    void onMapRenderProgress((event) => {
+      if (event.serverId !== server.id || event.worldId !== 'overworld') {
+        return;
+      }
+      setRenderProgress(event);
+    }).then((unlisten) => {
+      if (cancelled) {
+        unlisten();
+        return;
+      }
+      unlistenRenderProgress = unlisten;
+    });
+
     return () => {
       cancelled = true;
       unlistenBridge?.();
       unlistenPlayers?.();
       unlistenTiles?.();
       unlistenTileReady?.();
+      unlistenRenderProgress?.();
     };
   }, [server.id]);
 
@@ -272,6 +291,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       setTileStates({});
       setRequestedTileKeys([]);
       setIsTileLoading(false);
+      setRenderProgress(null);
       return;
     }
     let cancelled = false;
@@ -279,6 +299,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     const previousTiles = tilesRef.current;
     setIsTileLoading(true);
     setTileError(null);
+    setRenderProgress(null);
     setTileStates({});
     const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
     const tileWorldSize = TILE_SIZE * blocksPerPixel;
@@ -656,6 +677,15 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         return null;
     }
   })();
+  const progressPercentage = renderProgress
+    ? Math.min(
+        100,
+        Math.max(
+          0,
+          renderProgress.total > 0 ? (renderProgress.completed / renderProgress.total) * 100 : 0,
+        ),
+      )
+    : 0;
 
   return (
     <div className="map-view" data-testid="map-view">
@@ -730,6 +760,11 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 {isTileLoading && (
                   <span className="map-view__tile-status" role="status">
                     {t('map.surface.loadingTiles')}
+                    {renderProgress && renderProgress.total > 0 && (
+                      <span className="map-view__tile-status-progress">
+                        {renderProgress.completed}/{renderProgress.total}
+                      </span>
+                    )}
                   </span>
                 )}
                 <span className="map-view__zoom-label">
@@ -774,6 +809,21 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               role="button"
               aria-label={t('map.surface.overworld')}
             >
+              {isTileLoading && renderProgress && (
+                <div
+                  className="map-view__tile-progress"
+                  role="progressbar"
+                  aria-label={t('map.surface.loadingTiles')}
+                  aria-valuemin={0}
+                  aria-valuemax={renderProgress.total || 1}
+                  aria-valuenow={renderProgress.completed}
+                >
+                  <span
+                    className="map-view__tile-progress-value"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+              )}
               <div
                 className="map-view__canvas-content"
                 style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}
