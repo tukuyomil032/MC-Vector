@@ -31,6 +31,7 @@ use crate::map::tiles::{
 use crate::map::world::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files, is_air_state,
     present_chunks_for_bounds, read_complete_chunk, read_level_metadata, ChunkKey, ChunkView,
+    LiveSnapshotCache,
 };
 
 const MAP_PROTOCOL_VERSION: u32 = 2;
@@ -152,20 +153,6 @@ struct RuntimeBridgeStatus {
 
 type TileCacheKey = TileKey;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-struct LiveChunkKey {
-    server_id: String,
-    dimension: String,
-    chunk_x: i64,
-    chunk_z: i64,
-}
-
-#[derive(Clone, Debug)]
-struct CachedLiveChunk {
-    received_at: u64,
-    snapshot: ChunkView,
-}
-
 type LiveChunkMap = HashMap<(i64, i64), ChunkView>;
 
 #[derive(Clone)]
@@ -178,7 +165,7 @@ pub struct MapBridgeManager {
     asset_cache: Arc<StdMutex<HashMap<String, Arc<MapAssets>>>>,
     sessions: Arc<Mutex<HashMap<String, BridgeSender>>>,
     pending_snapshots: Arc<Mutex<HashMap<String, PendingSnapshotSender>>>,
-    live_snapshots: Arc<Mutex<HashMap<LiveChunkKey, CachedLiveChunk>>>,
+    live_snapshots: Arc<Mutex<LiveSnapshotCache>>,
     tile_scheduler: Arc<TileScheduler>,
 }
 
@@ -192,7 +179,7 @@ impl Default for MapBridgeManager {
             asset_cache: Arc::default(),
             sessions: Arc::default(),
             pending_snapshots: Arc::default(),
-            live_snapshots: Arc::default(),
+            live_snapshots: Arc::new(Mutex::new(LiveSnapshotCache::new(2_000))),
             tile_scheduler: Arc::new(TileScheduler::new(64, 2)),
         }
     }
@@ -1147,12 +1134,11 @@ async fn invalidate_chunk_tiles(
             && dimension_matches_world(&key.world_id, dimension)
             && crate::map::tiles::tile_intersects_chunk(key, chunk_x, chunk_z))
     });
-    manager.live_snapshots.lock().await.retain(|key, _| {
-        !(key.server_id == server_id
-            && key.dimension == dimension
-            && key.chunk_x == chunk_x
-            && key.chunk_z == chunk_z)
-    });
+    manager
+        .live_snapshots
+        .lock()
+        .await
+        .remove(server_id, &ChunkKey::new(dimension, chunk_x, chunk_z));
 }
 
 async fn read_bridge_line<R>(reader: &mut R) -> Result<Option<Vec<u8>>, String>
@@ -1184,17 +1170,16 @@ async fn request_live_chunk(
     chunk_x: i64,
     chunk_z: i64,
 ) -> Option<ChunkView> {
-    let cache_key = LiveChunkKey {
-        server_id: server_id.to_string(),
-        dimension: dimension.to_string(),
-        chunk_x,
-        chunk_z,
-    };
+    let chunk_key = ChunkKey::new(dimension, chunk_x, chunk_z);
     let now = current_timestamp();
-    if let Some(cached) = manager.live_snapshots.lock().await.get(&cache_key).cloned() {
-        if now.saturating_sub(cached.received_at) <= 2 {
-            return Some(cached.snapshot);
-        }
+    if let Some(cached) =
+        manager
+            .live_snapshots
+            .lock()
+            .await
+            .get(server_id, &chunk_key, now.saturating_mul(1_000))
+    {
+        return Some(cached);
     }
 
     let sender = manager.sessions.lock().await.get(server_id).cloned()?;
@@ -1227,11 +1212,9 @@ async fn request_live_chunk(
                 && snapshot.key.chunk_z == chunk_z =>
         {
             manager.live_snapshots.lock().await.insert(
-                cache_key,
-                CachedLiveChunk {
-                    received_at: current_timestamp(),
-                    snapshot: snapshot.clone(),
-                },
+                server_id,
+                snapshot.clone(),
+                current_timestamp().saturating_mul(1_000),
             );
             Some(snapshot)
         }
@@ -2059,7 +2042,7 @@ pub async fn remove_map_component(
         .live_snapshots
         .lock()
         .await
-        .retain(|key, _| key.server_id != server_id);
+        .remove_server(&server_id);
     manager
         .asset_cache
         .lock()

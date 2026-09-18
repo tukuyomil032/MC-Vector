@@ -18,9 +18,15 @@ struct CachedSnapshot {
     view: ChunkView,
 }
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+struct LiveSnapshotKey {
+    server_id: String,
+    chunk: ChunkKey,
+}
+
 #[derive(Clone, Debug)]
 pub struct LiveSnapshotCache {
-    entries: HashMap<ChunkKey, CachedSnapshot>,
+    entries: HashMap<LiveSnapshotKey, CachedSnapshot>,
     max_age_ms: u64,
 }
 
@@ -32,11 +38,15 @@ impl LiveSnapshotCache {
         }
     }
 
-    pub fn insert(&mut self, view: ChunkView, received_at: u64) {
+    pub fn insert(&mut self, server_id: &str, view: ChunkView, received_at: u64) {
         let mut cached_view = view;
         cached_view.source = ChunkSourceKind::CachedLive;
+        let key = LiveSnapshotKey {
+            server_id: server_id.to_string(),
+            chunk: cached_view.key.clone(),
+        };
         self.entries.insert(
-            cached_view.key.clone(),
+            key,
             CachedSnapshot {
                 received_at,
                 view: cached_view,
@@ -44,16 +54,27 @@ impl LiveSnapshotCache {
         );
     }
 
-    pub fn get(&self, key: &ChunkKey, now: u64) -> Option<ChunkView> {
-        let cached = self.entries.get(key)?;
+    pub fn get(&self, server_id: &str, key: &ChunkKey, now: u64) -> Option<ChunkView> {
+        let cache_key = LiveSnapshotKey {
+            server_id: server_id.to_string(),
+            chunk: key.clone(),
+        };
+        let cached = self.entries.get(&cache_key)?;
         if now.saturating_sub(cached.received_at) > self.max_age_ms {
             return None;
         }
         Some(cached.view.clone())
     }
 
-    pub fn remove(&mut self, key: &ChunkKey) {
-        self.entries.remove(key);
+    pub fn remove(&mut self, server_id: &str, key: &ChunkKey) {
+        self.entries.remove(&LiveSnapshotKey {
+            server_id: server_id.to_string(),
+            chunk: key.clone(),
+        });
+    }
+
+    pub fn remove_server(&mut self, server_id: &str) {
+        self.entries.retain(|key, _| key.server_id != server_id);
     }
 
     pub fn len(&self) -> usize {
@@ -272,12 +293,13 @@ mod tests {
         let view = decode_live_snapshot(&payload("minecraft:overworld", 42)).expect("decode");
         let key = view.key.clone();
         let mut cache = LiveSnapshotCache::new(1_000);
-        cache.insert(view, 10_000);
+        cache.insert("server-1", view, 10_000);
         assert_eq!(
-            cache.get(&key, 11_000).expect("fresh").source,
+            cache.get("server-1", &key, 11_000).expect("fresh").source,
             ChunkSourceKind::CachedLive
         );
-        assert!(cache.get(&key, 11_001).is_none());
+        assert!(cache.get("server-1", &key, 11_001).is_none());
+        assert!(cache.get("other-server", &key, 10_000).is_none());
         assert_eq!(cache.len(), 1);
     }
 }
