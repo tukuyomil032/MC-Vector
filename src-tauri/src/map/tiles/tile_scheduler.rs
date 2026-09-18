@@ -1,25 +1,29 @@
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use tokio::sync::Notify;
 
 use super::tile_key::TileKey;
-use super::tile_queue::{TilePriority, TileQueue};
+use super::tile_queue::{EnqueueResult, TilePriority, TileQueue};
 
 struct SchedulerState {
     queue: TileQueue,
     active: usize,
+    cancelled: HashSet<(TileKey, u64)>,
 }
 
 struct PendingRequestGuard {
     scheduler: Arc<TileScheduler>,
     key: Option<TileKey>,
+    sequence: u64,
 }
 
 impl PendingRequestGuard {
-    fn new(scheduler: Arc<TileScheduler>, key: TileKey) -> Self {
+    fn new(scheduler: Arc<TileScheduler>, key: TileKey, sequence: u64) -> Self {
         Self {
             scheduler,
             key: Some(key),
+            sequence,
         }
     }
 
@@ -31,7 +35,7 @@ impl PendingRequestGuard {
 impl Drop for PendingRequestGuard {
     fn drop(&mut self) {
         if let Some(key) = self.key.take() {
-            self.scheduler.remove_pending(&key);
+            self.scheduler.remove_pending(&key, self.sequence);
         }
     }
 }
@@ -48,6 +52,7 @@ impl TileScheduler {
             state: Mutex::new(SchedulerState {
                 queue: TileQueue::new(capacity),
                 active: 0,
+                cancelled: HashSet::new(),
             }),
             notify: Notify::new(),
             max_workers: max_workers.max(1),
@@ -59,7 +64,7 @@ impl TileScheduler {
         key: TileKey,
         priority: TilePriority,
     ) -> Result<SchedulerPermit, String> {
-        {
+        let sequence = {
             let mut state = self
                 .state
                 .lock()
@@ -67,12 +72,24 @@ impl TileScheduler {
             if state.queue.contains(&key) {
                 return Err("Map tile render request is already scheduled".to_string());
             }
-            if !state.queue.enqueue(key.clone(), priority) {
-                return Err("Map tile render queue is full".to_string());
+            match state.queue.enqueue(key.clone(), priority) {
+                EnqueueResult::Inserted { sequence, evicted } => {
+                    if let Some(tile) = evicted {
+                        state.cancelled.insert((tile.key, tile.sequence));
+                    }
+                    sequence
+                }
+                EnqueueResult::Coalesced => {
+                    return Err("Map tile render request is already scheduled".to_string());
+                }
+                EnqueueResult::Full => {
+                    return Err("Map tile render queue is full".to_string());
+                }
             }
-        }
+        };
+        self.notify.notify_waiters();
 
-        let mut pending_guard = PendingRequestGuard::new(Arc::clone(self), key.clone());
+        let mut pending_guard = PendingRequestGuard::new(Arc::clone(self), key.clone(), sequence);
 
         loop {
             let notified = self.notify.notified();
@@ -81,9 +98,18 @@ impl TileScheduler {
                     .state
                     .lock()
                     .map_err(|_| "Map tile scheduler is poisoned".to_string())?;
-                let is_next = state.queue.peek().is_some_and(|tile| tile.key == key);
+                if state.cancelled.remove(&(key.clone(), sequence)) {
+                    return Err(
+                        "Map tile render request was evicted by a higher-priority request"
+                            .to_string(),
+                    );
+                }
+                let is_next = state
+                    .queue
+                    .peek()
+                    .is_some_and(|tile| tile.key == key && tile.sequence == sequence);
                 if is_next && state.active < self.max_workers {
-                    state.queue.pop();
+                    let _ = state.queue.pop();
                     state.active += 1;
                     true
                 } else {
@@ -100,9 +126,10 @@ impl TileScheduler {
         }
     }
 
-    fn remove_pending(&self, key: &TileKey) {
+    fn remove_pending(&self, key: &TileKey, sequence: u64) {
         if let Ok(mut state) = self.state.lock() {
-            state.queue.remove(key);
+            state.queue.remove(key, sequence);
+            state.cancelled.remove(&(key.clone(), sequence));
         }
         self.notify.notify_waiters();
     }
@@ -187,5 +214,96 @@ mod tests {
             .await
             .expect("replacement request should fit after cancellation");
         drop(replacement);
+    }
+
+    #[tokio::test]
+    async fn viewport_admission_evicts_and_wakes_a_lower_priority_waiter() {
+        let scheduler = Arc::new(TileScheduler::new(1, 1));
+        let first = scheduler
+            .acquire(key(1), TilePriority::Viewport)
+            .await
+            .expect("first permit");
+        let scheduler_for_background = Arc::clone(&scheduler);
+        let background = tokio::spawn(async move {
+            scheduler_for_background
+                .acquire(key(2), TilePriority::Background)
+                .await
+        });
+        tokio::task::yield_now().await;
+
+        let scheduler_for_viewport = Arc::clone(&scheduler);
+        let viewport = tokio::spawn(async move {
+            scheduler_for_viewport
+                .acquire(key(3), TilePriority::Viewport)
+                .await
+        });
+        let background_result = tokio::time::timeout(std::time::Duration::from_secs(1), background)
+            .await
+            .expect("evicted waiter should wake")
+            .expect("background task should not panic");
+        let background_error = match background_result {
+            Ok(_) => panic!("evicted request must not acquire a permit"),
+            Err(error) => error,
+        };
+        assert!(background_error.contains("evicted"));
+
+        drop(first);
+        let viewport_permit = viewport
+            .await
+            .expect("viewport task should not panic")
+            .expect("viewport request should acquire after worker release");
+        drop(viewport_permit);
+    }
+
+    #[tokio::test]
+    async fn same_priority_request_still_reports_queue_full() {
+        let scheduler = Arc::new(TileScheduler::new(1, 1));
+        let first = scheduler
+            .acquire(key(1), TilePriority::Viewport)
+            .await
+            .expect("first permit");
+        let scheduler_for_waiter = Arc::clone(&scheduler);
+        let waiting = tokio::spawn(async move {
+            scheduler_for_waiter
+                .acquire(key(2), TilePriority::Adjacent)
+                .await
+        });
+        tokio::task::yield_now().await;
+
+        let result = scheduler.acquire(key(3), TilePriority::Adjacent).await;
+        let error = match result {
+            Ok(_) => panic!("same-priority queue should stay full"),
+            Err(error) => error,
+        };
+        assert_eq!(error, "Map tile render queue is full");
+        waiting.abort();
+        let _ = waiting.await;
+        drop(first);
+    }
+
+    #[tokio::test]
+    async fn duplicate_request_is_rejected_without_consuming_capacity() {
+        let scheduler = Arc::new(TileScheduler::new(1, 1));
+        let first = scheduler
+            .acquire(key(1), TilePriority::Viewport)
+            .await
+            .expect("first permit");
+        let scheduler_for_waiter = Arc::clone(&scheduler);
+        let waiting = tokio::spawn(async move {
+            scheduler_for_waiter
+                .acquire(key(2), TilePriority::Background)
+                .await
+        });
+        tokio::task::yield_now().await;
+
+        let duplicate = scheduler.acquire(key(2), TilePriority::Viewport).await;
+        let error = match duplicate {
+            Ok(_) => panic!("duplicate queued request should be rejected"),
+            Err(error) => error,
+        };
+        assert_eq!(error, "Map tile render request is already scheduled");
+        waiting.abort();
+        let _ = waiting.await;
+        drop(first);
     }
 }
