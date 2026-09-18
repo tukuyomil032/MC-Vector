@@ -369,6 +369,16 @@ fn config_issue(
     })
 }
 
+fn config_read_error(message: impl Into<String>) -> BridgeConfigInspection {
+    BridgeConfigInspection::Invalid(BridgeConfigIssue {
+        state: "invalid".to_string(),
+        reason: "parse_error".to_string(),
+        message: message.into(),
+        managed_by: None,
+        server_id: None,
+    })
+}
+
 fn inspect_bridge_config(
     path: &Path,
     expected_server_id: Option<&str>,
@@ -526,10 +536,14 @@ fn inspect_bridge_config(
 }
 
 fn read_bridge_config(path: &Path) -> Result<Option<BridgeConfig>, String> {
-    match inspect_bridge_config(path, None)? {
-        BridgeConfigInspection::Missing => Ok(None),
-        BridgeConfigInspection::Valid(config) => Ok(Some(config)),
-        BridgeConfigInspection::Invalid(issue) => Err(issue.message),
+    match inspect_bridge_config(path, None) {
+        Err(error) => {
+            log::debug!("Map bridge configuration is unavailable: {error}");
+            Ok(None)
+        }
+        Ok(BridgeConfigInspection::Missing) => Ok(None),
+        Ok(BridgeConfigInspection::Valid(config)) => Ok(Some(config)),
+        Ok(BridgeConfigInspection::Invalid(_)) => Ok(None),
     }
 }
 
@@ -779,7 +793,10 @@ async fn build_status(
 
     let active = existing_normal_file(&paths.active_jar)?;
     let disabled = existing_normal_file(&paths.disabled_jar)?;
-    let metadata = load_metadata(&paths)?;
+    let (metadata, metadata_message) = match load_metadata(&paths) {
+        Ok(metadata) => (metadata, None),
+        Err(error) => (None, Some(error)),
+    };
     let (raw_component, raw_component_message) =
         component_state(active, disabled, metadata.as_ref());
     let artifact = if active {
@@ -789,7 +806,10 @@ async fn build_status(
     } else {
         None
     };
-    let inspection = inspect_bridge_config(&paths.config, Some(server_id))?;
+    let inspection = match inspect_bridge_config(&paths.config, Some(server_id)) {
+        Ok(inspection) => inspection,
+        Err(error) => config_read_error(error),
+    };
     let config = match &inspection {
         BridgeConfigInspection::Valid(config) => Some(config.clone()),
         BridgeConfigInspection::Missing | BridgeConfigInspection::Invalid(_) => None,
@@ -798,7 +818,10 @@ async fn build_status(
         BridgeConfigInspection::Invalid(issue) => Some(issue),
         BridgeConfigInspection::Missing | BridgeConfigInspection::Valid(_) => None,
     };
-    let asset_status = map_assets::source_status(&root)?;
+    let asset_status = match map_assets::source_status(&root) {
+        Ok(status) => status,
+        Err(error) => map_assets::AssetStatus::invalid(error),
+    };
 
     if let Some(config) = config.as_ref() {
         let _ = ensure_bridge_listener(app.clone(), manager, config.clone()).await;
@@ -846,6 +869,7 @@ async fn build_status(
         && bridge != "connected";
     let message = config_issue
         .map(|issue| issue.message.clone())
+        .or(metadata_message)
         .or(component_message)
         .or_else(|| {
             if component == "active" && bridge == "disconnected" {

@@ -112,7 +112,12 @@ pub(crate) fn write_config(server_root: &Path, config: &AssetConfig) -> Result<(
 }
 
 pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
-    let configured = configured_source(server_root)?;
+    let configured = match configured_source(server_root) {
+        Ok(configured) => configured,
+        Err(error) => {
+            return Ok(AssetStatus::invalid(error));
+        }
+    };
     let source = configured.clone().or_else(detect_vanilla_source);
     let Some(source) = source else {
         return Ok(AssetStatus {
@@ -235,6 +240,24 @@ pub(crate) struct AssetStatus {
     pub quality: String,
     pub unresolved_blockstate_count: usize,
     pub message: Option<String>,
+}
+
+impl AssetStatus {
+    pub(crate) fn invalid(message: impl Into<String>) -> Self {
+        Self {
+            state: "invalid".to_string(),
+            source_path: None,
+            identity: None,
+            blockstate_count: 0,
+            model_count: 0,
+            texture_count: 0,
+            animated_texture_count: 0,
+            minecraft_version: None,
+            quality: "invalid".to_string(),
+            unresolved_blockstate_count: 0,
+            message: Some(message.into()),
+        }
+    }
 }
 
 fn configured_source(server_root: &Path) -> Result<Option<PathBuf>, String> {
