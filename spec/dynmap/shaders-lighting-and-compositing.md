@@ -25,6 +25,14 @@ The first release implements one deterministic Iso HD profile with:
 - water, leaves, glass, ice, and snow transparency rules;
 - a visible quality/fallback state for missing light or asset data.
 
+The first translated lighting slice is now source-backed rather than a
+height-based approximation. `TexturePackHDShader.processBlock` supplies the
+directional face coefficients for the no-brightness-table branch, and
+`ShadowHDLighting` supplies the 16-level shadow curve. MC-Vector keeps those
+inputs in Rust-specific `Face::dynmap_shade`, `shadow_scale`, and
+`shade_surface` functions; it does not copy Dynmap's Bukkit iterator or Java
+lighting objects.
+
 Cave, underwater, topology, and user-selectable shader profiles follow after
 the default profile is golden-tested.
 
@@ -52,6 +60,8 @@ the result must carry an unresolved-block diagnostic.
 - `TexturePackHDUnderwaterShader.java`
 - `DynmapCore/src/main/java/org/dynmap/utils/LightLevels.java`
 
-Lighting coefficients and stop/continue behavior are `open` until translated
-code has golden fixtures for terrain, water, foliage, transparent buildings,
-and caves.
+The translated coefficients are covered by focused Rust tests, but full parity
+is still `open`: neighbouring-light smoothing, world brightness tables,
+night/day output, custom shader profiles, and cave/underwater behavior still
+need golden fixtures for terrain, water, foliage, transparent buildings, and
+caves.

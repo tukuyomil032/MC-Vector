@@ -38,6 +38,17 @@ Phase 08 asset resolver and Phase 10 geometry.
 - The Paper smoke fixture now validates the advertised `world_status` and
   `chat_messages` capabilities, and validates the structured world-status
   payload. This is bridge evidence, not renderer parity evidence.
+- The directional face multiplier now follows the no-brightness-table branch
+  in Dynmap's `TexturePackHDShader`: west/east use `0xA0`, the top face uses
+  the even/odd-Y `0xD9`/`0xE6` rule, and bottom/north/south remain unscaled.
+- The previous MC-Vector height-based light approximation was replaced with a
+  translated `ShadowHDLighting` light-level curve. Sky and emitted/block light
+  are clamped to the Minecraft 0..15 range, the stronger source wins, and the
+  20% per-level dropoff is explicit and unit-tested.
+- The translated slice is implemented in `render/geometry.rs`,
+  `render/lighting.rs`, and `render/shader.rs`; it does not yet implement
+  Dynmap's neighbouring-light smoothing, world brightness-table selection, or
+  all selectable lighting profiles.
 
 These are focused slices only. The Phase 11 gate remains open until all-block
 model coverage, custom block renderers, shader/lighting parity, resource-pack
