@@ -1,22 +1,11 @@
+pub(crate) mod application;
 pub mod assets;
+pub(crate) mod domain;
 pub mod projection;
 pub mod render;
 pub mod tile_buffer;
 pub mod tiles;
 pub mod world;
-
-/// Stable world-facing data types consumed by the application and renderer.
-pub(crate) mod domain {
-    pub(crate) use super::world::{ChunkKey, ChunkView};
-}
-
-/// Application-side scheduling, cache, and tile identity services.
-pub(crate) mod application {
-    pub(crate) use super::tiles::{
-        CachedTile, MemoryTileCache, RenderProgress, TileKey, TileMetadata, TilePriority,
-        TileRenderState, TileScheduler, DEFAULT_PERSPECTIVE,
-    };
-}
 
 /// World sources normalize saved Anvil data and live bridge snapshots.
 pub(crate) mod sources {
