@@ -525,7 +525,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const mapTileRequestReady = isMapTileRequestReady(status, diagnosticStatusError);
 
   useEffect(() => {
+    const tileGeneration = mapRequestsRef.current.beginTileGeneration();
     if (!mapTileRequestReady) {
+      mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
       revokeTiles(tilesRef.current);
       tilesRef.current = [];
       setTiles([]);
@@ -559,17 +561,21 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         requests.map(async ({ x, y }): Promise<MapTile | null> => {
           const tileKey = `${server.id}:${worldId}:${zoom}:${x}:${y}`;
           try {
-            const bytes = await mapRequestsRef.current.requestTile(tileKey, async () => {
-              const buffer = await getMapTile(server.id, worldId, zoom, x, y);
-              const nextBytes = normalizeMapTileBytes(buffer);
-              if (
-                nextBytes.length < 8 ||
-                !nextBytes.slice(0, 8).every((value, index) => value === PNG_SIGNATURE[index])
-              ) {
-                throw new Error('Map tile response was not a valid PNG');
-              }
-              return nextBytes;
-            });
+            const bytes = await mapRequestsRef.current.requestTile(
+              tileKey,
+              async () => {
+                const buffer = await getMapTile(server.id, worldId, zoom, x, y);
+                const nextBytes = normalizeMapTileBytes(buffer);
+                if (
+                  nextBytes.length < 8 ||
+                  !nextBytes.slice(0, 8).every((value, index) => value === PNG_SIGNATURE[index])
+                ) {
+                  throw new Error('Map tile response was not a valid PNG');
+                }
+                return nextBytes;
+              },
+              tileGeneration,
+            );
             if (cancelled) {
               return null;
             }
@@ -602,6 +608,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           setIsTileLoading(false);
         }
       });
+      mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
     }, VIEWPORT_DEBOUNCE_MS);
 
     return () => {

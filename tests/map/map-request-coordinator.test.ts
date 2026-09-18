@@ -37,12 +37,56 @@ describe('createMapRequestCoordinator', () => {
     const first = coordinator.requestTile('z/x/y', request);
     const second = coordinator.requestTile('z/x/y', request);
 
+    await Promise.resolve();
     expect(request).toHaveBeenCalledTimes(1);
     expect(second).toBe(first);
 
     requestGate.resolve('tile');
     await expect(first).resolves.toBe('tile');
     await expect(second).resolves.toBe('tile');
+  });
+
+  it('coalesces a tile when a newer generation requests it before it starts', async () => {
+    const firstGate = deferred<void>();
+    const sharedRequest = vi.fn(() => Promise.resolve('shared tile'));
+    const coordinator = createMapRequestCoordinator({ maxInFlightTiles: 1 });
+    const firstGeneration = coordinator.beginTileGeneration();
+    const first = coordinator.requestTile('old', () => firstGate.promise, firstGeneration);
+    const queued = coordinator.requestTile('shared', sharedRequest, firstGeneration);
+
+    const secondGeneration = coordinator.beginTileGeneration();
+    const shared = coordinator.requestTile('shared', sharedRequest, secondGeneration);
+    coordinator.cleanupTileGeneration(secondGeneration);
+
+    expect(shared).toBe(queued);
+    expect(sharedRequest).not.toHaveBeenCalled();
+
+    firstGate.resolve(undefined);
+    await expect(first).resolves.toBeUndefined();
+    await expect(shared).resolves.toBe('shared tile');
+    expect(sharedRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes stale queued tiles and starts the newest generation first', async () => {
+    const firstGate = deferred<void>();
+    const staleRequest = vi.fn(() => Promise.resolve('stale tile'));
+    const newestRequest = vi.fn(() => Promise.resolve('new tile'));
+    const coordinator = createMapRequestCoordinator({ maxInFlightTiles: 1 });
+    const firstGeneration = coordinator.beginTileGeneration();
+    const first = coordinator.requestTile('first', () => firstGate.promise, firstGeneration);
+    const stale = coordinator.requestTile('stale', staleRequest, firstGeneration);
+
+    const secondGeneration = coordinator.beginTileGeneration();
+    const newest = coordinator.requestTile('newest', newestRequest, secondGeneration);
+    coordinator.cleanupTileGeneration(secondGeneration);
+
+    await expect(stale).rejects.toThrow('superseded by a newer viewport');
+    expect(staleRequest).not.toHaveBeenCalled();
+
+    firstGate.resolve(undefined);
+    await expect(first).resolves.toBeUndefined();
+    await expect(newest).resolves.toBe('new tile');
+    expect(newestRequest).toHaveBeenCalledTimes(1);
   });
 
   it('allows a failed render and tile request to be retried', async () => {
@@ -68,7 +112,7 @@ describe('createMapRequestCoordinator', () => {
     expect(tileRequest).toHaveBeenCalledTimes(2);
   });
 
-  it('can be reused for the same keys after clear', async () => {
+  it('keeps an active tile request coalesced while clearing queued work', async () => {
     const firstRender = deferred<void>();
     const secondRender = deferred<void>();
     const renderRequest = vi
@@ -76,15 +120,14 @@ describe('createMapRequestCoordinator', () => {
       .mockImplementationOnce(() => firstRender.promise)
       .mockImplementationOnce(() => secondRender.promise);
     const firstTile = deferred<string>();
-    const secondTile = deferred<string>();
     const tileRequest = vi
       .fn<() => Promise<string>>()
-      .mockImplementationOnce(() => firstTile.promise)
-      .mockImplementationOnce(() => secondTile.promise);
-    const coordinator = createMapRequestCoordinator();
+      .mockImplementationOnce(() => firstTile.promise);
+    const coordinator = createMapRequestCoordinator({ maxInFlightTiles: 1 });
 
     const renderBeforeClear = coordinator.requestRender('viewport', renderRequest);
     const tileBeforeClear = coordinator.requestTile('z/x/y', tileRequest);
+    const queuedTile = coordinator.requestTile('queued', tileRequest);
 
     coordinator.clear();
 
@@ -92,14 +135,14 @@ describe('createMapRequestCoordinator', () => {
     const tileAfterClear = coordinator.requestTile('z/x/y', tileRequest);
 
     expect(renderAfterClear).not.toBe(renderBeforeClear);
-    expect(tileAfterClear).not.toBe(tileBeforeClear);
+    expect(tileAfterClear).toBe(tileBeforeClear);
     expect(renderRequest).toHaveBeenCalledTimes(2);
-    expect(tileRequest).toHaveBeenCalledTimes(2);
+    await expect(queuedTile).rejects.toThrow('superseded by a newer viewport');
+    expect(tileRequest).toHaveBeenCalledTimes(1);
 
     firstRender.resolve(undefined);
     secondRender.resolve(undefined);
     firstTile.resolve('first tile');
-    secondTile.resolve('second tile');
     await Promise.all([renderBeforeClear, renderAfterClear, tileBeforeClear, tileAfterClear]);
   });
 });
