@@ -134,6 +134,17 @@ impl AssetResolver {
         Some(texture.sample_uv(face.uv, face.rotation, u, v))
     }
 
+    pub(crate) fn sample_resolved_face(
+        &self,
+        face: &ResolvedFace,
+        u: f32,
+        v: f32,
+    ) -> Option<[u8; 4]> {
+        self.textures
+            .get(&face.texture)
+            .map(|texture| texture.sample_uv(face.uv, face.rotation, u, v))
+    }
+
     pub(crate) fn has_blockstate(&self, state: &str) -> bool {
         let block_id = state.split_once('|').map_or(state, |(id, _)| id);
         self.blockstates.contains_key(block_id)

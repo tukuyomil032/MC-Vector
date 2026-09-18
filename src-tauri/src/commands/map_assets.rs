@@ -8,7 +8,8 @@ use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
 use crate::map::assets::{
-    manifest_quality, source_version, AssetManifest, AssetResolver, ASSET_MANIFEST_VERSION,
+    manifest_quality, source_version, AssetManifest, AssetResolver, RenderFace,
+    ASSET_MANIFEST_VERSION,
 };
 
 const ASSET_CONFIG_NAME: &str = "map-assets.json";
@@ -57,6 +58,35 @@ impl MapAssets {
             .sample_face_at(&encoded, face, u, v)
             .map(|color| {
                 crate::map::assets::apply_tint(color, crate::map::assets::tint_for(&encoded, biome))
+            })
+            .unwrap_or_else(|| fallback_block_colour(&block_id))
+    }
+
+    pub(crate) fn model_faces(&self, state: &str) -> Option<Vec<RenderFace>> {
+        let (encoded, _) = encode_state(state);
+        self.resolver.appearance(&encoded)
+    }
+
+    pub(crate) fn sample_model_face(
+        &self,
+        state: &str,
+        biome: &str,
+        face: &RenderFace,
+        u: f32,
+        v: f32,
+    ) -> [u8; 4] {
+        let (_, block_id) = encode_state(state);
+        self.resolver
+            .sample_resolved_face(face, u, v)
+            .map(|color| {
+                if face.tint_index.is_some() {
+                    crate::map::assets::apply_tint(
+                        color,
+                        crate::map::assets::tint_for(&block_id, biome),
+                    )
+                } else {
+                    color
+                }
             })
             .unwrap_or_else(|| fallback_block_colour(&block_id))
     }

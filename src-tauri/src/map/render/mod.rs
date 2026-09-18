@@ -10,6 +10,8 @@ mod voxel_traversal;
 
 use std::collections::HashMap;
 
+use crate::map::assets::{RenderFace, RenderFaceDirection};
+
 use self::compositing::alpha_over;
 pub(crate) use self::geometry::Face;
 use self::iso::IsoHDPerspective;
@@ -33,19 +35,41 @@ pub(crate) struct RenderedSurfaceTile {
     pub(crate) coverage_ratio: f32,
 }
 
+pub(crate) fn render_surface_tile<F, C>(
+    bounds: TileWorldBounds,
+    sample_surface: F,
+    sample_color: C,
+) -> Result<RenderedSurfaceTile, String>
+where
+    F: FnMut(i64, i64) -> Option<SurfaceSample>,
+    C: FnMut(&SurfaceSample, Face, f32, f32) -> [u8; 4],
+{
+    render_surface_tile_with_models(
+        bounds,
+        sample_surface,
+        sample_color,
+        |_sample| None,
+        |_sample, _face, _u, _v| [0, 0, 0, 0],
+    )
+}
+
 /// Render a surface tile using the same useful property as Dynmap's HD
 /// perspective: a column is projected with a non-zero camera elevation, and
 /// the visible top and side faces are composited from far to near. The input
 /// source remains column-oriented so Anvil and Paper snapshots can share the
 /// renderer without moving NBT or Bukkit work into this module.
-pub(crate) fn render_surface_tile<F, C>(
+pub(crate) fn render_surface_tile_with_models<F, C, M, MC>(
     bounds: TileWorldBounds,
     mut sample_surface: F,
     mut sample_color: C,
+    mut model_for: M,
+    mut sample_model_color: MC,
 ) -> Result<RenderedSurfaceTile, String>
 where
     F: FnMut(i64, i64) -> Option<SurfaceSample>,
     C: FnMut(&SurfaceSample, Face, f32, f32) -> [u8; 4],
+    M: FnMut(&SurfaceSample) -> Option<Vec<RenderFace>>,
+    MC: FnMut(&SurfaceSample, &RenderFace, f32, f32) -> [u8; 4],
 {
     let width = bounds.tile_size;
     let height = bounds.tile_size;
@@ -61,6 +85,7 @@ where
         z: i64,
         sample: SurfaceSample,
         side_depth: i32,
+        model_faces: Option<Vec<RenderFace>>,
     }
 
     let center_x = bounds.origin_x as f64 + (bounds.tile_size as f64 * step as f64) / 2.0;
@@ -97,12 +122,14 @@ where
             let depth = (world_x - bounds.origin_x) as f64 * 0.70710678
                 + (world_z - bounds.origin_z) as f64 * 0.70710678
                 - sample.y as f64 * 0.35;
+            let model_faces = model_for(&sample);
             columns.push(ProjectedColumn {
                 depth,
                 x: world_x,
                 z: world_z,
                 sample,
                 side_depth,
+                model_faces,
             });
         }
     }
@@ -119,6 +146,65 @@ where
         let z = column.z as f64;
         let x2 = x + step as f64;
         let z2 = z + step as f64;
+
+        if let Some(model_faces) = column
+            .model_faces
+            .as_ref()
+            .filter(|faces| !faces.is_empty())
+        {
+            let mut projected_faces = model_faces
+                .iter()
+                .map(|face| {
+                    let points = face.vertices.map(|point| {
+                        (
+                            column.x as f64 + f64::from(point[0]) / 16.0,
+                            column.sample.y as f64 + f64::from(point[1]) / 16.0,
+                            column.z as f64 + f64::from(point[2]) / 16.0,
+                        )
+                    });
+                    let depth = points
+                        .iter()
+                        .map(|(point_x, point_y, point_z)| {
+                            (*point_x - bounds.origin_x as f64) * 0.70710678
+                                + (*point_z - bounds.origin_z as f64) * 0.70710678
+                                - *point_y * 0.35
+                        })
+                        .sum::<f64>()
+                        / 4.0;
+                    let polygon = project_quad(
+                        &perspective,
+                        points,
+                        center_x,
+                        center_y,
+                        center_z,
+                        scale,
+                        width,
+                        height,
+                    );
+                    (depth, face, polygon)
+                })
+                .collect::<Vec<_>>();
+            projected_faces.sort_by(|left, right| right.0.total_cmp(&left.0));
+            for (_, face, polygon) in projected_faces {
+                let direction = render_face_direction(face.direction);
+                raster_polygon_textured(&mut pixels, width, height, &polygon, |u, v| {
+                    let color = sample_model_color(&column.sample, face, u, v);
+                    if face.shade {
+                        shade_surface(
+                            color,
+                            column.sample.y,
+                            column.sample.sky_light,
+                            column.sample.block_light,
+                            direction,
+                            1.0,
+                        )
+                    } else {
+                        color
+                    }
+                });
+            }
+            continue;
+        }
 
         let top_face = project_quad(
             &perspective,
@@ -208,6 +294,17 @@ where
         rendered_column_count,
         coverage_ratio: covered_pixels as f32 / (width * height).max(1) as f32,
     })
+}
+
+fn render_face_direction(direction: RenderFaceDirection) -> Face {
+    match direction {
+        RenderFaceDirection::Down => Face::Down,
+        RenderFaceDirection::Up => Face::Up,
+        RenderFaceDirection::North => Face::North,
+        RenderFaceDirection::South => Face::South,
+        RenderFaceDirection::West => Face::West,
+        RenderFaceDirection::East => Face::East,
+    }
 }
 
 fn project_quad(
@@ -358,5 +455,37 @@ mod tests {
             colours.len() > 4,
             "projected faces should sample more than one texel"
         );
+    }
+
+    #[test]
+    fn rasterizes_resolved_model_face() {
+        let bounds = TileWorldBounds::new(32, 8, 8, 0, 0).expect("valid bounds");
+        let face = RenderFace {
+            direction: RenderFaceDirection::Up,
+            vertices: [
+                [0.0, 16.0, 0.0],
+                [16.0, 16.0, 0.0],
+                [16.0, 16.0, 16.0],
+                [0.0, 16.0, 16.0],
+            ],
+            texture: "minecraft:test".to_string(),
+            uv: [0.0, 0.0, 16.0, 16.0],
+            rotation: 0,
+            tint_index: None,
+            shade: false,
+        };
+        let rendered = render_surface_tile_with_models(
+            bounds,
+            sample,
+            |_surface, _face, _u, _v| [0, 0, 0, 0],
+            move |_surface| Some(vec![face.clone()]),
+            |_surface, _face, _u, _v| [230, 80, 40, 255],
+        )
+        .expect("model face should render");
+
+        assert!(rendered
+            .pixels
+            .chunks_exact(4)
+            .any(|pixel| pixel[0] == 230 && pixel[1] == 80 && pixel[2] == 40));
     }
 }

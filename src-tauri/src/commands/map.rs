@@ -22,7 +22,7 @@ use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot
 use super::map_assets::{self, MapAssets};
 use super::server::ServerManager;
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
-use crate::map::render::{render_surface_tile, shade_surface, Face, SurfaceSample};
+use crate::map::render::{render_surface_tile_with_models, shade_surface, Face, SurfaceSample};
 use crate::map::tile_buffer::RgbaTileBuffer;
 use crate::map::tiles::{
     MemoryTileCache, TileKey, TilePriority, TileScheduler, DEFAULT_PERSPECTIVE,
@@ -2672,7 +2672,10 @@ fn render_world_tile_detailed(
     let mut diagnostic = None;
     let mut rendered_chunks = HashSet::new();
     let live_chunk = live_chunk.cloned();
-    let rendered = render_surface_tile(
+    let mut model_cache: HashMap<(String, String), Option<Vec<crate::map::assets::RenderFace>>> =
+        HashMap::new();
+    let assets_for_models = assets;
+    let rendered = render_surface_tile_with_models(
         bounds,
         |world_x, world_z| {
             let chunk_x = floor_div(world_x, 16);
@@ -2698,6 +2701,21 @@ fn render_world_tile_detailed(
             sample
         },
         |sample, face, u, v| surface_face_colour(sample, assets, face, u, v),
+        |sample| {
+            let Some(assets) = assets_for_models else {
+                return None;
+            };
+            let key = (sample.state.clone(), sample.biome.clone());
+            model_cache
+                .entry(key)
+                .or_insert_with(|| assets.model_faces(&sample.state))
+                .clone()
+        },
+        |sample, face, u, v| {
+            assets_for_models
+                .map(|assets| assets.sample_model_face(&sample.state, &sample.biome, face, u, v))
+                .unwrap_or_else(|| map_assets::fallback_block_colour(&sample.state))
+        },
     )?;
     let pixels = rgba_pixels_to_scanlines(&rendered.pixels, TILE_SIZE as usize, TILE_SIZE as usize);
     let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &pixels)?;
