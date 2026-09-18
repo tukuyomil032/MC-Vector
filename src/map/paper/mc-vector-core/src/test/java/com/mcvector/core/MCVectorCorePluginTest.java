@@ -1,9 +1,11 @@
 package com.mcvector.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -86,5 +88,72 @@ class MCVectorCorePluginTest {
         assertNotNull(dirty);
         assertEquals(BridgeEventQueue.Kind.DIRTY, dirty.kind());
         assertEquals(null, plugin.eventQueueForTests().poll(0));
+    }
+
+    @Test
+    void servesLoadedChunksWithoutLoadingUnavailableChunks() throws InterruptedException {
+        server.addPlayer("Alex");
+        World world = server.getWorlds().get(0);
+        world.getChunkAt(0, 0);
+        int unloadedChunkX = 1000;
+        int unloadedChunkZ = 1000;
+        assertFalse(world.isChunkLoaded(unloadedChunkX, unloadedChunkZ));
+
+        plugin.handleBridgeMessageForTests(snapshotRequest("loaded", "minecraft:overworld", 0, 0));
+        plugin.handleBridgeMessageForTests(
+                snapshotRequest("unloaded", "minecraft:overworld", unloadedChunkX, unloadedChunkZ));
+
+        plugin.serveSnapshotRequestForTests();
+        BridgeEventQueue.Event snapshot = plugin.eventQueueForTests().poll(0);
+        assertNotNull(snapshot);
+        assertTrue(snapshot.message().contains("\"type\":\"chunk_snapshot\""));
+        assertTrue(snapshot.message().contains("\"requestId\":\"loaded\""));
+        assertTrue(snapshot.message().contains("\"payload\":\""));
+
+        plugin.serveSnapshotRequestForTests();
+        BridgeEventQueue.Event unavailable = plugin.eventQueueForTests().poll(0);
+        assertNotNull(unavailable);
+        assertTrue(unavailable.message().contains("\"type\":\"chunk_snapshot_unavailable\""));
+        assertTrue(unavailable.message().contains("\"requestId\":\"unloaded\""));
+        assertTrue(unavailable.message().contains("\"reason\":\"not_loaded\""));
+        assertFalse(world.isChunkLoaded(unloadedChunkX, unloadedChunkZ));
+    }
+
+    @Test
+    void rejectsDuplicateRequestIdsAndKeepsOneRequestPerTick() throws InterruptedException {
+        plugin.handleBridgeMessageForTests(snapshotRequest("duplicate", "missing-world", 0, 0));
+        plugin.handleBridgeMessageForTests(snapshotRequest("duplicate", "missing-world", 1, 1));
+
+        BridgeEventQueue.Event duplicate = plugin.eventQueueForTests().poll(0);
+        assertNotNull(duplicate);
+        assertTrue(duplicate.message().contains("\"type\":\"chunk_snapshot_unavailable\""));
+        assertTrue(duplicate.message().contains("\"requestId\":\"duplicate\""));
+        assertTrue(duplicate.message().contains("\"reason\":\"duplicate_request\""));
+
+        plugin.handleBridgeMessageForTests(snapshotRequest("second", "missing-world", 2, 2));
+        plugin.serveSnapshotRequestForTests();
+        BridgeEventQueue.Event first = plugin.eventQueueForTests().poll(0);
+        assertNotNull(first);
+        assertTrue(first.message().contains("\"requestId\":\"duplicate\""));
+        assertTrue(first.message().contains("\"reason\":\"world_unavailable\""));
+        assertEquals(null, plugin.eventQueueForTests().poll(0));
+
+        plugin.serveSnapshotRequestForTests();
+        BridgeEventQueue.Event second = plugin.eventQueueForTests().poll(0);
+        assertNotNull(second);
+        assertTrue(second.message().contains("\"requestId\":\"second\""));
+        assertTrue(second.message().contains("\"reason\":\"world_unavailable\""));
+    }
+
+    private static String snapshotRequest(String requestId, String dimension, int chunkX, int chunkZ) {
+        return "{\"type\":\"chunk_snapshot_request\",\"requestId\":\""
+                + requestId
+                + "\",\"dimension\":\""
+                + dimension
+                + "\",\"chunkX\":"
+                + chunkX
+                + ",\"chunkZ\":"
+                + chunkZ
+                + "}";
     }
 }

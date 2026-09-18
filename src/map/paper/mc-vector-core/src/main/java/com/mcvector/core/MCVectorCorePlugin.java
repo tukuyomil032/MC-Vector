@@ -41,6 +41,7 @@ import org.bukkit.scheduler.BukkitTask;
 public class MCVectorCorePlugin extends JavaPlugin implements Listener {
     private static final int QUEUE_CAPACITY = 512;
     private static final int SNAPSHOT_REQUEST_CAPACITY = 128;
+    private static final int SNAPSHOT_REQUESTS_PER_TICK = 1;
     private static final long SNAPSHOT_PERIOD_TICKS = 20L;
 
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
@@ -48,7 +49,7 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
     private final BridgeEventQueue eventQueue = new BridgeEventQueue(QUEUE_CAPACITY);
     private final ConcurrentLinkedQueue<ChunkSnapshotRequest> snapshotRequests =
             new ConcurrentLinkedQueue<>();
-    private final Set<SnapshotCoordinate> queuedSnapshotCoordinates = ConcurrentHashMap.newKeySet();
+    private final Set<String> queuedSnapshotRequestIds = ConcurrentHashMap.newKeySet();
 
     private BukkitTask snapshotTask;
     private BukkitTask snapshotRequestTask;
@@ -169,41 +170,43 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
 
     private void handleInboundMessage(String message) {
         ChunkSnapshotRequest.parse(message).ifPresent(request -> {
-            SnapshotCoordinate coordinate = new SnapshotCoordinate(
-                    request.dimension(), request.chunkX(), request.chunkZ());
-            if (!queuedSnapshotCoordinates.add(coordinate)) {
+            if (!queuedSnapshotRequestIds.add(request.requestId())) {
                 enqueueImmediate(ChunkSnapshotEncoder.unavailable(request, "duplicate_request"));
                 return;
             }
             if (snapshotRequests.size() >= SNAPSHOT_REQUEST_CAPACITY
                     || !snapshotRequests.offer(request)) {
-                queuedSnapshotCoordinates.remove(coordinate);
+                queuedSnapshotRequestIds.remove(request.requestId());
                 enqueueImmediate(ChunkSnapshotEncoder.unavailable(request, "queue_full"));
             }
         });
     }
 
     private void serveSnapshotRequest() {
-        ChunkSnapshotRequest request = snapshotRequests.poll();
-        if (request == null) {
-            return;
+        for (int count = 0; count < SNAPSHOT_REQUESTS_PER_TICK; count++) {
+            ChunkSnapshotRequest request = snapshotRequests.poll();
+            if (request == null) {
+                return;
+            }
+            try {
+                World world = Bukkit.getWorlds().stream()
+                        .filter(candidate -> PlayerSnapshot.dimensionKey(candidate).equals(request.dimension()))
+                        .findFirst()
+                        .orElse(null);
+                if (world == null) {
+                    enqueueImmediate(ChunkSnapshotEncoder.unavailable(request, "world_unavailable"));
+                    continue;
+                }
+                if (!world.isChunkLoaded(request.chunkX(), request.chunkZ())) {
+                    enqueueImmediate(ChunkSnapshotEncoder.unavailable(request, "not_loaded"));
+                    continue;
+                }
+                Chunk chunk = world.getChunkAt(request.chunkX(), request.chunkZ());
+                enqueueImmediate(ChunkSnapshotEncoder.encode(request, world, chunk));
+            } finally {
+                queuedSnapshotRequestIds.remove(request.requestId());
+            }
         }
-        queuedSnapshotCoordinates.remove(
-                new SnapshotCoordinate(request.dimension(), request.chunkX(), request.chunkZ()));
-        World world = Bukkit.getWorlds().stream()
-                .filter(candidate -> PlayerSnapshot.dimensionKey(candidate).equals(request.dimension()))
-                .findFirst()
-                .orElse(null);
-        if (world == null) {
-            enqueueImmediate(ChunkSnapshotEncoder.unavailable(request, "world_unavailable"));
-            return;
-        }
-        if (!world.isChunkLoaded(request.chunkX(), request.chunkZ())) {
-            enqueueImmediate(ChunkSnapshotEncoder.unavailable(request, "not_loaded"));
-            return;
-        }
-        Chunk chunk = world.getChunkAt(request.chunkX(), request.chunkZ());
-        enqueueImmediate(ChunkSnapshotEncoder.encode(request, world, chunk));
     }
 
     private void enqueueImmediate(String message) {
@@ -231,7 +234,12 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
         return eventQueue;
     }
 
-    private record SnapshotCoordinate(String dimension, int chunkX, int chunkZ) {
+    void handleBridgeMessageForTests(String message) {
+        handleInboundMessage(message);
+    }
+
+    void serveSnapshotRequestForTests() {
+        serveSnapshotRequest();
     }
 
     @EventHandler
