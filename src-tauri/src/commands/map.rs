@@ -25,7 +25,8 @@ use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
 use crate::map::render::{render_iso_tile, shade_surface, Face, SurfaceSample};
 use crate::map::tile_buffer::RgbaTileBuffer;
 use crate::map::tiles::{
-    MemoryTileCache, TileKey, TilePriority, TileScheduler, DEFAULT_PERSPECTIVE,
+    MemoryTileCache, RenderProgress, TileKey, TilePriority, TileRenderState, TileScheduler,
+    DEFAULT_PERSPECTIVE,
 };
 use crate::map::world::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files,
@@ -1840,6 +1841,23 @@ fn emit_map_tile_ready(
     );
 }
 
+fn emit_map_render_progress(app: &AppHandle, key: &TileCacheKey, progress: RenderProgress) {
+    let _ = app.emit(
+        "map-render-progress",
+        serde_json::json!({
+            "serverId": key.server_id,
+            "worldId": key.world_id,
+            "zoom": key.zoom,
+            "tileX": key.tile_x,
+            "tileY": key.tile_y,
+            "state": progress.state,
+            "completed": progress.completed,
+            "total": progress.total,
+            "message": progress.message,
+        }),
+    );
+}
+
 #[tauri::command]
 pub async fn get_map_asset_status(
     app: AppHandle,
@@ -2160,6 +2178,7 @@ async fn render_map_tile(
     let tile_permit = manager.tile_scheduler.acquire(key.clone(), priority).await;
     let tile_result: Result<Vec<u8>, String> = async {
         let _tile_permit = tile_permit?;
+        emit_map_render_progress(&app, &key, RenderProgress::rendering(0, 1));
 
         let asset_missing = assets.is_none();
         let dimension = if key.world_id == "overworld" {
@@ -2194,6 +2213,18 @@ async fn render_map_tile(
             Some((rendered.has_terrain, rendered.coverage_ratio)),
             rendered.message.as_deref(),
         );
+        let progress_state = if asset_missing {
+            TileRenderState::AssetMissing
+        } else if rendered.has_terrain {
+            TileRenderState::Terrain
+        } else {
+            TileRenderState::Empty
+        };
+        emit_map_render_progress(
+            &app,
+            &tile_key,
+            RenderProgress::completed(progress_state, rendered.message.clone()),
+        );
 
         manager
             .tile_cache
@@ -2204,6 +2235,10 @@ async fn render_map_tile(
         Ok(tile)
     }
     .await;
+
+    if let Err(error) = &tile_result {
+        emit_map_render_progress(&app, &key, RenderProgress::error(error.clone()));
+    }
 
     finish_inflight_tile(&manager, &key, tile_result)
         .await

@@ -116,6 +116,18 @@ export interface MapTileReadyEvent {
   message?: string | null;
 }
 
+export interface MapRenderProgressEvent {
+  serverId: string;
+  worldId: string;
+  zoom: number;
+  tileX: number;
+  tileY: number;
+  state: MapTileRenderState;
+  completed: number;
+  total: number;
+  message?: string | null;
+}
+
 export function isMapAssetWarningState(state: MapAssetState): boolean {
   return ['missing', 'invalid', 'version_mismatch', 'fallback'].includes(state);
 }
@@ -279,4 +291,10 @@ export function onMapTileInvalidated(
 
 export function onMapTileReady(callback: (event: MapTileReadyEvent) => void): Promise<UnlistenFn> {
   return tauriListen('map-tile-ready', callback);
+}
+
+export function onMapRenderProgress(
+  callback: (event: MapRenderProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return tauriListen('map-render-progress', callback);
 }

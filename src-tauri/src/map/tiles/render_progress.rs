@@ -32,4 +32,22 @@ impl RenderProgress {
             message: None,
         }
     }
+
+    pub(crate) fn completed(state: TileRenderState, message: Option<String>) -> Self {
+        Self {
+            state,
+            completed: 1,
+            total: 1,
+            message,
+        }
+    }
+
+    pub(crate) fn error(message: impl Into<String>) -> Self {
+        Self {
+            state: TileRenderState::Error,
+            completed: 0,
+            total: 1,
+            message: Some(message.into()),
+        }
+    }
 }
