@@ -108,10 +108,21 @@ impl AssetResolver {
     }
 
     pub(crate) fn sample_top_at(&self, encoded_state: &str, u: f32, v: f32) -> Option<[u8; 4]> {
+        self.sample_face_at(encoded_state, "up", u, v)
+    }
+
+    pub(crate) fn sample_face_at(
+        &self,
+        encoded_state: &str,
+        direction: &str,
+        u: f32,
+        v: f32,
+    ) -> Option<[u8; 4]> {
+        let direction = FaceDirection::parse(direction)?;
         let faces = self.appearance(encoded_state)?;
         let face = faces
             .iter()
-            .filter(|face| face.direction == FaceDirection::Up)
+            .filter(|face| face.direction == direction)
             .max_by(|left, right| {
                 let left_height = left.vertices.iter().map(|point| point[1]).sum::<f32>();
                 let right_height = right.vertices.iter().map(|point| point[1]).sum::<f32>();

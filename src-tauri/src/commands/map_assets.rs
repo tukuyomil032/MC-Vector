@@ -57,9 +57,20 @@ impl MapAssets {
         u: f32,
         v: f32,
     ) -> [u8; 4] {
+        self.sample_state_face_at_with_biome(state, biome, "up", u, v)
+    }
+
+    pub(crate) fn sample_state_face_at_with_biome(
+        &self,
+        state: &str,
+        biome: &str,
+        face: &str,
+        u: f32,
+        v: f32,
+    ) -> [u8; 4] {
         let (encoded, block_id) = encode_state(state);
         self.resolver
-            .sample_top_at(&encoded, u, v)
+            .sample_face_at(&encoded, face, u, v)
             .map(|color| {
                 crate::map::assets::apply_tint(color, crate::map::assets::tint_for(&encoded, biome))
             })
