@@ -60,9 +60,6 @@ where
         x: i64,
         z: i64,
         sample: SurfaceSample,
-        top: [u8; 4],
-        north: [u8; 4],
-        west: [u8; 4],
         side_depth: i32,
     }
 
@@ -90,37 +87,6 @@ where
             let Some(sample) = cached_surface(world_x, world_z) else {
                 continue;
             };
-            let neighbour_height = cached_surface(world_x + step, world_z).map(|value| value.y);
-            let gradient = perspective.height_shade(sample.y, neighbour_height);
-            let u = (world_x.rem_euclid(16) as f32 + 0.5) / 16.0;
-            let v = (world_z.rem_euclid(16) as f32 + 0.5) / 16.0;
-            let base = sample_color(&sample, Face::Up, u, v);
-            let top = shade_surface(
-                base,
-                sample.y,
-                sample.sky_light,
-                sample.block_light,
-                Face::Up,
-                gradient,
-            );
-            let north_base = sample_color(&sample, Face::North, u, v);
-            let north = shade_surface(
-                north_base,
-                sample.y,
-                sample.sky_light,
-                sample.block_light,
-                Face::North,
-                1.0,
-            );
-            let west_base = sample_color(&sample, Face::West, u, v);
-            let west = shade_surface(
-                west_base,
-                sample.y,
-                sample.sky_light,
-                sample.block_light,
-                Face::West,
-                1.0,
-            );
             let west_height = cached_surface(world_x - step, world_z)
                 .map(|value| sample.y.saturating_sub(value.y))
                 .unwrap_or(4);
@@ -136,9 +102,6 @@ where
                 x: world_x,
                 z: world_z,
                 sample,
-                top,
-                north,
-                west,
                 side_depth,
             });
         }
@@ -202,9 +165,39 @@ where
             width,
             height,
         );
-        raster_polygon(&mut pixels, width, height, &north_face, column.north);
-        raster_polygon(&mut pixels, width, height, &west_face, column.west);
-        raster_polygon(&mut pixels, width, height, &top_face, column.top);
+        raster_polygon_textured(&mut pixels, width, height, &north_face, |u, v| {
+            shade_surface(
+                sample_color(&column.sample, Face::North, u, v),
+                column.sample.y,
+                column.sample.sky_light,
+                column.sample.block_light,
+                Face::North,
+                1.0,
+            )
+        });
+        raster_polygon_textured(&mut pixels, width, height, &west_face, |u, v| {
+            shade_surface(
+                sample_color(&column.sample, Face::West, u, v),
+                column.sample.y,
+                column.sample.sky_light,
+                column.sample.block_light,
+                Face::West,
+                1.0,
+            )
+        });
+        raster_polygon_textured(&mut pixels, width, height, &top_face, |u, v| {
+            shade_surface(
+                sample_color(&column.sample, Face::Up, u, v),
+                column.sample.y,
+                column.sample.sky_light,
+                column.sample.block_light,
+                Face::Up,
+                perspective.height_shade(
+                    column.sample.y,
+                    cached_surface(column.x + step, column.z).map(|value| value.y),
+                ),
+            )
+        });
     }
 
     let covered_pixels = pixels.iter().filter(|pixel| pixel[3] > 0).count();
@@ -237,16 +230,15 @@ fn project_quad(
     })
 }
 
-fn raster_polygon(
+fn raster_polygon_textured<F>(
     pixels: &mut [[u8; 4]],
     width: usize,
     height: usize,
     polygon: &[(f32, f32); 4],
-    colour: [u8; 4],
-) {
-    if colour[3] == 0 {
-        return;
-    }
+    mut colour_at: F,
+) where
+    F: FnMut(f32, f32) -> [u8; 4],
+{
     let min_x = polygon
         .iter()
         .map(|point| point.0)
@@ -274,10 +266,16 @@ fn raster_polygon(
     if min_x >= max_x || min_y >= max_y {
         return;
     }
+    let span_x = (max_x as f32 - min_x as f32).max(1.0);
+    let span_y = (max_y as f32 - min_y as f32).max(1.0);
     for y in min_y..max_y {
         for x in min_x..max_x {
             if point_in_convex_quad((x as f32 + 0.5, y as f32 + 0.5), polygon) {
                 let index = y * width + x;
+                let colour = colour_at(
+                    ((x as f32 + 0.5 - min_x as f32) / span_x).clamp(0.0, 1.0),
+                    ((y as f32 + 0.5 - min_y as f32) / span_y).clamp(0.0, 1.0),
+                );
                 pixels[index] = alpha_over(pixels[index], colour);
             }
         }
@@ -341,5 +339,24 @@ mod tests {
             .pixels
             .chunks_exact(4)
             .any(|pixel| pixel[0] != pixel[1]));
+    }
+
+    #[test]
+    fn interpolates_texture_coordinates_across_projected_faces() {
+        let bounds = TileWorldBounds::new(32, 8, 8, 0, 0).expect("valid bounds");
+        let rendered = render_surface_tile(bounds, sample, |_surface, _face, u, v| {
+            [(u * 255.0) as u8, (v * 255.0) as u8, 90, 255]
+        })
+        .expect("textured surface should render");
+        let colours = rendered
+            .pixels
+            .chunks_exact(4)
+            .filter(|pixel| pixel[3] > 0)
+            .map(|pixel| [pixel[0], pixel[1], pixel[2]])
+            .collect::<std::collections::HashSet<_>>();
+        assert!(
+            colours.len() > 4,
+            "projected faces should sample more than one texel"
+        );
     }
 }
