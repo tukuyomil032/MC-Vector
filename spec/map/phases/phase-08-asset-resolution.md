@@ -24,6 +24,9 @@ Phase 07 manifest and Phase 05 normalized block states.
 - resolve variants/multipart conditions and parent inheritance;
 - parse PNG alpha and select deterministic animation frame;
 - resolve biome tint and transparency classifications;
+- when a blockstate/model is unresolved but matching block textures exist, build
+  a face-aware textured cube fallback instead of immediately using a named
+  colour; retain explicit low-quality colour fallback when no texture exists;
 - produce unresolved-state counts and fallback quality;
 - include asset hash/manifest/renderer versions in cache identity.
 
@@ -42,7 +45,10 @@ and resource-pack source layers, cache identity, and the supported launcher
 candidate families. Candidate selection now persists `sourcePaths` while
 retaining the legacy `sourcePath` field; later layers override matching
 entries before blockstate/model/texture resolution. The Map-filtered Rust
-suite passes 32 asset/discovery tests (119 Map-module tests overall).
+suite passes 34 asset/discovery tests. Unresolved states with available
+face-specific textures now resolve to a textured cube fallback, and water/lava
+still textures are recognized without weakening the explicit missing-texture
+diagnostic.
 
 Implementation commit: `64ca6f9 feat(map): resolve ordered client and resource
 pack layers`.
