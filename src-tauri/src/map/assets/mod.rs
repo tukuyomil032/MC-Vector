@@ -5,6 +5,7 @@ mod manifest;
 mod model;
 mod resolver;
 mod resource_pack;
+mod service;
 mod texture;
 mod tint;
 
@@ -24,6 +25,10 @@ pub(crate) use self::discovery::{
 pub(crate) use self::manifest::{AssetManifest, ASSET_MANIFEST_VERSION};
 pub(crate) use self::model::{FaceDirection as RenderFaceDirection, ResolvedFace as RenderFace};
 pub(crate) use self::resolver::{manifest_quality, source_version};
+pub(crate) use self::service::{
+    asset_candidates, fallback_block_colour, load_for_server, source_status, write_config,
+    AssetConfig, AssetStatus, MapAssets,
+};
 pub(crate) use self::tint::apply_tint;
 
 #[derive(Debug)]

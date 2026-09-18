@@ -19,12 +19,12 @@ use tokio::time::{timeout, Duration};
 use uuid::Uuid;
 
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
-use super::map_assets::{self, MapAssets};
 use super::server::ServerManager;
 use crate::map::application::{
     CachedTile, MemoryTileCache, RenderProgress, TileKey, TileMetadata, TilePriority,
     TileRenderState, TileScheduler, DEFAULT_PERSPECTIVE,
 };
+use crate::map::assets::{self as map_assets, MapAssets};
 use crate::map::domain::{ChunkKey, ChunkView};
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
 use crate::map::renderer::{render_iso_tile, shade_surface, Face, SurfaceSample};

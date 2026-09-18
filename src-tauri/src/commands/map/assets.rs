@@ -1,4 +1,5 @@
 use super::*;
+use crate::map::assets as map_assets;
 use crate::map::assets::AssetCandidate;
 
 #[tauri::command]
