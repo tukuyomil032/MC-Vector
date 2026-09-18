@@ -70,6 +70,23 @@ Only evidence at or above the requested claim may be used for the final score.
 
 - [MC-Vector Map Integration Requirements](./map-integration-requirements.md)
 - [Dynmap v3.0 renderer research corpus](./dynmap/README.md)
+- [MC-Vector Map implementation plan](./map/README.md)
+
+## Map ADRs
+
+The Map feature has its own architecture decisions. These are design records,
+not a substitute for the executable Phase 0-17 documents.
+
+| ADR | Decision |
+| --- | --- |
+| [ADR-008](./ADR-008-map-feature-boundary.md) | Map feature boundary and directory ownership |
+| [ADR-009](./ADR-009-map-paper-bridge.md) | Paper bridge and protocol v2 |
+| [ADR-010](./ADR-010-map-assets-and-launchers.md) | User assets and launcher discovery |
+| [ADR-011](./ADR-011-map-dynmap-source-port.md) | Selected Dynmap source reuse and license boundary |
+| [ADR-012](./ADR-012-map-renderer.md) | Rust Iso renderer |
+| [ADR-013](./ADR-013-map-tile-system.md) | Bounded tile scheduler and cache |
+| [ADR-014](./ADR-014-map-ui-and-lifecycle.md) | Map UI states and lifecycle |
+| [ADR-015](./ADR-015-map-verification-and-release.md) | Evidence and release gates |
 
 ## Score Model
 
@@ -102,7 +119,7 @@ A 10 requires the 9.5 conditions plus real failure recovery and catalog recovery
 
 ## Phase Order
 
-1. Phase 0: Replace legacy specifications with this ADR suite.
+1. Phase 0: Replace legacy specifications with this ADR suite and Map corpus.
 2. Phase 1: Add the Rust-owned operation boundary and lifecycle generation.
 3. Phase 2: Replace differential Backup with full snapshots and transactional restore.
 4. Phase 3: Make manifests authoritative and repair catalog/retention behavior.
@@ -110,6 +127,10 @@ A 10 requires the 9.5 conditions plus real failure recovery and catalog recovery
 6. Phase 5: Minimize capabilities/CSP and harden managed paths/imports.
 7. Phase 6: Preserve the build workflow, pin action SHAs, and add focused real Tauri smoke E2E.
 8. Phase 7: Run the evidence matrix, OS checks, and final scoring.
+
+The Map implementation plan is independent of the hardening phase order and is
+tracked in `spec/map/phases/phase-00` through `phase-17`. Its gates must not be
+silently treated as proof for the hardening ADRs.
 
 ## Non-Goals
 
