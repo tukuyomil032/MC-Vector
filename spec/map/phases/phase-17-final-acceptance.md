@@ -34,6 +34,31 @@ Phases 00-16 complete or explicitly recorded as blocked/open.
 Full local matrix, real Paper, real Tauri, golden fixtures, accessibility/manual
 checks, `git diff --check`, and distribution/license audit.
 
+## Evidence recorded on 2026-09-18
+
+The following local gates currently pass:
+
+- `bun run check`
+- `bun run test` (47 files, 423 tests)
+- `bun run typecheck:tests`
+- `bun run build`
+- `cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check`
+- `cargo test --manifest-path src-tauri/Cargo.toml` (201 passed, 1 ignored)
+- `cargo check --manifest-path src-tauri/Cargo.toml` (no Rust warnings)
+- `src/map/paper/mc-vector-core/gradlew --no-daemon clean test jar`
+- Paper 1.21.10 smoke: connected, listener-absent, and `.jar.disabled`
+  scenarios, including hello, heartbeat, player snapshot, loaded snapshot,
+  and unloaded-chunk rejection
+- CI workflow action and distribution-boundary checks
+
+The Tauri debug target also compiled and launched through `bun run tauri:dev`.
+Manual Map interaction was not recorded in that run because a production
+MC-Vector instance was already open and was deliberately left untouched. The
+following gates therefore remain open: real Tauri Map interaction, disk-cache
+reuse after restart, debug/production app-data separation, golden-image
+comparison, complete vanilla block/model coverage, and full Dynmap feature
+parity. Remote CI was not dispatched.
+
 ## Diff review checklist
 
 No dead declarations, no old preview fallback, no transparent-success state,
@@ -44,6 +69,10 @@ the release note.
 
 Only when all mandatory evidence is present may the feature be labelled
 “Dynmap-like renderer”. Otherwise the report lists the exact open gate.
+
+Current result: **open**. The local code/test matrix and Paper smoke evidence
+are strong enough to continue implementation, but they do not prove Dynmap
+parity or complete the real-Tauri and visual acceptance gates.
 
 ## Known non-goals
 

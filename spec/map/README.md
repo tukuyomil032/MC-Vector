@@ -47,7 +47,7 @@ evidence are recorded.
 | 12–14 | in-progress | Bounded tiles, world layers, player interpolation, and server-scoped marker persistence are present; complete overlay UI and real-session gate remain. |
 | 15 | focused-tested | Pinned Paper 1.21.10 smoke passes connected/offline/disabled scenarios and live snapshot assertions. Tauri dev compiled and launched; manual Map interaction, cache reuse, and app-data separation remain open. |
 | 16 | focused-tested | CI workflows, Gradle wrapper, Paper workflow, attribution artifacts, and distribution-boundary checks are present; the local matrix passes, while remote CI evidence remains intentionally undispatched. |
-| 17 | pending | Final acceptance waits for the real Tauri manual evidence and the remaining renderer/asset parity gates. |
+| 17 | open | Local full gates and Paper smoke are recorded in the Phase 17 document; real Tauri manual evidence, golden images, complete renderer/asset parity, and remote CI evidence remain open. |
 
 Do not use this ledger to describe the Map renderer as Dynmap-complete. The
 only completion label for that claim is the Phase 17 gate.
