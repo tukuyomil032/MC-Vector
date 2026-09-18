@@ -51,7 +51,7 @@ pub mod tiles;
 pub mod world;
 
 use status::MapStatus;
-use world::MapWorldInfo;
+use world::{MapWorldBorder, MapWorldInfo};
 
 const MAP_PROTOCOL_VERSION: u32 = 2;
 const CORE_PLUGIN_VERSION: &str = "0.1.0";
@@ -2589,6 +2589,15 @@ fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo,
         spawn_y: metadata.as_ref().and_then(|metadata| metadata.spawn_y),
         spawn_z: metadata.as_ref().and_then(|metadata| metadata.spawn_z),
         data_version: metadata.as_ref().and_then(|metadata| metadata.data_version),
+        world_border: metadata.as_ref().and_then(|metadata| {
+            metadata.world_border.as_ref().map(|border| MapWorldBorder {
+                center_x: border.center_x,
+                center_z: border.center_z,
+                size: border.size,
+                warning_blocks: border.warning_blocks,
+                warning_time: border.warning_time,
+            })
+        }),
         recommended_zoom,
     })
 }

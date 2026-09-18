@@ -16,7 +16,18 @@ pub struct MapWorldInfo {
     pub spawn_y: Option<i64>,
     pub spawn_z: Option<i64>,
     pub data_version: Option<i64>,
+    pub world_border: Option<MapWorldBorder>,
     pub recommended_zoom: u8,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MapWorldBorder {
+    pub center_x: Option<f64>,
+    pub center_z: Option<f64>,
+    pub size: Option<f64>,
+    pub warning_blocks: Option<i64>,
+    pub warning_time: Option<i64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -192,5 +203,23 @@ mod tests {
 
         fs::remove_dir_all(root).expect("cleanup root");
         fs::remove_dir_all(outside).expect("cleanup outside");
+    }
+
+    #[test]
+    fn world_border_response_keeps_optional_fields_in_camel_case() {
+        let border = MapWorldBorder {
+            center_x: Some(12.5),
+            center_z: Some(-8.25),
+            size: Some(59_999_968.0),
+            warning_blocks: Some(5),
+            warning_time: Some(15),
+        };
+        let json = serde_json::to_value(&border).expect("world border should serialize");
+
+        assert_eq!(json["centerX"], 12.5);
+        assert_eq!(json["centerZ"], -8.25);
+        assert_eq!(json["size"], 59_999_968.0);
+        assert_eq!(json["warningBlocks"], 5);
+        assert_eq!(json["warningTime"], 15);
     }
 }
