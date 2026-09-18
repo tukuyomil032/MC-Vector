@@ -118,17 +118,17 @@ pub fn run() {
             // ヘルスチェック
             commands::health_check::ping_server,
             // Map integration
-            commands::map::get_map_status,
-            commands::map::get_map_world_info,
-            commands::map::repair_map_bridge,
-            commands::map::get_map_asset_status,
-            commands::map::select_map_asset,
-            commands::map::request_map_render,
-            commands::map::get_map_tile,
-            commands::map::enable_map,
-            commands::map::pause_map,
-            commands::map::restore_map,
-            commands::map::remove_map_component,
+            commands::map::status::get_map_status,
+            commands::map::world::get_map_world_info,
+            commands::map::lifecycle::repair_map_bridge,
+            commands::map::assets::get_map_asset_status,
+            commands::map::assets::select_map_asset,
+            commands::map::tiles::request_map_render,
+            commands::map::tiles::get_map_tile,
+            commands::map::lifecycle::enable_map,
+            commands::map::lifecycle::pause_map,
+            commands::map::lifecycle::restore_map,
+            commands::map::lifecycle::remove_map_component,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

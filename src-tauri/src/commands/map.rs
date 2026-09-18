@@ -21,18 +21,35 @@ use uuid::Uuid;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::map_assets::{self, MapAssets};
 use super::server::ServerManager;
-use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
-use crate::map::render::{render_iso_tile, shade_surface, Face, SurfaceSample};
-use crate::map::tile_buffer::RgbaTileBuffer;
-use crate::map::tiles::{
+use crate::map::application::{
     CachedTile, MemoryTileCache, RenderProgress, TileKey, TileMetadata, TilePriority,
     TileRenderState, TileScheduler, DEFAULT_PERSPECTIVE,
 };
-use crate::map::world::{
+use crate::map::domain::{ChunkKey, ChunkView};
+use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
+use crate::map::renderer::{render_iso_tile, shade_surface, Face, SurfaceSample};
+use crate::map::sources::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files, is_air_state,
-    present_chunks_for_bounds, read_complete_chunk, read_level_metadata, ChunkKey, ChunkView,
-    LiveSnapshotCache,
+    present_chunks_for_bounds, read_complete_chunk, read_level_metadata, LiveSnapshotCache,
 };
+use crate::map::tile_buffer::RgbaTileBuffer;
+
+// Keep this file as the parent module so existing `commands::map` state APIs
+// remain stable. Rust cannot compile both `map.rs` and `map/mod.rs` as the
+// same module, so the command boundaries live in path-qualified child files.
+#[path = "map/assets.rs"]
+pub mod assets;
+#[path = "map/lifecycle.rs"]
+pub mod lifecycle;
+#[path = "map/status.rs"]
+pub mod status;
+#[path = "map/tiles.rs"]
+pub mod tiles;
+#[path = "map/world.rs"]
+pub mod world;
+
+use status::MapStatus;
+use world::MapWorldInfo;
 
 const MAP_PROTOCOL_VERSION: u32 = 2;
 const CORE_PLUGIN_VERSION: &str = "0.1.0";
@@ -52,27 +69,6 @@ const RAY_CHUNK_PADDING_BLOCKS: i64 = 512;
 const TILE_RENDERER_VERSION: &str = "iso-ray-model-texture-v7";
 const MAX_TILE_CACHE_ENTRIES: usize = 256;
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MapStatus {
-    pub server_id: String,
-    pub component: String,
-    pub artifact: Option<String>,
-    pub restart_required: bool,
-    pub bridge: String,
-    pub config_state: String,
-    pub config_reason: Option<String>,
-    pub protocol_version: u32,
-    pub plugin_version: Option<String>,
-    pub configured_port: Option<u16>,
-    pub last_heartbeat: Option<u64>,
-    pub asset_state: String,
-    pub asset_source: Option<String>,
-    pub asset_identity: Option<String>,
-    pub asset_message: Option<String>,
-    pub message: Option<String>,
-}
-
 #[derive(Clone, Debug)]
 struct BridgeConfigIssue {
     state: String,
@@ -87,25 +83,6 @@ enum BridgeConfigInspection {
     Missing,
     Valid(BridgeConfig),
     Invalid(BridgeConfigIssue),
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MapWorldInfo {
-    pub world_id: String,
-    pub has_terrain: bool,
-    pub generated_chunk_count: usize,
-    pub min_chunk_x: Option<i64>,
-    pub max_chunk_x: Option<i64>,
-    pub min_chunk_z: Option<i64>,
-    pub max_chunk_z: Option<i64>,
-    pub center_x: i64,
-    pub center_z: i64,
-    pub spawn_x: Option<i64>,
-    pub spawn_y: Option<i64>,
-    pub spawn_z: Option<i64>,
-    pub data_version: Option<i64>,
-    pub recommended_zoom: u8,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -643,7 +620,7 @@ fn locate_core_artifact(app: &AppHandle) -> Option<PathBuf> {
     }
     candidates.push(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../bridge/mc-vector-core/build/libs")
+            .join("../src/map/paper/mc-vector-core/build/libs")
             .join(CORE_JAR_NAME),
     );
 
@@ -1695,31 +1672,7 @@ pub(crate) async fn prepare_bridge_for_server(
     }
 }
 
-#[tauri::command]
-pub async fn get_map_status(
-    app: AppHandle,
-    manager: State<'_, MapBridgeManager>,
-    server_id: String,
-) -> Result<MapStatus, String> {
-    build_status(&app, &manager, &server_id).await
-}
-
-#[tauri::command]
-pub async fn get_map_world_info(
-    app: AppHandle,
-    server_id: String,
-    world_id: String,
-) -> Result<MapWorldInfo, String> {
-    let app_data = app_data_dir(&app)?;
-    let server_root = server_dir(&app_data, &server_id)?;
-    let world_root = resolve_world_directory(&server_root, &world_id)?;
-    tokio::task::spawn_blocking(move || inspect_world_info(&world_root, &world_id))
-        .await
-        .map_err(|error| format!("Map world inspection worker failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn repair_map_bridge(
+async fn repair_map_bridge_impl(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     servers: State<'_, ServerManager>,
@@ -1841,48 +1794,7 @@ fn emit_map_render_progress(app: &AppHandle, key: &TileCacheKey, progress: Rende
     );
 }
 
-#[tauri::command]
-pub async fn get_map_asset_status(
-    app: AppHandle,
-    server_id: String,
-) -> Result<map_assets::AssetStatus, String> {
-    let app_data = app_data_dir(&app)?;
-    let root = server_dir(&app_data, &server_id)?;
-    tokio::task::spawn_blocking(move || map_assets::source_status(&root))
-        .await
-        .map_err(|error| format!("Map asset status worker failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn select_map_asset(
-    app: AppHandle,
-    manager: State<'_, MapBridgeManager>,
-    server_id: String,
-    source_path: String,
-) -> Result<map_assets::AssetStatus, String> {
-    let app_data = app_data_dir(&app)?;
-    let root = server_dir(&app_data, &server_id)?;
-    let config = map_assets::AssetConfig {
-        source_path: Some(source_path),
-    };
-    map_assets::write_config(&root, &config)?;
-    manager
-        .asset_cache
-        .lock()
-        .map_err(|_| "Map asset cache is poisoned".to_string())?
-        .remove(&server_id);
-    manager
-        .tile_cache
-        .lock()
-        .await
-        .remove_where(|key| key.server_id == server_id);
-    tokio::task::spawn_blocking(move || map_assets::source_status(&root))
-        .await
-        .map_err(|error| format!("Map asset status worker failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn enable_map(
+async fn enable_map_impl(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     servers: State<'_, ServerManager>,
@@ -1928,8 +1840,7 @@ pub async fn enable_map(
     build_status(&app, &manager, &server_id).await
 }
 
-#[tauri::command]
-pub async fn pause_map(
+async fn pause_map_impl(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     servers: State<'_, ServerManager>,
@@ -1963,8 +1874,7 @@ pub async fn pause_map(
     build_status(&app, &manager, &server_id).await
 }
 
-#[tauri::command]
-pub async fn restore_map(
+async fn restore_map_impl(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     servers: State<'_, ServerManager>,
@@ -2000,8 +1910,7 @@ pub async fn restore_map(
     build_status(&app, &manager, &server_id).await
 }
 
-#[tauri::command]
-pub async fn remove_map_component(
+async fn remove_map_component_impl(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     servers: State<'_, ServerManager>,
@@ -2251,31 +2160,7 @@ async fn render_map_tile(
         .map(tauri::ipc::Response::new)
 }
 
-#[tauri::command]
-pub async fn get_map_tile(
-    app: AppHandle,
-    manager: State<'_, MapBridgeManager>,
-    server_id: String,
-    world_id: String,
-    zoom: u8,
-    tile_x: i32,
-    tile_y: i32,
-) -> Result<tauri::ipc::Response, String> {
-    render_map_tile(
-        app,
-        Arc::new(manager.inner().clone()),
-        server_id,
-        world_id,
-        zoom,
-        tile_x,
-        tile_y,
-        TilePriority::Viewport,
-    )
-    .await
-}
-
-#[tauri::command]
-pub async fn request_map_render(
+async fn request_map_render_impl(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     server_id: String,
