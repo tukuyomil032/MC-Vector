@@ -10,16 +10,27 @@
  *          dependencies are intentionally excluded.
 */
 
+use std::collections::HashMap;
+
 use serde::Serialize;
 
 pub(crate) mod dynmap;
+pub(crate) mod world_tile;
 
 use crate::map::assets::RenderFace;
+use crate::map::domain::ChunkView;
 use crate::map::projection::TileWorldBounds;
-use crate::map::render::{render_iso_tile as render_iso_tile_core, RenderedSurfaceTile};
+use crate::map::render::{
+    render_iso_tile as render_iso_tile_core, RenderedSurfaceTile, SurfaceSample,
+};
 
-pub(crate) use crate::map::render::{shade_surface, Face, SurfaceSample};
 pub(crate) use dynmap::iso_hd::IsoHDPerspective;
+pub(crate) use world_tile::render_world_tile_detailed;
+
+pub(crate) const MAX_ZOOM: u8 = 8;
+pub(crate) const TILE_SIZE: u32 = 256;
+
+pub(crate) type LiveChunkMap = HashMap<(i64, i64), ChunkView>;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

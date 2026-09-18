@@ -1,13 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use fastanvil::complete::Chunk as CompleteChunk;
-use fastanvil::{Chunk as DimensionChunk, HeightMode};
-use flate2::{write::ZlibEncoder, Compression};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -35,13 +31,12 @@ use crate::map::bridge::protocol::{
     validate_hello, BridgeStatusPayload, ChatMessageEventPayload, WorldStatusEventPayload,
 };
 use crate::map::domain::{ChunkKey, ChunkView};
-use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
-use crate::map::renderer::{render_iso_tile, shade_surface, Face, SurfaceSample};
+use crate::map::projection::{floor_div, TileWorldBounds};
+use crate::map::renderer::{render_world_tile_detailed, LiveChunkMap, MAX_ZOOM, TILE_SIZE};
 use crate::map::sources::{
-    decode_live_snapshot as decode_world_snapshot, enumerate_region_files, is_air_state,
-    present_chunks_for_bounds, read_complete_chunk, read_level_metadata, LiveSnapshotCache,
+    decode_live_snapshot as decode_world_snapshot, enumerate_region_files, read_level_metadata,
+    LiveSnapshotCache,
 };
-use crate::map::tile_buffer::RgbaTileBuffer;
 
 // Keep this file as the parent module so existing `commands::map` state APIs
 // remain stable. Rust cannot compile both `map.rs` and `map/mod.rs` as the
@@ -58,11 +53,6 @@ pub mod status;
 pub mod tiles;
 #[path = "map/world.rs"]
 pub mod world;
-#[path = "../map/renderer/world_tile.rs"]
-mod world_tile;
-
-use world_tile::render_world_tile_detailed;
-
 use status::MapStatus;
 use world::{MapWorldBorder, MapWorldInfo};
 
@@ -70,11 +60,8 @@ const CORE_JAR_NAME: &str = "mc-vector-core.jar";
 const CORE_DISABLED_JAR_NAME: &str = "mc-vector-core.jar.disabled";
 const CORE_CONFIG_NAME: &str = "mc-vector-core.yml";
 const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
-const MAX_ZOOM: u8 = 8;
-const TILE_SIZE: u32 = 256;
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
 const MAX_LIVE_CHUNKS_PER_AXIS: i64 = 8;
-const RAY_CHUNK_PADDING_BLOCKS: i64 = 512;
 // Bump this whenever the rasterisation algorithm or its source data contract
 // changes. In particular, the earlier representative-colour/surface tiles
 // must never be reused by the Iso ray renderer.
@@ -115,8 +102,6 @@ struct RuntimeBridgeStatus {
 }
 
 type TileCacheKey = TileKey;
-
-type LiveChunkMap = HashMap<(i64, i64), ChunkView>;
 
 #[derive(Clone)]
 pub struct MapBridgeManager {
@@ -2139,52 +2124,6 @@ fn write_disk_tile(
     crate::map::tiles::write_metadata_atomic(&metadata_path, &tile.metadata)
 }
 
-type Rgba = [u8; 4];
-
-fn existing_chunk_coordinates_for_tile(
-    world_root: &Path,
-    zoom: u8,
-    tile_x: i32,
-    tile_y: i32,
-) -> Result<Vec<(i64, i64)>, String> {
-    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let tile_min_x = bounds.origin_x;
-    let tile_min_z = bounds.origin_z;
-    let tile_max_x = bounds.max_x();
-    let tile_max_z = bounds.max_z();
-    let min_chunk_x = floor_div(tile_min_x, 16);
-    let max_chunk_x = floor_div(tile_max_x, 16);
-    let min_chunk_z = floor_div(tile_min_z, 16);
-    let max_chunk_z = floor_div(tile_max_z, 16);
-    present_chunks_for_bounds(
-        world_root,
-        min_chunk_x,
-        max_chunk_x,
-        min_chunk_z,
-        max_chunk_z,
-    )
-}
-
-fn ray_chunk_coordinates_for_tile(
-    world_root: &Path,
-    zoom: u8,
-    tile_x: i32,
-    tile_y: i32,
-) -> Result<Vec<(i64, i64)>, String> {
-    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
-    let min_chunk_x = floor_div(bounds.origin_x - RAY_CHUNK_PADDING_BLOCKS, 16);
-    let max_chunk_x = floor_div(bounds.max_x() + RAY_CHUNK_PADDING_BLOCKS, 16);
-    let min_chunk_z = floor_div(bounds.origin_z - RAY_CHUNK_PADDING_BLOCKS, 16);
-    let max_chunk_z = floor_div(bounds.max_z() + RAY_CHUNK_PADDING_BLOCKS, 16);
-    present_chunks_for_bounds(
-        world_root,
-        min_chunk_x,
-        max_chunk_x,
-        min_chunk_z,
-        max_chunk_z,
-    )
-}
-
 fn recommended_zoom(min_chunk_x: i64, max_chunk_x: i64, min_chunk_z: i64, max_chunk_z: i64) -> u8 {
     let span_x = (max_chunk_x - min_chunk_x + 1).max(1) * 16;
     let span_z = (max_chunk_z - min_chunk_z + 1).max(1) * 16;
@@ -2257,13 +2196,17 @@ fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo,
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::map::bridge::config::CORE_PLUGIN_VERSION;
     use crate::map::bridge::protocol::{HelloRequest, MAX_CHAT_MESSAGE_BYTES};
+    use crate::map::projection::floor_mod;
+    use crate::map::renderer::world_tile::{
+        existing_chunk_coordinates_for_tile, render_overview_tile,
+    };
     use crate::map::world::{ChunkLayer, ChunkSourceKind};
     use base64::Engine;
-
-    use super::world_tile::render_overview_tile;
-    use super::*;
+    use flate2::{write::ZlibEncoder, Compression};
+    use std::io::Write;
 
     fn test_config() -> BridgeConfig {
         BridgeConfig {

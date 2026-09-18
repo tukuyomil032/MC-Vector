@@ -1,11 +1,25 @@
 //! World tile rasterization owned by the Map renderer feature.
-//!
-//! This module is currently compiled as a child of `commands::map` so the
-//! extraction can preserve the existing command contract while the renderer
-//! dependencies are moved behind feature-owned boundaries incrementally.
 
-use super::*;
-use crate::map::renderer::TileRenderResult;
+use std::collections::{HashMap, HashSet};
+use std::io::Write;
+use std::path::Path;
+
+use fastanvil::complete::Chunk as CompleteChunk;
+use fastanvil::{Chunk as DimensionChunk, HeightMode};
+use flate2::{write::ZlibEncoder, Compression};
+
+use crate::map::assets::{self as map_assets, MapAssets, RenderFace};
+use crate::map::domain::{ChunkKey, ChunkView};
+use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
+use crate::map::render::{shade_surface, Face, SurfaceSample};
+use crate::map::sources::{
+    enumerate_region_files, is_air_state, present_chunks_for_bounds, read_complete_chunk,
+};
+use crate::map::tile_buffer::{Rgba, RgbaTileBuffer};
+
+use super::{render_iso_tile, LiveChunkMap, TileRenderResult, MAX_ZOOM, TILE_SIZE};
+
+const RAY_CHUNK_PADDING_BLOCKS: i64 = 512;
 
 fn render_chunk<'a>(
     world_root: &Path,
@@ -289,7 +303,47 @@ fn chunk_representative_colour(chunk: &CompleteChunk, assets: Option<&MapAssets>
     }))
 }
 
-pub(super) fn render_overview_tile(
+pub(crate) fn existing_chunk_coordinates_for_tile(
+    world_root: &Path,
+    zoom: u8,
+    tile_x: i32,
+    tile_y: i32,
+) -> Result<Vec<(i64, i64)>, String> {
+    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    let min_chunk_x = floor_div(bounds.origin_x, 16);
+    let max_chunk_x = floor_div(bounds.max_x(), 16);
+    let min_chunk_z = floor_div(bounds.origin_z, 16);
+    let max_chunk_z = floor_div(bounds.max_z(), 16);
+    present_chunks_for_bounds(
+        world_root,
+        min_chunk_x,
+        max_chunk_x,
+        min_chunk_z,
+        max_chunk_z,
+    )
+}
+
+pub(crate) fn ray_chunk_coordinates_for_tile(
+    world_root: &Path,
+    zoom: u8,
+    tile_x: i32,
+    tile_y: i32,
+) -> Result<Vec<(i64, i64)>, String> {
+    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    let min_chunk_x = floor_div(bounds.origin_x - RAY_CHUNK_PADDING_BLOCKS, 16);
+    let max_chunk_x = floor_div(bounds.max_x() + RAY_CHUNK_PADDING_BLOCKS, 16);
+    let min_chunk_z = floor_div(bounds.origin_z - RAY_CHUNK_PADDING_BLOCKS, 16);
+    let max_chunk_z = floor_div(bounds.max_z() + RAY_CHUNK_PADDING_BLOCKS, 16);
+    present_chunks_for_bounds(
+        world_root,
+        min_chunk_x,
+        max_chunk_x,
+        min_chunk_z,
+        max_chunk_z,
+    )
+}
+
+pub(crate) fn render_overview_tile(
     world_root: &Path,
     zoom: u8,
     tile_x: i32,
@@ -362,7 +416,7 @@ pub(super) fn render_overview_tile(
     })
 }
 
-pub(super) fn render_world_tile_detailed(
+pub(crate) fn render_world_tile_detailed(
     world_root: &Path,
     zoom: u8,
     tile_x: i32,
@@ -407,8 +461,7 @@ pub(super) fn render_world_tile_detailed(
     for ((chunk_x, chunk_z), snapshot) in &live_chunks {
         max_surface_cache.insert((*chunk_x, *chunk_z), live_chunk_max_surface_y(snapshot));
     }
-    let mut model_cache: HashMap<(String, String), Option<Vec<crate::map::assets::RenderFace>>> =
-        HashMap::new();
+    let mut model_cache: HashMap<(String, String), Option<Vec<RenderFace>>> = HashMap::new();
     let assets_for_models = assets;
     let min_y = live_chunks
         .values()
