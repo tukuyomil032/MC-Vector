@@ -33,13 +33,30 @@ contents did not include a copyright header, so no synthetic header was added;
 the exact source path, ref, URL, hash, and Apache attribution are recorded here
 and in the manifest.
 
+## Translated geometry sources
+
+The following sources were read at the same immutable ref and translated into
+Rust rather than copied verbatim:
+
+- `DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java`
+  supplies the azimuth/inclination normalization, world-to-map and map-to-world
+  transform order, tile floor convention, and ray construction contract.
+- `DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java` supplies the 3x3
+  left-multiply, rotation, shear, scale, and vector transform operations.
+
+The translated destination is
+`src-tauri/src/map/renderer/dynmap/iso_hd.rs`. The module carries its own SPDX,
+origin, source-ref, destination, and change metadata. It is a geometry slice,
+not a complete port of Dynmap's voxel traversal or asset pipeline.
+
 ## Intentionally not copied
 
-`IsoHDPerspective.java` and `TexturePack.java` remain upstream references only.
-They are large, depend on a broad Dynmap type graph, and would not be useful as
-an isolated compilable snapshot. Their exact paths and future port destinations
-remain registered in [porting-manifest.md](porting-manifest.md). No source
-commit was changed to make those omissions appear complete.
+`IsoHDPerspective.java` and `TexturePack.java` remain upstream references rather
+than verbatim source drops. `IsoHDPerspective` has a tracked geometry
+translation, while its voxel/patch traversal and `TexturePack` remain
+unported. Their exact paths and future port destinations remain registered in
+[porting-manifest.md](porting-manifest.md). No source commit was changed to make
+those omissions appear complete.
 
 The pinned repository did not contain a root `NOTICE` file at this ref. The
 local [NOTICE](NOTICE) is therefore an MC-Vector attribution artifact, not a

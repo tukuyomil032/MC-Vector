@@ -30,8 +30,14 @@ leaving the actual contracts unresolved. The manifest keeps both rows as
 
 ## Translation boundary
 
-Future Rust work may translate selected math and data-model behavior from this
-ref, but must:
+The first translated geometry boundary is now implemented at
+`src-tauri/src/map/renderer/dynmap/iso_hd.rs`. It translates the pinned
+`IsoHDPerspective`/`Matrix3D` coordinate contract into Rust and is routed
+through the existing `render_iso_tile` path. It does not claim complete Dynmap
+ray traversal or asset parity: voxel traversal, render patches, shaders,
+lighting, and `TexturePack` remain separate implementation work.
+
+Future Rust work and every subsequent translation must:
 
 1. keep the pinned ref and exact source path in the manifest;
 2. preserve Apache-2.0 attribution and record concrete MC-Vector changes;
@@ -41,4 +47,7 @@ ref, but must:
 5. keep Minecraft client assets as user-owned inputs rather than bundling them
    with this source snapshot.
 
-No Rust or shared-file change is part of Phase 9 source-boundary setup.
+The translated module carries SPDX, source path/ref, destination, and concrete
+change metadata. Its focused tests are the geometry evidence for this slice;
+golden terrain and full model/texture evidence are still required before any
+Dynmap-parity claim.
