@@ -9,3 +9,4 @@
  */
 
 pub(crate) mod iso_hd;
+pub(crate) mod texture;
