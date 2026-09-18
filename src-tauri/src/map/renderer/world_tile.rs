@@ -227,7 +227,6 @@ fn shaded_surface_colour(
     u: f32,
     v: f32,
     face: Face,
-    height_gradient: f32,
 ) -> Rgba {
     shade_surface(
         surface_base_colour(sample, assets, u, v),
@@ -235,7 +234,6 @@ fn shaded_surface_colour(
         sample.sky_light,
         sample.block_light,
         face,
-        height_gradient,
     )
 }
 
@@ -248,7 +246,7 @@ fn surface_colour(
     let Some(sample) = chunk_surface_sample(chunk, local_x, local_z) else {
         return fallback_terrain_colour(0, 0);
     };
-    shaded_surface_colour(&sample, assets, 0.5, 0.5, Face::Up, 1.0)
+    shaded_surface_colour(&sample, assets, 0.5, 0.5, Face::Up)
 }
 
 fn live_surface_colour(
@@ -260,7 +258,7 @@ fn live_surface_colour(
     let Some(sample) = live_surface_sample(snapshot, local_x, local_z) else {
         return fallback_terrain_colour(0, 0);
     };
-    shaded_surface_colour(&sample, assets, 0.5, 0.5, Face::Up, 1.0)
+    shaded_surface_colour(&sample, assets, 0.5, 0.5, Face::Up)
 }
 
 fn average_surface_colours(colours: impl IntoIterator<Item = Rgba>) -> Rgba {

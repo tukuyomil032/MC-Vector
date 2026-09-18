@@ -133,7 +133,6 @@ where
                             sample.sky_light,
                             sample.block_light,
                             render_face_direction(face.direction),
-                            1.0,
                         );
                     }
                     if color[3] == 0 {
