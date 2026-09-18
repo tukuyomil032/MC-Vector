@@ -35,9 +35,17 @@ Phase 02 path contract and Tauri v2 command registration rules.
   `commands/map_assets.rs` module.
 - `commands/map.rs` and `commands/map/assets.rs` keep their existing Tauri
   command names while depending on the feature-owned asset boundary.
-- `cargo check` and the focused `map::assets::` test slice pass after the
-  extraction. The command file remains larger than the target thin-command
-  boundary, so the Phase 03 gate is not closed.
+- The world tile rasterization path now lives at
+  `src-tauri/src/map/renderer/world_tile.rs`. The command parent retains the
+  Tauri-facing call and test boundary while the Anvil/live source traversal,
+  overview aggregation, model sampling, and PNG encoding are owned by the
+  feature renderer path.
+- `cargo check`, `cargo fmt --check`, and the focused `map::` test slice pass
+  with 115 tests after the renderer extraction. The module is currently
+  compiled through a path-qualified child of `commands::map` to preserve the
+  existing private dependency contract; the remaining bridge, application,
+  and command orchestration extraction is still open, so the Phase 03 gate is
+  not closed.
 
 ## Focused tests
 
