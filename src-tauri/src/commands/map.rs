@@ -788,9 +788,9 @@ async fn invalidate_chunk_tiles(
     chunk_z: i64,
 ) {
     manager.tile_cache.lock().await.remove_where(|key| {
-        !(key.server_id == server_id
+        key.server_id == server_id
             && dimension_matches_world(&key.world_id, dimension)
-            && crate::map::tiles::tile_intersects_chunk(key, chunk_x, chunk_z))
+            && crate::map::tiles::tile_intersects_chunk(key, chunk_x, chunk_z)
     });
     manager
         .live_snapshots
@@ -2480,6 +2480,71 @@ mod tests {
             "overworld",
             "minecraft:the_nether"
         ));
+    }
+
+    #[tokio::test]
+    async fn dirty_chunk_invalidation_removes_only_matching_memory_tiles() {
+        let manager = MapBridgeManager::default();
+        let matching = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            MAX_ZOOM,
+            0,
+            0,
+        );
+        let unrelated_tile = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            MAX_ZOOM,
+            1,
+            0,
+        );
+        let unrelated_server = TileCacheKey::new(
+            "server-2",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            MAX_ZOOM,
+            0,
+            0,
+        );
+
+        {
+            let mut cache = manager.tile_cache.lock().await;
+            for key in [
+                matching.clone(),
+                unrelated_tile.clone(),
+                unrelated_server.clone(),
+            ] {
+                cache.insert(
+                    key,
+                    CachedTile {
+                        bytes: vec![1],
+                        metadata: TileMetadata::default(),
+                    },
+                );
+            }
+        }
+
+        invalidate_chunk_tiles(&manager, "server-1", "minecraft:overworld", 0, 0).await;
+
+        let mut cache = manager.tile_cache.lock().await;
+        assert!(cache.get(&matching).is_none());
+        assert!(cache.get(&unrelated_tile).is_some());
+        assert!(cache.get(&unrelated_server).is_some());
     }
 
     #[test]
