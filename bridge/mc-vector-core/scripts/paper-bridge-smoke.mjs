@@ -38,6 +38,20 @@ async function waitFor(predicate, label, timeoutMs = testTimeoutMs) {
   throw new Error(`Timed out waiting for ${label}`);
 }
 
+async function withTimeout(promise, label, timeoutMs) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function getUnusedPort() {
   const server = createServer();
   await new Promise((resolvePromise, reject) => {
@@ -59,6 +73,7 @@ function createFixture() {
   let server;
   let helloResolve;
   let snapshotResolve;
+  let telemetryResolve;
   let chunkSnapshotResolve;
   let unavailableResolve;
   let connectedSocket;
@@ -67,6 +82,9 @@ function createFixture() {
   });
   const snapshotPromise = new Promise((resolvePromise) => {
     snapshotResolve = resolvePromise;
+  });
+  const telemetryPromise = new Promise((resolvePromise) => {
+    telemetryResolve = resolvePromise;
   });
   const chunkSnapshotPromise = new Promise((resolvePromise) => {
     chunkSnapshotResolve = resolvePromise;
@@ -80,6 +98,7 @@ function createFixture() {
     connectionErrors,
     helloPromise,
     snapshotPromise,
+    telemetryPromise,
     chunkSnapshotPromise,
     unavailablePromise,
     async listen() {
@@ -113,6 +132,10 @@ function createFixture() {
             }
             if (message.type === 'player_snapshot') {
               snapshotResolve(message);
+              telemetryResolve(message);
+            }
+            if (message.type === 'heartbeat') {
+              telemetryResolve(message);
             }
             if (message.type === 'chunk_snapshot') {
               chunkSnapshotResolve(message);
@@ -165,12 +188,23 @@ function createFixture() {
   return fixture;
 }
 
-async function writeServerFiles(serverDirectory, port, { disabled = false } = {}) {
+async function writeServerFiles(
+  serverDirectory,
+  bridgePort,
+  { disabled = false, serverPort } = {},
+) {
   await mkdir(join(serverDirectory, 'plugins'), { recursive: true });
   await writeFile(join(serverDirectory, 'eula.txt'), '# smoke test only\neula=true\n');
   await writeFile(
     join(serverDirectory, 'server.properties'),
-    'online-mode=false\nspawn-protection=0\nview-distance=2\nsimulation-distance=2\n',
+    [
+      'online-mode=false',
+      'spawn-protection=0',
+      'view-distance=2',
+      'simulation-distance=2',
+      `server-port=${serverPort}`,
+      '',
+    ].join('\n'),
   );
   await writeFile(
     join(serverDirectory, 'plugins', 'mc-vector-core.yml'),
@@ -179,7 +213,7 @@ async function writeServerFiles(serverDirectory, port, { disabled = false } = {}
       'schema-version: 1',
       `server-id: ${serverId}`,
       'host: 127.0.0.1',
-      `port: ${port}`,
+      `port: ${bridgePort}`,
       `token: ${bridgeToken}`,
       `protocol-version: ${protocolVersion}`,
       'plugin-version: 0.1.0',
@@ -261,15 +295,11 @@ async function runConnected() {
   let log = '';
   try {
     const port = await fixture.listen();
-    await writeServerFiles(serverDirectory, port);
+    const serverPort = await getUnusedPort();
+    await writeServerFiles(serverDirectory, port, { serverPort });
     processHandle = startPaper(serverDirectory);
     await waitFor(async () => /Done \(/.test(await processHandle.readLog()), 'Paper startup');
-    const hello = await Promise.race([
-      fixture.helloPromise,
-      delay(testTimeoutMs).then(() => {
-        throw new Error('Timed out waiting for bridge hello');
-      }),
-    ]);
+    const hello = await withTimeout(fixture.helloPromise, 'bridge hello', testTimeoutMs);
     if (
       hello.serverId !== serverId ||
       hello.protocolVersion !== protocolVersion ||
@@ -284,24 +314,24 @@ async function runConnected() {
     processHandle.child.stdin.write('forceload add 0 0\n');
     await delay(1_000);
     fixture.requestSnapshots();
-    await Promise.race([
-      fixture.snapshotPromise,
-      delay(5_000).then(() => {
-        throw new Error('Timed out waiting for player snapshot');
-      }),
-    ]);
-    const chunkSnapshot = await Promise.race([
+    const telemetry = await withTimeout(
+      fixture.telemetryPromise,
+      'heartbeat or player snapshot',
+      15_000,
+    );
+    if (telemetry.type !== 'heartbeat' && telemetry.type !== 'player_snapshot') {
+      throw new Error(`Unexpected telemetry message: ${JSON.stringify(telemetry)}`);
+    }
+    const chunkSnapshot = await withTimeout(
       fixture.chunkSnapshotPromise,
-      delay(5_000).then(() => {
-        throw new Error('Timed out waiting for chunk snapshot response');
-      }),
-    ]);
-    const unavailable = await Promise.race([
+      'chunk snapshot response',
+      5_000,
+    );
+    const unavailable = await withTimeout(
       fixture.unavailablePromise,
-      delay(5_000).then(() => {
-        throw new Error('Timed out waiting for unloaded chunk response');
-      }),
-    ]);
+      'unloaded chunk response',
+      5_000,
+    );
     if (chunkSnapshot.requestId !== 'loaded-0-0' || chunkSnapshot.codec !== 'deflate-base64') {
       throw new Error(`Unexpected chunk snapshot: ${JSON.stringify(chunkSnapshot)}`);
     }
@@ -315,7 +345,7 @@ async function runConnected() {
     }
     await persistLog('connected', log, `\nfixture=${JSON.stringify(fixture.messages)}\n`);
     console.log(
-      'connected: Paper loaded MC-Vector Core and exchanged hello/player/chunk snapshot messages',
+      'connected: Paper loaded MC-Vector Core and exchanged hello/telemetry/chunk snapshot messages',
     );
   } catch (error) {
     log = processHandle ? await processHandle.readLog() : log;
@@ -336,7 +366,8 @@ async function runOffline() {
   let log = '';
   try {
     const port = await getUnusedPort();
-    await writeServerFiles(serverDirectory, port);
+    const serverPort = await getUnusedPort();
+    await writeServerFiles(serverDirectory, port, { serverPort });
     processHandle = startPaper(serverDirectory);
     await waitFor(
       async () => /Done \(/.test(await processHandle.readLog()),
@@ -369,7 +400,8 @@ async function runDisabled() {
   let log = '';
   try {
     const port = await fixture.listen();
-    await writeServerFiles(serverDirectory, port, { disabled: true });
+    const serverPort = await getUnusedPort();
+    await writeServerFiles(serverDirectory, port, { disabled: true, serverPort });
     processHandle = startPaper(serverDirectory);
     await waitFor(
       async () => /Done \(/.test(await processHandle.readLog()),
