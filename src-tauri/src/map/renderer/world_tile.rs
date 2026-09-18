@@ -5,6 +5,7 @@
 //! dependencies are moved behind feature-owned boundaries incrementally.
 
 use super::*;
+use crate::map::renderer::TileRenderResult;
 
 fn render_chunk<'a>(
     world_root: &Path,

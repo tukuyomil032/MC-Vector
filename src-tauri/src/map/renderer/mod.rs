@@ -8,7 +8,9 @@
  * Changes: Added a Rust-only renderer boundary and moved model-face UV
  *          rotation into the renderer; Dynmap runtime, Bukkit, and Java
  *          dependencies are intentionally excluded.
- */
+*/
+
+use serde::Serialize;
 
 pub(crate) mod dynmap;
 
@@ -18,6 +20,17 @@ use crate::map::render::{render_iso_tile as render_iso_tile_core, RenderedSurfac
 
 pub(crate) use crate::map::render::{shade_surface, Face, SurfaceSample};
 pub(crate) use dynmap::iso_hd::IsoHDPerspective;
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TileRenderResult {
+    pub(crate) png: Vec<u8>,
+    pub(crate) rendered_chunk_count: usize,
+    pub(crate) decode_failed_chunk_count: usize,
+    pub(crate) has_terrain: bool,
+    pub(crate) coverage_ratio: f32,
+    pub(crate) message: Option<String>,
+}
 
 /// Render through the existing world-tile path while applying model-face UV
 /// rotation at the source-derived renderer boundary.

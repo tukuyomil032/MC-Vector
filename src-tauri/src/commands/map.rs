@@ -108,17 +108,6 @@ fn default_viewport_height() -> u32 {
     768
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct TileRenderResult {
-    png: Vec<u8>,
-    rendered_chunk_count: usize,
-    decode_failed_chunk_count: usize,
-    has_terrain: bool,
-    coverage_ratio: f32,
-    message: Option<String>,
-}
-
 #[derive(Clone, Debug)]
 struct RuntimeBridgeStatus {
     bridge: String,
