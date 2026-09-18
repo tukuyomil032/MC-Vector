@@ -1,6 +1,6 @@
-/// Vanilla-inspired biome tint fallback. Exact colormap files can be added to
-/// the asset resolver later; keeping tinting behind this interface means the
-/// renderer never needs to know where the color came from.
+/// Vanilla-inspired biome tint fallback used when the selected asset source
+/// does not contain a Minecraft colormap. The resolver prefers the actual
+/// `colormap/grass.png` and `colormap/foliage.png` textures when available.
 pub(crate) fn tint_for(state: &str, biome: &str) -> Option<[u8; 3]> {
     let state = state.to_ascii_lowercase();
     let biome = biome.to_ascii_lowercase();
@@ -36,6 +36,32 @@ pub(crate) fn tint_for(state: &str, biome: &str) -> Option<[u8; 3]> {
         });
     }
     None
+}
+
+/// Return the approximate temperature/downfall coordinates used by the
+/// vanilla grass and foliage colormaps. The server bridge currently sends the
+/// biome key rather than the full biome registry entry, so uncommon custom
+/// biomes intentionally use the plains-like fallback until biome climate
+/// metadata is added to the protocol.
+pub(crate) fn colormap_coordinates(biome: &str) -> (f32, f32) {
+    let biome = biome.to_ascii_lowercase();
+    if biome.contains("desert") || biome.contains("badlands") || biome.contains("savanna") {
+        (1.0, 0.0)
+    } else if biome.contains("snow")
+        || biome.contains("ice")
+        || biome.contains("frozen")
+        || biome.contains("grove")
+    {
+        (0.0, 0.5)
+    } else if biome.contains("jungle") || biome.contains("bamboo") {
+        (0.95, 0.9)
+    } else if biome.contains("swamp") || biome.contains("mangrove") {
+        (0.8, 0.9)
+    } else if biome.contains("taiga") {
+        (0.25, 0.8)
+    } else {
+        (0.8, 0.4)
+    }
 }
 
 pub(crate) fn apply_tint(mut color: [u8; 4], tint: Option<[u8; 3]>) -> [u8; 4] {

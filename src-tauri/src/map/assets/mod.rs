@@ -145,6 +145,31 @@ impl AssetResolver {
             .map(|texture| texture.sample_uv(face.uv, face.rotation, u, v))
     }
 
+    pub(crate) fn biome_tint(&self, state: &str, biome: &str) -> Option<[u8; 3]> {
+        let state = state.to_ascii_lowercase();
+        let colormap = if state.contains("leaves") || state.contains("azalea") {
+            "minecraft:colormap/foliage"
+        } else if state.contains("grass")
+            || state.contains("fern")
+            || state.contains("vine")
+            || state.contains("moss")
+        {
+            "minecraft:colormap/grass"
+        } else {
+            return self::tint::tint_for(&state, biome);
+        };
+
+        let (temperature, downfall) = self::tint::colormap_coordinates(biome);
+        let x = (1.0 - temperature.clamp(0.0, 1.0)).clamp(0.0, 1.0);
+        let y = (1.0 - (downfall * temperature).clamp(0.0, 1.0)).clamp(0.0, 1.0);
+        self.textures
+            .get(colormap)
+            .map(|texture| texture.sample_uv(default_uv_for_colormap(), 0, x, y))
+            .filter(|color| color[3] > 0)
+            .map(|color| [color[0], color[1], color[2]])
+            .or_else(|| self::tint::tint_for(&state, biome))
+    }
+
     pub(crate) fn has_blockstate(&self, state: &str) -> bool {
         let block_id = state.split_once('|').map_or(state, |(id, _)| id);
         self.blockstates.contains_key(block_id)
@@ -170,6 +195,10 @@ impl AssetResolver {
         stack.remove(&canonical);
         Ok(flattened)
     }
+}
+
+fn default_uv_for_colormap() -> [f32; 4] {
+    [0.0, 0.0, 16.0, 16.0]
 }
 
 fn resolve_texture_reference(

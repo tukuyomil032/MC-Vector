@@ -57,7 +57,7 @@ impl MapAssets {
         self.resolver
             .sample_face_at(&encoded, face, u, v)
             .map(|color| {
-                crate::map::assets::apply_tint(color, crate::map::assets::tint_for(&encoded, biome))
+                crate::map::assets::apply_tint(color, self.resolver.biome_tint(&encoded, biome))
             })
             .unwrap_or_else(|| fallback_block_colour(&block_id))
     }
@@ -82,7 +82,7 @@ impl MapAssets {
                 if face.tint_index.is_some() {
                     crate::map::assets::apply_tint(
                         color,
-                        crate::map::assets::tint_for(&block_id, biome),
+                        self.resolver.biome_tint(&block_id, biome),
                     )
                 } else {
                     color
