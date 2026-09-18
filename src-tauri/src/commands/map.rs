@@ -29,7 +29,7 @@ use crate::map::tiles::{
     DEFAULT_PERSPECTIVE,
 };
 use crate::map::world::{
-    decode_live_snapshot as decode_world_snapshot, enumerate_region_files,
+    decode_live_snapshot as decode_world_snapshot, enumerate_region_files, is_air_state,
     present_chunks_for_bounds, read_complete_chunk, read_level_metadata, ChunkKey, ChunkView,
 };
 
@@ -2823,13 +2823,6 @@ fn live_block_sample(
             sky_light: layer.sky_light,
             block_light: layer.block_light,
         })
-}
-
-fn is_air_state(state: &str) -> bool {
-    matches!(
-        state.split('|').next().unwrap_or(state),
-        "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
-    )
 }
 
 fn live_surface_sample(
