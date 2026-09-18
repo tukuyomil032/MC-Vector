@@ -11,6 +11,7 @@ import type {
   MapTileInvalidatedEvent,
   MapTileReadyEvent,
   MapViewport,
+  MapWorldEntry,
   MapWorldInfo,
 } from '../state/map-types';
 
@@ -20,6 +21,10 @@ export function getMapStatus(serverId: string): Promise<MapStatus> {
 
 export function getMapWorldInfo(serverId: string, worldId: string): Promise<MapWorldInfo> {
   return tauriInvoke('get_map_world_info', { serverId, worldId });
+}
+
+export function getMapWorlds(serverId: string): Promise<MapWorldEntry[]> {
+  return tauriInvoke('get_map_worlds', { serverId });
 }
 
 export function requestMapRender(

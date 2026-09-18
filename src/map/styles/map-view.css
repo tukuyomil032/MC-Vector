@@ -202,6 +202,22 @@
   font-weight: 650;
 }
 
+.map-view__world-select {
+  max-width: 12rem;
+  border: 0;
+  background: transparent;
+  color: var(--mv-surface-text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  outline: none;
+}
+
+.map-view__world-select:focus-visible {
+  border-radius: 0.35rem;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 75%, transparent);
+}
+
 .map-view__world-dot {
   background: #22c55e;
 }

@@ -39,6 +39,7 @@ const CORE_COMMANDS = [
   'can_update_app',
   'get_app_location',
   'get_map_status',
+  'get_map_worlds',
   'get_map_world_info',
   'repair_map_bridge',
   'get_map_asset_status',

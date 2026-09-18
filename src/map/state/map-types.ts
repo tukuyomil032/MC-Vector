@@ -56,6 +56,13 @@ export interface MapStatus {
   message?: string | null;
 }
 
+export interface MapWorldEntry {
+  worldId: string;
+  label: string;
+  dimension: string;
+  available: boolean;
+}
+
 export interface MapAssetStatus {
   state: MapAssetState;
   sourcePath: string | null;

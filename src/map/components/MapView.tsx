@@ -30,6 +30,7 @@ import {
   getMapAssetCandidates,
   getMapAssetStatus,
   getMapWorldInfo,
+  getMapWorlds,
   getMapStatus,
   getMapTile,
   pauseMap,
@@ -59,6 +60,7 @@ import {
   mergeMapAssetStatus,
   normalizeMapTileBytes,
   resolveMapTileDiagnosticState,
+  type MapWorldEntry,
 } from '../state/map-types';
 import { createMapRequestCoordinator } from '../state/map-request-coordinator';
 
@@ -101,6 +103,20 @@ function bridgeIcon(state: MapBridgeState) {
   return state === 'connected' ? <Wifi size={14} /> : <WifiOff size={14} />;
 }
 
+function playerBelongsToWorld(player: MapPlayer, worldId: string): boolean {
+  const dimension = player.dimension.toLowerCase();
+  switch (worldId) {
+    case 'overworld':
+      return dimension === 'overworld' || dimension === 'minecraft:overworld';
+    case 'world_nether':
+      return dimension === 'nether' || dimension === 'minecraft:the_nether';
+    case 'world_the_end':
+      return dimension === 'end' || dimension === 'minecraft:the_end';
+    default:
+      return dimension === worldId.toLowerCase();
+  }
+}
+
 function revokeTiles(tiles: MapTile[]) {
   tiles.forEach((tile) => URL.revokeObjectURL(tile.url));
 }
@@ -112,6 +128,15 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [assetStatus, setAssetStatus] = useState<MapAssetStatus | null>(null);
   const [assetCandidates, setAssetCandidates] = useState<MapAssetCandidate[]>([]);
   const [assetCandidatesError, setAssetCandidatesError] = useState<string | null>(null);
+  const [worlds, setWorlds] = useState<MapWorldEntry[]>([
+    {
+      worldId: 'overworld',
+      label: 'Overworld',
+      dimension: 'minecraft:overworld',
+      available: true,
+    },
+  ]);
+  const [worldId, setWorldId] = useState('overworld');
   const [players, setPlayers] = useState<MapPlayer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
@@ -235,6 +260,34 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     return request;
   }, [server.id]);
 
+  const refreshWorlds = useCallback(async () => {
+    try {
+      const nextWorlds = await getMapWorlds(server.id);
+      if (nextWorlds.length > 0) {
+        setWorlds(nextWorlds);
+        setWorldId((current) =>
+          nextWorlds.some((world) => world.worldId === current && world.available)
+            ? current
+            : (nextWorlds.find((world) => world.available)?.worldId ?? 'overworld'),
+        );
+      }
+    } catch {
+      // Keep the safe Overworld fallback when discovery is unavailable.
+      setWorlds((current) =>
+        current.length > 0
+          ? current
+          : [
+              {
+                worldId: 'overworld',
+                label: 'Overworld',
+                dimension: 'minecraft:overworld',
+                available: true,
+              },
+            ],
+      );
+    }
+  }, [server.id]);
+
   const refreshStatus = useCallback(
     async (refreshAssets = false) => {
       setIsLoading(true);
@@ -289,6 +342,15 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setTileStates({});
     setRequestedTileKeys([]);
     setIsTileLoading(false);
+    setWorldId('overworld');
+    setWorlds([
+      {
+        worldId: 'overworld',
+        label: 'Overworld',
+        dimension: 'minecraft:overworld',
+        available: true,
+      },
+    ]);
     setMapCenter({ x: 0, z: 0 });
     setWorldHasTerrain(null);
     centerInitializedRef.current = false;
@@ -296,19 +358,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setPan({ x: 0, y: 0 });
     void refreshStatus(true);
     void refreshAssetCandidates();
-    void getMapWorldInfo(server.id, 'overworld')
-      .then((info) => {
-        if (centerInitializedRef.current) {
-          return;
-        }
-        setWorldHasTerrain(info.hasTerrain);
-        setMapCenter({ x: info.centerX, z: info.centerZ });
-        setZoom(info.recommendedZoom);
-        centerInitializedRef.current = true;
-      })
-      .catch(() => {
-        setWorldHasTerrain(false);
-      });
+    void refreshWorlds();
     const interval = window.setInterval(() => {
       void refreshStatus();
     }, 5000);
@@ -317,7 +367,33 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       revokeTiles(tilesRef.current);
       tilesRef.current = [];
     };
-  }, [refreshAssetCandidates, refreshStatus, server.id]);
+  }, [refreshAssetCandidates, refreshStatus, refreshWorlds, server.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    centerInitializedRef.current = false;
+    setWorldHasTerrain(null);
+    setMapCenter({ x: 0, z: 0 });
+    setPan({ x: 0, y: 0 });
+    void getMapWorldInfo(server.id, worldId)
+      .then((info) => {
+        if (cancelled) {
+          return;
+        }
+        setWorldHasTerrain(info.hasTerrain);
+        setMapCenter({ x: info.centerX, z: info.centerZ });
+        setZoom(info.recommendedZoom);
+        centerInitializedRef.current = true;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWorldHasTerrain(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [server.id, worldId]);
 
   useMapEvents({
     serverId: server.id,
@@ -339,9 +415,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       }
       setPlayers(event.message.players);
       if (!centerInitializedRef.current) {
-        const player = event.message.players.find(
-          (candidate) =>
-            candidate.dimension === 'overworld' || candidate.dimension === 'minecraft:overworld',
+        const player = event.message.players.find((candidate) =>
+          playerBelongsToWorld(candidate, worldId),
         );
         if (player) {
           setMapCenter({ x: player.x, z: player.z });
@@ -353,14 +428,14 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       setTileRevision((revision) => revision + 1);
     },
     onTileReady: (event) => {
-      if (event.worldId !== 'overworld') {
+      if (event.worldId !== worldId) {
         return;
       }
       const key = `${event.zoom}:${event.tileX}:${event.tileY}`;
       setTileStates((current) => ({ ...current, [key]: event }));
     },
     onRenderProgress: (event) => {
-      if (event.worldId !== 'overworld') {
+      if (event.worldId !== worldId) {
         return;
       }
       setRenderProgress(event);
@@ -406,10 +481,10 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
       void Promise.all(
         requests.map(async ({ x, y }): Promise<MapTile | null> => {
-          const tileKey = `${server.id}:overworld:${zoom}:${x}:${y}`;
+          const tileKey = `${server.id}:${worldId}:${zoom}:${x}:${y}`;
           try {
             const bytes = await mapRequestsRef.current.requestTile(tileKey, async () => {
-              const buffer = await getMapTile(server.id, 'overworld', zoom, x, y);
+              const buffer = await getMapTile(server.id, worldId, zoom, x, y);
               const nextBytes = normalizeMapTileBytes(buffer);
               if (
                 nextBytes.length < 8 ||
@@ -468,11 +543,14 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     diagnosticStatusError,
     mapTileRequestReady,
     tileRevision,
+    worldId,
     zoom,
   ]);
 
   const component = status?.component ?? 'absent';
   const bridge = status?.bridge ?? 'not_applicable';
+  const selectedWorld = worlds.find((world) => world.worldId === worldId);
+  const visiblePlayers = players.filter((player) => playerBelongsToWorld(player, worldId));
 
   const componentLabel = (value: MapStatus['component']): string => {
     switch (value) {
@@ -576,6 +654,23 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const handleRefresh = () => {
     void refreshStatus();
     void refreshAssetCandidates();
+    void refreshWorlds();
+  };
+
+  const handleWorldChange = (nextWorldId: string) => {
+    const nextWorld = worlds.find((world) => world.worldId === nextWorldId);
+    if (!nextWorld?.available || nextWorld.worldId === worldId) {
+      return;
+    }
+    revokeTiles(tilesRef.current);
+    tilesRef.current = [];
+    setTiles([]);
+    setTileStates({});
+    setRequestedTileKeys([]);
+    setTileError(null);
+    setRenderProgress(null);
+    setWorldId(nextWorld.worldId);
+    setTileRevision((revision) => revision + 1);
   };
 
   const handleAssetSelection = async (selection: string) => {
@@ -698,10 +793,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   };
 
   const handleRecenter = () => {
-    const player = players.find(
-      (candidate) =>
-        candidate.dimension === 'overworld' || candidate.dimension === 'minecraft:overworld',
-    );
+    const player = players.find((candidate) => playerBelongsToWorld(candidate, worldId));
     setMapCenter(
       player
         ? { x: player.x, z: player.z }
@@ -897,7 +989,19 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
             <div className="map-view__surface-toolbar">
               <div className="map-view__world-label">
                 <span className="map-view__world-dot" aria-hidden="true" />
-                {t('map.surface.overworld')}
+                <select
+                  className="map-view__world-select"
+                  value={worldId}
+                  onChange={(event) => handleWorldChange(event.target.value)}
+                  aria-label={t('map.surface.overworld')}
+                >
+                  {worlds.map((world) => (
+                    <option key={world.worldId} value={world.worldId} disabled={!world.available}>
+                      {world.label}
+                      {!world.available ? ' (unavailable)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="map-view__surface-toolbar-actions">
                 {isTileLoading && (
@@ -950,7 +1054,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               onKeyDown={handleMapKeyDown}
               tabIndex={0}
               role="button"
-              aria-label={t('map.surface.overworld')}
+              aria-label={selectedWorld?.label ?? t('map.surface.overworld')}
             >
               {isTileLoading && renderProgress && (
                 <div
@@ -1023,7 +1127,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     <span>{tileDiagnostic.description}</span>
                   </div>
                 )}
-                {players.map((player) => (
+                {visiblePlayers.map((player) => (
                   <div
                     className="map-view__player-marker"
                     key={player.playerId}
@@ -1085,8 +1189,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
             <div className="map-view__surface-footer">
               <span>
-                {players.length > 0
-                  ? t('map.surface.playerCount', { count: players.length })
+                {visiblePlayers.length > 0
+                  ? t('map.surface.playerCount', { count: visiblePlayers.length })
                   : t('map.surface.noPlayers')}
               </span>
               <span className="map-view__surface-hint">{t('map.featureDescription')}</span>
@@ -1111,21 +1215,21 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
             <div className="map-view__side-card map-view__side-card--players">
               <div className="map-view__side-card-heading">
-                <span>{t('map.surface.playerCount', { count: players.length })}</span>
+                <span>{t('map.surface.playerCount', { count: visiblePlayers.length })}</span>
                 <button
                   type="button"
                   className="map-view__text-button"
                   onClick={handleRecenter}
-                  disabled={players.length === 0}
+                  disabled={visiblePlayers.length === 0}
                 >
                   {t('map.actions.recenter')}
                 </button>
               </div>
-              {players.length === 0 ? (
+              {visiblePlayers.length === 0 ? (
                 <p>{t('map.surface.noPlayers')}</p>
               ) : (
                 <ul className="map-view__player-list">
-                  {players.map((player) => (
+                  {visiblePlayers.map((player) => (
                     <li key={player.playerId}>
                       <span className="map-view__player-list-dot" aria-hidden="true" />
                       <span>{player.name}</span>
