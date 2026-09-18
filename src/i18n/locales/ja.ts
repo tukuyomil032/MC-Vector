@@ -781,6 +781,11 @@ export const ja: TranslationDictionary = {
       noPlayers: 'オンラインのプレイヤーはいません',
       playerCount: '{count}人がオンライン',
       zoom: 'ズーム {level}',
+      coordinateJump: '地図の座標へ移動',
+      coordinateX: 'X座標',
+      coordinateZ: 'Z座標',
+      coordinateJumpAction: '移動',
+      coordinateInvalid: 'XとZには-30,000,000から30,000,000までの値を入力してください。',
     },
     management: {
       componentTitle: 'MC-Vector Core',

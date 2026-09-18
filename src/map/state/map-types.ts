@@ -175,6 +175,30 @@ export interface MapMarkerInput {
   color: string;
 }
 
+export const MAP_COORDINATE_LIMIT = 30_000_000;
+
+export interface MapCoordinateTarget {
+  x: number;
+  z: number;
+}
+
+export function parseMapCoordinate(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const coordinate = Number(trimmed);
+  return Number.isFinite(coordinate) && Math.abs(coordinate) <= MAP_COORDINATE_LIMIT
+    ? coordinate
+    : null;
+}
+
+export function parseMapCoordinateTarget(x: string, z: string): MapCoordinateTarget | null {
+  const parsedX = parseMapCoordinate(x);
+  const parsedZ = parseMapCoordinate(z);
+  return parsedX === null || parsedZ === null ? null : { x: parsedX, z: parsedZ };
+}
+
 export function mapMarkersForWorld(markers: MapMarker[], worldId: string): MapMarker[] {
   return markers.filter((marker) => marker.worldId === worldId);
 }

@@ -67,6 +67,7 @@ import {
   mapMarkersForWorld,
   mergeMapAssetStatus,
   normalizeMapTileBytes,
+  parseMapCoordinateTarget,
   resolveMapTileDiagnosticState,
   type MapWorldEntry,
 } from '../state/map-types';
@@ -167,6 +168,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [mapCenter, setMapCenter] = useState<MapCenter>({ x: 0, z: 0 });
   const [tileRevision, setTileRevision] = useState(0);
   const [pan, setPan] = useState<PanState>({ x: 0, y: 0 });
+  const [coordinateX, setCoordinateX] = useState('');
+  const [coordinateZ, setCoordinateZ] = useState('');
+  const [coordinateError, setCoordinateError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [worldHasTerrain, setWorldHasTerrain] = useState<boolean | null>(null);
   const tilesRef = useRef<MapTile[]>([]);
@@ -720,6 +724,18 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setTileRevision((revision) => revision + 1);
   };
 
+  const handleCoordinateJump = () => {
+    const target = parseMapCoordinateTarget(coordinateX, coordinateZ);
+    if (!target) {
+      setCoordinateError(t('map.surface.coordinateInvalid'));
+      return;
+    }
+    setCoordinateError(null);
+    setMapCenter(target);
+    setPan({ x: 0, y: 0 });
+    centerInitializedRef.current = true;
+  };
+
   const handleCreateMarker = async () => {
     const input = {
       worldId,
@@ -1090,6 +1106,45 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   ))}
                 </select>
               </div>
+              <form
+                className="map-view__coordinate-jump"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleCoordinateJump();
+                }}
+                aria-label={t('map.surface.coordinateJump')}
+              >
+                <label htmlFor="map-coordinate-x">{t('map.surface.coordinateX')}</label>
+                <input
+                  id="map-coordinate-x"
+                  className="map-view__coordinate-input"
+                  value={coordinateX}
+                  onChange={(event) => setCoordinateX(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="X"
+                  aria-label={t('map.surface.coordinateX')}
+                  aria-invalid={coordinateError ? 'true' : undefined}
+                />
+                <label htmlFor="map-coordinate-z">{t('map.surface.coordinateZ')}</label>
+                <input
+                  id="map-coordinate-z"
+                  className="map-view__coordinate-input"
+                  value={coordinateZ}
+                  onChange={(event) => setCoordinateZ(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="Z"
+                  aria-label={t('map.surface.coordinateZ')}
+                  aria-invalid={coordinateError ? 'true' : undefined}
+                />
+                <Button type="submit" variant="ghost" size="sm">
+                  {t('map.surface.coordinateJumpAction')}
+                </Button>
+              </form>
+              {coordinateError && (
+                <span className="map-view__coordinate-error" role="alert">
+                  {coordinateError}
+                </span>
+              )}
               <div className="map-view__surface-toolbar-actions">
                 {isTileLoading && (
                   <span className="map-view__tile-status" role="status">

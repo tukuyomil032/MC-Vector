@@ -190,9 +190,54 @@
 }
 
 .map-view__surface-toolbar {
+  flex-wrap: wrap;
   justify-content: space-between;
   border-bottom: 1px solid var(--mv-surface-border);
   padding: 0.62rem 0.72rem;
+}
+
+.map-view__coordinate-jump {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.3rem;
+  margin-inline: auto;
+}
+
+.map-view__coordinate-jump label {
+  color: var(--mv-surface-text-muted);
+  font-size: 0.65rem;
+  font-weight: 650;
+}
+
+.map-view__coordinate-input {
+  width: 4.6rem;
+  min-width: 0;
+  border: 1px solid var(--mv-surface-border);
+  border-radius: 0.35rem;
+  background: var(--mv-surface-card-bg);
+  padding: 0.35rem 0.4rem;
+  color: var(--mv-surface-text-primary);
+  font: inherit;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-view__coordinate-input:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+.map-view__coordinate-input[aria-invalid='true'] {
+  border-color: rgb(239 68 68 / 62%);
+}
+
+.map-view__coordinate-error {
+  flex-basis: 100%;
+  color: #fecaca;
+  font-size: 0.66rem;
+  text-align: center;
 }
 
 .map-view__world-label {
@@ -928,6 +973,17 @@
 
   .map-view__marker-form {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .map-view__coordinate-jump {
+    order: 3;
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .map-view__coordinate-error {
+    order: 4;
+    text-align: left;
   }
 
   .map-view__marker-color-field {

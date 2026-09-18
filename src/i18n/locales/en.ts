@@ -785,6 +785,11 @@ export const en: TranslationDictionary = {
       noPlayers: 'No players are online',
       playerCount: '{count} online',
       zoom: 'Zoom {level}',
+      coordinateJump: 'Jump to map coordinates',
+      coordinateX: 'X coordinate',
+      coordinateZ: 'Z coordinate',
+      coordinateJumpAction: 'Go',
+      coordinateInvalid: 'Enter X and Z between -30,000,000 and 30,000,000.',
     },
     management: {
       componentTitle: 'MC-Vector Core',
