@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
-use crate::map::assets::AssetResolver;
+use crate::map::assets::{
+    manifest_quality, source_version, AssetManifest, AssetResolver, ASSET_MANIFEST_VERSION,
+};
 
 const ASSET_CONFIG_NAME: &str = "map-assets.json";
 const VANILLA_VERSION_PREFIX: &str = "1.21";
@@ -24,29 +26,44 @@ pub(crate) struct MapAssets {
     resolver: AssetResolver,
     top_color_cache: Mutex<HashMap<String, [u8; 4]>>,
     pub(crate) identity: String,
+    pub(crate) manifest: AssetManifest,
 }
 
 impl MapAssets {
+    pub(crate) fn cache_identity(&self) -> String {
+        format!(
+            "{}:manifest-v{}",
+            self.identity, self.manifest.manifest_version
+        )
+    }
+
     pub(crate) fn sample(&self, block: &Block) -> [u8; 4] {
         self.sample_encoded_state(block.encoded_description(), block.name())
     }
 
     pub(crate) fn sample_state(&self, state: &str) -> [u8; 4] {
-        let (block_id, properties) = state.split_once('[').unwrap_or((state, ""));
-        let properties = properties
-            .strip_suffix(']')
-            .unwrap_or(properties)
-            .split(',')
-            .filter(|property| !property.is_empty())
-            .filter_map(|property| property.split_once('='))
-            .collect::<Vec<_>>();
-        let mut properties = properties
-            .into_iter()
-            .map(|(key, value)| format!("{key}={value}"))
-            .collect::<Vec<_>>();
-        properties.sort();
-        let encoded = format!("{block_id}|{}", properties.join(","));
-        self.sample_encoded_state(&encoded, block_id)
+        let (encoded, block_id) = encode_state(state);
+        self.sample_encoded_state(&encoded, &block_id)
+    }
+
+    pub(crate) fn sample_state_at(&self, state: &str, u: f32, v: f32) -> [u8; 4] {
+        self.sample_state_at_with_biome(state, "", u, v)
+    }
+
+    pub(crate) fn sample_state_at_with_biome(
+        &self,
+        state: &str,
+        biome: &str,
+        u: f32,
+        v: f32,
+    ) -> [u8; 4] {
+        let (encoded, block_id) = encode_state(state);
+        self.resolver
+            .sample_top_at(&encoded, u, v)
+            .map(|color| {
+                crate::map::assets::apply_tint(color, crate::map::assets::tint_for(&encoded, biome))
+            })
+            .unwrap_or_else(|| fallback_block_colour(&block_id))
     }
 
     fn sample_encoded_state(&self, encoded: &str, block_name: &str) -> [u8; 4] {
@@ -69,6 +86,26 @@ impl MapAssets {
         }
         colour
     }
+}
+
+fn encode_state(state: &str) -> (String, String) {
+    let (block_id, properties) = if let Some((block_id, properties)) = state.split_once('|') {
+        (block_id, properties)
+    } else {
+        let (block_id, properties) = state.split_once('[').unwrap_or((state, ""));
+        (block_id, properties.strip_suffix(']').unwrap_or(properties))
+    };
+    let mut properties = properties
+        .split(',')
+        .filter(|property| !property.is_empty())
+        .filter_map(|property| property.split_once('='))
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect::<Vec<_>>();
+    properties.sort();
+    (
+        format!("{block_id}|{}", properties.join(",")),
+        block_id.to_string(),
+    )
 }
 
 pub(crate) fn load_for_server(server_root: &Path) -> Result<Option<MapAssets>, String> {
@@ -111,22 +148,30 @@ pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
             blockstate_count: 0,
             model_count: 0,
             texture_count: 0,
+            animated_texture_count: 0,
+            minecraft_version: None,
+            quality: "missing".to_string(),
+            unresolved_blockstate_count: 0,
             message: Some("No Minecraft client JAR or resource pack was found".to_string()),
         });
     };
 
     match source_details(&source) {
-        Ok((identity, blockstate_count, model_count, texture_count)) => Ok(AssetStatus {
+        Ok(details) => Ok(AssetStatus {
             state: if configured.is_some() {
-                "configured".to_string()
+                "user_selected".to_string()
             } else {
-                "detected".to_string()
+                "auto_detected".to_string()
             },
             source_path: Some(source.display().to_string()),
-            identity: Some(identity),
-            blockstate_count,
-            model_count,
-            texture_count,
+            identity: Some(details.identity),
+            blockstate_count: details.blockstate_count,
+            model_count: details.model_count,
+            texture_count: details.texture_count,
+            animated_texture_count: details.animated_texture_count,
+            minecraft_version: details.minecraft_version,
+            quality: details.quality,
+            unresolved_blockstate_count: details.unresolved_blockstate_count,
             message: None,
         }),
         Err(error) => Ok(AssetStatus {
@@ -136,12 +181,27 @@ pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
             blockstate_count: 0,
             model_count: 0,
             texture_count: 0,
+            animated_texture_count: 0,
+            minecraft_version: source_version(&source.display().to_string()),
+            quality: "invalid".to_string(),
+            unresolved_blockstate_count: 0,
             message: Some(error),
         }),
     }
 }
 
-fn source_details(source: &Path) -> Result<(String, usize, usize, usize), String> {
+struct SourceDetails {
+    identity: String,
+    blockstate_count: usize,
+    model_count: usize,
+    texture_count: usize,
+    animated_texture_count: usize,
+    minecraft_version: Option<String>,
+    quality: String,
+    unresolved_blockstate_count: usize,
+}
+
+fn source_details(source: &Path) -> Result<SourceDetails, String> {
     validate_asset_source(source)?;
     let (blockstate_count, model_count, texture_count) = count_asset_entries(source)?;
     if blockstate_count == 0 || model_count == 0 || texture_count == 0 {
@@ -150,12 +210,41 @@ fn source_details(source: &Path) -> Result<(String, usize, usize, usize), String
                 .to_string(),
         );
     }
-    Ok((
-        asset_identity(source)?,
+    let identity = asset_identity(source)?;
+    let entries = if source.is_dir() {
+        load_directory_entries(source)?
+    } else {
+        load_archive_entries(source)?
+    };
+    let resolver = AssetResolver::from_entries(&entries)?;
+    let unresolved_blockstate_count = blockstate_count.saturating_sub(resolver.blockstate_count());
+    let quality = manifest_quality(&AssetManifest {
+        manifest_version: ASSET_MANIFEST_VERSION,
+        minecraft_version: source_version(&source.display().to_string()),
+        source_path: source.display().to_string(),
+        source_identity: identity.clone(),
+        resource_pack_hash: identity.clone(),
         blockstate_count,
         model_count,
         texture_count,
-    ))
+        animated_texture_count: 0,
+        unresolved_blockstate_count,
+        quality: AssetManifest::quality_for(unresolved_blockstate_count, blockstate_count),
+    })
+    .to_string();
+    Ok(SourceDetails {
+        identity,
+        blockstate_count,
+        model_count,
+        texture_count,
+        animated_texture_count: entries
+            .keys()
+            .filter(|path| path.ends_with(".png.mcmeta"))
+            .count(),
+        minecraft_version: source_version(&source.display().to_string()),
+        quality,
+        unresolved_blockstate_count,
+    })
 }
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -167,6 +256,10 @@ pub(crate) struct AssetStatus {
     pub blockstate_count: usize,
     pub model_count: usize,
     pub texture_count: usize,
+    pub animated_texture_count: usize,
+    pub minecraft_version: Option<String>,
+    pub quality: String,
+    pub unresolved_blockstate_count: usize,
     pub message: Option<String>,
 }
 
@@ -236,11 +329,32 @@ fn load_from_source(source: &Path) -> Result<MapAssets, String> {
     };
 
     let resolver = AssetResolver::from_entries(&entries)?;
+    let (blockstate_count, model_count, texture_count) = count_asset_entries(source)?;
+    let animated_texture_count = entries
+        .keys()
+        .filter(|path| path.ends_with(".png.mcmeta"))
+        .count();
+    let unresolved_blockstate_count = blockstate_count.saturating_sub(resolver.blockstate_count());
+    let source_path = source.display().to_string();
+    let manifest = AssetManifest {
+        manifest_version: ASSET_MANIFEST_VERSION,
+        minecraft_version: source_version(&source_path),
+        source_path,
+        source_identity: identity.clone(),
+        resource_pack_hash: identity.clone(),
+        blockstate_count,
+        model_count,
+        texture_count,
+        animated_texture_count,
+        unresolved_blockstate_count,
+        quality: AssetManifest::quality_for(unresolved_blockstate_count, blockstate_count),
+    };
 
     Ok(MapAssets {
         resolver,
         top_color_cache: Mutex::new(HashMap::new()),
         identity,
+        manifest,
     })
 }
 
@@ -359,7 +473,7 @@ fn is_interesting_asset(path: &str) -> bool {
         && (path.contains("/blockstates/")
             || path.contains("/models/")
             || path.contains("/textures/"))
-        && (path.ends_with(".json") || path.ends_with(".png"))
+        && (path.ends_with(".json") || path.ends_with(".png") || path.ends_with(".png.mcmeta"))
 }
 
 fn asset_identity(source: &Path) -> Result<String, String> {

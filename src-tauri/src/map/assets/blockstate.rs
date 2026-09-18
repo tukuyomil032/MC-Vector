@@ -18,8 +18,14 @@ pub(crate) fn model_references(
     if let Some(variants) = blockstate.get("variants").and_then(Value::as_object) {
         let key = variants
             .get(encoded_properties)
-            .or_else(|| variants.get(""))
-            .or_else(|| variants.values().next());
+            .or_else(|| {
+                variants
+                    .iter()
+                    .filter(|(key, _)| variant_key_matches(key, &properties))
+                    .max_by_key(|(key, _)| key.split(',').count())
+                    .map(|(_, value)| value)
+            })
+            .or_else(|| variants.get(""));
         return key.map(parse_apply).unwrap_or_default();
     }
 
@@ -35,6 +41,21 @@ pub(crate) fn model_references(
         })
         .flat_map(|part| part.get("apply").map(parse_apply).unwrap_or_default())
         .collect()
+}
+
+fn variant_key_matches(key: &str, properties: &HashMap<&str, &str>) -> bool {
+    if key.is_empty() {
+        return true;
+    }
+    key.split(',').all(|condition| {
+        let Some((property, expected)) = condition.split_once('=') else {
+            return false;
+        };
+        let Some(actual) = properties.get(property) else {
+            return false;
+        };
+        expected.split('|').any(|candidate| candidate == *actual)
+    })
 }
 
 fn parse_apply(value: &Value) -> Vec<ModelReference> {
