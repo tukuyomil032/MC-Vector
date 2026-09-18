@@ -23,7 +23,7 @@ export function createMapRequestCoordinator(): MapRequestCoordinator {
       });
       return pending;
     },
-    requestTile<T>(key, request) {
+    requestTile<T>(key: string, request: () => Promise<T>): Promise<T> {
       const existing = tileRequests.get(key) as Promise<T> | undefined;
       if (existing) {
         return existing;
