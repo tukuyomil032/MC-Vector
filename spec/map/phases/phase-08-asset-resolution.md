@@ -37,9 +37,15 @@ parent/multipart/rotation, override packs, and cache separation.
 The focused Rust asset and discovery fixtures cover variants, multipart
 conditions, parent texture variables, model rotation and rescaling, UV lock,
 texture alpha, deterministic animated-texture frames, vanilla colormap tint,
-material alpha policy, resource-pack overlay precedence, cache identity, and
-the supported launcher candidate families. The Map-filtered Rust suite passes
-119 tests.
+material alpha policy, resource-pack overlay precedence, ordered client-JAR
+and resource-pack source layers, cache identity, and the supported launcher
+candidate families. Candidate selection now persists `sourcePaths` while
+retaining the legacy `sourcePath` field; later layers override matching
+entries before blockstate/model/texture resolution. The Map-filtered Rust
+suite passes 32 asset/discovery tests (119 Map-module tests overall).
+
+Implementation commit: `64ca6f9 feat(map): resolve ordered client and resource
+pack layers`.
 
 The local full checks also pass: `bun run check`, `bun run typecheck:tests`,
 `bun run test` (51 files, 434 tests), `bun run build`, and
@@ -51,10 +57,12 @@ regression.
 
 The Phase 08 gate remains open. The current fixtures are synthetic and do not
 yet prove complete vanilla 1.21.x blockstate coverage, exact launcher install
-layouts, full resource-pack stack selection from the UI, custom mod renderers,
-or golden images from a real client JAR. Those boundaries are intentionally
-carried into Phases 09–11 and 15–17 rather than being inferred from parser
-unit tests.
+layouts, active-pack ordering from each launcher's native configuration, custom
+mod renderers, or golden images from a real client JAR. The UI can now persist
+the discovered client-JAR-plus-pack stack, but manual stack editing and
+launcher-specific active-pack metadata remain open. Those boundaries are
+intentionally carried into Phases 09–11 and 15–17 rather than being inferred
+from parser unit tests.
 
 ## Diff review checklist
 

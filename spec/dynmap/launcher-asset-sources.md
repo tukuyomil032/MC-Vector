@@ -25,6 +25,13 @@ Each adapter returns candidates, not an already trusted path. Rust validates
 canonical containment, file type, readable size, Minecraft version metadata,
 and SHA-256 before use.
 
+For a usable game instance, the selected source is represented as an ordered
+stack: the client JAR is the base layer, followed by discovered resource-pack
+archives/directories. Later entries override matching `assets/` entries before
+blockstate, model, texture, animation metadata, and colormap resolution. The
+stack identity is composed from every layer identity, so changing a pack
+invalidates Map tiles instead of reusing a client-only cache.
+
 ## Manifest identity
 
 ```text
@@ -52,4 +59,7 @@ auto-detected candidate.
 
 Launcher layouts vary by OS, custom roots, portable instances, and symlinks.
 Fixtures must cover standard/custom PrismLauncher roots, official Launcher,
-manual selection, invalid archives, path traversal, and version mismatch.
+manual selection, invalid archives, path traversal, and version mismatch. The
+current discovery fallback lists resource-pack directory entries in stable
+path order; reading each launcher's active-pack order from its native options
+file remains open work.
