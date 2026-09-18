@@ -14,9 +14,9 @@ use std::collections::{HashMap, HashSet};
 use serde_json::Value;
 
 use self::blockstate::model_references;
-use self::model::{default_uv, FaceDirection, Model, ResolvedFace};
+use self::model::{default_uv, face_vertices, FaceDirection, Model, ResolvedFace};
 use self::resolver::ResourcePackStack;
-use self::texture::TextureImage;
+use self::texture::{TextureImage, DEFAULT_UV};
 
 pub(crate) use self::custom_renderer::{apply_material_alpha, is_air, material_kind, MaterialKind};
 pub(crate) use self::discovery::{
@@ -80,20 +80,24 @@ impl AssetResolver {
 
     pub(crate) fn appearance(&self, encoded_state: &str) -> Option<Vec<ResolvedFace>> {
         let (block_id, properties) = encoded_state.split_once('|').unwrap_or((encoded_state, ""));
-        let blockstate = self.blockstates.get(block_id)?;
+        let Some(blockstate) = self.blockstates.get(block_id) else {
+            return self.fallback_cube_appearance(block_id);
+        };
         let references = model_references(blockstate, properties);
         if references.is_empty() {
-            return None;
+            return self.fallback_cube_appearance(block_id);
         }
         let mut faces = Vec::new();
         for reference in references {
-            let model = self
-                .flatten_model(&reference.model, &mut HashSet::new())
-                .ok()?;
+            let Ok(model) = self.flatten_model(&reference.model, &mut HashSet::new()) else {
+                continue;
+            };
             for (direction, face, vertices, shade) in
                 model.resolve_faces(reference.x, reference.y, reference.uvlock)
             {
-                let texture = resolve_texture_reference(&face.texture, &model.textures).ok()?;
+                let Ok(texture) = resolve_texture_reference(&face.texture, &model.textures) else {
+                    continue;
+                };
                 if !self.textures.contains_key(&texture) {
                     continue;
                 }
@@ -108,7 +112,73 @@ impl AssetResolver {
                 });
             }
         }
+        (!faces.is_empty())
+            .then_some(faces)
+            .or_else(|| self.fallback_cube_appearance(block_id))
+    }
+
+    fn fallback_cube_appearance(&self, block_id: &str) -> Option<Vec<ResolvedFace>> {
+        if is_air(block_id) {
+            return None;
+        }
+        let (namespace, path) = block_id.split_once(':').unwrap_or(("minecraft", block_id));
+        let tinted = path.contains("grass")
+            || path.contains("leaves")
+            || path.contains("fern")
+            || path.contains("vine")
+            || path.contains("moss")
+            || path.contains("azalea");
+        let directions = [
+            FaceDirection::Down,
+            FaceDirection::Up,
+            FaceDirection::North,
+            FaceDirection::South,
+            FaceDirection::West,
+            FaceDirection::East,
+        ];
+        let mut faces = Vec::new();
+        for direction in directions {
+            let Some(texture) = self.fallback_texture_for_face(namespace, path, direction) else {
+                continue;
+            };
+            faces.push(ResolvedFace {
+                direction,
+                vertices: face_vertices(direction, [0.0; 3], [16.0; 3]),
+                texture,
+                uv: DEFAULT_UV,
+                rotation: 0,
+                tint_index: tinted.then_some(0),
+                shade: true,
+            });
+        }
         (!faces.is_empty()).then_some(faces)
+    }
+
+    fn fallback_texture_for_face(
+        &self,
+        namespace: &str,
+        path: &str,
+        direction: FaceDirection,
+    ) -> Option<String> {
+        let stems = match path {
+            "water" => vec!["water_still", "water_flow"],
+            "lava" => vec!["lava_still", "lava_flow"],
+            _ => vec![path],
+        };
+        let suffixes: &[&str] = match direction {
+            FaceDirection::Up => &["_top", "_side", ""],
+            FaceDirection::Down => &["_bottom", "_side", ""],
+            FaceDirection::North
+            | FaceDirection::South
+            | FaceDirection::West
+            | FaceDirection::East => &["_side", "_front", ""],
+        };
+        stems.iter().find_map(|stem| {
+            suffixes.iter().find_map(|suffix| {
+                let key = format!("{namespace}:block/{stem}{suffix}");
+                self.textures.contains_key(&key).then_some(key)
+            })
+        })
     }
 
     pub(crate) fn sample_face_at(
@@ -365,6 +435,56 @@ mod tests {
         assert_eq!(
             resolver.sample_face_at("minecraft:test|facing=north,half=top", "up", 0.5, 0.5,),
             Some([9, 8, 7, 255])
+        );
+    }
+
+    #[test]
+    fn unresolved_blockstate_uses_available_face_textures_before_colour_fallback() {
+        let entries = HashMap::from([
+            (
+                "assets/minecraft/textures/block/mystery_top.png".to_string(),
+                png([10, 20, 30, 255]),
+            ),
+            (
+                "assets/minecraft/textures/block/mystery_bottom.png".to_string(),
+                png([40, 50, 60, 255]),
+            ),
+            (
+                "assets/minecraft/textures/block/mystery_side.png".to_string(),
+                png([70, 80, 90, 255]),
+            ),
+        ]);
+        let resolver = AssetResolver::from_entries(&entries).expect("fixture should load");
+        let faces = resolver
+            .appearance("minecraft:mystery|")
+            .expect("available textures should produce a fallback cube");
+
+        assert_eq!(faces.len(), 6);
+        assert_eq!(
+            resolver.sample_face_at("minecraft:mystery|", "up", 0.5, 0.5),
+            Some([10, 20, 30, 255])
+        );
+        assert_eq!(
+            resolver.sample_face_at("minecraft:mystery|", "down", 0.5, 0.5),
+            Some([40, 50, 60, 255])
+        );
+        assert_eq!(
+            resolver.sample_face_at("minecraft:mystery|", "north", 0.5, 0.5),
+            Some([70, 80, 90, 255])
+        );
+    }
+
+    #[test]
+    fn unresolved_fluid_uses_still_texture_when_present() {
+        let entries = HashMap::from([(
+            "assets/minecraft/textures/block/water_still.png".to_string(),
+            png([30, 90, 180, 200]),
+        )]);
+        let resolver = AssetResolver::from_entries(&entries).expect("fixture should load");
+
+        assert_eq!(
+            resolver.sample_face_at("minecraft:water|level=0", "up", 0.5, 0.5),
+            Some([30, 90, 180, 200])
         );
     }
 

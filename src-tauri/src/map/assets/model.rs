@@ -146,7 +146,11 @@ fn uv_lock_rotation(face_rotation: u32, model_rotation_x: u32, model_rotation_y:
     (face_rotation + inverse_turns * 90) % 360
 }
 
-fn face_vertices(direction: FaceDirection, from: [f32; 3], to: [f32; 3]) -> [[f32; 3]; 4] {
+pub(crate) fn face_vertices(
+    direction: FaceDirection,
+    from: [f32; 3],
+    to: [f32; 3],
+) -> [[f32; 3]; 4] {
     let (x0, y0, z0) = (from[0], from[1], from[2]);
     let (x1, y1, z1) = (to[0], to[1], to[2]);
     match direction {
