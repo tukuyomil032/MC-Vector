@@ -60,6 +60,7 @@ const CORE_DISABLED_JAR_NAME: &str = "mc-vector-core.jar.disabled";
 const CORE_CONFIG_NAME: &str = "mc-vector-core.yml";
 const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
 const MAX_BRIDGE_LINE_BYTES: usize = 1024 * 1024;
+const MAX_CHAT_MESSAGE_BYTES: usize = 16 * 1024;
 const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
@@ -223,6 +224,25 @@ struct WorldStatusEventPayload {
     message: Value,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatMessageContract {
+    #[serde(rename = "type")]
+    message_type: String,
+    player_id: String,
+    name: String,
+    message: String,
+    #[serde(rename = "capturedAt")]
+    _captured_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct ChatMessageEventPayload {
+    server_id: String,
+    message: Value,
+}
+
 type BridgeSender = mpsc::Sender<String>;
 type PendingSnapshotSender = oneshot::Sender<Result<ChunkView, String>>;
 
@@ -233,6 +253,34 @@ fn parse_world_status_message(value: Value) -> Result<Value, &'static str> {
 
     if object.get("type").and_then(Value::as_str) != Some("world_status") {
         return Err("world_status payload has an invalid type");
+    }
+
+    Ok(value)
+}
+
+fn parse_chat_message(value: Value) -> Result<Value, String> {
+    if !value.is_object() {
+        return Err("chat_message payload must be a JSON object".to_string());
+    }
+
+    let contract: ChatMessageContract = serde_json::from_value(value.clone())
+        .map_err(|error| format!("invalid chat_message fields: {error}"))?;
+    if contract.message_type != "chat_message" {
+        return Err("chat_message payload has an invalid type".to_string());
+    }
+    if contract.player_id.is_empty() {
+        return Err("chat_message playerId must not be empty".to_string());
+    }
+    if contract.name.is_empty() {
+        return Err("chat_message name must not be empty".to_string());
+    }
+    if contract.message.is_empty() {
+        return Err("chat_message message must not be empty".to_string());
+    }
+    if contract.message.as_bytes().len() > MAX_CHAT_MESSAGE_BYTES {
+        return Err(format!(
+            "chat_message message exceeds {MAX_CHAT_MESSAGE_BYTES} bytes"
+        ));
     }
 
     Ok(value)
@@ -1508,6 +1556,28 @@ async fn handle_bridge_connection(
                 Err(error) => {
                     log::warn!(
                         "Ignoring malformed world_status from server {}: {}",
+                        server_id,
+                        error
+                    );
+                }
+            },
+            "chat_message" => match parse_chat_message(value) {
+                Ok(message) => {
+                    let payload = ChatMessageEventPayload {
+                        server_id: server_id.clone(),
+                        message,
+                    };
+                    if let Err(error) = app.emit("map-chat-message", payload) {
+                        log::warn!(
+                            "Failed to emit chat_message for server {}: {}",
+                            server_id,
+                            error
+                        );
+                    }
+                }
+                Err(error) => {
+                    log::warn!(
+                        "Ignoring malformed chat_message from server {}: {}",
                         server_id,
                         error
                     );
@@ -3647,5 +3717,82 @@ mod tests {
             "type": "player_snapshot"
         }))
         .is_err());
+    }
+
+    #[test]
+    fn chat_message_parser_preserves_structured_payload() {
+        let message = serde_json::json!({
+            "type": "chat_message",
+            "playerId": "player-1",
+            "name": "Alex",
+            "message": "Hello from Paper",
+            "capturedAt": 1_725_000_000_u64,
+            "extra": { "source": "paper" },
+        });
+
+        assert_eq!(parse_chat_message(message.clone()), Ok(message.clone()));
+
+        let payload = ChatMessageEventPayload {
+            server_id: "server-1".to_string(),
+            message,
+        };
+        let encoded = serde_json::to_value(payload).expect("event payload should serialize");
+        assert_eq!(encoded["serverId"], "server-1");
+        assert_eq!(encoded["message"]["type"], "chat_message");
+        assert_eq!(encoded["message"]["playerId"], "player-1");
+        assert_eq!(encoded["message"]["extra"]["source"], "paper");
+    }
+
+    #[test]
+    fn chat_message_parser_rejects_missing_or_wrong_fields() {
+        let cases = [
+            serde_json::json!(null),
+            serde_json::json!({
+                "type": "chat_message",
+                "playerId": "player-1",
+                "name": "Alex",
+                "message": "Hello",
+            }),
+            serde_json::json!({
+                "type": "chat_message",
+                "playerId": "player-1",
+                "name": "Alex",
+                "message": 42,
+                "capturedAt": 1,
+            }),
+            serde_json::json!({
+                "type": "player_snapshot",
+                "playerId": "player-1",
+                "name": "Alex",
+                "message": "Hello",
+                "capturedAt": 1,
+            }),
+        ];
+
+        for value in cases {
+            assert!(parse_chat_message(value).is_err());
+        }
+    }
+
+    #[test]
+    fn chat_message_parser_rejects_empty_and_oversized_messages() {
+        let mut empty = serde_json::json!({
+            "type": "chat_message",
+            "playerId": "player-1",
+            "name": "Alex",
+            "message": "Hello",
+            "capturedAt": 1,
+        });
+        empty["message"] = serde_json::json!("");
+        assert!(parse_chat_message(empty).is_err());
+
+        let oversized = serde_json::json!({
+            "type": "chat_message",
+            "playerId": "player-1",
+            "name": "Alex",
+            "message": "x".repeat(MAX_CHAT_MESSAGE_BYTES + 1),
+            "capturedAt": 1,
+        });
+        assert!(parse_chat_message(oversized).is_err());
     }
 }
