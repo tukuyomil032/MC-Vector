@@ -558,6 +558,28 @@
   padding: 0.85rem;
 }
 
+.map-view__world-status-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.map-view__world-status-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.map-view__world-status-list dt {
+  color: var(--mv-surface-text-muted);
+}
+
+.map-view__world-status-list dd {
+  margin: 0;
+  color: var(--mv-surface-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 .map-view__side-card-heading {
   justify-content: space-between;
   gap: 0.6rem;

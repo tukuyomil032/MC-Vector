@@ -57,8 +57,10 @@ import {
   type MapRenderProgressEvent,
   type MapStatus,
   type MapTileReadyEvent,
+  type MapWorldStatus,
   type MapWorldInfo,
   clearMapAssetStatus,
+  formatMinecraftTime,
   getValidMapWorldBorder,
   getMapAssetCandidateSourcePath,
   isMapAssetCandidateCurrent,
@@ -67,6 +69,7 @@ import {
   isMapMarkerInputValid,
   isMapTileRequestReady,
   mapMarkersForWorld,
+  mapWorldStatusForWorld,
   mergeMapAssetStatus,
   normalizeMapTileBytes,
   parseMapCoordinateTarget,
@@ -176,6 +179,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [worldHasTerrain, setWorldHasTerrain] = useState<boolean | null>(null);
   const [worldInfo, setWorldInfo] = useState<MapWorldInfo | null>(null);
+  const [worldStatuses, setWorldStatuses] = useState<MapWorldStatus[]>([]);
   const tilesRef = useRef<MapTile[]>([]);
   const mapRequestsRef = useRef(createMapRequestCoordinator());
   const mapRequestGenerationRef = useRef(0);
@@ -377,6 +381,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setMapCenter({ x: 0, z: 0 });
     setWorldHasTerrain(null);
     setWorldInfo(null);
+    setWorldStatuses([]);
     centerInitializedRef.current = false;
     setTileRevision(0);
     setPan({ x: 0, y: 0 });
@@ -418,6 +423,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     centerInitializedRef.current = false;
     setWorldHasTerrain(null);
     setWorldInfo(null);
+    setWorldStatuses([]);
     setMapCenter({ x: 0, z: 0 });
     setPan({ x: 0, y: 0 });
     void getMapWorldInfo(server.id, worldId)
@@ -434,6 +440,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       .catch(() => {
         if (!cancelled) {
           setWorldInfo(null);
+          setWorldStatuses([]);
           setWorldHasTerrain(false);
         }
       });
@@ -470,6 +477,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           centerInitializedRef.current = true;
         }
       }
+    },
+    onWorldStatus: (event) => {
+      if (!Array.isArray(event.message?.worlds)) {
+        return;
+      }
+      setWorldStatuses(event.message.worlds);
     },
     onTileInvalidated: () => {
       setTileRevision((revision) => revision + 1);
@@ -597,6 +610,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const component = status?.component ?? 'absent';
   const bridge = status?.bridge ?? 'not_applicable';
   const selectedWorld = worlds.find((world) => world.worldId === worldId);
+  const selectedWorldStatus = mapWorldStatusForWorld(worldStatuses, selectedWorld, worldId);
   const visiblePlayers = useMemo(
     () => players.filter((player) => playerBelongsToWorld(player, worldId)),
     [players, worldId],
@@ -728,6 +742,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setTileError(null);
     setRenderProgress(null);
     setWorldInfo(null);
+    setWorldStatuses([]);
     setWorldId(nextWorld.worldId);
     setTileRevision((revision) => revision + 1);
   };
@@ -1432,6 +1447,37 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     </li>
                   ))}
                 </ul>
+              )}
+            </div>
+
+            <div className="map-view__side-card map-view__side-card--world-status">
+              <div className="map-view__side-card-heading">
+                <span>{t('map.worldStatus.title')}</span>
+                {selectedWorldStatus && (
+                  <span className="map-view__compact-status">
+                    {formatMinecraftTime(selectedWorldStatus.time)}
+                  </span>
+                )}
+              </div>
+              {selectedWorldStatus ? (
+                <dl className="map-view__world-status-list">
+                  <div>
+                    <dt>{t('map.worldStatus.time')}</dt>
+                    <dd>{formatMinecraftTime(selectedWorldStatus.time)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('map.worldStatus.weather')}</dt>
+                    <dd>
+                      {selectedWorldStatus.thundering
+                        ? t('map.worldStatus.thunder')
+                        : selectedWorldStatus.hasStorm
+                          ? t('map.worldStatus.rain')
+                          : t('map.worldStatus.clear')}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p>{t('map.worldStatus.waiting')}</p>
               )}
             </div>
           </aside>

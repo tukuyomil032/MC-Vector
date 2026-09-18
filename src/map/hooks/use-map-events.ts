@@ -5,6 +5,7 @@ import {
   onMapRenderProgress,
   onMapTileInvalidated,
   onMapTileReady,
+  onMapWorldStatus,
 } from '../api/map-commands';
 import type {
   MapBridgeStatusEvent,
@@ -12,12 +13,14 @@ import type {
   MapRenderProgressEvent,
   MapTileInvalidatedEvent,
   MapTileReadyEvent,
+  MapWorldStatusEvent,
 } from '../state/map-types';
 
 interface UseMapEventsOptions {
   serverId: string;
   onBridgeStatus: (event: MapBridgeStatusEvent) => void;
   onPlayersUpdated: (event: MapPlayersUpdatedEvent) => void;
+  onWorldStatus: (event: MapWorldStatusEvent) => void;
   onTileInvalidated: (event: MapTileInvalidatedEvent) => void;
   onTileReady: (event: MapTileReadyEvent) => void;
   onRenderProgress: (event: MapRenderProgressEvent) => void;
@@ -77,6 +80,11 @@ export function useMapEvents(options: UseMapEventsOptions): void {
     subscribe(onMapPlayersUpdated, (event) => {
       if (event.serverId === serverId) {
         optionsRef.current.onPlayersUpdated(event);
+      }
+    });
+    subscribe(onMapWorldStatus, (event) => {
+      if (event.serverId === serverId) {
+        optionsRef.current.onWorldStatus(event);
       }
     });
     subscribe(onMapTileInvalidated, (event) => {

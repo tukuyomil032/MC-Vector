@@ -788,6 +788,15 @@ export const ja: TranslationDictionary = {
       coordinateInvalid: 'XとZには-30,000,000から30,000,000までの値を入力してください。',
       worldBorder: 'ワールド境界',
     },
+    worldStatus: {
+      title: 'ワールド情報',
+      time: '時刻',
+      weather: '天候',
+      clear: '晴れ',
+      rain: '雨',
+      thunder: '雷雨',
+      waiting: 'ライブのワールド情報を待っています。',
+    },
     management: {
       componentTitle: 'MC-Vector Core',
       componentDescription:

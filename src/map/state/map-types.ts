@@ -222,6 +222,51 @@ export interface MapPlayersUpdatedEvent {
   };
 }
 
+export interface MapWorldStatus {
+  worldId: string;
+  dimension: string;
+  time: number;
+  fullTime: number;
+  hasStorm: boolean;
+  thundering: boolean;
+  weatherDuration: number;
+  thunderDuration: number;
+  capturedAt: number;
+}
+
+export interface MapWorldStatusEvent {
+  serverId: string;
+  message?: {
+    type?: 'world_status';
+    worlds?: MapWorldStatus[];
+    capturedAt?: number;
+  };
+}
+
+export function mapWorldStatusForWorld(
+  statuses: MapWorldStatus[],
+  world: MapWorldEntry | undefined,
+  worldId: string,
+): MapWorldStatus | null {
+  const selectedDimension = world?.dimension?.toLowerCase();
+  return (
+    statuses.find(
+      (status) =>
+        status.worldId === worldId ||
+        (selectedDimension !== undefined && status.dimension.toLowerCase() === selectedDimension),
+    ) ?? null
+  );
+}
+
+export function formatMinecraftTime(ticks: number): string {
+  if (!Number.isFinite(ticks)) {
+    return '--:--';
+  }
+  const normalized = ((Math.floor(ticks) % 24_000) + 24_000) % 24_000;
+  const totalMinutes = Math.floor((((normalized + 6_000) % 24_000) / 1_000) * 60);
+  return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+}
+
 export interface MapBridgeStatusEvent {
   serverId: string;
   status: MapBridgeState;

@@ -13,6 +13,7 @@ import type {
   MapTileInvalidatedEvent,
   MapTileReadyEvent,
   MapViewport,
+  MapWorldStatusEvent,
   MapWorldEntry,
   MapWorldInfo,
 } from '../state/map-types';
@@ -109,6 +110,12 @@ export function onMapPlayersUpdated(
   callback: (event: MapPlayersUpdatedEvent) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('map-players-updated', callback);
+}
+
+export function onMapWorldStatus(
+  callback: (event: MapWorldStatusEvent) => void,
+): Promise<UnlistenFn> {
+  return tauriListen('map-world-status', callback);
 }
 
 export function onMapTileInvalidated(

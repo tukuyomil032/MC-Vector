@@ -792,6 +792,15 @@ export const en: TranslationDictionary = {
       coordinateInvalid: 'Enter X and Z between -30,000,000 and 30,000,000.',
       worldBorder: 'World border',
     },
+    worldStatus: {
+      title: 'World status',
+      time: 'Time',
+      weather: 'Weather',
+      clear: 'Clear',
+      rain: 'Rain',
+      thunder: 'Thunderstorm',
+      waiting: 'Waiting for live world status.',
+    },
     management: {
       componentTitle: 'MC-Vector Core',
       componentDescription:
