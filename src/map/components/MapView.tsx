@@ -57,7 +57,9 @@ import {
   type MapRenderProgressEvent,
   type MapStatus,
   type MapTileReadyEvent,
+  type MapWorldInfo,
   clearMapAssetStatus,
+  getValidMapWorldBorder,
   getMapAssetCandidateSourcePath,
   isMapAssetCandidateCurrent,
   isMapAssetWarningState,
@@ -173,6 +175,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [coordinateError, setCoordinateError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [worldHasTerrain, setWorldHasTerrain] = useState<boolean | null>(null);
+  const [worldInfo, setWorldInfo] = useState<MapWorldInfo | null>(null);
   const tilesRef = useRef<MapTile[]>([]);
   const mapRequestsRef = useRef(createMapRequestCoordinator());
   const mapRequestGenerationRef = useRef(0);
@@ -373,6 +376,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     ]);
     setMapCenter({ x: 0, z: 0 });
     setWorldHasTerrain(null);
+    setWorldInfo(null);
     centerInitializedRef.current = false;
     setTileRevision(0);
     setPan({ x: 0, y: 0 });
@@ -413,6 +417,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     let cancelled = false;
     centerInitializedRef.current = false;
     setWorldHasTerrain(null);
+    setWorldInfo(null);
     setMapCenter({ x: 0, z: 0 });
     setPan({ x: 0, y: 0 });
     void getMapWorldInfo(server.id, worldId)
@@ -420,6 +425,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         if (cancelled) {
           return;
         }
+        setWorldInfo(info);
         setWorldHasTerrain(info.hasTerrain);
         setMapCenter({ x: info.centerX, z: info.centerZ });
         setZoom(info.recommendedZoom);
@@ -427,6 +433,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       })
       .catch(() => {
         if (!cancelled) {
+          setWorldInfo(null);
           setWorldHasTerrain(false);
         }
       });
@@ -720,6 +727,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setRequestedTileKeys([]);
     setTileError(null);
     setRenderProgress(null);
+    setWorldInfo(null);
     setWorldId(nextWorld.worldId);
     setTileRevision((revision) => revision + 1);
   };
@@ -946,6 +954,10 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     50 + ((coordinate * tileWorldSize - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
   const playerPosition = (coordinate: number, center: number) =>
     50 + ((coordinate - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
+  const validWorldBorder = getValidMapWorldBorder(worldInfo?.worldBorder);
+  const worldBorderSizePercentage = validWorldBorder
+    ? (validWorldBorder.size / (TILES_PER_VIEW * tileWorldSize)) * 100
+    : 0;
 
   const artifactIsActive = status?.artifact === 'active';
   const artifactIsPaused = status?.artifact === 'paused';
@@ -1268,6 +1280,25 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     <strong>{tileDiagnostic.title}</strong>
                     <span>{tileDiagnostic.description}</span>
                   </div>
+                )}
+                {validWorldBorder && (
+                  <div
+                    className="map-view__world-border"
+                    role="img"
+                    aria-label={t('map.surface.worldBorder')}
+                    style={{
+                      left: `${playerPosition(
+                        validWorldBorder.centerX - validWorldBorder.size / 2,
+                        mapCenter.x,
+                      )}%`,
+                      top: `${playerPosition(
+                        validWorldBorder.centerZ - validWorldBorder.size / 2,
+                        mapCenter.z,
+                      )}%`,
+                      width: `${worldBorderSizePercentage}%`,
+                      height: `${worldBorderSizePercentage}%`,
+                    }}
+                  />
                 )}
                 {visibleMarkers.map((marker) => (
                   <div

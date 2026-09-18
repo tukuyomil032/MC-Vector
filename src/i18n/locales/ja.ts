@@ -786,6 +786,7 @@ export const ja: TranslationDictionary = {
       coordinateZ: 'Z座標',
       coordinateJumpAction: '移動',
       coordinateInvalid: 'XとZには-30,000,000から30,000,000までの値を入力してください。',
+      worldBorder: 'ワールド境界',
     },
     management: {
       componentTitle: 'MC-Vector Core',

@@ -373,6 +373,40 @@ export function normalizeMapTileBytes(buffer: MapTileBytes): Uint8Array {
   return Uint8Array.from(buffer);
 }
 
+export interface MapWorldBorder {
+  centerX?: number | null;
+  centerZ?: number | null;
+  size?: number | null;
+  warningBlocks?: number | null;
+  warningTime?: number | null;
+}
+
+export interface ValidMapWorldBorder {
+  centerX: number;
+  centerZ: number;
+  size: number;
+}
+
+export function getValidMapWorldBorder(
+  border: MapWorldBorder | null | undefined,
+): ValidMapWorldBorder | null {
+  const centerX = border?.centerX;
+  const centerZ = border?.centerZ;
+  const size = border?.size;
+  if (
+    typeof centerX !== 'number' ||
+    typeof centerZ !== 'number' ||
+    typeof size !== 'number' ||
+    !Number.isFinite(centerX) ||
+    !Number.isFinite(centerZ) ||
+    !Number.isFinite(size) ||
+    size <= 0
+  ) {
+    return null;
+  }
+  return { centerX, centerZ, size };
+}
+
 export interface MapWorldInfo {
   worldId: string;
   hasTerrain: boolean;
@@ -388,6 +422,7 @@ export interface MapWorldInfo {
   spawnZ?: number | null;
   dataVersion?: number | null;
   recommendedZoom: number;
+  worldBorder?: MapWorldBorder | null;
 }
 
 export interface MapViewport {

@@ -790,6 +790,7 @@ export const en: TranslationDictionary = {
       coordinateZ: 'Z coordinate',
       coordinateJumpAction: 'Go',
       coordinateInvalid: 'Enter X and Z between -30,000,000 and 30,000,000.',
+      worldBorder: 'World border',
     },
     management: {
       componentTitle: 'MC-Vector Core',
