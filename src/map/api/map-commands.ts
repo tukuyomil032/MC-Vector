@@ -1,5 +1,6 @@
 import { type UnlistenFn, tauriInvoke, tauriListen } from '../../lib/tauri-api';
 import type {
+  MapAssetCandidate,
   MapAssetStatus,
   MapBridgeStatusEvent,
   MapPlayersUpdatedEvent,
@@ -35,6 +36,10 @@ export function repairMapBridge(serverId: string): Promise<MapStatus> {
 
 export function getMapAssetStatus(serverId: string): Promise<MapAssetStatus> {
   return tauriInvoke('get_map_asset_status', { serverId });
+}
+
+export function getMapAssetCandidates(serverId: string): Promise<MapAssetCandidate[]> {
+  return tauriInvoke('get_map_asset_candidates', { serverId });
 }
 
 export function selectMapAsset(serverId: string, sourcePath: string): Promise<MapAssetStatus> {

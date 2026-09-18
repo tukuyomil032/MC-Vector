@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MapAssetStatus } from '@/map/state/map-types';
+import type { MapAssetCandidate, MapAssetStatus } from '@/map/state/map-types';
 
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 
@@ -20,6 +20,43 @@ const fullAssetStatus: MapAssetStatus = {
   unresolvedBlockstateCount: 0,
   message: null,
 };
+
+const assetCandidates: MapAssetCandidate[] = [
+  {
+    launcher: 'official_launcher',
+    launcherRoot: '/minecraft/launcher',
+    instanceId: null,
+    gameDirectory: '/minecraft/.minecraft',
+    clientJar: {
+      path: '/minecraft/.minecraft/versions/1.21.1/client.jar',
+      identity: 'sha256:jar',
+    },
+    resourcePacks: [],
+    minecraftVersion: '1.21.1',
+    sourceIdentity: 'official:1.21.1',
+    resourcePackHash: null,
+    state: 'valid',
+    message: null,
+  },
+  {
+    launcher: 'prism_launcher_custom',
+    launcherRoot: '/launchers/prism',
+    instanceId: 'instance-1',
+    gameDirectory: '/instances/instance-1/.minecraft',
+    clientJar: null,
+    resourcePacks: [
+      {
+        path: '/instances/instance-1/.minecraft/resourcepacks/example.zip',
+        identity: 'sha256:pack',
+      },
+    ],
+    minecraftVersion: '1.20.4',
+    sourceIdentity: 'prism:instance-1',
+    resourcePackHash: 'sha256:pack',
+    state: 'version_mismatch',
+    message: 'Minecraft version does not match the server',
+  },
+];
 
 describe('map asset status bridge', () => {
   beforeEach(() => {
@@ -48,5 +85,13 @@ describe('map asset status bridge', () => {
       serverId: 'server-1',
       sourcePath: '/assets/selected.zip',
     });
+  });
+
+  it('loads the strict candidate payload through the registered command', async () => {
+    invoke.mockResolvedValueOnce(assetCandidates);
+    const { getMapAssetCandidates } = await import('@/map/api/map-commands');
+
+    await expect(getMapAssetCandidates('server-1')).resolves.toEqual(assetCandidates);
+    expect(invoke).toHaveBeenCalledWith('get_map_asset_candidates', { serverId: 'server-1' });
   });
 });

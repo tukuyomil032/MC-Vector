@@ -219,3 +219,78 @@ describe('map tile diagnostics', () => {
     ).toBe('error');
   });
 });
+
+describe('map asset candidates', () => {
+  const candidate = (
+    overrides: Partial<import('@/map/state/map-types').MapAssetCandidate> = {},
+  ) => ({
+    launcher: 'prism_launcher_standard' as const,
+    launcherRoot: '/launchers/prism',
+    instanceId: 'instance-1',
+    gameDirectory: '/instances/instance-1/.minecraft',
+    clientJar: {
+      path: '/instances/instance-1/.minecraft/versions/1.21.1/client.jar',
+      identity: 'sha256:jar',
+    },
+    resourcePacks: [
+      {
+        path: '/instances/instance-1/.minecraft/resourcepacks/example.zip',
+        identity: 'sha256:pack',
+      },
+    ],
+    minecraftVersion: '1.21.1',
+    sourceIdentity: 'prism:instance-1',
+    resourcePackHash: 'sha256:pack',
+    state: 'valid' as const,
+    message: null,
+    ...overrides,
+  });
+
+  it('prefers the validated client jar path for a selectable candidate', async () => {
+    const { getMapAssetCandidateSourcePath } = await import('@/map/state/map-types');
+
+    expect(getMapAssetCandidateSourcePath(candidate())).toBe(
+      '/instances/instance-1/.minecraft/versions/1.21.1/client.jar',
+    );
+  });
+
+  it('falls back to the first resource pack when the client jar is absent', async () => {
+    const { getMapAssetCandidateSourcePath } = await import('@/map/state/map-types');
+
+    expect(getMapAssetCandidateSourcePath(candidate({ clientJar: null }))).toBe(
+      '/instances/instance-1/.minecraft/resourcepacks/example.zip',
+    );
+  });
+
+  it('does not expose warning candidates as selectable paths', async () => {
+    const { getMapAssetCandidateSourcePath } = await import('@/map/state/map-types');
+
+    expect(
+      getMapAssetCandidateSourcePath(
+        candidate({ state: 'version_mismatch', message: 'wrong version' }),
+      ),
+    ).toBeNull();
+    expect(
+      getMapAssetCandidateSourcePath(candidate({ state: 'invalid', message: 'missing jar' })),
+    ).toBeNull();
+  });
+
+  it('rejects candidates from a previous server request generation', async () => {
+    const { isMapAssetCandidateCurrent } = await import('@/map/state/map-types');
+    const selected = candidate();
+    const current = { serverId: 'server-1', generation: 2 };
+    const snapshot = {
+      serverId: 'server-1',
+      generation: 2,
+      candidates: [selected],
+    };
+
+    expect(isMapAssetCandidateCurrent(selected, snapshot, current)).toBe(true);
+    expect(isMapAssetCandidateCurrent(selected, { ...snapshot, generation: 1 }, current)).toBe(
+      false,
+    );
+    expect(
+      isMapAssetCandidateCurrent(selected, { ...snapshot, serverId: 'server-2' }, current),
+    ).toBe(false);
+  });
+});

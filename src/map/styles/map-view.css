@@ -641,6 +641,28 @@
   white-space: nowrap;
 }
 
+.map-view__asset-candidates-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-view__asset-candidates-list > li {
+  border: 1px solid var(--mv-surface-border);
+  border-radius: 0.55rem;
+  padding: 0.55rem;
+}
+
+.map-view__asset-candidates-list .map-view__asset-details {
+  margin-top: 0;
+}
+
+.map-view__asset-candidates-list button {
+  margin-top: 0.65rem;
+}
+
 .map-view__management-actions {
   flex-wrap: wrap;
   gap: 0.55rem;

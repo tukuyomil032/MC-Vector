@@ -70,6 +70,69 @@ export interface MapAssetStatus {
   message: string | null;
 }
 
+export type MapAssetLauncher =
+  | 'manual'
+  | 'prism_launcher_standard'
+  | 'prism_launcher_custom'
+  | 'prism_launcher_portable'
+  | 'official_launcher';
+
+export type MapAssetSourceState = 'valid' | 'version_mismatch' | 'invalid';
+
+export interface MapAssetArtifact {
+  path: string;
+  identity: string;
+}
+
+export interface MapAssetCandidate {
+  launcher: MapAssetLauncher;
+  launcherRoot: string;
+  instanceId: string | null;
+  gameDirectory: string | null;
+  clientJar: MapAssetArtifact | null;
+  resourcePacks: MapAssetArtifact[];
+  minecraftVersion: string | null;
+  sourceIdentity: string | null;
+  resourcePackHash: string | null;
+  state: MapAssetSourceState;
+  message: string | null;
+}
+
+export interface MapRequestContext {
+  serverId: string;
+  generation: number;
+}
+
+export interface MapAssetCandidateSnapshot extends MapRequestContext {
+  candidates: MapAssetCandidate[];
+}
+
+export function isMapRequestContextCurrent(
+  request: MapRequestContext,
+  current: MapRequestContext,
+): boolean {
+  return request.serverId === current.serverId && request.generation === current.generation;
+}
+
+export function isMapAssetCandidateCurrent(
+  candidate: MapAssetCandidate,
+  snapshot: MapAssetCandidateSnapshot,
+  current: MapRequestContext,
+): boolean {
+  return (
+    isMapRequestContextCurrent(snapshot, current) &&
+    snapshot.candidates.includes(candidate) &&
+    getMapAssetCandidateSourcePath(candidate) !== null
+  );
+}
+
+export function getMapAssetCandidateSourcePath(candidate: MapAssetCandidate): string | null {
+  if (candidate.state !== 'valid') {
+    return null;
+  }
+  return candidate.clientJar?.path || candidate.resourcePacks[0]?.path || null;
+}
+
 export interface MapPlayer {
   playerId: string;
   name: string;

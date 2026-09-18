@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
+  getMapAssetCandidates,
   getMapAssetStatus,
   getMapWorldInfo,
   getMapStatus,
@@ -43,12 +44,16 @@ import type { MinecraftServer } from '../../renderer/shared/server declaration';
 import { Button } from '../../renderer/components/ui/Button';
 import {
   type MapBridgeState,
+  type MapAssetCandidate,
+  type MapAssetCandidateSnapshot,
   type MapAssetStatus,
   type MapPlayer,
   type MapRenderProgressEvent,
   type MapStatus,
   type MapTileReadyEvent,
   clearMapAssetStatus,
+  getMapAssetCandidateSourcePath,
+  isMapAssetCandidateCurrent,
   isMapAssetWarningState,
   isMapAssetSelectionSuccessful,
   isMapTileRequestReady,
@@ -106,6 +111,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [tab, setTab] = useState<MapTab>('map');
   const [status, setStatus] = useState<MapStatus | null>(null);
   const [assetStatus, setAssetStatus] = useState<MapAssetStatus | null>(null);
+  const [assetCandidates, setAssetCandidates] = useState<MapAssetCandidate[]>([]);
+  const [assetCandidatesError, setAssetCandidatesError] = useState<string | null>(null);
   const [players, setPlayers] = useState<MapPlayer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
@@ -126,6 +133,14 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [worldHasTerrain, setWorldHasTerrain] = useState<boolean | null>(null);
   const tilesRef = useRef<MapTile[]>([]);
   const mapRequestsRef = useRef(createMapRequestCoordinator());
+  const mapRequestGenerationRef = useRef(0);
+  const assetStatusRequestRef = useRef<Promise<AssetStatusRefreshResult> | null>(null);
+  const assetCandidatesRequestRef = useRef<Promise<MapAssetCandidate[] | null> | null>(null);
+  const assetCandidatesContextRef = useRef<MapAssetCandidateSnapshot>({
+    serverId: server.id,
+    generation: 0,
+    candidates: [],
+  });
   const centerInitializedRef = useRef(false);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; pan: PanState }>();
 
@@ -142,24 +157,94 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   }, []);
 
   const refreshAssetStatus = useCallback(async (): Promise<AssetStatusRefreshResult> => {
-    try {
-      const nextStatus = await getMapAssetStatus(server.id);
-      applyAssetStatus(nextStatus);
-      return { status: nextStatus, error: null };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setAssetStatus(null);
-      setAssetStatusError(message);
-      setStatus((current) => clearMapAssetStatus(current, message));
-      return { status: null, error: message };
+    const existing = assetStatusRequestRef.current;
+    if (existing) {
+      return existing;
     }
+
+    const generation = mapRequestGenerationRef.current;
+    const requestServerId = server.id;
+    const operation = getMapAssetStatus(requestServerId)
+      .then((nextStatus) => {
+        if (mapRequestGenerationRef.current !== generation) {
+          return { status: null, error: null };
+        }
+        applyAssetStatus(nextStatus);
+        return { status: nextStatus, error: null };
+      })
+      .catch((error) => {
+        if (mapRequestGenerationRef.current !== generation) {
+          return { status: null, error: null };
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        setAssetStatus(null);
+        setAssetStatusError(message);
+        setStatus((current) => clearMapAssetStatus(current, message));
+        return { status: null, error: message };
+      });
+    const request = operation.finally(() => {
+      if (assetStatusRequestRef.current === request) {
+        assetStatusRequestRef.current = null;
+      }
+    });
+    assetStatusRequestRef.current = request;
+    return request;
   }, [applyAssetStatus, server.id]);
+
+  const refreshAssetCandidates = useCallback(async (): Promise<MapAssetCandidate[] | null> => {
+    const existing = assetCandidatesRequestRef.current;
+    if (existing) {
+      return existing;
+    }
+
+    const generation = mapRequestGenerationRef.current;
+    const requestServerId = server.id;
+    const operation = getMapAssetCandidates(requestServerId)
+      .then((nextCandidates) => {
+        if (mapRequestGenerationRef.current !== generation) {
+          return null;
+        }
+        setAssetCandidates(nextCandidates);
+        setAssetCandidatesError(null);
+        assetCandidatesContextRef.current = {
+          serverId: requestServerId,
+          generation,
+          candidates: nextCandidates,
+        };
+        return nextCandidates;
+      })
+      .catch((error) => {
+        if (mapRequestGenerationRef.current !== generation) {
+          return null;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        setAssetCandidates([]);
+        setAssetCandidatesError(message);
+        assetCandidatesContextRef.current = {
+          serverId: requestServerId,
+          generation,
+          candidates: [],
+        };
+        return null;
+      });
+    const request = operation.finally(() => {
+      if (assetCandidatesRequestRef.current === request) {
+        assetCandidatesRequestRef.current = null;
+      }
+    });
+    assetCandidatesRequestRef.current = request;
+    return request;
+  }, [server.id]);
 
   const refreshStatus = useCallback(
     async (refreshAssets = false) => {
       setIsLoading(true);
       try {
+        const generation = mapRequestGenerationRef.current;
         const nextStatus = await getMapStatus(server.id);
+        if (mapRequestGenerationRef.current !== generation) {
+          return false;
+        }
         setStatus(nextStatus);
         setStatusError(null);
         setLoadError(null);
@@ -181,9 +266,19 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   );
 
   useEffect(() => {
+    mapRequestGenerationRef.current += 1;
+    assetStatusRequestRef.current = null;
+    assetCandidatesRequestRef.current = null;
+    assetCandidatesContextRef.current = {
+      serverId: server.id,
+      generation: mapRequestGenerationRef.current,
+      candidates: [],
+    };
     setStatus(null);
     setAssetStatus(null);
     setAssetStatusError(null);
+    setAssetCandidates([]);
+    setAssetCandidatesError(null);
     mapRequestsRef.current.clear();
     setPlayers([]);
     setStatusError(null);
@@ -201,6 +296,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setTileRevision(0);
     setPan({ x: 0, y: 0 });
     void refreshStatus(true);
+    void refreshAssetCandidates();
     void getMapWorldInfo(server.id, 'overworld')
       .then((info) => {
         if (centerInitializedRef.current) {
@@ -222,7 +318,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       revokeTiles(tilesRef.current);
       tilesRef.current = [];
     };
-  }, [refreshStatus, server.id]);
+  }, [refreshAssetCandidates, refreshStatus, server.id]);
 
   useMapEvents({
     serverId: server.id,
@@ -495,20 +591,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     void runAction(() => repairMapBridge(server.id), t('map.toast.bridgeRepaired'));
   };
 
-  const handleSelectAsset = async () => {
-    const selection = await open({
-      multiple: false,
-      directory: false,
-      filters: [
-        {
-          name: 'Minecraft assets',
-          extensions: ['jar', 'zip'],
-        },
-      ],
-    });
-    if (typeof selection !== 'string') {
-      return;
-    }
+  const handleRefresh = () => {
+    void refreshStatus();
+    void refreshAssetCandidates();
+  };
+
+  const handleAssetSelection = async (selection: string) => {
     setIsActing(true);
     try {
       const nextAssetStatus = await selectMapAsset(server.id, selection);
@@ -516,6 +604,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       const selectionWasRejected = !isMapAssetSelectionSuccessful(nextAssetStatus.state);
       const statusRefreshed = await refreshStatus();
       const assetRefresh = await refreshAssetStatus();
+      await refreshAssetCandidates();
 
       if (selectionWasRejected) {
         applyAssetStatus(nextAssetStatus, false);
@@ -553,6 +642,37 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     } finally {
       setIsActing(false);
     }
+  };
+
+  const handleSelectAsset = async () => {
+    const selection = await open({
+      multiple: false,
+      directory: false,
+      filters: [
+        {
+          name: 'Minecraft assets',
+          extensions: ['jar', 'zip'],
+        },
+      ],
+    });
+    if (typeof selection === 'string') {
+      await handleAssetSelection(selection);
+    }
+  };
+
+  const handleSelectCandidate = async (candidate: MapAssetCandidate) => {
+    const currentContext = {
+      serverId: server.id,
+      generation: mapRequestGenerationRef.current,
+    };
+    if (!isMapAssetCandidateCurrent(candidate, assetCandidatesContextRef.current, currentContext)) {
+      return;
+    }
+    const sourcePath = getMapAssetCandidateSourcePath(candidate);
+    if (!sourcePath) {
+      return;
+    }
+    await handleAssetSelection(sourcePath);
   };
 
   const handleRemove = () => {
@@ -752,7 +872,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => void refreshStatus()}
+            onClick={handleRefresh}
             disabled={isLoading}
             title={t('map.actions.refresh')}
           >
@@ -1156,6 +1276,90 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 </div>
               </dl>
             )}
+            <section className="map-view__asset-candidates" aria-label="Map asset candidates">
+              <div className="map-view__asset-panel">
+                <div>
+                  <span>Detected candidates</span>
+                  <strong>{assetCandidates.length}</strong>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isLoading || isActing}
+                >
+                  <RefreshCw size={14} aria-hidden="true" />
+                  Refresh candidates
+                </Button>
+              </div>
+              {assetCandidatesError && (
+                <div className="map-view__notice map-view__notice--error" role="alert">
+                  <AlertTriangle size={15} aria-hidden="true" />
+                  <span>Candidate discovery failed: {assetCandidatesError}</span>
+                </div>
+              )}
+              {assetCandidates.length === 0 && !assetCandidatesError && (
+                <p className="map-view__management-note">No asset candidates detected.</p>
+              )}
+              {assetCandidates.length > 0 && (
+                <ul className="map-view__asset-candidates-list">
+                  {assetCandidates.map((candidate) => {
+                    const sourcePath = getMapAssetCandidateSourcePath(candidate);
+                    const isSelectable = candidate.state === 'valid' && sourcePath !== null;
+                    const candidateKey = [
+                      candidate.launcher,
+                      candidate.launcherRoot,
+                      candidate.instanceId ?? '',
+                      candidate.sourceIdentity ?? candidate.clientJar?.identity ?? '',
+                    ].join(':');
+                    return (
+                      <li key={candidateKey}>
+                        <dl className="map-view__asset-details">
+                          <div>
+                            <dt>launcher</dt>
+                            <dd>{candidate.launcher}</dd>
+                          </div>
+                          <div>
+                            <dt>version</dt>
+                            <dd>{candidate.minecraftVersion ?? '—'}</dd>
+                          </div>
+                          <div>
+                            <dt>state</dt>
+                            <dd>{candidate.state}</dd>
+                          </div>
+                          <div>
+                            <dt>clientJar</dt>
+                            <dd>{candidate.clientJar?.path ?? '—'}</dd>
+                          </div>
+                          <div>
+                            <dt>resourcePacks</dt>
+                            <dd>
+                              {candidate.resourcePacks.length > 0
+                                ? candidate.resourcePacks
+                                    .map((resourcePack) => resourcePack.path)
+                                    .join(', ')
+                                : '—'}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>message</dt>
+                            <dd>{candidate.message ?? '—'}</dd>
+                          </div>
+                        </dl>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => void handleSelectCandidate(candidate)}
+                          disabled={!isSelectable || isActing}
+                        >
+                          Use candidate
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
           </section>
 
           {component === 'absent' && (
@@ -1209,12 +1413,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               <AlertTriangle size={17} aria-hidden="true" />
               <span>
                 {t('map.bridge.statusErrorDescription')}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void refreshStatus()}
-                  disabled={isLoading}
-                >
+                <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={isLoading}>
                   {t('map.actions.refresh')}
                 </Button>
               </span>
