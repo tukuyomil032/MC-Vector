@@ -152,6 +152,45 @@ export interface MapPlayer {
   capturedAt: number;
 }
 
+export interface MapMarkerPosition {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface MapMarker {
+  id: string;
+  worldId: string;
+  group: string;
+  name: string;
+  position: MapMarkerPosition;
+  color: string;
+}
+
+export interface MapMarkerInput {
+  worldId: string;
+  group: string;
+  name: string;
+  position: MapMarkerPosition;
+  color: string;
+}
+
+export function mapMarkersForWorld(markers: MapMarker[], worldId: string): MapMarker[] {
+  return markers.filter((marker) => marker.worldId === worldId);
+}
+
+export function isMapMarkerInputValid(input: MapMarkerInput): boolean {
+  return (
+    input.worldId.trim().length > 0 &&
+    input.group.trim().length > 0 &&
+    input.name.trim().length > 0 &&
+    /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(input.color) &&
+    Number.isFinite(input.position.x) &&
+    Number.isFinite(input.position.y) &&
+    Number.isFinite(input.position.z)
+  );
+}
+
 export interface MapPlayersUpdatedEvent {
   serverId: string;
   message?: {

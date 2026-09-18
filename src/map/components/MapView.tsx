@@ -30,6 +30,9 @@ import { useTranslation } from '../../i18n';
 import {
   getMapAssetCandidates,
   getMapAssetStatus,
+  createMapMarker,
+  deleteMapMarker,
+  getMapMarkers,
   getMapWorldInfo,
   getMapWorlds,
   getMapStatus,
@@ -49,6 +52,7 @@ import {
   type MapAssetCandidate,
   type MapAssetCandidateSnapshot,
   type MapAssetStatus,
+  type MapMarker,
   type MapPlayer,
   type MapRenderProgressEvent,
   type MapStatus,
@@ -58,7 +62,9 @@ import {
   isMapAssetCandidateCurrent,
   isMapAssetWarningState,
   isMapAssetSelectionSuccessful,
+  isMapMarkerInputValid,
   isMapTileRequestReady,
+  mapMarkersForWorld,
   mergeMapAssetStatus,
   normalizeMapTileBytes,
   resolveMapTileDiagnosticState,
@@ -140,6 +146,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   ]);
   const [worldId, setWorldId] = useState('overworld');
   const [players, setPlayers] = useState<MapPlayer[]>([]);
+  const [markers, setMarkers] = useState<MapMarker[]>([]);
+  const [markerName, setMarkerName] = useState('');
+  const [markerGroup, setMarkerGroup] = useState('default');
+  const [markerColor, setMarkerColor] = useState('#22c55e');
+  const [markerError, setMarkerError] = useState<string | null>(null);
+  const [isMarkerActing, setIsMarkerActing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -335,6 +347,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setAssetCandidatesError(null);
     mapRequestsRef.current.clear();
     setPlayers([]);
+    setMarkers([]);
+    setMarkerError(null);
     setStatusError(null);
     revokeTiles(tilesRef.current);
     tilesRef.current = [];
@@ -370,6 +384,26 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       tilesRef.current = [];
     };
   }, [refreshAssetCandidates, refreshStatus, refreshWorlds, server.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMarkerError(null);
+    void getMapMarkers(server.id)
+      .then((nextMarkers) => {
+        if (!cancelled) {
+          setMarkers(nextMarkers);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setMarkers([]);
+          setMarkerError(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [server.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -563,6 +597,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     worldId,
     isManagedArtifactAvailable,
   );
+  const visibleMarkers = useMemo(() => mapMarkersForWorld(markers, worldId), [markers, worldId]);
 
   const componentLabel = (value: MapStatus['component']): string => {
     switch (value) {
@@ -683,6 +718,48 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setRenderProgress(null);
     setWorldId(nextWorld.worldId);
     setTileRevision((revision) => revision + 1);
+  };
+
+  const handleCreateMarker = async () => {
+    const input = {
+      worldId,
+      group: markerGroup.trim(),
+      name: markerName.trim(),
+      position: { x: mapCenter.x, y: 0, z: mapCenter.z },
+      color: markerColor,
+    };
+    if (!isMapMarkerInputValid(input)) {
+      setMarkerError('Enter a marker name and a valid color.');
+      return;
+    }
+    setIsMarkerActing(true);
+    setMarkerError(null);
+    try {
+      const marker = await createMapMarker(server.id, input);
+      setMarkers((current) => [...current, marker]);
+      setMarkerName('');
+      toast.success('Map marker created');
+    } catch (error) {
+      setMarkerError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsMarkerActing(false);
+    }
+  };
+
+  const handleDeleteMarker = async (marker: MapMarker) => {
+    setIsMarkerActing(true);
+    setMarkerError(null);
+    try {
+      const deleted = await deleteMapMarker(server.id, marker.id);
+      if (deleted) {
+        setMarkers((current) => current.filter((candidate) => candidate.id !== marker.id));
+        toast.success('Map marker deleted');
+      }
+    } catch (error) {
+      setMarkerError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsMarkerActing(false);
+    }
   };
 
   const handleAssetSelection = async (selection: string) => {
@@ -1137,6 +1214,26 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     <span>{tileDiagnostic.description}</span>
                   </div>
                 )}
+                {visibleMarkers.map((marker) => (
+                  <div
+                    className="map-view__marker"
+                    key={marker.id}
+                    role="img"
+                    aria-label={`${marker.name} (${Math.round(marker.position.x)}, ${Math.round(marker.position.z)})`}
+                    title={`${marker.name} (${Math.round(marker.position.x)}, ${Math.round(marker.position.z)})`}
+                    style={{
+                      left: `${playerPosition(marker.position.x, mapCenter.x)}%`,
+                      top: `${playerPosition(marker.position.z, mapCenter.z)}%`,
+                    }}
+                  >
+                    <span
+                      className="map-view__marker-dot"
+                      aria-hidden="true"
+                      style={{ backgroundColor: marker.color }}
+                    />
+                    <span className="map-view__marker-name">{marker.name}</span>
+                  </div>
+                ))}
                 {interpolatedPlayers.map((player) => (
                   <div
                     className="map-view__player-marker"
@@ -1255,6 +1352,101 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         </div>
       ) : (
         <div className="map-view__management">
+          <section className="map-view__management-card map-view__marker-management">
+            <div className="map-view__management-card-header">
+              <div>
+                <div className="map-view__eyebrow">Map overlays</div>
+                <h3>Markers</h3>
+              </div>
+              <span className="map-view__compact-status">{visibleMarkers.length} in view</span>
+            </div>
+            <p>
+              Create a persistent marker at the current map center. Markers are stored per server
+              and filtered by the selected world.
+            </p>
+            <form
+              className="map-view__marker-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleCreateMarker();
+              }}
+            >
+              <label>
+                Name
+                <input
+                  value={markerName}
+                  onChange={(event) => setMarkerName(event.target.value)}
+                  placeholder="Spawn"
+                  maxLength={256}
+                  required
+                />
+              </label>
+              <label>
+                Group
+                <input
+                  value={markerGroup}
+                  onChange={(event) => setMarkerGroup(event.target.value)}
+                  maxLength={128}
+                  required
+                />
+              </label>
+              <label className="map-view__marker-color-field">
+                Color
+                <input
+                  type="color"
+                  value={markerColor}
+                  onChange={(event) => setMarkerColor(event.target.value)}
+                  aria-label="Marker color"
+                />
+              </label>
+              <div className="map-view__marker-form-footer">
+                <span>
+                  {selectedWorld?.label ?? worldId}: {Math.round(mapCenter.x)},{' '}
+                  {Math.round(mapCenter.z)}
+                </span>
+                <Button type="submit" variant="secondary" size="sm" disabled={isMarkerActing}>
+                  Add marker
+                </Button>
+              </div>
+            </form>
+            {markerError && (
+              <div className="map-view__asset-error" role="alert">
+                {markerError}
+              </div>
+            )}
+            {visibleMarkers.length > 0 ? (
+              <ul className="map-view__marker-list">
+                {visibleMarkers.map((marker) => (
+                  <li key={marker.id}>
+                    <span
+                      className="map-view__marker-list-dot"
+                      aria-hidden="true"
+                      style={{ backgroundColor: marker.color }}
+                    />
+                    <span className="map-view__marker-list-copy">
+                      <strong>{marker.name}</strong>
+                      <small>
+                        {marker.group} · {Math.round(marker.position.x)},{' '}
+                        {Math.round(marker.position.z)}
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      className="map-view__icon-button"
+                      onClick={() => void handleDeleteMarker(marker)}
+                      disabled={isMarkerActing}
+                      aria-label={`Delete marker ${marker.name}`}
+                      title={`Delete marker ${marker.name}`}
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="map-view__management-note">No markers in the selected world.</p>
+            )}
+          </section>
           <section className="map-view__management-card">
             <div className="map-view__management-card-header">
               <div>

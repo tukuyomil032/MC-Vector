@@ -442,6 +442,38 @@
   box-shadow: 0 0 0 4px rgb(34 197 94 / 25%);
 }
 
+.map-view__marker {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  transform: translate(-50%, -50%);
+  color: var(--mv-surface-text-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 80%);
+  pointer-events: none;
+}
+
+.map-view__marker-dot,
+.map-view__marker-list-dot {
+  display: inline-block;
+  width: 0.62rem;
+  height: 0.62rem;
+  flex: 0 0 auto;
+  border: 2px solid #f8fafc;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgb(15 23 42 / 34%);
+}
+
+.map-view__marker-name {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .map-view__surface-footer {
   justify-content: space-between;
   gap: 1rem;
@@ -548,6 +580,90 @@
 
 .map-view__management-card {
   padding: 1rem;
+}
+
+.map-view__marker-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.map-view__marker-form label {
+  display: grid;
+  gap: 0.28rem;
+  color: var(--mv-surface-text-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.map-view__marker-form input {
+  min-width: 0;
+  border: 1px solid var(--mv-surface-border);
+  border-radius: 0.4rem;
+  background: var(--mv-surface-card-bg);
+  padding: 0.48rem 0.55rem;
+  color: var(--mv-surface-text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.map-view__marker-form input:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+.map-view__marker-color-field input {
+  width: 3rem;
+  min-height: 1.85rem;
+  padding: 0.15rem;
+}
+
+.map-view__marker-form-footer {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--mv-surface-text-muted);
+  font-size: 0.68rem;
+}
+
+.map-view__marker-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-view__marker-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid var(--mv-surface-border);
+  padding-top: 0.45rem;
+}
+
+.map-view__marker-list-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 0.12rem;
+}
+
+.map-view__marker-list-copy strong {
+  overflow: hidden;
+  color: var(--mv-surface-text-secondary);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-view__marker-list-copy small {
+  color: var(--mv-surface-text-muted);
+  font-size: 0.65rem;
 }
 
 .map-view__management-card-header {
@@ -808,6 +924,14 @@
 
   .map-view__asset-details {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-view__marker-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .map-view__marker-color-field {
+    grid-column: 1 / -1;
   }
 }
 

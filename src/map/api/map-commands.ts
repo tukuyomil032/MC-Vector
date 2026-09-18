@@ -3,6 +3,8 @@ import type {
   MapAssetCandidate,
   MapAssetStatus,
   MapBridgeStatusEvent,
+  MapMarker,
+  MapMarkerInput,
   MapPlayersUpdatedEvent,
   MapRenderProgressEvent,
   MapRenderRequestResult,
@@ -25,6 +27,26 @@ export function getMapWorldInfo(serverId: string, worldId: string): Promise<MapW
 
 export function getMapWorlds(serverId: string): Promise<MapWorldEntry[]> {
   return tauriInvoke('get_map_worlds', { serverId });
+}
+
+export function getMapMarkers(serverId: string): Promise<MapMarker[]> {
+  return tauriInvoke('get_map_markers', { serverId });
+}
+
+export function createMapMarker(serverId: string, input: MapMarkerInput): Promise<MapMarker> {
+  return tauriInvoke('create_map_marker', { serverId, input });
+}
+
+export function updateMapMarker(
+  serverId: string,
+  markerId: string,
+  input: MapMarkerInput,
+): Promise<MapMarker> {
+  return tauriInvoke('update_map_marker', { serverId, markerId, input });
+}
+
+export function deleteMapMarker(serverId: string, markerId: string): Promise<boolean> {
+  return tauriInvoke('delete_map_marker', { serverId, markerId });
 }
 
 export function requestMapRender(
