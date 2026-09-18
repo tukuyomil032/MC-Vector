@@ -20,8 +20,11 @@ pub(crate) fn read_png(path: &Path) -> Result<Option<Vec<u8>>, String> {
     if metadata.len() > MAX_TILE_BYTES {
         return Err("Cached map tile is too large".to_string());
     }
-    let bytes =
-        fs::read(path).map_err(|error| format!("Failed to read cached map tile: {error}"))?;
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("Failed to read cached map tile: {error}")),
+    };
     if !bytes.starts_with(PNG_SIGNATURE) {
         return Ok(None);
     }
@@ -32,19 +35,14 @@ pub(crate) fn write_png_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> 
     if !bytes.starts_with(PNG_SIGNATURE) {
         return Err("Refusing to cache a non-PNG map tile".to_string());
     }
-    let parent = path
-        .parent()
-        .ok_or_else(|| "Map tile cache path has no parent".to_string())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("Failed to create map tile cache directory: {error}"))?;
-    let temporary = parent.join(format!(".{}.tmp-{}", Uuid::new_v4(), Uuid::new_v4()));
-    fs::write(&temporary, bytes)
-        .map_err(|error| format!("Failed to write temporary map tile: {error}"))?;
-    if let Err(error) = fs::rename(&temporary, path) {
-        let _ = fs::remove_file(&temporary);
-        return Err(format!("Failed to atomically replace map tile: {error}"));
-    }
-    Ok(())
+    write_bytes_atomic(
+        path,
+        bytes,
+        "Map tile cache path has no parent",
+        "map tile cache directory",
+        "temporary map tile",
+        "atomically replace map tile",
+    )
 }
 
 pub(crate) fn read_metadata(path: &Path) -> Result<Option<TileMetadata>, String> {
@@ -63,8 +61,11 @@ pub(crate) fn read_metadata(path: &Path) -> Result<Option<TileMetadata>, String>
     if metadata.len() > MAX_METADATA_BYTES {
         return Err("Cached map tile metadata is too large".to_string());
     }
-    let bytes = fs::read(path)
-        .map_err(|error| format!("Failed to read cached map tile metadata: {error}"))?;
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("Failed to read cached map tile metadata: {error}")),
+    };
     serde_json::from_slice(&bytes)
         .map(Some)
         .map_err(|error| format!("Cached map tile metadata is invalid: {error}"))
@@ -73,21 +74,65 @@ pub(crate) fn read_metadata(path: &Path) -> Result<Option<TileMetadata>, String>
 pub(crate) fn write_metadata_atomic(path: &Path, metadata: &TileMetadata) -> Result<(), String> {
     let bytes = serde_json::to_vec(metadata)
         .map_err(|error| format!("Failed to encode map tile metadata: {error}"))?;
+    write_bytes_atomic(
+        path,
+        &bytes,
+        "Map tile metadata path has no parent",
+        "map tile metadata directory",
+        "temporary map tile metadata",
+        "atomically replace map tile metadata",
+    )
+}
+
+fn write_bytes_atomic(
+    path: &Path,
+    bytes: &[u8],
+    missing_parent_message: &str,
+    directory_label: &str,
+    temporary_label: &str,
+    replace_label: &str,
+) -> Result<(), String> {
     let parent = path
         .parent()
-        .ok_or_else(|| "Map tile metadata path has no parent".to_string())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("Failed to create map tile metadata directory: {error}"))?;
-    let temporary = parent.join(format!(".{}.tmp-{}", Uuid::new_v4(), Uuid::new_v4()));
-    fs::write(&temporary, bytes)
-        .map_err(|error| format!("Failed to write temporary map tile metadata: {error}"))?;
-    if let Err(error) = fs::rename(&temporary, path) {
-        let _ = fs::remove_file(&temporary);
-        return Err(format!(
-            "Failed to atomically replace map tile metadata: {error}"
-        ));
+        .ok_or_else(|| missing_parent_message.to_string())?;
+    let mut retried_missing_path = false;
+
+    loop {
+        match fs::create_dir_all(parent) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !retried_missing_path => {
+                retried_missing_path = true;
+                continue;
+            }
+            Err(error) => return Err(format!("Failed to create {directory_label}: {error}")),
+        }
+
+        let temporary = parent.join(format!(".{}.tmp-{}", Uuid::new_v4(), Uuid::new_v4()));
+        match fs::write(&temporary, bytes) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !retried_missing_path => {
+                retried_missing_path = true;
+                let _ = fs::remove_file(&temporary);
+                continue;
+            }
+            Err(error) => {
+                let _ = fs::remove_file(&temporary);
+                return Err(format!("Failed to write {temporary_label}: {error}"));
+            }
+        }
+
+        match fs::rename(&temporary, path) {
+            Ok(()) => return Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !retried_missing_path => {
+                retried_missing_path = true;
+                let _ = fs::remove_file(&temporary);
+            }
+            Err(error) => {
+                let _ = fs::remove_file(&temporary);
+                return Err(format!("Failed to {replace_label}: {error}"));
+            }
+        }
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -100,6 +145,21 @@ mod tests {
         let path = root.join("8/0/0.png");
         assert!(write_png_atomic(&path, b"not png").is_err());
         assert!(!path.exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn png_round_trips_with_a_missing_cache_root() {
+        let root = std::env::temp_dir().join(format!("mc-vector-tile-png-{}", Uuid::new_v4()));
+        let path = root.join("8/0/0.png");
+        let expected = b"\x89PNG\r\n\x1a\nfixture";
+
+        write_png_atomic(&path, expected).expect("PNG should be written");
+        assert_eq!(
+            read_png(&path).expect("PNG should be read"),
+            Some(expected.to_vec())
+        );
+
         let _ = fs::remove_dir_all(root);
     }
 
