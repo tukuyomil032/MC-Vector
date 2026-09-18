@@ -759,16 +759,10 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     : (assetStatus?.state ?? status?.assetState ?? 'not_applicable');
   const assetSource = assetStatusError ? null : (assetStatus?.sourcePath ?? status?.assetSource);
   const assetMessage = assetStatusError ?? assetStatus?.message ?? status?.assetMessage;
-  const mapLoadError = loadError ?? assetStatusError;
+  const mapLoadError = loadError ?? statusError ?? assetStatusError;
   const viewportTileStates = requestedTileKeys
     .map((key) => tileStates[key])
     .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
-  const terrainTiles = viewportTileStates.filter((tile) => tile.hasTerrain);
-  const allReceivedTilesEmpty =
-    requestedTileKeys.length > 0 &&
-    requestedTileKeys.every((key) => Boolean(tileStates[key])) &&
-    terrainTiles.length === 0 &&
-    !isTileLoading;
   const canvasBlocked =
     isLoading ||
     Boolean(diagnosticStatusError) ||
@@ -990,7 +984,16 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                       }}
                     />
                   ))
-                ) : !allReceivedTilesEmpty ? (
+                ) : !canvasBlocked && tileDiagnostic ? (
+                  <div
+                    className={`map-view__empty-state map-view__empty-state--diagnostic map-view__empty-state--${tileDiagnosticState}`}
+                    role={tileDiagnosticState === 'error' ? 'alert' : 'status'}
+                  >
+                    <MapIcon size={25} aria-hidden="true" />
+                    <strong>{tileDiagnostic.title}</strong>
+                    <span>{tileDiagnostic.description}</span>
+                  </div>
+                ) : !canvasBlocked ? (
                   <div className="map-view__empty-state" role={tileError ? 'alert' : undefined}>
                     <MapIcon size={25} aria-hidden="true" />
                     <strong>
@@ -1011,14 +1014,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     </span>
                   </div>
                 ) : null}
-                {allReceivedTilesEmpty && (
-                  <div className="map-view__empty-state" role="status">
-                    <MapIcon size={25} aria-hidden="true" />
-                    <strong>{t('map.surface.noGeneratedTerrain')}</strong>
-                    <span>{t('map.surface.noGeneratedTerrainDescription')}</span>
-                  </div>
-                )}
-                {tileDiagnostic && !allReceivedTilesEmpty && tiles.length > 0 && (
+                {tileDiagnostic && !canvasBlocked && tiles.length > 0 && (
                   <div
                     className={`map-view__tile-diagnostic map-view__tile-diagnostic--${tileDiagnosticState}`}
                     role={tileDiagnosticState === 'error' ? 'alert' : 'status'}

@@ -259,17 +259,17 @@ export function resolveMapTileDiagnosticState(input: {
   const visibleStates = input.requestedTileKeys
     .map((key) => input.tileStates[key])
     .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
-  if (
-    isMapAssetWarningState(input.assetState) ||
-    visibleStates.some((tile) => tile.renderState === 'asset_missing')
-  ) {
-    return 'asset_missing';
-  }
   if (input.tileError || visibleStates.some((tile) => tile.renderState === 'error')) {
     return 'error';
   }
   if (visibleStates.some((tile) => (tile.decodeFailedChunkCount ?? 0) > 0)) {
     return 'error';
+  }
+  if (
+    isMapAssetWarningState(input.assetState) ||
+    visibleStates.some((tile) => tile.renderState === 'asset_missing')
+  ) {
+    return 'asset_missing';
   }
   if (visibleStates.some((tile) => tile.renderState === 'paper_chunk_unavailable')) {
     return 'paper_chunk_unavailable';

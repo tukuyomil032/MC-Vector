@@ -324,6 +324,15 @@
   pointer-events: none;
 }
 
+.map-view__empty-state--diagnostic {
+  background: rgb(15 23 42 / 90%);
+  border: 1px solid var(--mv-surface-border);
+}
+
+.map-view__empty-state--error {
+  border-color: rgb(239 68 68 / 42%);
+}
+
 .map-view__empty-state strong {
   color: var(--mv-surface-text-primary);
   font-size: 0.85rem;
@@ -370,8 +379,9 @@
 }
 
 .map-view__tile-diagnostic--asset_missing,
+.map-view__tile-diagnostic--empty,
 .map-view__tile-diagnostic--paper_chunk_unavailable {
-  border-color: rgb(245 158 11 / 42%);
+  border-color: var(--mv-surface-border);
 }
 
 .map-view__tile-diagnostic--stale,

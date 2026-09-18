@@ -77,6 +77,60 @@ describe('map tile diagnostics', () => {
     ).toBe('error');
   });
 
+  it('keeps tile errors ahead of asset warnings', async () => {
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
+
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'missing',
+        isLoading: false,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: 'tile request failed',
+        tileStates: {},
+      }),
+    ).toBe('error');
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'missing',
+        isLoading: false,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: {
+          '4:0:0': tile({ renderState: 'error', message: 'tile render failed' }),
+        },
+      }),
+    ).toBe('error');
+  });
+
+  it('keeps asset warnings ahead of empty and rendering states', async () => {
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
+
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'version_mismatch',
+        isLoading: false,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: {
+          '4:0:0': tile({ hasTerrain: false, renderState: 'empty' }),
+        },
+      }),
+    ).toBe('asset_missing');
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'version_mismatch',
+        isLoading: true,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: {},
+      }),
+    ).toBe('asset_missing');
+  });
+
   it('surfaces chunk decode failures even when the tile contains no terrain', async () => {
     const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
 

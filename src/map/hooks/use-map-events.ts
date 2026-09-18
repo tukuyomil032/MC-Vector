@@ -23,7 +23,26 @@ interface UseMapEventsOptions {
   onRenderProgress: (event: MapRenderProgressEvent) => void;
 }
 
-type MapEventSubscription<T> = (callback: (event: T) => void) => Promise<() => void>;
+type MapUnlisten = () => void | Promise<void>;
+type MapEventSubscription<T> = (callback: (event: T) => void) => Promise<MapUnlisten>;
+type SafeDisposer = () => Promise<void>;
+
+function createSafeDisposer(unlisten: MapUnlisten): SafeDisposer {
+  let disposed = false;
+
+  return async () => {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+    try {
+      await unlisten();
+    } catch {
+      // Event cleanup must not escape React effect cleanup.
+    }
+  };
+}
 
 export function useMapEvents(options: UseMapEventsOptions): void {
   const optionsRef = useRef(options);
@@ -32,17 +51,18 @@ export function useMapEvents(options: UseMapEventsOptions): void {
   useEffect(() => {
     const serverId = options.serverId;
     let disposed = false;
-    const unlisteners = new Set<() => void>();
+    const unlisteners = new Set<SafeDisposer>();
 
     const subscribe = <T>(listen: MapEventSubscription<T>, callback: (event: T) => void) => {
       void Promise.resolve()
         .then(() => listen(callback))
         .then((unlisten) => {
+          const dispose = createSafeDisposer(unlisten);
           if (disposed) {
-            unlisten();
+            void dispose();
             return;
           }
-          unlisteners.add(unlisten);
+          unlisteners.add(dispose);
         })
         .catch(() => {
           // Listener setup failures do not change the existing Map status flow.
@@ -77,8 +97,8 @@ export function useMapEvents(options: UseMapEventsOptions): void {
 
     return () => {
       disposed = true;
-      for (const unlisten of unlisteners) {
-        unlisten();
+      for (const dispose of unlisteners) {
+        void dispose();
       }
       unlisteners.clear();
     };
