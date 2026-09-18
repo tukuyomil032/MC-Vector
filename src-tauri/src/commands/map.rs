@@ -216,8 +216,27 @@ struct BridgeStatusPayload {
     message: Option<String>,
 }
 
+#[derive(Clone, Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct WorldStatusEventPayload {
+    server_id: String,
+    message: Value,
+}
+
 type BridgeSender = mpsc::Sender<String>;
 type PendingSnapshotSender = oneshot::Sender<Result<ChunkView, String>>;
+
+fn parse_world_status_message(value: Value) -> Result<Value, &'static str> {
+    let Some(object) = value.as_object() else {
+        return Err("world_status payload must be a JSON object");
+    };
+
+    if object.get("type").and_then(Value::as_str) != Some("world_status") {
+        return Err("world_status payload has an invalid type");
+    }
+
+    Ok(value)
+}
 
 fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -1472,6 +1491,28 @@ async fn handle_bridge_connection(
                     serde_json::json!({ "serverId": server_id.clone(), "message": value }),
                 );
             }
+            "world_status" => match parse_world_status_message(value) {
+                Ok(message) => {
+                    let payload = WorldStatusEventPayload {
+                        server_id: server_id.clone(),
+                        message,
+                    };
+                    if let Err(error) = app.emit("map-world-status", payload) {
+                        log::warn!(
+                            "Failed to emit world_status for server {}: {}",
+                            server_id,
+                            error
+                        );
+                    }
+                }
+                Err(error) => {
+                    log::warn!(
+                        "Ignoring malformed world_status from server {}: {}",
+                        server_id,
+                        error
+                    );
+                }
+            },
             "chunk_dirty" => {
                 if let (Some(dimension), Some(chunk_x), Some(chunk_z)) = (
                     value.get("dimension").and_then(Value::as_str),
@@ -3566,5 +3607,45 @@ mod tests {
     #[test]
     fn oversized_lines_are_rejected_by_the_contract() {
         assert!(MAX_BRIDGE_LINE_BYTES >= 64 * 1024);
+    }
+
+    #[test]
+    fn world_status_parser_preserves_structured_payload() {
+        let message = serde_json::json!({
+            "type": "world_status",
+            "worldId": "world",
+            "dimension": "minecraft:overworld",
+            "status": {
+                "loaded": true,
+                "players": 3,
+            },
+        });
+
+        assert_eq!(
+            parse_world_status_message(message.clone()),
+            Ok(message.clone())
+        );
+
+        let payload = WorldStatusEventPayload {
+            server_id: "server-1".to_string(),
+            message,
+        };
+        let encoded = serde_json::to_value(payload).expect("event payload should serialize");
+        assert_eq!(encoded["serverId"], "server-1");
+        assert_eq!(encoded["message"]["type"], "world_status");
+        assert_eq!(encoded["message"]["status"]["players"], 3);
+    }
+
+    #[test]
+    fn world_status_parser_rejects_malformed_payloads() {
+        assert!(parse_world_status_message(serde_json::json!(null)).is_err());
+        assert!(parse_world_status_message(serde_json::json!({
+            "worldId": "world"
+        }))
+        .is_err());
+        assert!(parse_world_status_message(serde_json::json!({
+            "type": "player_snapshot"
+        }))
+        .is_err());
     }
 }
