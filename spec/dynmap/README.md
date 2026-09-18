@@ -1,75 +1,71 @@
 # Dynmap v3.0 Research Corpus
 
-Status: implementation reference, not a compatibility claim
+Status: active implementation reference. This corpus is not a claim that
+MC-Vector is Dynmap-compatible yet.
 
-This corpus records the Dynmap v3.0 architecture and the decisions required to
-reimplement the renderer inside MC-Vector. It is intentionally separate from
-the current Map prototype. The prototype is useful for bridge and lifecycle
-tests, but it is not a Dynmap-equivalent renderer.
+## Fixed source reference
 
-## Fixed reference
+- Repository: `https://github.com/webbukkit/dynmap`
+- Research branch: `v3.0`
+- Immutable reference commit: `93b454efb8802dc7406d6873434f2aeec5c636f4`
+- First Paper fixture: Paper 1.21.10
+- First target perspective: `IsoHDPerspective`
+- Research date: 2026-09-18
 
-- Repository: https://github.com/webbukkit/dynmap
-- Reference branch: `v3.0`
-- Primary source date: 2026-09-18
-- First MC-Vector server target: Paper 1.21.10, with a versioned 1.21.x matrix
-- First renderer target: `IsoHDPerspective`
-- Implementation language: Rust renderer plus Java Paper adapter
-
-The exact upstream commit used for a release must be recorded in
-`porting-manifest.md`. A branch name is useful for research, but a release
-must not depend on a moving branch.
-
-## Evidence labels
-
-- `observed`: directly supported by the referenced source file or fixture.
-- `inferred`: a design conclusion derived from observed behavior.
-- `open`: not yet verified by a fixture or the target Paper version.
+The branch name remains useful for browsing, but implementation manifests and
+release artifacts must use the immutable commit above or a later explicitly
+reviewed commit. The reference commit is a research anchor, not a runtime
+dependency.
 
 ## Reading order
 
-1. [architecture](architecture.md)
-2. [world data and platform adapters](world-data-and-platform-adapters.md)
-3. [render pipeline](render-pipeline.md)
-4. [assets, block models, and textures](assets-block-models-and-textures.md)
-5. [perspectives, shaders, and lighting](perspective-shaders-lighting.md)
-6. [tile queue, storage, and updates](tile-queue-storage-and-updates.md)
-7. [MC-Vector reimplementation](mc-vector-reimplementation.md)
-8. [porting manifest](porting-manifest.md)
-9. [verification and fixtures](verification-and-fixtures.md)
-10. [license and assets](license-assets-and-attribution.md)
-11. [comparison matrix](comparison-matrix.md)
-12. [implementation roadmap](implementation-roadmap.md)
-13. [API and wire contracts](api-contracts.md)
-14. [Phase 1: world sources](phase-1-world-sources.md)
-15. [Phase 2: assets](phase-2-assets.md)
-16. [Phase 3: IsoHDPerspective renderer](phase-3-iso-renderer.md)
-17. [Phase 4: tile system](phase-4-tile-system.md)
-18. [Phase 5: Tauri and React](phase-5-tauri-ui.md)
-19. [Phase 6: real verification](phase-6-paper-tauri-verification.md)
+1. [source scope and version](source-scope-and-version.md)
+2. [architecture](architecture.md)
+3. [world data and platform adapters](world-data-and-platform-adapters.md)
+4. [render pipeline](render-pipeline.md)
+5. [assets, blockstates, models, and textures](assets-blockstates-models-textures.md)
+6. [Iso perspective and geometry](iso-perspective-and-geometry.md)
+7. [shaders, lighting, and compositing](shaders-lighting-and-compositing.md)
+8. [tile queue, storage, and updates](tile-queue-storage-and-updates.md)
+9. [markers, overlays, and runtime features](markers-overlays-and-runtime-features.md)
+10. [MC-Vector boundaries](mc-vector-boundaries.md)
+11. [source porting](source-porting.md)
+12. [launcher asset sources](launcher-asset-sources.md)
+13. [license and attribution](license-and-attribution.md)
+14. [verification fixtures](verification-fixtures.md)
 
-## Product boundary
+## Evidence vocabulary
 
-The first parity effort covers the terrain renderer: world data, block state,
-models, textures, projection, ray traversal, shaders, lighting, tile storage,
-and incremental updates. Markers, chat, time/weather, the embedded web server,
-and Dynmap API compatibility remain later features.
+- `observed`: directly confirmed in the pinned source, official API, or a
+  checked-in fixture.
+- `inferred`: a design conclusion derived from observed behavior.
+- `open`: not yet verified against the target Paper version, real asset, or
+  real application.
+- `implemented`: code exists, but does not imply that a gate passed.
+- `verified`: the named test or manual evidence exists and is recorded.
 
-Dynmap is not a runtime dependency. Selected Apache-licensed rendering logic
-may be translated or ported when its source, commit, license, and MC-Vector
-changes are recorded in `porting-manifest.md`.
+## Scope rule
 
-## Official sources
+Dynmap is a large system. The corpus therefore records the complete data flow
+before selecting code for reuse. MC-Vector may copy or translate Apache-licensed
+rendering code only after the source path, commit, original header, license,
+change summary, and fixture are registered in the porting manifest. Bukkit
+lifecycle, platform adapters, embedded web server, web UI, commands, and
+storage backends are not copied as runtime components.
 
-- [Project guide](https://github.com/webbukkit/dynmap/blob/v3.0/CLAUDE.md)
-- [MapManager](https://github.com/webbukkit/dynmap/blob/v3.0/DynmapCore/src/main/java/org/dynmap/MapManager.java)
-- [IsoHDPerspective](https://github.com/webbukkit/dynmap/blob/v3.0/DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java)
-- [TexturePack](https://github.com/webbukkit/dynmap/blob/v3.0/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java)
-- [Dynmap shaders](https://github.com/webbukkit/dynmap/blob/v3.0/DynmapCore/src/main/resources/shaders.txt)
+## Current product truth
 
-## Current gap
+The existing MC-Vector map implementation is a prototype. It contains useful
+bridge, cache, asset, and UI foundations, but a representative-colour or sparse
+sampling path is not Dynmap parity. Completion requires the Phase 0-17 plan in
+`../map/phases/` and the evidence gates in [verification-fixtures.md](verification-fixtures.md).
 
-The current Rust path still contains `chunk_representative_colour`,
-`average_surface_colours`, and overview sampling. Those functions are retained
-only until the source and test-backed renderer replaces them. They are not a
-release acceptance path for Dynmap parity.
+## Primary sources
+
+- [Dynmap project guide](https://github.com/webbukkit/dynmap/blob/93b454efb8802dc7406d6873434f2aeec5c636f4/CLAUDE.md)
+- [DynmapCore](https://github.com/webbukkit/dynmap/blob/93b454efb8802dc7406d6873434f2aeec5c636f4/DynmapCore/src/main/java/org/dynmap/DynmapCore.java)
+- [MapManager](https://github.com/webbukkit/dynmap/blob/93b454efb8802dc7406d6873434f2aeec5c636f4/DynmapCore/src/main/java/org/dynmap/MapManager.java)
+- [IsoHDPerspective](https://github.com/webbukkit/dynmap/blob/93b454efb8802dc7406d6873434f2aeec5c636f4/DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java)
+- [TexturePack](https://github.com/webbukkit/dynmap/blob/93b454efb8802dc7406d6873434f2aeec5c636f4/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java)
+- [Dynmap shaders](https://github.com/webbukkit/dynmap/blob/93b454efb8802dc7406d6873434f2aeec5c636f4/DynmapCore/src/main/resources/shaders.txt)
+- [Dynmap repository and license policy](https://github.com/webbukkit/dynmap)

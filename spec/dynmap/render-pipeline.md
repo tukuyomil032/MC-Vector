@@ -1,71 +1,53 @@
 # Render Pipeline
 
-## Dynmap stages
+## Observed Dynmap flow
 
-The v3.0 render path is not a chunk-colour map. A tile request determines the
-chunks required by the selected perspective, creates a platform cache, and
-then renders pixels through a perspective and shader pipeline. `MapManager`
-coordinates work while `IsoHDPerspective` performs the hot ray-tracing path.
+1. A tile or update request enters `MapManager`.
+2. The map type and perspective calculate required world/chunk bounds.
+3. A `MapChunkCache` loads a bounded snapshot.
+4. The perspective traverses each output pixel/ray through the cached world.
+5. Block models produce render patches; the shader consumes hit state, UV,
+   light, biome, and previous-block context.
+6. The image is encoded and sent to `MapStorage`.
+7. Tile state/update metadata is published to clients.
+
+This is a streaming render pipeline, not a loop that picks two block colours
+from an entire region. Required chunks, tile size, scale, perspective, shader,
+lighting, and storage identity all participate in the result.
+
+## MC-Vector pipeline
 
 ```text
-Tile request
-  -> required chunk bounds
-  -> MapChunkCache / MapIterator
-  -> pixel ray
-  -> voxel traversal
-  -> model patches and face intersections
-  -> texture / tint / light
-  -> shader state
-  -> alpha composition
-  -> tile flags and PNG
-  -> persistent storage
+Map request
+  -> TileScheduler
+  -> source resolver (live/cache/Anvil)
+  -> asset/model resolver
+  -> PerspectiveRenderer
+  -> RGBA/PNG encoder
+  -> atomic disk store + memory cache
+  -> map-tile-ready event
 ```
 
-Sources:
+The Tauri command only validates input and delegates to the map application
+service. It must not synchronously scan Anvil files or construct PNGs.
 
-- [MapManager.java](https://github.com/webbukkit/dynmap/blob/v3.0/DynmapCore/src/main/java/org/dynmap/MapManager.java)
-- [IsoHDPerspective.java](https://github.com/webbukkit/dynmap/blob/v3.0/DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java)
+## Failure semantics
 
-## Current MC-Vector gap
+| Stage | State |
+| --- | --- |
+| source has no generated chunks | `empty` |
+| source is being read/rendered | `rendering` |
+| prior image is shown while replacement runs | `stale` |
+| source or renderer fails without a valid prior image | `error` |
+| no user asset for full model rendering | `asset_missing` or `fallback` |
+| bridge cannot provide a requested live chunk | `paper_chunk_unavailable` |
 
-The current code has two different paths:
+An empty PNG is not a success signal. Metadata carries `hasTerrain`, coverage,
+chunk count, provenance, unresolved block count, and quality.
 
-- overview zooms enumerate present chunks but write a representative chunk
-  colour at one pixel;
-- close zooms sample a small fixed grid per output pixel and render a surface
-  colour.
+## Source evidence
 
-This avoids a whole-world scan, but it cannot reproduce buildings, partial
-blocks, face orientation, occlusion, or Dynmap's oblique projection. A sparse
-sample can also miss a generated chunk entirely.
-
-The replacement must not call `chunk_representative_colour` or
-`average_surface_colours` as the final pixel renderer.
-
-## MC-Vector render contract
-
-```rust
-pub trait PerspectiveRenderer {
-    fn render_tile(
-        &self,
-        request: TileRenderRequest,
-        source: &dyn ChunkSource,
-        assets: &dyn AssetResolver,
-    ) -> Result<RenderedTile, RenderError>;
-}
-```
-
-`RenderedTile` includes the PNG plus coverage, rendered chunk count, source
-provenance, render state, and renderer version. The binary PNG is returned
-through Tauri; metadata is emitted as structured state.
-
-## Failure behavior
-
-- An empty generated range returns `empty`, not a green success surface.
-- A missing asset returns `asset_missing` with an explicit quality message.
-- A read failure returns `error` or retains the last successful tile as
-  `stale`.
-- An incomplete chunk causes a bounded retry.
-- A tile is replaced only after a complete PNG is atomically available.
-- Old cache entries from the prototype renderer are not treated as new
-  renderer output.
+The primary implementation references are `MapManager.java`,
+`IsoHDPerspective.java`, `MapTile.java`, `MapType.java`, and the HD shader
+classes at the pinned commit. The current MC-Vector implementation is accepted
+as scaffolding only until it follows this data flow.

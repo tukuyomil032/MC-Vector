@@ -1,78 +1,66 @@
 # World Data and Platform Adapters
 
-## Dynmap abstraction
+## Dynmap model
 
-Dynmap separates platform access from rendering with `MapChunkCache` and
-`MapIterator`. The renderer can ask for a block, light level, biome, and nearby
-position without knowing whether the platform is Spigot, Fabric, or Forge.
-The v3.0 project guide identifies these interfaces as the platform-to-core
-boundary.
+Dynmap separates acquisition from rendering. Platform adapters obtain a stable
+chunk snapshot and expose it through `MapChunkCache` and `MapIterator`. The
+renderer asks for block state, biome, light, height, tile-entity data, and
+neighbouring positions without knowing whether the source was a live server or
+an adapter-specific cache.
 
-The abstraction exists because the hot renderer needs deterministic, local
-iteration over a tile's required chunks. It cannot safely call arbitrary live
-world APIs for every pixel.
+The iterator is mutable for performance, but the renderer sees a bounded
+read-only world view. Loaded/unloaded handling, visibility limits, and chunk
+cache reuse are adapter responsibilities.
 
-## MC-Vector source model
-
-Rust exposes one logical source with multiple implementations:
+## MC-Vector source precedence
 
 ```text
-ChunkSource
-  ├─ LiveSnapshotSource    loaded Paper chunks only
-  ├─ AnvilSource           saved region/chunk data
-  ├─ LiveCache              recently received snapshots
-  └─ LastSuccessfulTile    degraded visual fallback
+new live ChunkSnapshot
+  > cached live snapshot
+  > stable Anvil/NBT read
+  > last successful tile
+  > explicit empty/error state
 ```
 
-The source returns both data and provenance. A tile must be able to report
-whether it was produced from live data, saved data, stale data, or a degraded
-fallback.
+Live requests must only use already-loaded Paper chunks. The plugin checks
+`World#isChunkLoaded` and returns `not_loaded`; it never forces generation.
+Paper main-thread snapshot capture is bounded to one chunk per tick and the
+network write remains on the bridge worker.
 
-## Java adapter contract
+## Normalized Rust data
 
-`MC-Vector Core` is a conventional `JavaPlugin` using Bukkit/Paper public APIs.
-It sends:
+```rust
+pub trait ChunkSource {
+    fn get_chunk(&self, key: ChunkKey) -> Result<Option<ChunkView>, ChunkSourceError>;
+}
 
-- hello and capability negotiation;
-- join and quit events;
-- coalesced player snapshots;
-- dirty chunk hints;
-- heartbeat messages;
-- bounded requests for already-loaded chunk snapshots.
+pub struct ChunkView {
+    pub key: ChunkKey,
+    pub sections: Vec<ChunkSection>,
+    pub revision: ChunkRevision,
+    pub captured_at: Option<i64>,
+    pub source: ChunkSourceKind,
+}
+```
 
-It does not create a chunk for Map. Before obtaining a snapshot, it checks the
-world and loaded status on the Paper main thread. The snapshot is then encoded
-off the main thread or handed to the bridge writer without synchronous socket
-I/O on the main thread.
+The exact public names may evolve, but the source/provenance distinction may
+not be removed. A tile rendered from stale Anvil data must not be presented as
+a fresh live snapshot.
 
-The initial live payload is deliberately bounded: column block states, biome,
-height, sky light, block light, and no more than sixteen surface layers. This
-is a transport optimization, not the final renderer's complete world model.
-Saved Anvil data remains the authoritative fallback for chunks outside the
-loaded live window.
+## Anvil requirements
 
-## Rust Anvil boundary
+- Validate region header offsets and sector lengths before reading.
+- Handle negative region and chunk coordinates with floor division.
+- Support the compression types present in the verified fixture.
+- Decode 1.21.x `sections`, `block_states.palette`, and packed data.
+- Retry unstable or truncated chunks without discarding the whole tile.
+- Preserve per-chunk failure reasons and decoded counts.
+- Never write back to a Minecraft world.
 
-The Rust reader must handle:
+## Source evidence and open items
 
-- region header presence bits;
-- negative region and chunk coordinates;
-- compressed chunk payloads;
-- 1.21.x `sections`, `block_states`, and palette/long-array layouts;
-- incomplete writes and corrupt chunks;
-- region modification time and retry;
-- unknown NBT tags without dropping the complete tile.
-
-`fastanvil` is used for region framing and chunk access where its API matches
-the fixture. `fastnbt` is used for explicit 1.21.x structures where a generic
-chunk type is insufficient. Library behavior is verified against checked-in
-fixtures rather than assumed from the crate name.
-
-## Coordinate rules
-
-- World X and Z are the horizontal axes.
-- Tile/chunk conversion uses mathematical floor division for negative values.
-- A chunk spans `[chunkX * 16, chunkX * 16 + 15]` and the same for Z.
-- Every source records the dimension identifier and chunk revision.
-- Missing data is distinct from an air-only generated chunk and from a read
-  failure.
+Primary Dynmap paths: `DynmapCore/src/main/java/org/dynmap/utils/MapChunkCache.java`,
+`MapIterator.java`, `DynmapChunk.java`, and platform-specific
+`bukkit-helper/*`. Paper `ChunkSnapshot` is the live adapter reference. The
+exact 1.21.10 payload shape and `fastanvil`/`fastnbt` compatibility remain
+fixture-gated open items.
