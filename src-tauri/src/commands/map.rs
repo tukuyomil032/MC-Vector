@@ -25,8 +25,8 @@ use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
 use crate::map::render::{render_iso_tile, shade_surface, Face, SurfaceSample};
 use crate::map::tile_buffer::RgbaTileBuffer;
 use crate::map::tiles::{
-    MemoryTileCache, RenderProgress, TileKey, TilePriority, TileRenderState, TileScheduler,
-    DEFAULT_PERSPECTIVE,
+    CachedTile, MemoryTileCache, RenderProgress, TileKey, TileMetadata, TilePriority,
+    TileRenderState, TileScheduler, DEFAULT_PERSPECTIVE,
 };
 use crate::map::world::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files, is_air_state,
@@ -2150,20 +2150,34 @@ async fn render_map_tile(
         tile_y,
     );
 
-    if let Some(tile) = manager.tile_cache.lock().await.get(&key) {
-        let coverage = png_coverage(&tile);
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), Some(coverage), None);
-        return Ok(tauri::ipc::Response::new(tile));
+    if let Some(cached) = manager.tile_cache.lock().await.get(&key) {
+        emit_map_tile_ready(
+            &app,
+            &key,
+            &cached.bytes,
+            cached.metadata.rendered_chunk_count,
+            assets.is_none(),
+            Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
+            cached.metadata.message.as_deref(),
+        );
+        return Ok(tauri::ipc::Response::new(cached.bytes));
     }
-    if let Some(tile) = read_disk_tile(&server_root, &key)? {
+    if let Some(cached) = read_disk_tile(&server_root, &key)? {
         manager
             .tile_cache
             .lock()
             .await
-            .insert(key.clone(), tile.clone());
-        let coverage = png_coverage(&tile);
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), Some(coverage), None);
-        return Ok(tauri::ipc::Response::new(tile));
+            .insert(key.clone(), cached.clone());
+        emit_map_tile_ready(
+            &app,
+            &key,
+            &cached.bytes,
+            cached.metadata.rendered_chunk_count,
+            assets.is_none(),
+            Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
+            cached.metadata.message.as_deref(),
+        );
+        return Ok(tauri::ipc::Response::new(cached.bytes));
     }
 
     if let Some(receiver) = join_inflight_tile(&manager, &key).await? {
@@ -2226,12 +2240,21 @@ async fn render_map_tile(
             RenderProgress::completed(progress_state, rendered.message.clone()),
         );
 
+        let cached = CachedTile {
+            bytes: tile.clone(),
+            metadata: TileMetadata {
+                rendered_chunk_count: rendered.rendered_chunk_count,
+                has_terrain: rendered.has_terrain,
+                coverage_ratio: rendered.coverage_ratio,
+                message: rendered.message,
+            },
+        };
         manager
             .tile_cache
             .lock()
             .await
-            .insert(tile_key.clone(), tile.clone());
-        write_disk_tile(&server_root, &tile_key, &tile)?;
+            .insert(tile_key.clone(), cached.clone());
+        write_disk_tile(&server_root, &tile_key, &cached)?;
         Ok(tile)
     }
     .await;
@@ -2511,12 +2534,25 @@ fn tile_cache_directory(
     Ok(Some(current))
 }
 
-fn read_disk_tile(server_root: &Path, key: &TileCacheKey) -> Result<Option<Vec<u8>>, String> {
+fn read_disk_tile(server_root: &Path, key: &TileCacheKey) -> Result<Option<CachedTile>, String> {
     let Some(directory) = tile_cache_directory(server_root, key, false)? else {
         return Ok(None);
     };
-    let path = directory.join(format!("{}.png", key.tile_y));
-    crate::map::tiles::read_png(&path)
+    let png_path = directory.join(format!("{}.png", key.tile_y));
+    let Some(bytes) = crate::map::tiles::read_png(&png_path)? else {
+        return Ok(None);
+    };
+    let metadata_path = directory.join(format!("{}.json", key.tile_y));
+    let metadata = crate::map::tiles::read_metadata(&metadata_path)?.unwrap_or_else(|| {
+        let (has_terrain, coverage_ratio) = png_coverage(&bytes);
+        TileMetadata {
+            rendered_chunk_count: 0,
+            has_terrain,
+            coverage_ratio,
+            message: None,
+        }
+    });
+    Ok(Some(CachedTile { bytes, metadata }))
 }
 
 fn remove_map_cache(server_root: &Path) -> Result<(), String> {
@@ -2535,20 +2571,26 @@ fn remove_map_cache(server_root: &Path) -> Result<(), String> {
     fs::remove_dir_all(path).map_err(|error| format!("Failed to remove map tile cache: {error}"))
 }
 
-fn write_disk_tile(server_root: &Path, key: &TileCacheKey, bytes: &[u8]) -> Result<(), String> {
+fn write_disk_tile(
+    server_root: &Path,
+    key: &TileCacheKey,
+    tile: &CachedTile,
+) -> Result<(), String> {
     let Some(directory) = tile_cache_directory(server_root, key, true)? else {
         return Err("Map tile cache directory could not be created".to_string());
     };
-    let path = directory.join(format!("{}.png", key.tile_y));
-    if let Ok(metadata) = fs::symlink_metadata(&path) {
+    let png_path = directory.join(format!("{}.png", key.tile_y));
+    if let Ok(metadata) = fs::symlink_metadata(&png_path) {
         if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
             return Err(format!(
                 "Refusing to replace a non-regular cached map tile: {}",
-                path.display()
+                png_path.display()
             ));
         }
     }
-    crate::map::tiles::write_png_atomic(&path, bytes)
+    crate::map::tiles::write_png_atomic(&png_path, &tile.bytes)?;
+    let metadata_path = directory.join(format!("{}.json", key.tile_y));
+    crate::map::tiles::write_metadata_atomic(&metadata_path, &tile.metadata)
 }
 
 type Rgba = [u8; 4];
@@ -3444,10 +3486,19 @@ mod tests {
             3,
         );
         let png = b"\x89PNG\r\n\x1a\nfixture";
-        write_disk_tile(&root, &key, png).expect("tile should be written");
+        let tile = CachedTile {
+            bytes: png.to_vec(),
+            metadata: TileMetadata {
+                rendered_chunk_count: 3,
+                has_terrain: true,
+                coverage_ratio: 0.5,
+                message: None,
+            },
+        };
+        write_disk_tile(&root, &key, &tile).expect("tile should be written");
         assert_eq!(
             read_disk_tile(&root, &key).expect("tile should be read"),
-            Some(png.to_vec())
+            Some(tile)
         );
         remove_map_cache(&root).expect("managed cache should be removable");
         assert!(!root.join("map-cache").exists());
