@@ -2100,10 +2100,11 @@ async fn render_map_tile(
         emit_map_render_progress(&app, &key, RenderProgress::rendering(0, 1));
 
         let asset_missing = assets.is_none();
-        let dimension = if key.world_id == "overworld" {
-            "minecraft:overworld"
-        } else {
-            key.world_id.as_str()
+        let dimension = match key.world_id.as_str() {
+            "overworld" => "minecraft:overworld",
+            "world_nether" => "minecraft:the_nether",
+            "world_the_end" => "minecraft:the_end",
+            other => other,
         };
         let tile_bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
         let live_chunks =

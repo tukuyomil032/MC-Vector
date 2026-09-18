@@ -119,6 +119,7 @@ pub fn run() {
             commands::health_check::ping_server,
             // Map integration
             commands::map::status::get_map_status,
+            commands::map::world::get_map_worlds,
             commands::map::world::get_map_world_info,
             commands::map::lifecycle::repair_map_bridge,
             commands::map::assets::get_map_asset_status,
