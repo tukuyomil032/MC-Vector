@@ -21,6 +21,7 @@ import {
   type WheelEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -40,6 +41,7 @@ import {
   selectMapAsset,
 } from '../api/map-commands';
 import { useMapEvents } from '../hooks/use-map-events';
+import { useMapPlayerInterpolation } from '../hooks/use-map-player-interpolation';
 import type { MinecraftServer } from '../../renderer/shared/server declaration';
 import { Button } from '../../renderer/components/ui/Button';
 import {
@@ -550,7 +552,17 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const component = status?.component ?? 'absent';
   const bridge = status?.bridge ?? 'not_applicable';
   const selectedWorld = worlds.find((world) => world.worldId === worldId);
-  const visiblePlayers = players.filter((player) => playerBelongsToWorld(player, worldId));
+  const visiblePlayers = useMemo(
+    () => players.filter((player) => playerBelongsToWorld(player, worldId)),
+    [players, worldId],
+  );
+  const isManagedArtifactAvailable =
+    component === 'active' || component === 'paused' || component === 'waiting_restart';
+  const interpolatedPlayers = useMapPlayerInterpolation(
+    visiblePlayers,
+    worldId,
+    isManagedArtifactAvailable,
+  );
 
   const componentLabel = (value: MapStatus['component']): string => {
     switch (value) {
@@ -842,8 +854,6 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const playerPosition = (coordinate: number, center: number) =>
     50 + ((coordinate - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
 
-  const isManagedArtifactAvailable =
-    component === 'active' || component === 'paused' || component === 'waiting_restart';
   const artifactIsActive = status?.artifact === 'active';
   const artifactIsPaused = status?.artifact === 'paused';
   const assetState = assetStatusError
@@ -1127,7 +1137,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     <span>{tileDiagnostic.description}</span>
                   </div>
                 )}
-                {visiblePlayers.map((player) => (
+                {interpolatedPlayers.map((player) => (
                   <div
                     className="map-view__player-marker"
                     key={player.playerId}
@@ -1189,8 +1199,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
             <div className="map-view__surface-footer">
               <span>
-                {visiblePlayers.length > 0
-                  ? t('map.surface.playerCount', { count: visiblePlayers.length })
+                {interpolatedPlayers.length > 0
+                  ? t('map.surface.playerCount', { count: interpolatedPlayers.length })
                   : t('map.surface.noPlayers')}
               </span>
               <span className="map-view__surface-hint">{t('map.featureDescription')}</span>
@@ -1215,21 +1225,21 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
             <div className="map-view__side-card map-view__side-card--players">
               <div className="map-view__side-card-heading">
-                <span>{t('map.surface.playerCount', { count: visiblePlayers.length })}</span>
+                <span>{t('map.surface.playerCount', { count: interpolatedPlayers.length })}</span>
                 <button
                   type="button"
                   className="map-view__text-button"
                   onClick={handleRecenter}
-                  disabled={visiblePlayers.length === 0}
+                  disabled={interpolatedPlayers.length === 0}
                 >
                   {t('map.actions.recenter')}
                 </button>
               </div>
-              {visiblePlayers.length === 0 ? (
+              {interpolatedPlayers.length === 0 ? (
                 <p>{t('map.surface.noPlayers')}</p>
               ) : (
                 <ul className="map-view__player-list">
-                  {visiblePlayers.map((player) => (
+                  {interpolatedPlayers.map((player) => (
                     <li key={player.playerId}>
                       <span className="map-view__player-list-dot" aria-hidden="true" />
                       <span>{player.name}</span>
