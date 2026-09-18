@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
-use fastanvil::Block;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
@@ -24,7 +22,6 @@ pub(crate) struct AssetConfig {
 
 pub(crate) struct MapAssets {
     resolver: AssetResolver,
-    top_color_cache: Mutex<HashMap<String, [u8; 4]>>,
     pub(crate) identity: String,
     pub(crate) manifest: AssetManifest,
 }
@@ -35,19 +32,6 @@ impl MapAssets {
             "{}:manifest-v{}",
             self.identity, self.manifest.manifest_version
         )
-    }
-
-    pub(crate) fn sample(&self, block: &Block) -> [u8; 4] {
-        self.sample_encoded_state(block.encoded_description(), block.name())
-    }
-
-    pub(crate) fn sample_state(&self, state: &str) -> [u8; 4] {
-        let (encoded, block_id) = encode_state(state);
-        self.sample_encoded_state(&encoded, &block_id)
-    }
-
-    pub(crate) fn sample_state_at(&self, state: &str, u: f32, v: f32) -> [u8; 4] {
-        self.sample_state_at_with_biome(state, "", u, v)
     }
 
     pub(crate) fn sample_state_at_with_biome(
@@ -75,27 +59,6 @@ impl MapAssets {
                 crate::map::assets::apply_tint(color, crate::map::assets::tint_for(&encoded, biome))
             })
             .unwrap_or_else(|| fallback_block_colour(&block_id))
-    }
-
-    fn sample_encoded_state(&self, encoded: &str, block_name: &str) -> [u8; 4] {
-        if let Some(colour) = self
-            .top_color_cache
-            .lock()
-            .ok()
-            .and_then(|cache| cache.get(encoded).copied())
-        {
-            return colour;
-        }
-
-        let colour = self
-            .resolver
-            .sample_top(encoded)
-            .unwrap_or_else(|| fallback_block_colour(block_name));
-
-        if let Ok(mut cache) = self.top_color_cache.lock() {
-            cache.insert(encoded.to_string(), colour);
-        }
-        colour
     }
 }
 
@@ -363,7 +326,6 @@ fn load_from_source(source: &Path) -> Result<MapAssets, String> {
 
     Ok(MapAssets {
         resolver,
-        top_color_cache: Mutex::new(HashMap::new()),
         identity,
         manifest,
     })
