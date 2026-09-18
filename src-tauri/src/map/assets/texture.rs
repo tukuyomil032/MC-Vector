@@ -42,7 +42,19 @@ impl TextureImage {
         let texture_u = min_u + (max_u - min_u) * u.clamp(0.0, 1.0);
         let texture_v = min_v + (max_v - min_v) * v.clamp(0.0, 1.0);
         let x = ((texture_u / 16.0) * self.width as f32).floor() as i32;
-        let y = ((texture_v / 16.0) * self.height as f32).floor() as i32;
+        // Minecraft animated textures are stored as a vertical strip of
+        // square frames. Phase 2 intentionally renders a deterministic
+        // still image, so sample the first frame instead of treating later
+        // animation frames as extra UV space.
+        let logical_height = if self.animated
+            && self.height > self.width
+            && self.height.is_multiple_of(self.width)
+        {
+            self.width
+        } else {
+            self.height
+        };
+        let y = ((texture_v / 16.0) * logical_height as f32).floor() as i32;
         self.pixel(x, y)
     }
 
@@ -99,5 +111,30 @@ mod tests {
         };
         assert_eq!(image.sample_uv(DEFAULT_UV, 90, 0.25, 0.75), [255; 4]);
         assert!(image.animated);
+    }
+
+    #[test]
+    fn samples_the_first_frame_of_an_animated_vertical_strip() {
+        let mut pixels = vec![0_u8; 16 * 32 * 4];
+        for y in 0..16 {
+            for x in 0..16 {
+                let offset = (y * 16 + x) * 4;
+                pixels[offset..offset + 4].copy_from_slice(&[255, 0, 0, 255]);
+            }
+        }
+        for y in 16..32 {
+            for x in 0..16 {
+                let offset = (y * 16 + x) * 4;
+                pixels[offset..offset + 4].copy_from_slice(&[0, 0, 255, 255]);
+            }
+        }
+        let image = TextureImage {
+            width: 16,
+            height: 32,
+            pixels,
+            animated: true,
+        };
+
+        assert_eq!(image.sample_uv(DEFAULT_UV, 0, 0.5, 0.9), [255, 0, 0, 255]);
     }
 }
