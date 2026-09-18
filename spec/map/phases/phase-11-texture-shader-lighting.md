@@ -27,6 +27,22 @@ Phase 08 asset resolver and Phase 10 geometry.
 - add water/lava/leaves/glass/ice/snow and common non-cube renderers;
 - count unresolved blocks and expose quality metadata.
 
+## Implemented evidence (2026-09-18)
+
+- The model-face sampler already applies a resolved biome tint when the face
+  carries a Minecraft `tintindex`, while preserving the source texture alpha.
+- The renderer now applies a material policy after sampling: cutout blocks use
+  a 128 alpha-test threshold and translucent blocks retain their texture alpha
+  for compositing. Focused tests cover both policies and the tint/alpha
+  boundary.
+- The Paper smoke fixture now validates the advertised `world_status` and
+  `chat_messages` capabilities, and validates the structured world-status
+  payload. This is bridge evidence, not renderer parity evidence.
+
+These are focused slices only. The Phase 11 gate remains open until all-block
+model coverage, custom block renderers, shader/lighting parity, resource-pack
+golden images, and real Paper/Tauri visual evidence are available.
+
 ## Focused tests
 
 Terrain, water, forest, snow, height, buildings, stairs, slabs, fences, doors,
