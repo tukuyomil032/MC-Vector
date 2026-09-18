@@ -9,24 +9,35 @@ const CUTOUT_ALPHA_THRESHOLD: u8 = 128;
 
 pub(crate) fn material_kind(state: &str) -> MaterialKind {
     let state = state.to_ascii_lowercase();
-    if state.contains("glass")
-        || state.contains("water")
-        || state.contains("ice")
-        || state.contains("slime")
-    {
+    if contains_any(
+        &state,
+        [
+            "glass",
+            "water",
+            "lava",
+            "ice",
+            "slime",
+            "honey",
+            "powder_snow",
+            "bubble_column",
+        ],
+    ) {
         MaterialKind::Translucent
-    } else if state.contains("leaves")
-        || state.contains("plant")
-        || state.contains("flower")
-        || state.contains("grass")
-        || state.contains("vine")
-        || state.contains("fence")
-        || state.contains("door")
-    {
+    } else if contains_any(
+        &state,
+        [
+            "leaves", "plant", "flower", "grass", "fern", "vine", "fence", "door", "pane", "bars",
+            "chain", "rail", "torch", "lantern", "sign", "banner", "tripwire",
+        ],
+    ) {
         MaterialKind::Cutout
     } else {
         MaterialKind::Opaque
     }
+}
+
+fn contains_any<const N: usize>(state: &str, names: [&str; N]) -> bool {
+    names.into_iter().any(|name| state.contains(name))
 }
 
 /// Apply the material alpha contract after a resolved model face has been
@@ -57,7 +68,14 @@ mod tests {
     #[test]
     fn classifies_common_transparent_and_cutout_materials() {
         assert_eq!(material_kind("minecraft:glass"), MaterialKind::Translucent);
+        assert_eq!(
+            material_kind("minecraft:water[level=3]"),
+            MaterialKind::Translucent
+        );
         assert_eq!(material_kind("minecraft:oak_leaves"), MaterialKind::Cutout);
+        assert_eq!(material_kind("minecraft:iron_bars"), MaterialKind::Cutout);
+        assert_eq!(material_kind("minecraft:oak_sign"), MaterialKind::Cutout);
+        assert_eq!(material_kind("minecraft:rail"), MaterialKind::Cutout);
         assert_eq!(material_kind("minecraft:stone"), MaterialKind::Opaque);
         assert!(is_air("minecraft:air[facing=north]"));
     }
