@@ -32,6 +32,30 @@ Phase 07 manifest and Phase 05 normalized block states.
 Vanilla states, stairs/slabs/fences/doors, leaves/glass/water/snow, alpha/tint,
 parent/multipart/rotation, override packs, and cache separation.
 
+## Current evidence (2026-09-18)
+
+The focused Rust asset and discovery fixtures cover variants, multipart
+conditions, parent texture variables, model rotation and rescaling, UV lock,
+texture alpha, deterministic animated-texture frames, vanilla colormap tint,
+material alpha policy, resource-pack overlay precedence, cache identity, and
+the supported launcher candidate families. The Map-filtered Rust suite passes
+119 tests.
+
+The local full checks also pass: `bun run check`, `bun run typecheck:tests`,
+`bun run test` (51 files, 434 tests), `bun run build`, and
+`cargo test --manifest-path src-tauri/Cargo.toml` (219 passed, 1 intentionally
+ignored). The first full Rust run inside the restricted sandbox could not bind
+the existing loopback download fixtures; the same command passed with the
+required local loopback permission. This is environment evidence, not a Map
+regression.
+
+The Phase 08 gate remains open. The current fixtures are synthetic and do not
+yet prove complete vanilla 1.21.x blockstate coverage, exact launcher install
+layouts, full resource-pack stack selection from the UI, custom mod renderers,
+or golden images from a real client JAR. Those boundaries are intentionally
+carried into Phases 09–11 and 15–17 rather than being inferred from parser
+unit tests.
+
 ## Diff review checklist
 
 No fixed-colour path as the primary path, no silent asset version mismatch,
