@@ -192,12 +192,33 @@ export interface MapWorldInfo {
   recommendedZoom: number;
 }
 
+export interface MapViewport {
+  centerX: number;
+  centerZ: number;
+  zoom: number;
+  width?: number;
+  height?: number;
+}
+
+export interface MapRenderRequestResult {
+  requested: number;
+  accepted: number;
+}
+
 export function getMapStatus(serverId: string): Promise<MapStatus> {
   return tauriInvoke('get_map_status', { serverId });
 }
 
 export function getMapWorldInfo(serverId: string, worldId: string): Promise<MapWorldInfo> {
   return tauriInvoke('get_map_world_info', { serverId, worldId });
+}
+
+export function requestMapRender(
+  serverId: string,
+  worldId: string,
+  viewport: MapViewport,
+): Promise<MapRenderRequestResult> {
+  return tauriInvoke('request_map_render', { serverId, worldId, viewport });
 }
 
 export function repairMapBridge(serverId: string): Promise<MapStatus> {

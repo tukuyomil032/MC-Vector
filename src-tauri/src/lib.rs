@@ -123,6 +123,7 @@ pub fn run() {
             commands::map::repair_map_bridge,
             commands::map::get_map_asset_status,
             commands::map::select_map_asset,
+            commands::map::request_map_render,
             commands::map::get_map_tile,
             commands::map::enable_map,
             commands::map::pause_map,

@@ -14,7 +14,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot, Mutex};
-use tokio::task::JoinHandle;
+use tokio::task::{JoinHandle, JoinSet};
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
 
@@ -41,6 +41,8 @@ const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
 const MAX_BRIDGE_LINE_BYTES: usize = 1024 * 1024;
 const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
+const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
+const MAX_LIVE_CHUNKS_PER_AXIS: i64 = 8;
 // This version intentionally invalidates the earlier representative-colour
 // tiles. The renderer now resolves blockstate/model parents and samples the
 // resolved top face before the tile path aggregates chunk footprints.
@@ -84,7 +86,7 @@ enum BridgeConfigInspection {
     Invalid(BridgeConfigIssue),
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapWorldInfo {
     pub world_id: String,
@@ -101,6 +103,33 @@ pub struct MapWorldInfo {
     pub spawn_z: Option<i64>,
     pub data_version: Option<i64>,
     pub recommended_zoom: u8,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MapViewport {
+    pub center_x: f64,
+    pub center_z: f64,
+    pub zoom: u8,
+    #[serde(default = "default_viewport_width")]
+    pub width: u32,
+    #[serde(default = "default_viewport_height")]
+    pub height: u32,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MapRenderRequestResult {
+    pub requested: usize,
+    pub accepted: usize,
+}
+
+fn default_viewport_width() -> u32 {
+    1024
+}
+
+fn default_viewport_height() -> u32 {
+    768
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -135,6 +164,9 @@ struct CachedLiveChunk {
     snapshot: ChunkView,
 }
 
+type LiveChunkMap = HashMap<(i64, i64), ChunkView>;
+
+#[derive(Clone)]
 pub struct MapBridgeManager {
     listeners: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
     statuses: Arc<Mutex<HashMap<String, RuntimeBridgeStatus>>>,
@@ -1208,6 +1240,69 @@ async fn request_live_chunk(
     }
 }
 
+async fn request_live_chunks_for_tile(
+    manager: &Arc<MapBridgeManager>,
+    server_id: &str,
+    dimension: &str,
+    bounds: TileWorldBounds,
+) -> LiveChunkMap {
+    let (min_chunk_x, max_chunk_x) = limited_chunk_range(
+        floor_div(bounds.origin_x, 16),
+        floor_div(bounds.max_x(), 16),
+        floor_div(bounds.origin_x + bounds.max_x(), 32),
+    );
+    let (min_chunk_z, max_chunk_z) = limited_chunk_range(
+        floor_div(bounds.origin_z, 16),
+        floor_div(bounds.max_z(), 16),
+        floor_div(bounds.origin_z + bounds.max_z(), 32),
+    );
+    let center_chunk_x = floor_div(bounds.origin_x + bounds.max_x(), 32);
+    let center_chunk_z = floor_div(bounds.origin_z + bounds.max_z(), 32);
+    let mut candidates = (min_chunk_z..=max_chunk_z)
+        .flat_map(|chunk_z| (min_chunk_x..=max_chunk_x).map(move |chunk_x| (chunk_x, chunk_z)))
+        .collect::<Vec<_>>();
+    candidates.sort_by_key(|(chunk_x, chunk_z)| {
+        (
+            (chunk_x - center_chunk_x).abs() + (chunk_z - center_chunk_z).abs(),
+            *chunk_x,
+            *chunk_z,
+        )
+    });
+    candidates.truncate(MAX_LIVE_CHUNKS_PER_TILE);
+
+    let mut requests = JoinSet::new();
+    for (chunk_x, chunk_z) in candidates {
+        let manager = Arc::clone(manager);
+        let server_id = server_id.to_string();
+        let dimension = dimension.to_string();
+        requests.spawn(async move {
+            let snapshot =
+                request_live_chunk(&manager, &server_id, &dimension, chunk_x, chunk_z).await;
+            ((chunk_x, chunk_z), snapshot)
+        });
+    }
+
+    let mut snapshots = LiveChunkMap::new();
+    while let Some(result) = requests.join_next().await {
+        if let Ok((key, Some(snapshot))) = result {
+            snapshots.insert(key, snapshot);
+        }
+    }
+    snapshots
+}
+
+fn limited_chunk_range(minimum: i64, maximum: i64, center: i64) -> (i64, i64) {
+    if maximum.saturating_sub(minimum).saturating_add(1) <= MAX_LIVE_CHUNKS_PER_AXIS {
+        return (minimum, maximum);
+    }
+    let half = MAX_LIVE_CHUNKS_PER_AXIS / 2;
+    let start = center.saturating_sub(half).clamp(
+        minimum,
+        maximum.saturating_sub(MAX_LIVE_CHUNKS_PER_AXIS - 1),
+    );
+    (start, start.saturating_add(MAX_LIVE_CHUNKS_PER_AXIS - 1))
+}
+
 fn parse_hello(value: &Value) -> Result<HelloRequest, String> {
     if value.get("type").and_then(Value::as_str) != Some("hello") {
         return Err("The first bridge message must be hello".to_string());
@@ -1972,10 +2067,9 @@ pub async fn remove_map_component(
     build_status(&app, &manager, &server_id).await
 }
 
-#[tauri::command]
-pub async fn get_map_tile(
+async fn render_map_tile(
     app: AppHandle,
-    manager: State<'_, MapBridgeManager>,
+    manager: Arc<MapBridgeManager>,
     server_id: String,
     world_id: String,
     zoom: u8,
@@ -2067,24 +2161,14 @@ pub async fn get_map_tile(
         let _tile_permit = tile_permit?;
 
         let asset_missing = assets.is_none();
-        let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
-        let tile_origin_x = i64::from(tile_x) * i64::from(TILE_SIZE) * blocks_per_pixel;
-        let tile_origin_z = i64::from(tile_y) * i64::from(TILE_SIZE) * blocks_per_pixel;
-        let center_world_x = tile_origin_x + i64::from(TILE_SIZE) * blocks_per_pixel / 2;
-        let center_world_z = tile_origin_z + i64::from(TILE_SIZE) * blocks_per_pixel / 2;
         let dimension = if key.world_id == "overworld" {
             "minecraft:overworld"
         } else {
             key.world_id.as_str()
         };
-        let live_chunk = request_live_chunk(
-            &manager,
-            &key.server_id,
-            dimension,
-            floor_div(center_world_x, 16),
-            floor_div(center_world_z, 16),
-        )
-        .await;
+        let tile_bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+        let live_chunks =
+            request_live_chunks_for_tile(&manager, &key.server_id, dimension, tile_bounds).await;
 
         let rendered = tokio::task::spawn_blocking(move || {
             render_world_tile_detailed(
@@ -2093,7 +2177,7 @@ pub async fn get_map_tile(
                 tile_x,
                 tile_y,
                 assets.as_deref(),
-                live_chunk.as_ref(),
+                Some(&live_chunks),
             )
             .map_err(|error| format!("Failed to render map tile: {error}"))
         })
@@ -2123,6 +2207,113 @@ pub async fn get_map_tile(
     finish_inflight_tile(&manager, &key, tile_result)
         .await
         .map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+pub async fn get_map_tile(
+    app: AppHandle,
+    manager: State<'_, MapBridgeManager>,
+    server_id: String,
+    world_id: String,
+    zoom: u8,
+    tile_x: i32,
+    tile_y: i32,
+) -> Result<tauri::ipc::Response, String> {
+    render_map_tile(
+        app,
+        Arc::new(manager.inner().clone()),
+        server_id,
+        world_id,
+        zoom,
+        tile_x,
+        tile_y,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn request_map_render(
+    app: AppHandle,
+    manager: State<'_, MapBridgeManager>,
+    server_id: String,
+    world_id: String,
+    viewport: MapViewport,
+) -> Result<MapRenderRequestResult, String> {
+    if server_id.trim().is_empty() || world_id.trim().is_empty() {
+        return Err("Server and world IDs are required".to_string());
+    }
+    let coordinates = viewport_tile_coordinates(&viewport)?;
+    let requested = coordinates.len();
+    let shared_manager = Arc::new(manager.inner().clone());
+    let mut accepted = 0;
+    for (tile_x, tile_y) in coordinates {
+        let app = app.clone();
+        let manager = Arc::clone(&shared_manager);
+        let server_id = server_id.clone();
+        let world_id = world_id.clone();
+        tokio::spawn(async move {
+            if let Err(error) = render_map_tile(
+                app.clone(),
+                manager,
+                server_id.clone(),
+                world_id,
+                viewport.zoom,
+                tile_x,
+                tile_y,
+            )
+            .await
+            {
+                let _ = app.emit(
+                    "map-error",
+                    serde_json::json!({
+                        "serverId": server_id,
+                        "scope": "tile",
+                        "message": error,
+                    }),
+                );
+            }
+        });
+        accepted += 1;
+    }
+    Ok(MapRenderRequestResult {
+        requested,
+        accepted,
+    })
+}
+
+fn viewport_tile_coordinates(viewport: &MapViewport) -> Result<Vec<(i32, i32)>, String> {
+    if !viewport.center_x.is_finite() || !viewport.center_z.is_finite() {
+        return Err("Map viewport center must be finite".to_string());
+    }
+    if viewport.zoom > MAX_ZOOM {
+        return Err(format!("Zoom must be between 0 and {MAX_ZOOM}"));
+    }
+    let width = viewport.width.clamp(256, 4096) as f64;
+    let height = viewport.height.clamp(256, 4096) as f64;
+    let blocks_per_pixel = (1_i64 << (MAX_ZOOM - viewport.zoom)) as f64;
+    let tile_world_size = f64::from(TILE_SIZE) * blocks_per_pixel;
+    let min_x =
+        ((viewport.center_x - width * blocks_per_pixel / 2.0) / tile_world_size).floor() as i64 - 1;
+    let max_x =
+        ((viewport.center_x + width * blocks_per_pixel / 2.0) / tile_world_size).floor() as i64 + 1;
+    let min_y = ((viewport.center_z - height * blocks_per_pixel / 2.0) / tile_world_size).floor()
+        as i64
+        - 1;
+    let max_y = ((viewport.center_z + height * blocks_per_pixel / 2.0) / tile_world_size).floor()
+        as i64
+        + 1;
+    let mut coordinates = Vec::new();
+    for tile_y in min_y..=max_y {
+        for tile_x in min_x..=max_x {
+            if let (Ok(tile_x), Ok(tile_y)) = (i32::try_from(tile_x), i32::try_from(tile_y)) {
+                coordinates.push((tile_x, tile_y));
+            }
+            if coordinates.len() >= 64 {
+                return Ok(coordinates);
+            }
+        }
+    }
+    Ok(coordinates)
 }
 
 fn resolve_world_directory(server_root: &Path, world_id: &str) -> Result<PathBuf, String> {
@@ -2647,27 +2838,28 @@ fn render_overview_tile(
     tile_x: i32,
     tile_y: i32,
     assets: Option<&MapAssets>,
-    live_chunk: Option<&ChunkView>,
+    live_chunks: Option<&LiveChunkMap>,
 ) -> Result<TileRenderResult, String> {
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
-    if let Some(snapshot) = live_chunk {
-        if !coordinates.contains(&(snapshot.key.chunk_x, snapshot.key.chunk_z))
-            && bounds.intersects_chunk(snapshot.key.chunk_x, snapshot.key.chunk_z)
-        {
-            coordinates.push((snapshot.key.chunk_x, snapshot.key.chunk_z));
+    if let Some(live_chunks) = live_chunks {
+        for snapshot in live_chunks.values() {
+            if !coordinates.contains(&(snapshot.key.chunk_x, snapshot.key.chunk_z))
+                && bounds.intersects_chunk(snapshot.key.chunk_x, snapshot.key.chunk_z)
+            {
+                coordinates.push((snapshot.key.chunk_x, snapshot.key.chunk_z));
+            }
         }
     }
 
     let mut tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
     let mut rendered_chunk_count = 0;
     for (chunk_x, chunk_z) in coordinates {
-        let colour = if live_chunk.is_some_and(|snapshot| {
-            snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
-        }) {
-            let snapshot = live_chunk.expect("checked live chunk presence");
+        let colour = if let Some(snapshot) =
+            live_chunks.and_then(|chunks| chunks.get(&(chunk_x, chunk_z)))
+        {
             average_surface_colours((0..16).flat_map(|local_z| {
                 (0..16).map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
             }))
@@ -2710,30 +2902,38 @@ fn render_world_tile_detailed(
     tile_x: i32,
     tile_y: i32,
     assets: Option<&MapAssets>,
-    live_chunk: Option<&ChunkView>,
+    live_chunks: Option<&LiveChunkMap>,
 ) -> Result<TileRenderResult, String> {
     let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
     if blocks_per_pixel >= 16 {
-        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunk);
+        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
     }
-    if live_chunk.is_none()
+    if live_chunks.is_none_or(HashMap::is_empty)
         && existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?.is_empty()
     {
         // Avoid walking tens of thousands of air voxels for a tile whose
         // region headers already prove that no saved chunk intersects it.
-        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunk);
+        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
     }
 
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
     let mut rendered_chunks = HashSet::new();
-    let live_chunk = live_chunk.cloned();
+    let live_chunks = live_chunks.cloned().unwrap_or_default();
     let mut model_cache: HashMap<(String, String), Option<Vec<crate::map::assets::RenderFace>>> =
         HashMap::new();
     let assets_for_models = assets;
-    let min_y = live_chunk.as_ref().map_or(-64, |snapshot| snapshot.min_y);
-    let max_y = live_chunk.as_ref().map_or(320, |snapshot| snapshot.max_y);
+    let min_y = live_chunks
+        .values()
+        .map(|snapshot| snapshot.min_y)
+        .min()
+        .unwrap_or(-64);
+    let max_y = live_chunks
+        .values()
+        .map(|snapshot| snapshot.max_y)
+        .max()
+        .unwrap_or(320);
     let rendered = render_iso_tile(
         bounds,
         min_y,
@@ -2743,12 +2943,8 @@ fn render_world_tile_detailed(
             let chunk_z = floor_div(world_z, 16);
             let local_x = floor_mod(world_x, 16) as usize;
             let local_z = floor_mod(world_z, 16) as usize;
-            if live_chunk.as_ref().is_some_and(|snapshot| {
-                snapshot.key.chunk_x == chunk_x && snapshot.key.chunk_z == chunk_z
-            }) {
-                let sample = live_chunk
-                    .as_ref()
-                    .and_then(|snapshot| live_block_sample(snapshot, local_x, y, local_z));
+            if let Some(snapshot) = live_chunks.get(&(chunk_x, chunk_z)) {
+                let sample = live_block_sample(snapshot, local_x, y, local_z);
                 if sample.is_some() {
                     rendered_chunks.insert((chunk_x, chunk_z));
                 }
@@ -3035,7 +3231,8 @@ mod tests {
         let root =
             std::env::temp_dir().join(format!("mc-vector-map-overview-test-{}", Uuid::new_v4()));
         let snapshot = live_test_snapshot(0, 0);
-        let detailed = render_world_tile_detailed(&root, 0, 0, 0, None, Some(&snapshot))
+        let live_chunks = HashMap::from([((0, 0), snapshot)]);
+        let detailed = render_world_tile_detailed(&root, 0, 0, 0, None, Some(&live_chunks))
             .expect("overview should render");
         let (has_terrain, coverage) = png_coverage(&detailed.png);
         assert!(has_terrain);

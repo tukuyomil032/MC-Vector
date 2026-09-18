@@ -43,6 +43,7 @@ import {
   pauseMap,
   repairMapBridge,
   removeMapComponent,
+  requestMapRender,
   restoreMap,
   resolveMapTileDiagnosticState,
   selectMapAsset,
@@ -290,6 +291,17 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       })),
     ).flat();
     setRequestedTileKeys(requests.map(({ x, y }) => `${zoom}:${x}:${y}`));
+
+    void requestMapRender(server.id, 'overworld', {
+      centerX: mapCenter.x,
+      centerZ: mapCenter.z,
+      zoom,
+      width: 768,
+      height: 512,
+    }).catch(() => {
+      // Individual tile requests below still provide the image and diagnostic
+      // state. Prefetch failures are surfaced by getMapTile or map-tile-ready.
+    });
 
     void Promise.all(
       requests.map(async ({ x, y }): Promise<MapTile | null> => {
