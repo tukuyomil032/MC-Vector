@@ -17,7 +17,7 @@ use self::model::{default_uv, FaceDirection, Model, ResolvedFace};
 use self::resolver::ResourcePackStack;
 use self::texture::TextureImage;
 
-pub(crate) use self::custom_renderer::{is_air, material_kind, MaterialKind};
+pub(crate) use self::custom_renderer::{apply_material_alpha, is_air, material_kind, MaterialKind};
 pub(crate) use self::discovery::{
     discover_asset_candidates, AssetCandidate, AssetDiscoveryOptions, AssetLauncher,
 };
@@ -286,6 +286,42 @@ mod tests {
             Some([11, 22, 33, 77])
         );
         assert_eq!(resolver.appearance("minecraft:test|").unwrap().len(), 1);
+    }
+
+    #[test]
+    fn resolved_face_sampling_keeps_tint_marker_and_texture_alpha() {
+        let entries = HashMap::from([
+            (
+                "assets/minecraft/blockstates/test.json".to_string(),
+                br#"{"variants":{"":{"model":"minecraft:block/test"}}}"#.to_vec(),
+            ),
+            (
+                "assets/minecraft/models/block/test.json".to_string(),
+                br##"{"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"up":{"texture":"#all","tintindex":0}}}],"textures":{"all":"minecraft:block/test_texture"}}"##.to_vec(),
+            ),
+            (
+                "assets/minecraft/textures/block/test_texture.png".to_string(),
+                png([200, 100, 50, 77]),
+            ),
+        ]);
+        let resolver = AssetResolver::from_entries(&entries).expect("fixture should load");
+        let face = resolver
+            .appearance("minecraft:test|")
+            .expect("resolved model face")
+            .remove(0);
+
+        assert_eq!(face.tint_index, Some(0));
+        let sampled = resolver
+            .sample_resolved_face(&face, 0.5, 0.5)
+            .expect("texture sample");
+        assert_eq!(sampled, [200, 100, 50, 77]);
+        assert_eq!(
+            apply_tint(
+                sampled,
+                resolver.biome_tint("minecraft:grass_block", "minecraft:plains")
+            ),
+            [98, 72, 17, 77]
+        );
     }
 
     #[test]

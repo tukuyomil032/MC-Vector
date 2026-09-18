@@ -73,3 +73,16 @@ pub(crate) fn apply_tint(mut color: [u8; 4], tint: Option<[u8; 3]>) -> [u8; 4] {
     }
     color
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn biome_tint_modulates_rgb_without_losing_texture_alpha() {
+        assert_eq!(
+            apply_tint([200, 100, 50, 77], Some([128, 255, 0])),
+            [100, 100, 0, 77]
+        );
+    }
+}

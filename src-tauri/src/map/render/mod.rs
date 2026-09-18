@@ -8,7 +8,7 @@ mod ray;
 mod shader;
 mod voxel_traversal;
 
-use crate::map::assets::{RenderFace, RenderFaceDirection};
+use crate::map::assets::{apply_material_alpha, material_kind, RenderFace, RenderFaceDirection};
 
 use self::compositing::alpha_over;
 pub(crate) use self::geometry::Face;
@@ -118,7 +118,13 @@ where
                 }
                 hits.sort_by(|left, right| left.0.distance.total_cmp(&right.0.distance));
                 for (hit, face) in hits {
-                    let mut color = sample_model_color(&sample, face, hit.u, hit.v);
+                    // The asset callback supplies texture sampling and the
+                    // existing biome tint. Apply material alpha afterwards so
+                    // cutout/transparent semantics do not alter tinted RGB.
+                    let mut color = prepare_sampled_face_color(
+                        &sample,
+                        sample_model_color(&sample, face, hit.u, hit.v),
+                    );
                     if face.shade {
                         color = shade_surface(
                             color,
@@ -153,6 +159,10 @@ where
         pixels,
         coverage_ratio: rendered_pixel_count as f32 / (width * height).max(1) as f32,
     })
+}
+
+fn prepare_sampled_face_color(sample: &SurfaceSample, color: [u8; 4]) -> [u8; 4] {
+    apply_material_alpha(material_kind(&sample.state), color)
 }
 
 fn skip_above_surface(
@@ -387,5 +397,31 @@ mod tests {
         .expect("ray tile should render");
         assert!(rendered.coverage_ratio > 0.0);
         assert!(rendered.pixels.chunks_exact(4).any(|pixel| pixel[3] > 0));
+    }
+
+    #[test]
+    fn resolved_face_material_policy_preserves_tinted_rgb_and_alpha_modes() {
+        let mut sample = SurfaceSample {
+            state: "minecraft:oak_fence".to_string(),
+            biome: "minecraft:plains".to_string(),
+            y: 64,
+            sky_light: 15,
+            block_light: 0,
+        };
+
+        assert_eq!(
+            prepare_sampled_face_color(&sample, [44, 88, 132, 127]),
+            [44, 88, 132, 0]
+        );
+        assert_eq!(
+            prepare_sampled_face_color(&sample, [44, 88, 132, 200]),
+            [44, 88, 132, 255]
+        );
+
+        sample.state = "minecraft:glass".to_string();
+        assert_eq!(
+            prepare_sampled_face_color(&sample, [44, 88, 132, 96]),
+            [44, 88, 132, 96]
+        );
     }
 }
