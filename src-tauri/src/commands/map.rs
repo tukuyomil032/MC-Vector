@@ -2076,6 +2076,7 @@ async fn render_map_tile(
     zoom: u8,
     tile_x: i32,
     tile_y: i32,
+    priority: TilePriority,
 ) -> Result<tauri::ipc::Response, String> {
     let _ = app_data_dir(&app)?;
     if server_id.trim().is_empty() || world_id.trim().is_empty() {
@@ -2132,7 +2133,8 @@ async fn render_map_tile(
     );
 
     if let Some(tile) = manager.tile_cache.lock().await.get(&key) {
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None, None);
+        let coverage = png_coverage(&tile);
+        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), Some(coverage), None);
         return Ok(tauri::ipc::Response::new(tile));
     }
     if let Some(tile) = read_disk_tile(&server_root, &key)? {
@@ -2141,7 +2143,8 @@ async fn render_map_tile(
             .lock()
             .await
             .insert(key.clone(), tile.clone());
-        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), None, None);
+        let coverage = png_coverage(&tile);
+        emit_map_tile_ready(&app, &key, &tile, 0, assets.is_none(), Some(coverage), None);
         return Ok(tauri::ipc::Response::new(tile));
     }
 
@@ -2154,10 +2157,7 @@ async fn render_map_tile(
     }
 
     let tile_key = key.clone();
-    let tile_permit = manager
-        .tile_scheduler
-        .acquire(key.clone(), TilePriority::Viewport)
-        .await;
+    let tile_permit = manager.tile_scheduler.acquire(key.clone(), priority).await;
     let tile_result: Result<Vec<u8>, String> = async {
         let _tile_permit = tile_permit?;
 
@@ -2228,6 +2228,7 @@ pub async fn get_map_tile(
         zoom,
         tile_x,
         tile_y,
+        TilePriority::Viewport,
     )
     .await
 }
@@ -2245,6 +2246,10 @@ pub async fn request_map_render(
     }
     let coordinates = viewport_tile_coordinates(&viewport)?;
     let requested = coordinates.len();
+    let blocks_per_pixel = (1_i64 << (MAX_ZOOM - viewport.zoom)) as f64;
+    let tile_world_size = f64::from(TILE_SIZE) * blocks_per_pixel;
+    let center_tile_x = (viewport.center_x / tile_world_size).floor() as i32;
+    let center_tile_y = (viewport.center_z / tile_world_size).floor() as i32;
     let shared_manager = Arc::new(manager.inner().clone());
     let mut accepted = 0;
     for (tile_x, tile_y) in coordinates {
@@ -2252,6 +2257,11 @@ pub async fn request_map_render(
         let manager = Arc::clone(&shared_manager);
         let server_id = server_id.clone();
         let world_id = world_id.clone();
+        let priority = if tile_x == center_tile_x && tile_y == center_tile_y {
+            TilePriority::Viewport
+        } else {
+            TilePriority::Adjacent
+        };
         tokio::spawn(async move {
             if let Err(error) = render_map_tile(
                 app.clone(),
@@ -2261,6 +2271,7 @@ pub async fn request_map_render(
                 viewport.zoom,
                 tile_x,
                 tile_y,
+                priority,
             )
             .await
             {
