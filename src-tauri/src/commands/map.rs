@@ -22,7 +22,7 @@ use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot
 use super::map_assets::{self, MapAssets};
 use super::server::ServerManager;
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
-use crate::map::render::{render_surface_tile_with_models, shade_surface, Face, SurfaceSample};
+use crate::map::render::{render_iso_tile, shade_surface, Face, SurfaceSample};
 use crate::map::tile_buffer::RgbaTileBuffer;
 use crate::map::tiles::{
     MemoryTileCache, TileKey, TilePriority, TileScheduler, DEFAULT_PERSPECTIVE,
@@ -2478,6 +2478,56 @@ fn chunk_surface_sample(
     None
 }
 
+fn complete_block_sample(
+    chunk: &CompleteChunk,
+    local_x: usize,
+    y: i32,
+    local_z: usize,
+) -> Option<SurfaceSample> {
+    let y = y as isize;
+    let block = chunk.block(local_x, y, local_z)?;
+    if is_air_state(block.name()) {
+        return None;
+    }
+    let biome = chunk
+        .biome(local_x, y, local_z)
+        .map(|biome| format!("{biome:?}").to_ascii_lowercase())
+        .unwrap_or_else(|| "minecraft:plains".to_string());
+    Some(SurfaceSample {
+        state: block.encoded_description().to_string(),
+        biome,
+        y: y as i32,
+        sky_light: 15,
+        block_light: 0,
+    })
+}
+
+fn live_block_sample(
+    snapshot: &ChunkView,
+    local_x: usize,
+    y: i32,
+    local_z: usize,
+) -> Option<SurfaceSample> {
+    snapshot
+        .column(local_x, local_z)?
+        .iter()
+        .find(|layer| layer.y == y && !is_air_state(&layer.state))
+        .map(|layer| SurfaceSample {
+            state: layer.state.clone(),
+            biome: layer.biome.clone(),
+            y: layer.y,
+            sky_light: layer.sky_light,
+            block_light: layer.block_light,
+        })
+}
+
+fn is_air_state(state: &str) -> bool {
+    matches!(
+        state.split('|').next().unwrap_or(state),
+        "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
+    )
+}
+
 fn live_surface_sample(
     snapshot: &ChunkView,
     local_x: usize,
@@ -2666,6 +2716,13 @@ fn render_world_tile_detailed(
     if blocks_per_pixel >= 16 {
         return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunk);
     }
+    if live_chunk.is_none()
+        && existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?.is_empty()
+    {
+        // Avoid walking tens of thousands of air voxels for a tile whose
+        // region headers already prove that no saved chunk intersects it.
+        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunk);
+    }
 
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
@@ -2675,9 +2732,13 @@ fn render_world_tile_detailed(
     let mut model_cache: HashMap<(String, String), Option<Vec<crate::map::assets::RenderFace>>> =
         HashMap::new();
     let assets_for_models = assets;
-    let rendered = render_surface_tile_with_models(
+    let min_y = live_chunk.as_ref().map_or(-64, |snapshot| snapshot.min_y);
+    let max_y = live_chunk.as_ref().map_or(320, |snapshot| snapshot.max_y);
+    let rendered = render_iso_tile(
         bounds,
-        |world_x, world_z| {
+        min_y,
+        max_y,
+        |world_x, y, world_z| {
             let chunk_x = floor_div(world_x, 16);
             let chunk_z = floor_div(world_z, 16);
             let local_x = floor_mod(world_x, 16) as usize;
@@ -2687,20 +2748,19 @@ fn render_world_tile_detailed(
             }) {
                 let sample = live_chunk
                     .as_ref()
-                    .and_then(|snapshot| live_surface_sample(snapshot, local_x, local_z));
+                    .and_then(|snapshot| live_block_sample(snapshot, local_x, y, local_z));
                 if sample.is_some() {
                     rendered_chunks.insert((chunk_x, chunk_z));
                 }
                 return sample;
             }
             let sample = render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
-                .and_then(|chunk| chunk_surface_sample(chunk, local_x, local_z));
+                .and_then(|chunk| complete_block_sample(chunk, local_x, y, local_z));
             if sample.is_some() {
                 rendered_chunks.insert((chunk_x, chunk_z));
             }
             sample
         },
-        |sample, face, u, v| surface_face_colour(sample, assets, face, u, v),
         |sample| {
             let Some(assets) = assets_for_models else {
                 return None;
