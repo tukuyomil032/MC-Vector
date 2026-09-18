@@ -40,6 +40,16 @@ Y coordinate, then transformed back into world space. Keeping this contract at
 the renderer boundary prevents a generated chunk from being projected outside
 the tile that requested it.
 
+Required-chunk discovery follows the same map-plane contract. For a detailed
+tile, MC-Vector inverse-transforms the eight corners of the projected tile
+volume at the configured world-height range, converts the resulting world X/Z
+envelope to chunk coordinates, and then filters candidate chunks by projected
+overlap. The envelope is deliberately conservative; it prevents a chunk from
+being omitted before the more precise overlap test. Live snapshot requests and
+saved Anvil candidate discovery use this same range. Overview tiles remain on
+the world X/Z plane because their low-resolution rasterizer is not an Iso
+projection.
+
 ## Focused tests
 
 Exact transforms, axis-parallel rays, negative coordinates, chunk boundaries,

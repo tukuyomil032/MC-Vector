@@ -66,8 +66,10 @@ The translated destination is
 `src-tauri/src/map/renderer/dynmap/iso_hd.rs`. The module carries its own SPDX,
 origin, source-ref, destination, and change metadata. Its production ray
 boundary uses projected map-plane tile coordinates, floor semantics, and the
-source matrix order; it is still not a complete port of Dynmap's full voxel
-traversal or asset pipeline.
+source matrix order. Required-chunk discovery also translates the source's
+inverse-transformed tile-volume envelope and projected chunk-overlap filter;
+it is still not a complete port of Dynmap's full voxel traversal or asset
+pipeline.
 
 The additional snapshots for `IsoHDPerspective`, `TexturePack`,
 `HDBlockModels`, `HDShader`, `HDLighting`, `Matrix3D`, and `shaders.txt` are

@@ -21,6 +21,16 @@ Iso tile on `(tileX * tileWorldSize, tileY * tileWorldSize)` in world X/Z space
 will move terrain into neighboring tiles or make a generated chunk appear
 empty.
 
+Dynmap's `getRequiredChunks` applies the inverse `map_to_world` transform to
+the eight corners of the tile volume, including the configured minimum and
+maximum world heights. It first obtains a conservative chunk-coordinate
+rectangle and then clips candidate chunks against the projected side polygons.
+MC-Vector currently mirrors the first step with an inverse-transformed X/Z
+envelope and applies a projected chunk-volume overlap filter before reading
+saved chunks or requesting live snapshots. Exact polygon clipping remains an
+explicit follow-up once the Rust geometry layer exposes the corresponding
+polygon primitives.
+
 ## Porting boundary
 
 Port to Rust only the platform-neutral mathematics and data contracts:
