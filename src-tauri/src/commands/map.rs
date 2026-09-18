@@ -29,6 +29,10 @@ use crate::map::bridge::config::{
     config_read_error, inspect_bridge_config, read_bridge_config, validate_bridge_config,
     write_bridge_config, BridgeConfig, BridgeConfigInspection, MAP_PROTOCOL_VERSION,
 };
+use crate::map::bridge::protocol::{
+    hello_ack, hello_rejection_reason, parse_chat_message, parse_hello, parse_world_status_message,
+    validate_hello, BridgeStatusPayload, ChatMessageEventPayload, WorldStatusEventPayload,
+};
 use crate::map::domain::{ChunkKey, ChunkView};
 use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
 use crate::map::renderer::{render_iso_tile, shade_surface, Face, SurfaceSample};
@@ -66,7 +70,6 @@ const CORE_DISABLED_JAR_NAME: &str = "mc-vector-core.jar.disabled";
 const CORE_CONFIG_NAME: &str = "mc-vector-core.yml";
 const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
 const MAX_BRIDGE_LINE_BYTES: usize = 1024 * 1024;
-const MAX_CHAT_MESSAGE_BYTES: usize = 16 * 1024;
 const MAX_ZOOM: u8 = 8;
 const TILE_SIZE: u32 = 256;
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
@@ -177,90 +180,8 @@ struct MapPaths {
     assets: PathBuf,
 }
 
-#[derive(Clone, Debug)]
-struct HelloRequest {
-    protocol_version: u32,
-    server_id: String,
-    token: String,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct BridgeStatusPayload {
-    server_id: String,
-    status: String,
-    last_heartbeat: Option<u64>,
-    message: Option<String>,
-}
-
-#[derive(Clone, Debug, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct WorldStatusEventPayload {
-    server_id: String,
-    message: Value,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ChatMessageContract {
-    #[serde(rename = "type")]
-    message_type: String,
-    player_id: String,
-    name: String,
-    message: String,
-    #[serde(rename = "capturedAt")]
-    _captured_at: u64,
-}
-
-#[derive(Clone, Debug, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct ChatMessageEventPayload {
-    server_id: String,
-    message: Value,
-}
-
 type BridgeSender = mpsc::Sender<String>;
 type PendingSnapshotSender = oneshot::Sender<Result<ChunkView, String>>;
-
-fn parse_world_status_message(value: Value) -> Result<Value, &'static str> {
-    let Some(object) = value.as_object() else {
-        return Err("world_status payload must be a JSON object");
-    };
-
-    if object.get("type").and_then(Value::as_str) != Some("world_status") {
-        return Err("world_status payload has an invalid type");
-    }
-
-    Ok(value)
-}
-
-fn parse_chat_message(value: Value) -> Result<Value, String> {
-    if !value.is_object() {
-        return Err("chat_message payload must be a JSON object".to_string());
-    }
-
-    let contract: ChatMessageContract = serde_json::from_value(value.clone())
-        .map_err(|error| format!("invalid chat_message fields: {error}"))?;
-    if contract.message_type != "chat_message" {
-        return Err("chat_message payload has an invalid type".to_string());
-    }
-    if contract.player_id.is_empty() {
-        return Err("chat_message playerId must not be empty".to_string());
-    }
-    if contract.name.is_empty() {
-        return Err("chat_message name must not be empty".to_string());
-    }
-    if contract.message.is_empty() {
-        return Err("chat_message message must not be empty".to_string());
-    }
-    if contract.message.as_bytes().len() > MAX_CHAT_MESSAGE_BYTES {
-        return Err(format!(
-            "chat_message message exceeds {MAX_CHAT_MESSAGE_BYTES} bytes"
-        ));
-    }
-
-    Ok(value)
-}
 
 fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -1049,72 +970,6 @@ fn limited_chunk_range(minimum: i64, maximum: i64, center: i64) -> (i64, i64) {
         maximum.saturating_sub(MAX_LIVE_CHUNKS_PER_AXIS - 1),
     );
     (start, start.saturating_add(MAX_LIVE_CHUNKS_PER_AXIS - 1))
-}
-
-fn parse_hello(value: &Value) -> Result<HelloRequest, String> {
-    if value.get("type").and_then(Value::as_str) != Some("hello") {
-        return Err("The first bridge message must be hello".to_string());
-    }
-    let protocol_version = value
-        .get("protocolVersion")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "Bridge hello is missing protocolVersion".to_string())?
-        as u32;
-    let server_id = value
-        .get("serverId")
-        .and_then(Value::as_str)
-        .ok_or_else(|| "Bridge hello is missing serverId".to_string())?
-        .to_string();
-    let token = value
-        .get("token")
-        .and_then(Value::as_str)
-        .ok_or_else(|| "Bridge hello is missing token".to_string())?
-        .to_string();
-    Ok(HelloRequest {
-        protocol_version,
-        server_id,
-        token,
-    })
-}
-
-fn validate_hello(hello: &HelloRequest, config: &BridgeConfig) -> Result<(), String> {
-    if hello.protocol_version != MAP_PROTOCOL_VERSION
-        || hello.protocol_version != config.protocol_version
-    {
-        return Err("Unsupported bridge protocol version".to_string());
-    }
-    if hello.server_id != config.server_id {
-        return Err("Bridge server ID does not match the listener".to_string());
-    }
-    if hello.token != config.token {
-        return Err("Bridge authentication failed".to_string());
-    }
-    Ok(())
-}
-
-fn hello_rejection_reason(error: &str) -> &'static str {
-    if error.contains("Unsupported bridge protocol version") {
-        "protocol_mismatch"
-    } else if error.contains("server ID") {
-        "server_mismatch"
-    } else if error.contains("authentication failed") {
-        "authentication_failed"
-    } else {
-        "invalid_hello"
-    }
-}
-
-fn hello_ack(accepted: bool, reason: Option<&str>) -> String {
-    if accepted {
-        return format!(
-            "{{\"type\":\"hello_ack\",\"accepted\":true,\"protocolVersion\":{MAP_PROTOCOL_VERSION}}}\n"
-        );
-    }
-
-    format!(
-        "{{\"type\":\"hello_ack\",\"accepted\":false,\"reason\":\"{}\"}}\n",
-        reason.unwrap_or("invalid_hello")
-    )
 }
 
 async fn handle_bridge_connection(
@@ -2432,6 +2287,7 @@ fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo,
 #[cfg(test)]
 mod tests {
     use crate::map::bridge::config::CORE_PLUGIN_VERSION;
+    use crate::map::bridge::protocol::{HelloRequest, MAX_CHAT_MESSAGE_BYTES};
     use crate::map::world::{ChunkLayer, ChunkSourceKind};
     use base64::Engine;
 
