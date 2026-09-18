@@ -27,6 +27,20 @@ Phase 03 boundaries.
 - expose `terrain`, `empty`, `rendering`, `stale`, `error`, and asset states;
 - make listener disposer idempotent and classify unrelated errors separately.
 
+## Implemented evidence (2026-09-18)
+
+- The Map request coordinator now limits active Tauri tile invokes to four,
+  tags requests by viewport generation, coalesces shared tiles, and rejects
+  only queued requests superseded by a newer viewport.
+- The Rust scheduler waits for transient capacity pressure instead of turning a
+  short burst into an immediate `Map tile render queue is full` command error.
+- Focused verification passed: Map tests (38 tests), Rust tile tests (17
+  tests), frontend formatter/linter, and `bun run build`.
+
+The `request_map_render`/visible-tile admission contract is improved but not
+yet a complete shared scheduler API: Phase 12 still owns backend cancellation
+and end-to-end viewport stress evidence.
+
 ## Focused tests
 
 Duplicate request, cache ENOENT/atomic write, stale retention, event cleanup,

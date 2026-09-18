@@ -27,6 +27,22 @@ Phase 11 renderer and Phase 04 error-state contract.
 - invalidate only tiles intersecting dirty chunks;
 - version cache by world/asset/renderer/perspective identity.
 
+## Implemented evidence (2026-09-18)
+
+- Tile scheduling no longer fails immediately when the bounded pending queue is
+  temporarily full; it waits for a permit while preserving viewport priority,
+  eviction, duplicate detection, and cancellation cleanup.
+- Atomic PNG/metadata storage treats a file that disappears between metadata
+  inspection and read as a cache miss and retries one `NotFound` directory/file
+  race before reporting a real storage error.
+- Frontend viewport generations cap active invokes and clean up stale pending
+  requests before they reach the Rust scheduler.
+- Focused Rust tile tests (17) and Map frontend tests (38) pass.
+
+This is a recovery slice, not the Phase 12 completion gate. Backend request
+cancellation, scheduler stress under repeated pan/zoom, persistent cache reuse
+in a real Tauri session, and full dirty-tile evidence remain open.
+
 ## Focused tests
 
 Priority, duplicate coalescing, cancellation, LRU, disk reuse, atomic failure,

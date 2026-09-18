@@ -45,6 +45,9 @@ Phase 13 real Map UI, Phase 06 bridge, and marker research corpus.
 - Paper emits asynchronous `chat_message` events without world or socket work
   in the chat callback; Rust validates and forwards them as
   `map-chat-message`, and React displays a bounded recent chat overlay.
+- Map validates `spawnX`/`spawnZ` against the selected world and renders a
+  labeled spawn overlay without treating missing or non-finite metadata as an
+  error.
 
 These are focused implementation slices, not the Phase 14 completion gate.
 Full marker-group management, spawn visualization, and real Paper/Tauri
