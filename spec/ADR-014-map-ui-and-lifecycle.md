@@ -31,3 +31,11 @@ ignored with a diagnostic and never treated as successful map data.
 World-border metadata is read from the Java Edition `level.dat` `Data` fields,
 not from an invented nested compound. Missing or invalid fields produce no
 border overlay and do not make world inspection fail.
+
+Paper chat is an independent protocol v2 `chat_message` event. The Java
+plugin enqueues the player UUID, display name, message text, and capture time
+without performing world or socket work from the asynchronous chat callback.
+Rust validates the message and its 16 KiB UTF-8 byte limit before emitting the
+server-scoped `map-chat-message` event. React keeps a bounded recent overlay;
+chat delivery is diagnostic/overlay data and never makes a tile request or a
+bridge connection count as renderer readiness.

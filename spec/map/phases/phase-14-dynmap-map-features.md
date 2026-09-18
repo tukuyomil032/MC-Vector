@@ -42,10 +42,14 @@ Phase 13 real Map UI, Phase 06 bridge, and marker research corpus.
   thunder state, weather durations, and capture time.
 - Rust validates and forwards that message as `map-world-status`; React displays
   Minecraft time and weather for the selected dimension.
+- Paper emits asynchronous `chat_message` events without world or socket work
+  in the chat callback; Rust validates and forwards them as
+  `map-chat-message`, and React displays a bounded recent chat overlay.
 
 These are focused implementation slices, not the Phase 14 completion gate.
-Chat overlay, full marker-group management, spawn visualization, and real
-Paper/Tauri live-session evidence remain open.
+Full marker-group management, spawn visualization, and real Paper/Tauri
+live-session evidence remain open. Chat delivery is implemented, but its
+real-session evidence is still part of the Phase 15 gate.
 
 ## Focused tests
 
