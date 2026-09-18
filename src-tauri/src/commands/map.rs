@@ -2585,6 +2585,58 @@ mod tests {
     }
 
     #[test]
+    fn disk_dirty_chunk_invalidation_removes_only_intersecting_tiles() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-map-invalidation-test-{}",
+            Uuid::new_v4()
+        ));
+        let png = b"\x89PNG\r\n\x1a\nfixture";
+        let matching = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            MAX_ZOOM,
+            0,
+            0,
+        );
+        let unrelated = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            MAX_ZOOM,
+            1,
+            0,
+        );
+        let tile = |bytes: &[u8]| CachedTile {
+            bytes: bytes.to_vec(),
+            metadata: TileMetadata::default(),
+        };
+
+        write_disk_tile(&root, &matching, &tile(png)).expect("matching tile should be written");
+        write_disk_tile(&root, &unrelated, &tile(png)).expect("unrelated tile should be written");
+        invalidate_disk_chunk_tiles(&root, "server-1", "minecraft:overworld", 0, 0)
+            .expect("dirty chunk invalidation should succeed");
+
+        assert!(read_disk_tile(&root, &matching)
+            .expect("matching tile read should succeed")
+            .is_none());
+        assert!(read_disk_tile(&root, &unrelated)
+            .expect("unrelated tile read should succeed")
+            .is_some());
+
+        remove_map_cache(&root).expect("managed cache should be removable");
+        fs::remove_dir(root).expect("test root should be removed");
+    }
+
+    #[test]
     fn tile_cache_directory_allows_concurrent_first_requests() {
         let root =
             std::env::temp_dir().join(format!("mc-vector-map-cache-race-test-{}", Uuid::new_v4()));
