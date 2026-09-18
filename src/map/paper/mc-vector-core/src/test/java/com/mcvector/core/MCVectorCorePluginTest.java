@@ -54,6 +54,34 @@ class MCVectorCorePluginTest {
     }
 
     @Test
+    void snapshotsEveryWorldStatusOnThePaperScheduler() throws InterruptedException {
+        server.addPlayer("Alex");
+        plugin.eventQueueForTests().poll(0);
+
+        server.getScheduler().performTicks(20);
+
+        BridgeEventQueue.Event playerSnapshot = plugin.eventQueueForTests().poll(0);
+        assertNotNull(playerSnapshot);
+        assertEquals(BridgeEventQueue.Kind.PLAYER_SNAPSHOT, playerSnapshot.kind());
+
+        BridgeEventQueue.Event worldStatus = plugin.eventQueueForTests().poll(0);
+        assertNotNull(worldStatus);
+        assertEquals(BridgeEventQueue.Kind.WORLD_STATUS, worldStatus.kind());
+        assertTrue(worldStatus.message().contains("\"type\":\"world_status\""));
+        assertTrue(worldStatus.message().contains("\"worlds\":[{"));
+        assertTrue(worldStatus.message().contains("\"worldId\":\"world\""));
+        assertTrue(worldStatus.message().contains("\"dimension\":\"minecraft:overworld\""));
+        assertTrue(worldStatus.message().contains("\"time\":"));
+        assertTrue(worldStatus.message().contains("\"fullTime\":"));
+        assertTrue(worldStatus.message().contains("\"hasStorm\":"));
+        assertTrue(worldStatus.message().contains("\"thundering\":"));
+        assertTrue(worldStatus.message().contains("\"weatherDuration\":"));
+        assertTrue(worldStatus.message().contains("\"thunderDuration\":"));
+        assertTrue(worldStatus.message().contains("\"capturedAt\":"));
+        assertEquals(null, plugin.eventQueueForTests().poll(0));
+    }
+
+    @Test
     void enqueuesJoinAndQuitEventsImmediately() throws InterruptedException {
         PlayerMock player = server.addPlayer("Alex");
         plugin.eventQueueForTests().poll(0);

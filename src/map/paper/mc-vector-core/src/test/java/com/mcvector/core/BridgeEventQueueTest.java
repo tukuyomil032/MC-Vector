@@ -17,6 +17,23 @@ class BridgeEventQueueTest {
     }
 
     @Test
+    void replacesOlderWorldStatusEvents() throws InterruptedException {
+        BridgeEventQueue queue = new BridgeEventQueue(2);
+        String oldMessage = "{\"type\":\"world_status\",\"worlds\":[],\"capturedAt\":1}";
+        String latestMessage = "{\"type\":\"world_status\",\"worlds\":[],\"capturedAt\":2}";
+
+        assertEquals(BridgeEventQueue.OfferResult.ENQUEUED, queue.offerWorldStatus(oldMessage));
+        assertEquals(BridgeEventQueue.OfferResult.ENQUEUED, queue.offerWorldStatus(latestMessage));
+        assertEquals(latestMessage, queue.latestWorldStatus());
+        assertEquals(1, queue.size());
+
+        BridgeEventQueue.Event event = queue.poll(0);
+        assertEquals(BridgeEventQueue.Kind.WORLD_STATUS, event.kind());
+        assertEquals(latestMessage, event.message());
+        assertEquals(null, queue.poll(0));
+    }
+
+    @Test
     void coalescesDirtyHintsByDimensionAndChunk() throws InterruptedException {
         BridgeEventQueue queue = new BridgeEventQueue(4);
         BridgeEventQueue.DirtyChunkKey overworld = new BridgeEventQueue.DirtyChunkKey("minecraft:overworld", 4, -2);

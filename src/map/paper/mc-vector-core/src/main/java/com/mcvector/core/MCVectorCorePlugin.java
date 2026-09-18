@@ -145,12 +145,21 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
         for (Player player : Bukkit.getOnlinePlayers()) {
             players.add(PlayerSnapshot.from(player).toJson());
         }
+        long capturedAt = Instant.now().toEpochMilli();
         String snapshot = BridgeJson.object(
                 BridgeJson.field("type", "player_snapshot"),
                 BridgeJson.field("players", BridgeJson.raw("[" + String.join(",", players) + "]")),
-                BridgeJson.field("capturedAt", Instant.now().toEpochMilli()));
+                BridgeJson.field("capturedAt", capturedAt));
         if (eventQueue.offerPlayerSnapshot(snapshot) == BridgeEventQueue.OfferResult.DROPPED) {
             getLogger().fine("MC-Vector bridge queue is full; dropping a player snapshot marker");
+        }
+        List<WorldStatusSnapshot> worldStatuses = new ArrayList<>();
+        for (World world : Bukkit.getWorlds()) {
+            worldStatuses.add(WorldStatusSnapshot.from(world, capturedAt));
+        }
+        String worldStatus = WorldStatusSnapshot.eventJson(worldStatuses, capturedAt);
+        if (eventQueue.offerWorldStatus(worldStatus) == BridgeEventQueue.OfferResult.DROPPED) {
+            getLogger().fine("MC-Vector bridge queue is full; dropping a world status marker");
         }
     }
 
@@ -164,7 +173,7 @@ public class MCVectorCorePlugin extends JavaPlugin implements Listener {
                 BridgeJson.field("paperVersion", paperVersion),
                 BridgeJson.field(
                         "capabilities",
-                        BridgeJson.raw("[\"player_snapshot\",\"chunk_dirty\",\"chunk_surface_snapshot_v1\"]")),
+                        BridgeJson.raw("[\"player_snapshot\",\"world_status\",\"chunk_dirty\",\"chunk_surface_snapshot_v1\"]")),
                 BridgeJson.field("token", config.token()));
     }
 

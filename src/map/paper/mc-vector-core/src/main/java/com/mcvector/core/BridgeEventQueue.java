@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 final class BridgeEventQueue {
     enum Kind {
         PLAYER_SNAPSHOT,
+        WORLD_STATUS,
         IMMEDIATE,
         DIRTY
     }
@@ -31,6 +32,10 @@ final class BridgeEventQueue {
             return new Event(Kind.IMMEDIATE, message, null);
         }
 
+        static Event worldStatus(String message) {
+            return new Event(Kind.WORLD_STATUS, message, null);
+        }
+
         static Event dirty(DirtyChunkKey key, String message) {
             return new Event(Kind.DIRTY, message, key);
         }
@@ -38,6 +43,7 @@ final class BridgeEventQueue {
 
     private final LinkedBlockingQueue<Event> queue;
     private final AtomicReference<String> latestPlayerSnapshot = new AtomicReference<>();
+    private final AtomicReference<String> latestWorldStatus = new AtomicReference<>();
     private final Set<DirtyChunkKey> queuedDirtyChunks = ConcurrentHashMap.newKeySet();
 
     BridgeEventQueue(int capacity) {
@@ -61,6 +67,14 @@ final class BridgeEventQueue {
                 : OfferResult.DROPPED;
     }
 
+    OfferResult offerWorldStatus(String message) {
+        latestWorldStatus.set(message);
+        queue.removeIf(event -> event.kind() == Kind.WORLD_STATUS);
+        return queue.offer(Event.worldStatus(message))
+                ? OfferResult.ENQUEUED
+                : OfferResult.DROPPED;
+    }
+
     OfferResult offerDirty(DirtyChunkKey key, String message) {
         if (!queuedDirtyChunks.add(key)) {
             return OfferResult.COALESCED;
@@ -76,8 +90,17 @@ final class BridgeEventQueue {
         return latestPlayerSnapshot.get();
     }
 
+    String latestWorldStatus() {
+        return latestWorldStatus.get();
+    }
+
     void removeQueuedSnapshot(String message) {
         queue.removeIf(event -> event.kind() == Kind.PLAYER_SNAPSHOT
+                && event.message().equals(message));
+    }
+
+    void removeQueuedWorldStatus(String message) {
+        queue.removeIf(event -> event.kind() == Kind.WORLD_STATUS
                 && event.message().equals(message));
     }
 
