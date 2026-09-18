@@ -3,7 +3,7 @@ import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { isEulaRequiredError } from '@/lib/eula-commands';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
-import { enableMap } from '@/lib/map-commands';
+import { enableMap } from '@/map/api/map-commands';
 import {
   type ServerTemplate,
   getServerTemplates,

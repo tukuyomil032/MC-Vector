@@ -22,7 +22,7 @@
 @import './views/properties-view.css';
 @import './views/server-settings.css';
 @import './views/users-view.css';
-@import './views/map-view.css';
+@import '../map/styles/map-view.css';
 @import './views/proxy-help-view.css';
 @import './views/proxy-setup-view.css';
 @import './views/ngrok-guide-view.css';

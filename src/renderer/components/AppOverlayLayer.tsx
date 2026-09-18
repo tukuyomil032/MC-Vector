@@ -1,5 +1,6 @@
 import type { Translate } from '../../i18n';
 import type { ServerTemplate } from '../../lib/server-commands';
+import MapSetupModal from '../../map/components/MapSetupModal';
 import type { UpdatePromptState } from '../hooks/use-app-updater';
 import type { PendingServerEula } from '../hooks/use-server-eula-gate';
 import type { MinecraftServer } from '../shared/server declaration';
@@ -7,7 +8,6 @@ import AddServerModal from './AddServerModal';
 import AppDownloadToast from './AppDownloadToast';
 import AppUpdateModal from './AppUpdateModal';
 import ImportServerModal from './ImportServerModal';
-import MapSetupModal from './MapSetupModal';
 import ServerEulaModal from './ServerEulaModal';
 
 interface DownloadStatus {

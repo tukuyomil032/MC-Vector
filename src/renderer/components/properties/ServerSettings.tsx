@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
 import { copyToClipboard } from '../../../lib/clipboard-commands';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
-import { enableMap } from '../../../lib/map-commands';
+import { enableMap } from '../../../map/api/map-commands';
 import {
   clearNgrokToken,
   hasNgrokToken,

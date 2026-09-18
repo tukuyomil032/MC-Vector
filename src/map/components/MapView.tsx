@@ -27,31 +27,29 @@ import {
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
-  type MapBridgeState,
-  type MapPlayer,
-  type MapRenderProgressEvent,
-  type MapStatus,
-  type MapTileReadyEvent,
   getMapWorldInfo,
   getMapStatus,
   getMapTile,
-  isMapAssetWarningState,
-  normalizeMapTileBytes,
-  onMapBridgeStatus,
-  onMapPlayersUpdated,
-  onMapRenderProgress,
-  onMapTileInvalidated,
-  onMapTileReady,
   pauseMap,
   repairMapBridge,
   removeMapComponent,
   requestMapRender,
   restoreMap,
-  resolveMapTileDiagnosticState,
   selectMapAsset,
-} from '../../lib/map-commands';
-import type { MinecraftServer } from '../shared/server declaration';
-import { Button } from './ui/Button';
+} from '../api/map-commands';
+import { useMapEvents } from '../hooks/use-map-events';
+import type { MinecraftServer } from '../../renderer/shared/server declaration';
+import { Button } from '../../renderer/components/ui/Button';
+import {
+  type MapBridgeState,
+  type MapPlayer,
+  type MapRenderProgressEvent,
+  type MapStatus,
+  type MapTileReadyEvent,
+  isMapAssetWarningState,
+  normalizeMapTileBytes,
+  resolveMapTileDiagnosticState,
+} from '../state/map-types';
 
 interface MapViewProps {
   server: MinecraftServer;
@@ -177,18 +175,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     };
   }, [refreshStatus, server.id]);
 
-  useEffect(() => {
-    let cancelled = false;
-    let unlistenBridge: (() => void) | undefined;
-    let unlistenPlayers: (() => void) | undefined;
-    let unlistenTiles: (() => void) | undefined;
-    let unlistenTileReady: (() => void) | undefined;
-    let unlistenRenderProgress: (() => void) | undefined;
-
-    void onMapBridgeStatus((event) => {
-      if (event.serverId !== server.id) {
-        return;
-      }
+  useMapEvents({
+    serverId: server.id,
+    onBridgeStatus: (event) => {
       setStatus((current) =>
         current
           ? {
@@ -199,16 +188,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
             }
           : current,
       );
-    }).then((unlisten) => {
-      if (cancelled) {
-        unlisten();
-        return;
-      }
-      unlistenBridge = unlisten;
-    });
-
-    void onMapPlayersUpdated((event) => {
-      if (event.serverId !== server.id || !event.message?.players) {
+    },
+    onPlayersUpdated: (event) => {
+      if (!event.message?.players) {
         return;
       }
       setPlayers(event.message.players);
@@ -222,62 +204,24 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           centerInitializedRef.current = true;
         }
       }
-    }).then((unlisten) => {
-      if (cancelled) {
-        unlisten();
-        return;
-      }
-      unlistenPlayers = unlisten;
-    });
-
-    void onMapTileInvalidated((event) => {
-      if (event.serverId === server.id) {
-        setTileRevision((revision) => revision + 1);
-      }
-    }).then((unlisten) => {
-      if (cancelled) {
-        unlisten();
-        return;
-      }
-      unlistenTiles = unlisten;
-    });
-
-    void onMapTileReady((event) => {
-      if (event.serverId !== server.id || event.worldId !== 'overworld') {
+    },
+    onTileInvalidated: () => {
+      setTileRevision((revision) => revision + 1);
+    },
+    onTileReady: (event) => {
+      if (event.worldId !== 'overworld') {
         return;
       }
       const key = `${event.zoom}:${event.tileX}:${event.tileY}`;
       setTileStates((current) => ({ ...current, [key]: event }));
-    }).then((unlisten) => {
-      if (cancelled) {
-        unlisten();
-        return;
-      }
-      unlistenTileReady = unlisten;
-    });
-
-    void onMapRenderProgress((event) => {
-      if (event.serverId !== server.id || event.worldId !== 'overworld') {
+    },
+    onRenderProgress: (event) => {
+      if (event.worldId !== 'overworld') {
         return;
       }
       setRenderProgress(event);
-    }).then((unlisten) => {
-      if (cancelled) {
-        unlisten();
-        return;
-      }
-      unlistenRenderProgress = unlisten;
-    });
-
-    return () => {
-      cancelled = true;
-      unlistenBridge?.();
-      unlistenPlayers?.();
-      unlistenTiles?.();
-      unlistenTileReady?.();
-      unlistenRenderProgress?.();
-    };
-  }, [server.id]);
+    },
+  });
 
   useEffect(() => {
     if (

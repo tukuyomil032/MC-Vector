@@ -7,13 +7,13 @@ vi.mock('@/lib/tauri-api', () => ({
 
 describe('map tile binary responses', () => {
   it('normalizes number arrays returned by Tauri into PNG-compatible bytes', async () => {
-    const { normalizeMapTileBytes } = await import('@/lib/map-commands');
+    const { normalizeMapTileBytes } = await import('@/map/state/map-types');
 
     expect(normalizeMapTileBytes([137, 80, 78, 71])).toEqual(new Uint8Array([137, 80, 78, 71]));
   });
 
   it('preserves ArrayBuffer and Uint8Array responses', async () => {
-    const { normalizeMapTileBytes } = await import('@/lib/map-commands');
+    const { normalizeMapTileBytes } = await import('@/map/state/map-types');
     const source = new Uint8Array([0, 1, 2, 255]);
 
     expect(normalizeMapTileBytes(source)).toBe(source);
@@ -22,7 +22,7 @@ describe('map tile binary responses', () => {
 });
 
 describe('map tile diagnostics', () => {
-  const tile = (overrides: Partial<import('@/lib/map-commands').MapTileReadyEvent> = {}) => ({
+  const tile = (overrides: Partial<import('@/map/state/map-types').MapTileReadyEvent> = {}) => ({
     serverId: 'server-1',
     worldId: 'overworld',
     zoom: 4,
@@ -36,7 +36,7 @@ describe('map tile diagnostics', () => {
   });
 
   it('does not turn a status error into a tile loading state', async () => {
-    const { resolveMapTileDiagnosticState } = await import('@/lib/map-commands');
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
 
     expect(
       resolveMapTileDiagnosticState({
@@ -51,7 +51,7 @@ describe('map tile diagnostics', () => {
   });
 
   it('distinguishes a fully empty viewport from a render failure', async () => {
-    const { resolveMapTileDiagnosticState } = await import('@/lib/map-commands');
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
 
     expect(
       resolveMapTileDiagnosticState({
@@ -78,7 +78,7 @@ describe('map tile diagnostics', () => {
   });
 
   it('reports asset fallback and keeps rendering as separate states', async () => {
-    const { resolveMapTileDiagnosticState } = await import('@/lib/map-commands');
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
 
     expect(
       resolveMapTileDiagnosticState({

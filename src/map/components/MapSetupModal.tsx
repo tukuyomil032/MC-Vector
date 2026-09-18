@@ -3,8 +3,8 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Map as MapIcon, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
-import type { MinecraftServer } from '../shared/server declaration';
-import { Button } from './ui/Button';
+import type { MinecraftServer } from '../../renderer/shared/server declaration';
+import { Button } from '../../renderer/components/ui/Button';
 
 interface MapSetupModalProps {
   server: MinecraftServer | null;

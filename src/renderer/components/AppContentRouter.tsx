@@ -4,7 +4,7 @@ import type { AppView, MinecraftServer } from '../shared/server declaration';
 import BackupsView from './BackupsView';
 import ConsoleView from './ConsoleView';
 import NgrokGuideView from './NgrokGuideView';
-import MapView from './MapView';
+import MapView from '../../map/components/MapView';
 import ProxyHelpView from './ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './ProxySetupView';
 import UsersView from './UsersView';
