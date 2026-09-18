@@ -77,6 +77,29 @@ describe('map tile diagnostics', () => {
     ).toBe('error');
   });
 
+  it('surfaces chunk decode failures even when the tile contains no terrain', async () => {
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
+
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'auto_detected',
+        isLoading: false,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: {
+          '4:0:0': tile({
+            hasTerrain: false,
+            renderState: 'empty',
+            coverageRatio: 0,
+            renderedChunkCount: 0,
+            decodeFailedChunkCount: 1,
+          }),
+        },
+      }),
+    ).toBe('error');
+  });
+
   it('reports asset fallback and keeps rendering as separate states', async () => {
     const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
 

@@ -111,6 +111,7 @@ export interface MapTileReadyEvent {
   renderState: MapTileRenderState;
   coverageRatio: number;
   renderedChunkCount: number;
+  decodeFailedChunkCount?: number | null;
   message?: string | null;
 }
 
@@ -165,6 +166,9 @@ export function resolveMapTileDiagnosticState(input: {
     return 'asset_missing';
   }
   if (input.tileError || visibleStates.some((tile) => tile.renderState === 'error')) {
+    return 'error';
+  }
+  if (visibleStates.some((tile) => (tile.decodeFailedChunkCount ?? 0) > 0)) {
     return 'error';
   }
   if (visibleStates.some((tile) => tile.renderState === 'paper_chunk_unavailable')) {

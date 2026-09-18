@@ -117,6 +117,7 @@ fn default_viewport_height() -> u32 {
 struct TileRenderResult {
     png: Vec<u8>,
     rendered_chunk_count: usize,
+    decode_failed_chunk_count: usize,
     has_terrain: bool,
     coverage_ratio: f32,
     message: Option<String>,
@@ -1737,20 +1738,13 @@ fn emit_map_tile_ready(
     key: &TileCacheKey,
     png: &[u8],
     rendered_chunk_count: usize,
+    decode_failed_chunk_count: Option<usize>,
     asset_missing: bool,
     coverage: Option<(bool, f32)>,
     diagnostic: Option<&str>,
 ) {
     let (has_terrain, coverage_ratio) = coverage.unwrap_or_else(|| png_coverage(png));
-    let render_state = if asset_missing {
-        "asset_missing"
-    } else if diagnostic.is_some() {
-        "error"
-    } else if has_terrain {
-        "terrain"
-    } else {
-        "empty"
-    };
+    let render_state = tile_render_state(asset_missing, has_terrain, diagnostic);
     let _ = app.emit(
         "map-tile-ready",
         serde_json::json!({
@@ -1763,6 +1757,7 @@ fn emit_map_tile_ready(
             "renderState": render_state,
             "coverageRatio": coverage_ratio,
             "renderedChunkCount": rendered_chunk_count,
+            "decodeFailedChunkCount": decode_failed_chunk_count,
             "message": diagnostic.map_or_else(
                 || {
                     if has_terrain {
@@ -1775,6 +1770,22 @@ fn emit_map_tile_ready(
             ),
         }),
     );
+}
+
+fn tile_render_state(
+    asset_missing: bool,
+    has_terrain: bool,
+    diagnostic: Option<&str>,
+) -> &'static str {
+    if asset_missing {
+        "asset_missing"
+    } else if diagnostic.is_some() {
+        "error"
+    } else if has_terrain {
+        "terrain"
+    } else {
+        "empty"
+    }
 }
 
 fn emit_map_render_progress(app: &AppHandle, key: &TileCacheKey, progress: RenderProgress) {
@@ -2048,6 +2059,7 @@ async fn render_map_tile(
             &key,
             &cached.bytes,
             cached.metadata.rendered_chunk_count,
+            None,
             assets.is_none(),
             Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
             cached.metadata.message.as_deref(),
@@ -2065,6 +2077,7 @@ async fn render_map_tile(
             &key,
             &cached.bytes,
             cached.metadata.rendered_chunk_count,
+            None,
             assets.is_none(),
             Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
             cached.metadata.message.as_deref(),
@@ -2115,6 +2128,7 @@ async fn render_map_tile(
             &tile_key,
             &tile,
             rendered.rendered_chunk_count,
+            Some(rendered.decode_failed_chunk_count),
             asset_missing,
             Some((rendered.has_terrain, rendered.coverage_ratio)),
             rendered.message.as_deref(),
@@ -2568,11 +2582,13 @@ fn render_chunk<'a>(
     chunk_z: i64,
     chunks: &'a mut HashMap<(i64, i64), Result<Option<CompleteChunk>, String>>,
     diagnostic: &mut Option<String>,
+    decode_failed_chunk_count: &mut usize,
 ) -> Option<&'a CompleteChunk> {
     if !chunks.contains_key(&(chunk_x, chunk_z)) {
         let key = ChunkKey::new("minecraft:overworld", chunk_x, chunk_z);
         let rendered = read_complete_chunk(world_root, &key);
         if let Err(error) = &rendered {
+            *decode_failed_chunk_count += 1;
             if diagnostic.is_none() {
                 *diagnostic = Some(format!(
                     "Failed to read chunk ({chunk_x}, {chunk_z}): {error}"
@@ -2853,6 +2869,7 @@ fn render_overview_tile(
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
+    let mut decode_failed_chunk_count = 0;
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
     if let Some(live_chunks) = live_chunks {
         for snapshot in live_chunks.values() {
@@ -2874,9 +2891,16 @@ fn render_overview_tile(
                 (0..16).map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
             }))
         } else {
-            render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
-                .map(|chunk| chunk_representative_colour(chunk, assets))
-                .unwrap_or_else(|| fallback_terrain_colour(0, 0))
+            render_chunk(
+                world_root,
+                chunk_x,
+                chunk_z,
+                &mut chunks,
+                &mut diagnostic,
+                &mut decode_failed_chunk_count,
+            )
+            .map(|chunk| chunk_representative_colour(chunk, assets))
+            .unwrap_or_else(|| fallback_terrain_colour(0, 0))
         };
         if colour[3] == 0 {
             continue;
@@ -2900,6 +2924,7 @@ fn render_overview_tile(
     Ok(TileRenderResult {
         png,
         rendered_chunk_count,
+        decode_failed_chunk_count,
         has_terrain,
         coverage_ratio,
         message: diagnostic,
@@ -2928,6 +2953,7 @@ fn render_world_tile_detailed(
     let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Result<Option<CompleteChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
+    let mut decode_failed_chunk_count = 0;
     let mut rendered_chunks = HashSet::new();
     let live_chunks = live_chunks.cloned().unwrap_or_default();
     let all_saved_chunk_coordinates = enumerate_region_files(world_root)?
@@ -2936,8 +2962,15 @@ fn render_world_tile_detailed(
         .collect::<HashSet<_>>();
     let mut max_surface_cache = HashMap::new();
     for &(chunk_x, chunk_z) in &saved_chunk_coordinates {
-        let max_surface = render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
-            .and_then(complete_chunk_max_surface_y);
+        let max_surface = render_chunk(
+            world_root,
+            chunk_x,
+            chunk_z,
+            &mut chunks,
+            &mut diagnostic,
+            &mut decode_failed_chunk_count,
+        )
+        .and_then(complete_chunk_max_surface_y);
         max_surface_cache.insert((chunk_x, chunk_z), max_surface);
     }
     for ((chunk_x, chunk_z), snapshot) in &live_chunks {
@@ -2972,8 +3005,15 @@ fn render_world_tile_detailed(
                 }
                 return sample;
             }
-            let sample = render_chunk(world_root, chunk_x, chunk_z, &mut chunks, &mut diagnostic)
-                .and_then(|chunk| complete_block_sample(chunk, local_x, y, local_z));
+            let sample = render_chunk(
+                world_root,
+                chunk_x,
+                chunk_z,
+                &mut chunks,
+                &mut diagnostic,
+                &mut decode_failed_chunk_count,
+            )
+            .and_then(|chunk| complete_block_sample(chunk, local_x, y, local_z));
             if sample.is_some() {
                 rendered_chunks.insert((chunk_x, chunk_z));
             }
@@ -3008,6 +3048,7 @@ fn render_world_tile_detailed(
     Ok(TileRenderResult {
         png,
         rendered_chunk_count: rendered_chunks.len(),
+        decode_failed_chunk_count,
         has_terrain,
         coverage_ratio: rendered.coverage_ratio,
         message: diagnostic,
@@ -3253,6 +3294,30 @@ mod tests {
             .png;
         assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
         assert!(png.len() > 100);
+    }
+
+    #[test]
+    fn overview_decode_failures_are_counted_and_select_error_state() {
+        let root =
+            std::env::temp_dir().join(format!("mc-vector-map-decode-error-{}", Uuid::new_v4()));
+        let region_dir = root.join("region");
+        fs::create_dir_all(&region_dir).expect("region directory should be created");
+        let mut header = vec![0u8; 8192];
+        header[2] = 2;
+        header[3] = 1;
+        fs::write(region_dir.join("r.0.0.mca"), &header).expect("region header should be written");
+
+        let result = render_overview_tile(&root, MAX_ZOOM, 0, 0, None, None)
+            .expect("overview should render despite a bad chunk");
+        assert_eq!(result.rendered_chunk_count, 0);
+        assert_eq!(result.decode_failed_chunk_count, 1);
+        assert_eq!(
+            tile_render_state(false, result.has_terrain, result.message.as_deref()),
+            "error"
+        );
+        assert_eq!(tile_render_state(false, false, None), "empty");
+
+        fs::remove_dir_all(root).expect("test root should be removed");
     }
 
     #[test]
