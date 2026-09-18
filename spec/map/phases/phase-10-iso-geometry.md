@@ -23,6 +23,11 @@ Phase 05 normalized chunk data, Phase 08 models, Phase 09 port manifest.
 
 - port/translate matrix and ray math from the pinned source;
 - implement deterministic traversal and patch intersection;
+- translate Dynmap `PatchDefinition`/`handlePatch` semantics for parametric
+  U/V limits, determinant-based side visibility, trapezoid clipping, and
+  `TOPFLIP`/`TOPFLIPV`/`TOPFLIPHV`/`FLIP` UV corrections;
+- align the model-face winding for top and bottom faces with Dynmap's
+  `PatchDefinition.updateModelFace` construction before applying visibility;
 - support negative coordinates and boundary continuity;
 - remove representative-colour-only success path;
 - return render metadata alongside pixels.
@@ -30,7 +35,8 @@ Phase 05 normalized chunk data, Phase 08 models, Phase 09 port manifest.
 ## Focused tests
 
 Exact transforms, axis-parallel rays, negative coordinates, chunk boundaries,
-non-cube patches, rotations, and tile edge continuity.
+parametric and non-cube patches, trapezoid clipping, determinant visibility,
+UV flips, rotations, and tile edge continuity.
 
 ## Diff review checklist
 
@@ -39,7 +45,10 @@ transparent hit semantics, and no unexplained divergence from source math.
 
 ## Phase gate
 
-Geometry produces recognizable oblique fixture output independent of UI.
+Geometry produces recognizable oblique fixture output independent of UI, and
+the patch intersection boundary is covered by focused tests. This is still a
+partial geometry gate: complete Dynmap traversal and golden-world evidence are
+not implied.
 
 ## Known non-goals
 

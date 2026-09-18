@@ -28,12 +28,16 @@ open until the required fixtures pass.
 
 ## Translation boundary
 
-The first translated geometry boundary is now implemented at
-`src-tauri/src/map/renderer/dynmap/iso_hd.rs`. It translates the pinned
-`IsoHDPerspective`/`Matrix3D` coordinate contract into Rust and is routed
-through the existing `render_iso_tile` path. It does not claim complete Dynmap
-ray traversal or asset parity: voxel traversal, render patches, shaders,
-lighting, and `TexturePack` remain separate implementation work.
+The translated geometry boundary is implemented at
+`src-tauri/src/map/renderer/dynmap/iso_hd.rs` and
+`src-tauri/src/map/renderer/dynmap/patch.rs`. The first module translates the
+pinned `IsoHDPerspective`/`Matrix3D` coordinate contract into Rust. The second
+translates `PatchDefinition` and `IsoHDPerspective.handlePatch`: parametric
+patch hits, determinant-based side visibility, clipped trapezoids, and UV flip
+modes are routed through the existing `render_iso_tile` path. It still does
+not claim complete Dynmap ray traversal or asset parity: scaled submodels,
+custom renderers, shaders, lighting, and the full `TexturePack` contract remain
+separate implementation work.
 
 Future Rust work and every subsequent translation must:
 
@@ -45,7 +49,7 @@ Future Rust work and every subsequent translation must:
 5. keep Minecraft client assets as user-owned inputs rather than bundling them
    with this source snapshot.
 
-The translated module carries SPDX, source path/ref, destination, and concrete
-change metadata. Its focused tests are the geometry evidence for this slice;
+The translated modules carry SPDX, source path/ref, destination, and concrete
+change metadata. Their focused tests are the geometry evidence for this slice;
 golden terrain and full model/texture evidence are still required before any
 Dynmap-parity claim.
