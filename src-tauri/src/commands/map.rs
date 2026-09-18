@@ -2373,15 +2373,9 @@ fn tile_cache_directory(
                 return Ok(None);
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                match fs::create_dir(&current) {
-                    Ok(()) => {}
-                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
-                    Err(error) => {
-                        return Err(format!(
-                            "Failed to create map tile cache directory: {error}"
-                        ));
-                    }
-                }
+                fs::create_dir_all(&current).map_err(|error| {
+                    format!("Failed to create map tile cache directory: {error}")
+                })?;
                 let metadata = fs::symlink_metadata(&current).map_err(|error| {
                     format!("Failed to inspect map tile cache directory: {error}")
                 })?;
@@ -3406,6 +3400,35 @@ mod tests {
             }
         });
 
+        remove_map_cache(&root).expect("managed cache should be removable");
+        fs::remove_dir(root).expect("test root should be removed");
+    }
+
+    #[test]
+    fn tile_cache_directory_creates_a_missing_server_root() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-map-cache-missing-root-{}",
+            Uuid::new_v4()
+        ));
+        let key = TileCacheKey::new(
+            "server-missing-root",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            2,
+            0,
+            0,
+        );
+
+        let directory = tile_cache_directory(&root, &key, true)
+            .expect("a missing server root should be created")
+            .expect("create=true should return a directory");
+
+        assert!(directory.is_dir());
+        assert!(directory.starts_with(&root));
         remove_map_cache(&root).expect("managed cache should be removable");
         fs::remove_dir(root).expect("test root should be removed");
     }
