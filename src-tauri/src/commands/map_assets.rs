@@ -183,6 +183,32 @@ pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
     }
 }
 
+pub(crate) fn asset_candidates(server_root: &Path) -> Result<Vec<AssetCandidate>, String> {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "Unable to discover Minecraft assets because HOME is unset".to_string())?;
+    let mut options = AssetDiscoveryOptions::for_home(home);
+    if let Some(config_dir) = std::env::var_os("XDG_CONFIG_HOME") {
+        options
+            .official_launcher_roots
+            .push(PathBuf::from(config_dir).join("minecraft"));
+    }
+    if let Some(configured) = configured_source(server_root)? {
+        options.manual_paths.push(configured);
+    }
+
+    let mut candidates = discover_asset_candidates(&options);
+    candidates.sort_by(|left, right| {
+        launcher_priority(left.launcher)
+            .cmp(&launcher_priority(right.launcher))
+            .then_with(|| {
+                version_key(&right.minecraft_version).cmp(&version_key(&left.minecraft_version))
+            })
+            .then_with(|| candidate_path(left).cmp(&candidate_path(right)))
+    });
+    Ok(candidates)
+}
+
 struct SourceDetails {
     identity: String,
     blockstate_count: usize,

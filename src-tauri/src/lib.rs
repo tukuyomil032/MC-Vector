@@ -122,6 +122,7 @@ pub fn run() {
             commands::map::world::get_map_world_info,
             commands::map::lifecycle::repair_map_bridge,
             commands::map::assets::get_map_asset_status,
+            commands::map::assets::get_map_asset_candidates,
             commands::map::assets::select_map_asset,
             commands::map::tiles::request_map_render,
             commands::map::tiles::get_map_tile,

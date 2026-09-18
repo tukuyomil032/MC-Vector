@@ -1,4 +1,5 @@
 use super::*;
+use crate::map::assets::AssetCandidate;
 
 #[tauri::command]
 pub async fn get_map_asset_status(
@@ -10,6 +11,18 @@ pub async fn get_map_asset_status(
     tokio::task::spawn_blocking(move || map_assets::source_status(&root))
         .await
         .map_err(|error| format!("Map asset status worker failed: {error}"))?
+}
+
+#[tauri::command]
+pub async fn get_map_asset_candidates(
+    app: AppHandle,
+    server_id: String,
+) -> Result<Vec<AssetCandidate>, String> {
+    let app_data = super::app_data_dir(&app)?;
+    let root = super::server_dir(&app_data, &server_id)?;
+    tokio::task::spawn_blocking(move || map_assets::asset_candidates(&root))
+        .await
+        .map_err(|error| format!("Map asset discovery worker failed: {error}"))?
 }
 
 #[tauri::command]
