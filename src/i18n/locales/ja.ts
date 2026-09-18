@@ -797,6 +797,10 @@ export const ja: TranslationDictionary = {
       thunder: '雷雨',
       waiting: 'ライブのワールド情報を待っています。',
     },
+    chat: {
+      title: 'ライブチャット',
+      empty: 'まだチャットを受信していません。',
+    },
     management: {
       componentTitle: 'MC-Vector Core',
       componentDescription:

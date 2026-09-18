@@ -243,6 +243,19 @@ export interface MapWorldStatusEvent {
   };
 }
 
+export interface MapChatMessage {
+  type: 'chat_message';
+  playerId: string;
+  name: string;
+  message: string;
+  capturedAt: number;
+}
+
+export interface MapChatMessageEvent {
+  serverId: string;
+  message?: MapChatMessage;
+}
+
 export function mapWorldStatusForWorld(
   statuses: MapWorldStatus[],
   world: MapWorldEntry | undefined,

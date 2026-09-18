@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import {
   onMapBridgeStatus,
+  onMapChatMessage,
   onMapPlayersUpdated,
   onMapRenderProgress,
   onMapTileInvalidated,
@@ -9,6 +10,7 @@ import {
 } from '../api/map-commands';
 import type {
   MapBridgeStatusEvent,
+  MapChatMessageEvent,
   MapPlayersUpdatedEvent,
   MapRenderProgressEvent,
   MapTileInvalidatedEvent,
@@ -19,6 +21,7 @@ import type {
 interface UseMapEventsOptions {
   serverId: string;
   onBridgeStatus: (event: MapBridgeStatusEvent) => void;
+  onChatMessage: (event: MapChatMessageEvent) => void;
   onPlayersUpdated: (event: MapPlayersUpdatedEvent) => void;
   onWorldStatus: (event: MapWorldStatusEvent) => void;
   onTileInvalidated: (event: MapTileInvalidatedEvent) => void;
@@ -75,6 +78,11 @@ export function useMapEvents(options: UseMapEventsOptions): void {
     subscribe(onMapBridgeStatus, (event) => {
       if (event.serverId === serverId) {
         optionsRef.current.onBridgeStatus(event);
+      }
+    });
+    subscribe(onMapChatMessage, (event) => {
+      if (event.serverId === serverId) {
+        optionsRef.current.onChatMessage(event);
       }
     });
     subscribe(onMapPlayersUpdated, (event) => {

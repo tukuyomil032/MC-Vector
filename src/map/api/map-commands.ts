@@ -2,6 +2,7 @@ import { type UnlistenFn, tauriInvoke, tauriListen } from '../../lib/tauri-api';
 import type {
   MapAssetCandidate,
   MapAssetStatus,
+  MapChatMessageEvent,
   MapBridgeStatusEvent,
   MapMarker,
   MapMarkerInput,
@@ -116,6 +117,12 @@ export function onMapWorldStatus(
   callback: (event: MapWorldStatusEvent) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('map-world-status', callback);
+}
+
+export function onMapChatMessage(
+  callback: (event: MapChatMessageEvent) => void,
+): Promise<UnlistenFn> {
+  return tauriListen('map-chat-message', callback);
 }
 
 export function onMapTileInvalidated(

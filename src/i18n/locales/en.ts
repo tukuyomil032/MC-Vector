@@ -801,6 +801,10 @@ export const en: TranslationDictionary = {
       thunder: 'Thunderstorm',
       waiting: 'Waiting for live world status.',
     },
+    chat: {
+      title: 'Live chat',
+      empty: 'No chat messages received yet.',
+    },
     management: {
       componentTitle: 'MC-Vector Core',
       componentDescription:

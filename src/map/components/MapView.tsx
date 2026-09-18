@@ -49,6 +49,7 @@ import type { MinecraftServer } from '../../renderer/shared/server declaration';
 import { Button } from '../../renderer/components/ui/Button';
 import {
   type MapBridgeState,
+  type MapChatMessage,
   type MapAssetCandidate,
   type MapAssetCandidateSnapshot,
   type MapAssetStatus,
@@ -180,6 +181,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [worldHasTerrain, setWorldHasTerrain] = useState<boolean | null>(null);
   const [worldInfo, setWorldInfo] = useState<MapWorldInfo | null>(null);
   const [worldStatuses, setWorldStatuses] = useState<MapWorldStatus[]>([]);
+  const [chatMessages, setChatMessages] = useState<MapChatMessage[]>([]);
   const tilesRef = useRef<MapTile[]>([]);
   const mapRequestsRef = useRef(createMapRequestCoordinator());
   const mapRequestGenerationRef = useRef(0);
@@ -382,6 +384,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setWorldHasTerrain(null);
     setWorldInfo(null);
     setWorldStatuses([]);
+    setChatMessages([]);
     centerInitializedRef.current = false;
     setTileRevision(0);
     setPan({ x: 0, y: 0 });
@@ -483,6 +486,19 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         return;
       }
       setWorldStatuses(event.message.worlds);
+    },
+    onChatMessage: (event) => {
+      const message = event.message;
+      if (
+        !message ||
+        message.type !== 'chat_message' ||
+        !message.playerId ||
+        !message.name ||
+        !message.message
+      ) {
+        return;
+      }
+      setChatMessages((current) => [...current, message].slice(-8));
     },
     onTileInvalidated: () => {
       setTileRevision((revision) => revision + 1);
@@ -1478,6 +1494,25 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 </dl>
               ) : (
                 <p>{t('map.worldStatus.waiting')}</p>
+              )}
+            </div>
+
+            <div className="map-view__side-card map-view__side-card--chat">
+              <div className="map-view__side-card-heading">
+                <span>{t('map.chat.title')}</span>
+                <span className="map-view__compact-status">{chatMessages.length}</span>
+              </div>
+              {chatMessages.length === 0 ? (
+                <p>{t('map.chat.empty')}</p>
+              ) : (
+                <ul className="map-view__chat-list" aria-live="polite">
+                  {chatMessages.map((chat) => (
+                    <li key={`${chat.capturedAt}:${chat.playerId}:${chat.message}`}>
+                      <strong>{chat.name}</strong>
+                      <span>{chat.message}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </aside>

@@ -580,6 +580,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+.map-view__chat-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-view__chat-list li {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.map-view__chat-list strong {
+  color: var(--mv-surface-text-primary);
+  font-size: 0.75rem;
+}
+
+.map-view__chat-list span {
+  overflow: hidden;
+  color: var(--mv-surface-text-secondary);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .map-view__side-card-heading {
   justify-content: space-between;
   gap: 0.6rem;
