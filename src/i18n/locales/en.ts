@@ -814,6 +814,23 @@ export const en: TranslationDictionary = {
       removeConfirmDescription:
         'Only the managed JAR, bridge configuration, and metadata will be removed. If the server is running, removal stays pending and the server is not stopped automatically.',
     },
+    markers: {
+      overlays: 'Map overlays',
+      title: 'Markers',
+      visibleCount: '{count} in view',
+      description:
+        'Create a persistent marker at the current map center. Markers are stored per server and filtered by the selected world.',
+      name: 'Name',
+      namePlaceholder: 'Spawn',
+      group: 'Group',
+      color: 'Color',
+      colorAriaLabel: 'Marker color',
+      location: '{world}: {x}, {z}',
+      add: 'Add marker',
+      noMarkers: 'No markers in the selected world.',
+      delete: 'Delete marker {name}',
+      invalidInput: 'Enter a marker name and a valid color.',
+    },
     toast: {
       enabled: 'Map enabled',
       paused: 'Map paused',
@@ -823,6 +840,8 @@ export const en: TranslationDictionary = {
       failed: 'Map component operation failed',
       assetsSelected: 'Minecraft assets configured',
       bridgeRepaired: 'Map bridge configuration repaired. Restart Paper if requested.',
+      markerCreated: 'Map marker created',
+      markerDeleted: 'Map marker deleted',
     },
   },
 

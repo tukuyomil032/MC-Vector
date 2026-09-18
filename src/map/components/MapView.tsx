@@ -729,7 +729,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       color: markerColor,
     };
     if (!isMapMarkerInputValid(input)) {
-      setMarkerError('Enter a marker name and a valid color.');
+      setMarkerError(t('map.markers.invalidInput'));
       return;
     }
     setIsMarkerActing(true);
@@ -738,7 +738,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       const marker = await createMapMarker(server.id, input);
       setMarkers((current) => [...current, marker]);
       setMarkerName('');
-      toast.success('Map marker created');
+      toast.success(t('map.toast.markerCreated'));
     } catch (error) {
       setMarkerError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -753,7 +753,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       const deleted = await deleteMapMarker(server.id, marker.id);
       if (deleted) {
         setMarkers((current) => current.filter((candidate) => candidate.id !== marker.id));
-        toast.success('Map marker deleted');
+        toast.success(t('map.toast.markerDeleted'));
       }
     } catch (error) {
       setMarkerError(error instanceof Error ? error.message : String(error));
@@ -1355,15 +1355,14 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           <section className="map-view__management-card map-view__marker-management">
             <div className="map-view__management-card-header">
               <div>
-                <div className="map-view__eyebrow">Map overlays</div>
-                <h3>Markers</h3>
+                <div className="map-view__eyebrow">{t('map.markers.overlays')}</div>
+                <h3>{t('map.markers.title')}</h3>
               </div>
-              <span className="map-view__compact-status">{visibleMarkers.length} in view</span>
+              <span className="map-view__compact-status">
+                {t('map.markers.visibleCount', { count: visibleMarkers.length })}
+              </span>
             </div>
-            <p>
-              Create a persistent marker at the current map center. Markers are stored per server
-              and filtered by the selected world.
-            </p>
+            <p>{t('map.markers.description')}</p>
             <form
               className="map-view__marker-form"
               onSubmit={(event) => {
@@ -1372,17 +1371,17 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               }}
             >
               <label>
-                Name
+                {t('map.markers.name')}
                 <input
                   value={markerName}
                   onChange={(event) => setMarkerName(event.target.value)}
-                  placeholder="Spawn"
+                  placeholder={t('map.markers.namePlaceholder')}
                   maxLength={256}
                   required
                 />
               </label>
               <label>
-                Group
+                {t('map.markers.group')}
                 <input
                   value={markerGroup}
                   onChange={(event) => setMarkerGroup(event.target.value)}
@@ -1391,21 +1390,24 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 />
               </label>
               <label className="map-view__marker-color-field">
-                Color
+                {t('map.markers.color')}
                 <input
                   type="color"
                   value={markerColor}
                   onChange={(event) => setMarkerColor(event.target.value)}
-                  aria-label="Marker color"
+                  aria-label={t('map.markers.colorAriaLabel')}
                 />
               </label>
               <div className="map-view__marker-form-footer">
                 <span>
-                  {selectedWorld?.label ?? worldId}: {Math.round(mapCenter.x)},{' '}
-                  {Math.round(mapCenter.z)}
+                  {t('map.markers.location', {
+                    world: selectedWorld?.label ?? worldId,
+                    x: Math.round(mapCenter.x),
+                    z: Math.round(mapCenter.z),
+                  })}
                 </span>
                 <Button type="submit" variant="secondary" size="sm" disabled={isMarkerActing}>
-                  Add marker
+                  {t('map.markers.add')}
                 </Button>
               </div>
             </form>
@@ -1435,8 +1437,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                       className="map-view__icon-button"
                       onClick={() => void handleDeleteMarker(marker)}
                       disabled={isMarkerActing}
-                      aria-label={`Delete marker ${marker.name}`}
-                      title={`Delete marker ${marker.name}`}
+                      aria-label={t('map.markers.delete', { name: marker.name })}
+                      title={t('map.markers.delete', { name: marker.name })}
                     >
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
@@ -1444,7 +1446,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 ))}
               </ul>
             ) : (
-              <p className="map-view__management-note">No markers in the selected world.</p>
+              <p className="map-view__management-note">{t('map.markers.noMarkers')}</p>
             )}
           </section>
           <section className="map-view__management-card">

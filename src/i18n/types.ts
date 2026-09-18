@@ -804,6 +804,22 @@ export interface TranslationDictionary {
       removeConfirmTitle: string;
       removeConfirmDescription: string;
     };
+    markers: {
+      overlays: string;
+      title: string;
+      visibleCount: string;
+      description: string;
+      name: string;
+      namePlaceholder: string;
+      group: string;
+      color: string;
+      colorAriaLabel: string;
+      location: string;
+      add: string;
+      noMarkers: string;
+      delete: string;
+      invalidInput: string;
+    };
     toast: {
       enabled: string;
       paused: string;
@@ -813,6 +829,8 @@ export interface TranslationDictionary {
       failed: string;
       assetsSelected: string;
       bridgeRepaired: string;
+      markerCreated: string;
+      markerDeleted: string;
     };
   };
 

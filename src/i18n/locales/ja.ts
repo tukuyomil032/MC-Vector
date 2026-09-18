@@ -809,6 +809,23 @@ export const ja: TranslationDictionary = {
       removeConfirmDescription:
         '管理対象のJAR、ブリッジ設定、メタデータだけを削除します。起動中は削除待ちになり、サーバーは自動停止しません。',
     },
+    markers: {
+      overlays: 'Mapオーバーレイ',
+      title: 'マーカー',
+      visibleCount: '表示中 {count}件',
+      description:
+        '現在の地図中心に永続マーカーを作成します。マーカーはサーバーごとに保存され、選択中のワールドで絞り込まれます。',
+      name: '名前',
+      namePlaceholder: 'スポーン',
+      group: 'グループ',
+      color: '色',
+      colorAriaLabel: 'マーカーの色',
+      location: '{world}: {x}, {z}',
+      add: 'マーカーを追加',
+      noMarkers: '選択中のワールドにマーカーはありません。',
+      delete: 'マーカー「{name}」を削除',
+      invalidInput: 'マーカー名と有効な色を入力してください。',
+    },
     toast: {
       enabled: 'Map機能を有効化しました',
       paused: 'Map機能を一時停止しました',
@@ -818,6 +835,8 @@ export const ja: TranslationDictionary = {
       failed: 'Mapコンポーネントの操作に失敗しました',
       assetsSelected: 'Minecraft資産を設定しました',
       bridgeRepaired: 'Mapブリッジ設定を修復しました。必要ならPaperを再起動してください',
+      markerCreated: 'Mapマーカーを作成しました',
+      markerDeleted: 'Mapマーカーを削除しました',
     },
   },
 
