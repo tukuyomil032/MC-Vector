@@ -213,7 +213,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     candidates: [],
   });
   const centerInitializedRef = useRef(false);
-  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; pan: PanState }>();
+  const dragRef = useRef<
+    { pointerId: number; startX: number; startY: number; pan: PanState } | undefined
+  >(undefined);
 
   useEffect(() => {
     tilesRef.current = tiles;
@@ -599,7 +601,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
             if (cancelled) {
               return null;
             }
-            const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+            const bytesForBlob = new Uint8Array(bytes.byteLength);
+            bytesForBlob.set(bytes);
+            const url = URL.createObjectURL(new Blob([bytesForBlob.buffer], { type: 'image/png' }));
             nextUrls.push(url);
             return { x, y, url };
           } catch (error) {

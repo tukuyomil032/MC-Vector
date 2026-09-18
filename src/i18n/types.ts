@@ -782,6 +782,26 @@ export interface TranslationDictionary {
       noPlayers: string;
       playerCount: string;
       zoom: string;
+      coordinateJump: string;
+      coordinateX: string;
+      coordinateZ: string;
+      coordinateJumpAction: string;
+      coordinateInvalid: string;
+      worldBorder: string;
+      spawn: string;
+    };
+    worldStatus: {
+      title: string;
+      time: string;
+      weather: string;
+      clear: string;
+      rain: string;
+      thunder: string;
+      waiting: string;
+    };
+    chat: {
+      title: string;
+      empty: string;
     };
     management: {
       componentTitle: string;
@@ -812,6 +832,8 @@ export interface TranslationDictionary {
       name: string;
       namePlaceholder: string;
       group: string;
+      groupFilter: string;
+      allGroups: string;
       color: string;
       colorAriaLabel: string;
       location: string;
