@@ -18,21 +18,31 @@ or Paper plugin.
 
 ## Selected source
 
-The `upstream/` directory contains only two small, verbatim snapshots:
+The `upstream/` directory contains the pinned, source-only snapshots listed in
+[`SOURCE-REF.md`](SOURCE-REF.md). They cover the perspective, matrix, patch,
+block-model, texture-pack, shader, and lighting boundaries:
 
-- `HDPerspective.java`, for the perspective and chunk/tile data boundary;
-- `PatchDefinition.java`, for render-patch geometry and visibility data.
+- `HDPerspective.java` and `IsoHDPerspective.java`;
+- `Matrix3D.java` and `PatchDefinition.java`;
+- `HDBlockModels.java`, `TexturePack.java`, `HDShader.java`, and
+  `HDLighting.java`;
+- `shaders.txt`.
 
 The original upstream contents are retained. These files are for source review
-and future translation only; they are not Java build inputs for MC-Vector.
+and selective translation only; they are not Java build inputs for MC-Vector.
+The corresponding Rust implementation is tracked separately under
+`src-tauri/src/map/renderer/dynmap` and remains incomplete until its fixtures
+and parity gates pass.
 
 ## Intentionally excluded
 
-The full `IsoHDPerspective.java` and `TexturePack.java` sources remain linked in
-the manifest but are not copied because their size and dependency graphs make a
-standalone snapshot misleading. Future selective translation must be backed by
-the geometry, block-model, texture, alpha, lighting, and golden-image fixtures
-listed in the manifest and existing Dynmap research corpus.
+The upstream snapshot is intentionally not the whole Dynmap repository. The
+copied renderer files still have large dependency graphs, so copying them is
+not treated as a completed port. Future selective translation must be backed
+by geometry, block-model, texture, alpha, lighting, and golden-image fixtures
+listed in the manifest and the Dynmap research corpus. Bukkit/platform
+adapters, lifecycle, storage, web UI, commands, and user assets remain
+excluded.
 
 Dynmap platform adapters, lifecycle, storage, web UI, commands, server assets,
 and Minecraft client assets are outside this boundary. MC-Vector is an

@@ -7,26 +7,24 @@ not as a runtime library. The repository is too large to copy safely as a
 single source drop, and its Bukkit/platform adapters, lifecycle, storage, web
 server, commands, and web assets do not belong in MC-Vector.
 
-The selected snapshot is deliberately small:
-
-- `HDPerspective.java` records the perspective boundary: required chunks,
-  invalidated tiles, render entry points, and data requirements.
-- `PatchDefinition.java` records the patch geometry, UV clipping, visibility,
-  orientation, and shading fields needed when translating render-patch data.
-
-Both files are kept under `upstream/` with their original contents. They are
-not compiled by Vite, Rust, or the Paper Gradle project. Their source headers
-were absent in the pinned upstream files, so attribution is carried by the
-local license, NOTICE, source reference, and manifest artifacts rather than by
-inventing a header that was not present upstream.
+The selected snapshot is deliberately limited to renderer contracts and their
+direct source references. It includes `HDPerspective.java`,
+`IsoHDPerspective.java`, `Matrix3D.java`, `PatchDefinition.java`,
+`HDBlockModels.java`, `TexturePack.java`, `HDShader.java`, `HDLighting.java`,
+and `shaders.txt`. These files are kept under `upstream/` with their original
+contents. They are not compiled by Vite, Rust, or the Paper Gradle project.
+Their source headers were absent in the pinned upstream files, so attribution
+is carried by the local license, NOTICE, source reference, and manifest
+artifacts rather than by inventing a header that was not present upstream.
 
 ## Deliberate omissions
 
-`IsoHDPerspective.java` and `TexturePack.java` were not copied. Each is large
-and pulls in a wide graph of Dynmap renderer, model, asset, and platform types.
-Copying either file alone would create the appearance of a usable port while
-leaving the actual contracts unresolved. The manifest keeps both rows as
-`planned`, with their future Rust destinations and required fixtures.
+The rest of Dynmap was not copied. The selected renderer files still pull in a
+wide graph of Dynmap renderer, model, asset, and platform types. Copying these
+files alone would create the appearance of a usable port while leaving the
+actual contracts unresolved. The manifest therefore distinguishes source
+snapshots from translated Rust responsibilities and keeps full parity gates
+open until the required fixtures pass.
 
 ## Translation boundary
 
