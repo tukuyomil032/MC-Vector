@@ -13,9 +13,8 @@ src-tauri/src/commands/map/ thin Tauri v2 adapters
 spec/dynmap/                primary-source research and license evidence
 ```
 
-The root `bridge/` directory is temporary migration input. It may be removed
-only after Phase 2 path checks, Gradle, Paper smoke, and managed-JAR discovery
-all use `src/map/paper/mc-vector-core`.
+The root `bridge/` directory has been removed. Paper build, Paper smoke, and
+managed-JAR discovery use `src/map/paper/mc-vector-core`.
 
 ## Phase order
 
@@ -32,6 +31,24 @@ all use `src/map/paper/mc-vector-core`.
 Phases may run side-by-side only where the owned files are disjoint. Each
 implementation task is one logical commit; no push, PR, or remote CI dispatch
 is implied by a local phase gate.
+
+## Current implementation ledger
+
+The ledger distinguishes landed code from a phase gate. A phase remains
+`in-progress` until its documented gate and the required real-environment
+evidence are recorded.
+
+| Phase | Status | Evidence / remaining boundary |
+| --- | --- | --- |
+| 00 | phase-complete | Research corpus, 18 phase documents, and ADR-008 through ADR-015 are landed. |
+| 01–03 | focused-tested | Feature roots, Paper path, Rust command boundaries, and module contracts are landed; full architectural extraction remains tracked in their phase documents. |
+| 04–08 | focused-tested | Empty/error states, queue/cache recovery, Anvil/live bridge groundwork, launcher discovery, and asset resolution have focused tests. Full Phase 8 gate is recorded in the session handoff, not as real-Paper proof. |
+| 09–11 | in-progress | Pinned Dynmap snapshots, Iso geometry, model UV handling, tint, alpha, and lighting are present; golden-image and all-block coverage are not complete. |
+| 12–14 | in-progress | Bounded tiles, world layers, player interpolation, and server-scoped marker persistence are present; complete overlay UI and real-session gate remain. |
+| 15–17 | pending | Real Paper/Tauri evidence, CI/distribution review, and final acceptance remain. |
+
+Do not use this ledger to describe the Map renderer as Dynmap-complete. The
+only completion label for that claim is the Phase 17 gate.
 
 ## Agent model
 
