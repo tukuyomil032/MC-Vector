@@ -69,7 +69,8 @@ import {
   isMapAssetSelectionSuccessful,
   isMapMarkerInputValid,
   isMapTileRequestReady,
-  mapMarkersForWorld,
+  mapMarkerGroupsForWorld,
+  mapMarkersForWorldAndGroup,
   mapWorldStatusForWorld,
   mergeMapAssetStatus,
   normalizeMapTileBytes,
@@ -174,6 +175,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [markerName, setMarkerName] = useState('');
   const [markerGroup, setMarkerGroup] = useState('default');
+  const [markerGroupFilter, setMarkerGroupFilter] = useState('all');
   const [markerColor, setMarkerColor] = useState('#22c55e');
   const [markerError, setMarkerError] = useState<string | null>(null);
   const [isMarkerActing, setIsMarkerActing] = useState(false);
@@ -663,7 +665,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     worldId,
     isManagedArtifactAvailable,
   );
-  const visibleMarkers = useMemo(() => mapMarkersForWorld(markers, worldId), [markers, worldId]);
+  const markerGroups = useMemo(() => mapMarkerGroupsForWorld(markers, worldId), [markers, worldId]);
+  const activeMarkerGroup = markerGroups.includes(markerGroupFilter) ? markerGroupFilter : 'all';
+  const visibleMarkers = useMemo(
+    () => mapMarkersForWorldAndGroup(markers, worldId, activeMarkerGroup),
+    [activeMarkerGroup, markers, worldId],
+  );
 
   const componentLabel = (value: MapStatus['component']): string => {
     switch (value) {
@@ -1580,9 +1587,24 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 <div className="map-view__eyebrow">{t('map.markers.overlays')}</div>
                 <h3>{t('map.markers.title')}</h3>
               </div>
-              <span className="map-view__compact-status">
-                {t('map.markers.visibleCount', { count: visibleMarkers.length })}
-              </span>
+              <label className="map-view__marker-group-filter">
+                <span className="map-view__sr-only">{t('map.markers.groupFilter')}</span>
+                <select
+                  value={activeMarkerGroup}
+                  onChange={(event) => setMarkerGroupFilter(event.target.value)}
+                  aria-label={t('map.markers.groupFilter')}
+                >
+                  <option value="all">{t('map.markers.allGroups')}</option>
+                  {markerGroups.map((group) => (
+                    <option key={group} value={group}>
+                      {group}
+                    </option>
+                  ))}
+                </select>
+                <span className="map-view__compact-status">
+                  {t('map.markers.visibleCount', { count: visibleMarkers.length })}
+                </span>
+              </label>
             </div>
             <p>{t('map.markers.description')}</p>
             <form

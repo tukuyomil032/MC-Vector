@@ -843,6 +843,8 @@ export const en: TranslationDictionary = {
       name: 'Name',
       namePlaceholder: 'Spawn',
       group: 'Group',
+      groupFilter: 'Marker group filter',
+      allGroups: 'All groups',
       color: 'Color',
       colorAriaLabel: 'Marker color',
       location: '{world}: {x}, {z}',

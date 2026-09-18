@@ -203,6 +203,22 @@ export function mapMarkersForWorld(markers: MapMarker[], worldId: string): MapMa
   return markers.filter((marker) => marker.worldId === worldId);
 }
 
+export function mapMarkerGroupsForWorld(markers: MapMarker[], worldId: string): string[] {
+  return [...new Set(mapMarkersForWorld(markers, worldId).map((marker) => marker.group))].sort(
+    (left, right) => left.localeCompare(right),
+  );
+}
+
+export function mapMarkersForWorldAndGroup(
+  markers: MapMarker[],
+  worldId: string,
+  group: string,
+): MapMarker[] {
+  return mapMarkersForWorld(markers, worldId).filter(
+    (marker) => group === 'all' || marker.group === group,
+  );
+}
+
 export function isMapMarkerInputValid(input: MapMarkerInput): boolean {
   return (
     input.worldId.trim().length > 0 &&

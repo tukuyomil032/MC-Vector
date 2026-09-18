@@ -744,6 +744,35 @@
   font-size: 0.68rem;
 }
 
+.map-view__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.map-view__marker-group-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-view__marker-group-filter select {
+  max-width: 11rem;
+  border: 1px solid var(--mv-surface-border);
+  border-radius: 0.4rem;
+  background: var(--mv-surface-raised);
+  color: var(--mv-surface-text-secondary);
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.7rem;
+}
+
 .map-view__marker-list {
   display: grid;
   gap: 0.45rem;

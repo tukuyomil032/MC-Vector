@@ -838,6 +838,8 @@ export const ja: TranslationDictionary = {
       name: '名前',
       namePlaceholder: 'スポーン',
       group: 'グループ',
+      groupFilter: 'マーカーグループの絞り込み',
+      allGroups: 'すべてのグループ',
       color: '色',
       colorAriaLabel: 'マーカーの色',
       location: '{world}: {x}, {z}',

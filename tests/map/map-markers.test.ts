@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MapMarker, MapMarkerInput } from '@/map/state/map-types';
-import { isMapMarkerInputValid, mapMarkersForWorld } from '@/map/state/map-types';
+import {
+  isMapMarkerInputValid,
+  mapMarkerGroupsForWorld,
+  mapMarkersForWorld,
+  mapMarkersForWorldAndGroup,
+} from '@/map/state/map-types';
 
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 
@@ -30,6 +35,17 @@ describe('map markers', () => {
         'overworld',
       ),
     ).toEqual([marker]);
+  });
+
+  it('lists and filters marker groups for the selected world', () => {
+    const markers = [
+      marker,
+      { ...marker, id: 'marker-2', group: 'town' },
+      { ...marker, id: 'marker-3', group: 'default', worldId: 'world_nether' },
+    ];
+    expect(mapMarkerGroupsForWorld(markers, 'overworld')).toEqual(['default', 'town']);
+    expect(mapMarkersForWorldAndGroup(markers, 'overworld', 'town')).toEqual([markers[1]]);
+    expect(mapMarkersForWorldAndGroup(markers, 'overworld', 'all')).toEqual(markers.slice(0, 2));
   });
 
   it('validates marker input before submitting it', () => {
