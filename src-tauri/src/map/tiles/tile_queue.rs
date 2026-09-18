@@ -36,7 +36,7 @@ pub(crate) struct TileQueue {
 impl TileQueue {
     pub(crate) fn new(capacity: usize) -> Self {
         Self {
-            capacity,
+            capacity: capacity.max(1),
             sequence: 0,
             pending: HashMap::new(),
         }

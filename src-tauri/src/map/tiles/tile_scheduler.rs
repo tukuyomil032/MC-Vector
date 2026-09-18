@@ -64,28 +64,33 @@ impl TileScheduler {
         key: TileKey,
         priority: TilePriority,
     ) -> Result<SchedulerPermit, String> {
-        let sequence = {
-            let mut state = self
-                .state
-                .lock()
-                .map_err(|_| "Map tile scheduler is poisoned".to_string())?;
-            if state.queue.contains(&key) {
-                return Err("Map tile render request is already scheduled".to_string());
-            }
-            match state.queue.enqueue(key.clone(), priority) {
-                EnqueueResult::Inserted { sequence, evicted } => {
-                    if let Some(tile) = evicted {
-                        state.cancelled.insert((tile.key, tile.sequence));
-                    }
-                    sequence
-                }
-                EnqueueResult::Coalesced => {
+        let sequence = loop {
+            let notified = self.notify.notified();
+            let sequence = {
+                let mut state = self
+                    .state
+                    .lock()
+                    .map_err(|_| "Map tile scheduler is poisoned".to_string())?;
+                if state.queue.contains(&key) {
                     return Err("Map tile render request is already scheduled".to_string());
                 }
-                EnqueueResult::Full => {
-                    return Err("Map tile render queue is full".to_string());
+                match state.queue.enqueue(key.clone(), priority) {
+                    EnqueueResult::Inserted { sequence, evicted } => {
+                        if let Some(tile) = evicted {
+                            state.cancelled.insert((tile.key, tile.sequence));
+                        }
+                        Some(sequence)
+                    }
+                    EnqueueResult::Coalesced => {
+                        return Err("Map tile render request is already scheduled".to_string());
+                    }
+                    EnqueueResult::Full => None,
                 }
+            };
+            if let Some(sequence) = sequence {
+                break sequence;
             }
+            notified.await;
         };
         self.notify.notify_waiters();
 
@@ -117,6 +122,7 @@ impl TileScheduler {
                 }
             };
             if ready {
+                self.notify.notify_waiters();
                 pending_guard.disarm();
                 return Ok(SchedulerPermit {
                     scheduler: Arc::clone(self),
@@ -139,6 +145,15 @@ impl TileScheduler {
             state.active = state.active.saturating_sub(1);
         }
         self.notify.notify_waiters();
+    }
+
+    #[cfg(test)]
+    fn pending_len(&self) -> usize {
+        self.state
+            .lock()
+            .expect("scheduler state should not be poisoned")
+            .queue
+            .len()
     }
 }
 
@@ -256,7 +271,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn same_priority_request_still_reports_queue_full() {
+    async fn same_priority_request_waits_for_capacity_instead_of_returning_queue_full() {
         let scheduler = Arc::new(TileScheduler::new(1, 1));
         let first = scheduler
             .acquire(key(1), TilePriority::Viewport)
@@ -270,15 +285,30 @@ mod tests {
         });
         tokio::task::yield_now().await;
 
-        let result = scheduler.acquire(key(3), TilePriority::Adjacent).await;
-        let error = match result {
-            Ok(_) => panic!("same-priority queue should stay full"),
-            Err(error) => error,
-        };
-        assert_eq!(error, "Map tile render queue is full");
-        waiting.abort();
-        let _ = waiting.await;
+        assert_eq!(scheduler.pending_len(), 1);
+        let scheduler_for_replacement = Arc::clone(&scheduler);
+        let mut replacement = tokio::spawn(async move {
+            scheduler_for_replacement
+                .acquire(key(3), TilePriority::Adjacent)
+                .await
+        });
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(10), &mut replacement)
+                .await
+                .is_err()
+        );
+
         drop(first);
+        let queued_permit = waiting
+            .await
+            .expect("queued task should not panic")
+            .expect("queued task should acquire after worker release");
+        drop(queued_permit);
+        let replacement_permit = replacement
+            .await
+            .expect("replacement task should not panic")
+            .expect("replacement should wait for capacity and then acquire");
+        drop(replacement_permit);
     }
 
     #[tokio::test]
