@@ -48,11 +48,15 @@ Phase 13 real Map UI, Phase 06 bridge, and marker research corpus.
 - Map validates `spawnX`/`spawnZ` against the selected world and renders a
   labeled spawn overlay without treating missing or non-finite metadata as an
   error.
+- Map exposes the available marker groups for the selected world and filters
+  the visible marker overlay without mutating persisted marker data. The
+  filter is keyboard-accessible and reports the number of visible markers.
 
 These are focused implementation slices, not the Phase 14 completion gate.
-Full marker-group management, spawn visualization, and real Paper/Tauri
-live-session evidence remain open. Chat delivery is implemented, but its
-real-session evidence is still part of the Phase 15 gate.
+Marker persistence/group CRUD, real Paper/Tauri live-session evidence, and
+complete overlay behavior remain open. Spawn visualization and marker-group
+filtering now have focused implementation evidence. Chat delivery is
+implemented, but its real-session evidence is still part of the Phase 15 gate.
 
 ## Focused tests
 
