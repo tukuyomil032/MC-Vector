@@ -66,6 +66,7 @@ export interface MapWorldEntry {
 export interface MapAssetStatus {
   state: MapAssetState;
   sourcePath: string | null;
+  sourcePaths?: string[];
   identity: string | null;
   blockstateCount: number;
   modelCount: number;
@@ -139,10 +140,18 @@ export function isMapAssetCandidateCurrent(
 }
 
 export function getMapAssetCandidateSourcePath(candidate: MapAssetCandidate): string | null {
+  return getMapAssetCandidateSourcePaths(candidate)?.[0] ?? null;
+}
+
+export function getMapAssetCandidateSourcePaths(candidate: MapAssetCandidate): string[] | null {
   if (candidate.state !== 'valid') {
     return null;
   }
-  return candidate.clientJar?.path || candidate.resourcePacks[0]?.path || null;
+  const paths = [
+    ...(candidate.clientJar ? [candidate.clientJar.path] : []),
+    ...candidate.resourcePacks.map((resourcePack) => resourcePack.path),
+  ];
+  return paths.length > 0 ? paths : null;
 }
 
 export interface MapPlayer {

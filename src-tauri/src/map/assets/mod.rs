@@ -39,8 +39,15 @@ pub(crate) struct AssetResolver {
 }
 
 impl AssetResolver {
+    #[cfg(test)]
     pub(crate) fn from_entries(entries: &HashMap<String, Vec<u8>>) -> Result<Self, String> {
-        let stack = ResourcePackStack::from_entries(entries.clone());
+        Self::from_entry_layers([entries.clone()])
+    }
+
+    pub(crate) fn from_entry_layers(
+        layers: impl IntoIterator<Item = HashMap<String, Vec<u8>>>,
+    ) -> Result<Self, String> {
+        let stack = ResourcePackStack::from_layers(layers);
         let mut blockstates = HashMap::new();
         let mut models = HashMap::new();
         let mut textures = HashMap::new();
@@ -55,7 +62,7 @@ impl AssetResolver {
                     .map_err(|error| format!("Invalid block model {path}: {error}"))?;
                 models.insert(key, model);
             } else if let Some(key) = asset_key(path, "textures", ".png") {
-                let animated = entries.contains_key(&format!("{path}.mcmeta"));
+                let animated = stack.entries().contains_key(&format!("{path}.mcmeta"));
                 textures.insert(key, TextureImage::from_png(bytes, animated)?);
             }
         }
@@ -406,6 +413,36 @@ mod tests {
         assert_eq!(
             resolver.biome_tint("minecraft:grass_block", "minecraft:plains"),
             Some([17, 29, 43])
+        );
+    }
+
+    #[test]
+    fn later_resource_pack_layer_overrides_client_texture() {
+        let base = HashMap::from([
+            (
+                "assets/minecraft/blockstates/test.json".to_string(),
+                br#"{"variants":{"":{"model":"minecraft:block/test"}}}"#.to_vec(),
+            ),
+            (
+                "assets/minecraft/models/block/test.json".to_string(),
+                br#"{"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"up":{"texture":"minecraft:block/test"}}}]}"#.to_vec(),
+            ),
+            (
+                "assets/minecraft/textures/block/test.png".to_string(),
+                png([10, 20, 30, 255]),
+            ),
+        ]);
+        let overlay = HashMap::from([(
+            "assets/minecraft/textures/block/test.png".to_string(),
+            png([200, 180, 160, 255]),
+        )]);
+
+        let resolver = AssetResolver::from_entry_layers([base, overlay])
+            .expect("resource-pack stack should load");
+
+        assert_eq!(
+            resolver.sample_face_at("minecraft:test|", "up", 0.5, 0.5),
+            Some([200, 180, 160, 255])
         );
     }
 }

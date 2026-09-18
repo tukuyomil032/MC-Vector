@@ -71,8 +71,13 @@ export function getMapAssetCandidates(serverId: string): Promise<MapAssetCandida
   return tauriInvoke('get_map_asset_candidates', { serverId });
 }
 
-export function selectMapAsset(serverId: string, sourcePath: string): Promise<MapAssetStatus> {
-  return tauriInvoke('select_map_asset', { serverId, sourcePath });
+export function selectMapAsset(
+  serverId: string,
+  sourcePath: string | string[],
+): Promise<MapAssetStatus> {
+  return Array.isArray(sourcePath)
+    ? tauriInvoke('select_map_asset', { serverId, sourcePaths: sourcePath })
+    : tauriInvoke('select_map_asset', { serverId, sourcePath });
 }
 
 export function enableMap(serverId: string): Promise<MapStatus> {

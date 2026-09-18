@@ -19,7 +19,12 @@ const VANILLA_VERSION_PREFIX: &str = "1.21";
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AssetConfig {
+    /// Backward-compatible single-source form used by older installations.
     pub source_path: Option<String>,
+    /// Ordered from lowest to highest priority, matching Minecraft's pack
+    /// stack semantics. The first entry is normally a client JAR.
+    #[serde(default)]
+    pub source_paths: Vec<String>,
 }
 
 pub(crate) struct MapAssets {
@@ -97,11 +102,11 @@ fn encode_state(state: &str) -> (String, String) {
 }
 
 pub(crate) fn load_for_server(server_root: &Path) -> Result<Option<MapAssets>, String> {
-    let source = configured_source(server_root)?.or_else(detect_vanilla_source);
-    let Some(source) = source else {
+    let sources = configured_sources(server_root)?.or_else(detect_vanilla_sources);
+    let Some(sources) = sources else {
         return Ok(None);
     };
-    load_from_source(&source).map(Some)
+    load_from_sources(&sources).map(Some)
 }
 
 pub(crate) fn read_config(server_root: &Path) -> Result<AssetConfig, String> {
@@ -115,8 +120,8 @@ pub(crate) fn read_config(server_root: &Path) -> Result<AssetConfig, String> {
 }
 
 pub(crate) fn write_config(server_root: &Path, config: &AssetConfig) -> Result<(), String> {
-    if let Some(source) = config.source_path.as_deref() {
-        validate_asset_source(Path::new(source))?;
+    for source in config_sources(config) {
+        validate_asset_source(&source)?;
     }
     let path = server_root.join(ASSET_CONFIG_NAME);
     let bytes = serde_json::to_vec_pretty(config)
@@ -126,17 +131,18 @@ pub(crate) fn write_config(server_root: &Path, config: &AssetConfig) -> Result<(
 }
 
 pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
-    let configured = match configured_source(server_root) {
+    let configured = match configured_sources(server_root) {
         Ok(configured) => configured,
         Err(error) => {
             return Ok(AssetStatus::invalid(error));
         }
     };
-    let source = configured.clone().or_else(detect_vanilla_source);
-    let Some(source) = source else {
+    let sources = configured.clone().or_else(detect_vanilla_sources);
+    let Some(sources) = sources else {
         return Ok(AssetStatus {
             state: "missing".to_string(),
             source_path: None,
+            source_paths: Vec::new(),
             identity: None,
             blockstate_count: 0,
             model_count: 0,
@@ -149,14 +155,18 @@ pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
         });
     };
 
-    match source_details(&source) {
+    match source_details(&sources) {
         Ok(details) => Ok(AssetStatus {
             state: if configured.is_some() {
                 "user_selected".to_string()
             } else {
                 "auto_detected".to_string()
             },
-            source_path: Some(source.display().to_string()),
+            source_path: sources.first().map(|source| source.display().to_string()),
+            source_paths: sources
+                .iter()
+                .map(|source| source.display().to_string())
+                .collect(),
             identity: Some(details.identity),
             blockstate_count: details.blockstate_count,
             model_count: details.model_count,
@@ -169,13 +179,19 @@ pub(crate) fn source_status(server_root: &Path) -> Result<AssetStatus, String> {
         }),
         Err(error) => Ok(AssetStatus {
             state: "invalid".to_string(),
-            source_path: Some(source.display().to_string()),
+            source_path: sources.first().map(|source| source.display().to_string()),
+            source_paths: sources
+                .iter()
+                .map(|source| source.display().to_string())
+                .collect(),
             identity: None,
             blockstate_count: 0,
             model_count: 0,
             texture_count: 0,
             animated_texture_count: 0,
-            minecraft_version: source_version(&source.display().to_string()),
+            minecraft_version: sources
+                .first()
+                .and_then(|source| source_version(&source.display().to_string())),
             quality: "invalid".to_string(),
             unresolved_blockstate_count: 0,
             message: Some(error),
@@ -193,8 +209,8 @@ pub(crate) fn asset_candidates(server_root: &Path) -> Result<Vec<AssetCandidate>
             .official_launcher_roots
             .push(PathBuf::from(config_dir).join("minecraft"));
     }
-    if let Some(configured) = configured_source(server_root)? {
-        options.manual_paths.push(configured);
+    if let Some(configured) = configured_sources(server_root)? {
+        options.manual_paths.extend(configured);
     }
 
     let mut candidates = discover_asset_candidates(&options);
@@ -220,47 +236,46 @@ struct SourceDetails {
     unresolved_blockstate_count: usize,
 }
 
-fn source_details(source: &Path) -> Result<SourceDetails, String> {
-    validate_asset_source(source)?;
-    let (blockstate_count, model_count, texture_count) = count_asset_entries(source)?;
+fn source_details(sources: &[PathBuf]) -> Result<SourceDetails, String> {
+    let stack = load_asset_stack(sources)?;
+    let (blockstate_count, model_count, texture_count) = (
+        stack.blockstate_count,
+        stack.model_count,
+        stack.texture_count,
+    );
     if blockstate_count == 0 || model_count == 0 || texture_count == 0 {
         return Err(
             "Map asset source does not contain Minecraft blockstates, models, and textures"
                 .to_string(),
         );
     }
-    let identity = asset_identity(source)?;
-    let entries = if source.is_dir() {
-        load_directory_entries(source)?
-    } else {
-        load_archive_entries(source)?
-    };
-    let resolver = AssetResolver::from_entries(&entries)?;
+    let resolver = AssetResolver::from_entry_layers(stack.layers.clone())?;
     let unresolved_blockstate_count = blockstate_count.saturating_sub(resolver.blockstate_count());
     let quality = manifest_quality(&AssetManifest {
         manifest_version: ASSET_MANIFEST_VERSION,
-        minecraft_version: source_version(&source.display().to_string()),
-        source_path: source.display().to_string(),
-        source_identity: identity.clone(),
-        resource_pack_hash: identity.clone(),
+        minecraft_version: sources
+            .first()
+            .and_then(|source| source_version(&source.display().to_string())),
+        source_path: source_paths_string(sources),
+        source_identity: stack.identity.clone(),
+        resource_pack_hash: stack.identity.clone(),
         blockstate_count,
         model_count,
         texture_count,
-        animated_texture_count: 0,
+        animated_texture_count: stack.animated_texture_count,
         unresolved_blockstate_count,
-        quality: AssetManifest::quality_for(unresolved_blockstate_count, blockstate_count),
+        quality: AssetManifest::quality_for(unresolved_blockstate_count, stack.blockstate_count),
     })
     .to_string();
     Ok(SourceDetails {
-        identity,
+        identity: stack.identity,
         blockstate_count,
         model_count,
         texture_count,
-        animated_texture_count: entries
-            .keys()
-            .filter(|path| path.ends_with(".png.mcmeta"))
-            .count(),
-        minecraft_version: source_version(&source.display().to_string()),
+        animated_texture_count: stack.animated_texture_count,
+        minecraft_version: sources
+            .first()
+            .and_then(|source| source_version(&source.display().to_string())),
         quality,
         unresolved_blockstate_count,
     })
@@ -271,6 +286,7 @@ fn source_details(source: &Path) -> Result<SourceDetails, String> {
 pub(crate) struct AssetStatus {
     pub state: String,
     pub source_path: Option<String>,
+    pub source_paths: Vec<String>,
     pub identity: Option<String>,
     pub blockstate_count: usize,
     pub model_count: usize,
@@ -287,6 +303,7 @@ impl AssetStatus {
         Self {
             state: "invalid".to_string(),
             source_path: None,
+            source_paths: Vec::new(),
             identity: None,
             blockstate_count: 0,
             model_count: 0,
@@ -300,16 +317,25 @@ impl AssetStatus {
     }
 }
 
-fn configured_source(server_root: &Path) -> Result<Option<PathBuf>, String> {
-    let config = read_config(server_root)?;
-    let Some(source) = config.source_path else {
-        return Ok(None);
-    };
-    let path = PathBuf::from(source);
-    Ok(Some(path))
+fn config_sources(config: &AssetConfig) -> Vec<PathBuf> {
+    if !config.source_paths.is_empty() {
+        return config.source_paths.iter().map(PathBuf::from).collect();
+    }
+    config
+        .source_path
+        .as_deref()
+        .map(PathBuf::from)
+        .into_iter()
+        .collect()
 }
 
-fn detect_vanilla_source() -> Option<PathBuf> {
+fn configured_sources(server_root: &Path) -> Result<Option<Vec<PathBuf>>, String> {
+    let config = read_config(server_root)?;
+    let sources = config_sources(&config);
+    Ok((!sources.is_empty()).then_some(sources))
+}
+
+fn detect_vanilla_sources() -> Option<Vec<PathBuf>> {
     let home = std::env::var_os("HOME").map(PathBuf::from)?;
     let mut options = AssetDiscoveryOptions::for_home(home);
     if let Some(config_dir) = std::env::var_os("XDG_CONFIG_HOME") {
@@ -337,21 +363,21 @@ fn detect_vanilla_source() -> Option<PathBuf> {
             .then_with(|| candidate_path(left).cmp(&candidate_path(right)))
     });
 
-    candidates
+    candidates.into_iter().map(candidate_source_paths).next()
+}
+
+fn candidate_source_paths(candidate: AssetCandidate) -> Vec<PathBuf> {
+    candidate
+        .client_jar
         .into_iter()
-        .filter_map(|candidate| {
+        .map(|artifact| artifact.path)
+        .chain(
             candidate
-                .client_jar
-                .map(|artifact| artifact.path)
-                .or_else(|| {
-                    candidate
-                        .resource_packs
-                        .into_iter()
-                        .next()
-                        .map(|artifact| artifact.path)
-                })
-        })
-        .next()
+                .resource_packs
+                .into_iter()
+                .map(|artifact| artifact.path),
+        )
+        .collect()
 }
 
 fn launcher_priority(launcher: AssetLauncher) -> u8 {
@@ -411,77 +437,96 @@ fn validate_asset_source(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn load_from_source(source: &Path) -> Result<MapAssets, String> {
-    validate_asset_source(source)?;
-    let identity = asset_identity(source)?;
-    let entries = if source.is_dir() {
-        load_directory_entries(source)?
-    } else {
-        load_archive_entries(source)?
-    };
-
-    let resolver = AssetResolver::from_entries(&entries)?;
-    let (blockstate_count, model_count, texture_count) = count_asset_entries(source)?;
-    let animated_texture_count = entries
-        .keys()
-        .filter(|path| path.ends_with(".png.mcmeta"))
-        .count();
-    let unresolved_blockstate_count = blockstate_count.saturating_sub(resolver.blockstate_count());
-    let source_path = source.display().to_string();
+fn load_from_sources(sources: &[PathBuf]) -> Result<MapAssets, String> {
+    let stack = load_asset_stack(sources)?;
+    let resolver = AssetResolver::from_entry_layers(stack.layers.clone())?;
+    let unresolved_blockstate_count = stack
+        .blockstate_count
+        .saturating_sub(resolver.blockstate_count());
+    let source_path = source_paths_string(sources);
     let manifest = AssetManifest {
         manifest_version: ASSET_MANIFEST_VERSION,
-        minecraft_version: source_version(&source_path),
+        minecraft_version: sources
+            .first()
+            .and_then(|source| source_version(&source.display().to_string())),
         source_path,
-        source_identity: identity.clone(),
-        resource_pack_hash: identity.clone(),
-        blockstate_count,
-        model_count,
-        texture_count,
-        animated_texture_count,
+        source_identity: stack.identity.clone(),
+        resource_pack_hash: stack.identity.clone(),
+        blockstate_count: stack.blockstate_count,
+        model_count: stack.model_count,
+        texture_count: stack.texture_count,
+        animated_texture_count: stack.animated_texture_count,
         unresolved_blockstate_count,
-        quality: AssetManifest::quality_for(unresolved_blockstate_count, blockstate_count),
+        quality: AssetManifest::quality_for(unresolved_blockstate_count, stack.blockstate_count),
     };
 
     Ok(MapAssets {
         resolver,
-        identity,
+        identity: stack.identity,
         manifest,
     })
 }
 
-fn count_asset_entries(source: &Path) -> Result<(usize, usize, usize), String> {
+struct LoadedAssetStack {
+    layers: Vec<HashMap<String, Vec<u8>>>,
+    identity: String,
+    blockstate_count: usize,
+    model_count: usize,
+    texture_count: usize,
+    animated_texture_count: usize,
+}
+
+fn source_paths_string(sources: &[PathBuf]) -> String {
+    sources
+        .iter()
+        .map(|source| source.display().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn load_asset_stack(sources: &[PathBuf]) -> Result<LoadedAssetStack, String> {
+    if sources.is_empty() {
+        return Err("Map asset source stack is empty".to_string());
+    }
+    let mut layers = Vec::with_capacity(sources.len());
+    let mut identities = Vec::with_capacity(sources.len());
+    for source in sources {
+        validate_asset_source(source)?;
+        identities.push(asset_identity(source)?);
+        layers.push(if source.is_dir() {
+            load_directory_entries(source)?
+        } else {
+            load_archive_entries(source)?
+        });
+    }
+
+    let mut merged = HashMap::new();
+    for layer in &layers {
+        crate::map::assets::resource_pack::overlay_entries(&mut merged, layer.clone());
+    }
+    let (blockstate_count, model_count, texture_count) = count_asset_entries(&merged);
+    let animated_texture_count = merged
+        .keys()
+        .filter(|path| path.ends_with(".png.mcmeta"))
+        .count();
+    Ok(LoadedAssetStack {
+        layers,
+        identity: format!("stack:{}", identities.join("+")),
+        blockstate_count,
+        model_count,
+        texture_count,
+        animated_texture_count,
+    })
+}
+
+fn count_asset_entries(entries: &HashMap<String, Vec<u8>>) -> (usize, usize, usize) {
     let mut blockstates = 0;
     let mut models = 0;
     let mut textures = 0;
-    if source.is_dir() {
-        let mut files = Vec::new();
-        collect_files(source, &mut files)?;
-        for path in files {
-            let relative = path
-                .strip_prefix(source)
-                .map_err(|_| "Map asset path escaped its source directory".to_string())?
-                .to_string_lossy()
-                .replace('\\', "/");
-            count_asset_path(&relative, &mut blockstates, &mut models, &mut textures);
-        }
-    } else {
-        let file = fs::File::open(source)
-            .map_err(|error| format!("Failed to open map asset archive: {error}"))?;
-        let mut archive = ZipArchive::new(file)
-            .map_err(|error| format!("Map asset source is not a readable ZIP/JAR: {error}"))?;
-        for index in 0..archive.len() {
-            let entry = archive
-                .by_index(index)
-                .map_err(|error| format!("Failed to read map asset archive entry: {error}"))?;
-            count_asset_path(
-                &entry.name().replace('\\', "/"),
-                &mut blockstates,
-                &mut models,
-                &mut textures,
-            );
-        }
+    for path in entries.keys() {
+        count_asset_path(path, &mut blockstates, &mut models, &mut textures);
     }
-    Ok((blockstates, models, textures))
+    (blockstates, models, textures)
 }
 
 fn count_asset_path(path: &str, blockstates: &mut usize, models: &mut usize, textures: &mut usize) {
@@ -702,5 +747,26 @@ mod tests {
         assert_eq!(launcher_priority(AssetLauncher::PrismLauncherStandard), 0);
         assert_eq!(launcher_priority(AssetLauncher::OfficialLauncher), 1);
         assert_eq!(launcher_priority(AssetLauncher::AtLauncher), 6);
+    }
+
+    #[test]
+    fn ordered_asset_config_sources_take_precedence_over_legacy_source() {
+        let config = AssetConfig {
+            source_path: Some("/legacy/client.jar".to_string()),
+            source_paths: vec![
+                "/client.jar".to_string(),
+                "/resourcepacks/base.zip".to_string(),
+                "/resourcepacks/override.zip".to_string(),
+            ],
+        };
+
+        assert_eq!(
+            config_sources(&config),
+            [
+                PathBuf::from("/client.jar"),
+                PathBuf::from("/resourcepacks/base.zip"),
+                PathBuf::from("/resourcepacks/override.zip"),
+            ]
+        );
     }
 }

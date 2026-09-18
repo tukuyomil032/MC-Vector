@@ -9,9 +9,11 @@ pub(crate) struct ResourcePackStack {
 }
 
 impl ResourcePackStack {
-    pub(crate) fn from_entries(entries: HashMap<String, Vec<u8>>) -> Self {
+    pub(crate) fn from_layers(layers: impl IntoIterator<Item = HashMap<String, Vec<u8>>>) -> Self {
         let mut stack = Self::default();
-        stack.overlay(entries);
+        for entries in layers {
+            stack.overlay(entries);
+        }
         stack
     }
 

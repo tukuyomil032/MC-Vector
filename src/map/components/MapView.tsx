@@ -64,6 +64,7 @@ import {
   formatMinecraftTime,
   getValidMapWorldBorder,
   getMapAssetCandidateSourcePath,
+  getMapAssetCandidateSourcePaths,
   isMapAssetCandidateCurrent,
   isMapAssetWarningState,
   isMapAssetSelectionSuccessful,
@@ -853,7 +854,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     }
   };
 
-  const handleAssetSelection = async (selection: string) => {
+  const handleAssetSelection = async (selection: string | string[]) => {
     setIsActing(true);
     try {
       const nextAssetStatus = await selectMapAsset(server.id, selection);
@@ -925,11 +926,11 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     if (!isMapAssetCandidateCurrent(candidate, assetCandidatesContextRef.current, currentContext)) {
       return;
     }
-    const sourcePath = getMapAssetCandidateSourcePath(candidate);
-    if (!sourcePath) {
+    const sourcePaths = getMapAssetCandidateSourcePaths(candidate);
+    if (!sourcePaths) {
       return;
     }
-    await handleAssetSelection(sourcePath);
+    await handleAssetSelection(sourcePaths);
   };
 
   const handleRemove = () => {
@@ -1772,6 +1773,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   <dt>sourcePath</dt>
                   <dd>{assetStatus.sourcePath ?? '—'}</dd>
                 </div>
+                {assetStatus.sourcePaths && assetStatus.sourcePaths.length > 1 && (
+                  <div>
+                    <dt>sourcePaths</dt>
+                    <dd>{assetStatus.sourcePaths.join(', ')}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>identity</dt>
                   <dd>{assetStatus.identity ?? '—'}</dd>

@@ -31,12 +31,18 @@ pub async fn select_map_asset(
     app: AppHandle,
     manager: State<'_, MapBridgeManager>,
     server_id: String,
-    source_path: String,
+    source_path: Option<String>,
+    source_paths: Option<Vec<String>>,
 ) -> Result<map_assets::AssetStatus, String> {
     let app_data = super::app_data_dir(&app)?;
     let root = super::server_dir(&app_data, &server_id)?;
+    let source_paths = source_paths
+        .filter(|paths| !paths.is_empty())
+        .or_else(|| source_path.map(|path| vec![path]))
+        .ok_or_else(|| "At least one map asset source is required".to_string())?;
     let config = map_assets::AssetConfig {
-        source_path: Some(source_path),
+        source_path: source_paths.first().cloned(),
+        source_paths,
     };
     map_assets::write_config(&root, &config)?;
     manager
