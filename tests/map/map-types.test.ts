@@ -135,4 +135,87 @@ describe('map tile diagnostics', () => {
       }),
     ).toBe('stale');
   });
+
+  it('keeps warning states separate from detected and user-selected assets', async () => {
+    const { isMapAssetSelectionSuccessful, isMapAssetWarningState } =
+      await import('@/map/state/map-types');
+
+    expect(isMapAssetWarningState('missing')).toBe(true);
+    expect(isMapAssetWarningState('version_mismatch')).toBe(true);
+    expect(isMapAssetWarningState('invalid')).toBe(true);
+    expect(isMapAssetWarningState('fallback')).toBe(true);
+    expect(isMapAssetWarningState('auto_detected')).toBe(false);
+    expect(isMapAssetWarningState('user_selected')).toBe(false);
+    expect(isMapAssetSelectionSuccessful('auto_detected')).toBe(true);
+    expect(isMapAssetSelectionSuccessful('user_selected')).toBe(true);
+    expect(isMapAssetSelectionSuccessful('missing')).toBe(false);
+    expect(isMapAssetSelectionSuccessful('version_mismatch')).toBe(false);
+    expect(isMapAssetSelectionSuccessful('fallback')).toBe(false);
+    expect(isMapAssetSelectionSuccessful('invalid')).toBe(false);
+  });
+
+  it('clears stale asset success metadata when the refresh fails', async () => {
+    const { clearMapAssetStatus, mergeMapAssetStatus } = await import('@/map/state/map-types');
+    const status = {
+      serverId: 'server-1',
+      component: 'active' as const,
+      artifact: 'active' as const,
+      bridge: 'connected' as const,
+      configState: 'valid' as const,
+      protocolVersion: 2,
+      assetState: 'auto_detected' as const,
+      assetSource: '/assets/old.jar',
+      assetIdentity: 'sha256:old',
+      assetMessage: null,
+    };
+    const nextAssetStatus = {
+      state: 'user_selected' as const,
+      sourcePath: '/assets/new.jar',
+      identity: 'sha256:new',
+      blockstateCount: 1,
+      modelCount: 1,
+      textureCount: 1,
+      animatedTextureCount: 0,
+      minecraftVersion: '1.21.1',
+      quality: 'full',
+      unresolvedBlockstateCount: 0,
+      message: null,
+    };
+
+    expect(mergeMapAssetStatus(status, nextAssetStatus)).toMatchObject({
+      assetState: 'user_selected',
+      assetSource: '/assets/new.jar',
+    });
+    expect(clearMapAssetStatus(status, 'asset status unavailable')).toMatchObject({
+      assetState: 'invalid',
+      assetSource: null,
+      assetIdentity: null,
+      assetMessage: 'asset status unavailable',
+    });
+  });
+
+  it('propagates an asset status error through the existing map diagnostic contract', async () => {
+    const { isMapTileRequestReady, resolveMapTileDiagnosticState } =
+      await import('@/map/state/map-types');
+    const status = {
+      serverId: 'server-1',
+      component: 'active' as const,
+      bridge: 'connected' as const,
+      configState: 'valid' as const,
+      protocolVersion: 2,
+      assetState: 'invalid' as const,
+    };
+
+    expect(isMapTileRequestReady(status, 'asset status unavailable')).toBe(false);
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'invalid',
+        isLoading: false,
+        requestedTileKeys: [],
+        statusError: 'asset status unavailable',
+        tileError: null,
+        tileStates: {},
+      }),
+    ).toBe('error');
+  });
 });

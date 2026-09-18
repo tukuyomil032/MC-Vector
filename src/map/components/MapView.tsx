@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
+  getMapAssetStatus,
   getMapWorldInfo,
   getMapStatus,
   getMapTile,
@@ -42,12 +43,16 @@ import type { MinecraftServer } from '../../renderer/shared/server declaration';
 import { Button } from '../../renderer/components/ui/Button';
 import {
   type MapBridgeState,
+  type MapAssetStatus,
   type MapPlayer,
   type MapRenderProgressEvent,
   type MapStatus,
   type MapTileReadyEvent,
+  clearMapAssetStatus,
   isMapAssetWarningState,
+  isMapAssetSelectionSuccessful,
   isMapTileRequestReady,
+  mergeMapAssetStatus,
   normalizeMapTileBytes,
   resolveMapTileDiagnosticState,
 } from '../state/map-types';
@@ -77,6 +82,11 @@ interface MapTile {
   url: string;
 }
 
+interface AssetStatusRefreshResult {
+  status: MapAssetStatus | null;
+  error: string | null;
+}
+
 const MAX_ZOOM = 8;
 const TILE_SIZE = 256;
 const TILES_PER_VIEW = 3;
@@ -95,11 +105,13 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const { t } = useTranslation();
   const [tab, setTab] = useState<MapTab>('map');
   const [status, setStatus] = useState<MapStatus | null>(null);
+  const [assetStatus, setAssetStatus] = useState<MapAssetStatus | null>(null);
   const [players, setPlayers] = useState<MapPlayer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [assetStatusError, setAssetStatusError] = useState<string | null>(null);
   const [tiles, setTiles] = useState<MapTile[]>([]);
   const [tileStates, setTileStates] = useState<Record<string, MapTileReadyEvent>>({});
   const [requestedTileKeys, setRequestedTileKeys] = useState<string[]>([]);
@@ -121,25 +133,57 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     tilesRef.current = tiles;
   }, [tiles]);
 
-  const refreshStatus = useCallback(async () => {
-    setIsLoading(true);
+  const applyAssetStatus = useCallback((nextStatus: MapAssetStatus, clearError = true) => {
+    setAssetStatus(nextStatus);
+    if (clearError) {
+      setAssetStatusError(null);
+    }
+    setStatus((current) => mergeMapAssetStatus(current, nextStatus));
+  }, []);
+
+  const refreshAssetStatus = useCallback(async (): Promise<AssetStatusRefreshResult> => {
     try {
-      const nextStatus = await getMapStatus(server.id);
-      setStatus(nextStatus);
-      setStatusError(null);
-      setLoadError(null);
+      const nextStatus = await getMapAssetStatus(server.id);
+      applyAssetStatus(nextStatus);
+      return { status: nextStatus, error: null };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setStatus(null);
-      setStatusError(message);
-      setLoadError(message);
-    } finally {
-      setIsLoading(false);
+      setAssetStatus(null);
+      setAssetStatusError(message);
+      setStatus((current) => clearMapAssetStatus(current, message));
+      return { status: null, error: message };
     }
-  }, [server.id]);
+  }, [applyAssetStatus, server.id]);
+
+  const refreshStatus = useCallback(
+    async (refreshAssets = false) => {
+      setIsLoading(true);
+      try {
+        const nextStatus = await getMapStatus(server.id);
+        setStatus(nextStatus);
+        setStatusError(null);
+        setLoadError(null);
+        if (refreshAssets) {
+          await refreshAssetStatus();
+        }
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setStatus(null);
+        setStatusError(message);
+        setLoadError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [refreshAssetStatus, server.id],
+  );
 
   useEffect(() => {
     setStatus(null);
+    setAssetStatus(null);
+    setAssetStatusError(null);
     mapRequestsRef.current.clear();
     setPlayers([]);
     setStatusError(null);
@@ -156,7 +200,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     centerInitializedRef.current = false;
     setTileRevision(0);
     setPan({ x: 0, y: 0 });
-    void refreshStatus();
+    void refreshStatus(true);
     void getMapWorldInfo(server.id, 'overworld')
       .then((info) => {
         if (centerInitializedRef.current) {
@@ -231,7 +275,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     },
   });
 
-  const mapTileRequestReady = isMapTileRequestReady(status, statusError);
+  const diagnosticStatusError = statusError ?? assetStatusError;
+  const mapTileRequestReady = isMapTileRequestReady(status, diagnosticStatusError);
 
   useEffect(() => {
     if (!mapTileRequestReady) {
@@ -342,7 +387,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     status?.component,
     status?.configState,
     status?.assetState,
-    statusError,
+    diagnosticStatusError,
     mapTileRequestReady,
     tileRevision,
     zoom,
@@ -466,8 +511,39 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     }
     setIsActing(true);
     try {
-      await selectMapAsset(server.id, selection);
-      await refreshStatus();
+      const nextAssetStatus = await selectMapAsset(server.id, selection);
+      applyAssetStatus(nextAssetStatus);
+      const selectionWasRejected = !isMapAssetSelectionSuccessful(nextAssetStatus.state);
+      const statusRefreshed = await refreshStatus();
+      const assetRefresh = await refreshAssetStatus();
+
+      if (selectionWasRejected) {
+        applyAssetStatus(nextAssetStatus, false);
+        const message = nextAssetStatus.message ?? assetLabel(nextAssetStatus.state);
+        if (isMapAssetWarningState(nextAssetStatus.state)) {
+          toast.warning(message);
+        } else {
+          toast.error(`${t('map.toast.failed')}: ${message}`);
+        }
+        return;
+      }
+      if (!statusRefreshed) {
+        toast.error(`${t('map.toast.failed')}: ${t('map.bridge.statusError')}`);
+        return;
+      }
+      if (assetRefresh.error || !assetRefresh.status) {
+        toast.error(`${t('map.toast.failed')}: ${assetRefresh.error ?? t('map.asset.invalid')}`);
+        return;
+      }
+      if (!isMapAssetSelectionSuccessful(assetRefresh.status.state)) {
+        const message = assetRefresh.status.message ?? assetLabel(assetRefresh.status.state);
+        if (isMapAssetWarningState(assetRefresh.status.state)) {
+          toast.warning(message);
+        } else {
+          toast.error(`${t('map.toast.failed')}: ${message}`);
+        }
+        return;
+      }
       setTileRevision((revision) => revision + 1);
       toast.success(t('map.toast.assetsSelected'));
     } catch (error) {
@@ -576,7 +652,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     component === 'active' || component === 'paused' || component === 'waiting_restart';
   const artifactIsActive = status?.artifact === 'active';
   const artifactIsPaused = status?.artifact === 'paused';
-  const assetState = status?.assetState ?? 'not_applicable';
+  const assetState = assetStatusError
+    ? 'invalid'
+    : (assetStatus?.state ?? status?.assetState ?? 'not_applicable');
+  const assetSource = assetStatusError ? null : (assetStatus?.sourcePath ?? status?.assetSource);
+  const assetMessage = assetStatusError ?? assetStatus?.message ?? status?.assetMessage;
+  const mapLoadError = loadError ?? assetStatusError;
   const viewportTileStates = requestedTileKeys
     .map((key) => tileStates[key])
     .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
@@ -588,7 +669,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     !isTileLoading;
   const canvasBlocked =
     isLoading ||
-    Boolean(statusError) ||
+    Boolean(diagnosticStatusError) ||
     !status ||
     status.configState !== 'valid' ||
     !isManagedArtifactAvailable;
@@ -598,7 +679,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     hasPreviousTiles: tiles.length > 0,
     isLoading: isTileLoading,
     requestedTileKeys,
-    statusError,
+    diagnosticStatusError,
     tileError,
     tileStates,
   });
@@ -704,11 +785,11 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         </button>
       </div>
 
-      {loadError && (
+      {mapLoadError && (
         <div className="map-view__notice map-view__notice--error" role="alert">
           <AlertTriangle size={17} aria-hidden="true" />
           <span>
-            {statusError ? t('map.bridge.statusError') : loadError}
+            {statusError ? t('map.bridge.statusError') : mapLoadError}
             {status?.message && <small>{status.message}</small>}
           </span>
         </div>
@@ -811,7 +892,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   <div className="map-view__empty-state" role={tileError ? 'alert' : undefined}>
                     <MapIcon size={25} aria-hidden="true" />
                     <strong>
-                      {statusError
+                      {diagnosticStatusError
                         ? t('map.bridge.statusError')
                         : tileError
                           ? t('map.surface.tileError')
@@ -822,7 +903,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                               : t('map.surface.noTile')}
                     </strong>
                     <span>
-                      {statusError
+                      {diagnosticStatusError
                         ? t('map.bridge.statusErrorDescription')
                         : (tileError ?? t('map.surface.noTileDescription'))}
                     </span>
@@ -867,14 +948,14 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     <strong>
                       {isLoading
                         ? t('map.surface.loading')
-                        : statusError
+                        : diagnosticStatusError
                           ? t('map.bridge.statusError')
                           : status?.configState !== 'valid'
                             ? t('map.bridge.configurationRequired')
                             : t('map.surface.placeholder')}
                     </strong>
                     <span>
-                      {statusError
+                      {diagnosticStatusError
                         ? t('map.bridge.statusErrorDescription')
                         : status?.configState !== 'valid'
                           ? t('map.bridge.configurationRequiredDescription')
@@ -889,7 +970,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               <div className="map-view__notice map-view__notice--warning" role="status">
                 <AlertTriangle size={17} aria-hidden="true" />
                 <span>
-                  {status?.assetMessage ??
+                  {assetMessage ??
                     (assetState === 'missing'
                       ? t('map.asset.missing')
                       : assetState === 'version_mismatch'
@@ -1011,7 +1092,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               <div>
                 <span>{t('map.asset.title')}</span>
                 <strong>{assetLabel(assetState)}</strong>
-                {status?.assetSource && <code>{status.assetSource}</code>}
+                {assetSource && <code>{assetSource}</code>}
+                {assetStatusError && (
+                  <span role="alert" className="map-view__asset-error">
+                    {assetStatusError}
+                  </span>
+                )}
               </div>
               <Button
                 variant="secondary"
@@ -1022,6 +1108,54 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 {t('map.asset.choose')}
               </Button>
             </div>
+            {assetStatus && (
+              <dl className="map-view__asset-details">
+                <div>
+                  <dt>state</dt>
+                  <dd>{assetStatus.state}</dd>
+                </div>
+                <div>
+                  <dt>sourcePath</dt>
+                  <dd>{assetStatus.sourcePath ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>identity</dt>
+                  <dd>{assetStatus.identity ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>blockstateCount</dt>
+                  <dd>{assetStatus.blockstateCount}</dd>
+                </div>
+                <div>
+                  <dt>modelCount</dt>
+                  <dd>{assetStatus.modelCount}</dd>
+                </div>
+                <div>
+                  <dt>textureCount</dt>
+                  <dd>{assetStatus.textureCount}</dd>
+                </div>
+                <div>
+                  <dt>animatedTextureCount</dt>
+                  <dd>{assetStatus.animatedTextureCount}</dd>
+                </div>
+                <div>
+                  <dt>minecraftVersion</dt>
+                  <dd>{assetStatus.minecraftVersion ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>quality</dt>
+                  <dd>{assetStatus.quality}</dd>
+                </div>
+                <div>
+                  <dt>unresolvedBlockstateCount</dt>
+                  <dd>{assetStatus.unresolvedBlockstateCount}</dd>
+                </div>
+                <div>
+                  <dt>message</dt>
+                  <dd>{assetStatus.message ?? '—'}</dd>
+                </div>
+              </dl>
+            )}
           </section>
 
           {component === 'absent' && (

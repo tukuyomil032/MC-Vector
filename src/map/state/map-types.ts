@@ -58,12 +58,16 @@ export interface MapStatus {
 
 export interface MapAssetStatus {
   state: MapAssetState;
-  sourcePath?: string | null;
-  identity?: string | null;
+  sourcePath: string | null;
+  identity: string | null;
   blockstateCount: number;
   modelCount: number;
   textureCount: number;
-  message?: string | null;
+  animatedTextureCount: number;
+  minecraftVersion: string | null;
+  quality: string;
+  unresolvedBlockstateCount: number;
+  message: string | null;
 }
 
 export interface MapPlayer {
@@ -129,6 +133,39 @@ export interface MapRenderProgressEvent {
 
 export function isMapAssetWarningState(state: MapAssetState): boolean {
   return ['missing', 'invalid', 'version_mismatch', 'fallback'].includes(state);
+}
+
+export function isMapAssetSelectionSuccessful(state: MapAssetState): boolean {
+  return state !== 'not_applicable' && !isMapAssetWarningState(state);
+}
+
+export function mergeMapAssetStatus(
+  status: MapStatus | null,
+  assetStatus: MapAssetStatus,
+): MapStatus | null {
+  if (!status) {
+    return null;
+  }
+  return {
+    ...status,
+    assetState: assetStatus.state,
+    assetSource: assetStatus.sourcePath,
+    assetIdentity: assetStatus.identity,
+    assetMessage: assetStatus.message,
+  };
+}
+
+export function clearMapAssetStatus(status: MapStatus | null, message: string): MapStatus | null {
+  if (!status) {
+    return null;
+  }
+  return {
+    ...status,
+    assetState: 'invalid',
+    assetSource: null,
+    assetIdentity: null,
+    assetMessage: message,
+  };
 }
 
 export function isMapTileRequestReady(
