@@ -37,11 +37,16 @@ Phase 11 renderer and Phase 04 error-state contract.
   race before reporting a real storage error.
 - Frontend viewport generations cap active invokes and clean up stale pending
   requests before they reach the Rust scheduler.
-- Focused Rust tile tests (17) and Map frontend tests (38) pass.
+- `chunk_dirty` now removes only matching in-memory tiles; the previous predicate
+  was inverted and retained the dirty tile while removing unrelated entries.
+- The same intersection rule is covered for persisted PNG tiles, so a dirty
+  chunk cannot invalidate an adjacent tile in either cache layer.
+- Focused Rust tile/cache/invalidation tests and Map frontend tests pass.
 
 This is a recovery slice, not the Phase 12 completion gate. Backend request
 cancellation, scheduler stress under repeated pan/zoom, persistent cache reuse
-in a real Tauri session, and full dirty-tile evidence remain open.
+in a real Tauri session, and full renderer-integrated dirty-tile evidence remain
+open.
 
 ## Focused tests
 

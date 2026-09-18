@@ -44,7 +44,7 @@ evidence are recorded.
 | 01–03 | focused-tested | Feature roots, Paper path, Rust command boundaries, and module contracts are landed; full architectural extraction remains tracked in their phase documents. |
 | 04–08 | focused-tested | Empty/error states, queue/cache recovery, Anvil/live bridge groundwork, launcher discovery, and asset resolution have focused tests. Full Phase 8 gate is recorded in the session handoff, not as real-Paper proof. |
 | 09–11 | in-progress | Pinned Dynmap snapshots, Iso geometry, model UV handling, tint, alpha, and lighting are present; golden-image and all-block coverage are not complete. |
-| 12–14 | in-progress | Bounded tiles, world layers, player interpolation, and server-scoped marker persistence are present; complete overlay UI and real-session gate remain. |
+| 12–14 | in-progress | Bounded tiles, world layers, player interpolation, and server-scoped marker persistence are present; dirty-chunk invalidation is now regression-tested in memory and on disk, while complete overlay UI and real-session gate remain. |
 | 15 | focused-tested | Pinned Paper 1.21.10 smoke passes connected/offline/disabled scenarios and live snapshot assertions. Tauri dev compiled and launched; manual Map interaction, cache reuse, and app-data separation remain open. |
 | 16 | focused-tested | CI workflows, Gradle wrapper, Paper workflow, attribution artifacts, and distribution-boundary checks are present; the local matrix passes, while remote CI evidence remains intentionally undispatched. |
 | 17 | open | Local full gates and Paper smoke are recorded in the Phase 17 document; real Tauri manual evidence, golden images, complete renderer/asset parity, and remote CI evidence remain open. |
