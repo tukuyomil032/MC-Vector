@@ -26,6 +26,9 @@ Phases 00–26 complete or explicitly blocked with user-visible evidence.
 - run real Paper 1.21.10 and real Tauri manual verification;
 - inspect golden-image reports and all-block coverage;
 - verify launcher fixtures, especially the Prism shared-library layout;
+- verify the same-version Core JAR, checksum, and release manifest are present
+  in the application GitHub Release and that production Map enablement works
+  without a local Gradle checkout;
 - verify no loading loop, transparent-success state, queue flood, cache ENOENT,
   or listener rejection remains;
 - verify source attribution and non-bundling of user-owned assets;

@@ -130,9 +130,11 @@ A 10 requires the 9.5 conditions plus real failure recovery and catalog recovery
 8. Phase 7: Run the evidence matrix, OS checks, and final scoring.
 
 The Map implementation plan is independent of the hardening phase order and is
-tracked in `spec/map/phases/phase-00` through `phase-27`. Its gates must not be
-silently treated as proof for the hardening ADRs. Phase 27 is the only final
-acceptance gate for the declared in-app map capability.
+tracked in `spec/map/phases/phase-00` through `phase-27`, with Phase 18A as the
+immediate Core artifact-distribution and enablement-recovery prerequisite after
+Phase 17. Its gates must not be silently treated as proof for the hardening
+ADRs. Phase 27 is the only final acceptance gate for the declared in-app map
+capability.
 
 ## Non-Goals
 

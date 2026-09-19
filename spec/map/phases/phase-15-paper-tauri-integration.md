@@ -73,7 +73,9 @@ The Paper portion is complete; the manual Tauri portion remains open.
 
 ## Known non-goals
 
-Cross-platform release packaging is addressed in Phase 16.
+Application release packaging and production Core-plugin download are not
+proved by this local integration phase. Runtime artifact recovery is Phase 18A;
+the complete CI/license/distribution gate is Phase 25.
 
 ## Follow-up phases
 

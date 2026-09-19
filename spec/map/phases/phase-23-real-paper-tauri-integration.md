@@ -17,11 +17,14 @@ integration evidence.
 
 ## Dependencies
 
-Phases 06, 09, 17, 21, and 22.
+Phases 06, 09, 17, 18A, 21, and 22.
 
 ## Implementation tasks
 
 - verify connected, offline, paused, restored, and disabled component states;
+- verify production-mode Core artifact download/verification without a local
+  Gradle checkout, and distinguish Core installation from Minecraft asset
+  selection;
 - verify loaded snapshot success and unloaded-chunk rejection;
 - place/break blocks and confirm only intersecting tiles update;
 - select a real client JAR/resource pack and record parsed asset counts;

@@ -17,7 +17,9 @@ focused Map state tests.
 
 ## Dependencies
 
-Phases 05, 06, 11, 14, and 17.
+Phases 05, 06, 11, 14, 17, and 18A. Map type discovery must not start a
+rendering loop while the managed Core artifact is missing, invalid, or waiting
+for a server restart.
 
 ## Implementation tasks
 

@@ -35,7 +35,7 @@ managed-JAR discovery use `src/map/paper/mc-vector-core`.
 11 blockstate/model resolution -> 12 texture/tint/transparency
 13 Dynmap source porting -> 14 Iso geometry
 15 shaders/lighting -> 16 special block renderers
-17 tile system -> 18 dimensions/map types
+17 tile system -> 18A Core artifact distribution/lifecycle recovery -> 18 dimensions/map types
 19 players/markers -> 20 map-visible overlays
 21 Map UI -> 22 lifecycle and diagnostics
 23 real Paper/Tauri integration -> 24 golden fixtures
@@ -63,7 +63,9 @@ evidence are recorded.
 | 01–03 | focused-tested | Feature roots, Paper path, Rust command boundaries, and module contracts are landed; full architectural extraction remains tracked in their phase documents. |
 | 04–08 | focused-tested | Empty/error states, queue/cache recovery, Anvil/live bridge groundwork, launcher discovery, and asset resolution have focused tests. Full Phase 8 gate is recorded in the session handoff, not as real-Paper proof. |
 | 09–16 | in-progress | Asset validation, model/texture resolution, selected Dynmap renderer work, geometry, lighting, and special block rendering remain incomplete until real client assets and golden fixtures prove them. |
-| 17–22 | open | Tile scheduling, dimensions, markers, overlays, UI state, and lifecycle behavior require real-data verification. Known loading-loop and launcher-discovery defects are tracked here before renderer parity work continues. |
+| 17 | open | Projected tile scheduling has focused tests, but the real-app gate found a missing Core JAR precondition; Phase 17 remains open until its real Paper/Tauri zoom evidence is rerun. |
+| 18A | open | Core artifact enablement, GitHub Release distribution, production download/verification, and the missing-JAR lifecycle defect are not implemented yet. |
+| 18–22 | open | Dimensions, markers, overlays, UI state, and lifecycle behavior require real-data verification after the Core artifact prerequisite is reliable. |
 | 23–26 | open | Real Paper/Tauri evidence, golden images, CI/license evidence, and all-block coverage are not complete. |
 | 27 | open | Final acceptance is intentionally open until every mandatory map capability and real-environment gate passes. |
 

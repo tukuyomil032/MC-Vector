@@ -233,13 +233,15 @@ Real-app evidence is incomplete and therefore this Phase is not closed:
   no listener before the debug app was closed.
 
 The missing managed Paper artifact is a precondition failure outside this
-phase's projected-tile changes. The phase remains open until a subsequent
-run has the Core JAR installed and completes the required zoom/pan and live
-bridge checks. No final Dynmap parity claim is made.
+phase's projected-tile changes. The phase remains open until Phase 18A installs
+or downloads the Core JAR and a subsequent run completes the required zoom/pan
+and live bridge checks. No final Dynmap parity claim is made.
 
 ## Follow-up phases
 
 The final Dynmap map-feature reproduction remains open after Phase 17. The
-next phase must continue from the canonical Dynmap research corpus and the
-remaining renderer, asset, dimension, overlay, and real-data acceptance
-contracts. Phase 17 completion must never be reported as final parity.
+immediate next phase is Phase 18A: repair artifact-authoritative enablement and
+add GitHub Release distribution/on-demand production installation. Only after
+that prerequisite is reliable should the dimension, overlay, renderer, and
+remaining real-data acceptance contracts proceed. Phase 17 completion must
+never be reported as final parity.

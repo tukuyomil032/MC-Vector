@@ -24,6 +24,17 @@ The root `bridge/` directory is migration-only and must disappear after Phase
 02. Dynmap is not a runtime dependency. The Java plugin observes the server;
 Rust owns world reads, assets, rendering, tiles, and cache.
 
+`MC-Vector Core` is a separately distributed runtime component. A production
+application must not require a developer checkout or a local Gradle
+`build/libs` directory. When Map is enabled and no verified managed Core JAR is
+installed, the Rust backend downloads the exact versioned Core asset from the
+MC-Vector GitHub Release that matches the application version, verifies its
+manifest, SHA-256, size, plugin identity, and protocol compatibility, then
+installs it atomically. A failed download or verification never persists Map
+consent as enabled and never starts the bridge as if the component were active.
+Development builds may use an explicitly identified local artifact for testing,
+but that provenance must remain distinguishable from `github_release`.
+
 ## Product boundary
 
 ### In scope: map capability
@@ -72,12 +83,38 @@ component: absent | active | paused | waiting_restart | remove_pending | conflic
 bridge: not_applicable | connecting | connected | disconnected | incompatible | error
 asset: configured | auto_detected | user_selected | missing | version_mismatch | invalid | fallback
 tile: terrain | empty | rendering | stale | error | asset_missing | bridge_incompatible | paper_chunk_unavailable | paused
+coreArtifact: missing | download_required | downloading | verifying | installed | outdated | invalid | conflict | error
 ```
 
 Map is shown for active, waiting-restart, paused, remove-pending, and conflict
 states. It is hidden only when the managed component is absent and consent is
 disabled. Pause renames only the managed artifact to `.jar.disabled`; full
 removal waits for a stopped server and never removes an unknown same-named file.
+Minecraft asset selection and Core plugin installation are independent states:
+selecting a client JAR never proves that Paper has loaded `MC-Vector Core`.
+`enable_map` is successful only after `coreArtifact=installed` or an already
+verified managed artifact is restored. If the server is running when an
+artifact is installed, the result is `waiting_restart` and the server is not
+silently restarted.
+
+## Core release contract
+
+The application release tag `vX.Y.Z` is the compatibility anchor for the Core
+plugin. The matching GitHub Release publishes:
+
+```text
+mc-vector-core-X.Y.Z.jar
+mc-vector-core-X.Y.Z.jar.sha256
+mc-vector-core-X.Y.Z.manifest.json
+```
+
+The manifest records the release tag, app/plugin versions, protocol version,
+supported Paper versions, artifact size, SHA-256, and source commit. The
+installed server filename remains `plugins/mc-vector-core.jar`; the installed
+managed metadata records the versioned release asset and `github_release`
+provenance. Unknown same-named JARs are never replaced. The complete build and
+release gate is Phase 25, while the immediate enablement/download repair is
+Phase 18A.
 
 ## Paper bridge
 
@@ -120,10 +157,12 @@ prove a real Paper plugin was loaded; a mock does not prove a real Tauri app.
 
 Phase 27 is the only completion gate. It requires the map capability to be
 verified on real Paper and real Tauri with user-owned assets, golden fixtures,
-all declared map types, incremental updates, and no known blocking runtime
-errors. A selected JAR without parsed blockstate/model/texture counts is not a
-valid asset state. A generated PNG without non-transparent terrain or a
-structured tile state is not a valid map result.
+all declared map types, incremental updates, a verified Core release artifact,
+and no known blocking runtime errors. A selected JAR without parsed
+blockstate/model/texture counts is not a valid asset state. A generated PNG
+without non-transparent terrain or a structured tile state is not a valid map
+result. A Map component reported enabled without a verified managed Core JAR is
+an acceptance failure, not a degraded success state.
 
 ## Non-goals
 
