@@ -7,6 +7,7 @@ pub(crate) enum TileRenderState {
     Empty,
     Rendering,
     Error,
+    QueueFull,
     AssetMissing,
 }
 
@@ -44,6 +45,15 @@ impl RenderProgress {
             completed: 0,
             total: 1,
             message: Some(message.into()),
+        }
+    }
+
+    pub(crate) fn queue_full() -> Self {
+        Self {
+            state: TileRenderState::QueueFull,
+            completed: 0,
+            total: 1,
+            message: Some("Map tile render queue is full; keeping the previous tile".to_string()),
         }
     }
 }

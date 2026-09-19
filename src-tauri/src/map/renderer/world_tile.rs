@@ -9,7 +9,7 @@ use flate2::{write::ZlibEncoder, Compression};
 
 use crate::map::assets::{self as map_assets, MapAssets, RenderFace};
 use crate::map::domain::{ChunkKey, ChunkView};
-use crate::map::projection::{floor_div, floor_mod, TileWorldBounds};
+use crate::map::projection::{floor_div, floor_mod, MapTileGeometry, MapTilePlane};
 use crate::map::render::{shade_surface, Face, SurfaceSample};
 use crate::map::sources::{
     enumerate_region_files, is_air_state, present_chunks_for_bounds, read_java_chunk,
@@ -298,7 +298,13 @@ pub(crate) fn existing_chunk_coordinates_for_tile(
     tile_x: i32,
     tile_y: i32,
 ) -> Result<Vec<(i64, i64)>, String> {
-    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    if geometry.plane == MapTilePlane::IsoProjected {
+        return ray_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y);
+    }
+    let bounds = geometry
+        .world_bounds()
+        .expect("WorldXZ geometry must have world bounds");
     let min_chunk_x = floor_div(bounds.origin_x, 16);
     let max_chunk_x = floor_div(bounds.max_x(), 16);
     let min_chunk_z = floor_div(bounds.origin_z, 16);
@@ -318,16 +324,14 @@ pub(crate) fn ray_chunk_coordinates_for_tile(
     tile_x: i32,
     tile_y: i32,
 ) -> Result<Vec<(i64, i64)>, String> {
-    let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
-    let (min_world_x, max_world_x, min_world_z, max_world_z) = IsoHDPerspective::default()
-        .world_xz_bounds_for_map_tile(
-            i64::from(tile_x),
-            i64::from(tile_y),
-            TILE_SIZE,
-            blocks_per_pixel as f64,
-            -64.0,
-            320.0,
-        );
+    let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    if geometry.plane != MapTilePlane::IsoProjected {
+        return existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y);
+    }
+    let perspective = IsoHDPerspective::default();
+    let (min_world_x, max_world_x, min_world_z, max_world_z) = perspective
+        .world_xz_bounds_for_geometry(geometry, -64.0, 320.0)
+        .expect("Iso geometry must have projected bounds");
     let min_chunk_x = floor_div(min_world_x - RAY_CHUNK_PADDING_BLOCKS, 16);
     let max_chunk_x = floor_div(max_world_x + RAY_CHUNK_PADDING_BLOCKS, 16);
     let min_chunk_z = floor_div(min_world_z - RAY_CHUNK_PADDING_BLOCKS, 16);
@@ -339,20 +343,11 @@ pub(crate) fn ray_chunk_coordinates_for_tile(
         min_chunk_z,
         max_chunk_z,
     )?;
-    let perspective = IsoHDPerspective::default();
     Ok(candidates
         .into_iter()
         .filter(|&(chunk_x, chunk_z)| {
-            perspective.projected_tile_intersects_chunk(
-                i64::from(tile_x),
-                i64::from(tile_y),
-                TILE_SIZE,
-                blocks_per_pixel as f64,
-                -64.0,
-                320.0,
-                chunk_x,
-                chunk_z,
-            )
+            perspective
+                .projected_geometry_intersects_chunk(geometry, -64.0, 320.0, chunk_x, chunk_z)
         })
         .collect())
 }
@@ -365,7 +360,13 @@ pub(crate) fn render_overview_tile(
     assets: Option<&MapAssets>,
     live_chunks: Option<&LiveChunkMap>,
 ) -> Result<TileRenderResult, String> {
-    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    if geometry.plane != MapTilePlane::WorldXZ {
+        return Err("Overview renderer received projected tile geometry".to_string());
+    }
+    let bounds = geometry
+        .world_bounds()
+        .expect("WorldXZ geometry must have world bounds");
     let mut chunks: HashMap<(i64, i64), Result<Option<JavaChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
@@ -438,18 +439,17 @@ pub(crate) fn render_world_tile_detailed(
     assets: Option<&MapAssets>,
     live_chunks: Option<&LiveChunkMap>,
 ) -> Result<TileRenderResult, String> {
-    let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
-    if blocks_per_pixel >= 16 {
+    let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+    if geometry.plane == MapTilePlane::WorldXZ {
         return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
     }
     let saved_chunk_coordinates = ray_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
     if live_chunks.is_none_or(HashMap::is_empty) && saved_chunk_coordinates.is_empty() {
         // Avoid walking tens of thousands of air voxels for a tile whose
         // region headers already prove that no saved chunk intersects it.
-        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
+        return empty_tile_result();
     }
 
-    let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     let mut chunks: HashMap<(i64, i64), Result<Option<JavaChunk>, String>> = HashMap::new();
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
@@ -488,7 +488,7 @@ pub(crate) fn render_world_tile_detailed(
         .max()
         .unwrap_or(320);
     let rendered = render_iso_tile(
-        bounds,
+        geometry,
         min_y,
         max_y,
         |world_x, y, world_z| {
@@ -550,6 +550,19 @@ pub(crate) fn render_world_tile_detailed(
         has_terrain,
         coverage_ratio: rendered.coverage_ratio,
         message: diagnostic,
+    })
+}
+
+fn empty_tile_result() -> Result<TileRenderResult, String> {
+    let tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
+    let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &tile_buffer.into_scanlines())?;
+    Ok(TileRenderResult {
+        png,
+        rendered_chunk_count: 0,
+        decode_failed_chunk_count: 0,
+        has_terrain: false,
+        coverage_ratio: 0.0,
+        message: None,
     })
 }
 

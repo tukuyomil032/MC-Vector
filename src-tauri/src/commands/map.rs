@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -17,8 +17,8 @@ use uuid::Uuid;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::server::ServerManager;
 use crate::map::application::{
-    CachedTile, MemoryTileCache, RenderProgress, TileKey, TileMetadata, TilePriority,
-    TileRenderState, TileScheduler, DEFAULT_PERSPECTIVE,
+    CachedTile, MemoryTileCache, RenderProgress, ScheduleResult, TileKey, TileMetadata,
+    TilePriority, TileRenderState, TileScheduler, DEFAULT_PERSPECTIVE,
 };
 use crate::map::assets::{self as map_assets, MapAssets};
 use crate::map::bridge::config::{
@@ -31,7 +31,7 @@ use crate::map::bridge::protocol::{
     validate_hello, BridgeStatusPayload, ChatMessageEventPayload, WorldStatusEventPayload,
 };
 use crate::map::domain::{ChunkKey, ChunkView};
-use crate::map::projection::{floor_div, TileWorldBounds};
+use crate::map::projection::{floor_div, MapTileGeometry, MapTilePlane};
 use crate::map::renderer::{
     render_world_tile_detailed, IsoHDPerspective, LiveChunkMap, MAX_ZOOM, TILE_SIZE,
 };
@@ -80,13 +80,27 @@ pub struct MapViewport {
     pub width: u32,
     #[serde(default = "default_viewport_height")]
     pub height: u32,
+    #[serde(default)]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub request_generation: Option<u64>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapRenderRequestResult {
+    pub request_id: String,
+    pub request_generation: u64,
     pub requested: usize,
     pub accepted: usize,
+    pub coalesced: usize,
+    pub rejected: usize,
+}
+
+#[derive(Clone, Debug)]
+struct RenderRequestContext {
+    request_id: Option<String>,
+    request_generation: Option<u64>,
 }
 
 fn default_viewport_width() -> u32 {
@@ -117,6 +131,7 @@ pub struct MapBridgeManager {
     pending_snapshots: Arc<Mutex<HashMap<String, PendingSnapshotSender>>>,
     live_snapshots: Arc<Mutex<LiveSnapshotCache>>,
     tile_scheduler: Arc<TileScheduler>,
+    render_generations: Arc<Mutex<HashMap<(String, String), u64>>>,
 }
 
 impl Default for MapBridgeManager {
@@ -131,6 +146,7 @@ impl Default for MapBridgeManager {
             pending_snapshots: Arc::default(),
             live_snapshots: Arc::new(Mutex::new(LiveSnapshotCache::new(2_000))),
             tile_scheduler: Arc::new(TileScheduler::new(64, 2)),
+            render_generations: Arc::default(),
         }
     }
 }
@@ -373,6 +389,55 @@ async fn runtime_status(
     manager.statuses.lock().await.get(server_id).cloned()
 }
 
+async fn begin_render_generation(
+    manager: &MapBridgeManager,
+    server_id: &str,
+    world_id: &str,
+) -> Result<u64, String> {
+    let mut generations = manager.render_generations.lock().await;
+    let generation = generations
+        .entry((server_id.to_string(), world_id.to_string()))
+        .or_insert(0);
+    *generation = generation.wrapping_add(1).max(1);
+    Ok(*generation)
+}
+
+async fn current_render_generation(
+    manager: &MapBridgeManager,
+    server_id: &str,
+    world_id: &str,
+) -> Option<u64> {
+    manager
+        .render_generations
+        .lock()
+        .await
+        .get(&(server_id.to_string(), world_id.to_string()))
+        .copied()
+}
+
+async fn render_generation_is_current(
+    manager: &MapBridgeManager,
+    server_id: &str,
+    world_id: &str,
+    generation: u64,
+) -> bool {
+    current_render_generation(manager, server_id, world_id)
+        .await
+        .is_some_and(|current| current == generation)
+}
+
+async fn cancel_render_requests_for_server(manager: &MapBridgeManager, server_id: &str) {
+    manager
+        .tile_scheduler
+        .cancel_where(|key| key.server_id == server_id);
+    let mut generations = manager.render_generations.lock().await;
+    for ((key_server_id, _), generation) in generations.iter_mut() {
+        if key_server_id == server_id {
+            *generation = generation.wrapping_add(1).max(1);
+        }
+    }
+}
+
 fn component_state(
     active: bool,
     disabled: bool,
@@ -608,6 +673,9 @@ async fn set_runtime_status(
             last_heartbeat,
         },
     );
+    if bridge != "connected" {
+        cancel_render_requests_for_server(manager, server_id).await;
+    }
 }
 
 fn dimension_matches_world(world_id: &str, dimension: &str) -> bool {
@@ -619,6 +687,15 @@ fn dimension_matches_world(world_id: &str, dimension: &str) -> bool {
     ) || world_id == dimension
 }
 
+fn world_id_for_dimension(dimension: &str) -> String {
+    match dimension {
+        "minecraft:overworld" => "overworld".to_string(),
+        "minecraft:the_nether" => "world_nether".to_string(),
+        "minecraft:the_end" => "world_the_end".to_string(),
+        other => other.to_string(),
+    }
+}
+
 fn tile_coordinates_intersect_chunk(
     zoom: u8,
     tile_x: i32,
@@ -626,19 +703,17 @@ fn tile_coordinates_intersect_chunk(
     chunk_x: i64,
     chunk_z: i64,
 ) -> bool {
-    let blocks_per_pixel = 1_i64 << (MAX_ZOOM - zoom);
-    let tile_min_x = i64::from(tile_x) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let tile_min_z = i64::from(tile_y) * i64::from(TILE_SIZE) * blocks_per_pixel;
-    let tile_max_x = tile_min_x + i64::from(TILE_SIZE) * blocks_per_pixel - 1;
-    let tile_max_z = tile_min_z + i64::from(TILE_SIZE) * blocks_per_pixel - 1;
-    let chunk_min_x = chunk_x * 16;
-    let chunk_min_z = chunk_z * 16;
-    let chunk_max_x = chunk_min_x + 15;
-    let chunk_max_z = chunk_min_z + 15;
-    tile_min_x <= chunk_max_x
-        && tile_max_x >= chunk_min_x
-        && tile_min_z <= chunk_max_z
-        && tile_max_z >= chunk_min_z
+    let Ok(geometry) = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)
+    else {
+        return false;
+    };
+    match geometry.plane {
+        MapTilePlane::WorldXZ => geometry
+            .world_bounds()
+            .is_some_and(|bounds| bounds.intersects_chunk(chunk_x, chunk_z)),
+        MapTilePlane::IsoProjected => IsoHDPerspective::default()
+            .projected_geometry_intersects_chunk(geometry, -64.0, 320.0, chunk_x, chunk_z),
+    }
 }
 
 fn normal_directory_entries(path: &Path) -> Result<Option<Vec<fs::DirEntry>>, String> {
@@ -666,10 +741,11 @@ fn invalidate_disk_chunk_tiles(
     dimension: &str,
     chunk_x: i64,
     chunk_z: i64,
-) -> Result<(), String> {
+) -> Result<Vec<(String, u8, i32, i32)>, String> {
+    let mut affected = Vec::new();
     let server_cache = server_root.join("map-cache").join(cache_segment(server_id));
     let Some(world_entries) = normal_directory_entries(&server_cache)? else {
-        return Ok(());
+        return Ok(affected);
     };
 
     for world_entry in world_entries {
@@ -764,11 +840,34 @@ fn invalidate_disk_chunk_tiles(
                                         if tile_coordinates_intersect_chunk(
                                             zoom, tile_x, tile_y, chunk_x, chunk_z,
                                         ) {
-                                            fs::remove_file(&path).map_err(|error| {
-                                                format!(
-                                                    "Failed to invalidate cached map tile: {error}"
-                                                )
-                                            })?;
+                                            affected.push((
+                                                world_id.to_string(),
+                                                zoom,
+                                                tile_x,
+                                                tile_y,
+                                            ));
+                                            let metadata_path =
+                                                tile_x_path.join(format!("{}.json", tile_y));
+                                            let mut tile_metadata =
+                                                crate::map::tiles::read_metadata(&metadata_path)?
+                                                    .unwrap_or_else(|| {
+                                                        let bytes =
+                                                            fs::read(&path).unwrap_or_default();
+                                                        let (has_terrain, coverage_ratio) =
+                                                            png_coverage(&bytes);
+                                                        TileMetadata {
+                                                            rendered_chunk_count: 0,
+                                                            has_terrain,
+                                                            coverage_ratio,
+                                                            message: None,
+                                                            stale: false,
+                                                        }
+                                                    });
+                                            tile_metadata.stale = true;
+                                            crate::map::tiles::write_metadata_atomic(
+                                                &metadata_path,
+                                                &tile_metadata,
+                                            )?;
                                         }
                                     }
                                 }
@@ -779,7 +878,7 @@ fn invalidate_disk_chunk_tiles(
             }
         }
     }
-    Ok(())
+    Ok(affected)
 }
 
 async fn invalidate_chunk_tiles(
@@ -788,8 +887,13 @@ async fn invalidate_chunk_tiles(
     dimension: &str,
     chunk_x: i64,
     chunk_z: i64,
-) {
-    manager.tile_cache.lock().await.remove_where(|key| {
+) -> Vec<TileKey> {
+    let affected = manager.tile_cache.lock().await.mark_stale_where(|key| {
+        key.server_id == server_id
+            && dimension_matches_world(&key.world_id, dimension)
+            && crate::map::tiles::tile_intersects_chunk(key, chunk_x, chunk_z)
+    });
+    manager.tile_scheduler.cancel_where(|key| {
         key.server_id == server_id
             && dimension_matches_world(&key.world_id, dimension)
             && crate::map::tiles::tile_intersects_chunk(key, chunk_x, chunk_z)
@@ -799,6 +903,7 @@ async fn invalidate_chunk_tiles(
         .lock()
         .await
         .remove(server_id, &ChunkKey::new(dimension, chunk_x, chunk_z));
+    affected
 }
 
 fn decode_live_snapshot(value: &Value) -> Result<ChunkView, String> {
@@ -871,13 +976,20 @@ async fn request_live_chunks_for_tile(
     manager: &Arc<MapBridgeManager>,
     server_id: &str,
     dimension: &str,
-    bounds: TileWorldBounds,
+    geometry: MapTileGeometry,
 ) -> LiveChunkMap {
     let (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z, center_chunk_x, center_chunk_z) =
-        live_chunk_bounds_for_tile(bounds);
+        live_chunk_bounds_for_tile(geometry);
+    let perspective = IsoHDPerspective::default();
     let mut candidates = (min_chunk_z..=max_chunk_z)
         .flat_map(|chunk_z| (min_chunk_x..=max_chunk_x).map(move |chunk_x| (chunk_x, chunk_z)))
         .collect::<Vec<_>>();
+    if geometry.plane == MapTilePlane::IsoProjected {
+        candidates.retain(|(chunk_x, chunk_z)| {
+            perspective
+                .projected_geometry_intersects_chunk(geometry, -64.0, 320.0, *chunk_x, *chunk_z)
+        });
+    }
     candidates.sort_by_key(|(chunk_x, chunk_z)| {
         (
             (chunk_x - center_chunk_x).abs() + (chunk_z - center_chunk_z).abs(),
@@ -908,27 +1020,26 @@ async fn request_live_chunks_for_tile(
     snapshots
 }
 
-fn live_chunk_bounds_for_tile(bounds: TileWorldBounds) -> (i64, i64, i64, i64, i64, i64) {
+fn live_chunk_bounds_for_tile(geometry: MapTileGeometry) -> (i64, i64, i64, i64, i64, i64) {
     // Overview tiles are still rasterized on the world X/Z plane. Detailed
     // Iso tiles use projected map-plane coordinates, so their live request
     // range must be inverse-transformed just like the renderer's rays.
-    let (min_world_x, max_world_x, min_world_z, max_world_z) = if bounds.blocks_per_pixel >= 16 {
-        (
-            bounds.origin_x,
-            bounds.max_x(),
-            bounds.origin_z,
-            bounds.max_z(),
-        )
-    } else {
-        IsoHDPerspective::default().world_xz_bounds_for_map_tile(
-            i64::from(bounds.tile_x),
-            i64::from(bounds.tile_y),
-            bounds.tile_size as u32,
-            bounds.blocks_per_pixel as f64,
-            -64.0,
-            320.0,
-        )
-    };
+    let (min_world_x, max_world_x, min_world_z, max_world_z) =
+        if geometry.plane == MapTilePlane::WorldXZ {
+            let bounds = geometry
+                .world_bounds()
+                .expect("WorldXZ geometry must have world bounds");
+            (
+                bounds.origin_x,
+                bounds.max_x(),
+                bounds.origin_z,
+                bounds.max_z(),
+            )
+        } else {
+            IsoHDPerspective::default()
+                .world_xz_bounds_for_geometry(geometry, -64.0, 320.0)
+                .expect("Iso geometry must have projected bounds")
+        };
     let (min_chunk_x, max_chunk_x) = limited_chunk_range(
         floor_div(min_world_x, 16),
         floor_div(max_world_x, 16),
@@ -1151,7 +1262,12 @@ async fn handle_bridge_connection(
                     value.get("chunkX").and_then(Value::as_i64),
                     value.get("chunkZ").and_then(Value::as_i64),
                 ) {
-                    invalidate_chunk_tiles(&manager, &server_id, dimension, chunk_x, chunk_z).await;
+                    let mut affected_tiles =
+                        invalidate_chunk_tiles(&manager, &server_id, dimension, chunk_x, chunk_z)
+                            .await
+                            .into_iter()
+                            .map(|key| (key.world_id, key.zoom, key.tile_x, key.tile_y))
+                            .collect::<HashSet<_>>();
                     if let Ok(app_data) = app_data_dir(&app) {
                         if let Ok(root) = server_dir(&app_data, &server_id) {
                             let server_id_for_cache = server_id.clone();
@@ -1166,22 +1282,54 @@ async fn handle_bridge_connection(
                                 )
                             })
                             .await;
-                            if let Ok(Err(error)) = result {
-                                let _ = app.emit(
-                                    "map-error",
-                                    serde_json::json!({
-                                        "serverId": server_id.clone(),
-                                        "message": error,
-                                    }),
-                                );
+                            match result {
+                                Ok(Ok(disk_tiles)) => affected_tiles.extend(disk_tiles),
+                                Ok(Err(error)) => {
+                                    let _ = app.emit(
+                                        "map-error",
+                                        serde_json::json!({
+                                            "serverId": server_id.clone(),
+                                            "message": error,
+                                        }),
+                                    );
+                                }
+                                Err(error) => {
+                                    let _ = app.emit(
+                                        "map-error",
+                                        serde_json::json!({
+                                            "serverId": server_id.clone(),
+                                            "message": format!("Map cache invalidation worker failed: {error}"),
+                                        }),
+                                    );
+                                }
                             }
                         }
                     }
+                    let tiles = affected_tiles
+                        .into_iter()
+                        .map(|(world_id, zoom, tile_x, tile_y)| {
+                            serde_json::json!({
+                                "worldId": world_id,
+                                "zoom": zoom,
+                                "tileX": tile_x,
+                                "tileY": tile_y,
+                            })
+                        })
+                        .collect::<Vec<_>>();
+                    let _ = app.emit(
+                        "map-tile-invalidated",
+                        serde_json::json!({
+                            "serverId": server_id.clone(),
+                            "message": {
+                                "worldId": world_id_for_dimension(dimension),
+                                "dimension": dimension,
+                                "chunkX": chunk_x,
+                                "chunkZ": chunk_z,
+                                "tiles": tiles,
+                            },
+                        }),
+                    );
                 }
-                let _ = app.emit(
-                    "map-tile-invalidated",
-                    serde_json::json!({ "serverId": server_id.clone(), "message": value }),
-                );
             }
             "chunk_snapshot" | "chunk_snapshot_unavailable" => {
                 let request_id = value.get("requestId").and_then(Value::as_str);
@@ -1313,6 +1461,7 @@ impl MapBridgeManager {
             pending_snapshots: Arc::clone(&self.pending_snapshots),
             live_snapshots: Arc::clone(&self.live_snapshots),
             tile_scheduler: Arc::clone(&self.tile_scheduler),
+            render_generations: Arc::clone(&self.render_generations),
         }
     }
 }
@@ -1322,6 +1471,7 @@ async fn stop_bridge_listener(manager: &MapBridgeManager, server_id: &str) {
         handle.abort();
     }
     manager.statuses.lock().await.remove(server_id);
+    cancel_render_requests_for_server(manager, server_id).await;
 }
 
 pub(crate) async fn prepare_bridge_for_server(
@@ -1408,6 +1558,80 @@ fn png_coverage(bytes: &[u8]) -> (bool, f32) {
     (covered > 0.0, covered / total as f32)
 }
 
+fn tile_geometry_payload(key: &TileCacheKey) -> Value {
+    let Ok(geometry) = MapTileGeometry::new(
+        TILE_SIZE as usize,
+        MAX_ZOOM,
+        key.zoom,
+        key.tile_x,
+        key.tile_y,
+    ) else {
+        return Value::Null;
+    };
+
+    let plane = match geometry.plane {
+        MapTilePlane::WorldXZ => "WorldXZ",
+        MapTilePlane::IsoProjected => "IsoProjected",
+    };
+    let mut payload = serde_json::json!({
+        "plane": plane,
+        "tileSize": geometry.tile_size,
+        "zoom": geometry.zoom,
+        "maxZoom": geometry.max_zoom,
+        "tileX": geometry.tile_x,
+        "tileY": geometry.tile_y,
+        "blocksPerPixel": geometry.blocks_per_pixel,
+    });
+
+    match geometry.plane {
+        MapTilePlane::WorldXZ => {
+            if let Some(bounds) = geometry.world_bounds() {
+                payload["planeOrigin"] = serde_json::json!({
+                    "x": bounds.origin_x,
+                    "z": bounds.origin_z,
+                });
+                payload["planeBounds"] = serde_json::json!({
+                    "minX": bounds.origin_x,
+                    "maxX": bounds.max_x(),
+                    "minZ": bounds.origin_z,
+                    "maxZ": bounds.max_z(),
+                });
+            }
+        }
+        MapTilePlane::IsoProjected => {
+            if let Some(bounds) = geometry.projected_bounds(1.0) {
+                payload["planeOrigin"] = serde_json::json!({
+                    "x": bounds.min_x,
+                    "z": bounds.min_y,
+                });
+                payload["planeBounds"] = serde_json::json!({
+                    "minX": bounds.min_x,
+                    "maxX": bounds.max_x,
+                    "minZ": bounds.min_y,
+                    "maxZ": bounds.max_y,
+                });
+            }
+        }
+    }
+    payload
+}
+
+fn add_render_request_context(
+    payload: &mut Value,
+    key: &TileCacheKey,
+    context: Option<&RenderRequestContext>,
+) {
+    payload["geometry"] = tile_geometry_payload(key);
+    if let Some(context) = context {
+        if let Some(request_id) = context.request_id.as_deref() {
+            payload["requestId"] = Value::String(request_id.to_string());
+        }
+        if let Some(request_generation) = context.request_generation {
+            payload["requestGeneration"] = serde_json::json!(request_generation);
+        }
+    }
+}
+
 fn emit_map_tile_ready(
     app: &AppHandle,
     key: &TileCacheKey,
@@ -1417,34 +1641,34 @@ fn emit_map_tile_ready(
     asset_missing: bool,
     coverage: Option<(bool, f32)>,
     diagnostic: Option<&str>,
+    context: Option<&RenderRequestContext>,
 ) {
     let (has_terrain, coverage_ratio) = coverage.unwrap_or_else(|| png_coverage(png));
     let render_state = tile_render_state(asset_missing, has_terrain, diagnostic);
-    let _ = app.emit(
-        "map-tile-ready",
-        serde_json::json!({
-            "serverId": key.server_id,
-            "worldId": key.world_id,
-            "zoom": key.zoom,
-            "tileX": key.tile_x,
-            "tileY": key.tile_y,
-            "hasTerrain": has_terrain,
-            "renderState": render_state,
-            "coverageRatio": coverage_ratio,
-            "renderedChunkCount": rendered_chunk_count,
-            "decodeFailedChunkCount": decode_failed_chunk_count,
-            "message": diagnostic.map_or_else(
-                || {
-                    if has_terrain {
-                        serde_json::Value::Null
-                    } else {
-                        serde_json::Value::String("No generated terrain intersects this tile".to_string())
-                    }
-                },
-                |message| serde_json::Value::String(message.to_string()),
-            ),
-        }),
-    );
+    let mut payload = serde_json::json!({
+        "serverId": key.server_id,
+        "worldId": key.world_id,
+        "zoom": key.zoom,
+        "tileX": key.tile_x,
+        "tileY": key.tile_y,
+        "hasTerrain": has_terrain,
+        "renderState": render_state,
+        "coverageRatio": coverage_ratio,
+        "renderedChunkCount": rendered_chunk_count,
+        "decodeFailedChunkCount": decode_failed_chunk_count,
+        "message": diagnostic.map_or_else(
+            || {
+                if has_terrain {
+                    serde_json::Value::Null
+                } else {
+                    serde_json::Value::String("No generated terrain intersects this tile".to_string())
+                }
+            },
+            |message| serde_json::Value::String(message.to_string()),
+        ),
+    });
+    add_render_request_context(&mut payload, key, context);
+    let _ = app.emit("map-tile-ready", payload);
 }
 
 fn tile_render_state(
@@ -1463,21 +1687,25 @@ fn tile_render_state(
     }
 }
 
-fn emit_map_render_progress(app: &AppHandle, key: &TileCacheKey, progress: RenderProgress) {
-    let _ = app.emit(
-        "map-render-progress",
-        serde_json::json!({
-            "serverId": key.server_id,
-            "worldId": key.world_id,
-            "zoom": key.zoom,
-            "tileX": key.tile_x,
-            "tileY": key.tile_y,
-            "state": progress.state,
-            "completed": progress.completed,
-            "total": progress.total,
-            "message": progress.message,
-        }),
-    );
+fn emit_map_render_progress(
+    app: &AppHandle,
+    key: &TileCacheKey,
+    progress: RenderProgress,
+    context: Option<&RenderRequestContext>,
+) {
+    let mut payload = serde_json::json!({
+        "serverId": key.server_id,
+        "worldId": key.world_id,
+        "zoom": key.zoom,
+        "tileX": key.tile_x,
+        "tileY": key.tile_y,
+        "state": progress.state,
+        "completed": progress.completed,
+        "total": progress.total,
+        "message": progress.message,
+    });
+    add_render_request_context(&mut payload, key, context);
+    let _ = app.emit("map-render-progress", payload);
 }
 
 async fn enable_map_impl(
@@ -1672,7 +1900,12 @@ async fn render_map_tile(
     zoom: u8,
     tile_x: i32,
     tile_y: i32,
-    priority: TilePriority,
+    _priority: TilePriority,
+    sequence: Option<u64>,
+    allow_render: bool,
+    scheduler_generation: Option<u64>,
+    request_id: Option<String>,
+    request_generation: Option<u64>,
 ) -> Result<tauri::ipc::Response, String> {
     let _ = app_data_dir(&app)?;
     if server_id.trim().is_empty() || world_id.trim().is_empty() {
@@ -1727,37 +1960,75 @@ async fn render_map_tile(
         tile_x,
         tile_y,
     );
+    let request_context = if request_id.is_some() || request_generation.is_some() {
+        Some(RenderRequestContext {
+            request_id,
+            request_generation,
+        })
+    } else {
+        None
+    };
 
-    if let Some(cached) = manager.tile_cache.lock().await.get(&key) {
-        emit_map_tile_ready(
-            &app,
-            &key,
-            &cached.bytes,
-            cached.metadata.rendered_chunk_count,
-            None,
-            assets.is_none(),
-            Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
-            cached.metadata.message.as_deref(),
-        );
+    let cached = if allow_render {
+        manager.tile_cache.lock().await.get_fresh(&key)
+    } else {
+        manager.tile_cache.lock().await.get(&key)
+    };
+    if let Some(cached) = cached {
+        if allow_render {
+            emit_map_tile_ready(
+                &app,
+                &key,
+                &cached.bytes,
+                cached.metadata.rendered_chunk_count,
+                None,
+                assets.is_none(),
+                Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
+                cached.metadata.message.as_deref(),
+                request_context.as_ref(),
+            );
+        }
         return Ok(tauri::ipc::Response::new(cached.bytes));
     }
-    if let Some(cached) = read_disk_tile(&server_root, &key)? {
-        manager
-            .tile_cache
-            .lock()
-            .await
-            .insert(key.clone(), cached.clone());
-        emit_map_tile_ready(
+    if !allow_render {
+        if let Some(cached) = read_disk_tile(&server_root, &key)? {
+            manager
+                .tile_cache
+                .lock()
+                .await
+                .insert(key.clone(), cached.clone());
+            return Ok(tauri::ipc::Response::new(cached.bytes));
+        }
+        emit_map_render_progress(
             &app,
             &key,
-            &cached.bytes,
-            cached.metadata.rendered_chunk_count,
-            None,
-            assets.is_none(),
-            Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
-            cached.metadata.message.as_deref(),
+            RenderProgress::error("Map tile is not available in the completed or stale cache"),
+            request_context.as_ref(),
         );
-        return Ok(tauri::ipc::Response::new(cached.bytes));
+        return Err("Map tile is not available in the completed or stale cache".to_string());
+    }
+    if allow_render {
+        if let Some(cached) = read_disk_tile(&server_root, &key)? {
+            manager
+                .tile_cache
+                .lock()
+                .await
+                .insert(key.clone(), cached.clone());
+            if !cached.metadata.stale {
+                emit_map_tile_ready(
+                    &app,
+                    &key,
+                    &cached.bytes,
+                    cached.metadata.rendered_chunk_count,
+                    None,
+                    assets.is_none(),
+                    Some((cached.metadata.has_terrain, cached.metadata.coverage_ratio)),
+                    cached.metadata.message.as_deref(),
+                    request_context.as_ref(),
+                );
+                return Ok(tauri::ipc::Response::new(cached.bytes));
+            }
+        }
     }
 
     if let Some(receiver) = join_inflight_tile(&manager, &key).await? {
@@ -1768,11 +2039,44 @@ async fn render_map_tile(
         };
     }
 
+    let sequence = if allow_render && sequence.is_none() {
+        match manager.tile_scheduler.submit(key.clone(), _priority)? {
+            ScheduleResult::Accepted { sequence } => Some(sequence),
+            ScheduleResult::Coalesced => {
+                return Err("Map tile render request was coalesced".to_string());
+            }
+            ScheduleResult::Full => {
+                emit_map_render_progress(
+                    &app,
+                    &key,
+                    RenderProgress::queue_full(),
+                    request_context.as_ref(),
+                );
+                return Err("Map tile render scheduler is full".to_string());
+            }
+        }
+    } else {
+        sequence
+    };
+
     let tile_key = key.clone();
-    let tile_permit = manager.tile_scheduler.acquire(key.clone(), priority).await;
+    let tile_permit = match sequence {
+        Some(sequence) => {
+            manager
+                .tile_scheduler
+                .acquire_submitted(key.clone(), sequence)
+                .await
+        }
+        None => Err("Map tile render request has no scheduler sequence".to_string()),
+    };
     let tile_result: Result<Vec<u8>, String> = async {
         let _tile_permit = tile_permit?;
-        emit_map_render_progress(&app, &key, RenderProgress::rendering(0, 1));
+        emit_map_render_progress(
+            &app,
+            &key,
+            RenderProgress::rendering(0, 1),
+            request_context.as_ref(),
+        );
 
         let asset_missing = assets.is_none();
         let dimension = match key.world_id.as_str() {
@@ -1781,9 +2085,9 @@ async fn render_map_tile(
             "world_the_end" => "minecraft:the_end",
             other => other,
         };
-        let tile_bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
+        let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
         let live_chunks =
-            request_live_chunks_for_tile(&manager, &key.server_id, dimension, tile_bounds).await;
+            request_live_chunks_for_tile(&manager, &key.server_id, dimension, geometry).await;
 
         let rendered = tokio::task::spawn_blocking(move || {
             render_world_tile_detailed(
@@ -1799,6 +2103,20 @@ async fn render_map_tile(
         .await
         .map_err(|error| format!("Map tile worker failed: {error}"))??;
         let tile = rendered.png;
+        if let Some(scheduler_generation) = scheduler_generation {
+            if !render_generation_is_current(
+                &manager,
+                &tile_key.server_id,
+                &tile_key.world_id,
+                scheduler_generation,
+            )
+            .await
+            {
+                return Err(
+                    "Map tile completion belongs to an obsolete render generation".to_string(),
+                );
+            }
+        }
         emit_map_tile_ready(
             &app,
             &tile_key,
@@ -1808,6 +2126,7 @@ async fn render_map_tile(
             asset_missing,
             Some((rendered.has_terrain, rendered.coverage_ratio)),
             rendered.message.as_deref(),
+            request_context.as_ref(),
         );
         let progress_state = if asset_missing {
             TileRenderState::AssetMissing
@@ -1820,6 +2139,7 @@ async fn render_map_tile(
             &app,
             &tile_key,
             RenderProgress::completed(progress_state, rendered.message.clone()),
+            request_context.as_ref(),
         );
 
         let cached = CachedTile {
@@ -1829,6 +2149,7 @@ async fn render_map_tile(
                 has_terrain: rendered.has_terrain,
                 coverage_ratio: rendered.coverage_ratio,
                 message: rendered.message,
+                stale: false,
             },
         };
         manager
@@ -1856,7 +2177,12 @@ async fn render_map_tile(
     .await;
 
     if let Err(error) = &tile_result {
-        emit_map_render_progress(&app, &key, RenderProgress::error(error.clone()));
+        emit_map_render_progress(
+            &app,
+            &key,
+            RenderProgress::error(error.clone()),
+            request_context.as_ref(),
+        );
     }
 
     finish_inflight_tile(&manager, &key, tile_result)
@@ -1874,12 +2200,23 @@ async fn request_map_render_impl(
     if server_id.trim().is_empty() || world_id.trim().is_empty() {
         return Err("Server and world IDs are required".to_string());
     }
+    let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, viewport.zoom, 0, 0)?;
     let coordinates = viewport_tile_coordinates(&viewport)?;
     let requested = coordinates.len();
-    let blocks_per_pixel = (1_i64 << (MAX_ZOOM - viewport.zoom)) as f64;
-    let tile_world_size = f64::from(TILE_SIZE) * blocks_per_pixel;
-    let center_tile_x = (viewport.center_x / tile_world_size).floor() as i32;
-    let center_tile_y = (viewport.center_z / tile_world_size).floor() as i32;
+    let scheduler_generation =
+        begin_render_generation(manager.inner(), &server_id, &world_id).await?;
+    let request_id = viewport
+        .request_id
+        .clone()
+        .filter(|request_id| !request_id.trim().is_empty())
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
+    let request_generation = viewport.request_generation.unwrap_or(scheduler_generation);
+    manager
+        .tile_scheduler
+        .cancel_where(|key| key.server_id == server_id && key.world_id == world_id);
+    let tile_plane_size = f64::from(TILE_SIZE) * geometry.blocks_per_pixel as f64;
+    let center_tile_x = (viewport.center_x / tile_plane_size).floor() as i32;
+    let center_tile_y = (viewport.center_z / tile_plane_size).floor() as i32;
     let shared_manager = Arc::new(manager.inner().clone());
     let mut accepted = 0;
     for (tile_x, tile_y) in coordinates {
@@ -1887,6 +2224,7 @@ async fn request_map_render_impl(
         let manager = Arc::clone(&shared_manager);
         let server_id = server_id.clone();
         let world_id = world_id.clone();
+        let request_id_for_tile = request_id.clone();
         let priority = if tile_x == center_tile_x && tile_y == center_tile_y {
             TilePriority::Viewport
         } else {
@@ -1902,6 +2240,11 @@ async fn request_map_render_impl(
                 tile_x,
                 tile_y,
                 priority,
+                None,
+                true,
+                Some(scheduler_generation),
+                Some(request_id_for_tile),
+                Some(request_generation),
             )
             .await
             {
@@ -1918,8 +2261,12 @@ async fn request_map_render_impl(
         accepted += 1;
     }
     Ok(MapRenderRequestResult {
+        request_id,
+        request_generation,
         requested,
         accepted,
+        coalesced: 0,
+        rejected: 0,
     })
 }
 
@@ -1932,16 +2279,17 @@ fn viewport_tile_coordinates(viewport: &MapViewport) -> Result<Vec<(i32, i32)>, 
     }
     let width = viewport.width.clamp(256, 4096) as f64;
     let height = viewport.height.clamp(256, 4096) as f64;
-    let blocks_per_pixel = (1_i64 << (MAX_ZOOM - viewport.zoom)) as f64;
-    let tile_world_size = f64::from(TILE_SIZE) * blocks_per_pixel;
+    let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, viewport.zoom, 0, 0)?;
+    let blocks_per_pixel = geometry.blocks_per_pixel as f64;
+    let tile_plane_size = f64::from(TILE_SIZE) * blocks_per_pixel;
     let min_x =
-        ((viewport.center_x - width * blocks_per_pixel / 2.0) / tile_world_size).floor() as i64 - 1;
+        ((viewport.center_x - width * blocks_per_pixel / 2.0) / tile_plane_size).floor() as i64 - 1;
     let max_x =
-        ((viewport.center_x + width * blocks_per_pixel / 2.0) / tile_world_size).floor() as i64 + 1;
-    let min_y = ((viewport.center_z - height * blocks_per_pixel / 2.0) / tile_world_size).floor()
+        ((viewport.center_x + width * blocks_per_pixel / 2.0) / tile_plane_size).floor() as i64 + 1;
+    let min_y = ((viewport.center_z - height * blocks_per_pixel / 2.0) / tile_plane_size).floor()
         as i64
         - 1;
-    let max_y = ((viewport.center_z + height * blocks_per_pixel / 2.0) / tile_world_size).floor()
+    let max_y = ((viewport.center_z + height * blocks_per_pixel / 2.0) / tile_plane_size).floor()
         as i64
         + 1;
     let mut coordinates = Vec::new();
@@ -2116,6 +2464,7 @@ fn read_disk_tile(server_root: &Path, key: &TileCacheKey) -> Result<Option<Cache
             has_terrain,
             coverage_ratio,
             message: None,
+            stale: false,
         }
     });
     Ok(Some(CachedTile { bytes, metadata }))
@@ -2429,7 +2778,7 @@ mod tests {
         header[3] = 1;
         fs::write(region_dir.join("r.0.0.mca"), &header).expect("region header should be written");
 
-        let result = render_overview_tile(&root, MAX_ZOOM, 0, 0, None, None)
+        let result = render_overview_tile(&root, 0, 0, 0, None, None)
             .expect("overview should render despite a bad chunk");
         assert_eq!(result.rendered_chunk_count, 0);
         assert_eq!(result.decode_failed_chunk_count, 1);
@@ -2510,7 +2859,7 @@ mod tests {
 
     #[test]
     fn detailed_live_chunk_bounds_use_projected_tile_volume() {
-        let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, MAX_ZOOM, 0, 0)
+        let bounds = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, MAX_ZOOM, 0, 0)
             .expect("valid detailed tile bounds");
         let (min_x, max_x, min_z, max_z, center_x, center_z) = live_chunk_bounds_for_tile(bounds);
         let projected_center = IsoHDPerspective::default().map_to_world([128.0, 128.0, 0.0]);
@@ -2525,7 +2874,7 @@ mod tests {
 
     #[test]
     fn overview_live_chunk_bounds_keep_world_plane_contract() {
-        let bounds = TileWorldBounds::new(TILE_SIZE as usize, MAX_ZOOM, 0, 0, 0)
+        let bounds = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, 0, 0, 0)
             .expect("valid overview tile bounds");
         let (min_x, max_x, min_z, max_z, center_x, center_z) = live_chunk_bounds_for_tile(bounds);
 
@@ -2533,6 +2882,51 @@ mod tests {
         assert!((min_z..=max_z).contains(&center_z));
         assert_eq!(max_x - min_x + 1, MAX_LIVE_CHUNKS_PER_AXIS);
         assert_eq!(max_z - min_z + 1, MAX_LIVE_CHUNKS_PER_AXIS);
+    }
+
+    #[test]
+    fn render_event_context_exposes_the_canonical_plane_and_generation() {
+        let overview = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            4,
+            -2,
+            3,
+        );
+        let detailed = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            8,
+            -1,
+            2,
+        );
+        let context = RenderRequestContext {
+            request_id: Some("render-17".to_string()),
+            request_generation: Some(17),
+        };
+
+        let mut overview_payload = serde_json::json!({});
+        add_render_request_context(&mut overview_payload, &overview, Some(&context));
+        assert_eq!(overview_payload["geometry"]["plane"], "WorldXZ");
+        assert_eq!(overview_payload["geometry"]["tileX"], -2);
+        assert_eq!(overview_payload["requestId"], "render-17");
+        assert_eq!(overview_payload["requestGeneration"], 17);
+
+        let mut detailed_payload = serde_json::json!({});
+        add_render_request_context(&mut detailed_payload, &detailed, Some(&context));
+        assert_eq!(detailed_payload["geometry"]["plane"], "IsoProjected");
+        assert_eq!(detailed_payload["geometry"]["tileY"], 2);
+        assert!(detailed_payload["geometry"]["planeBounds"]["minX"].is_number());
     }
 
     #[test]
@@ -2545,13 +2939,13 @@ mod tests {
             "v1",
             TILE_RENDERER_VERSION,
             DEFAULT_PERSPECTIVE,
-            MAX_ZOOM,
+            4,
             0,
             0,
         );
         assert!(crate::map::tiles::tile_intersects_chunk(&key, 0, 0));
         assert!(crate::map::tiles::tile_intersects_chunk(&key, 15, 15));
-        assert!(!crate::map::tiles::tile_intersects_chunk(&key, 16, 0));
+        assert!(!crate::map::tiles::tile_intersects_chunk(&key, 256, 0));
         assert!(!crate::map::tiles::tile_intersects_chunk(&key, 0, -1));
         assert!(dimension_matches_world("overworld", "minecraft:overworld"));
         assert!(!dimension_matches_world(
@@ -2571,7 +2965,7 @@ mod tests {
             "fallback",
             TILE_RENDERER_VERSION,
             DEFAULT_PERSPECTIVE,
-            MAX_ZOOM,
+            4,
             0,
             0,
         );
@@ -2583,7 +2977,7 @@ mod tests {
             "fallback",
             TILE_RENDERER_VERSION,
             DEFAULT_PERSPECTIVE,
-            MAX_ZOOM,
+            4,
             1,
             0,
         );
@@ -2595,7 +2989,7 @@ mod tests {
             "fallback",
             TILE_RENDERER_VERSION,
             DEFAULT_PERSPECTIVE,
-            MAX_ZOOM,
+            4,
             0,
             0,
         );
@@ -2620,7 +3014,7 @@ mod tests {
         invalidate_chunk_tiles(&manager, "server-1", "minecraft:overworld", 0, 0).await;
 
         let mut cache = manager.tile_cache.lock().await;
-        assert!(cache.get(&matching).is_none());
+        assert!(cache.get(&matching).is_some_and(|tile| tile.metadata.stale));
         assert!(cache.get(&unrelated_tile).is_some());
         assert!(cache.get(&unrelated_server).is_some());
     }
@@ -2650,6 +3044,7 @@ mod tests {
                 has_terrain: true,
                 coverage_ratio: 0.5,
                 message: None,
+                stale: false,
             },
         };
         write_disk_tile(&root, &key, &tile).expect("tile should be written");
@@ -2677,7 +3072,7 @@ mod tests {
             "fallback",
             TILE_RENDERER_VERSION,
             DEFAULT_PERSPECTIVE,
-            MAX_ZOOM,
+            4,
             0,
             0,
         );
@@ -2689,7 +3084,7 @@ mod tests {
             "fallback",
             TILE_RENDERER_VERSION,
             DEFAULT_PERSPECTIVE,
-            MAX_ZOOM,
+            4,
             1,
             0,
         );
@@ -2705,7 +3100,7 @@ mod tests {
 
         assert!(read_disk_tile(&root, &matching)
             .expect("matching tile read should succeed")
-            .is_none());
+            .is_some_and(|tile| tile.metadata.stale));
         assert!(read_disk_tile(&root, &unrelated)
             .expect("unrelated tile read should succeed")
             .is_some());

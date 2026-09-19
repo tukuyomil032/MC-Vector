@@ -19,7 +19,7 @@ pub(crate) mod world_tile;
 
 use crate::map::assets::RenderFace;
 use crate::map::domain::ChunkView;
-use crate::map::projection::TileWorldBounds;
+use crate::map::projection::MapTileGeometry;
 use crate::map::render::{
     render_iso_tile as render_iso_tile_core, RenderedSurfaceTile, SurfaceSample,
 };
@@ -46,7 +46,7 @@ pub(crate) struct TileRenderResult {
 /// Render through the existing world-tile path while applying model-face UV
 /// rotation at the source-derived renderer boundary.
 pub(crate) fn render_iso_tile<F, S, M, MC>(
-    bounds: TileWorldBounds,
+    geometry: MapTileGeometry,
     min_y: i32,
     max_y: i32,
     block_at: F,
@@ -61,7 +61,7 @@ where
     MC: FnMut(&SurfaceSample, &RenderFace, f32, f32) -> [u8; 4],
 {
     render_iso_tile_core(
-        bounds,
+        geometry,
         min_y,
         max_y,
         block_at,
@@ -107,12 +107,12 @@ mod tests {
 
     #[test]
     fn render_path_forwards_zero_rotation_faces_to_the_asset_sampler() {
-        let bounds = TileWorldBounds::new(8, 8, 8, 0, 0).expect("valid bounds");
+        let geometry = MapTileGeometry::new(8, 8, 8, 0, 0).expect("valid geometry");
         let observed_rotation = Rc::new(RefCell::new(None));
         let observed_rotation_for_sampler = Rc::clone(&observed_rotation);
 
         let rendered = render_iso_tile(
-            bounds,
+            geometry,
             -64,
             320,
             |_x, y, _z| {

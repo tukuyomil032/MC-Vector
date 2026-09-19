@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use tokio::sync::Notify;
@@ -8,8 +8,15 @@ use super::tile_queue::{EnqueueResult, TilePriority, TileQueue};
 
 struct SchedulerState {
     queue: TileQueue,
-    active: usize,
+    active: HashMap<TileKey, u64>,
     cancelled: HashSet<(TileKey, u64)>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ScheduleResult {
+    Accepted { sequence: u64 },
+    Coalesced,
+    Full,
 }
 
 struct PendingRequestGuard {
@@ -51,7 +58,7 @@ impl TileScheduler {
         Self {
             state: Mutex::new(SchedulerState {
                 queue: TileQueue::new(capacity),
-                active: 0,
+                active: HashMap::new(),
                 cancelled: HashSet::new(),
             }),
             notify: Notify::new(),
@@ -59,19 +66,20 @@ impl TileScheduler {
         }
     }
 
+    #[cfg(test)]
     pub(crate) async fn acquire(
         self: &Arc<Self>,
         key: TileKey,
         priority: TilePriority,
     ) -> Result<SchedulerPermit, String> {
-        let sequence = loop {
+        loop {
             let notified = self.notify.notified();
             let sequence = {
                 let mut state = self
                     .state
                     .lock()
                     .map_err(|_| "Map tile scheduler is poisoned".to_string())?;
-                if state.queue.contains(&key) {
+                if state.queue.contains(&key) || state.active.contains_key(&key) {
                     return Err("Map tile render request is already scheduled".to_string());
                 }
                 match state.queue.enqueue(key.clone(), priority) {
@@ -88,12 +96,45 @@ impl TileScheduler {
                 }
             };
             if let Some(sequence) = sequence {
-                break sequence;
+                self.notify.notify_waiters();
+                return self.acquire_submitted(key.clone(), sequence).await;
             }
             notified.await;
-        };
-        self.notify.notify_waiters();
+        }
+    }
 
+    pub(crate) fn submit(
+        &self,
+        key: TileKey,
+        priority: TilePriority,
+    ) -> Result<ScheduleResult, String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "Map tile scheduler is poisoned".to_string())?;
+        if state.queue.contains(&key) || state.active.contains_key(&key) {
+            return Ok(ScheduleResult::Coalesced);
+        }
+        let result = match state.queue.enqueue(key, priority) {
+            EnqueueResult::Inserted { sequence, evicted } => {
+                if let Some(tile) = evicted {
+                    state.cancelled.insert((tile.key, tile.sequence));
+                }
+                ScheduleResult::Accepted { sequence }
+            }
+            EnqueueResult::Coalesced => ScheduleResult::Coalesced,
+            EnqueueResult::Full => ScheduleResult::Full,
+        };
+        drop(state);
+        self.notify.notify_waiters();
+        Ok(result)
+    }
+
+    pub(crate) async fn acquire_submitted(
+        self: &Arc<Self>,
+        key: TileKey,
+        sequence: u64,
+    ) -> Result<SchedulerPermit, String> {
         let mut pending_guard = PendingRequestGuard::new(Arc::clone(self), key.clone(), sequence);
 
         loop {
@@ -113,9 +154,9 @@ impl TileScheduler {
                     .queue
                     .peek()
                     .is_some_and(|tile| tile.key == key && tile.sequence == sequence);
-                if is_next && state.active < self.max_workers {
+                if is_next && state.active.len() < self.max_workers {
                     let _ = state.queue.pop();
-                    state.active += 1;
+                    state.active.insert(key.clone(), sequence);
                     true
                 } else {
                     false
@@ -126,6 +167,8 @@ impl TileScheduler {
                 pending_guard.disarm();
                 return Ok(SchedulerPermit {
                     scheduler: Arc::clone(self),
+                    key,
+                    sequence,
                 });
             }
             notified.await;
@@ -140,9 +183,31 @@ impl TileScheduler {
         self.notify.notify_waiters();
     }
 
-    fn release(&self) {
+    pub(crate) fn cancel_where(&self, mut predicate: impl FnMut(&TileKey) -> bool) {
         if let Ok(mut state) = self.state.lock() {
-            state.active = state.active.saturating_sub(1);
+            let keys = state
+                .queue
+                .pending_keys()
+                .filter(|key| predicate(key))
+                .collect::<Vec<_>>();
+            for key in keys {
+                if let Some(tile) = state.queue.remove_key(&key) {
+                    state.cancelled.insert((tile.key, tile.sequence));
+                }
+            }
+        }
+        self.notify.notify_waiters();
+    }
+
+    fn release(&self, key: &TileKey, sequence: u64) {
+        if let Ok(mut state) = self.state.lock() {
+            if state
+                .active
+                .get(key)
+                .is_some_and(|active_sequence| *active_sequence == sequence)
+            {
+                state.active.remove(key);
+            }
         }
         self.notify.notify_waiters();
     }
@@ -159,11 +224,13 @@ impl TileScheduler {
 
 pub(crate) struct SchedulerPermit {
     scheduler: Arc<TileScheduler>,
+    key: TileKey,
+    sequence: u64,
 }
 
 impl Drop for SchedulerPermit {
     fn drop(&mut self) {
-        self.scheduler.release();
+        self.scheduler.release(&self.key, self.sequence);
     }
 }
 

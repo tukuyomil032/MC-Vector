@@ -101,6 +101,14 @@ impl TileQueue {
         }
     }
 
+    pub(crate) fn remove_key(&mut self, key: &TileKey) -> Option<QueuedTile> {
+        self.pending.remove(key)
+    }
+
+    pub(crate) fn pending_keys(&self) -> impl Iterator<Item = TileKey> + '_ {
+        self.pending.keys().cloned()
+    }
+
     pub(crate) fn pop(&mut self) -> Option<QueuedTile> {
         let key = self
             .pending

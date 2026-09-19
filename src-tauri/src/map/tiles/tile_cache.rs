@@ -11,6 +11,8 @@ pub(crate) struct TileMetadata {
     pub(crate) has_terrain: bool,
     pub(crate) coverage_ratio: f32,
     pub(crate) message: Option<String>,
+    #[serde(default)]
+    pub(crate) stale: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,6 +50,14 @@ impl MemoryTileCache {
         Some(entry.tile.clone())
     }
 
+    pub(crate) fn get_fresh(&mut self, key: &TileKey) -> Option<CachedTile> {
+        let entry = self.entries.get(key)?;
+        if entry.tile.metadata.stale {
+            return None;
+        }
+        self.get(key)
+    }
+
     pub(crate) fn insert(&mut self, key: TileKey, tile: CachedTile) {
         self.clock = self.clock.wrapping_add(1);
         self.entries.insert(
@@ -72,6 +82,20 @@ impl MemoryTileCache {
 
     pub(crate) fn remove_where(&mut self, mut predicate: impl FnMut(&TileKey) -> bool) {
         self.entries.retain(|key, _| !predicate(key));
+    }
+
+    pub(crate) fn mark_stale_where(
+        &mut self,
+        mut predicate: impl FnMut(&TileKey) -> bool,
+    ) -> Vec<TileKey> {
+        let mut affected = Vec::new();
+        for (key, entry) in &mut self.entries {
+            if predicate(key) {
+                entry.tile.metadata.stale = true;
+                affected.push(key.clone());
+            }
+        }
+        affected
     }
 
     #[cfg(test)]
@@ -138,6 +162,7 @@ mod tests {
             has_terrain: true,
             coverage_ratio: 0.42,
             message: None,
+            stale: false,
         };
         cache.insert(
             key(0),

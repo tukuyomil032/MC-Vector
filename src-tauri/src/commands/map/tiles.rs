@@ -19,6 +19,11 @@ pub async fn get_map_tile(
         tile_x,
         tile_y,
         TilePriority::Viewport,
+        None,
+        false,
+        None,
+        None,
+        None,
     )
     .await
 }

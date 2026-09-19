@@ -172,6 +172,7 @@ mod tests {
             has_terrain: true,
             coverage_ratio: 0.25,
             message: None,
+            stale: false,
         };
         write_metadata_atomic(&path, &expected).expect("metadata should be written");
         assert_eq!(

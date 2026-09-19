@@ -15,6 +15,10 @@ const MAX_INCLINATION_DEGREES: f64 = 90.0;
 const MIN_SCALE: f64 = 1.0;
 const MAX_SCALE: f64 = 64.0;
 
+use crate::map::projection::{
+    MapTileGeometry, MapTilePlane, ProjectedTileBounds, MAP_GEOMETRY_EPSILON,
+};
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Matrix3 {
     values: [[f64; 3]; 3],
@@ -207,12 +211,17 @@ impl IsoHDPerspective {
         min_height: f64,
         max_height: f64,
     ) -> (i64, i64, i64, i64) {
-        let map_units_per_pixel = blocks_per_pixel * self.scale;
-        let tile_map_size = f64::from(tile_size) * map_units_per_pixel;
-        let min_map_x = tile_x as f64 * tile_map_size - self.scale;
-        let max_map_x = (tile_x as f64 + 1.0) * tile_map_size + self.scale;
-        let min_map_y = tile_y as f64 * tile_map_size - self.scale;
-        let max_map_y = (tile_y as f64 + 1.0) * tile_map_size + self.scale;
+        let tile_map_size = f64::from(tile_size) * blocks_per_pixel * self.scale;
+        let map_bounds = ProjectedTileBounds {
+            min_x: tile_x as f64 * tile_map_size,
+            max_x: (tile_x as f64 + 1.0) * tile_map_size,
+            min_y: tile_y as f64 * tile_map_size,
+            max_y: (tile_y as f64 + 1.0) * tile_map_size,
+        };
+        let min_map_x = map_bounds.min_x - MAP_GEOMETRY_EPSILON;
+        let max_map_x = map_bounds.max_x + MAP_GEOMETRY_EPSILON;
+        let min_map_y = map_bounds.min_y - MAP_GEOMETRY_EPSILON;
+        let max_map_y = map_bounds.max_y + MAP_GEOMETRY_EPSILON;
         let (min_height, max_height) = (min_height.min(max_height), min_height.max(max_height));
         let mut min_world_x = f64::INFINITY;
         let mut max_world_x = f64::NEG_INFINITY;
@@ -242,6 +251,24 @@ impl IsoHDPerspective {
         )
     }
 
+    pub(crate) fn world_xz_bounds_for_geometry(
+        &self,
+        geometry: MapTileGeometry,
+        min_height: f64,
+        max_height: f64,
+    ) -> Option<(i64, i64, i64, i64)> {
+        (geometry.plane == MapTilePlane::IsoProjected).then(|| {
+            self.world_xz_bounds_for_map_tile(
+                i64::from(geometry.tile_x),
+                i64::from(geometry.tile_y),
+                geometry.tile_size as u32,
+                geometry.blocks_per_pixel as f64,
+                min_height,
+                max_height,
+            )
+        })
+    }
+
     /// Check the projected map-plane overlap between a world chunk volume and
     /// one tile. The required-chunk scan first uses the conservative X/Z bound
     /// above, then applies this inexpensive projection filter before reading a
@@ -260,10 +287,10 @@ impl IsoHDPerspective {
     ) -> bool {
         let map_units_per_pixel = blocks_per_pixel * self.scale;
         let tile_map_size = f64::from(tile_size) * map_units_per_pixel;
-        let tile_min_x = tile_x as f64 * tile_map_size - self.scale;
-        let tile_max_x = (tile_x as f64 + 1.0) * tile_map_size + self.scale;
-        let tile_min_y = tile_y as f64 * tile_map_size - self.scale;
-        let tile_max_y = (tile_y as f64 + 1.0) * tile_map_size + self.scale;
+        let tile_min_x = tile_x as f64 * tile_map_size - MAP_GEOMETRY_EPSILON;
+        let tile_max_x = (tile_x as f64 + 1.0) * tile_map_size + MAP_GEOMETRY_EPSILON;
+        let tile_min_y = tile_y as f64 * tile_map_size - MAP_GEOMETRY_EPSILON;
+        let tile_max_y = (tile_y as f64 + 1.0) * tile_map_size + MAP_GEOMETRY_EPSILON;
         let (min_height, max_height) = (min_height.min(max_height), min_height.max(max_height));
         let world_min_x = chunk_x as f64 * 16.0;
         let world_max_x = world_min_x + 16.0;
@@ -290,6 +317,29 @@ impl IsoHDPerspective {
             && max_map_x >= tile_min_x
             && min_map_y <= tile_max_y
             && max_map_y >= tile_min_y
+    }
+
+    pub(crate) fn projected_geometry_intersects_chunk(
+        &self,
+        geometry: MapTileGeometry,
+        min_height: f64,
+        max_height: f64,
+        chunk_x: i64,
+        chunk_z: i64,
+    ) -> bool {
+        if geometry.plane != MapTilePlane::IsoProjected {
+            return false;
+        }
+        self.projected_tile_intersects_chunk(
+            i64::from(geometry.tile_x),
+            i64::from(geometry.tile_y),
+            geometry.tile_size as u32,
+            geometry.blocks_per_pixel as f64,
+            min_height,
+            max_height,
+            chunk_x,
+            chunk_z,
+        )
     }
 
     fn ray_for_map_pixel(

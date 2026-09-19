@@ -12,4 +12,4 @@ pub(crate) use render_progress::{RenderProgress, TileRenderState};
 pub(crate) use tile_cache::{CachedTile, MemoryTileCache, TileMetadata};
 pub(crate) use tile_key::{TileKey, DEFAULT_PERSPECTIVE};
 pub(crate) use tile_queue::TilePriority;
-pub(crate) use tile_scheduler::TileScheduler;
+pub(crate) use tile_scheduler::{ScheduleResult, TileScheduler};

@@ -18,7 +18,7 @@ use self::png::validate_rgba;
 use self::ray::Ray;
 pub(crate) use self::shader::shade_surface;
 use self::voxel_traversal::{traverse, TraversalAction};
-use super::projection::TileWorldBounds;
+use super::projection::MapTileGeometry;
 use crate::map::renderer::dynmap::patch::{PatchDefinition, PatchHit as ModelFaceHit};
 
 #[derive(Clone, Debug)]
@@ -41,7 +41,7 @@ pub(crate) struct RenderedSurfaceTile {
 /// snapshots and Anvil data can share the renderer without leaking Bukkit or
 /// NBT types into this module.
 pub(crate) fn render_iso_tile<F, S, M, MC>(
-    bounds: TileWorldBounds,
+    geometry: MapTileGeometry,
     min_y: i32,
     max_y: i32,
     mut block_at: F,
@@ -58,12 +58,12 @@ where
     if min_y >= max_y {
         return Err("Iso renderer received an invalid world height range".to_string());
     }
-    let width = bounds.tile_size;
-    let height = bounds.tile_size;
+    let width = geometry.tile_size;
+    let height = geometry.tile_size;
     let mut pixels = vec![[0_u8; 4]; width * height];
     let perspective = IsoHDPerspective::default();
-    let blocks_per_pixel = bounds.blocks_per_pixel.max(1) as f64;
-    let tile_world_size = bounds.tile_size as i64 * bounds.blocks_per_pixel.max(1);
+    let blocks_per_pixel = geometry.blocks_per_pixel.max(1) as f64;
+    let tile_world_size = geometry.tile_size as i64 * geometry.blocks_per_pixel.max(1);
     let vertical_span = i64::from(max_y - min_y).unsigned_abs() as usize;
     let max_distance = (vertical_span as f32 + tile_world_size as f32 * 1.5).max(512.0);
     let max_steps = vertical_span
@@ -80,8 +80,8 @@ where
                 pixel_x,
                 pixel_y,
                 width as u32,
-                bounds.tile_x as i64,
-                bounds.tile_y as i64,
+                geometry.tile_x as i64,
+                geometry.tile_y as i64,
                 blocks_per_pixel,
                 min_y as f64,
                 max_y as f64,
@@ -292,9 +292,9 @@ mod tests {
 
     #[test]
     fn traces_isometric_rays_through_block_faces() {
-        let bounds = TileWorldBounds::new(16, 8, 8, 0, 0).expect("valid bounds");
+        let geometry = MapTileGeometry::new(16, 8, 8, 0, 0).expect("valid geometry");
         let rendered = render_iso_tile(
-            bounds,
+            geometry,
             -64,
             320,
             |_x, y, z| {
