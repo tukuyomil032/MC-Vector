@@ -17,6 +17,11 @@ interface Props {
 type PropertyValue = string | number | boolean;
 type ServerProperties = Record<string, PropertyValue>;
 
+function isMissingPropertiesFileError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /(?:no such file or directory|file not found|path not found|os error [23])/i.test(message);
+}
+
 export default function PropertiesView({ server }: Props) {
   const { t } = useTranslation();
   const [props, setProps] = useState<ServerProperties>({
@@ -78,6 +83,10 @@ export default function PropertiesView({ server }: Props) {
         }));
         setHasChanges(false);
       } catch (e) {
+        if (isMissingPropertiesFileError(e)) {
+          setHasChanges(false);
+          return;
+        }
         logError('Failed to load server properties', e, {
           propertyFilePath: propFilePath,
         });

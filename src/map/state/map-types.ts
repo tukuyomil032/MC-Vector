@@ -196,6 +196,44 @@ export interface MapCoordinateTarget {
   z: number;
 }
 
+export interface MapPlaneCoordinate {
+  x: number;
+  z: number;
+}
+
+/**
+ * Project a world position onto the default Dynmap IsoHDPerspective plane.
+ *
+ * This is the closed form of the matrix sequence in
+ * `src-tauri/src/map/renderer/dynmap/iso_hd.rs` for
+ * IsoHDPerspective(135, 60, 1). The second projected axis is named `z` here
+ * because the tile/UI contract represents its vertical map-plane coordinate
+ * with the same shape as world X/Z.
+ */
+export function projectWorldToMap(
+  worldX: number,
+  worldY: number,
+  worldZ: number,
+): MapPlaneCoordinate {
+  return {
+    x: (worldX - worldZ) * Math.SQRT1_2,
+    z: worldY * 0.5 - (worldX + worldZ) * Math.sqrt(3 / 8),
+  };
+}
+
+/**
+ * Return the coordinate system used by Rust for a given zoom level.
+ * Overview tiles use world X/Z; detailed tiles use the projected Iso plane.
+ */
+export function mapPlaneForZoom(
+  worldX: number,
+  worldY: number,
+  worldZ: number,
+  zoom: number,
+): MapPlaneCoordinate {
+  return zoom <= 4 ? { x: worldX, z: worldZ } : projectWorldToMap(worldX, worldY, worldZ);
+}
+
 export function parseMapCoordinate(value: string): number | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
@@ -392,15 +430,22 @@ export function clearMapAssetStatus(status: MapStatus | null, message: string): 
 export function isMapTileRequestReady(
   status: MapStatus | null,
   statusError: string | null,
+  serverIsOnline = true,
+  assetStatusError: string | null = null,
 ): boolean {
   return (
     !statusError &&
+    !assetStatusError &&
+    serverIsOnline &&
     status !== null &&
     status.configState === 'valid' &&
     (status.component === 'active' || status.component === 'waiting_restart') &&
+    status.bridge === 'connected' &&
     status.assetState !== 'not_applicable'
   );
 }
+
+export type MapTileDiagnosticState = MapTileRenderState | 'status_error' | null;
 
 export function resolveMapTileDiagnosticState(input: {
   assetState: MapAssetState;
@@ -408,10 +453,14 @@ export function resolveMapTileDiagnosticState(input: {
   isLoading: boolean;
   requestedTileKeys: string[];
   statusError: string | null;
+  assetStatusError?: string | null;
   tileError: string | null;
   tileStates: Record<string, MapTileReadyEvent>;
-}): MapTileRenderState | null {
+}): MapTileDiagnosticState {
   if (input.statusError) {
+    return 'status_error';
+  }
+  if (input.assetStatusError) {
     return 'error';
   }
   const visibleStates = input.requestedTileKeys

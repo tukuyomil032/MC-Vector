@@ -34,19 +34,18 @@ type MapEventSubscription<T> = (callback: (event: T) => void) => Promise<MapUnli
 type SafeDisposer = () => Promise<void>;
 
 function createSafeDisposer(unlisten: MapUnlisten): SafeDisposer {
-  let disposed = false;
+  let disposal: Promise<void> | null = null;
 
-  return async () => {
-    if (disposed) {
-      return;
+  return () => {
+    if (!disposal) {
+      disposal = Promise.resolve()
+        .then(() => unlisten())
+        .then(
+          () => undefined,
+          () => undefined,
+        );
     }
-
-    disposed = true;
-    try {
-      await unlisten();
-    } catch {
-      // Event cleanup must not escape React effect cleanup.
-    }
+    return disposal;
   };
 }
 

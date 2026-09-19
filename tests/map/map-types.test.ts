@@ -21,6 +21,32 @@ describe('map tile binary responses', () => {
   });
 });
 
+describe('map plane coordinates', () => {
+  it('uses world X/Z for overview zooms', async () => {
+    const { mapPlaneForZoom } = await import('@/map/state/map-types');
+
+    expect(mapPlaneForZoom(-17, 72, 31, 4)).toEqual({ x: -17, z: 31 });
+  });
+
+  it('uses the default Dynmap Iso projection for detailed zooms', async () => {
+    const { mapPlaneForZoom, projectWorldToMap } = await import('@/map/state/map-types');
+    const projected = projectWorldToMap(16, 64, 0);
+
+    expect(projected.x).toBeCloseTo(16 * Math.SQRT1_2, 9);
+    expect(projected.z).toBeCloseTo(32 - 16 * Math.sqrt(3 / 8), 9);
+    expect(mapPlaneForZoom(16, 64, 0, 5)).toEqual(projected);
+  });
+
+  it('keeps negative projected coordinates finite for floor-based tile selection', async () => {
+    const { projectWorldToMap } = await import('@/map/state/map-types');
+    const projected = projectWorldToMap(-17, 64, 31);
+
+    expect(Number.isFinite(projected.x)).toBe(true);
+    expect(Number.isFinite(projected.z)).toBe(true);
+    expect(Math.floor(projected.x / 256)).toBe(-1);
+  });
+});
+
 describe('map tile diagnostics', () => {
   const tile = (overrides: Partial<import('@/map/state/map-types').MapTileReadyEvent> = {}) => ({
     serverId: 'server-1',
@@ -35,7 +61,7 @@ describe('map tile diagnostics', () => {
     ...overrides,
   });
 
-  it('does not turn a status error into a tile loading state', async () => {
+  it('keeps a status error distinct from tile rendering errors', async () => {
     const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
 
     expect(
@@ -47,7 +73,7 @@ describe('map tile diagnostics', () => {
         tileError: null,
         tileStates: {},
       }),
-    ).toBe('error');
+    ).toBe('status_error');
   });
 
   it('distinguishes a fully empty viewport from a render failure', async () => {
@@ -266,11 +292,28 @@ describe('map tile diagnostics', () => {
         assetState: 'invalid',
         isLoading: false,
         requestedTileKeys: [],
-        statusError: 'asset status unavailable',
+        statusError: null,
+        assetStatusError: 'asset status unavailable',
         tileError: null,
         tileStates: {},
       }),
     ).toBe('error');
+  });
+
+  it('does not request tiles while the bridge or server is unavailable', async () => {
+    const { isMapTileRequestReady } = await import('@/map/state/map-types');
+    const status = {
+      serverId: 'server-1',
+      component: 'active' as const,
+      bridge: 'connected' as const,
+      configState: 'valid' as const,
+      protocolVersion: 2,
+      assetState: 'auto_detected' as const,
+    };
+
+    expect(isMapTileRequestReady(status, null, true)).toBe(true);
+    expect(isMapTileRequestReady({ ...status, bridge: 'disconnected' }, null, true)).toBe(false);
+    expect(isMapTileRequestReady(status, null, false)).toBe(false);
   });
 });
 

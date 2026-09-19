@@ -74,6 +74,7 @@ import {
   mapMarkersForWorldAndGroup,
   mapWorldStatusForWorld,
   mergeMapAssetStatus,
+  mapPlaneForZoom,
   normalizeMapTileBytes,
   parseMapCoordinateTarget,
   resolveMapTileDiagnosticState,
@@ -100,9 +101,15 @@ interface MapCenter {
 }
 
 interface MapTile {
+  worldId: string;
+  zoom: number;
   x: number;
   y: number;
   url: string;
+}
+
+function mapTileKey(tile: Pick<MapTile, 'worldId' | 'zoom' | 'x' | 'y'>): string {
+  return `${tile.worldId}:${tile.zoom}:${tile.x}:${tile.y}`;
 }
 
 interface AssetStatusRefreshResult {
@@ -181,6 +188,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [markerError, setMarkerError] = useState<string | null>(null);
   const [isMarkerActing, setIsMarkerActing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
   const [isActing, setIsActing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -206,6 +214,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const tilesRef = useRef<MapTile[]>([]);
   const mapRequestsRef = useRef(createMapRequestCoordinator());
   const mapRequestGenerationRef = useRef(0);
+  const lastTileRevisionRef = useRef(0);
   const assetStatusRequestRef = useRef<Promise<AssetStatusRefreshResult> | null>(null);
   const assetCandidatesRequestRef = useRef<Promise<MapAssetCandidate[] | null> | null>(null);
   const assetCandidatesContextRef = useRef<MapAssetCandidateSnapshot>({
@@ -339,10 +348,24 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   }, [server.id]);
 
   const refreshStatus = useCallback(
-    async (refreshAssets = false) => {
-      setIsLoading(true);
+    async (refreshAssets = false, initialLoad = false) => {
+      const generation = mapRequestGenerationRef.current;
+      if (initialLoad) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshingStatus(true);
+      }
+      const finishRefresh = () => {
+        if (mapRequestGenerationRef.current !== generation) {
+          return;
+        }
+        if (initialLoad) {
+          setIsLoading(false);
+        } else {
+          setIsRefreshingStatus(false);
+        }
+      };
       try {
-        const generation = mapRequestGenerationRef.current;
         const nextStatus = await getMapStatus(server.id);
         if (mapRequestGenerationRef.current !== generation) {
           return false;
@@ -353,15 +376,17 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         if (refreshAssets) {
           await refreshAssetStatus();
         }
+        finishRefresh();
         return true;
       } catch (error) {
+        if (mapRequestGenerationRef.current !== generation) {
+          return false;
+        }
         const message = error instanceof Error ? error.message : String(error);
-        setStatus(null);
         setStatusError(message);
         setLoadError(message);
+        finishRefresh();
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
     [refreshAssetStatus, server.id],
@@ -410,8 +435,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setChatMessages([]);
     centerInitializedRef.current = false;
     setTileRevision(0);
+    lastTileRevisionRef.current = 0;
     setPan({ x: 0, y: 0 });
-    void refreshStatus(true);
+    void refreshStatus(true, true);
     void refreshAssetCandidates();
     void refreshWorlds();
     const interval = window.setInterval(() => {
@@ -545,33 +571,41 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   });
 
   const diagnosticStatusError = statusError ?? assetStatusError;
-  const mapTileRequestReady = isMapTileRequestReady(status, diagnosticStatusError);
+  const statusUnavailableError = status ? null : statusError;
+  const mapTileRequestReady = isMapTileRequestReady(
+    status,
+    statusUnavailableError,
+    server.status === 'online',
+    assetStatusError,
+  );
 
   useEffect(() => {
     const tileGeneration = mapRequestsRef.current.beginTileGeneration();
     if (!mapTileRequestReady) {
       mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
-      revokeTiles(tilesRef.current);
-      tilesRef.current = [];
-      setTiles([]);
-      setTileStates({});
-      setRequestedTileKeys([]);
       setIsTileLoading(false);
       setRenderProgress(null);
       return;
     }
     let cancelled = false;
     const nextUrls: string[] = [];
+    const refreshExistingTiles = tileRevision !== lastTileRevisionRef.current;
+    lastTileRevisionRef.current = tileRevision;
     const timeout = window.setTimeout(() => {
       const previousTiles = tilesRef.current;
       setIsTileLoading(true);
       setTileError(null);
       setRenderProgress(null);
-      setTileStates({});
       const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
       const tileWorldSize = TILE_SIZE * blocksPerPixel;
-      const centerTileX = Math.floor(mapCenter.x / tileWorldSize);
-      const centerTileY = Math.floor(mapCenter.z / tileWorldSize);
+      const tilePlaneCenter = mapPlaneForZoom(
+        mapCenter.x,
+        worldInfo?.spawnY ?? 64,
+        mapCenter.z,
+        zoom,
+      );
+      const centerTileX = Math.floor(tilePlaneCenter.x / tileWorldSize);
+      const centerTileY = Math.floor(tilePlaneCenter.z / tileWorldSize);
       const requests = Array.from({ length: TILES_PER_VIEW }, (_, row) =>
         Array.from({ length: TILES_PER_VIEW }, (_, column) => ({
           x: centerTileX + column - 1,
@@ -579,9 +613,19 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         })),
       ).flat();
       setRequestedTileKeys(requests.map(({ x, y }) => `${zoom}:${x}:${y}`));
+      const previousTileKeys = new Set(previousTiles.map((tile) => mapTileKey(tile)));
+      const requestsToLoad = refreshExistingTiles
+        ? requests
+        : requests.filter(({ x, y }) => !previousTileKeys.has(mapTileKey({ worldId, zoom, x, y })));
+
+      if (requestsToLoad.length === 0) {
+        setIsTileLoading(false);
+        mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
+        return;
+      }
 
       void Promise.all(
-        requests.map(async ({ x, y }): Promise<MapTile | null> => {
+        requestsToLoad.map(async ({ x, y }): Promise<MapTile | null> => {
           const tileKey = `${server.id}:${worldId}:${zoom}:${x}:${y}`;
           try {
             const bytes = await mapRequestsRef.current.requestTile(
@@ -606,7 +650,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
             bytesForBlob.set(bytes);
             const url = URL.createObjectURL(new Blob([bytesForBlob.buffer], { type: 'image/png' }));
             nextUrls.push(url);
-            return { x, y, url };
+            return { worldId, zoom, x, y, url };
           } catch (error) {
             if (!cancelled) {
               setTileError(error instanceof Error ? error.message : String(error));
@@ -616,12 +660,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         }),
       ).then((loadedTiles) => {
         if (!cancelled) {
-          const merged = new Map(previousTiles.map((tile) => [`${tile.x}:${tile.y}`, tile]));
+          const merged = new Map(previousTiles.map((tile) => [mapTileKey(tile), tile]));
           loadedTiles.forEach((tile) => {
             if (!tile) {
               return;
             }
-            const key = `${tile.x}:${tile.y}`;
+            const key = mapTileKey(tile);
             const previous = merged.get(key);
             if (previous && previous.url !== tile.url) {
               URL.revokeObjectURL(previous.url);
@@ -644,11 +688,13 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   }, [
     mapCenter.x,
     mapCenter.z,
+    worldInfo?.spawnY,
     server.id,
     status?.component,
     status?.configState,
     status?.assetState,
-    diagnosticStatusError,
+    status?.bridge,
+    server.status,
     mapTileRequestReady,
     tileRevision,
     worldId,
@@ -1018,14 +1064,37 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
   const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
   const tileWorldSize = TILE_SIZE * blocksPerPixel;
+  const tilePlaneCenter = mapPlaneForZoom(mapCenter.x, worldInfo?.spawnY ?? 64, mapCenter.z, zoom);
   const tilePosition = (coordinate: number, center: number) =>
     50 + ((coordinate * tileWorldSize - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
   const playerPosition = (coordinate: number, center: number) =>
     50 + ((coordinate - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
+  const overlayPosition = (x: number, y: number, z: number) => {
+    const plane = mapPlaneForZoom(x, y, z, zoom);
+    return {
+      left: `${playerPosition(plane.x, tilePlaneCenter.x)}%`,
+      top: `${playerPosition(plane.z, tilePlaneCenter.z)}%`,
+    };
+  };
   const validWorldBorder = getValidMapWorldBorder(worldInfo?.worldBorder);
-  const worldBorderSizePercentage = validWorldBorder
-    ? (validWorldBorder.size / (TILES_PER_VIEW * tileWorldSize)) * 100
-    : 0;
+  const worldBorderPlaneBounds = validWorldBorder
+    ? (() => {
+        const halfSize = validWorldBorder.size / 2;
+        const borderY = worldInfo?.spawnY ?? 64;
+        const corners = [
+          [validWorldBorder.centerX - halfSize, validWorldBorder.centerZ - halfSize],
+          [validWorldBorder.centerX + halfSize, validWorldBorder.centerZ - halfSize],
+          [validWorldBorder.centerX - halfSize, validWorldBorder.centerZ + halfSize],
+          [validWorldBorder.centerX + halfSize, validWorldBorder.centerZ + halfSize],
+        ].map(([x, z]) => mapPlaneForZoom(x, borderY, z, zoom));
+        return {
+          minX: Math.min(...corners.map((corner) => corner.x)),
+          maxX: Math.max(...corners.map((corner) => corner.x)),
+          minZ: Math.min(...corners.map((corner) => corner.z)),
+          maxZ: Math.max(...corners.map((corner) => corner.z)),
+        };
+      })()
+    : null;
   const validWorldSpawn = getValidMapWorldSpawn(worldInfo, worldId);
 
   const artifactIsActive = status?.artifact === 'active';
@@ -1036,22 +1105,24 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const assetSource = assetStatusError ? null : (assetStatus?.sourcePath ?? status?.assetSource);
   const assetMessage = assetStatusError ?? assetStatus?.message ?? status?.assetMessage;
   const mapLoadError = loadError ?? statusError ?? assetStatusError;
+  const visibleTiles = tiles.filter((tile) => tile.worldId === worldId && tile.zoom === zoom);
   const viewportTileStates = requestedTileKeys
     .map((key) => tileStates[key])
     .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
   const canvasBlocked =
     isLoading ||
-    Boolean(diagnosticStatusError) ||
     !status ||
     status.configState !== 'valid' ||
-    !isManagedArtifactAvailable;
+    !isManagedArtifactAvailable ||
+    (!mapTileRequestReady && visibleTiles.length === 0);
 
   const tileDiagnosticState = resolveMapTileDiagnosticState({
     assetState,
-    hasPreviousTiles: tiles.length > 0,
+    hasPreviousTiles: visibleTiles.length > 0,
     isLoading: isTileLoading,
     requestedTileKeys,
-    statusError: diagnosticStatusError,
+    statusError: statusUnavailableError,
+    assetStatusError,
     tileError,
     tileStates,
   });
@@ -1061,6 +1132,11 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
   const tileDiagnostic = (() => {
     switch (tileDiagnosticState) {
+      case 'status_error':
+        return {
+          title: t('map.bridge.statusError'),
+          description: t('map.bridge.statusErrorDescription'),
+        };
       case 'asset_missing':
         return {
           title: t('map.surface.tileState.assetMissing'),
@@ -1125,10 +1201,14 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
             variant="secondary"
             size="sm"
             onClick={handleRefresh}
-            disabled={isLoading}
+            disabled={isRefreshingStatus}
             title={t('map.actions.refresh')}
           >
-            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} aria-hidden="true" />
+            <RefreshCw
+              size={15}
+              className={isRefreshingStatus ? 'animate-spin' : ''}
+              aria-hidden="true"
+            />
             <span className="sr-only">{t('map.actions.refresh')}</span>
           </Button>
         </div>
@@ -1298,16 +1378,16 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 className="map-view__canvas-content"
                 style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}
               >
-                {tiles.length > 0 ? (
-                  tiles.map((tile) => (
+                {visibleTiles.length > 0 ? (
+                  visibleTiles.map((tile) => (
                     <img
                       src={tile.url}
                       alt={t('map.surface.tileAlt')}
                       className="map-view__tile"
-                      key={`${tile.x}:${tile.y}`}
+                      key={mapTileKey(tile)}
                       style={{
-                        left: `${tilePosition(tile.x, mapCenter.x)}%`,
-                        top: `${tilePosition(tile.y, mapCenter.z)}%`,
+                        left: `${tilePosition(tile.x, tilePlaneCenter.x)}%`,
+                        top: `${tilePosition(tile.y, tilePlaneCenter.z)}%`,
                       }}
                     />
                   ))
@@ -1341,7 +1421,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     </span>
                   </div>
                 ) : null}
-                {tileDiagnostic && !canvasBlocked && tiles.length > 0 && (
+                {tileDiagnostic && !canvasBlocked && visibleTiles.length > 0 && (
                   <div
                     className={`map-view__tile-diagnostic map-view__tile-diagnostic--${tileDiagnosticState}`}
                     role={tileDiagnosticState === 'error' ? 'alert' : 'status'}
@@ -1350,22 +1430,24 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     <span>{tileDiagnostic.description}</span>
                   </div>
                 )}
-                {validWorldBorder && (
+                {worldBorderPlaneBounds && (
                   <div
                     className="map-view__world-border"
                     role="img"
                     aria-label={t('map.surface.worldBorder')}
                     style={{
-                      left: `${playerPosition(
-                        validWorldBorder.centerX - validWorldBorder.size / 2,
-                        mapCenter.x,
-                      )}%`,
-                      top: `${playerPosition(
-                        validWorldBorder.centerZ - validWorldBorder.size / 2,
-                        mapCenter.z,
-                      )}%`,
-                      width: `${worldBorderSizePercentage}%`,
-                      height: `${worldBorderSizePercentage}%`,
+                      left: `${playerPosition(worldBorderPlaneBounds.minX, tilePlaneCenter.x)}%`,
+                      top: `${playerPosition(worldBorderPlaneBounds.minZ, tilePlaneCenter.z)}%`,
+                      width: `${
+                        ((worldBorderPlaneBounds.maxX - worldBorderPlaneBounds.minX) /
+                          (TILES_PER_VIEW * tileWorldSize)) *
+                        100
+                      }%`,
+                      height: `${
+                        ((worldBorderPlaneBounds.maxZ - worldBorderPlaneBounds.minZ) /
+                          (TILES_PER_VIEW * tileWorldSize)) *
+                        100
+                      }%`,
                     }}
                   />
                 )}
@@ -1381,10 +1463,11 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                       x: Math.round(validWorldSpawn.x),
                       z: Math.round(validWorldSpawn.z),
                     })}
-                    style={{
-                      left: `${playerPosition(validWorldSpawn.x, mapCenter.x)}%`,
-                      top: `${playerPosition(validWorldSpawn.z, mapCenter.z)}%`,
-                    }}
+                    style={overlayPosition(
+                      validWorldSpawn.x,
+                      worldInfo?.spawnY ?? 64,
+                      validWorldSpawn.z,
+                    )}
                   >
                     <span
                       className="map-view__marker-dot map-view__spawn-marker-dot"
@@ -1405,10 +1488,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                     role="img"
                     aria-label={`${marker.name} (${Math.round(marker.position.x)}, ${Math.round(marker.position.z)})`}
                     title={`${marker.name} (${Math.round(marker.position.x)}, ${Math.round(marker.position.z)})`}
-                    style={{
-                      left: `${playerPosition(marker.position.x, mapCenter.x)}%`,
-                      top: `${playerPosition(marker.position.z, mapCenter.z)}%`,
-                    }}
+                    style={overlayPosition(marker.position.x, marker.position.y, marker.position.z)}
                   >
                     <span
                       className="map-view__marker-dot"
@@ -1422,10 +1502,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   <div
                     className="map-view__player-marker"
                     key={player.playerId}
-                    style={{
-                      left: `${playerPosition(player.x, mapCenter.x)}%`,
-                      top: `${playerPosition(player.z, mapCenter.z)}%`,
-                    }}
+                    style={overlayPosition(player.x, player.y, player.z)}
                     title={`${player.name} (${Math.round(player.x)}, ${Math.round(player.z)})`}
                   >
                     <span className="map-view__player-marker-dot" aria-hidden="true" />
