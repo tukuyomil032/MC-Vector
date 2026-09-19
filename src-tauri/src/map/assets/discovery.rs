@@ -169,7 +169,7 @@ pub(crate) fn discover_asset_candidates(options: &AssetDiscoveryOptions) -> Vec<
                 &root,
                 launcher,
                 &instance_directories,
-                &[".minecraft", "minecraft", "game"],
+                &[".minecraft", "minecraft", "instance", "game"],
                 options,
                 &mut candidates,
             );
@@ -202,7 +202,7 @@ pub(crate) fn discover_asset_candidates(options: &AssetDiscoveryOptions) -> Vec<
                 root,
                 launcher,
                 &instance_directories,
-                &[".minecraft", "minecraft", "game"],
+                &[".minecraft", "minecraft", "instance", "game"],
                 options,
                 &mut candidates,
             );
@@ -221,14 +221,17 @@ pub(crate) fn discover_asset_candidates(options: &AssetDiscoveryOptions) -> Vec<
 fn standard_prism_roots(home: &Path) -> Vec<PathBuf> {
     vec![
         home.join("Library/Application Support/PrismLauncher"),
+        home.join(".var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher"),
         home.join(".local/share/PrismLauncher"),
         home.join("AppData/Roaming/PrismLauncher"),
+        home.join("scoop/apps/prismlauncher/current"),
     ]
 }
 
 fn standard_multimc_roots(home: &Path) -> Vec<PathBuf> {
     vec![
         home.join("Library/Application Support/MultiMC"),
+        home.join(".config/local/multimc"),
         home.join(".local/share/MultiMC"),
         home.join("AppData/Roaming/MultiMC"),
         home.join("MultiMC"),
@@ -238,8 +241,11 @@ fn standard_multimc_roots(home: &Path) -> Vec<PathBuf> {
 fn standard_modrinth_roots(home: &Path) -> Vec<PathBuf> {
     vec![
         home.join("Library/Application Support/ModrinthApp"),
+        home.join("Library/Application Support/com.modrinth.theseus"),
         home.join(".local/share/ModrinthApp"),
+        home.join(".local/share/com.modrinth.theseus"),
         home.join("AppData/Roaming/ModrinthApp"),
+        home.join("AppData/Roaming/com.modrinth.theseus"),
     ]
 }
 
@@ -254,8 +260,11 @@ fn standard_curseforge_roots(home: &Path) -> Vec<PathBuf> {
 fn standard_gdlauncher_roots(home: &Path) -> Vec<PathBuf> {
     vec![
         home.join("Library/Application Support/gdlauncher_next"),
+        home.join("Library/Application Support/gdlauncher_carbon"),
         home.join(".local/share/gdlauncher_next"),
+        home.join(".local/share/gdlauncher_carbon"),
         home.join("AppData/Roaming/gdlauncher_next"),
+        home.join("AppData/Roaming/gdlauncher_carbon"),
     ]
 }
 
@@ -301,17 +310,17 @@ fn discover_prism_root(
         else {
             continue;
         };
-        let game_directory = instance.join(".minecraft");
-        let game_directory = if is_normal_directory(&game_directory) {
-            match canonical_directory(&game_directory) {
-                Ok(path) => path,
-                Err(_) => continue,
+        let game_directory = find_game_directory(&instance, &[".minecraft", "minecraft"]);
+        let metadata_version = instance_metadata_version_for(&instance, &game_directory);
+        let (game_jars, packs, pack_error) = discover_game_sources(&game_directory);
+        let mut jars = find_shared_client_jar(&root, launcher, metadata_version.as_deref())
+            .into_iter()
+            .collect::<Vec<_>>();
+        for jar in game_jars {
+            if !jars.contains(&jar) {
+                jars.push(jar);
             }
-        } else {
-            instance.clone()
-        };
-        let metadata_version = instance_metadata_version(&game_directory);
-        let (jars, packs, pack_error) = discover_game_sources(&game_directory);
+        }
 
         if jars.is_empty() {
             candidates.push(build_candidate(
@@ -385,14 +394,17 @@ fn discover_instance_root(
             else {
                 continue;
             };
-            let game_directory = game_directories
-                .iter()
-                .map(|relative| instance.join(relative))
-                .find(|path| is_normal_directory(path))
-                .and_then(|path| canonical_directory(&path).ok())
-                .unwrap_or_else(|| instance.clone());
-            let metadata_version = instance_metadata_version(&game_directory);
-            let (jars, packs, pack_error) = discover_game_sources(&game_directory);
+            let game_directory = find_game_directory(&instance, game_directories);
+            let metadata_version = instance_metadata_version_for(&instance, &game_directory);
+            let (game_jars, packs, pack_error) = discover_game_sources(&game_directory);
+            let mut jars = find_shared_client_jar(&root, launcher, metadata_version.as_deref())
+                .into_iter()
+                .collect::<Vec<_>>();
+            for jar in game_jars {
+                if !jars.contains(&jar) {
+                    jars.push(jar);
+                }
+            }
 
             if jars.is_empty() {
                 candidates.push(build_candidate(
@@ -624,6 +636,81 @@ fn find_client_jars(game_directory: &Path) -> Vec<PathBuf> {
     jars
 }
 
+fn find_game_directory(instance: &Path, game_directories: &[&str]) -> PathBuf {
+    game_directories
+        .iter()
+        .map(|relative| instance.join(relative))
+        .find(|path| is_normal_directory(path))
+        .and_then(|path| canonical_directory(&path).ok())
+        .unwrap_or_else(|| instance.to_path_buf())
+}
+
+fn find_shared_client_jar(
+    launcher_root: &Path,
+    launcher: AssetLauncher,
+    version: Option<&str>,
+) -> Option<PathBuf> {
+    let version = version.filter(|version| is_safe_path_component(version))?;
+    let (relative_directory, exact_name, prefix) = match launcher {
+        AssetLauncher::PrismLauncherStandard
+        | AssetLauncher::PrismLauncherCustom
+        | AssetLauncher::PrismLauncherPortable
+        | AssetLauncher::MultiMc => (
+            "com/mojang/minecraft",
+            format!("minecraft-{version}-client.jar"),
+            format!("minecraft-{version}-"),
+        ),
+        AssetLauncher::AtLauncher => (
+            "net/minecraft/client",
+            format!("client-{version}.jar"),
+            format!("client-{version}"),
+        ),
+        AssetLauncher::Manual
+        | AssetLauncher::OfficialLauncher
+        | AssetLauncher::ModrinthApp
+        | AssetLauncher::CurseForge
+        | AssetLauncher::GdLauncher => return None,
+    };
+    let mut version_directory = launcher_root.to_path_buf();
+    version_directory.push("libraries");
+    if !is_normal_directory(&version_directory) {
+        return None;
+    }
+    for component in relative_directory.split('/') {
+        version_directory.push(component);
+        if !is_normal_directory(&version_directory) {
+            return None;
+        }
+    }
+    version_directory.push(version);
+    if !is_normal_directory(&version_directory) {
+        return None;
+    }
+
+    let exact = version_directory.join(exact_name);
+    if is_normal_file(&exact) {
+        return canonical_file(&exact).ok();
+    }
+
+    let mut matching_jars = safe_children(&version_directory)
+        .into_iter()
+        .filter(|path| {
+            path.extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("jar"))
+        })
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with(&prefix))
+        })
+        .collect::<Vec<_>>();
+    matching_jars.sort();
+    matching_jars
+        .into_iter()
+        .find_map(|path| canonical_file(&path).ok())
+}
+
 fn find_resource_packs(game_directory: &Path) -> (Vec<AssetArtifact>, Option<String>) {
     let root = game_directory.join("resourcepacks");
     if !root.exists() {
@@ -775,6 +862,16 @@ fn instance_metadata_version(game_directory: &Path) -> Option<String> {
         .and_then(|component| component.get("version"))
         .and_then(Value::as_str)
         .map(ToOwned::to_owned)
+}
+
+fn instance_metadata_version_for(instance: &Path, game_directory: &Path) -> Option<String> {
+    instance_metadata_version(instance).or_else(|| instance_metadata_version(game_directory))
+}
+
+fn is_safe_path_component(value: &str) -> bool {
+    let mut components = Path::new(value).components();
+    matches!(components.next(), Some(Component::Normal(component)) if component == value)
+        && components.next().is_none()
 }
 
 fn make_artifact(path: &Path) -> Result<AssetArtifact, String> {
@@ -1042,13 +1139,39 @@ mod tests {
     }
 
     fn prism_instance(root: &Path, id: &str, version: &str) -> PathBuf {
-        let game = root.join("instances").join(id).join(".minecraft");
-        let jar_path = game
-            .join("versions")
+        prism_instance_with_game_directory(root, id, ".minecraft", version)
+    }
+
+    fn prism_instance_with_game_directory(
+        root: &Path,
+        id: &str,
+        game_directory: &str,
+        version: &str,
+    ) -> PathBuf {
+        let instance = root.join("instances").join(id);
+        let game = instance.join(game_directory);
+        fs::create_dir_all(&instance).expect("Prism instance should be created");
+        fs::create_dir_all(&game).expect("Prism game directory should be created");
+        fs::write(
+            instance.join("mmc-pack.json"),
+            format!(r#"{{"components":[{{"uid":"net.minecraft","version":"{version}"}}]}}"#),
+        )
+        .expect("Prism metadata should be created");
+        let jar_path = root
+            .join("libraries/com/mojang/minecraft")
             .join(version)
-            .join(format!("{version}.jar"));
+            .join(format!("minecraft-{version}-client.jar"));
         jar(&jar_path);
         game
+    }
+
+    fn shared_launcher_instance(
+        root: &Path,
+        id: &str,
+        game_directory: &str,
+        version: &str,
+    ) -> PathBuf {
+        prism_instance_with_game_directory(root, id, game_directory, version)
     }
 
     fn launcher_instance(
@@ -1075,14 +1198,15 @@ mod tests {
         let portable_root = fixture.path("portable-prism");
         let official_root = fixture.path("official/.minecraft");
         prism_instance(&standard_root, "standard", "1.20.1");
-        prism_instance(&custom_root, "custom", "1.19.4");
+        prism_instance_with_game_directory(&custom_root, "custom", "minecraft", "1.19.4");
         prism_instance(&portable_root, "portable", "1.18.2");
+        pack(&custom_root.join("instances/custom/minecraft/resourcepacks/custom.zip"));
         let official_jar = official_root.join("versions/1.21.1/1.21.1.jar");
         jar(&official_jar);
         pack(&official_root.join("resourcepacks/example.zip"));
 
         let mut options = AssetDiscoveryOptions::for_home(fixture.root.clone());
-        options.prism_custom_roots.push(custom_root);
+        options.prism_custom_roots.push(custom_root.clone());
         options.prism_portable_roots.push(portable_root);
         options.official_launcher_roots.push(official_root);
         let candidates = discover_asset_candidates(&options);
@@ -1116,6 +1240,39 @@ mod tests {
             .unwrap()
             .identity
             .starts_with("sha256:"));
+        let standard = candidates
+            .iter()
+            .find(|candidate| candidate.instance_id.as_deref() == Some("standard"))
+            .expect("standard Prism candidate should be discovered");
+        let expected_standard_game =
+            fs::canonicalize(standard_root.join("instances/standard/.minecraft"))
+                .expect("standard game directory should resolve");
+        let expected_standard_jar = fs::canonicalize(
+            standard_root.join("libraries/com/mojang/minecraft/1.20.1/minecraft-1.20.1-client.jar"),
+        )
+        .expect("standard client jar should resolve");
+        assert_eq!(
+            standard.game_directory.as_deref(),
+            Some(expected_standard_game.as_path())
+        );
+        assert_eq!(
+            standard
+                .client_jar
+                .as_ref()
+                .map(|artifact| artifact.path.as_path()),
+            Some(expected_standard_jar.as_path())
+        );
+        let custom = candidates
+            .iter()
+            .find(|candidate| candidate.instance_id.as_deref() == Some("custom"))
+            .expect("custom Prism candidate should be discovered");
+        let expected_custom_game = fs::canonicalize(custom_root.join("instances/custom/minecraft"))
+            .expect("custom game directory should resolve");
+        assert_eq!(custom.resource_packs.len(), 1);
+        assert_eq!(
+            custom.game_directory.as_deref(),
+            Some(expected_custom_game.as_path())
+        );
     }
 
     #[test]
@@ -1126,7 +1283,7 @@ mod tests {
         let curseforge_root = fixture.path("CurseForge");
         let gdlauncher_root = fixture.path("gdlauncher_next");
         let atlauncher_root = fixture.path("ATLauncher");
-        launcher_instance(&multimc_root, "instances", "multi", ".minecraft", "1.20.1");
+        shared_launcher_instance(&multimc_root, "multi", ".minecraft", "1.20.1");
         launcher_instance(
             &modrinth_root,
             "profiles",
@@ -1141,7 +1298,7 @@ mod tests {
             ".minecraft",
             "1.20.3",
         );
-        launcher_instance(&gdlauncher_root, "instances", "gd", "game", "1.20.4");
+        launcher_instance(&gdlauncher_root, "instances", "gd", "instance", "1.20.4");
         launcher_instance(&atlauncher_root, "instances", "at", ".minecraft", "1.20.5");
 
         let mut options = AssetDiscoveryOptions::for_home(fixture.root.clone());
@@ -1162,6 +1319,21 @@ mod tests {
         assert!(launchers.contains(&AssetLauncher::GdLauncher));
         assert!(launchers.contains(&AssetLauncher::AtLauncher));
         assert!(candidates.iter().all(AssetCandidate::is_usable));
+        let multimc = candidates
+            .iter()
+            .find(|candidate| candidate.launcher == AssetLauncher::MultiMc)
+            .expect("MultiMC candidate should be discovered");
+        assert!(multimc.client_jar.as_ref().is_some_and(|artifact| artifact
+            .path
+            .ends_with("libraries/com/mojang/minecraft/1.20.1/minecraft-1.20.1-client.jar")));
+        let gdlauncher = candidates
+            .iter()
+            .find(|candidate| candidate.launcher == AssetLauncher::GdLauncher)
+            .expect("GDLauncher candidate should be discovered");
+        assert!(gdlauncher
+            .game_directory
+            .as_ref()
+            .is_some_and(|path| path.ends_with("instances/gd/instance")));
 
         options.expected_minecraft_version = Some("1.21.10".to_string());
         let mismatched = discover_asset_candidates(&options);
@@ -1169,6 +1341,50 @@ mod tests {
             .iter()
             .filter(|candidate| candidate.launcher != AssetLauncher::OfficialLauncher)
             .all(|candidate| candidate.state == AssetSourceState::VersionMismatch));
+    }
+
+    #[test]
+    fn discovers_flatpak_scoop_and_known_app_data_roots_without_recursive_scan() {
+        let fixture = TempFixture::new("standard-roots");
+        let flatpak_root =
+            fixture.path(".var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher");
+        let scoop_root = fixture.path("scoop/apps/prismlauncher/current");
+        let modrinth_root = fixture.path("Library/Application Support/com.modrinth.theseus");
+        let gdlauncher_root = fixture.path("Library/Application Support/gdlauncher_carbon");
+        prism_instance(&flatpak_root, "flatpak", "1.20.1");
+        prism_instance(&scoop_root, "scoop", "1.20.2");
+        launcher_instance(
+            &modrinth_root,
+            "profiles",
+            "modrinth",
+            "minecraft",
+            "1.20.3",
+        );
+        launcher_instance(
+            &gdlauncher_root,
+            "instances",
+            "gd-carbon",
+            "instance",
+            "1.20.4",
+        );
+
+        let options = AssetDiscoveryOptions::for_home(fixture.root.clone());
+        let candidates = discover_asset_candidates(&options);
+
+        assert_eq!(candidates.len(), 4);
+        assert_eq!(
+            candidates
+                .iter()
+                .filter(|candidate| candidate.launcher == AssetLauncher::PrismLauncherStandard)
+                .count(),
+            2
+        );
+        assert!(candidates
+            .iter()
+            .any(|candidate| candidate.launcher == AssetLauncher::ModrinthApp));
+        assert!(candidates
+            .iter()
+            .any(|candidate| candidate.launcher == AssetLauncher::GdLauncher));
     }
 
     #[test]
