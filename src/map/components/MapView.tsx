@@ -38,6 +38,7 @@ import {
   getMapStatus,
   getMapTile,
   pauseMap,
+  requestMapRender,
   repairMapBridge,
   removeMapComponent,
   restoreMap,
@@ -56,7 +57,9 @@ import {
   type MapMarker,
   type MapPlayer,
   type MapRenderProgressEvent,
+  type MapRenderRequestContext,
   type MapStatus,
+  type MapTileGeometry,
   type MapTileReadyEvent,
   type MapWorldStatus,
   type MapWorldInfo,
@@ -70,14 +73,21 @@ import {
   isMapAssetSelectionSuccessful,
   isMapMarkerInputValid,
   isMapTileRequestReady,
+  isMapTileEventCurrent,
   mapMarkerGroupsForWorld,
   mapMarkersForWorldAndGroup,
   mapWorldStatusForWorld,
   mergeMapAssetStatus,
   mapPlaneForZoom,
+  mapTileCoordinateKey,
+  mapTileEventKey,
+  mapTileGeometryForZoom,
   normalizeMapTileBytes,
   parseMapCoordinateTarget,
   resolveMapTileDiagnosticState,
+  exactMapTileInvalidationKeys,
+  shouldFetchMapTileAfterReady,
+  viewportTileCoordinates,
   type MapWorldEntry,
 } from '../state/map-types';
 import { createMapRequestCoordinator } from '../state/map-request-coordinator';
@@ -108,6 +118,11 @@ interface MapTile {
   url: string;
 }
 
+interface ActiveMapRender extends MapRenderRequestContext {
+  geometry: MapTileGeometry;
+  planeCenter: { x: number; z: number };
+}
+
 function mapTileKey(tile: Pick<MapTile, 'worldId' | 'zoom' | 'x' | 'y'>): string {
   return `${tile.worldId}:${tile.zoom}:${tile.x}:${tile.y}`;
 }
@@ -120,6 +135,8 @@ interface AssetStatusRefreshResult {
 const MAX_ZOOM = 8;
 const TILE_SIZE = 256;
 const TILES_PER_VIEW = 3;
+const VIEWPORT_WIDTH = TILE_SIZE * TILES_PER_VIEW;
+const VIEWPORT_HEIGHT = TILE_SIZE * TILES_PER_VIEW;
 const VIEWPORT_DEBOUNCE_MS = 120;
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 
@@ -201,7 +218,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [renderProgress, setRenderProgress] = useState<MapRenderProgressEvent | null>(null);
   const [zoom, setZoom] = useState(2);
   const [mapCenter, setMapCenter] = useState<MapCenter>({ x: 0, z: 0 });
-  const [tileRevision, setTileRevision] = useState(0);
+  const [invalidationVersion, setInvalidationVersion] = useState(0);
   const [pan, setPan] = useState<PanState>({ x: 0, y: 0 });
   const [coordinateX, setCoordinateX] = useState('');
   const [coordinateZ, setCoordinateZ] = useState('');
@@ -214,7 +231,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const tilesRef = useRef<MapTile[]>([]);
   const mapRequestsRef = useRef(createMapRequestCoordinator());
   const mapRequestGenerationRef = useRef(0);
-  const lastTileRevisionRef = useRef(0);
+  const activeRenderRef = useRef<ActiveMapRender | null>(null);
+  const invalidatedTileKeysRef = useRef(new Set<string>());
+  const tileFetchesRef = useRef(new Map<string, Promise<void>>());
   const assetStatusRequestRef = useRef<Promise<AssetStatusRefreshResult> | null>(null);
   const assetCandidatesRequestRef = useRef<Promise<MapAssetCandidate[] | null> | null>(null);
   const assetCandidatesContextRef = useRef<MapAssetCandidateSnapshot>({
@@ -434,8 +453,10 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setWorldStatuses([]);
     setChatMessages([]);
     centerInitializedRef.current = false;
-    setTileRevision(0);
-    lastTileRevisionRef.current = 0;
+    activeRenderRef.current = null;
+    invalidatedTileKeysRef.current.clear();
+    setInvalidationVersion(0);
+    tileFetchesRef.current.clear();
     setPan({ x: 0, y: 0 });
     void refreshStatus(true, true);
     void refreshAssetCandidates();
@@ -501,6 +522,109 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     };
   }, [server.id, worldId]);
 
+  const loadMapTileAfterReady = useCallback(
+    (event: MapTileReadyEvent) => {
+      const activeRender = activeRenderRef.current;
+      if (!activeRender || !isMapTileEventCurrent(event, activeRender)) {
+        return;
+      }
+      const key = mapTileEventKey(event);
+      setTileStates((current) => ({ ...current, [key]: event }));
+      setRenderProgress({
+        serverId: event.serverId,
+        worldId: event.worldId,
+        zoom: event.zoom,
+        tileX: event.tileX,
+        tileY: event.tileY,
+        requestId: event.requestId ?? activeRender.requestId,
+        requestGeneration: event.requestGeneration ?? activeRender.generation,
+        state: event.renderState,
+        completed: 1,
+        total: 1,
+        message: event.message,
+      });
+
+      if (!shouldFetchMapTileAfterReady(event, activeRender, invalidatedTileKeysRef.current)) {
+        return;
+      }
+
+      const tileRequestKey = `${server.id}:${worldId}:${event.zoom}:${event.tileX}:${event.tileY}`;
+      if (tileFetchesRef.current.has(tileRequestKey)) {
+        return;
+      }
+      const requestGeneration = activeRender.generation;
+      const request = mapRequestsRef.current
+        .requestTile(
+          tileRequestKey,
+          async () => {
+            const buffer = await getMapTile(
+              server.id,
+              worldId,
+              event.zoom,
+              event.tileX,
+              event.tileY,
+            );
+            const bytes = normalizeMapTileBytes(buffer);
+            if (
+              bytes.length < PNG_SIGNATURE.length ||
+              !bytes
+                .slice(0, PNG_SIGNATURE.length)
+                .every((value, index) => value === PNG_SIGNATURE[index])
+            ) {
+              throw new Error('Map tile response was not a valid PNG');
+            }
+            return bytes;
+          },
+          requestGeneration,
+        )
+        .then((bytes) => {
+          const currentRender = activeRenderRef.current;
+          if (
+            !currentRender ||
+            currentRender.requestId !== activeRender.requestId ||
+            currentRender.generation !== requestGeneration
+          ) {
+            return;
+          }
+          const bytesForBlob = new Uint8Array(bytes.byteLength);
+          bytesForBlob.set(bytes);
+          const url = URL.createObjectURL(new Blob([bytesForBlob.buffer], { type: 'image/png' }));
+          const tile: MapTile = {
+            worldId,
+            zoom: event.zoom,
+            x: event.tileX,
+            y: event.tileY,
+            url,
+          };
+          const merged = new Map(tilesRef.current.map((entry) => [mapTileKey(entry), entry]));
+          const previous = merged.get(mapTileKey(tile));
+          if (previous && previous.url !== tile.url) {
+            URL.revokeObjectURL(previous.url);
+          }
+          merged.set(mapTileKey(tile), tile);
+          const nextTiles = [...merged.values()];
+          tilesRef.current = nextTiles;
+          setTiles(nextTiles);
+          invalidatedTileKeysRef.current.delete(key);
+        })
+        .catch((error) => {
+          const currentRender = activeRenderRef.current;
+          if (currentRender?.requestId === activeRender.requestId) {
+            setTileError(error instanceof Error ? error.message : String(error));
+          }
+        })
+        .finally(() => {
+          tileFetchesRef.current.delete(tileRequestKey);
+          if (activeRenderRef.current?.requestId === activeRender.requestId) {
+            setIsTileLoading(tileFetchesRef.current.size > 0);
+          }
+        });
+      tileFetchesRef.current.set(tileRequestKey, request);
+      setIsTileLoading(true);
+    },
+    [server.id, worldId],
+  );
+
   useMapEvents({
     serverId: server.id,
     onBridgeStatus: (event) => {
@@ -549,18 +673,43 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       }
       setChatMessages((current) => [...current, message].slice(-8));
     },
-    onTileInvalidated: () => {
-      setTileRevision((revision) => revision + 1);
-    },
-    onTileReady: (event) => {
-      if (event.worldId !== worldId) {
+    onTileInvalidated: (event) => {
+      const invalidatedKeys = exactMapTileInvalidationKeys(event, worldId);
+      if (invalidatedKeys.length === 0) {
         return;
       }
-      const key = `${event.zoom}:${event.tileX}:${event.tileY}`;
-      setTileStates((current) => ({ ...current, [key]: event }));
+      const newlyInvalidatedKeys = invalidatedKeys.filter((key) => {
+        if (invalidatedTileKeysRef.current.has(key)) {
+          return false;
+        }
+        invalidatedTileKeysRef.current.add(key);
+        return true;
+      });
+      if (newlyInvalidatedKeys.length === 0) {
+        return;
+      }
+      setTileStates((current) => {
+        const next = { ...current };
+        newlyInvalidatedKeys.forEach((key) => {
+          const previous = next[key];
+          if (previous) {
+            next[key] = {
+              ...previous,
+              renderState: 'stale',
+              message: 'Tile invalidated; waiting for a fresh render',
+            };
+          }
+        });
+        return next;
+      });
+      setInvalidationVersion((version) => version + 1);
+    },
+    onTileReady: (event) => {
+      loadMapTileAfterReady(event);
     },
     onRenderProgress: (event) => {
-      if (event.worldId !== worldId) {
+      const activeRender = activeRenderRef.current;
+      if (!activeRender || !isMapTileEventCurrent(event, activeRender)) {
         return;
       }
       setRenderProgress(event);
@@ -577,118 +726,102 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     statusUnavailableError,
     server.status === 'online',
     assetStatusError,
+    isLoading,
+    isActing,
   );
+  const mapRequestPlaneCenterX = mapPlaneForZoom(
+    mapCenter.x,
+    worldInfo?.spawnY ?? 64,
+    mapCenter.z,
+    zoom,
+  ).x;
+  const mapRequestPlaneCenterZ = mapPlaneForZoom(
+    mapCenter.x,
+    worldInfo?.spawnY ?? 64,
+    mapCenter.z,
+    zoom,
+  ).z;
 
   useEffect(() => {
     const tileGeneration = mapRequestsRef.current.beginTileGeneration();
     if (!mapTileRequestReady) {
-      mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
+      mapRequestsRef.current.clear();
       setIsTileLoading(false);
       setRenderProgress(null);
       return;
     }
     let cancelled = false;
-    const nextUrls: string[] = [];
-    const refreshExistingTiles = tileRevision !== lastTileRevisionRef.current;
-    lastTileRevisionRef.current = tileRevision;
     const timeout = window.setTimeout(() => {
-      const previousTiles = tilesRef.current;
+      if (cancelled) {
+        return;
+      }
+      const geometry = mapTileGeometryForZoom(zoom, TILE_SIZE);
+      const planeCenter = { x: mapRequestPlaneCenterX, z: mapRequestPlaneCenterZ };
+      const viewportTiles = viewportTileCoordinates(planeCenter, geometry);
+      const viewportTileKeys = new Set(viewportTiles.map(mapTileCoordinateKey));
+      const requestId = `map-render-${tileGeneration}`;
+      const renderKey = [
+        server.id,
+        worldId,
+        zoom,
+        planeCenter.x,
+        planeCenter.z,
+        invalidationVersion,
+      ].join(':');
+      activeRenderRef.current = {
+        requestId,
+        generation: tileGeneration,
+        worldId,
+        zoom,
+        viewportTileKeys,
+        geometry,
+        planeCenter,
+      };
+      setRequestedTileKeys([...viewportTileKeys]);
       setIsTileLoading(true);
       setTileError(null);
       setRenderProgress(null);
-      const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
-      const tileWorldSize = TILE_SIZE * blocksPerPixel;
-      const tilePlaneCenter = mapPlaneForZoom(
-        mapCenter.x,
-        worldInfo?.spawnY ?? 64,
-        mapCenter.z,
+      const viewport = {
+        centerX: planeCenter.x,
+        centerZ: planeCenter.z,
         zoom,
-      );
-      const centerTileX = Math.floor(tilePlaneCenter.x / tileWorldSize);
-      const centerTileY = Math.floor(tilePlaneCenter.z / tileWorldSize);
-      const requests = Array.from({ length: TILES_PER_VIEW }, (_, row) =>
-        Array.from({ length: TILES_PER_VIEW }, (_, column) => ({
-          x: centerTileX + column - 1,
-          y: centerTileY + row - 1,
-        })),
-      ).flat();
-      setRequestedTileKeys(requests.map(({ x, y }) => `${zoom}:${x}:${y}`));
-      const previousTileKeys = new Set(previousTiles.map((tile) => mapTileKey(tile)));
-      const requestsToLoad = refreshExistingTiles
-        ? requests
-        : requests.filter(({ x, y }) => !previousTileKeys.has(mapTileKey({ worldId, zoom, x, y })));
-
-      if (requestsToLoad.length === 0) {
-        setIsTileLoading(false);
-        mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
-        return;
-      }
-
-      void Promise.all(
-        requestsToLoad.map(async ({ x, y }): Promise<MapTile | null> => {
-          const tileKey = `${server.id}:${worldId}:${zoom}:${x}:${y}`;
-          try {
-            const bytes = await mapRequestsRef.current.requestTile(
-              tileKey,
-              async () => {
-                const buffer = await getMapTile(server.id, worldId, zoom, x, y);
-                const nextBytes = normalizeMapTileBytes(buffer);
-                if (
-                  nextBytes.length < 8 ||
-                  !nextBytes.slice(0, 8).every((value, index) => value === PNG_SIGNATURE[index])
-                ) {
-                  throw new Error('Map tile response was not a valid PNG');
-                }
-                return nextBytes;
-              },
-              tileGeneration,
-            );
-            if (cancelled) {
-              return null;
-            }
-            const bytesForBlob = new Uint8Array(bytes.byteLength);
-            bytesForBlob.set(bytes);
-            const url = URL.createObjectURL(new Blob([bytesForBlob.buffer], { type: 'image/png' }));
-            nextUrls.push(url);
-            return { worldId, zoom, x, y, url };
-          } catch (error) {
-            if (!cancelled) {
-              setTileError(error instanceof Error ? error.message : String(error));
-            }
-            return null;
+        width: VIEWPORT_WIDTH,
+        height: VIEWPORT_HEIGHT,
+        requestId,
+        requestGeneration: tileGeneration,
+        geometry,
+      };
+      void mapRequestsRef.current
+        .requestRender(renderKey, () =>
+          requestMapRender(server.id, worldId, viewport).then(() => undefined),
+        )
+        .then(() => {
+          if (activeRenderRef.current?.requestId === requestId) {
+            setIsTileLoading(tileFetchesRef.current.size > 0);
           }
-        }),
-      ).then((loadedTiles) => {
-        if (!cancelled) {
-          const merged = new Map(previousTiles.map((tile) => [mapTileKey(tile), tile]));
-          loadedTiles.forEach((tile) => {
-            if (!tile) {
-              return;
-            }
-            const key = mapTileKey(tile);
-            const previous = merged.get(key);
-            if (previous && previous.url !== tile.url) {
-              URL.revokeObjectURL(previous.url);
-            }
-            merged.set(key, tile);
-          });
-          setTiles([...merged.values()]);
-          nextUrls.length = 0;
+        })
+        .catch((error) => {
+          if (activeRenderRef.current?.requestId !== requestId) {
+            return;
+          }
           setIsTileLoading(false);
-        }
-      });
+          setTileError(error instanceof Error ? error.message : String(error));
+        });
       mapRequestsRef.current.cleanupTileGeneration(tileGeneration);
     }, VIEWPORT_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
-      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+      if (activeRenderRef.current?.generation === tileGeneration) {
+        activeRenderRef.current = null;
+      }
     };
   }, [
     mapCenter.x,
     mapCenter.z,
-    worldInfo?.spawnY,
+    mapRequestPlaneCenterX,
+    mapRequestPlaneCenterZ,
     server.id,
     status?.component,
     status?.configState,
@@ -696,7 +829,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     status?.bridge,
     server.status,
     mapTileRequestReady,
-    tileRevision,
+    invalidationVersion,
+    isLoading,
+    isActing,
     worldId,
     zoom,
   ]);
@@ -833,9 +968,6 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     if (!nextWorld?.available || nextWorld.worldId === worldId) {
       return;
     }
-    revokeTiles(tilesRef.current);
-    tilesRef.current = [];
-    setTiles([]);
     setTileStates({});
     setRequestedTileKeys([]);
     setTileError(null);
@@ -843,7 +975,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setWorldInfo(null);
     setWorldStatuses([]);
     setWorldId(nextWorld.worldId);
-    setTileRevision((revision) => revision + 1);
+    invalidatedTileKeysRef.current.clear();
   };
 
   const handleCoordinateJump = () => {
@@ -937,7 +1069,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         }
         return;
       }
-      setTileRevision((revision) => revision + 1);
+      setInvalidationVersion((version) => version + 1);
       toast.success(t('map.toast.assetsSelected'));
     } catch (error) {
       toast.error(
@@ -1062,8 +1194,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     }
   };
 
-  const blocksPerPixel = 2 ** (MAX_ZOOM - zoom);
-  const tileWorldSize = TILE_SIZE * blocksPerPixel;
+  const mapGeometry = mapTileGeometryForZoom(zoom, TILE_SIZE);
+  const tileWorldSize = mapGeometry.tileSize * mapGeometry.mapUnitsPerPixel;
   const tilePlaneCenter = mapPlaneForZoom(mapCenter.x, worldInfo?.spawnY ?? 64, mapCenter.z, zoom);
   const tilePosition = (coordinate: number, center: number) =>
     50 + ((coordinate * tileWorldSize - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
@@ -1124,6 +1256,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     statusError: statusUnavailableError,
     assetStatusError,
     tileError,
+    renderProgressState: renderProgress?.state,
     tileStates,
   });
   const tileDiagnosticMessage = viewportTileStates.find(
@@ -1147,6 +1280,11 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           title: t('map.surface.tileState.error'),
           description:
             tileError ?? tileDiagnosticMessage ?? t('map.surface.tileState.errorDescription'),
+        };
+      case 'queue_full':
+        return {
+          title: t('map.surface.tileState.queueFull'),
+          description: tileDiagnosticMessage ?? t('map.surface.tileState.queueFullDescription'),
         };
       case 'paper_chunk_unavailable':
         return {

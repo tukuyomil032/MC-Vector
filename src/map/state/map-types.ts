@@ -33,6 +33,7 @@ export type MapTileRenderState =
   | 'stale'
   | 'rendering'
   | 'error'
+  | 'queue_full'
   | 'asset_missing'
   | 'bridge_incompatible'
   | 'paper_chunk_unavailable';
@@ -201,6 +202,24 @@ export interface MapPlaneCoordinate {
   z: number;
 }
 
+export type MapTilePlane = 'WorldXZ' | 'IsoProjected';
+
+/**
+ * Canonical geometry shared by viewport requests, tile placement, and event
+ * validation. Rust uses the world X/Z plane for overview zooms and the
+ * projected Iso plane for detailed zooms.
+ */
+export interface MapTileGeometry {
+  plane: MapTilePlane;
+  tileSize: number;
+  zoom?: number;
+  maxZoom?: number;
+  tileX?: number;
+  tileY?: number;
+  blocksPerPixel: number;
+  mapUnitsPerPixel: number;
+}
+
 /**
  * Project a world position onto the default Dynmap IsoHDPerspective plane.
  *
@@ -232,6 +251,55 @@ export function mapPlaneForZoom(
   zoom: number,
 ): MapPlaneCoordinate {
   return zoom <= 4 ? { x: worldX, z: worldZ } : projectWorldToMap(worldX, worldY, worldZ);
+}
+
+export function mapTileGeometryForZoom(zoom: number, tileSize = 256): MapTileGeometry {
+  const boundedZoom = Math.min(8, Math.max(0, Math.floor(zoom)));
+  const blocksPerPixel = 2 ** (8 - boundedZoom);
+  return {
+    plane: boundedZoom <= 4 ? 'WorldXZ' : 'IsoProjected',
+    tileSize,
+    zoom: boundedZoom,
+    maxZoom: 8,
+    blocksPerPixel,
+    mapUnitsPerPixel: blocksPerPixel,
+  };
+}
+
+export function mapTileEventKey(tile: Pick<MapTileReadyEvent, 'zoom' | 'tileX' | 'tileY'>): string {
+  return `${tile.zoom}:${tile.tileX}:${tile.tileY}`;
+}
+
+export interface MapTileCoordinate {
+  zoom: number;
+  tileX: number;
+  tileY: number;
+  worldId?: string;
+}
+
+export function mapTileCoordinateKey(tile: MapTileCoordinate): string {
+  return `${tile.zoom}:${tile.tileX}:${tile.tileY}`;
+}
+
+export function viewportTileCoordinates(
+  center: MapPlaneCoordinate,
+  geometry: MapTileGeometry,
+  radius = 1,
+): MapTileCoordinate[] {
+  const tilePlaneSize = geometry.tileSize * geometry.mapUnitsPerPixel;
+  const centerTileX = Math.floor(center.x / tilePlaneSize);
+  const centerTileY = Math.floor(center.z / tilePlaneSize);
+  const coordinates: MapTileCoordinate[] = [];
+  for (let tileY = centerTileY - radius; tileY <= centerTileY + radius; tileY += 1) {
+    for (let tileX = centerTileX - radius; tileX <= centerTileX + radius; tileX += 1) {
+      coordinates.push({
+        zoom: geometry.zoom ?? 8 - Math.log2(geometry.blocksPerPixel),
+        tileX,
+        tileY,
+      });
+    }
+  }
+  return coordinates;
 }
 
 export function parseMapCoordinate(value: string): number | null {
@@ -358,9 +426,11 @@ export interface MapBridgeStatusEvent {
 export interface MapTileInvalidatedEvent {
   serverId: string;
   message?: {
+    worldId?: string;
     dimension?: string;
     chunkX?: number;
     chunkZ?: number;
+    tiles?: MapTileCoordinate[];
   };
 }
 
@@ -370,6 +440,9 @@ export interface MapTileReadyEvent {
   zoom: number;
   tileX: number;
   tileY: number;
+  requestId?: string | null;
+  requestGeneration?: number | null;
+  geometry?: Partial<MapTileGeometry> | null;
   hasTerrain: boolean;
   renderState: MapTileRenderState;
   coverageRatio: number;
@@ -384,10 +457,105 @@ export interface MapRenderProgressEvent {
   zoom: number;
   tileX: number;
   tileY: number;
+  requestId?: string | null;
+  requestGeneration?: number | null;
+  geometry?: Partial<MapTileGeometry> | null;
   state: MapTileRenderState;
   completed: number;
   total: number;
   message?: string | null;
+}
+
+export interface MapRenderRequestContext {
+  requestId: string;
+  generation: number;
+  worldId: string;
+  zoom: number;
+  viewportTileKeys: ReadonlySet<string>;
+  geometry?: MapTileGeometry;
+}
+
+export function isMapTileEventCurrent(
+  event: Pick<
+    MapTileReadyEvent | MapRenderProgressEvent,
+    'requestId' | 'requestGeneration' | 'worldId' | 'zoom' | 'tileX' | 'tileY' | 'geometry'
+  >,
+  request: MapRenderRequestContext,
+): boolean {
+  if (event.worldId !== request.worldId || event.zoom !== request.zoom) {
+    return false;
+  }
+  if (event.requestId && event.requestId !== request.requestId) {
+    return false;
+  }
+  if (
+    event.requestGeneration !== undefined &&
+    event.requestGeneration !== null &&
+    event.requestGeneration !== request.generation
+  ) {
+    return false;
+  }
+  if (event.geometry) {
+    if (
+      event.geometry.plane &&
+      request.geometry?.plane &&
+      event.geometry.plane !== request.geometry.plane
+    ) {
+      return false;
+    }
+    if (event.geometry.zoom !== undefined && event.geometry.zoom !== request.zoom) {
+      return false;
+    }
+    if (event.geometry.tileX !== undefined && event.geometry.tileX !== event.tileX) {
+      return false;
+    }
+    if (event.geometry.tileY !== undefined && event.geometry.tileY !== event.tileY) {
+      return false;
+    }
+  }
+  return request.viewportTileKeys.has(mapTileEventKey(event));
+}
+
+export function shouldFetchMapTileAfterReady(
+  event: Pick<
+    MapTileReadyEvent,
+    'requestId' | 'requestGeneration' | 'worldId' | 'zoom' | 'tileX' | 'tileY'
+  >,
+  request: MapRenderRequestContext,
+  pendingInvalidationKeys: ReadonlySet<string> = new Set(),
+): boolean {
+  if (!isMapTileEventCurrent(event, request)) {
+    return false;
+  }
+  const hasPendingInvalidationInViewport = [...pendingInvalidationKeys].some((key) =>
+    request.viewportTileKeys.has(key),
+  );
+  return !hasPendingInvalidationInViewport || pendingInvalidationKeys.has(mapTileEventKey(event));
+}
+
+export function exactMapTileInvalidationKeys(
+  event: MapTileInvalidatedEvent,
+  worldId: string,
+): string[] {
+  const message = event.message;
+  if (!message?.tiles) {
+    return [];
+  }
+  const messageWorldMatches =
+    message.worldId === worldId ||
+    (message.worldId === undefined &&
+      message.tiles.length > 0 &&
+      message.tiles.every((tile) => tile.worldId === worldId));
+  if (!messageWorldMatches) {
+    return [];
+  }
+  return [
+    ...new Set(
+      message.tiles
+        .filter((tile) => tile.worldId === undefined || tile.worldId === worldId)
+        .map(mapTileCoordinateKey),
+    ),
+  ];
 }
 
 export function isMapAssetWarningState(state: MapAssetState): boolean {
@@ -432,15 +600,20 @@ export function isMapTileRequestReady(
   statusError: string | null,
   serverIsOnline = true,
   assetStatusError: string | null = null,
+  isLoading = false,
+  isActing = false,
 ): boolean {
   return (
     !statusError &&
     !assetStatusError &&
     serverIsOnline &&
+    !isLoading &&
+    !isActing &&
     status !== null &&
     status.configState === 'valid' &&
     (status.component === 'active' || status.component === 'waiting_restart') &&
     status.bridge === 'connected' &&
+    !isMapAssetWarningState(status.assetState) &&
     status.assetState !== 'not_applicable'
   );
 }
@@ -455,6 +628,7 @@ export function resolveMapTileDiagnosticState(input: {
   statusError: string | null;
   assetStatusError?: string | null;
   tileError: string | null;
+  renderProgressState?: MapTileRenderState | null;
   tileStates: Record<string, MapTileReadyEvent>;
 }): MapTileDiagnosticState {
   if (input.statusError) {
@@ -463,11 +637,17 @@ export function resolveMapTileDiagnosticState(input: {
   if (input.assetStatusError) {
     return 'error';
   }
+  if (input.renderProgressState === 'queue_full') {
+    return 'queue_full';
+  }
   const visibleStates = input.requestedTileKeys
     .map((key) => input.tileStates[key])
     .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
   if (input.tileError || visibleStates.some((tile) => tile.renderState === 'error')) {
     return 'error';
+  }
+  if (visibleStates.some((tile) => tile.renderState === 'queue_full')) {
+    return 'queue_full';
   }
   if (visibleStates.some((tile) => (tile.decodeFailedChunkCount ?? 0) > 0)) {
     return 'error';
@@ -568,6 +748,9 @@ export interface MapViewport {
   zoom: number;
   width?: number;
   height?: number;
+  requestId?: string;
+  requestGeneration?: number;
+  geometry?: MapTileGeometry;
 }
 
 export interface MapRenderRequestResult {

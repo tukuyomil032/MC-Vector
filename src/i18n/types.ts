@@ -773,6 +773,8 @@ export interface TranslationDictionary {
         staleDescription: string;
         error: string;
         errorDescription: string;
+        queueFull: string;
+        queueFullDescription: string;
         assetMissing: string;
         assetMissingDescription: string;
         paperChunkUnavailable: string;

@@ -45,6 +45,118 @@ describe('map plane coordinates', () => {
     expect(Number.isFinite(projected.z)).toBe(true);
     expect(Math.floor(projected.x / 256)).toBe(-1);
   });
+
+  it('uses the canonical plane and tile geometry at every detailed zoom', async () => {
+    const { mapPlaneForZoom, mapTileGeometryForZoom, viewportTileCoordinates } =
+      await import('@/map/state/map-types');
+    const world = { x: 137, y: 72, z: -89 };
+    const detailedPositions = [8, 7, 6, 5].map((zoom) => {
+      const geometry = mapTileGeometryForZoom(zoom);
+      const plane = mapPlaneForZoom(world.x, world.y, world.z, zoom);
+      return {
+        zoom,
+        geometry,
+        tile: viewportTileCoordinates(plane, geometry, 0)[0],
+      };
+    });
+
+    expect(detailedPositions.map(({ geometry }) => geometry.plane)).toEqual([
+      'IsoProjected',
+      'IsoProjected',
+      'IsoProjected',
+      'IsoProjected',
+    ]);
+    expect(detailedPositions.map(({ geometry }) => geometry.blocksPerPixel)).toEqual([1, 2, 4, 8]);
+    expect(detailedPositions.map(({ tile }) => tile?.zoom)).toEqual([8, 7, 6, 5]);
+    expect(detailedPositions.every(({ tile }) => Number.isInteger(tile?.tileX))).toBe(true);
+    expect(detailedPositions.every(({ tile }) => Number.isInteger(tile?.tileY))).toBe(true);
+  });
+
+  it('accepts only current-generation tile events for the current viewport', async () => {
+    const { isMapTileEventCurrent } = await import('@/map/state/map-types');
+    const request = {
+      requestId: 'render-2',
+      generation: 2,
+      worldId: 'overworld',
+      zoom: 8,
+      viewportTileKeys: new Set(['8:0:0']),
+    };
+    const event = {
+      serverId: 'server-1',
+      worldId: 'overworld',
+      zoom: 8,
+      tileX: 0,
+      tileY: 0,
+      requestId: 'render-2',
+      requestGeneration: 2,
+      hasTerrain: true,
+      renderState: 'terrain' as const,
+      coverageRatio: 1,
+      renderedChunkCount: 1,
+    };
+
+    expect(isMapTileEventCurrent(event, request)).toBe(true);
+    expect(isMapTileEventCurrent({ ...event, requestId: 'render-1' }, request)).toBe(false);
+    expect(isMapTileEventCurrent({ ...event, requestGeneration: 1 }, request)).toBe(false);
+    expect(isMapTileEventCurrent({ ...event, tileX: 1 }, request)).toBe(false);
+  });
+
+  it('allows tile bytes only after a ready event and only for an exact invalidation', async () => {
+    const { shouldFetchMapTileAfterReady } = await import('@/map/state/map-types');
+    const request = {
+      requestId: 'render-2',
+      generation: 2,
+      worldId: 'overworld',
+      zoom: 8,
+      viewportTileKeys: new Set(['8:0:0', '8:1:0']),
+    };
+    const ready = {
+      serverId: 'server-1',
+      worldId: 'overworld',
+      zoom: 8,
+      tileX: 0,
+      tileY: 0,
+      requestId: 'render-2',
+      requestGeneration: 2,
+    };
+
+    expect(shouldFetchMapTileAfterReady(ready, request)).toBe(true);
+    expect(shouldFetchMapTileAfterReady(ready, request, new Set(['8:1:0']))).toBe(false);
+    expect(shouldFetchMapTileAfterReady({ ...ready, tileX: 1 }, request, new Set(['8:1:0']))).toBe(
+      true,
+    );
+    expect(shouldFetchMapTileAfterReady({ ...ready, requestId: 'render-1' }, request)).toBe(false);
+  });
+
+  it('returns only exact invalidation keys and ignores legacy chunk-only payloads', async () => {
+    const { exactMapTileInvalidationKeys } = await import('@/map/state/map-types');
+
+    expect(
+      exactMapTileInvalidationKeys(
+        {
+          serverId: 'server-1',
+          message: {
+            worldId: 'overworld',
+            tiles: [
+              { zoom: 8, tileX: 1, tileY: 2 },
+              { zoom: 8, tileX: 1, tileY: 2 },
+              { zoom: 7, tileX: 0, tileY: 0, worldId: 'world_nether' },
+            ],
+          },
+        },
+        'overworld',
+      ),
+    ).toEqual(['8:1:2']);
+    expect(
+      exactMapTileInvalidationKeys(
+        {
+          serverId: 'server-1',
+          message: { dimension: 'minecraft:overworld', chunkX: 0, chunkZ: 0 },
+        },
+        'overworld',
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe('map tile diagnostics', () => {
@@ -101,6 +213,28 @@ describe('map tile diagnostics', () => {
         tileStates: {},
       }),
     ).toBe('error');
+  });
+
+  it('surfaces queue saturation without treating it as a render failure', async () => {
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
+
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'auto_detected',
+        hasPreviousTiles: true,
+        isLoading: false,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        renderProgressState: 'queue_full',
+        tileStates: {
+          '4:0:0': tile({
+            renderState: 'queue_full',
+            message: 'Map tile render queue is full; keeping the previous tile',
+          }),
+        },
+      }),
+    ).toBe('queue_full');
   });
 
   it('keeps tile errors ahead of asset warnings', async () => {
@@ -314,6 +448,10 @@ describe('map tile diagnostics', () => {
     expect(isMapTileRequestReady(status, null, true)).toBe(true);
     expect(isMapTileRequestReady({ ...status, bridge: 'disconnected' }, null, true)).toBe(false);
     expect(isMapTileRequestReady(status, null, false)).toBe(false);
+    expect(isMapTileRequestReady(status, null, true, null, true)).toBe(false);
+    expect(isMapTileRequestReady(status, null, true, null, false, true)).toBe(false);
+    expect(isMapTileRequestReady({ ...status, assetState: 'missing' }, null, true)).toBe(false);
+    expect(isMapTileRequestReady({ ...status, component: 'paused' }, null, true)).toBe(false);
   });
 });
 

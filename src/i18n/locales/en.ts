@@ -774,6 +774,8 @@ export const en: TranslationDictionary = {
           'A fresh tile is being generated. The previous image stays visible until it is ready.',
         error: 'Terrain tile generation failed',
         errorDescription: 'The tile could not be generated. Refresh and try again.',
+        queueFull: 'Terrain tile queue is full',
+        queueFullDescription: 'The previous map remains visible while the viewport request waits.',
         assetMissing: 'Minecraft assets are not configured',
         assetMissingDescription:
           'Choose assets to render block textures and models instead of the low-quality fallback.',

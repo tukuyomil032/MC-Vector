@@ -770,6 +770,8 @@ export const ja: TranslationDictionary = {
         staleDescription: '新しいタイルを生成しています。完了するまで前回の画像を表示します。',
         error: '地形タイルの生成に失敗しました',
         errorDescription: 'タイルを生成できませんでした。再読み込みしてもう一度試してください。',
+        queueFull: '地形タイルの待ち行列が満杯です',
+        queueFullDescription: '前回の地図を表示したまま、表示範囲の要求を順番待ちにしています。',
         assetMissing: 'Minecraft資産が未設定です',
         assetMissingDescription:
           '資産を選択すると、ブロックのテクスチャとモデルを使った描画になります。',
