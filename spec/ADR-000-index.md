@@ -70,12 +70,13 @@ Only evidence at or above the requested claim may be used for the final score.
 
 - [MC-Vector Map Integration Requirements](./map-integration-requirements.md)
 - [Dynmap v3.0 renderer research corpus](./dynmap/README.md)
+- [Complete in-app map capability contract](./dynmap/map-capability-complete.md)
 - [MC-Vector Map implementation plan](./map/README.md)
 
 ## Map ADRs
 
 The Map feature has its own architecture decisions. These are design records,
-not a substitute for the executable Phase 0-17 documents.
+not a substitute for the executable Phase 0-27 documents.
 
 | ADR | Decision |
 | --- | --- |
@@ -129,8 +130,9 @@ A 10 requires the 9.5 conditions plus real failure recovery and catalog recovery
 8. Phase 7: Run the evidence matrix, OS checks, and final scoring.
 
 The Map implementation plan is independent of the hardening phase order and is
-tracked in `spec/map/phases/phase-00` through `phase-17`. Its gates must not be
-silently treated as proof for the hardening ADRs.
+tracked in `spec/map/phases/phase-00` through `phase-27`. Its gates must not be
+silently treated as proof for the hardening ADRs. Phase 27 is the only final
+acceptance gate for the declared in-app map capability.
 
 ## Non-Goals
 

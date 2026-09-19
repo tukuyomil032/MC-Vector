@@ -72,4 +72,5 @@ No push, PR creation, workflow dispatch, signing, or notarization.
 
 ## Follow-up phases
 
-Phase 17 is the final acceptance review.
+Phase 17 starts the tile-system work. Final acceptance is Phase 27 after the
+dimension, overlay, UI, real-environment, golden-fixture, and coverage gates.

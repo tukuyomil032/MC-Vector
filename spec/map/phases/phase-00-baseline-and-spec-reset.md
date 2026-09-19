@@ -3,7 +3,7 @@
 ## Goal
 
 Replace the mixed legacy Map/Dynmap plan with a source-backed research corpus,
-an executable 18-step plan, and ADRs that can be used without guesswork.
+an executable 28-phase plan, and ADRs that can be used without guesswork.
 
 ## Scope
 
@@ -25,7 +25,7 @@ references where the contract depends on them.
 - delete old `spec/dynmap/**` documents before recreating the corpus;
 - create source scope, architecture, world, renderer, asset, geometry, shader,
   tile, overlay, boundary, porting, launcher, license, and fixture documents;
-- create Phase 0-17 documents with this common structure;
+- create Phase 0-27 documents with this common structure;
 - update `map-integration-requirements.md` and ADR-000 index;
 - record open/provisional items instead of silently deciding them.
 

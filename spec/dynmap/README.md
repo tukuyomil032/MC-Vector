@@ -33,6 +33,7 @@ dependency.
 12. [launcher asset sources](launcher-asset-sources.md)
 13. [license and attribution](license-and-attribution.md)
 14. [verification fixtures](verification-fixtures.md)
+15. [complete map capability contract](map-capability-complete.md)
 
 ## Evidence vocabulary
 
@@ -57,8 +58,10 @@ storage backends are not copied as runtime components.
 
 The existing MC-Vector map implementation is a prototype. It contains useful
 bridge, cache, asset, and UI foundations, but a representative-colour or sparse
-sampling path is not Dynmap parity. Completion requires the Phase 0-17 plan in
-`../map/phases/` and the evidence gates in [verification-fixtures.md](verification-fixtures.md).
+sampling path is not Dynmap parity. The complete capability inventory is in
+[map-capability-complete.md](map-capability-complete.md). Completion requires
+the full Phase 0-27 plan in `../map/phases/` and the evidence gates in
+[verification-fixtures.md](verification-fixtures.md).
 
 ## Primary sources
 

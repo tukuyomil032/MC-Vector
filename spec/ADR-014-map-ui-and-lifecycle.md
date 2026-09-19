@@ -6,14 +6,19 @@
 ## Context
 
 The UI previously treated status failures and transparent tiles as a green
-success preview and mixed Map lifecycle with ordinary PluginBrowser behavior.
+success preview, mixed Map lifecycle with ordinary PluginBrowser behavior, and
+replaced visible tiles with a loading overlay during every periodic status
+poll.
 
 ## Decision
 
 Map owns explicit component, bridge, asset, world, tile, and render states. It
 requests tiles only after status/configuration is confirmed, displays repair and
-failure reasons, keeps stale tiles visible, and leaves managed plugin files out
-of PluginBrowser. Pause, restore, and destructive removal remain distinct.
+failure reasons, keeps stale tiles visible, does not hide visible tiles during
+background status refresh, and leaves managed plugin files out of PluginBrowser.
+Pause, restore, and destructive removal remain distinct. Launcher asset
+selection is not renderer readiness; the UI must display parsed asset counts,
+manifest identity, and renderer connection state separately.
 
 ## Consequences
 
