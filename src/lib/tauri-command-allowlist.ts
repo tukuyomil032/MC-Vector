@@ -51,6 +51,7 @@ const CORE_COMMANDS = [
   'get_map_tile',
   'enable_map',
   'pause_map',
+  'request_map_render',
   'restore_map',
   'remove_map_component',
 ] as const;
