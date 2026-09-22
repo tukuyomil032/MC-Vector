@@ -91,6 +91,14 @@ import {
   type MapWorldEntry,
 } from '../state/map-types';
 import { createMapRequestCoordinator } from '../state/map-request-coordinator';
+import {
+  clampMapZoom,
+  commitMapPan,
+  mapPreviewScale,
+  mapWorldCenterForViewportAnchor,
+  mapWorldPointAtViewportAnchor,
+  type MapViewportAnchor,
+} from '../state/map-viewport-interaction';
 
 interface MapViewProps {
   server: MinecraftServer;
@@ -121,6 +129,9 @@ interface MapTile {
 interface ActiveMapRender extends MapRenderRequestContext {
   geometry: MapTileGeometry;
   planeCenter: { x: number; z: number };
+  completedTileKeys: Set<string>;
+  fetchedTileKeys: Set<string>;
+  failed: boolean;
 }
 
 function mapTileKey(tile: Pick<MapTile, 'worldId' | 'zoom' | 'x' | 'y'>): string {
@@ -132,13 +143,22 @@ interface AssetStatusRefreshResult {
   error: string | null;
 }
 
-const MAX_ZOOM = 8;
 const TILE_SIZE = 256;
 const TILES_PER_VIEW = 3;
 const VIEWPORT_WIDTH = TILE_SIZE * TILES_PER_VIEW;
 const VIEWPORT_HEIGHT = TILE_SIZE * TILES_PER_VIEW;
 const VIEWPORT_DEBOUNCE_MS = 120;
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+
+function isFailedMapTileRenderState(state: MapTileReadyEvent['renderState']): boolean {
+  return [
+    'error',
+    'queue_full',
+    'asset_missing',
+    'bridge_incompatible',
+    'paper_chunk_unavailable',
+  ].includes(state);
+}
 
 function bridgeIcon(state: MapBridgeState) {
   return state === 'connected' ? <Wifi size={14} /> : <WifiOff size={14} />;
@@ -216,10 +236,10 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const [tileError, setTileError] = useState<string | null>(null);
   const [isTileLoading, setIsTileLoading] = useState(false);
   const [renderProgress, setRenderProgress] = useState<MapRenderProgressEvent | null>(null);
-  const [zoom, setZoom] = useState(2);
+  const [targetZoom, setTargetZoom] = useState(2);
+  const [renderedZoom, setRenderedZoom] = useState(2);
   const [mapCenter, setMapCenter] = useState<MapCenter>({ x: 0, z: 0 });
   const [invalidationVersion, setInvalidationVersion] = useState(0);
-  const [pan, setPan] = useState<PanState>({ x: 0, y: 0 });
   const [coordinateX, setCoordinateX] = useState('');
   const [coordinateZ, setCoordinateZ] = useState('');
   const [coordinateError, setCoordinateError] = useState<string | null>(null);
@@ -242,9 +262,58 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     candidates: [],
   });
   const centerInitializedRef = useRef(false);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const canvasContentRef = useRef<HTMLDivElement | null>(null);
+  const mapCenterRef = useRef<MapCenter>(mapCenter);
+  const worldYRef = useRef(64);
+  const renderedZoomRef = useRef(renderedZoom);
+  const previewZoomRef = useRef(renderedZoom);
+  const previewAnchorRef = useRef<MapViewportAnchor>({ x: 0.5, y: 0.5 });
+  const panRef = useRef<PanState>({ x: 0, y: 0 });
+  const zoomDebounceRef = useRef<number | undefined>(undefined);
   const dragRef = useRef<
-    { pointerId: number; startX: number; startY: number; pan: PanState } | undefined
+    { pointerId: number; startX: number; startY: number; pan: PanState; moved: boolean } | undefined
   >(undefined);
+
+  const applyTransientMapTransform = useCallback((layerZoom = renderedZoomRef.current) => {
+    const content = canvasContentRef.current;
+    if (!content) {
+      return;
+    }
+    const anchor = previewAnchorRef.current;
+    content.style.setProperty('--map-pan-x', `${panRef.current.x}px`);
+    content.style.setProperty('--map-pan-y', `${panRef.current.y}px`);
+    content.style.setProperty(
+      '--map-preview-scale',
+      String(mapPreviewScale(previewZoomRef.current, layerZoom)),
+    );
+    content.style.transformOrigin = `${anchor.x * 100}% ${anchor.y * 100}%`;
+  }, []);
+
+  useEffect(() => {
+    mapCenterRef.current = mapCenter;
+  }, [mapCenter]);
+
+  useEffect(() => {
+    worldYRef.current = worldInfo?.spawnY ?? 64;
+  }, [worldInfo?.spawnY]);
+
+  useEffect(() => {
+    renderedZoomRef.current = renderedZoom;
+    previewZoomRef.current = renderedZoom;
+    previewAnchorRef.current = { x: 0.5, y: 0.5 };
+    panRef.current = { x: 0, y: 0 };
+    applyTransientMapTransform(renderedZoom);
+  }, [applyTransientMapTransform, renderedZoom]);
+
+  useEffect(
+    () => () => {
+      if (zoomDebounceRef.current !== undefined) {
+        window.clearTimeout(zoomDebounceRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     tilesRef.current = tiles;
@@ -448,6 +517,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       },
     ]);
     setMapCenter({ x: 0, z: 0 });
+    setTargetZoom(2);
+    setRenderedZoom(2);
     setWorldHasTerrain(null);
     setWorldInfo(null);
     setWorldStatuses([]);
@@ -457,7 +528,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     invalidatedTileKeysRef.current.clear();
     setInvalidationVersion(0);
     tileFetchesRef.current.clear();
-    setPan({ x: 0, y: 0 });
+    panRef.current = { x: 0, y: 0 };
+    applyTransientMapTransform();
     void refreshStatus(true, true);
     void refreshAssetCandidates();
     void refreshWorlds();
@@ -469,7 +541,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       revokeTiles(tilesRef.current);
       tilesRef.current = [];
     };
-  }, [refreshAssetCandidates, refreshStatus, refreshWorlds, server.id]);
+  }, [applyTransientMapTransform, refreshAssetCandidates, refreshStatus, refreshWorlds, server.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -498,7 +570,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setWorldInfo(null);
     setWorldStatuses([]);
     setMapCenter({ x: 0, z: 0 });
-    setPan({ x: 0, y: 0 });
+    panRef.current = { x: 0, y: 0 };
+    applyTransientMapTransform();
     void getMapWorldInfo(server.id, worldId)
       .then((info) => {
         if (cancelled) {
@@ -507,7 +580,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         setWorldInfo(info);
         setWorldHasTerrain(info.hasTerrain);
         setMapCenter({ x: info.centerX, z: info.centerZ });
-        setZoom(info.recommendedZoom);
+        setTargetZoom(clampMapZoom(info.recommendedZoom));
         centerInitializedRef.current = true;
       })
       .catch(() => {
@@ -520,7 +593,28 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     return () => {
       cancelled = true;
     };
-  }, [server.id, worldId]);
+  }, [applyTransientMapTransform, server.id, worldId]);
+
+  const commitTargetLayerIfReady = useCallback(
+    (activeRender: ActiveMapRender) => {
+      if (
+        activeRenderRef.current?.requestId !== activeRender.requestId ||
+        activeRender.failed ||
+        activeRender.completedTileKeys.size !== activeRender.viewportTileKeys.size ||
+        activeRender.fetchedTileKeys.size !== activeRender.viewportTileKeys.size
+      ) {
+        return;
+      }
+      renderedZoomRef.current = activeRender.zoom;
+      previewZoomRef.current = activeRender.zoom;
+      previewAnchorRef.current = { x: 0.5, y: 0.5 };
+      panRef.current = { x: 0, y: 0 };
+      applyTransientMapTransform(activeRender.zoom);
+      setRenderedZoom(activeRender.zoom);
+      setIsTileLoading(false);
+    },
+    [applyTransientMapTransform],
+  );
 
   const loadMapTileAfterReady = useCallback(
     (event: MapTileReadyEvent) => {
@@ -529,6 +623,13 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         return;
       }
       const key = mapTileEventKey(event);
+      activeRender.completedTileKeys.add(key);
+      if (isFailedMapTileRenderState(event.renderState)) {
+        activeRender.failed = true;
+        setTileError(event.message ?? `Map render reported ${event.renderState}`);
+        setIsTileLoading(false);
+        return;
+      }
       setTileStates((current) => ({ ...current, [key]: event }));
       setRenderProgress({
         serverId: event.serverId,
@@ -606,11 +707,15 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           tilesRef.current = nextTiles;
           setTiles(nextTiles);
           invalidatedTileKeysRef.current.delete(key);
+          activeRender.fetchedTileKeys.add(key);
+          commitTargetLayerIfReady(activeRender);
         })
         .catch((error) => {
           const currentRender = activeRenderRef.current;
           if (currentRender?.requestId === activeRender.requestId) {
+            activeRender.failed = true;
             setTileError(error instanceof Error ? error.message : String(error));
+            setIsTileLoading(false);
           }
         })
         .finally(() => {
@@ -622,7 +727,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       tileFetchesRef.current.set(tileRequestKey, request);
       setIsTileLoading(true);
     },
-    [server.id, worldId],
+    [commitTargetLayerIfReady, server.id, worldId],
   );
 
   useMapEvents({
@@ -713,7 +818,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         return;
       }
       setRenderProgress(event);
-      if (event.state === 'error' || event.state === 'paper_chunk_unavailable') {
+      if (isFailedMapTileRenderState(event.state)) {
+        activeRender.failed = true;
+        setIsTileLoading(false);
         setTileError(event.message ?? `Map render reported ${event.state}`);
       }
     },
@@ -733,13 +840,13 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     mapCenter.x,
     worldInfo?.spawnY ?? 64,
     mapCenter.z,
-    zoom,
+    targetZoom,
   ).x;
   const mapRequestPlaneCenterZ = mapPlaneForZoom(
     mapCenter.x,
     worldInfo?.spawnY ?? 64,
     mapCenter.z,
-    zoom,
+    targetZoom,
   ).z;
 
   useEffect(() => {
@@ -755,7 +862,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       if (cancelled) {
         return;
       }
-      const geometry = mapTileGeometryForZoom(zoom, TILE_SIZE);
+      const geometry = mapTileGeometryForZoom(targetZoom, TILE_SIZE);
       const planeCenter = { x: mapRequestPlaneCenterX, z: mapRequestPlaneCenterZ };
       const viewportTiles = viewportTileCoordinates(planeCenter, geometry);
       const viewportTileKeys = new Set(viewportTiles.map(mapTileCoordinateKey));
@@ -763,7 +870,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       const renderKey = [
         server.id,
         worldId,
-        zoom,
+        targetZoom,
         planeCenter.x,
         planeCenter.z,
         invalidationVersion,
@@ -772,10 +879,13 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         requestId,
         generation: tileGeneration,
         worldId,
-        zoom,
+        zoom: targetZoom,
         viewportTileKeys,
         geometry,
         planeCenter,
+        completedTileKeys: new Set(),
+        fetchedTileKeys: new Set(),
+        failed: false,
       };
       setRequestedTileKeys([...viewportTileKeys]);
       setIsTileLoading(true);
@@ -784,7 +894,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       const viewport = {
         centerX: planeCenter.x,
         centerZ: planeCenter.z,
-        zoom,
+        worldCenterX: mapCenter.x,
+        worldCenterZ: mapCenter.z,
+        zoom: targetZoom,
         width: VIEWPORT_WIDTH,
         height: VIEWPORT_HEIGHT,
         requestId,
@@ -795,11 +907,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         .requestRender(renderKey, () =>
           requestMapRender(server.id, worldId, viewport).then(() => undefined),
         )
-        .then(() => {
-          if (activeRenderRef.current?.requestId === requestId) {
-            setIsTileLoading(tileFetchesRef.current.size > 0);
-          }
-        })
+        .then(() => undefined)
         .catch((error) => {
           if (activeRenderRef.current?.requestId !== requestId) {
             return;
@@ -834,7 +942,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     isLoading,
     isActing,
     worldId,
-    zoom,
+    targetZoom,
   ]);
 
   const component = status?.component ?? 'absent';
@@ -1025,7 +1133,8 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     }
     setCoordinateError(null);
     setMapCenter(target);
-    setPan({ x: 0, y: 0 });
+    panRef.current = { x: 0, y: 0 };
+    applyTransientMapTransform();
     centerInitializedRef.current = true;
   };
 
@@ -1163,13 +1272,63 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     setConfirmRemove(false);
   };
 
+  const mapAnchorAtClientPoint = (clientX: number, clientY: number): MapViewportAnchor => {
+    const canvas = canvasRef.current;
+    const content = canvasContentRef.current;
+    if (!canvas || !content || content.offsetWidth === 0 || content.offsetHeight === 0) {
+      return { x: 0.5, y: 0.5 };
+    }
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: 0.5 + (clientX - (rect.left + rect.width / 2)) / content.offsetWidth,
+      y: 0.5 + (clientY - (rect.top + rect.height / 2)) / content.offsetHeight,
+    };
+  };
+
+  const queueMapZoomAtAnchor = (nextPreviewZoom: number, anchor: MapViewportAnchor) => {
+    previewZoomRef.current = clampMapZoom(nextPreviewZoom);
+    previewAnchorRef.current = anchor;
+    applyTransientMapTransform();
+    if (zoomDebounceRef.current !== undefined) {
+      window.clearTimeout(zoomDebounceRef.current);
+    }
+    zoomDebounceRef.current = window.setTimeout(() => {
+      const nextTargetZoom = Math.round(previewZoomRef.current);
+      const sourceZoom = renderedZoomRef.current;
+      if (nextTargetZoom === sourceZoom) {
+        previewZoomRef.current = sourceZoom;
+        applyTransientMapTransform(sourceZoom);
+        return;
+      }
+      const worldY = worldYRef.current;
+      const anchoredWorld = mapWorldPointAtViewportAnchor(
+        mapCenterRef.current,
+        sourceZoom,
+        worldY,
+        previewAnchorRef.current,
+        { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+      );
+      const nextCenter = mapWorldCenterForViewportAnchor(
+        anchoredWorld,
+        nextTargetZoom,
+        worldY,
+        previewAnchorRef.current,
+        { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+      );
+      mapCenterRef.current = nextCenter;
+      setMapCenter(nextCenter);
+      setTargetZoom(nextTargetZoom);
+    }, VIEWPORT_DEBOUNCE_MS);
+  };
+
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      pan,
+      pan: panRef.current,
+      moved: false,
     };
   };
 
@@ -1178,43 +1337,77 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
-    setPan({
-      x: drag.pan.x + event.clientX - drag.startX,
-      y: drag.pan.y + event.clientY - drag.startY,
-    });
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) < 4) {
+      return;
+    }
+    drag.moved = true;
+    panRef.current = { x: drag.pan.x + deltaX, y: drag.pan.y + deltaY };
+    applyTransientMapTransform();
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = undefined;
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
     }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = undefined;
+    if (!drag.moved) {
+      return;
+    }
+    const content = canvasContentRef.current;
+    const contentSize = {
+      width: content?.offsetWidth || VIEWPORT_WIDTH,
+      height: content?.offsetHeight || VIEWPORT_HEIGHT,
+    };
+    const nextCenter = commitMapPan(
+      mapCenterRef.current,
+      renderedZoomRef.current,
+      worldYRef.current,
+      panRef.current,
+      { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+      contentSize,
+    );
+    mapCenterRef.current = nextCenter;
+    setMapCenter(nextCenter);
+    panRef.current = { x: 0, y: 0 };
+    applyTransientMapTransform();
   };
 
   const handleRecenter = () => {
     const player = players.find((candidate) => playerBelongsToWorld(candidate, worldId));
-    setMapCenter(
-      player
-        ? { x: player.x, z: player.z }
-        : worldHasTerrain === false
-          ? { x: 0, z: 0 }
-          : mapCenter,
-    );
+    const nextCenter = player
+      ? { x: player.x, z: player.z }
+      : worldHasTerrain === false
+        ? { x: 0, z: 0 }
+        : mapCenterRef.current;
+    mapCenterRef.current = nextCenter;
+    setMapCenter(nextCenter);
     centerInitializedRef.current = true;
-    setPan({ x: 0, y: 0 });
+    panRef.current = { x: 0, y: 0 };
+    applyTransientMapTransform();
   };
 
   const handleMapWheel = (event: WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
-    setZoom((value) => (event.deltaY < 0 ? Math.min(MAX_ZOOM, value + 1) : Math.max(0, value - 1)));
+    const unit = event.deltaMode === 1 ? 0.12 : 0.0025;
+    queueMapZoomAtAnchor(
+      previewZoomRef.current - event.deltaY * unit,
+      mapAnchorAtClientPoint(event.clientX, event.clientY),
+    );
   };
 
   const handleMapKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === '+' || event.key === '=') {
       event.preventDefault();
-      setZoom((value) => Math.min(MAX_ZOOM, value + 1));
+      queueMapZoomAtAnchor(previewZoomRef.current + 1, { x: 0.5, y: 0.5 });
     } else if (event.key === '-' || event.key === '_') {
       event.preventDefault();
-      setZoom((value) => Math.max(0, value - 1));
+      queueMapZoomAtAnchor(previewZoomRef.current - 1, { x: 0.5, y: 0.5 });
     } else if (
       event.key === 'ArrowLeft' ||
       event.key === 'ArrowRight' ||
@@ -1222,26 +1415,37 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       event.key === 'ArrowDown'
     ) {
       event.preventDefault();
-      const step = 64 * 2 ** (MAX_ZOOM - zoom);
-      setMapCenter((center) => ({
-        x: center.x + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
-        z: center.z + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0),
-      }));
+      const step = 64 * 2 ** (8 - targetZoom);
+      const nextCenter = {
+        x:
+          mapCenterRef.current.x +
+          (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
+        z:
+          mapCenterRef.current.z +
+          (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0),
+      };
+      mapCenterRef.current = nextCenter;
+      setMapCenter(nextCenter);
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       handleRecenter();
     }
   };
 
-  const mapGeometry = mapTileGeometryForZoom(zoom, TILE_SIZE);
+  const mapGeometry = mapTileGeometryForZoom(renderedZoom, TILE_SIZE);
   const tileWorldSize = mapGeometry.tileSize * mapGeometry.mapUnitsPerPixel;
-  const tilePlaneCenter = mapPlaneForZoom(mapCenter.x, worldInfo?.spawnY ?? 64, mapCenter.z, zoom);
+  const tilePlaneCenter = mapPlaneForZoom(
+    mapCenter.x,
+    worldInfo?.spawnY ?? 64,
+    mapCenter.z,
+    renderedZoom,
+  );
   const tilePosition = (coordinate: number, center: number) =>
     50 + ((coordinate * tileWorldSize - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
   const playerPosition = (coordinate: number, center: number) =>
     50 + ((coordinate - center) / (TILES_PER_VIEW * tileWorldSize)) * 100;
   const overlayPosition = (x: number, y: number, z: number) => {
-    const plane = mapPlaneForZoom(x, y, z, zoom);
+    const plane = mapPlaneForZoom(x, y, z, renderedZoom);
     return {
       left: `${playerPosition(plane.x, tilePlaneCenter.x)}%`,
       top: `${playerPosition(plane.z, tilePlaneCenter.z)}%`,
@@ -1257,7 +1461,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
           [validWorldBorder.centerX + halfSize, validWorldBorder.centerZ - halfSize],
           [validWorldBorder.centerX - halfSize, validWorldBorder.centerZ + halfSize],
           [validWorldBorder.centerX + halfSize, validWorldBorder.centerZ + halfSize],
-        ].map(([x, z]) => mapPlaneForZoom(x, borderY, z, zoom));
+        ].map(([x, z]) => mapPlaneForZoom(x, borderY, z, renderedZoom));
         return {
           minX: Math.min(...corners.map((corner) => corner.x)),
           maxX: Math.max(...corners.map((corner) => corner.x)),
@@ -1276,7 +1480,9 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
   const assetSource = assetStatusError ? null : (assetStatus?.sourcePath ?? status?.assetSource);
   const assetMessage = assetStatusError ?? assetStatus?.message ?? status?.assetMessage;
   const mapLoadError = loadError ?? statusError ?? assetStatusError;
-  const visibleTiles = tiles.filter((tile) => tile.worldId === worldId && tile.zoom === zoom);
+  const visibleTiles = tiles.filter(
+    (tile) => tile.worldId === worldId && tile.zoom === renderedZoom,
+  );
   const viewportTileStates = requestedTileKeys
     .map((key) => tileStates[key])
     .filter((tile): tile is MapTileReadyEvent => Boolean(tile));
@@ -1495,12 +1701,17 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   </span>
                 )}
                 <span className="map-view__zoom-label">
-                  {t('map.surface.zoom', { level: zoom })}
+                  {t('map.surface.zoom', { level: targetZoom })}
                 </span>
                 <button
                   type="button"
                   className="map-view__icon-button"
-                  onClick={() => setZoom((value) => Math.max(0, value - 1))}
+                  onClick={() =>
+                    queueMapZoomAtAnchor(Math.round(previewZoomRef.current) - 1, {
+                      x: 0.5,
+                      y: 0.5,
+                    })
+                  }
                   aria-label={t('map.actions.zoomOut')}
                 >
                   <Minus size={16} aria-hidden="true" />
@@ -1508,7 +1719,12 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                 <button
                   type="button"
                   className="map-view__icon-button"
-                  onClick={() => setZoom((value) => Math.min(8, value + 1))}
+                  onClick={() =>
+                    queueMapZoomAtAnchor(Math.round(previewZoomRef.current) + 1, {
+                      x: 0.5,
+                      y: 0.5,
+                    })
+                  }
                   aria-label={t('map.actions.zoomIn')}
                 >
                   <Plus size={16} aria-hidden="true" />
@@ -1526,6 +1742,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
             <div
               className="map-view__canvas"
+              ref={canvasRef}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -1551,10 +1768,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   />
                 </div>
               )}
-              <div
-                className="map-view__canvas-content"
-                style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}
-              >
+              <div className="map-view__canvas-content" ref={canvasContentRef}>
                 {visibleTiles.length > 0 ? (
                   visibleTiles.map((tile) => (
                     <img

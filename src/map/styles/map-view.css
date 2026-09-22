@@ -344,13 +344,19 @@
 }
 
 .map-view__canvas-content {
+  --map-pan-x: 0px;
+  --map-pan-y: 0px;
+  --map-preview-scale: 1;
   position: absolute;
   top: 50%;
   left: 50%;
   width: min(68vw, 44rem);
   height: min(68vw, 44rem);
+  transform: translate(-50%, -50%) translate(var(--map-pan-x), var(--map-pan-y))
+    scale(var(--map-preview-scale));
   transform-origin: center;
   transition: transform 160ms ease-out;
+  will-change: transform;
 }
 
 .map-view__tile,

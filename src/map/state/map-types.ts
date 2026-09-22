@@ -272,6 +272,29 @@ export function projectWorldToMap(
   };
 }
 
+/** Return world X/Z directly from the overview tile plane. */
+export function unprojectWorldXZToWorld(mapX: number, mapZ: number): MapCoordinateTarget {
+  return { x: mapX, z: mapZ };
+}
+
+/**
+ * Invert `projectWorldToMap` for the default Dynmap IsoHDPerspective plane.
+ * The projection loses Y, so callers supply the stable Y plane they use for
+ * viewport interactions (normally the selected world's spawn Y).
+ */
+export function unprojectIsoProjectedToWorld(
+  mapX: number,
+  mapZ: number,
+  worldY: number,
+): MapCoordinateTarget {
+  const difference = mapX * Math.SQRT2;
+  const sum = (worldY * 0.5 - mapZ) / Math.sqrt(3 / 8);
+  return {
+    x: (sum + difference) / 2,
+    z: (sum - difference) / 2,
+  };
+}
+
 /**
  * Return the coordinate system used by Rust for a given zoom level.
  * Overview tiles use world X/Z; detailed tiles use the projected Iso plane.
@@ -283,6 +306,18 @@ export function mapPlaneForZoom(
   zoom: number,
 ): MapPlaneCoordinate {
   return zoom <= 4 ? { x: worldX, z: worldZ } : projectWorldToMap(worldX, worldY, worldZ);
+}
+
+/** Invert the plane selected by `mapPlaneForZoom` back to world X/Z. */
+export function worldCoordinatesForMapPlane(
+  mapX: number,
+  mapZ: number,
+  worldY: number,
+  zoom: number,
+): MapCoordinateTarget {
+  return zoom <= 4
+    ? unprojectWorldXZToWorld(mapX, mapZ)
+    : unprojectIsoProjectedToWorld(mapX, mapZ, worldY);
 }
 
 export function mapTileGeometryForZoom(zoom: number, tileSize = 256): MapTileGeometry {
@@ -777,6 +812,9 @@ export interface MapWorldInfo {
 export interface MapViewport {
   centerX: number;
   centerZ: number;
+  /** World-space center retained alongside the renderer's selected plane. */
+  worldCenterX: number;
+  worldCenterZ: number;
   zoom: number;
   width?: number;
   height?: number;
