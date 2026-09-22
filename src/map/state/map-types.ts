@@ -69,6 +69,8 @@ export type MapTileRenderState =
   | 'bridge_incompatible'
   | 'paper_chunk_unavailable';
 
+export type MapTileRenderSource = 'saved' | 'live' | 'savedAndLive';
+
 export interface MapStatus {
   serverId: string;
   component: MapComponentState;
@@ -514,6 +516,9 @@ export interface MapTileReadyEvent {
   renderState: MapTileRenderState;
   coverageRatio: number;
   renderedChunkCount: number;
+  source?: MapTileRenderSource;
+  liveRequestedCount?: number;
+  liveReceivedCount?: number;
   decodeFailedChunkCount?: number | null;
   message?: string | null;
 }

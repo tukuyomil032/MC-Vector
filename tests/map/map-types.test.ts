@@ -455,6 +455,40 @@ describe('map tile diagnostics', () => {
   });
 });
 
+describe('map tile source metadata', () => {
+  it('accepts backend source and live snapshot counters as optional event fields', async () => {
+    const { resolveMapTileDiagnosticState } = await import('@/map/state/map-types');
+    const event = {
+      serverId: 'server',
+      worldId: 'overworld',
+      zoom: 2,
+      tileX: 0,
+      tileY: 0,
+      hasTerrain: true,
+      renderState: 'terrain' as const,
+      coverageRatio: 0.2,
+      renderedChunkCount: 3,
+      source: 'live' as const,
+      liveRequestedCount: 16,
+      liveReceivedCount: 3,
+    };
+
+    expect(event.source).toBe('live');
+    expect(event.liveRequestedCount).toBe(16);
+    expect(event.liveReceivedCount).toBe(3);
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'configured',
+        isLoading: false,
+        requestedTileKeys: ['2:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: { '2:0:0': event },
+      }),
+    ).toBeNull();
+  });
+});
+
 describe('map asset candidates', () => {
   const candidate = (
     overrides: Partial<import('@/map/state/map-types').MapAssetCandidate> = {},

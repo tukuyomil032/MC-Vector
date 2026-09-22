@@ -373,6 +373,7 @@ pub(crate) fn render_overview_tile(
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
+    let has_saved_source = !coordinates.is_empty();
     if let Some(live_chunks) = live_chunks {
         for snapshot in live_chunks.values() {
             if !coordinates.contains(&(snapshot.key.chunk_x, snapshot.key.chunk_z))
@@ -382,8 +383,6 @@ pub(crate) fn render_overview_tile(
             }
         }
     }
-    let has_saved_source = !coordinates.is_empty();
-
     let mut tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
     let mut rendered_chunk_count = 0;
     for (chunk_x, chunk_z) in coordinates {
