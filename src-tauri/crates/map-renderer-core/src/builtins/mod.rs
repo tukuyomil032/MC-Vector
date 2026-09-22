@@ -315,7 +315,7 @@ mod tests {
                 .get("StairStateRenderer")
                 .unwrap()
                 .implementation_status,
-            BuiltinImplementationStatus::NotStarted
+            BuiltinImplementationStatus::Translated
         );
     }
 

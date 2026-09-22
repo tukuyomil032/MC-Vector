@@ -37,6 +37,7 @@
     "test:typecheck": "tsc -p tsconfig.tests.json --noEmit",
     "check:workflow-actions": "node scripts/check-workflow-actions.mjs",
     "test:tauri:e2e": "node scripts/tauri-smoke-e2e.mjs",
+    "test:map:reference": "bun scripts/run-dynmap-reference-harness.mjs box",
     "test:provider:live": "vitest run --config vitest.live.config.ts",
     "test:all": "bun run check && bun run test && cd src-tauri && cargo test",
     "e2e": "playwright test",
