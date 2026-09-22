@@ -70,7 +70,7 @@ impl CustomRenderer for BoxRenderer {
         _context: &MapDataContext<'_>,
         factory: &RenderPatchFactory,
     ) -> Result<Vec<PatchDefinition>, CustomRendererError> {
-        box_patches(factory, CuboidBounds::UNIT, self.texture_index, self.shade)
+        box_patches_with_textures(factory, CuboidBounds::UNIT, [1, 4, 2, 5, 0, 3], self.shade)
     }
 }
 
@@ -89,6 +89,14 @@ impl CuboidRenderer {
             shade,
         }
     }
+
+    pub const fn empty() -> Self {
+        Self {
+            bounds: CuboidBounds::new(Vec3::ZERO, Vec3::ZERO),
+            texture_index: 0,
+            shade: true,
+        }
+    }
 }
 
 impl CustomRenderer for CuboidRenderer {
@@ -102,6 +110,9 @@ impl CustomRenderer for CuboidRenderer {
         _context: &MapDataContext<'_>,
         factory: &RenderPatchFactory,
     ) -> Result<Vec<PatchDefinition>, CustomRendererError> {
+        if self.bounds.min == self.bounds.max {
+            return Ok(Vec::new());
+        }
         box_patches(factory, self.bounds, self.texture_index, self.shade)
     }
 }
@@ -122,20 +133,15 @@ impl CustomRenderer for PlantRenderer {
         _context: &MapDataContext<'_>,
         factory: &RenderPatchFactory,
     ) -> Result<Vec<PatchDefinition>, CustomRendererError> {
-        let diagonal_a = factory.patch(
-            Vec3::new(0.0, 0.0, 0.0),
-            Vec3::new(1.0, 1.0, 1.0),
-            Vec3::new(1.0, 0.0, 1.0),
-            self.texture_index,
-            false,
-        )?;
-        let diagonal_b = factory.patch(
+        let diagonal_a = factory.patch_with_side(
             Vec3::new(1.0, 0.0, 0.0),
-            Vec3::new(0.0, 1.0, 1.0),
             Vec3::new(0.0, 0.0, 1.0),
+            Vec3::new(1.0, 1.0, 0.0),
+            crate::renderer::dynmap::types::SideVisible::Flip,
             self.texture_index,
             false,
         )?;
+        let diagonal_b = factory.rotated_patch(diagonal_a, 0.0, 90.0, 0.0, self.texture_index);
         Ok(vec![diagonal_a, diagonal_b])
     }
 }
@@ -169,15 +175,31 @@ impl CustomRenderer for PaneRenderer {
         if !(0.0..=0.5).contains(&self.thickness) || !self.thickness.is_finite() {
             return Err(CustomRendererError::UnsupportedState);
         }
-        let half = self.thickness;
-        let min = 0.5 - half;
-        let max = 0.5 + half;
-        box_patches(
-            factory,
-            CuboidBounds::new(Vec3::new(min, 0.0, min), Vec3::new(max, 1.0, max)),
+        let face = factory.patch_with_side(
+            Vec3::new(0.5, 0.0, 1.0),
+            Vec3::new(0.5, 0.0, 0.0),
+            Vec3::new(0.5, 1.0, 1.0),
+            crate::renderer::dynmap::types::SideVisible::Both,
             self.texture_index,
             true,
-        )
+        )?;
+        let edge = factory.patch_with_uv_bounds(
+            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(1.0, 1.0, 0.0),
+            Vec3::new(0.0, 1.0, 1.0),
+            (0.4375, 0.5625, 0.0, 1.0),
+            (
+                crate::renderer::dynmap::types::SideVisible::Both,
+                self.texture_index + 1,
+                true,
+            ),
+        )?;
+        Ok(vec![
+            face,
+            factory.rotated_patch(face, 0.0, 90.0, 0.0, self.texture_index),
+            edge,
+            factory.rotated_patch(edge, 0.0, 90.0, 0.0, self.texture_index + 1),
+        ])
     }
 }
 
@@ -250,6 +272,8 @@ pub(crate) fn box_patches_with_textures(
     let bounds = bounds.validate()?;
     let min = bounds.min;
     let max = bounds.max;
+    // Keep the exact Dynmap CustomRenderer.addBox order and point winding:
+    // bottom, top, x-, x+, z-, z+.
     let faces = [
         (
             Vec3::new(min.x, min.y, min.z),
@@ -258,22 +282,10 @@ pub(crate) fn box_patches_with_textures(
             BlockStep::YMinus,
         ),
         (
-            Vec3::new(min.x, max.y, min.z),
             Vec3::new(min.x, max.y, max.z),
-            Vec3::new(max.x, max.y, min.z),
+            Vec3::new(max.x, max.y, max.z),
+            Vec3::new(min.x, max.y, min.z),
             BlockStep::YPlus,
-        ),
-        (
-            Vec3::new(min.x, min.y, min.z),
-            Vec3::new(min.x, max.y, min.z),
-            Vec3::new(max.x, min.y, min.z),
-            BlockStep::ZMinus,
-        ),
-        (
-            Vec3::new(min.x, min.y, max.z),
-            Vec3::new(max.x, min.y, max.z),
-            Vec3::new(min.x, max.y, max.z),
-            BlockStep::ZPlus,
         ),
         (
             Vec3::new(min.x, min.y, min.z),
@@ -282,10 +294,22 @@ pub(crate) fn box_patches_with_textures(
             BlockStep::XMinus,
         ),
         (
-            Vec3::new(max.x, min.y, min.z),
-            Vec3::new(max.x, max.y, min.z),
             Vec3::new(max.x, min.y, max.z),
+            Vec3::new(max.x, min.y, min.z),
+            Vec3::new(max.x, max.y, max.z),
             BlockStep::XPlus,
+        ),
+        (
+            Vec3::new(max.x, min.y, min.z),
+            Vec3::new(min.x, min.y, min.z),
+            Vec3::new(max.x, max.y, min.z),
+            BlockStep::ZMinus,
+        ),
+        (
+            Vec3::new(min.x, min.y, max.z),
+            Vec3::new(max.x, min.y, max.z),
+            Vec3::new(min.x, max.y, max.z),
+            BlockStep::ZPlus,
         ),
     ];
     faces
@@ -293,7 +317,14 @@ pub(crate) fn box_patches_with_textures(
         .zip(texture_indices)
         .map(|((origin, u_end, v_end, cullface), texture_index)| {
             Ok(factory
-                .patch(origin, u_end, v_end, texture_index, shade)?
+                .patch_with_side(
+                    origin,
+                    u_end,
+                    v_end,
+                    crate::renderer::dynmap::types::SideVisible::Top,
+                    texture_index,
+                    shade,
+                )?
                 .with_cullface(Some(cullface)))
         })
         .collect()
@@ -402,7 +433,7 @@ mod tests {
                 .render(&state, &context, &factory)
                 .expect("pane renderer")
                 .len(),
-            6
+            4
         );
         assert_eq!(
             FrameRenderer::default()

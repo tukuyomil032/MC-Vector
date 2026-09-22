@@ -92,6 +92,30 @@ pub enum SideVisible {
     Front,
     Back,
     Both,
+    /// Dynmap's `TOP` visibility. The name is retained separately from
+    /// `Front` because it is part of the reference trace contract.
+    Top,
+    /// Dynmap's `BOTTOM` visibility.
+    Bottom,
+    /// Dynmap's `FLIP` visibility.
+    Flip,
+    TopFlip,
+    TopFlipV,
+    TopFlipHv,
+}
+
+impl SideVisible {
+    pub const fn reference_name(self) -> &'static str {
+        match self {
+            Self::Front | Self::Top => "TOP",
+            Self::Back | Self::Bottom => "BOTTOM",
+            Self::Both => "BOTH",
+            Self::Flip => "FLIP",
+            Self::TopFlip => "TOPFLIP",
+            Self::TopFlipV => "TOPFLIPV",
+            Self::TopFlipHv => "TOPFLIPHV",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

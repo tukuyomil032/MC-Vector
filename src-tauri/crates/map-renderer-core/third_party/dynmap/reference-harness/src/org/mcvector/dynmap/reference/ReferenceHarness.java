@@ -141,21 +141,22 @@ public final class ReferenceHarness {
 
         @Override
         public RenderPatch getRotatedPatch(RenderPatch patch, double xrot, double yrot, double zrot,
-                                           int textureidx) {
-            return patch;
+                                            int textureidx) {
+            return ((RecordingPatch) patch).rotated(xrot, yrot, zrot, 0.5, 0.5, 0.5, textureidx);
         }
 
         @Override
         public RenderPatch getRotatedPatch(RenderPatch patch, double xrot, double yrot, double zrot,
                                            double rotorigx, double rotorigy, double rotorigz,
                                            int textureidx) {
-            return patch;
+            return ((RecordingPatch) patch).rotated(xrot, yrot, zrot, rotorigx, rotorigy, rotorigz,
+                    textureidx);
         }
 
         @Override
         public RenderPatch getRotatedPatch(RenderPatch patch, int xrot, int yrot, int zrot,
                                            int textureidx) {
-            return patch;
+            return ((RecordingPatch) patch).rotated(xrot, yrot, zrot, 0.5, 0.5, 0.5, textureidx);
         }
 
         @Override
@@ -220,6 +221,53 @@ public final class ReferenceHarness {
                     .append("],\"side\":\"").append(sideVisible)
                     .append("\",\"textureIndex\":").append(textureIndex).append('}');
             return output.toString();
+        }
+
+        private RecordingPatch rotated(double xrot, double yrot, double zrot,
+                                       double originX, double originY, double originZ,
+                                       int replacementTextureIndex) {
+            double[] rotatedGeometry = geometry.clone();
+            for (int offset = 0; offset < rotatedGeometry.length; offset += 3) {
+                rotatePoint(rotatedGeometry, offset, xrot, yrot, zrot, originX, originY, originZ);
+            }
+            return new RecordingPatch(
+                    rotatedGeometry[0], rotatedGeometry[1], rotatedGeometry[2],
+                    rotatedGeometry[3], rotatedGeometry[4], rotatedGeometry[5],
+                    rotatedGeometry[6], rotatedGeometry[7], rotatedGeometry[8],
+                    umin, umax, vmin, vmax, vminAtUmax, vmaxAtUmax, sideVisible,
+                    replacementTextureIndex < 0 ? textureIndex : replacementTextureIndex);
+        }
+
+        private static void rotatePoint(double[] point, int offset,
+                                        double xrot, double yrot, double zrot,
+                                        double originX, double originY, double originZ) {
+            double x = point[offset] - originX;
+            double y = point[offset + 1] - originY;
+            double z = point[offset + 2] - originZ;
+            double sinX = Math.sin(Math.toRadians(xrot));
+            double cosX = Math.cos(Math.toRadians(xrot));
+            double sinY = Math.sin(Math.toRadians(yrot));
+            double cosY = Math.cos(Math.toRadians(yrot));
+            double sinZ = Math.sin(Math.toRadians(zrot));
+            double cosZ = Math.cos(Math.toRadians(zrot));
+            if (xrot != 0) {
+                double nextY = z * sinX + y * cosX;
+                z = z * cosX - y * sinX;
+                y = nextY;
+            }
+            if (yrot != 0) {
+                double nextX = x * cosY - z * sinY;
+                z = x * sinY + z * cosY;
+                x = nextX;
+            }
+            if (zrot != 0) {
+                double nextY = y * cosZ - x * sinZ;
+                x = y * sinZ + x * cosZ;
+                y = nextY;
+            }
+            point[offset] = x + originX;
+            point[offset + 1] = y + originY;
+            point[offset + 2] = z + originZ;
         }
     }
 }

@@ -188,11 +188,7 @@ impl BuiltinRendererRegistry {
             "ChestRenderer" => Some(Box::new(ChestRenderer::default())),
             "ChestStateRenderer" => Some(Box::new(ChestStateRenderer)),
             "CopyStairBlockRenderer" => Some(Box::new(CopyStairBlockRenderer)),
-            "CuboidRenderer" => Some(Box::new(CuboidRenderer::new(
-                simple::CuboidBounds::UNIT,
-                0,
-                true,
-            ))),
+            "CuboidRenderer" => Some(Box::new(CuboidRenderer::empty())),
             "DoorRenderer" => Some(Box::new(DoorRenderer::default())),
             "DoorStateRenderer" => Some(Box::new(DoorStateRenderer)),
             "FenceGateBlockRenderer" => Some(Box::new(FenceGateBlockRenderer)),

@@ -199,6 +199,31 @@ impl PatchDefinition {
         self
     }
 
+    /// Rotate a patch around Dynmap's default block-center origin.
+    pub fn rotated(
+        self,
+        x_degrees: f64,
+        y_degrees: f64,
+        z_degrees: f64,
+        texture_index: i32,
+    ) -> Self {
+        let origin = Vec3::new(0.5, 0.5, 0.5);
+        let rotate = |point: Vec3| rotate_point(point, origin, x_degrees, y_degrees, z_degrees);
+        let mut rotated = Self {
+            origin: rotate(self.origin),
+            u_end: rotate(self.u_end),
+            v_end: rotate(self.v_end),
+            texture_index: if texture_index < 0 {
+                self.texture_index
+            } else {
+                texture_index
+            },
+            ..self
+        };
+        rotated.step = dominant_step(rotated.normal());
+        rotated
+    }
+
     pub fn u_vector(self) -> Vec3 {
         self.u_end - self.origin
     }
@@ -259,8 +284,12 @@ impl PatchDefinition {
         let front_facing = denominator < -EPSILON;
         let back_facing = denominator > EPSILON;
         let visible = match self.side_visible {
-            SideVisible::Front => front_facing,
-            SideVisible::Back => back_facing,
+            SideVisible::Front | SideVisible::Top | SideVisible::TopFlip => front_facing,
+            SideVisible::Back
+            | SideVisible::Bottom
+            | SideVisible::Flip
+            | SideVisible::TopFlipV
+            | SideVisible::TopFlipHv => back_facing,
             SideVisible::Both => front_facing || back_facing,
         };
         if !visible {
@@ -285,6 +314,29 @@ impl PatchDefinition {
             shade: self.shade,
         })
     }
+}
+
+fn rotate_point(point: Vec3, origin: Vec3, x_degrees: f64, y_degrees: f64, z_degrees: f64) -> Vec3 {
+    let mut point = point - origin;
+    let (sin_x, cos_x) = x_degrees.to_radians().sin_cos();
+    let (sin_y, cos_y) = y_degrees.to_radians().sin_cos();
+    let (sin_z, cos_z) = z_degrees.to_radians().sin_cos();
+    if x_degrees != 0.0 {
+        let next_y = point.z * sin_x + point.y * cos_x;
+        point.z = point.z * cos_x - point.y * sin_x;
+        point.y = next_y;
+    }
+    if y_degrees != 0.0 {
+        let next_x = point.x * cos_y - point.z * sin_y;
+        point.z = point.x * sin_y + point.z * cos_y;
+        point.x = next_x;
+    }
+    if z_degrees != 0.0 {
+        let next_y = point.y * cos_z - point.x * sin_z;
+        point.x = point.y * sin_z + point.x * cos_z;
+        point.y = next_y;
+    }
+    point + origin
 }
 
 fn solve_patch_coordinates(

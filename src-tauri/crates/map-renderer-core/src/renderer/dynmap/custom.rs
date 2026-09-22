@@ -88,7 +88,7 @@ impl RenderPatchFactory {
         texture_index: i32,
         shade: bool,
     ) -> Result<PatchDefinition, CustomRendererError> {
-        PatchDefinitionFactory::create(
+        self.patch_with_side(
             origin,
             u_end,
             v_end,
@@ -96,7 +96,44 @@ impl RenderPatchFactory {
             texture_index,
             shade,
         )
+    }
+
+    pub fn patch_with_side(
+        &self,
+        origin: Vec3,
+        u_end: Vec3,
+        v_end: Vec3,
+        side_visible: SideVisible,
+        texture_index: i32,
+        shade: bool,
+    ) -> Result<PatchDefinition, CustomRendererError> {
+        PatchDefinitionFactory::create(origin, u_end, v_end, side_visible, texture_index, shade)
+            .map_err(CustomRendererError::from)
+    }
+
+    pub fn patch_with_uv_bounds(
+        &self,
+        origin: Vec3,
+        u_end: Vec3,
+        v_end: Vec3,
+        uv: (f64, f64, f64, f64),
+        style: (SideVisible, i32, bool),
+    ) -> Result<PatchDefinition, CustomRendererError> {
+        PatchDefinition::new(
+            origin, u_end, v_end, uv.0, uv.1, uv.2, uv.3, uv.2, uv.3, style.0, style.1, style.2,
+        )
         .map_err(CustomRendererError::from)
+    }
+
+    pub fn rotated_patch(
+        &self,
+        patch: PatchDefinition,
+        x_degrees: f64,
+        y_degrees: f64,
+        z_degrees: f64,
+        texture_index: i32,
+    ) -> PatchDefinition {
+        patch.rotated(x_degrees, y_degrees, z_degrees, texture_index)
     }
 }
 
