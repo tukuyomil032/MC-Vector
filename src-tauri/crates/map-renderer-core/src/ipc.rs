@@ -121,6 +121,41 @@ pub struct MapRenderDiagnostics {
 }
 
 impl MapRenderDiagnostics {
+    /// A connected bridge is not enough to activate Map.  A tile can replace an
+    /// existing layer only after the renderer has produced verified terrain.
+    pub fn has_verified_terrain(&self) -> bool {
+        self.bridge_state == BridgeState::Connected
+            && self.terrain_state == TerrainState::Ready
+            && self.render_state == MapRenderState::Ready
+            && self.source != TileRenderSource::None
+            && self.unavailable_reason.is_none()
+    }
+
+    pub fn can_activate_map(&self) -> bool {
+        self.has_verified_terrain()
+    }
+
+    pub fn can_start_render_scheduler(&self) -> bool {
+        self.bridge_state == BridgeState::Connected
+            && self.terrain_state != TerrainState::Unavailable
+            && !matches!(
+                self.render_state,
+                MapRenderState::Blocked
+                    | MapRenderState::Empty
+                    | MapRenderState::Failed
+                    | MapRenderState::Cancelled
+            )
+            && self.unavailable_reason.is_none()
+    }
+
+    pub fn should_replace_existing_layer(&self) -> bool {
+        self.has_verified_terrain()
+    }
+
+    pub fn can_save_as_fresh_cache(&self) -> bool {
+        self.has_verified_terrain()
+    }
+
     pub fn blocked(minecraft_version: MinecraftVersionId) -> Self {
         Self {
             bridge_state: BridgeState::Disconnected,
@@ -238,5 +273,53 @@ mod tests {
         assert!(!json.contains("token"));
         assert_eq!(diagnostics.render_state, MapRenderState::Blocked);
         assert_eq!(diagnostics.terrain_state, TerrainState::Unknown);
+        assert!(!diagnostics.can_activate_map());
+        assert!(!diagnostics.can_start_render_scheduler());
+        assert!(!diagnostics.should_replace_existing_layer());
+        assert!(!diagnostics.can_save_as_fresh_cache());
+    }
+
+    #[test]
+    fn connected_bridge_without_verified_terrain_cannot_activate_or_replace() {
+        let mut diagnostics = MapRenderDiagnostics::blocked(
+            MinecraftVersionId::new("1.21.4").expect("fixture version"),
+        );
+        diagnostics.bridge_state = BridgeState::Connected;
+        assert!(!diagnostics.can_activate_map());
+        assert!(!diagnostics.should_replace_existing_layer());
+    }
+
+    #[test]
+    fn failed_empty_and_retryable_results_never_become_fresh_success() {
+        let mut diagnostics = MapRenderDiagnostics::blocked(
+            MinecraftVersionId::new("1.21.4").expect("fixture version"),
+        );
+        diagnostics.bridge_state = BridgeState::Connected;
+        diagnostics.terrain_state = TerrainState::Ready;
+        diagnostics.source = TileRenderSource::Saved;
+        for state in [
+            MapRenderState::Empty,
+            MapRenderState::Failed,
+            MapRenderState::Retryable,
+        ] {
+            diagnostics.render_state = state;
+            assert!(!diagnostics.can_activate_map());
+            assert!(!diagnostics.can_save_as_fresh_cache());
+        }
+    }
+
+    #[test]
+    fn only_verified_ready_terrain_can_replace_and_activate() {
+        let mut diagnostics = MapRenderDiagnostics::blocked(
+            MinecraftVersionId::new("1.21.4").expect("fixture version"),
+        );
+        diagnostics.bridge_state = BridgeState::Connected;
+        diagnostics.terrain_state = TerrainState::Ready;
+        diagnostics.render_state = MapRenderState::Ready;
+        diagnostics.source = TileRenderSource::Saved;
+        diagnostics.unavailable_reason = None;
+        assert!(diagnostics.can_activate_map());
+        assert!(diagnostics.should_replace_existing_layer());
+        assert!(diagnostics.can_save_as_fresh_cache());
     }
 }
