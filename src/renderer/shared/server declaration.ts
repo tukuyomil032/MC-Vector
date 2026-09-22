@@ -45,6 +45,7 @@ export type AppView =
   | 'files'
   | 'plugins'
   | 'backups'
+  | 'map'
   | 'general-settings'
   | 'app-settings'
   | 'proxy'
