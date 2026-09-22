@@ -25,7 +25,7 @@ Each version must eventually provide separate evidence for:
 - Java process exit;
 - port `25565` release.
 
-The initial default record is intentionally `blocked`. It records that real environments and artifacts have not been supplied for the complete version matrix. A `verified` row is invalid unless it includes a command, artifact identity, and result reference. Raw paths, tokens, authorization values, and raw HTTP bodies are rejected by the validator.
+The initial default record is intentionally `blocked`. It records that real environments and artifacts have not been supplied for the complete version matrix. A `verified` row is invalid unless it includes a command, artifact identity, timestamp, commit, and result reference, and a verified version record must mark every required evidence class as verified. Raw paths, tokens, authorization values, and raw HTTP bodies are rejected by the validator.
 
 ## Commands
 

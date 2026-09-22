@@ -61,8 +61,13 @@ function validateRecord(label, record) {
     if (!allowedStatuses.has(item.status)) {
       failures.push(`${label}.${key}: invalid status ${item.status ?? '<missing>'}`);
     }
-    if (item.status === 'verified' && (!item.command || !item.artifact || !item.result)) {
-      failures.push(`${label}.${key}: verified evidence requires command, artifact, and result`);
+    if (
+      item.status === 'verified' &&
+      (!item.command || !item.artifact || !item.timestamp || !item.commit || !item.result)
+    ) {
+      failures.push(
+        `${label}.${key}: verified evidence requires command, artifact, timestamp, commit, and result`,
+      );
     }
     if (item.status !== 'verified' && !item.reason && !record.reason) {
       failures.push(`${label}.${key}: non-verified evidence requires a reason`);
@@ -72,6 +77,14 @@ function validateRecord(label, record) {
       /(^|[\\/])Users[\\/]|(^|[\\/])home[\\/]|token|authorization|rawHttpBody/i.test(serialized)
     ) {
       failures.push(`${label}.${key}: raw path or secret-like value is forbidden`);
+    }
+  }
+  if (record.status === 'verified') {
+    const incomplete = requiredEvidence.filter(
+      (key) => record.evidence[key]?.status !== 'verified',
+    );
+    if (incomplete.length > 0) {
+      failures.push(`${label}: verified record has incomplete evidence ${incomplete.join(', ')}`);
     }
   }
 }
