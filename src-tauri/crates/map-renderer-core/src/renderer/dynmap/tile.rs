@@ -14,6 +14,7 @@ pub const DEFAULT_TILE_EXTENT_AT_ZOOM_ZERO: i64 = 2_048;
 pub const MAX_REQUIRED_CHUNKS: usize = 64;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TileProjection {
     WorldXZ,
     IsoProjected,

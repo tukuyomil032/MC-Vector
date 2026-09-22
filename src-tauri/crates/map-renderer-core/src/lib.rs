@@ -3,6 +3,7 @@ pub mod bridge;
 pub mod builtins;
 pub mod cache;
 pub mod domain;
+pub mod ipc;
 pub mod renderer;
 pub mod scheduler;
 pub mod world;
