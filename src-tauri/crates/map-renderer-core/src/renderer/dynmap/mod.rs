@@ -1,5 +1,6 @@
 //! Source-independent Dynmap renderer contracts.
 
+pub mod custom;
 pub mod hd_perspective;
 pub mod iso_hd_perspective;
 pub mod lighting;
