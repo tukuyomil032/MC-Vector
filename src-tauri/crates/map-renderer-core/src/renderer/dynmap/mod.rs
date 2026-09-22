@@ -7,6 +7,7 @@ pub mod model;
 pub mod patch;
 pub mod shader;
 pub mod texture;
+pub mod tile;
 pub mod transform;
 pub mod types;
 

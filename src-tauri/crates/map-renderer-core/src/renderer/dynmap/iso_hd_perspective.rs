@@ -5,6 +5,13 @@ use super::patch::Ray;
 use super::transform::Matrix3D;
 use super::types::Vec3;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum ProjectionError {
+    InvalidViewport,
+    InvalidScale,
+    SingularTransform,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct IsoProjection {
     pub width: u32,
@@ -20,6 +27,25 @@ pub struct IsoProjection {
 impl IsoProjection {
     pub fn new(width: u32, height: u32, scale: f64, world_y: f64) -> Self {
         Self::with_dynmap_defaults(width, height, scale, world_y)
+    }
+
+    pub fn try_new(
+        width: u32,
+        height: u32,
+        scale: f64,
+        world_y: f64,
+    ) -> Result<Self, ProjectionError> {
+        if width == 0 || height == 0 {
+            return Err(ProjectionError::InvalidViewport);
+        }
+        if !scale.is_finite() || scale <= 0.0 {
+            return Err(ProjectionError::InvalidScale);
+        }
+        let projection = Self::with_dynmap_defaults(width, height, scale, world_y);
+        if projection.world_to_map.inverse().is_none() {
+            return Err(ProjectionError::SingularTransform);
+        }
+        Ok(projection)
     }
 
     pub fn with_dynmap_defaults(width: u32, height: u32, scale: f64, world_y: f64) -> Self {
@@ -90,6 +116,20 @@ impl IsoProjection {
         Ray::new(top, bottom - top)
     }
 
+    pub fn trace(self, world: Vec3) -> ProjectionTrace {
+        let (map_x, map_z) = self.world_to_map(world);
+        let screen = self.project(world);
+        let restored = self.unproject(screen.0, screen.1);
+        ProjectionTrace {
+            world,
+            map_x,
+            map_z,
+            screen_x: screen.0,
+            screen_y: screen.1,
+            restored_world: restored,
+        }
+    }
+
     fn unproject_at_world_y(self, map_x: f64, map_y: f64, world_y: f64) -> Vec3 {
         let rows = self.map_to_world.rows();
         let map_z = (world_y - rows[1][0] * map_x - rows[1][1] * map_y) / rows[1][2];
@@ -97,9 +137,19 @@ impl IsoProjection {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ProjectionTrace {
+    pub world: Vec3,
+    pub map_x: f64,
+    pub map_z: f64,
+    pub screen_x: f64,
+    pub screen_y: f64,
+    pub restored_world: Vec3,
+}
+
 #[cfg(test)]
 mod tests {
-    use super::IsoProjection;
+    use super::{IsoProjection, ProjectionError};
     use crate::renderer::dynmap::types::Vec3;
 
     #[test]
@@ -120,5 +170,27 @@ mod tests {
         let restored = projection.unproject(screen.0, screen.1);
         assert!((restored.x - point.x).abs() < 1e-9);
         assert!((restored.z - point.z).abs() < 1e-9);
+    }
+
+    #[test]
+    fn invalid_projection_inputs_are_rejected_without_panicking() {
+        assert_eq!(
+            IsoProjection::try_new(0, 256, 1.0, 0.0),
+            Err(ProjectionError::InvalidViewport)
+        );
+        assert_eq!(
+            IsoProjection::try_new(256, 256, 0.0, 0.0),
+            Err(ProjectionError::InvalidScale)
+        );
+    }
+
+    #[test]
+    fn projection_trace_keeps_the_world_anchor_explicit() {
+        let projection = IsoProjection::try_new(512, 384, 2.5, 16.0).unwrap();
+        let trace = projection.trace(Vec3::new(-17.25, 16.0, 2048.125));
+        assert!((trace.restored_world.x - trace.world.x).abs() < 1e-9);
+        assert!((trace.restored_world.z - trace.world.z).abs() < 1e-9);
+        assert!(trace.screen_x.is_finite());
+        assert!(trace.screen_y.is_finite());
     }
 }
