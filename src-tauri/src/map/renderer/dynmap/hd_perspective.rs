@@ -117,11 +117,8 @@ fn trace_pixel(
     atlas: &TextureAtlas,
     lighting: Lighting,
 ) -> Result<[u8; 4], RenderError> {
-    let base = projection.unproject(screen_x, screen_y);
-    let view = super::types::Vec3::new(1.0, 6.0_f64.sqrt(), 1.0)
-        .normalized()
-        .ok_or(RenderError::InvalidDimensions)?;
-    let ray = Ray::new(base + view * 512.0, view * -1.0);
+    let ray =
+        projection.ray_for_boundary(screen_x, screen_y, boundary.min.y, boundary.max_exclusive.y);
     let Some((entry, exit)) = ray_box_intersection(ray, boundary) else {
         return Ok([0, 0, 0, 0]);
     };
