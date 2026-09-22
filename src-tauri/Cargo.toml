@@ -45,6 +45,7 @@ futures-util = "0.3"
 sha2 = "0.10"
 fastanvil = "0.32"
 fastnbt = "2.6"
+png = "0.17"
 uuid = { version = "1", features = ["v4"] }
 keyring = { version = "3.6.3", default-features = false, features = ["apple-native", "windows-native", "linux-native-sync-persistent"] }
 

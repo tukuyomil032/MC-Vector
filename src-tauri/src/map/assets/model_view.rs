@@ -83,6 +83,13 @@ impl ModelView {
                 .unwrap_or(ModelResolution::UnknownModel { block_state }),
         }
     }
+
+    pub fn model_for(&self, block_state: BlockStateId) -> Option<&ModelDefinition> {
+        match self.resolve(block_state) {
+            ModelResolution::Resolved(model) => Some(model),
+            ModelResolution::MissingAsset { .. } | ModelResolution::UnknownModel { .. } => None,
+        }
+    }
 }
 
 #[cfg(test)]

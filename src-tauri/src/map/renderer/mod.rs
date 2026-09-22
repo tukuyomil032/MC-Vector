@@ -1,4 +1,5 @@
 pub mod dynmap;
+pub mod png;
 
 use crate::map::assets::model_view::ModelView;
 use crate::map::world::chunk_view::MapChunkCache;

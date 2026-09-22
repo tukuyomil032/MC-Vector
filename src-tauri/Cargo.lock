@@ -2811,6 +2811,7 @@ dependencies = [
  "glib 0.20.12",
  "keyring",
  "log",
+ "png 0.17.16",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
