@@ -15,9 +15,9 @@ use super::lighting::Lighting;
 use super::patch::{PatchDefinition, Ray};
 use super::texture::{TextureAtlas, TextureImage};
 use super::types::{SideVisible, Vec3};
-use crate::map::assets::model_view::{AssetKey, AssetResolutionState, ModelDefinition, ModelView};
-use crate::map::renderer::RendererDomain;
-use crate::map::world::chunk_view::{
+use crate::assets::model_view::{AssetKey, AssetResolutionState, ModelDefinition, ModelView};
+use crate::renderer::RendererDomain;
+use crate::world::chunk_view::{
     BiomeData, BlockCoord, BlockState, BlockStateData, BlockStateId, ChunkCoord, ChunkLoadState,
     ChunkSection, HeightData, LightData, MapChunkCache, SectionPalette, TileBoundary,
     TileBoundaryState, CHUNK_COLUMN_COUNT, SECTION_BLOCK_COUNT,
@@ -25,7 +25,7 @@ use crate::map::world::chunk_view::{
 
 const FIXTURE_MANIFEST: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../tests/fixtures/dynmap/manifest.json"
+    "/../../../tests/fixtures/dynmap/manifest.json"
 ));
 
 fn flat_fixture_domain() -> (MapChunkCache, ModelView) {

@@ -176,7 +176,7 @@ impl Transform3D {
 #[cfg(test)]
 mod tests {
     use super::{Matrix3D, Transform3D};
-    use crate::map::renderer::dynmap::types::Vec3;
+    use crate::renderer::dynmap::types::Vec3;
 
     fn assert_close(actual: Vec3, expected: Vec3) {
         assert!(

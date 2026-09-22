@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::map::assets::model_view::AssetResolutionState;
+use crate::assets::model_view::AssetResolutionState;
 
 pub const CHUNK_SIDE: usize = 16;
 pub const SECTION_BLOCK_COUNT: usize = CHUNK_SIDE * CHUNK_SIDE * CHUNK_SIDE;
@@ -456,7 +456,7 @@ mod tests {
         ChunkSection, HeightData, LightData, MapChunkCache, MissingBlockDataReason,
         MissingLightDataReason, TileBoundary,
     };
-    use crate::map::assets::model_view::AssetResolutionState;
+    use crate::assets::model_view::AssetResolutionState;
 
     #[test]
     fn negative_world_coordinates_use_floor_chunking() {

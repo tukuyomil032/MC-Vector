@@ -106,7 +106,7 @@ pub fn region_location(chunk: ChunkCoord) -> (RegionCoord, usize, usize) {
 #[cfg(test)]
 mod tests {
     use super::{region_location, RegionCoord};
-    use crate::map::world::chunk_view::ChunkCoord;
+    use crate::world::chunk_view::ChunkCoord;
 
     #[test]
     fn negative_chunk_coordinates_use_region_floor_division() {

@@ -5,8 +5,8 @@
 //! deterministic RGBA tile.  Model patches, UVs, resource-pack pixels, alpha,
 //! and light are all explicit inputs.
 
-use crate::map::renderer::RendererDomain;
-use crate::map::world::chunk_view::{BlockCoord, ChunkDataError, CHUNK_SIDE};
+use crate::renderer::RendererDomain;
+use crate::world::chunk_view::{BlockCoord, ChunkDataError, CHUNK_SIDE};
 
 use super::super::png::{encode_rgba, PngError};
 use super::iso_hd_perspective::IsoProjection;
@@ -149,11 +149,11 @@ fn trace_pixel(
                 .block_state_at(position)
                 .map_err(map_data_error)?;
             let model = match domain.models.resolve(block.id) {
-                crate::map::assets::model_view::ModelResolution::Resolved(model) => model,
-                crate::map::assets::model_view::ModelResolution::MissingAsset { .. } => {
+                crate::assets::model_view::ModelResolution::Resolved(model) => model,
+                crate::assets::model_view::ModelResolution::MissingAsset { .. } => {
                     return Err(RenderError::Model(ModelError::MissingAsset));
                 }
-                crate::map::assets::model_view::ModelResolution::UnknownModel { .. } => {
+                crate::assets::model_view::ModelResolution::UnknownModel { .. } => {
                     return Err(RenderError::Model(ModelError::UnknownModel));
                 }
             };
@@ -315,14 +315,14 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::render_chunk;
-    use crate::map::assets::model_view::{AssetResolutionState, ModelDefinition, ModelView};
-    use crate::map::renderer::dynmap::iso_hd_perspective::IsoProjection;
-    use crate::map::renderer::dynmap::lighting::Lighting;
-    use crate::map::renderer::dynmap::patch::PatchDefinition;
-    use crate::map::renderer::dynmap::texture::{TextureAtlas, TextureImage};
-    use crate::map::renderer::dynmap::types::{SideVisible, Vec3};
-    use crate::map::renderer::RendererDomain;
-    use crate::map::world::chunk_view::{
+    use crate::assets::model_view::{AssetResolutionState, ModelDefinition, ModelView};
+    use crate::renderer::dynmap::iso_hd_perspective::IsoProjection;
+    use crate::renderer::dynmap::lighting::Lighting;
+    use crate::renderer::dynmap::patch::PatchDefinition;
+    use crate::renderer::dynmap::texture::{TextureAtlas, TextureImage};
+    use crate::renderer::dynmap::types::{SideVisible, Vec3};
+    use crate::renderer::RendererDomain;
+    use crate::world::chunk_view::{
         BiomeData, BlockCoord, BlockState, BlockStateData, BlockStateId, ChunkCoord,
         ChunkLoadState, ChunkSection, HeightData, LightData, MapChunkCache, SectionPalette,
         TileBoundary, TileBoundaryState, CHUNK_COLUMN_COUNT, SECTION_BLOCK_COUNT,
@@ -376,7 +376,7 @@ mod tests {
         let models = ModelView::new(AssetResolutionState::Available).with_model(
             BlockStateId(0),
             ModelDefinition {
-                model_id: crate::map::assets::model_view::AssetKey::new("minecraft:stone"),
+                model_id: crate::assets::model_view::AssetKey::new("minecraft:stone"),
                 patches: vec![patch],
             },
         );

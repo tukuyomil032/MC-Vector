@@ -5,8 +5,8 @@
 //! never replaced with a guessed colour.
 
 use super::patch::{PatchDefinition, PatchHit, Ray};
-use crate::map::assets::model_view::{ModelResolution, ModelView};
-use crate::map::world::chunk_view::BlockStateId;
+use crate::assets::model_view::{ModelResolution, ModelView};
+use crate::world::chunk_view::BlockStateId;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ModelHit {
@@ -53,10 +53,10 @@ pub fn nearest_patch(
 #[cfg(test)]
 mod tests {
     use super::{nearest_patch, ModelError};
-    use crate::map::assets::model_view::{AssetResolutionState, ModelDefinition, ModelView};
-    use crate::map::renderer::dynmap::patch::{PatchDefinition, Ray};
-    use crate::map::renderer::dynmap::types::{SideVisible, Vec3};
-    use crate::map::world::chunk_view::BlockStateId;
+    use crate::assets::model_view::{AssetResolutionState, ModelDefinition, ModelView};
+    use crate::renderer::dynmap::patch::{PatchDefinition, Ray};
+    use crate::renderer::dynmap::types::{SideVisible, Vec3};
+    use crate::world::chunk_view::BlockStateId;
 
     fn model_view() -> ModelView {
         let patch = PatchDefinition::new(
@@ -77,7 +77,7 @@ mod tests {
         ModelView::new(AssetResolutionState::Available).with_model(
             BlockStateId(1),
             ModelDefinition {
-                model_id: crate::map::assets::model_view::AssetKey::new("minecraft:test"),
+                model_id: crate::assets::model_view::AssetKey::new("minecraft:test"),
                 patches: vec![patch],
             },
         )

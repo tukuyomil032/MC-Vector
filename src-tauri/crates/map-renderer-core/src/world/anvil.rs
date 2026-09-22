@@ -11,7 +11,7 @@ use std::path::Path;
 use fastanvil::{Chunk as _, JavaChunk};
 use fastnbt::Value;
 
-use crate::map::assets::model_view::AssetResolutionState;
+use crate::assets::model_view::AssetResolutionState;
 
 use super::chunk_view::{
     BiomeData, BlockCoord, BlockState, BlockStateData, BlockStateId, ChunkCoord, ChunkLoadState,
@@ -148,9 +148,9 @@ fn root_compound(value: &Value) -> Option<&HashMap<String, Value>> {
     }
 }
 
-fn section_compounds<'a>(
-    root: &'a HashMap<String, Value>,
-) -> Result<BTreeMap<i32, &'a HashMap<String, Value>>, AnvilError> {
+fn section_compounds(
+    root: &HashMap<String, Value>,
+) -> Result<BTreeMap<i32, &HashMap<String, Value>>, AnvilError> {
     let Some(Value::List(sections)) = root.get("sections") else {
         return Err(AnvilError::MalformedNbt);
     };
@@ -348,8 +348,8 @@ mod tests {
     use fastnbt::{ByteArray, Value};
 
     use super::{decode_chunk, stable_id, AnvilError};
-    use crate::map::assets::model_view::AssetResolutionState;
-    use crate::map::world::chunk_view::{BlockCoord, ChunkCoord};
+    use crate::assets::model_view::AssetResolutionState;
+    use crate::world::chunk_view::{BlockCoord, ChunkCoord};
 
     fn compound(entries: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
         Value::Compound(

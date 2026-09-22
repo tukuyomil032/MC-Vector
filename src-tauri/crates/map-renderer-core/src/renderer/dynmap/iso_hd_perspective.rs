@@ -100,7 +100,7 @@ impl IsoProjection {
 #[cfg(test)]
 mod tests {
     use super::IsoProjection;
-    use crate::map::renderer::dynmap::types::Vec3;
+    use crate::renderer::dynmap::types::Vec3;
 
     #[test]
     fn world_map_round_trip_preserves_horizontal_coordinates() {

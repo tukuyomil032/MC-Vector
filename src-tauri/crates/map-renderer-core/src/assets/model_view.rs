@@ -7,8 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::map::renderer::dynmap::patch::PatchDefinition;
-use crate::map::world::chunk_view::BlockStateId;
+use crate::renderer::dynmap::patch::PatchDefinition;
+use crate::world::chunk_view::BlockStateId;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct AssetKey(String);
@@ -23,11 +23,16 @@ impl AssetKey {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub enum AssetResolutionState {
+    #[default]
     Available,
-    Missing { asset: AssetKey },
-    Unknown { asset: AssetKey },
+    Missing {
+        asset: AssetKey,
+    },
+    Unknown {
+        asset: AssetKey,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,12 +52,6 @@ pub enum ModelResolution<'a> {
 pub struct ModelView {
     asset_state: AssetResolutionState,
     models: BTreeMap<BlockStateId, ModelDefinition>,
-}
-
-impl Default for AssetResolutionState {
-    fn default() -> Self {
-        Self::Available
-    }
 }
 
 impl ModelView {
@@ -95,7 +94,7 @@ impl ModelView {
 #[cfg(test)]
 mod tests {
     use super::{AssetKey, AssetResolutionState, ModelDefinition, ModelResolution, ModelView};
-    use crate::map::world::chunk_view::BlockStateId;
+    use crate::world::chunk_view::BlockStateId;
 
     #[test]
     fn missing_model_asset_is_not_silently_rendered() {

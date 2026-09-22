@@ -250,7 +250,7 @@ fn dominant_step(normal: Vec3) -> BlockStep {
 #[cfg(test)]
 mod tests {
     use super::{PatchDefinition, Ray};
-    use crate::map::renderer::dynmap::types::{SideVisible, Vec3};
+    use crate::renderer::dynmap::types::{SideVisible, Vec3};
 
     fn square_patch() -> PatchDefinition {
         PatchDefinition::new(

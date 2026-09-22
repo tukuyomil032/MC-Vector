@@ -2784,6 +2784,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "map-renderer-core"
+version = "2.0.63"
+dependencies = [
+ "fastanvil",
+ "fastnbt",
+ "png 0.17.16",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "markup5ever"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2804,14 +2815,11 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 name = "mc-vector"
 version = "2.0.63"
 dependencies = [
- "fastanvil",
- "fastnbt",
  "flate2",
  "futures-util",
  "glib 0.20.12",
  "keyring",
  "log",
- "png 0.17.16",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
