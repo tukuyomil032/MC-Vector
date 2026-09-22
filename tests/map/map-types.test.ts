@@ -102,7 +102,8 @@ describe('map plane coordinates', () => {
   });
 
   it('allows tile bytes only after a ready event and only for an exact invalidation', async () => {
-    const { shouldFetchMapTileAfterReady } = await import('@/map/state/map-types');
+    const { isMapTileReadyTerminalWithoutPng, shouldFetchMapTileAfterReady } =
+      await import('@/map/state/map-types');
     const request = {
       requestId: 'render-2',
       generation: 2,
@@ -126,6 +127,86 @@ describe('map plane coordinates', () => {
       true,
     );
     expect(shouldFetchMapTileAfterReady({ ...ready, requestId: 'render-1' }, request)).toBe(false);
+
+    const emptyLiveOnly = {
+      ...ready,
+      hasTerrain: false,
+      renderState: 'empty' as const,
+      source: 'live' as const,
+      liveReceivedCount: 0,
+    };
+    expect(isMapTileReadyTerminalWithoutPng(emptyLiveOnly)).toBe(true);
+    expect(shouldFetchMapTileAfterReady(emptyLiveOnly, request)).toBe(false);
+    expect(isMapTileReadyTerminalWithoutPng({ ...emptyLiveOnly, liveReceivedCount: 1 })).toBe(true);
+    expect(
+      shouldFetchMapTileAfterReady(
+        {
+          ...emptyLiveOnly,
+          source: 'saved' as const,
+        },
+        request,
+      ),
+    ).toBe(true);
+    expect(
+      shouldFetchMapTileAfterReady(
+        {
+          ...emptyLiveOnly,
+          hasTerrain: true,
+          renderState: 'terrain' as const,
+          liveReceivedCount: 1,
+        },
+        request,
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps an existing rendered layer while a completed target is entirely empty', async () => {
+    const { shouldReplaceRenderedMapLayer } = await import('@/map/state/map-types');
+    const emptyTarget = {
+      '4:0:0': { hasTerrain: false, renderState: 'empty' as const },
+      '4:1:0': { hasTerrain: false, renderState: 'empty' as const },
+    };
+    const terrainTarget = {
+      ...emptyTarget,
+      '4:0:0': { hasTerrain: true, renderState: 'terrain' as const },
+    };
+
+    expect(
+      shouldReplaceRenderedMapLayer({
+        hasPreviousLayer: true,
+        requestedTileKeys: Object.keys(emptyTarget),
+        tileStates: emptyTarget,
+      }),
+    ).toBe(false);
+    expect(
+      shouldReplaceRenderedMapLayer({
+        hasPreviousLayer: false,
+        requestedTileKeys: Object.keys(emptyTarget),
+        tileStates: emptyTarget,
+      }),
+    ).toBe(true);
+    expect(
+      shouldReplaceRenderedMapLayer({
+        hasPreviousLayer: true,
+        requestedTileKeys: Object.keys(terrainTarget),
+        tileStates: terrainTarget,
+      }),
+    ).toBe(true);
+    expect(
+      shouldReplaceRenderedMapLayer({
+        hasPreviousLayer: true,
+        requestedTileKeys: Object.keys(emptyTarget),
+        tileStates: emptyTarget,
+        failed: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldReplaceRenderedMapLayer({
+        hasPreviousLayer: false,
+        requestedTileKeys: Object.keys(emptyTarget),
+        tileStates: { '4:0:0': emptyTarget['4:0:0'] },
+      }),
+    ).toBe(false);
   });
 
   it('returns only exact invalidation keys and ignores legacy chunk-only payloads', async () => {
@@ -203,6 +284,19 @@ describe('map tile diagnostics', () => {
         },
       }),
     ).toBe('empty');
+    expect(
+      resolveMapTileDiagnosticState({
+        assetState: 'auto_detected',
+        hasPreviousTiles: true,
+        isLoading: false,
+        requestedTileKeys: ['4:0:0'],
+        statusError: null,
+        tileError: null,
+        tileStates: {
+          '4:0:0': tile({ hasTerrain: false, renderState: 'empty', coverageRatio: 0 }),
+        },
+      }),
+    ).toBe('stale');
     expect(
       resolveMapTileDiagnosticState({
         assetState: 'auto_detected',

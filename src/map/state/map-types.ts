@@ -523,6 +523,18 @@ export interface MapTileReadyEvent {
   message?: string | null;
 }
 
+/**
+ * A live-only empty tile has no cache entry by design. Its ready event is the
+ * complete result, so the renderer must not follow it with a PNG IPC call.
+ */
+export function isMapTileReadyTerminalWithoutPng(
+  event: Partial<
+    Pick<MapTileReadyEvent, 'hasTerrain' | 'renderState' | 'source' | 'liveReceivedCount'>
+  >,
+): boolean {
+  return event.renderState === 'empty' && !event.hasTerrain && event.source === 'live';
+}
+
 export interface MapRenderProgressEvent {
   serverId: string;
   worldId: string;
@@ -592,17 +604,42 @@ export function shouldFetchMapTileAfterReady(
   event: Pick<
     MapTileReadyEvent,
     'requestId' | 'requestGeneration' | 'worldId' | 'zoom' | 'tileX' | 'tileY'
-  >,
+  > &
+    Partial<Pick<MapTileReadyEvent, 'hasTerrain' | 'renderState' | 'source' | 'liveReceivedCount'>>,
   request: MapRenderRequestContext,
   pendingInvalidationKeys: ReadonlySet<string> = new Set(),
 ): boolean {
   if (!isMapTileEventCurrent(event, request)) {
     return false;
   }
+  if (isMapTileReadyTerminalWithoutPng(event)) {
+    return false;
+  }
   const hasPendingInvalidationInViewport = [...pendingInvalidationKeys].some((key) =>
     request.viewportTileKeys.has(key),
   );
   return !hasPendingInvalidationInViewport || pendingInvalidationKeys.has(mapTileEventKey(event));
+}
+
+export function shouldReplaceRenderedMapLayer(input: {
+  hasPreviousLayer: boolean;
+  failed?: boolean;
+  requestedTileKeys: ReadonlyArray<string>;
+  tileStates: Readonly<Record<string, Pick<MapTileReadyEvent, 'hasTerrain' | 'renderState'>>>;
+}): boolean {
+  if (input.failed || input.requestedTileKeys.length === 0) {
+    return false;
+  }
+  const targetTiles = input.requestedTileKeys
+    .map((key) => input.tileStates[key])
+    .filter((tile): tile is Pick<MapTileReadyEvent, 'hasTerrain' | 'renderState'> => Boolean(tile));
+  if (targetTiles.length !== input.requestedTileKeys.length) {
+    return false;
+  }
+  const targetIsEmpty = targetTiles.every(
+    (tile) => !tile.hasTerrain && tile.renderState === 'empty',
+  );
+  return !input.hasPreviousLayer || !targetIsEmpty;
 }
 
 export function exactMapTileInvalidationKeys(
@@ -739,7 +776,7 @@ export function resolveMapTileDiagnosticState(input: {
     visibleStates.every((tile) => !tile.hasTerrain) &&
     !input.isLoading
   ) {
-    return 'empty';
+    return input.hasPreviousTiles ? 'stale' : 'empty';
   }
   if (visibleStates.some((tile) => tile.renderState === 'stale')) {
     return 'stale';
