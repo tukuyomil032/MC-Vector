@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 
 pub mod advanced;
 pub mod connected;
+pub mod containers;
 pub mod doors;
 pub mod fluids;
 pub mod foliage;
