@@ -1,6 +1,8 @@
 //! World-coordinate tile boundaries used by Dynmap-style projections.
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct TileCoordinate {
     pub x: i64,
     pub z: i64,
@@ -11,7 +13,7 @@ pub const MAX_ZOOM: u8 = 8;
 pub const DEFAULT_TILE_EXTENT_AT_ZOOM_ZERO: i64 = 2_048;
 pub const MAX_REQUIRED_CHUNKS: usize = 64;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TileProjection {
     WorldXZ,
     IsoProjected,
