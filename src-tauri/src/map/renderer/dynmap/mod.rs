@@ -9,3 +9,6 @@ pub mod shader;
 pub mod texture;
 pub mod transform;
 pub mod types;
+
+#[cfg(test)]
+mod golden;
