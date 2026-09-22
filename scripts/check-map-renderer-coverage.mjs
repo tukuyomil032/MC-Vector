@@ -14,18 +14,21 @@ const catalogs = {
   symbols: await load('spec/map/coverage/source-symbols.json'),
   resources: await load('spec/map/coverage/resources.json'),
   builtins: await load('spec/map/coverage/builtin-renderers.json'),
+  versions: await load('spec/map/coverage/version-matrix.json'),
 };
 
 const failures = [];
 for (const [name, catalog] of Object.entries(catalogs)) {
-  if (catalog.sourceRevision !== revision) failures.push(`${name}: source revision mismatch`);
+  if (name !== 'versions' && catalog.sourceRevision !== revision) {
+    failures.push(`${name}: source revision mismatch`);
+  }
   if (!Array.isArray(catalog.entries) || catalog.entries.length === 0) {
     failures.push(`${name}: catalog is empty`);
   }
   for (const entry of catalog.entries ?? []) {
     if (entry.status === 'planned')
       failures.push(`${name}: planned entry ${entry.sourcePath ?? entry.class}`);
-    if (!entry.sourceRevision)
+    if (name !== 'versions' && !entry.sourceRevision)
       failures.push(`${name}: missing entry revision ${entry.sourcePath ?? entry.class}`);
   }
 }
@@ -52,6 +55,13 @@ if (strict.has('--require-all-builtins')) {
   for (const entry of catalogs.builtins.entries) {
     if (entry.implementationStatus !== 'verified') {
       failures.push(`builtins: incomplete implementation ${entry.class}`);
+    }
+  }
+}
+if (strict.has('--require-all-versions')) {
+  for (const entry of catalogs.versions.entries) {
+    if (entry.artifactStatus !== 'verified' || entry.status !== 'verified') {
+      failures.push(`versions: incomplete implementation ${entry.minecraftVersion}`);
     }
   }
 }
