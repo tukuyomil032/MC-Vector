@@ -227,12 +227,12 @@ impl CustomRenderer for FrameRenderer {
 }
 
 impl CuboidBounds {
-    const fn new(min: Vec3, max: Vec3) -> Self {
+    pub(crate) const fn new(min: Vec3, max: Vec3) -> Self {
         Self { min, max }
     }
 }
 
-fn box_patches(
+pub(crate) fn box_patches(
     factory: &RenderPatchFactory,
     bounds: CuboidBounds,
     texture_index: i32,
