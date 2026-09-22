@@ -12,6 +12,7 @@ use fastanvil::{Chunk as _, JavaChunk};
 use fastnbt::Value;
 
 use crate::assets::model_view::AssetResolutionState;
+use crate::domain::{ChunkDataAvailability, MissingDataKind};
 
 use super::chunk_view::{
     BiomeData, BlockCoord, BlockState, BlockStateData, BlockStateId, ChunkCoord, ChunkLoadState,
@@ -26,6 +27,9 @@ pub enum AnvilError {
     Region(RegionReadError),
     MalformedNbt,
     InvalidChunkCoordinate,
+    MissingChunkCoordinate,
+    MissingDataVersion,
+    InvalidDataVersion,
     DuplicateSection,
     InvalidSectionCoordinate,
     InvalidBlockStates,
@@ -38,6 +42,13 @@ pub enum AnvilError {
 pub struct SavedAnvilSource {
     regions: RegionSource,
     asset_state: AssetResolutionState,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct AnvilChunkHeader {
+    pub data_version: i64,
+    pub status: Option<String>,
+    pub coordinate: ChunkCoord,
 }
 
 impl SavedAnvilSource {
@@ -85,13 +96,9 @@ pub fn decode_chunk(
     let root_value: Value = fastnbt::from_bytes(bytes).map_err(|_| AnvilError::MalformedNbt)?;
     let root = root_compound(&root_value).ok_or(AnvilError::MalformedNbt)?;
 
-    if let (Some(x), Some(z)) = (
-        root.get("x").and_then(Value::as_i64),
-        root.get("z").and_then(Value::as_i64),
-    ) {
-        if x != expected_chunk.x || z != expected_chunk.z {
-            return Err(AnvilError::InvalidChunkCoordinate);
-        }
+    let header = decode_header(root)?;
+    if header.coordinate != expected_chunk {
+        return Err(AnvilError::InvalidChunkCoordinate);
     }
 
     let sections = section_compounds(root)?;
@@ -103,10 +110,18 @@ pub fn decode_chunk(
     let min_section = y_range.start.div_euclid(CHUNK_SIDE as isize) as i32;
     let max_section = (y_range.end - 1).div_euclid(CHUNK_SIDE as isize) as i32;
     let mut domain_sections = BTreeMap::new();
+    let mut missing_data = Vec::new();
     for section_y in min_section..=max_section {
         let section = match sections.get(&section_y) {
             Some(section) => decode_section(&java_chunk, section_y, section)?,
-            None => missing_section(section_y),
+            None => {
+                missing_data.extend([
+                    MissingDataKind::BlockStates,
+                    MissingDataKind::SkyLight,
+                    MissingDataKind::BlockLight,
+                ]);
+                missing_section(section_y)
+            }
         };
         domain_sections.insert(section_y, section);
     }
@@ -127,6 +142,19 @@ pub fn decode_chunk(
     )
     .map_err(|_| AnvilError::EmptyChunk)?;
 
+    if !matches!(asset_state, AssetResolutionState::Available) {
+        missing_data.push(MissingDataKind::Asset);
+    }
+    missing_data.sort_by_key(|kind| format!("{kind:?}"));
+    missing_data.dedup();
+    let availability = if missing_data.is_empty() {
+        ChunkDataAvailability::Complete
+    } else {
+        ChunkDataAvailability::Partial {
+            missing: missing_data,
+        }
+    };
+
     Ok(MapChunkCache::new(
         expected_chunk,
         ChunkLoadState::Loaded,
@@ -135,7 +163,35 @@ pub fn decode_chunk(
         height,
         TileBoundaryState::Present(boundary),
         asset_state,
-    ))
+    )
+    .with_availability(availability))
+}
+
+pub fn decode_header(root: &HashMap<String, Value>) -> Result<AnvilChunkHeader, AnvilError> {
+    let data_version = root
+        .get("DataVersion")
+        .and_then(Value::as_i64)
+        .ok_or(AnvilError::MissingDataVersion)?;
+    if data_version < 0 {
+        return Err(AnvilError::InvalidDataVersion);
+    }
+    let x = root
+        .get("x")
+        .and_then(Value::as_i64)
+        .ok_or(AnvilError::MissingChunkCoordinate)?;
+    let z = root
+        .get("z")
+        .and_then(Value::as_i64)
+        .ok_or(AnvilError::MissingChunkCoordinate)?;
+    let status = root
+        .get("Status")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    Ok(AnvilChunkHeader {
+        data_version,
+        status,
+        coordinate: ChunkCoord::new(x, z),
+    })
 }
 
 fn root_compound(value: &Value) -> Option<&HashMap<String, Value>> {
@@ -348,7 +404,7 @@ mod tests {
     use fastanvil::Region;
     use fastnbt::{ByteArray, Value};
 
-    use super::{decode_chunk, stable_id, AnvilError};
+    use super::{decode_chunk, decode_header, stable_id, AnvilError};
     use crate::assets::model_view::AssetResolutionState;
     use crate::world::chunk_view::{BlockCoord, ChunkCoord};
 
@@ -383,6 +439,8 @@ mod tests {
         let root = compound([
             ("DataVersion", Value::Int(4189)),
             ("Status", Value::String("minecraft:full".to_owned())),
+            ("x", Value::Int(0)),
+            ("z", Value::Int(0)),
             ("sections", Value::List(vec![section])),
         ]);
         fastnbt::to_bytes(&root).expect("fixture NBT serializes")
@@ -445,6 +503,20 @@ mod tests {
                 AssetResolutionState::Available,
             ),
             Err(AnvilError::MalformedNbt)
+        ));
+    }
+
+    #[test]
+    fn missing_chunk_header_fields_are_rejected() {
+        let root = compound([("sections", Value::List(Vec::new()))]);
+        let bytes = fastnbt::to_bytes(&root).expect("fixture serializes");
+        let value: Value = fastnbt::from_bytes(&bytes).expect("fixture parses");
+        let Value::Compound(root) = value else {
+            panic!("fixture root is compound");
+        };
+        assert!(matches!(
+            decode_header(&root),
+            Err(AnvilError::MissingDataVersion)
         ));
     }
 
