@@ -36,8 +36,8 @@ use crate::map::core_artifact::{
 use crate::map::domain::{ChunkKey, ChunkView};
 use crate::map::projection::{floor_div, MapTileGeometry, MapTilePlane};
 use crate::map::renderer::{
-    render_world_tile_detailed, IsoHDPerspective, LiveChunkMap, TileRenderSource, MAX_ZOOM,
-    TILE_SIZE,
+    render_world_tile_detailed, IsoHDPerspective, LiveChunkMap, TileRenderSource,
+    TileUnavailableReason, MAX_ZOOM, TILE_SIZE,
 };
 use crate::map::sources::{
     decode_live_snapshot as decode_world_snapshot, enumerate_region_files, read_level_metadata,
@@ -173,6 +173,11 @@ struct MapPaths {
 
 type BridgeSender = mpsc::Sender<String>;
 type PendingSnapshotSender = oneshot::Sender<Result<ChunkView, String>>;
+
+struct LiveChunkResponse {
+    snapshot: Option<ChunkView>,
+    unavailable_reason: Option<TileUnavailableReason>,
+}
 
 fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -929,6 +934,7 @@ fn invalidate_disk_chunk_tiles(
                                                             source: TileRenderSource::Saved,
                                                             live_requested_count: 0,
                                                             live_received_count: 0,
+                                                            unavailable_reason: None,
                                                             stale: false,
                                                         }
                                                     });
@@ -985,7 +991,7 @@ async fn request_live_chunk(
     dimension: &str,
     chunk_x: i64,
     chunk_z: i64,
-) -> Option<ChunkView> {
+) -> LiveChunkResponse {
     let chunk_key = ChunkKey::new(dimension, chunk_x, chunk_z);
     let now = current_timestamp();
     if let Some(cached) =
@@ -995,10 +1001,18 @@ async fn request_live_chunk(
             .await
             .get(server_id, &chunk_key, now.saturating_mul(1_000))
     {
-        return Some(cached);
+        return LiveChunkResponse {
+            snapshot: Some(cached),
+            unavailable_reason: None,
+        };
     }
 
-    let sender = manager.sessions.lock().await.get(server_id).cloned()?;
+    let Some(sender) = manager.sessions.lock().await.get(server_id).cloned() else {
+        return LiveChunkResponse {
+            snapshot: None,
+            unavailable_reason: Some(TileUnavailableReason::BridgeDisconnected),
+        };
+    };
     let request_id = Uuid::new_v4().to_string();
     let (response_sender, response_receiver) = oneshot::channel();
     manager
@@ -1018,7 +1032,10 @@ async fn request_live_chunk(
     .to_string();
     if sender.send(message).await.is_err() {
         manager.pending_snapshots.lock().await.remove(&request_id);
-        return None;
+        return LiveChunkResponse {
+            snapshot: None,
+            unavailable_reason: Some(TileUnavailableReason::BridgeDisconnected),
+        };
     }
 
     match timeout(Duration::from_millis(750), response_receiver).await {
@@ -1032,11 +1049,31 @@ async fn request_live_chunk(
                 snapshot.clone(),
                 current_timestamp().saturating_mul(1_000),
             );
-            Some(snapshot)
+            LiveChunkResponse {
+                snapshot: Some(snapshot),
+                unavailable_reason: None,
+            }
+        }
+        Ok(Ok(Err(reason))) => {
+            manager.pending_snapshots.lock().await.remove(&request_id);
+            LiveChunkResponse {
+                snapshot: None,
+                unavailable_reason: Some(TileUnavailableReason::from_bridge_reason(&reason)),
+            }
+        }
+        Ok(Ok(Ok(_))) => {
+            manager.pending_snapshots.lock().await.remove(&request_id);
+            LiveChunkResponse {
+                snapshot: None,
+                unavailable_reason: Some(TileUnavailableReason::InvalidSnapshot),
+            }
         }
         _ => {
             manager.pending_snapshots.lock().await.remove(&request_id);
-            None
+            LiveChunkResponse {
+                snapshot: None,
+                unavailable_reason: Some(TileUnavailableReason::Timeout),
+            }
         }
     }
 }
@@ -1052,6 +1089,7 @@ async fn request_live_chunks_for_tile(
     let requested_count = candidates.len();
 
     let mut snapshots = LiveChunkMap::new();
+    let mut unavailable_reason = None;
     for batch in candidates.chunks(LIVE_CHUNK_REQUEST_BATCH_SIZE) {
         let mut requests = JoinSet::new();
         for &(chunk_x, chunk_z) in batch {
@@ -1065,20 +1103,26 @@ async fn request_live_chunks_for_tile(
             });
         }
         while let Some(result) = requests.join_next().await {
-            if let Ok((key, Some(snapshot))) = result {
-                snapshots.insert(key, snapshot);
+            if let Ok((key, response)) = result {
+                if let Some(snapshot) = response.snapshot {
+                    snapshots.insert(key, snapshot);
+                } else if unavailable_reason.is_none() {
+                    unavailable_reason = response.unavailable_reason;
+                }
             }
         }
     }
     LiveChunkRequestResult {
         chunks: snapshots,
         requested_count,
+        unavailable_reason,
     }
 }
 
 struct LiveChunkRequestResult {
     chunks: LiveChunkMap,
     requested_count: usize,
+    unavailable_reason: Option<TileUnavailableReason>,
 }
 
 fn world_anchor_chunk(world_anchor: Option<(f64, f64)>) -> Option<(i64, i64)> {
@@ -1864,10 +1908,20 @@ fn emit_map_tile_ready(
     source: TileRenderSource,
     live_requested_count: usize,
     live_received_count: usize,
+    unavailable_reason: Option<TileUnavailableReason>,
     context: Option<&RenderRequestContext>,
 ) {
     let (has_terrain, coverage_ratio) = coverage.unwrap_or_else(|| png_coverage(png));
-    let render_state = tile_render_state(asset_missing, has_terrain, diagnostic);
+    let render_state =
+        tile_render_state(asset_missing, has_terrain, diagnostic, unavailable_reason);
+    let message = diagnostic.map(str::to_string).or_else(|| {
+        (!has_terrain).then(|| {
+            unavailable_reason.map_or_else(
+                || "No generated terrain intersects this tile".to_string(),
+                |reason| reason.message().to_string(),
+            )
+        })
+    });
     let mut payload = serde_json::json!({
         "serverId": key.server_id,
         "worldId": key.world_id,
@@ -1882,16 +1936,8 @@ fn emit_map_tile_ready(
         "source": source,
         "liveRequestedCount": live_requested_count,
         "liveReceivedCount": live_received_count,
-        "message": diagnostic.map_or_else(
-            || {
-                if has_terrain {
-                    serde_json::Value::Null
-                } else {
-                    serde_json::Value::String("No generated terrain intersects this tile".to_string())
-                }
-            },
-            |message| serde_json::Value::String(message.to_string()),
-        ),
+        "unavailableReason": unavailable_reason,
+        "message": message,
     });
     add_render_request_context(&mut payload, key, context);
     let _ = app.emit("map-tile-ready", payload);
@@ -1901,6 +1947,7 @@ fn tile_render_state(
     asset_missing: bool,
     has_terrain: bool,
     diagnostic: Option<&str>,
+    unavailable_reason: Option<TileUnavailableReason>,
 ) -> &'static str {
     if asset_missing {
         "asset_missing"
@@ -1908,6 +1955,8 @@ fn tile_render_state(
         "error"
     } else if has_terrain {
         "terrain"
+    } else if unavailable_reason.is_some() {
+        "paper_chunk_unavailable"
     } else {
         "empty"
     }
@@ -2311,6 +2360,7 @@ async fn render_map_tile_with_anchor(
                 cached.metadata.source,
                 cached.metadata.live_requested_count,
                 cached.metadata.live_received_count,
+                cached.metadata.unavailable_reason,
                 request_context.as_ref(),
             );
         }
@@ -2353,6 +2403,7 @@ async fn render_map_tile_with_anchor(
                     cached.metadata.source,
                     cached.metadata.live_requested_count,
                     cached.metadata.live_received_count,
+                    cached.metadata.unavailable_reason,
                     request_context.as_ref(),
                 );
                 return Ok(tauri::ipc::Response::new(cached.bytes));
@@ -2425,8 +2476,9 @@ async fn render_map_tile_with_anchor(
         .await;
         let live_requested_count = live_request.requested_count;
         let live_chunks = live_request.chunks;
+        let unavailable_reason = live_request.unavailable_reason;
 
-        let rendered = tokio::task::spawn_blocking(move || {
+        let mut rendered = tokio::task::spawn_blocking(move || {
             render_world_tile_detailed(
                 &world_root,
                 zoom,
@@ -2440,6 +2492,7 @@ async fn render_map_tile_with_anchor(
         })
         .await
         .map_err(|error| format!("Map tile worker failed: {error}"))??;
+        rendered.unavailable_reason = unavailable_reason;
         let tile = rendered.png.clone();
         if let Some(scheduler_generation) = scheduler_generation {
             if !render_generation_is_current(
@@ -2467,10 +2520,13 @@ async fn render_map_tile_with_anchor(
             rendered.source,
             rendered.live_requested_count,
             rendered.live_received_count,
+            rendered.unavailable_reason,
             request_context.as_ref(),
         );
         let progress_state = if asset_missing {
             TileRenderState::AssetMissing
+        } else if rendered.unavailable_reason.is_some() && !rendered.has_terrain {
+            TileRenderState::PaperChunkUnavailable
         } else if rendered.has_terrain {
             TileRenderState::Terrain
         } else {
@@ -2493,6 +2549,7 @@ async fn render_map_tile_with_anchor(
                 source: rendered.source,
                 live_requested_count: rendered.live_requested_count,
                 live_received_count: rendered.live_received_count,
+                unavailable_reason: rendered.unavailable_reason,
                 stale: false,
             },
         };
@@ -2839,9 +2896,14 @@ fn read_disk_tile(server_root: &Path, key: &TileCacheKey) -> Result<Option<Cache
             source: TileRenderSource::Saved,
             live_requested_count: 0,
             live_received_count: 0,
-            stale: false,
+            unavailable_reason: None,
+            stale: true,
         }
     });
+    let mut metadata = metadata;
+    if !metadata.has_terrain {
+        metadata.stale = true;
+    }
     Ok(Some(CachedTile { bytes, metadata }))
 }
 
@@ -3189,12 +3251,33 @@ mod tests {
         assert_eq!(result.rendered_chunk_count, 0);
         assert_eq!(result.decode_failed_chunk_count, 1);
         assert_eq!(
-            tile_render_state(false, result.has_terrain, result.message.as_deref()),
+            tile_render_state(false, result.has_terrain, result.message.as_deref(), None),
             "error"
         );
-        assert_eq!(tile_render_state(false, false, None), "empty");
+        assert_eq!(tile_render_state(false, false, None, None), "empty");
 
         fs::remove_dir_all(root).expect("test root should be removed");
+    }
+
+    #[test]
+    fn unavailable_live_reasons_are_redacted_and_do_not_look_like_empty_terrain() {
+        assert_eq!(
+            TileUnavailableReason::from_bridge_reason("not_loaded"),
+            TileUnavailableReason::NotLoaded
+        );
+        assert_eq!(
+            TileUnavailableReason::from_bridge_reason("private token /tmp/world"),
+            TileUnavailableReason::InvalidSnapshot
+        );
+        assert_eq!(
+            tile_render_state(false, false, None, Some(TileUnavailableReason::NotLoaded)),
+            "paper_chunk_unavailable"
+        );
+        assert_eq!(
+            TileUnavailableReason::NotLoaded.message(),
+            "Paper chunk is not loaded yet"
+        );
+        assert!(!TileUnavailableReason::NotLoaded.message().contains("/"));
     }
 
     #[test]
@@ -3416,6 +3499,7 @@ mod tests {
             source: TileRenderSource::Live,
             live_requested_count: 16,
             live_received_count: 0,
+            unavailable_reason: None,
         };
 
         assert!(!should_cache_tile(&result));
@@ -3591,6 +3675,7 @@ mod tests {
                 source: TileRenderSource::Saved,
                 live_requested_count: 0,
                 live_received_count: 0,
+                unavailable_reason: None,
                 stale: false,
             },
         };
@@ -3601,6 +3686,37 @@ mod tests {
         );
         remove_map_cache(&root).expect("managed cache should be removable");
         assert!(!root.join("map-cache").exists());
+        fs::remove_dir(root).expect("test root should be removed");
+    }
+
+    #[test]
+    fn disk_empty_tile_is_always_stale_and_must_be_retried() {
+        let root =
+            std::env::temp_dir().join(format!("mc-vector-map-empty-cache-test-{}", Uuid::new_v4()));
+        let key = TileCacheKey::new(
+            "server-1",
+            "overworld",
+            "1.21.10",
+            "fallback",
+            "fallback",
+            TILE_RENDERER_VERSION,
+            DEFAULT_PERSPECTIVE,
+            0,
+            0,
+            0,
+        );
+        let tile = CachedTile {
+            bytes: b"\x89PNG\r\n\x1a\nempty".to_vec(),
+            metadata: TileMetadata::default(),
+        };
+        write_disk_tile(&root, &key, &tile).expect("empty tile should be written");
+
+        let cached = read_disk_tile(&root, &key)
+            .expect("empty tile should be readable")
+            .expect("empty tile should exist");
+        assert!(cached.metadata.stale);
+
+        remove_map_cache(&root).expect("managed cache should be removable");
         fs::remove_dir(root).expect("test root should be removed");
     }
 

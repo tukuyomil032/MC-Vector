@@ -41,6 +41,40 @@ pub(crate) enum TileRenderSource {
     SavedAndLive,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum TileUnavailableReason {
+    NotLoaded,
+    WorldUnavailable,
+    QueueFull,
+    Timeout,
+    InvalidSnapshot,
+    BridgeDisconnected,
+}
+
+impl TileUnavailableReason {
+    pub(crate) fn from_bridge_reason(reason: &str) -> Self {
+        match reason {
+            "not_loaded" => Self::NotLoaded,
+            "world_unavailable" => Self::WorldUnavailable,
+            "queue_full" => Self::QueueFull,
+            "timeout" => Self::Timeout,
+            _ => Self::InvalidSnapshot,
+        }
+    }
+
+    pub(crate) fn message(self) -> &'static str {
+        match self {
+            Self::NotLoaded => "Paper chunk is not loaded yet",
+            Self::WorldUnavailable => "The selected Paper world is unavailable",
+            Self::QueueFull => "Paper snapshot queue is full",
+            Self::Timeout => "Paper chunk snapshot timed out",
+            Self::InvalidSnapshot => "Paper returned an invalid chunk snapshot",
+            Self::BridgeDisconnected => "Paper bridge is not connected",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TileRenderResult {
@@ -53,6 +87,7 @@ pub(crate) struct TileRenderResult {
     pub(crate) source: TileRenderSource,
     pub(crate) live_requested_count: usize,
     pub(crate) live_received_count: usize,
+    pub(crate) unavailable_reason: Option<TileUnavailableReason>,
 }
 
 pub(crate) fn tile_render_source(

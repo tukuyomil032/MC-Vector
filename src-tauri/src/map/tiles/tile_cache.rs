@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::map::renderer::TileRenderSource;
+use crate::map::renderer::{TileRenderSource, TileUnavailableReason};
 
 use super::tile_key::TileKey;
 
@@ -19,6 +19,8 @@ pub(crate) struct TileMetadata {
     pub(crate) live_requested_count: usize,
     #[serde(default)]
     pub(crate) live_received_count: usize,
+    #[serde(default)]
+    pub(crate) unavailable_reason: Option<TileUnavailableReason>,
     #[serde(default)]
     pub(crate) stale: bool,
 }
@@ -173,6 +175,7 @@ mod tests {
             source: TileRenderSource::SavedAndLive,
             live_requested_count: 8,
             live_received_count: 3,
+            unavailable_reason: None,
             stale: false,
         };
         cache.insert(

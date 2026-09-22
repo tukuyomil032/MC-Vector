@@ -138,6 +138,14 @@ describe('map plane coordinates', () => {
     expect(isMapTileReadyTerminalWithoutPng(emptyLiveOnly)).toBe(true);
     expect(shouldFetchMapTileAfterReady(emptyLiveOnly, request)).toBe(false);
     expect(isMapTileReadyTerminalWithoutPng({ ...emptyLiveOnly, liveReceivedCount: 1 })).toBe(true);
+    const unavailable = {
+      ...emptyLiveOnly,
+      renderState: 'paper_chunk_unavailable' as const,
+      unavailableReason: 'not_loaded' as const,
+      source: 'live' as const,
+    };
+    expect(isMapTileReadyTerminalWithoutPng(unavailable)).toBe(true);
+    expect(shouldFetchMapTileAfterReady(unavailable, request)).toBe(false);
     expect(
       shouldFetchMapTileAfterReady(
         {
@@ -176,6 +184,17 @@ describe('map plane coordinates', () => {
         hasPreviousLayer: true,
         requestedTileKeys: Object.keys(emptyTarget),
         tileStates: emptyTarget,
+      }),
+    ).toBe(false);
+    const unavailableTarget = {
+      '4:0:0': { hasTerrain: false, renderState: 'paper_chunk_unavailable' as const },
+      '4:1:0': { hasTerrain: false, renderState: 'paper_chunk_unavailable' as const },
+    };
+    expect(
+      shouldReplaceRenderedMapLayer({
+        hasPreviousLayer: true,
+        requestedTileKeys: Object.keys(unavailableTarget),
+        tileStates: unavailableTarget,
       }),
     ).toBe(false);
     expect(

@@ -9,6 +9,7 @@ pub(crate) enum TileRenderState {
     Error,
     QueueFull,
     AssetMissing,
+    PaperChunkUnavailable,
 }
 
 #[derive(Clone, Debug, Serialize)]

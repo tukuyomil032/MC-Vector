@@ -175,6 +175,7 @@ mod tests {
             source: crate::map::renderer::TileRenderSource::Saved,
             live_requested_count: 0,
             live_received_count: 0,
+            unavailable_reason: None,
             stale: false,
         };
         write_metadata_atomic(&path, &expected).expect("metadata should be written");

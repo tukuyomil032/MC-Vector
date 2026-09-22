@@ -71,6 +71,14 @@ export type MapTileRenderState =
 
 export type MapTileRenderSource = 'saved' | 'live' | 'savedAndLive';
 
+export type MapTileUnavailableReason =
+  | 'not_loaded'
+  | 'world_unavailable'
+  | 'queue_full'
+  | 'timeout'
+  | 'invalid_snapshot'
+  | 'bridge_disconnected';
+
 export interface MapStatus {
   serverId: string;
   component: MapComponentState;
@@ -519,6 +527,7 @@ export interface MapTileReadyEvent {
   source?: MapTileRenderSource;
   liveRequestedCount?: number;
   liveReceivedCount?: number;
+  unavailableReason?: MapTileUnavailableReason | null;
   decodeFailedChunkCount?: number | null;
   message?: string | null;
 }
@@ -529,10 +538,17 @@ export interface MapTileReadyEvent {
  */
 export function isMapTileReadyTerminalWithoutPng(
   event: Partial<
-    Pick<MapTileReadyEvent, 'hasTerrain' | 'renderState' | 'source' | 'liveReceivedCount'>
+    Pick<
+      MapTileReadyEvent,
+      'hasTerrain' | 'renderState' | 'source' | 'liveReceivedCount' | 'unavailableReason'
+    >
   >,
 ): boolean {
-  return event.renderState === 'empty' && !event.hasTerrain && event.source === 'live';
+  return (
+    !event.hasTerrain &&
+    ((event.renderState === 'empty' && event.source === 'live') ||
+      event.renderState === 'paper_chunk_unavailable')
+  );
 }
 
 export interface MapRenderProgressEvent {
@@ -605,7 +621,12 @@ export function shouldFetchMapTileAfterReady(
     MapTileReadyEvent,
     'requestId' | 'requestGeneration' | 'worldId' | 'zoom' | 'tileX' | 'tileY'
   > &
-    Partial<Pick<MapTileReadyEvent, 'hasTerrain' | 'renderState' | 'source' | 'liveReceivedCount'>>,
+    Partial<
+      Pick<
+        MapTileReadyEvent,
+        'hasTerrain' | 'renderState' | 'source' | 'liveReceivedCount' | 'unavailableReason'
+      >
+    >,
   request: MapRenderRequestContext,
   pendingInvalidationKeys: ReadonlySet<string> = new Set(),
 ): boolean {
@@ -637,7 +658,9 @@ export function shouldReplaceRenderedMapLayer(input: {
     return false;
   }
   const targetIsEmpty = targetTiles.every(
-    (tile) => !tile.hasTerrain && tile.renderState === 'empty',
+    (tile) =>
+      !tile.hasTerrain &&
+      (tile.renderState === 'empty' || tile.renderState === 'paper_chunk_unavailable'),
   );
   return !input.hasPreviousLayer || !targetIsEmpty;
 }

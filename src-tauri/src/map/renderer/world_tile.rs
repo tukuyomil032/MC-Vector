@@ -439,6 +439,7 @@ pub(crate) fn render_overview_tile(
         source: tile_render_source(rendered_saved_source, rendered_live_source),
         live_requested_count,
         live_received_count,
+        unavailable_reason: None,
     })
 }
 
@@ -581,6 +582,7 @@ pub(crate) fn render_world_tile_detailed(
         ),
         live_requested_count,
         live_received_count,
+        unavailable_reason: None,
     })
 }
 
@@ -597,6 +599,7 @@ fn empty_tile_result(live_requested_count: usize) -> Result<TileRenderResult, St
         source: tile_render_source(false, false),
         live_requested_count,
         live_received_count: 0,
+        unavailable_reason: None,
     })
 }
 
