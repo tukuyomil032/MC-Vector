@@ -3321,6 +3321,29 @@ mod tests {
     }
 
     #[test]
+    fn saved_anvil_fixture_keeps_the_same_terrain_visible_across_zoom_zero_to_eight() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-map-tile-pyramid-fixture-{}",
+            Uuid::new_v4()
+        ));
+        write_saved_terrain_fixture(&root);
+
+        for zoom in 0..=MAX_ZOOM {
+            let result = render_world_tile_detailed(&root, zoom, 0, 0, None, None, 0)
+                .unwrap_or_else(|error| panic!("zoom {zoom} should render: {error}"));
+            assert!(result.has_terrain, "zoom {zoom} lost saved terrain");
+            assert!(result.coverage_ratio > 0.0, "zoom {zoom} has no coverage");
+            assert!(
+                result.rendered_chunk_count > 0,
+                "zoom {zoom} rendered no chunks"
+            );
+            assert_eq!(result.source, TileRenderSource::Saved);
+        }
+
+        fs::remove_dir_all(root).expect("test root should be removed");
+    }
+
+    #[test]
     fn overview_decode_failures_are_counted_and_select_error_state() {
         let root =
             std::env::temp_dir().join(format!("mc-vector-map-decode-error-{}", Uuid::new_v4()));
