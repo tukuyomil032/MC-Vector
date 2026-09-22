@@ -35,6 +35,7 @@ fn flat_fixture_domain() -> (MapChunkCache, ModelView) {
             SectionPalette::complete(vec![BlockState {
                 id: BlockStateId(0),
                 name: "minecraft:stone|".to_owned(),
+                properties: BTreeMap::new(),
             }])
             .unwrap(),
             vec![0; SECTION_BLOCK_COUNT],

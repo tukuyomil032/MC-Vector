@@ -244,6 +244,7 @@ fn decode_block_states(chunk: &JavaChunk, section_y: i32) -> Result<BlockStateDa
         .map(|(id, name)| BlockState {
             id: BlockStateId(id as u32),
             name: name.clone(),
+            properties: BTreeMap::new(),
         })
         .collect();
     let palette = SectionPalette::complete(palette).map_err(|_| AnvilError::InvalidBlockStates)?;

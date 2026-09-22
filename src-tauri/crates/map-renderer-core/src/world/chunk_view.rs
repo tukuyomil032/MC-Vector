@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use crate::assets::model_view::AssetResolutionState;
+use crate::domain::{ChunkCoordinate, ChunkDataAvailability, ChunkIdentity};
 
 pub const CHUNK_SIDE: usize = 16;
 pub const SECTION_BLOCK_COUNT: usize = CHUNK_SIDE * CHUNK_SIDE * CHUNK_SIDE;
@@ -15,6 +16,7 @@ pub struct BlockStateId(pub u32);
 pub struct BlockState {
     pub id: BlockStateId,
     pub name: String,
+    pub properties: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -282,7 +284,9 @@ pub struct ChunkSection {
 #[derive(Debug, Clone)]
 pub struct MapChunkCache {
     pub chunk: ChunkCoord,
+    pub identity: ChunkIdentity,
     pub load_state: ChunkLoadState,
+    pub availability: ChunkDataAvailability,
     pub sections: BTreeMap<i32, ChunkSection>,
     pub biome: BiomeData,
     pub height: HeightData,
@@ -329,6 +333,7 @@ pub enum ChunkDataError {
         expected: ChunkCoord,
         actual: ChunkCoord,
     },
+    ChunkIdentityMismatch,
     SectionMissing {
         section_y: i32,
     },
@@ -346,13 +351,28 @@ impl MapChunkCache {
     ) -> Self {
         Self {
             chunk,
+            identity: ChunkIdentity::unknown(ChunkCoordinate::new(chunk.x, chunk.z)),
             load_state,
+            availability: ChunkDataAvailability::Complete,
             sections,
             biome,
             height,
             tile_boundary,
             asset_state,
         }
+    }
+
+    pub fn with_identity(mut self, identity: ChunkIdentity) -> Result<Self, ChunkDataError> {
+        if identity.coordinate != ChunkCoordinate::new(self.chunk.x, self.chunk.z) {
+            return Err(ChunkDataError::ChunkIdentityMismatch);
+        }
+        self.identity = identity;
+        Ok(self)
+    }
+
+    pub fn with_availability(mut self, availability: ChunkDataAvailability) -> Self {
+        self.availability = availability;
+        self
     }
 
     fn ensure_loaded(&self) -> Result<(), ChunkDataError> {
@@ -451,6 +471,8 @@ impl MapChunkCache {
 mod tests {
     use std::collections::BTreeMap;
 
+    use crate::domain::{ChunkCoordinate, ChunkIdentity, MinecraftVersionId};
+
     use super::{
         BiomeData, BlockCoord, BlockStateData, ChunkCoord, ChunkDataError, ChunkLoadState,
         ChunkSection, HeightData, LightData, MapChunkCache, MissingBlockDataReason,
@@ -524,6 +546,20 @@ mod tests {
                 kind: super::LightKind::Sky,
                 reason: MissingLightDataReason::Sky
             })
+        ));
+    }
+
+    #[test]
+    fn chunk_identity_cannot_be_attached_to_a_different_coordinate() {
+        let identity = ChunkIdentity {
+            minecraft_version: MinecraftVersionId::new("1.21.10").unwrap(),
+            world: crate::domain::WorldId::unknown(),
+            dimension: crate::domain::DimensionId::overworld(),
+            coordinate: ChunkCoordinate::new(1, 0),
+        };
+        assert!(matches!(
+            cache_with_incomplete_section().with_identity(identity),
+            Err(ChunkDataError::ChunkIdentityMismatch)
         ));
     }
 }
