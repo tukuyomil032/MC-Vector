@@ -373,7 +373,6 @@ pub(crate) fn render_overview_tile(
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
     let mut coordinates = existing_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
-    let has_saved_source = !coordinates.is_empty();
     if let Some(live_chunks) = live_chunks {
         for snapshot in live_chunks.values() {
             if !coordinates.contains(&(snapshot.key.chunk_x, snapshot.key.chunk_z))
@@ -385,10 +384,11 @@ pub(crate) fn render_overview_tile(
     }
     let mut tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
     let mut rendered_chunk_count = 0;
+    let mut rendered_saved_source = false;
+    let mut rendered_live_source = false;
     for (chunk_x, chunk_z) in coordinates {
-        let colour = if let Some(snapshot) =
-            live_chunks.and_then(|chunks| chunks.get(&(chunk_x, chunk_z)))
-        {
+        let live_snapshot = live_chunks.and_then(|chunks| chunks.get(&(chunk_x, chunk_z)));
+        let colour = if let Some(snapshot) = live_snapshot {
             average_surface_colours((0..16).flat_map(|local_z| {
                 (0..16).map(move |local_x| live_surface_colour(snapshot, local_x, local_z, assets))
             }))
@@ -408,6 +408,11 @@ pub(crate) fn render_overview_tile(
             continue;
         }
         rendered_chunk_count += 1;
+        if live_snapshot.is_some() {
+            rendered_live_source = true;
+        } else {
+            rendered_saved_source = true;
+        }
 
         // A chunk can cover less than one output pixel at overview zooms. The
         // old implementation wrote only the chunk centre, which made sparse
@@ -431,7 +436,7 @@ pub(crate) fn render_overview_tile(
         has_terrain,
         coverage_ratio,
         message: diagnostic,
-        source: tile_render_source(has_saved_source, live_received_count > 0),
+        source: tile_render_source(rendered_saved_source, rendered_live_source),
         live_requested_count,
         live_received_count,
     })
@@ -469,6 +474,8 @@ pub(crate) fn render_world_tile_detailed(
     let mut diagnostic = None;
     let mut decode_failed_chunk_count = 0;
     let mut rendered_chunks = HashSet::new();
+    let mut rendered_saved_chunks = HashSet::new();
+    let mut rendered_live_chunks = HashSet::new();
     let live_chunks = live_chunks.cloned().unwrap_or_default();
     let all_saved_chunk_coordinates = enumerate_region_files(world_root)?
         .into_iter()
@@ -515,6 +522,7 @@ pub(crate) fn render_world_tile_detailed(
                 let sample = live_block_sample(snapshot, local_x, y, local_z);
                 if sample.is_some() {
                     rendered_chunks.insert((chunk_x, chunk_z));
+                    rendered_live_chunks.insert((chunk_x, chunk_z));
                 }
                 return sample;
             }
@@ -529,6 +537,7 @@ pub(crate) fn render_world_tile_detailed(
             .and_then(|chunk| complete_block_sample(chunk, local_x, y, local_z));
             if sample.is_some() {
                 rendered_chunks.insert((chunk_x, chunk_z));
+                rendered_saved_chunks.insert((chunk_x, chunk_z));
             }
             sample
         },
@@ -566,7 +575,10 @@ pub(crate) fn render_world_tile_detailed(
         has_terrain,
         coverage_ratio: rendered.coverage_ratio,
         message: diagnostic,
-        source: tile_render_source(!saved_chunk_coordinates.is_empty(), live_received_count > 0),
+        source: tile_render_source(
+            !rendered_saved_chunks.is_empty(),
+            !rendered_live_chunks.is_empty(),
+        ),
         live_requested_count,
         live_received_count,
     })

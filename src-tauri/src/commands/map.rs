@@ -66,7 +66,7 @@ const CORE_DISABLED_JAR_NAME: &str = core_artifact::CORE_DISABLED_JAR_NAME;
 const CORE_CONFIG_NAME: &str = "mc-vector-core.yml";
 const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
-const MAX_LIVE_CHUNKS_PER_AXIS: i64 = 8;
+const LIVE_CHUNK_REQUEST_BATCH_SIZE: usize = 8;
 // Bump this whenever the rasterisation algorithm or its source data contract
 // changes. In particular, the earlier representative-colour/surface tiles
 // must never be reused by the Iso ray renderer.
@@ -1051,22 +1051,23 @@ async fn request_live_chunks_for_tile(
     let candidates = live_chunk_candidates(geometry, world_anchor);
     let requested_count = candidates.len();
 
-    let mut requests = JoinSet::new();
-    for (chunk_x, chunk_z) in candidates {
-        let manager = Arc::clone(manager);
-        let server_id = server_id.to_string();
-        let dimension = dimension.to_string();
-        requests.spawn(async move {
-            let snapshot =
-                request_live_chunk(&manager, &server_id, &dimension, chunk_x, chunk_z).await;
-            ((chunk_x, chunk_z), snapshot)
-        });
-    }
-
     let mut snapshots = LiveChunkMap::new();
-    while let Some(result) = requests.join_next().await {
-        if let Ok((key, Some(snapshot))) = result {
-            snapshots.insert(key, snapshot);
+    for batch in candidates.chunks(LIVE_CHUNK_REQUEST_BATCH_SIZE) {
+        let mut requests = JoinSet::new();
+        for &(chunk_x, chunk_z) in batch {
+            let manager = Arc::clone(manager);
+            let server_id = server_id.to_string();
+            let dimension = dimension.to_string();
+            requests.spawn(async move {
+                let snapshot =
+                    request_live_chunk(&manager, &server_id, &dimension, chunk_x, chunk_z).await;
+                ((chunk_x, chunk_z), snapshot)
+            });
+        }
+        while let Some(result) = requests.join_next().await {
+            if let Ok((key, Some(snapshot))) = result {
+                snapshots.insert(key, snapshot);
+            }
         }
     }
     LiveChunkRequestResult {
@@ -1093,35 +1094,89 @@ fn live_chunk_candidates(
     geometry: MapTileGeometry,
     world_anchor: Option<(f64, f64)>,
 ) -> Vec<(i64, i64)> {
-    let anchor_chunk = world_anchor_chunk(world_anchor);
-    let (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z, center_chunk_x, center_chunk_z) =
-        live_chunk_bounds_for_tile(geometry, anchor_chunk);
+    let (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z, _, _) =
+        live_chunk_bounds_for_tile(geometry);
     let perspective = IsoHDPerspective::default();
-    let world_bounds = geometry.world_bounds();
-    let mut candidates = (min_chunk_z..=max_chunk_z)
-        .flat_map(|chunk_z| (min_chunk_x..=max_chunk_x).map(move |chunk_x| (chunk_x, chunk_z)))
-        .filter(|(chunk_x, chunk_z)| {
-            world_bounds.is_some_and(|bounds| bounds.intersects_chunk(*chunk_x, *chunk_z))
-                || (geometry.plane == MapTilePlane::IsoProjected
-                    && perspective.projected_geometry_intersects_chunk(
-                        geometry, -64.0, 320.0, *chunk_x, *chunk_z,
-                    ))
+    let world_center = world_anchor.unwrap_or_else(|| world_center_for_tile(geometry));
+    let (search_min_x, search_max_x, search_min_z, search_max_z) = live_chunk_search_ranges(
+        geometry,
+        world_center,
+        (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z),
+    );
+    let mut candidates = (search_min_z..=search_max_z)
+        .flat_map(|chunk_z| (search_min_x..=search_max_x).map(move |chunk_x| (chunk_x, chunk_z)))
+        .filter(|(chunk_x, chunk_z)| match geometry.plane {
+            MapTilePlane::WorldXZ => geometry
+                .world_bounds()
+                .is_some_and(|bounds| bounds.intersects_chunk(*chunk_x, *chunk_z)),
+            MapTilePlane::IsoProjected => perspective
+                .projected_geometry_intersects_chunk(geometry, -64.0, 320.0, *chunk_x, *chunk_z),
         })
         .collect::<Vec<_>>();
-    candidates.sort_by_key(|(chunk_x, chunk_z)| {
-        let distance = anchor_chunk
-            .map(|(anchor_x, anchor_z)| (chunk_x - anchor_x).abs() + (chunk_z - anchor_z).abs())
-            .unwrap_or_else(|| (chunk_x - center_chunk_x).abs() + (chunk_z - center_chunk_z).abs());
-        (distance, *chunk_x, *chunk_z)
+    candidates.sort_by(|left, right| {
+        chunk_distance_squared(*left, world_center)
+            .total_cmp(&chunk_distance_squared(*right, world_center))
+            .then_with(|| left.cmp(right))
     });
     candidates.truncate(MAX_LIVE_CHUNKS_PER_TILE);
     candidates
 }
 
-fn live_chunk_bounds_for_tile(
+fn world_center_for_tile(geometry: MapTileGeometry) -> (f64, f64) {
+    if let Some(bounds) = geometry.world_bounds() {
+        return (
+            (bounds.origin_x as f64 + bounds.max_x() as f64) / 2.0,
+            (bounds.origin_z as f64 + bounds.max_z() as f64) / 2.0,
+        );
+    }
+
+    let perspective = IsoHDPerspective::default();
+    let map_tile_span = geometry.tile_size as f64 * geometry.blocks_per_pixel as f64;
+    let world = perspective.map_to_world([
+        (f64::from(geometry.tile_x) + 0.5) * map_tile_span,
+        (f64::from(geometry.tile_y) + 0.5) * map_tile_span,
+        0.0,
+    ]);
+    (world[0], world[2])
+}
+
+fn chunk_distance_squared(chunk: (i64, i64), world_center: (f64, f64)) -> f64 {
+    let chunk_center_x = chunk.0 as f64 * 16.0 + 8.0;
+    let chunk_center_z = chunk.1 as f64 * 16.0 + 8.0;
+    let delta_x = chunk_center_x - world_center.0;
+    let delta_z = chunk_center_z - world_center.1;
+    delta_x.mul_add(delta_x, delta_z * delta_z)
+}
+
+fn live_chunk_search_ranges(
     geometry: MapTileGeometry,
-    anchor_chunk: Option<(i64, i64)>,
-) -> (i64, i64, i64, i64, i64, i64) {
+    world_center: (f64, f64),
+    bounds: (i64, i64, i64, i64),
+) -> (i64, i64, i64, i64) {
+    let (min_chunk_x, max_chunk_x, min_chunk_z, max_chunk_z) = bounds;
+    let area = (max_chunk_x - min_chunk_x + 1).saturating_mul(max_chunk_z - min_chunk_z + 1);
+    if geometry.plane != MapTilePlane::WorldXZ || area <= 1_000_000 {
+        return bounds;
+    }
+
+    // A zoom-0 WorldXZ tile covers millions of chunks. The 64 nearest chunks
+    // in a rectangle are always within a 32-chunk Chebyshev radius of the
+    // rectangle point nearest to worldCenter, so this is an exact bounded
+    // search for the requested top-K set rather than an anchor-based cutoff.
+    let center_chunk_x =
+        floor_div(world_center.0.floor() as i64, 16).clamp(min_chunk_x, max_chunk_x);
+    let center_chunk_z =
+        floor_div(world_center.1.floor() as i64, 16).clamp(min_chunk_z, max_chunk_z);
+    let radius = (MAX_LIVE_CHUNKS_PER_TILE / 2) as i64;
+    (
+        center_chunk_x.saturating_sub(radius).max(min_chunk_x),
+        center_chunk_x.saturating_add(radius).min(max_chunk_x),
+        center_chunk_z.saturating_sub(radius).max(min_chunk_z),
+        center_chunk_z.saturating_add(radius).min(max_chunk_z),
+    )
+}
+
+fn live_chunk_bounds_for_tile(geometry: MapTileGeometry) -> (i64, i64, i64, i64, i64, i64) {
     // Overview tiles are still rasterized on the world X/Z plane. Detailed
     // Iso tiles use projected map-plane coordinates, so their live request
     // range must be inverse-transformed just like the renderer's rays.
@@ -1141,22 +1196,12 @@ fn live_chunk_bounds_for_tile(
                 .world_xz_bounds_for_geometry(geometry, -64.0, 320.0)
                 .expect("Iso geometry must have projected bounds")
         };
-    let (min_chunk_x, max_chunk_x) = limited_chunk_range(
-        floor_div(min_world_x, 16),
-        floor_div(max_world_x, 16),
-        anchor_chunk
-            .map(|(chunk_x, _)| chunk_x)
-            .unwrap_or_else(|| floor_div(min_world_x + max_world_x, 32)),
-    );
-    let (min_chunk_z, max_chunk_z) = limited_chunk_range(
-        floor_div(min_world_z, 16),
-        floor_div(max_world_z, 16),
-        anchor_chunk
-            .map(|(_, chunk_z)| chunk_z)
-            .unwrap_or_else(|| floor_div(min_world_z + max_world_z, 32)),
-    );
-    let center_chunk_x = floor_div(min_world_x + max_world_x, 32);
-    let center_chunk_z = floor_div(min_world_z + max_world_z, 32);
+    let min_chunk_x = floor_div(min_world_x, 16);
+    let max_chunk_x = floor_div(max_world_x, 16);
+    let min_chunk_z = floor_div(min_world_z, 16);
+    let max_chunk_z = floor_div(max_world_z, 16);
+    let center_chunk_x = floor_div((min_world_x + max_world_x) / 2, 16);
+    let center_chunk_z = floor_div((min_world_z + max_world_z) / 2, 16);
     (
         min_chunk_x,
         max_chunk_x,
@@ -1165,18 +1210,6 @@ fn live_chunk_bounds_for_tile(
         center_chunk_x,
         center_chunk_z,
     )
-}
-
-fn limited_chunk_range(minimum: i64, maximum: i64, center: i64) -> (i64, i64) {
-    if maximum.saturating_sub(minimum).saturating_add(1) <= MAX_LIVE_CHUNKS_PER_AXIS {
-        return (minimum, maximum);
-    }
-    let half = MAX_LIVE_CHUNKS_PER_AXIS / 2;
-    let start = center.saturating_sub(half).clamp(
-        minimum,
-        maximum.saturating_sub(MAX_LIVE_CHUNKS_PER_AXIS - 1),
-    );
-    (start, start.saturating_add(MAX_LIVE_CHUNKS_PER_AXIS - 1))
 }
 
 async fn handle_bridge_connection(
@@ -1881,8 +1914,10 @@ fn tile_render_state(
 }
 
 fn should_cache_tile(rendered: &crate::map::renderer::TileRenderResult) -> bool {
+    if matches!(rendered.source, TileRenderSource::Live) && !rendered.has_terrain {
+        return false;
+    }
     rendered.has_terrain
-        || rendered.live_received_count > 0
         || matches!(
             rendered.source,
             TileRenderSource::Saved | TileRenderSource::SavedAndLive
@@ -2928,7 +2963,10 @@ mod tests {
     };
     use crate::map::world::{ChunkLayer, ChunkSourceKind};
     use base64::Engine;
+    use fastanvil::Region;
+    use fastnbt::Value as NbtValue;
     use flate2::{write::ZlibEncoder, Compression};
+    use std::fs::OpenOptions;
     use std::io::Write;
 
     fn test_config() -> BridgeConfig {
@@ -2981,6 +3019,28 @@ mod tests {
             ChunkSourceKind::LiveSnapshot,
         )
         .expect("live test snapshot should be valid")
+    }
+
+    fn write_sparse_saved_chunk(root: &std::path::Path) {
+        let region_dir = root.join("region");
+        fs::create_dir_all(&region_dir).expect("region directory should be created");
+        let path = region_dir.join("r.0.0.mca");
+        let region_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path)
+            .expect("region file should be created");
+        let mut region = Region::create(region_file).expect("region should be created");
+        let bytes = fastnbt::to_bytes(&HashMap::from([
+            ("DataVersion".to_string(), NbtValue::Int(3953)),
+            ("Status".to_string(), NbtValue::String("full".to_string())),
+            ("sections".to_string(), NbtValue::List(Vec::new())),
+        ]))
+        .expect("sparse chunk NBT should encode");
+        region
+            .write_chunk(0, 0, &bytes)
+            .expect("sparse saved chunk should be written");
     }
 
     #[test]
@@ -3149,6 +3209,9 @@ mod tests {
         assert!(has_terrain);
         assert!(coverage > 0.0);
         assert_eq!(detailed.rendered_chunk_count, 1);
+        assert_eq!(detailed.source, TileRenderSource::Live);
+        assert_eq!(detailed.live_requested_count, 1);
+        assert_eq!(detailed.live_received_count, 1);
     }
 
     #[test]
@@ -3166,6 +3229,47 @@ mod tests {
         assert!(has_terrain);
         assert!(coverage > 0.0);
         assert_eq!(detailed.rendered_chunk_count, 1);
+        assert_eq!(detailed.source, TileRenderSource::Live);
+        assert_eq!(detailed.live_requested_count, 1);
+        assert_eq!(detailed.live_received_count, 1);
+    }
+
+    #[test]
+    fn overview_live_replacement_does_not_report_saved_and_live_source() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-map-overview-source-test-{}",
+            Uuid::new_v4()
+        ));
+        write_sparse_saved_chunk(&root);
+        let live_chunks = HashMap::from([((0, 0), live_test_snapshot(0, 0))]);
+
+        let result = render_overview_tile(&root, 0, 0, 0, None, Some(&live_chunks), 1)
+            .expect("overview should render");
+
+        assert_eq!(result.source, TileRenderSource::Live);
+        assert_eq!(result.rendered_chunk_count, 1);
+        assert_eq!(result.live_requested_count, 1);
+        assert_eq!(result.live_received_count, 1);
+        fs::remove_dir_all(root).expect("cleanup should succeed");
+    }
+
+    #[test]
+    fn detailed_live_replacement_does_not_report_saved_and_live_source() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-map-detailed-source-test-{}",
+            Uuid::new_v4()
+        ));
+        write_sparse_saved_chunk(&root);
+        let live_chunks = HashMap::from([((0, 0), live_test_snapshot(0, 0))]);
+
+        let result = render_world_tile_detailed(&root, MAX_ZOOM, 0, 0, None, Some(&live_chunks), 1)
+            .expect("detailed tile should render");
+
+        assert_eq!(result.source, TileRenderSource::Live);
+        assert_eq!(result.rendered_chunk_count, 1);
+        assert_eq!(result.live_requested_count, 1);
+        assert_eq!(result.live_received_count, 1);
+        fs::remove_dir_all(root).expect("cleanup should succeed");
     }
 
     #[test]
@@ -3208,8 +3312,7 @@ mod tests {
     fn detailed_live_chunk_bounds_use_projected_tile_volume() {
         let bounds = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, MAX_ZOOM, 0, 0)
             .expect("valid detailed tile bounds");
-        let (min_x, max_x, min_z, max_z, center_x, center_z) =
-            live_chunk_bounds_for_tile(bounds, None);
+        let (min_x, max_x, min_z, max_z, center_x, center_z) = live_chunk_bounds_for_tile(bounds);
         let projected_center = IsoHDPerspective::default().map_to_world([128.0, 128.0, 0.0]);
         let projected_chunk_x = floor_div(projected_center[0].floor() as i64, 16);
         let projected_chunk_z = floor_div(projected_center[2].floor() as i64, 16);
@@ -3224,13 +3327,12 @@ mod tests {
     fn overview_live_chunk_bounds_keep_world_plane_contract() {
         let bounds = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, 0, 0, 0)
             .expect("valid overview tile bounds");
-        let (min_x, max_x, min_z, max_z, center_x, center_z) =
-            live_chunk_bounds_for_tile(bounds, None);
+        let (min_x, max_x, min_z, max_z, center_x, center_z) = live_chunk_bounds_for_tile(bounds);
 
         assert!((min_x..=max_x).contains(&center_x));
         assert!((min_z..=max_z).contains(&center_z));
-        assert_eq!(max_x - min_x + 1, MAX_LIVE_CHUNKS_PER_AXIS);
-        assert_eq!(max_z - min_z + 1, MAX_LIVE_CHUNKS_PER_AXIS);
+        assert!(max_x - min_x + 1 > MAX_LIVE_CHUNKS_PER_TILE as i64);
+        assert!(max_z - min_z + 1 > MAX_LIVE_CHUNKS_PER_TILE as i64);
     }
 
     #[test]
@@ -3256,8 +3358,7 @@ mod tests {
         let anchor = (1_024.5, 768.5);
         let anchor_chunk = world_anchor_chunk(Some(anchor)).expect("anchor chunk");
         let candidates = live_chunk_candidates(geometry, Some(anchor));
-        let (min_x, max_x, min_z, max_z, _, _) =
-            live_chunk_bounds_for_tile(geometry, Some(anchor_chunk));
+        let (min_x, max_x, min_z, max_z, _, _) = live_chunk_bounds_for_tile(geometry);
 
         assert_eq!(candidates.first(), Some(&anchor_chunk));
         assert!((min_x..=max_x).contains(&anchor_chunk.0));
@@ -3283,6 +3384,27 @@ mod tests {
     }
 
     #[test]
+    fn detailed_candidates_keep_geometric_chunks_when_viewport_center_is_outside_tile() {
+        let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, MAX_ZOOM, 0, 0)
+            .expect("valid detailed geometry");
+        let tile_center = world_center_for_tile(geometry);
+        let viewport_center = (tile_center.0 + 16.0 * 20.0, tile_center.1 + 16.0 * 20.0);
+        let candidates = live_chunk_candidates(geometry, Some(viewport_center));
+
+        assert!(!candidates.is_empty());
+        assert!(candidates.len() <= MAX_LIVE_CHUNKS_PER_TILE);
+        assert!(candidates.iter().all(|&(chunk_x, chunk_z)| {
+            IsoHDPerspective::default()
+                .projected_geometry_intersects_chunk(geometry, -64.0, 320.0, chunk_x, chunk_z)
+        }));
+        assert!(candidates.iter().any(|&(chunk_x, chunk_z)| (chunk_x
+            - floor_div(tile_center.0 as i64, 16))
+        .abs()
+            <= 20
+            && (chunk_z - floor_div(tile_center.1 as i64, 16)).abs() <= 20));
+    }
+
+    #[test]
     fn empty_live_result_is_terminal_but_not_cacheable() {
         let result = crate::map::renderer::TileRenderResult {
             png: Vec::new(),
@@ -3298,6 +3420,12 @@ mod tests {
 
         assert!(!should_cache_tile(&result));
         assert_eq!(result.source, TileRenderSource::Live);
+
+        let received_empty = crate::map::renderer::TileRenderResult {
+            live_received_count: 1,
+            ..result
+        };
+        assert!(!should_cache_tile(&received_empty));
     }
 
     #[test]
