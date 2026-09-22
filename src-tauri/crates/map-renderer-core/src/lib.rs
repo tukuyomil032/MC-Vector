@@ -4,4 +4,5 @@ pub mod builtins;
 pub mod cache;
 pub mod domain;
 pub mod renderer;
+pub mod scheduler;
 pub mod world;

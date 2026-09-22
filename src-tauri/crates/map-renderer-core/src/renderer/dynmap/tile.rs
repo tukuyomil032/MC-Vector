@@ -13,7 +13,7 @@ pub const MAX_ZOOM: u8 = 8;
 pub const DEFAULT_TILE_EXTENT_AT_ZOOM_ZERO: i64 = 2_048;
 pub const MAX_REQUIRED_CHUNKS: usize = 64;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum TileProjection {
     WorldXZ,
     IsoProjected,

@@ -20,7 +20,7 @@ pub const TILE_CACHE_SCHEMA_VERSION: u16 = 2;
 
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct TileCacheKey {
     pub minecraft_version: MinecraftVersionId,
     pub renderer_version: String,
