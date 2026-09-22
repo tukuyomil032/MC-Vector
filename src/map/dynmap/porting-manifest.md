@@ -25,6 +25,11 @@ the exact pinned ref and path shown below.
 | `webbukkit/dynmap` | `93b454efb8802dc7406d6873434f2aeec5c636f4` | `DynmapCore/src/main/java/org/dynmap/hdmap/*Shader.java`, `DynmapCore/src/main/resources/shaders.txt` | `src-tauri/src/map/renderer` | Apache-2.0 | Reimplement coefficients and rules with attribution | Light/alpha/tint fixtures required; not copied here | planned |
 | `webbukkit/dynmap` | `93b454efb8802dc7406d6873434f2aeec5c636f4` | `LICENSE` | `src/map/dynmap/LICENSE-APACHE-2.0` | Apache-2.0 | Verbatim license artifact | Exact pinned source fetched and retained | license-artifact |
 
+The translated geometry, shading, asset-resolution, and PNG boundary is
+covered by the saved Anvil vertical-slice fixture described in
+`porting-notes.md`. That fixture is evidence for the selected Rust path only;
+it does not promote the rows marked `planned` to full Dynmap parity.
+
 ## Boundary rules
 
 - Every copied or translated item keeps this exact source ref; the moving

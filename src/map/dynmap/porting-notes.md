@@ -49,6 +49,21 @@ Future Rust work and every subsequent translation must:
 5. keep Minecraft client assets as user-owned inputs rather than bundling them
    with this source snapshot.
 
+## Renderer vertical slice
+
+The first saved-world vertical slice is now covered by
+`commands::map::tests::saved_anvil_fixture_renders_a_deterministic_nontransparent_iso_tile`.
+It writes a 1.21.10-shaped Anvil fixture, resolves a client-asset fixture through
+the Rust blockstate/model/texture resolver, renders an IsoProjected tile, and
+asserts non-zero terrain coverage, a saved source, a non-zero rendered chunk
+count, and byte-for-byte deterministic PNG output on a second render.
+
+This is evidence that the Rust-owned Anvil-to-PNG path is live; it is not a
+claim of complete Dynmap renderer parity. The fixture deliberately contains no
+Minecraft user asset from the repository. Real client JAR/resource-pack input
+remains an external acceptance prerequisite, and the full model registry,
+custom renderers, and Dynmap golden-image parity remain open.
+
 The translated modules carry SPDX, source path/ref, destination, and concrete
 change metadata. Their focused tests are the geometry evidence for this slice;
 golden terrain and full model/texture evidence are still required before any

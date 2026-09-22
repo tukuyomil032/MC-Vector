@@ -3028,8 +3028,9 @@ mod tests {
     use fastanvil::Region;
     use fastnbt::Value as NbtValue;
     use flate2::{write::ZlibEncoder, Compression};
+    use image::{ImageFormat, Rgba, RgbaImage};
     use std::fs::OpenOptions;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
 
     fn test_config() -> BridgeConfig {
         BridgeConfig {
@@ -3095,7 +3096,7 @@ mod tests {
             .expect("region file should be created");
         let mut region = Region::create(region_file).expect("region should be created");
         let bytes = fastnbt::to_bytes(&HashMap::from([
-            ("DataVersion".to_string(), NbtValue::Int(3953)),
+            ("DataVersion".to_string(), NbtValue::Int(4671)),
             ("Status".to_string(), NbtValue::String("full".to_string())),
             ("sections".to_string(), NbtValue::List(Vec::new())),
         ]))
@@ -3103,6 +3104,46 @@ mod tests {
         region
             .write_chunk(0, 0, &bytes)
             .expect("sparse saved chunk should be written");
+    }
+
+    fn write_saved_terrain_fixture(root: &std::path::Path) {
+        let region_dir = root.join("region");
+        fs::create_dir_all(&region_dir).expect("region directory should be created");
+        let path = region_dir.join("r.0.0.mca");
+        let region_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path)
+            .expect("region file should be created");
+        let mut region = Region::create(region_file).expect("region should be created");
+
+        let block_palette = NbtValue::Compound(HashMap::from([(
+            "Name".to_string(),
+            NbtValue::String("minecraft:grass_block".to_string()),
+        )]));
+        let block_states = NbtValue::Compound(HashMap::from([(
+            "palette".to_string(),
+            NbtValue::List(vec![block_palette]),
+        )]));
+        let biomes = NbtValue::Compound(HashMap::from([(
+            "palette".to_string(),
+            NbtValue::List(vec![NbtValue::String("minecraft:plains".to_string())]),
+        )]));
+        let section = NbtValue::Compound(HashMap::from([
+            ("Y".to_string(), NbtValue::Byte(4)),
+            ("block_states".to_string(), block_states),
+            ("biomes".to_string(), biomes),
+        ]));
+        let bytes = fastnbt::to_bytes(&HashMap::from([
+            ("DataVersion".to_string(), NbtValue::Int(3953)),
+            ("Status".to_string(), NbtValue::String("full".to_string())),
+            ("sections".to_string(), NbtValue::List(vec![section])),
+        ]))
+        .expect("terrain fixture NBT should encode");
+        region
+            .write_chunk(0, 0, &bytes)
+            .expect("terrain fixture chunk should be written");
     }
 
     #[test]
@@ -3233,6 +3274,50 @@ mod tests {
             .png;
         assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
         assert!(png.len() > 100);
+    }
+
+    #[test]
+    fn saved_anvil_fixture_renders_a_deterministic_nontransparent_iso_tile() {
+        let root = std::env::temp_dir().join(format!(
+            "mc-vector-map-saved-terrain-fixture-{}",
+            Uuid::new_v4()
+        ));
+        write_saved_terrain_fixture(&root);
+        let texture = RgbaImage::from_pixel(16, 16, Rgba([48, 160, 72, 255]));
+        let mut texture_png = Cursor::new(Vec::new());
+        texture
+            .write_to(&mut texture_png, ImageFormat::Png)
+            .expect("texture fixture should encode");
+        let assets = MapAssets::from_test_entries(&HashMap::from([
+            (
+                "assets/minecraft/blockstates/grass_block.json".to_string(),
+                br#"{"variants":{"":{"model":"minecraft:block/grass_block"}}}"#.to_vec(),
+            ),
+            (
+                "assets/minecraft/models/block/grass_block.json".to_string(),
+                br##"{"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"down":{"texture":"#all"},"up":{"texture":"#all"},"north":{"texture":"#all"},"south":{"texture":"#all"},"west":{"texture":"#all"},"east":{"texture":"#all"}}}],"textures":{"all":"minecraft:block/grass_block"}}"##.to_vec(),
+            ),
+            (
+                "assets/minecraft/textures/block/grass_block.png".to_string(),
+                texture_png.into_inner(),
+            ),
+        ]))
+        .expect("client asset fixture should load");
+
+        let first = render_world_tile_detailed(&root, MAX_ZOOM, 0, 0, Some(&assets), None, 0)
+            .expect("saved fixture should render");
+        let second = render_world_tile_detailed(&root, MAX_ZOOM, 0, 0, Some(&assets), None, 0)
+            .expect("saved fixture should render deterministically");
+
+        assert!(first.png.starts_with(b"\x89PNG\r\n\x1a\n"));
+        assert!(first.has_terrain);
+        assert!(first.coverage_ratio > 0.0);
+        assert!(first.rendered_chunk_count > 0);
+        assert_eq!(first.source, TileRenderSource::Saved);
+        assert_eq!(first.png, second.png);
+        assert_eq!(first.coverage_ratio, second.coverage_ratio);
+
+        fs::remove_dir_all(root).expect("test root should be removed");
     }
 
     #[test]

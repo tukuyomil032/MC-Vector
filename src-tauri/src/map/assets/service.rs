@@ -34,6 +34,30 @@ pub(crate) struct MapAssets {
 }
 
 impl MapAssets {
+    #[cfg(test)]
+    pub(crate) fn from_test_entries(entries: &HashMap<String, Vec<u8>>) -> Result<Self, String> {
+        let resolver = AssetResolver::from_entries(entries)?;
+        let identity = "test-client-assets-1.21.10".to_string();
+        let manifest = AssetManifest {
+            manifest_version: ASSET_MANIFEST_VERSION,
+            minecraft_version: Some("1.21.10".to_string()),
+            source_path: "test-fixture".to_string(),
+            source_identity: identity.clone(),
+            resource_pack_hash: identity.clone(),
+            blockstate_count: resolver.blockstate_count(),
+            model_count: 0,
+            texture_count: 0,
+            animated_texture_count: 0,
+            unresolved_blockstate_count: 0,
+            quality: crate::map::assets::manifest::AssetQuality::Full,
+        };
+        Ok(Self {
+            resolver,
+            identity,
+            manifest,
+        })
+    }
+
     pub(crate) fn sample_state_face_at_with_biome(
         &self,
         state: &str,
