@@ -96,6 +96,7 @@ import { createMapRequestCoordinator } from '../state/map-request-coordinator';
 import {
   clampMapZoom,
   commitMapPan,
+  formatMapZoom,
   mapPreviewScale,
   mapWorldCenterForViewportAnchor,
   mapWorldPointAtViewportAnchor,
@@ -1342,8 +1343,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
       const nextTargetZoom = Math.round(previewZoomRef.current);
       const sourceZoom = renderedZoomRef.current;
       if (nextTargetZoom === sourceZoom) {
-        previewZoomRef.current = sourceZoom;
-        setPreviewZoom(sourceZoom);
+        setTargetZoom(sourceZoom);
         applyTransientMapTransform(sourceZoom);
         return;
       }
@@ -1370,6 +1370,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
+    canvasContentRef.current?.classList.add('is-interacting');
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -1402,6 +1403,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    canvasContentRef.current?.classList.remove('is-interacting');
     dragRef.current = undefined;
     if (!drag.moved) {
       return;
@@ -1750,7 +1752,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
                   </span>
                 )}
                 <span className="map-view__zoom-label">
-                  {t('map.surface.zoom', { level: previewZoom })}
+                  {t('map.surface.zoom', { level: formatMapZoom(previewZoom) })}
                 </span>
                 <button
                   type="button"

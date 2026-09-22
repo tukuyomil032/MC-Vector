@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clampMapZoom,
   commitMapPan,
+  formatMapZoom,
   mapPreviewScale,
   mapWorldPointAtViewportAnchor,
   mapWorldCenterForViewportAnchor,
@@ -46,6 +47,12 @@ describe('map viewport interaction', () => {
     expect(clampMapZoom(8.8)).toBe(8);
     expect(clampMapZoom(4.25)).toBe(4.25);
     expect(mapPreviewScale(6.5, 5)).toBeCloseTo(2 ** 1.5, 9);
+  });
+
+  it('formats fractional zoom without leaking floating-point noise into the toolbar', () => {
+    expect(formatMapZoom(0.860000000000005)).toBe('0.86');
+    expect(formatMapZoom(8)).toBe('8');
+    expect(formatMapZoom(8.9)).toBe('8');
   });
 
   it('commits a transient drag to world coordinates without retaining CSS pan', () => {

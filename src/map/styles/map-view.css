@@ -359,6 +359,10 @@
   will-change: transform;
 }
 
+.map-view__canvas-content.is-interacting {
+  transition: none;
+}
+
 .map-view__tile,
 .map-view__empty-state {
   position: absolute;

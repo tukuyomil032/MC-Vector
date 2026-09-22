@@ -29,6 +29,11 @@ export function clampMapZoom(zoom: number): number {
   return Math.min(MAP_MAX_ZOOM, Math.max(MAP_MIN_ZOOM, zoom));
 }
 
+export function formatMapZoom(zoom: number): string {
+  const clamped = clampMapZoom(zoom);
+  return Number.isInteger(clamped) ? String(clamped) : clamped.toFixed(2);
+}
+
 export function mapPreviewScale(previewZoom: number, renderedZoom: number): number {
   return 2 ** (clampMapZoom(previewZoom) - clampMapZoom(renderedZoom));
 }
