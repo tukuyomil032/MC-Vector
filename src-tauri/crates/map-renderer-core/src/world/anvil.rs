@@ -385,7 +385,7 @@ fn decode_biomes(chunk: &JavaChunk, height: &HeightData) -> Result<BiomeData, An
     BiomeData::complete(values).map_err(|_| AnvilError::InvalidBiomeData)
 }
 
-fn stable_id(value: &str) -> u32 {
+pub(crate) fn stable_id(value: &str) -> u32 {
     let mut hash = 2_166_136_261u32;
     for byte in value.as_bytes() {
         hash ^= u32::from(*byte);

@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::MinecraftVersionId;
 
+pub mod snapshots;
+
 pub const PROTOCOL_VERSION: u16 = 2;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -105,6 +107,8 @@ pub struct ChunkSnapshot {
     pub data_version: i64,
     pub chunk_x: i32,
     pub chunk_z: i32,
+    pub biomes: Vec<String>,
+    pub heightmap: Vec<i32>,
     pub sections: Vec<SectionSnapshot>,
 }
 
@@ -293,6 +297,8 @@ mod tests {
                 data_version: 4189,
                 chunk_x: -2,
                 chunk_z: 4,
+                biomes: vec!["minecraft:plains".to_owned(); 256],
+                heightmap: vec![64; 256],
                 sections: vec![SectionSnapshot {
                     section_y: 0,
                     block_palette: vec![BlockStateSnapshot {
