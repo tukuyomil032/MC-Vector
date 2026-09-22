@@ -1,31 +1,27 @@
 # Dynmap Source Boundary
 
-This directory contains the small, attributed Dynmap v3.0 source boundary used
-by MC-Vector as a porting reference. It is not a Dynmap runtime dependency,
-does not make MC-Vector Dynmap-compatible, and is not bundled into the frontend
-or Paper plugin.
+This directory contains the attributed Dynmap v3.0 renderer-closure source
+boundary used by MC-Vector as a porting reference. It is not a Dynmap runtime
+dependency, does not make MC-Vector Dynmap-compatible, and is not bundled into
+the frontend or Paper plugin.
 
 ## Pinned source
 
 - Repository: <https://github.com/webbukkit/dynmap>
 - Branch context: `v3.0`
 - Immutable ref: `93b454efb8802dc7406d6873434f2aeec5c636f4`
-- Source and hash inventory: [SOURCE-REF.md](SOURCE-REF.md)
+- Source and hash inventory: [SOURCE-REF.md](SOURCE-REF.md) and
+  [ORIGIN-MANIFEST.json](ORIGIN-MANIFEST.json)
 - Source provenance: [ORIGIN-MANIFEST.md](ORIGIN-MANIFEST.md)
 - License: [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0)
 - Attribution and boundary notice: [NOTICE](NOTICE)
 
-## Selected source
+## Renderer closure source
 
-The `upstream/` directory contains the pinned, source-only snapshots listed in
-[`SOURCE-REF.md`](SOURCE-REF.md). They cover the perspective, matrix, patch,
-block-model, texture-pack, shader, and lighting boundaries:
-
-- `HDPerspective.java` and `IsoHDPerspective.java`;
-- `Matrix3D.java` and `PatchDefinition.java`;
-- `HDBlockModels.java`, `TexturePack.java`, `HDShader.java`, and
-  `HDLighting.java`;
-- `shaders.txt`.
+The `upstream/` directory contains the pinned, source-only Java snapshots listed
+in [`ORIGIN-MANIFEST.json`](ORIGIN-MANIFEST.json). The closure includes the
+Dynmap renderer API, HD perspective/model/texture/shader/lighting code, built-in
+renderer classes, color multipliers, and renderer-facing utility classes.
 
 The original upstream contents are retained. These files are for source review
 and selective translation only; they are not Java build inputs for MC-Vector.

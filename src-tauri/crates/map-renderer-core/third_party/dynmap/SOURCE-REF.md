@@ -1,23 +1,118 @@
 # Dynmap Source Reference
 
-This directory is a source-only attribution boundary. It is not compiled by
-Vite, Rust, or the Paper Gradle project.
+This source-only snapshot is generated from the complete renderer closure
+at pinned revision `93b454efb8802dc7406d6873434f2aeec5c636f4`. It is not compiled or bundled at runtime.
 
-- Repository: <https://github.com/webbukkit/dynmap>
-- Branch context: `v3.0`
-- Immutable source ref: `93b454efb8802dc7406d6873434f2aeec5c636f4`
-- License: [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0)
-- Local attribution: [NOTICE](NOTICE)
-- Verification command: `bun scripts/verify-dynmap-source.mjs`
+- Repository: https://github.com/webbukkit/dynmap
+- Revision: `93b454efb8802dc7406d6873434f2aeec5c636f4`
+- License: Apache-2.0; see `LICENSE-APACHE-2.0` and `NOTICE`
+- Machine-readable manifest: `ORIGIN-MANIFEST.json`
 
 | Local source | Upstream source | SHA-256 |
 | --- | --- | --- |
-| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java` | `1bd07eb34fbde3638c541807ed93c4545ae845e5f43364d4f82a0af9beee301f` |
-| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java` | `dcbaacc681a6930ee3ae8e7ee7eb227382e5eb4db69d1564d2f759e4274d3692` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/CaveHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/CaveHDShader.java` | `fe41c4a53b653c6f5350cbc68193eb19be1f86f086af0379d38f193c7583eba2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/ChunkStatusHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/ChunkStatusHDShader.java` | `98b6fc66db71e8a8617af5adaa153e7f042c08e4778f3942f7f6bcc533a8fe7e` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/ChunkVersionHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/ChunkVersionHDShader.java` | `f494f68f1fe3834f5d1400ce2b1ee4cb04075c653a35ae6b35e46ca4fce7e4c6` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFBandedWoodColorMultiplier.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFBandedWoodColorMultiplier.java` | `8277704e98c2ba4793db9ef95680211f1b839f81de39acd9c71198ef7977c1ae` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFMagicLeafColorMultiplier.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFMagicLeafColorMultiplier.java` | `ed6239adb4532e29b7e321868a1cbee7333d89c8bc1edc3627e10d6b6dd273bc` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFSpecialLeafColorMultiplier.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFSpecialLeafColorMultiplier.java` | `7b1e81504ba66687dfe5a207919a532d6136c949cdde49908e64577f0335cff8` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/CTMTexturePack.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/CTMTexturePack.java` | `2a5a4ce6d1002d964ff19504c8b07ea2e61c3ec55510f845fdc7c576b2ce7dd2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/CustomBlockModel.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/CustomBlockModel.java` | `f2a8fc2a93aeee753c9b55c34b4d2fbf28d66e83715efea400a760b687b8193c` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDLighting.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDLighting.java` | `1a28537a553019fe86ed4a05b5bea5731b78b4b0fd669a614e1eef2bc9520d0c` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDShader.java` | `20a9a9342ffc35b28d595fb02da224eca772de0096c2a0b529186762dc243de7` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModel.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModel.java` | `66cb9f59df04ef273b6cee91248dbbf6594c64b91a9f2f3531789e1ef79d5586` |
 | `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java` | `cbd857b896f10bb08b057a3f9ddf01ba53242b3ebd9116b163bf26739b0c48c0` |
-| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java` | `ce8a720df763ac3c0815fe4fbe69e5a6673b02f73be464ea869111ca952ecf1c` |
-| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java` | `7075f40adc82b7e02a10305f97e78da8eb3809e017b675c1edd8d225e817e896` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockPatchModel.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockPatchModel.java` | `3a90c81e0c6eabc304228aadf48c27e6fe47b67a22b683073cf4c8adc0c166af` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockStateTextureMap.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockStateTextureMap.java` | `996b15babff3347a7b1799472ae694f8d270652a6a9fac46e55ff8962e01cda7` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockVolumetricModel.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockVolumetricModel.java` | `368be333a349dd093f27fa6b574f818265707c8dfb050fcf7f34253077163339` |
 | `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java` | `0dea1ddbb370e04ba49cd8f05d12c46e1cb0e3af0963a4f7dc86cd5c88da5413` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDMap.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDMap.java` | `14cc1808ddcc3a482cb4c8fc1913d24c4b55c524a0e1014b0072e6b6a9738aeb` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDMapManager.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDMapManager.java` | `6501715d53f8a9eed2751185ce3320a4ec87458ac7cdd9961ed004f1ac3acf60` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDMapTile.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDMapTile.java` | `6b3bf566437980c7f32fe7347d0d29acbdb5a59398950c9c51246c007b843e8f` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java` | `1bd07eb34fbde3638c541807ed93c4545ae845e5f43364d4f82a0af9beee301f` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspectiveState.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspectiveState.java` | `3271db2dcb3ebf072f248b79189223ad7d8b084033115332aac6d7628567f5e5` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDScaledBlockModels.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDScaledBlockModels.java` | `6b277973afbd94d81dba404e02360053d80aaf3d91a6c4d6ebbce82ddcb7644f` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java` | `7075f40adc82b7e02a10305f97e78da8eb3809e017b675c1edd8d225e817e896` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDShaderState.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/HDShaderState.java` | `5fd338979cd60c3f39f87fc56588847bc8ebdee1e85bfac80993447cecff33a2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/InhabitedHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/InhabitedHDShader.java` | `5eed79d24d9ae1f42e6bb545d5a03a740c69ffe34179b59de183a91a7de04a82` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java` | `dcbaacc681a6930ee3ae8e7ee7eb227382e5eb4db69d1564d2f759e4274d3692` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/LightLevelHDLighting.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/LightLevelHDLighting.java` | `b5036944e9229da3577c0b041b08ca31b42bd5a740494e98405174d76c3975e7` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java` | `2393cfeeaf7bb9caf64d491dc85df7ff30c7ece90a2ad13c003e2b5c434987b0` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java` | `7f353d500541f6c4bf93821ad10e8e2bd4cf509655baa7540d5d17c91d05ca0b` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java` | `31ceeeb0771544b5b10f9adbc08d155075f2d0a8c62c668f1c0fc62a7515d07d` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java` | `181b5b87165b5a125e89fab113f226f7aa816e46a02078a0a29236ced9309d58` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java` | `5e5f610e072f7fd3f52f7c756318a480adc7195f990a40fff4f805f4d5a8b871` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java` | `a259832639512541320d66b247f98f784f6b003bf58faef38ec5cc1a3650967e` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java` | `a1d79b426b1a0a0db45eb6899a8dc3558838d3b1ca28ce868fa18111535c3750` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java` | `fc2ac367695e75ac69d74eed84a8c9ac4866d0676ba8b2485c6749b9395a3af7` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java` | `2c6eb8f1f814773a3b3f7131bf07a422059bafeef867ceca7125ff131f8ba87f` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java` | `a86c77abb005e62ea76832d149438612640b92ac6e12c23a5b7a0e5bdfc4187a` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java` | `7d8b886904eb062e702bc7941addae0f0e9f5c4414b35670fe74f5997c151308` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java` | `af5d3ee0bd992d14196949d2ef35e852232d4a2b4b3e559144fafce4c6b3f6f0` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java` | `ccaf21f6c6dceba0c7c0b295d6f79be6c69296daf25552c10f0df7ee9b2c66dc` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java` | `436d5c0729dde3d60b922477b609408b27cd20a8acc35b1a61156e88336bc6d3` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java` | `b9d16c527d02b0f8d5edbf5dedbfae4d3d685c7ea6fd9a4a2881dfaed5f775ed` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java` | `51207e46b478e0e5ce5941dcd32ea831fe3465c1cfd761217bf7e1af0fc331b2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java` | `ebe893be99349f48f68d5f541ea7db478eada6b10382032a6c37e126c9e5d0a5` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java` | `392eb6cfcb310686830e91cb24f201dc8967f873ab203e8bdd2347e91e89076d` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java` | `f0eb54b2f6bb82b0cf81fc7d29116e8572372e3867194e0c4014eb83f184fd89` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java` | `1d863a2ae62bd376be4beebeb6b1086d8142077fa66bd5d8d3c7e65bf0c85978` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java` | `6cc87434b6c3cec1435fcff3cb356f1b44466e090f2e27d3fd4eb13f91404058` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java` | `dfa779b6533178e1e3a1726fbf7e5538a5aff5d475f11dc1d78e4115a6b70cbb` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java` | `93fddd6f6b65942bf963c73917e97a7631c3367f1714ac5e241bc3d322e7d770` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java` | `4735957ac36e78989fc2200d32b22e265912aee13e1f09c83172dd059c240de8` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java` | `7365af8c0170d5604121cceabafc49cab5ab544d7363c5557b780347ce343d3d` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java` | `a8f95210f5d728c6a25277b305605f252088ff60b3854fbfc3e8df788ca2bc4a` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java` | `58d4977c668f4642dfe63e44a7c099c59583fae388474bd07ce3fb18fd1ccd10` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java` | `09e641b0cae2ddf350bdfeefd47e128905132f4995ad92bd763a617dc857b4ee` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java` | `ac879bf370757ae15b6e71a9cb1e407e77cac9d57413e515ffab0e5d4abfaedb` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java` | `d200298eebd390015c23bfa3b3ad8a299ce56e25d0676dfdae6119bf95fce5ac` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java` | `6093880278bcf5d99d10c3a57f10f70f12651756fb2d1f3bdc6d68dc985f280a` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java` | `dd4a3eea67ea12ba2af1f2f9f6bed48b4df7c485a8611f59691994a76f48391b` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java` | `d15d31fc62d558c63fa8d2820a057d3694be04d621872ebcc60402d45267f36c` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java` | `36fc92781b68664de58736ec1c44488ccf9b3c3127aeab5c74b6fbdce19cb1cd` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java` | `061bb1979ea70a5a8bb5f2577df42949a753bd7887970882a1997c0cd457b22a` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java` | `d113409930703dc3ca99e157adcf003a351974282887421151060100f36dfbae` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java` | `3899c004a3069c5937ee019f3d5f70ea4860aef4aef8b1931453e32185ad30c1` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java` | `f03f78a4f7235bd3138174c5ff69b374522b3b150f25568a7e66d50e52bd111a` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java` | `1e972307baf7cf46f0216374b551ca9f3de140894fe7fb1915cf767ba4a634f2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/ShadowHDLighting.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/ShadowHDLighting.java` | `c8a08ada2f72806200a3882d3e72f01b4d8c2022fa90f1db130f6e7dd8251ab8` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java` | `ce8a720df763ac3c0815fe4fbe69e5a6673b02f73be464ea869111ca952ecf1c` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDCaveShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDCaveShader.java` | `a9bfd81000975918f0e5fb9a24896b084166642b047ccb832ce30db6d365a46c` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDShader.java` | `b3b788ab9ef1861aac9fa6b1a79f580f2a00e3b301f6895b73ca942ebe8a3763` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDUnderwaterShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDUnderwaterShader.java` | `b9508c216de2a5d8b21a2ba69b8cea3a60c2a61027a0f466b3ab4cce6f1ef759` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackLoader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackLoader.java` | `e48d0906707f03c01c0b01e0b5ca5fcf08241a6cb36b144bb5b9a7d0fef2e874` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TopoHDShader.java` | `DynmapCore/src/main/java/org/dynmap/hdmap/TopoHDShader.java` | `cb713814721cf0a2089cafd8ba27798986b027e57f06032ef79a6ccce3219cc3` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/BlockStateParser.java` | `DynmapCore/src/main/java/org/dynmap/utils/BlockStateParser.java` | `5e78fd6666bc4e5b2f770bc2aebd88535252fe636e9e301b7b1c80bd59ea3e06` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/BlockStep.java` | `DynmapCore/src/main/java/org/dynmap/utils/BlockStep.java` | `1ff162764fa66893dceabceb1bb60e824094cc89b1b68a009c47a41f301aa941` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/BufferInputStream.java` | `DynmapCore/src/main/java/org/dynmap/utils/BufferInputStream.java` | `0f65b6e274d923044663a7d2061e8644e0803952ec2e20f9f5fbe5d7fd936387` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/BufferOutputStream.java` | `DynmapCore/src/main/java/org/dynmap/utils/BufferOutputStream.java` | `bc407cc23fdfb02b591d51ddaa98d7e55ef0d4ebaa8baaf926718e544486965d` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/DataBitsPacked.java` | `DynmapCore/src/main/java/org/dynmap/utils/DataBitsPacked.java` | `794eba710d94ec052e6628dcab6d6232096759e95983913fdb1d73d89c5f7043` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/DynIntHashMap.java` | `DynmapCore/src/main/java/org/dynmap/utils/DynIntHashMap.java` | `7c5ff20142324070298568698591c4a89ac1bff050664384227a2f95dd83bcff` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/DynLongHashMap.java` | `DynmapCore/src/main/java/org/dynmap/utils/DynLongHashMap.java` | `23ef1934c57f15945d6f3c0aecfbc38615bebd0bd3e01efcb4ec9be8e1e7dc70` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/DynmapBufferedImage.java` | `DynmapCore/src/main/java/org/dynmap/utils/DynmapBufferedImage.java` | `f9c28c3fde7aab4e4ef5188c370837322365891b9519a18452243caac94f0972` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/DynmapLogger.java` | `DynmapCore/src/main/java/org/dynmap/utils/DynmapLogger.java` | `9bf832f488b38fc68565624672a246a8f3bedca3590e3f8b7d1a65c38d8ada03` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/ForgeConfigFile.java` | `DynmapCore/src/main/java/org/dynmap/utils/ForgeConfigFile.java` | `3a53bf335ab740959557713519bf8875ef3d1ffef01807ad893497bfc5c0205f` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/ImageIOManager.java` | `DynmapCore/src/main/java/org/dynmap/utils/ImageIOManager.java` | `958e2d3f04312599525d073e306232c96326065b85770721d1300f606293375e` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3D.java` | `DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3D.java` | `902be820167a9eba17daed20e63e0a6a6c4a759dfd551aeed9305f17769a38cc` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3DList.java` | `DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3DList.java` | `3dc9dc4487da44354e00a3eb53adc0dae5de619fbbc69204f28d684d4248c3e2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/IpAddressMatcher.java` | `DynmapCore/src/main/java/org/dynmap/utils/IpAddressMatcher.java` | `c1fe8d561082b0d472a859bc3213ea527ccfa7636399666e8fccd339c1c41918` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/LightLevels.java` | `DynmapCore/src/main/java/org/dynmap/utils/LightLevels.java` | `790f276d5a6faabc580728e8f3bdf54f300065041b83346b622391300315b524` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/LRULinkedHashMap.java` | `DynmapCore/src/main/java/org/dynmap/utils/LRULinkedHashMap.java` | `d400acd43bd51572e0aff162fe1513d5e3de6bc72d0dab4cf70f777b55d1d45a` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/MapChunkCache.java` | `DynmapCore/src/main/java/org/dynmap/utils/MapChunkCache.java` | `e69a0ff36e98c2f325446a66a0d5f724040af039d27ac8e2e7ac880cdbd4541f` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/MapIterator.java` | `DynmapCore/src/main/java/org/dynmap/utils/MapIterator.java` | `09e041a6c63703bc69f3d4e6a55e82cb914389be634b7cdc775c5eb300626e53` |
 | `upstream/DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java` | `DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java` | `3b4731e0352a4764dfd975d97e0f1447d294e6b46160ce00805feba4352934e2` |
 | `upstream/DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java` | `DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java` | `3e1db6c77caeb84fe2bcbb7d70b5db0b57a204d5b8ff4f139bfda36a54f69dcd` |
-| `upstream/DynmapCore/src/main/resources/shaders.txt` | `DynmapCore/src/main/resources/shaders.txt` | `2fa0e7dce0bddd7462f5039c2f1a63153b376708e87afd8687250cb178164675` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/PatchDefinitionFactory.java` | `DynmapCore/src/main/java/org/dynmap/utils/PatchDefinitionFactory.java` | `9ea1ef21260874c926c0aaa26c566a4b60c7076e954e7ad5553f5cd4f2e92977` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/Polygon.java` | `DynmapCore/src/main/java/org/dynmap/utils/Polygon.java` | `8b598c4c36ff903c51054a4560fb87b171075c498882ad0a5c19c667663d8294` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/RectangleVisibilityLimit.java` | `DynmapCore/src/main/java/org/dynmap/utils/RectangleVisibilityLimit.java` | `f2ab42b227cc08e2f663f160a4c8796110eff20587e9152e7181448aad1c8eaf` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/RoundVisibilityLimit.java` | `DynmapCore/src/main/java/org/dynmap/utils/RoundVisibilityLimit.java` | `d3558de69092b2355e9ddc909b78bb2a3b4aee721130ec48122d9bbe65f434c9` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/TileFlags.java` | `DynmapCore/src/main/java/org/dynmap/utils/TileFlags.java` | `e2527f0e09dbe5a7d2e7f8eb3e698e071dd1c1ad508d4cc1fae1b5aa836377a2` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/Vector3D.java` | `DynmapCore/src/main/java/org/dynmap/utils/Vector3D.java` | `3a14c93f62c477d70fbd41f1aa8564ed81a73fe77e7672247755f2876897b588` |
+| `upstream/DynmapCore/src/main/java/org/dynmap/utils/VisibilityLimit.java` | `DynmapCore/src/main/java/org/dynmap/utils/VisibilityLimit.java` | `57ef1b45ee47b2e586549cc3c4438c707134286c532ae4daa7a74c3c514fb720` |
+| `upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomColorMultiplier.java` | `DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomColorMultiplier.java` | `708243b92e419a0c9abac0a894d4270f2d1acf9bbf18fa8739d61b32617d4712` |
+| `upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomRenderer.java` | `DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomRenderer.java` | `42bcf79d9037219e5dd395ab6daca8ead608c1adce1dc5cf30c7bc8d59acc8bd` |
+| `upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/DynmapBlockState.java` | `DynmapCoreAPI/src/main/java/org/dynmap/renderer/DynmapBlockState.java` | `b27bd6638839d535d5489adce04299e1fcefac89a37a1610bc165943f1d4d364` |
+| `upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/MapDataContext.java` | `DynmapCoreAPI/src/main/java/org/dynmap/renderer/MapDataContext.java` | `f6f859c3e6d7c69214581e05be428da57f0f392648b3ab1e89aa0ad1a6bf1480` |
+| `upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatch.java` | `DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatch.java` | `2cf0fd5687697d47b710eff263e0c118b2b94d0d379e81e8a3fba950f624ea3b` |
+| `upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatchFactory.java` | `DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatchFactory.java` | `5529bb3016c8101f71d7afebf41832243eadaf169c74267fcc560ccefd9d0f54` |

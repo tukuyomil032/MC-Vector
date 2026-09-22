@@ -1,0 +1,3 @@
+# Preserve the pinned upstream bytes exactly; the source manifest proves their
+# SHA-256. Do not normalize upstream formatting as part of the Rust port.
+upstream/** -whitespace
