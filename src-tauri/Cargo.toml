@@ -43,6 +43,8 @@ flate2 = "1"
 reqwest = { version = "0.12", features = ["stream"] }
 futures-util = "0.3"
 sha2 = "0.10"
+fastanvil = "0.32"
+fastnbt = "2.6"
 uuid = { version = "1", features = ["v4"] }
 keyring = { version = "3.6.3", default-features = false, features = ["apple-native", "windows-native", "linux-native-sync-persistent"] }
 
