@@ -8,7 +8,7 @@ use std::io::Cursor;
 
 use crate::assets::archive::AssetArchive;
 
-const MAX_TEXTURE_PIXELS: u64 = 16_777_216;
+use crate::security::MAX_TEXTURE_PIXELS;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TextureImage {

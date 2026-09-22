@@ -7,7 +7,7 @@ use serde_json::Value;
 use super::archive::AssetArchive;
 use super::model_view::AssetKey;
 
-const MAX_MODEL_DEPTH: usize = 32;
+use crate::security::MAX_MODEL_INHERITANCE_DEPTH;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ResolverError {
@@ -120,7 +120,7 @@ impl<'a> BlockStateResolver<'a> {
         stack: &mut Vec<AssetKey>,
         depth: usize,
     ) -> Result<ResolvedModel, ResolverError> {
-        if depth > MAX_MODEL_DEPTH {
+        if depth > MAX_MODEL_INHERITANCE_DEPTH {
             return Err(ResolverError::ParentDepthExceeded);
         }
         if stack.contains(key) {

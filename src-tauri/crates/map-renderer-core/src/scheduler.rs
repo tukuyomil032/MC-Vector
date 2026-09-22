@@ -89,7 +89,7 @@ impl RenderScheduler {
         max_pending: usize,
         retry_backoff: RetryBackoff,
     ) -> Result<Self, SchedulerError> {
-        if max_in_flight == 0 || max_pending < max_in_flight {
+        if crate::security::validate_scheduler_capacity(max_in_flight, max_pending).is_err() {
             return Err(SchedulerError::InvalidCapacity);
         }
         Ok(Self {

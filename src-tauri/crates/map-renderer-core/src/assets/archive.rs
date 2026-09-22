@@ -6,10 +6,10 @@ use std::io::{Cursor, Read};
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
-const MAX_ARCHIVE_BYTES: usize = 256 * 1024 * 1024;
-const MAX_ENTRY_BYTES: u64 = 64 * 1024 * 1024;
-const MAX_ENTRY_COUNT: usize = 100_000;
-const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 = 192 * 1024 * 1024;
+use crate::security::{
+    MAX_ARCHIVE_BYTES, MAX_ARCHIVE_ENTRY_BYTES, MAX_ARCHIVE_ENTRY_COUNT,
+    MAX_ARCHIVE_TOTAL_UNCOMPRESSED_BYTES,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ArchiveError {
@@ -51,7 +51,7 @@ impl AssetArchive {
         if archive.is_empty() {
             return Err(ArchiveError::EmptyArchive);
         }
-        if archive.len() > MAX_ENTRY_COUNT {
+        if archive.len() > MAX_ARCHIVE_ENTRY_COUNT {
             return Err(ArchiveError::TooManyEntries);
         }
 
@@ -71,13 +71,13 @@ impl AssetArchive {
                 continue;
             }
             let declared_size = entry.size();
-            if declared_size > MAX_ENTRY_BYTES {
+            if declared_size > MAX_ARCHIVE_ENTRY_BYTES {
                 return Err(ArchiveError::EntryTooLarge);
             }
             total_uncompressed = total_uncompressed
                 .checked_add(declared_size)
                 .ok_or(ArchiveError::UncompressedSizeLimit)?;
-            if total_uncompressed > MAX_TOTAL_UNCOMPRESSED_BYTES {
+            if total_uncompressed > MAX_ARCHIVE_TOTAL_UNCOMPRESSED_BYTES {
                 return Err(ArchiveError::UncompressedSizeLimit);
             }
             let capacity =

@@ -6,4 +6,5 @@ pub mod domain;
 pub mod ipc;
 pub mod renderer;
 pub mod scheduler;
+pub mod security;
 pub mod world;

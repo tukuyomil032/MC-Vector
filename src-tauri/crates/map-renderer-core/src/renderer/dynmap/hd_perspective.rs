@@ -62,14 +62,9 @@ pub fn render_chunk(
     if projection.width == 0 || projection.height == 0 || projection.scale <= 0.0 {
         return Err(RenderError::InvalidDimensions);
     }
-    let pixel_count = usize::try_from(projection.width)
-        .ok()
-        .and_then(|width| {
-            usize::try_from(projection.height)
-                .ok()
-                .and_then(|height| width.checked_mul(height))
-        })
-        .ok_or(RenderError::InvalidDimensions)?;
+    let pixel_count =
+        crate::security::checked_render_pixel_count(projection.width, projection.height)
+            .map_err(|_| RenderError::InvalidDimensions)?;
     let mut pixels = vec![[0, 0, 0, 0]; pixel_count];
     let boundary = domain.chunk.boundary().map_err(map_data_error)?;
     let (chunk_x, chunk_z) = domain.chunk.chunk.origin();
@@ -188,7 +183,6 @@ pub fn traverse_voxels(
     ray: Ray,
     boundary: super::super::super::world::chunk_view::TileBoundary,
 ) -> Vec<VoxelVisit> {
-    const MAX_VOXEL_STEPS: usize = 65_536;
     let Some((entry, exit)) = ray_box_intersection(ray, boundary) else {
         return Vec::new();
     };
@@ -212,7 +206,7 @@ pub fn traverse_voxels(
     let mut next_z = next_boundary_t(ray.origin.z, ray.direction.z, block_z, step_z);
     let mut visits = Vec::new();
 
-    for _ in 0..MAX_VOXEL_STEPS {
+    for _ in 0..crate::security::MAX_VOXEL_STEPS {
         if distance > exit + 1e-7 {
             break;
         }

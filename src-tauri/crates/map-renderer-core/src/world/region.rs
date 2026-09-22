@@ -13,8 +13,7 @@ use sha2::{Digest, Sha256};
 use super::chunk_view::ChunkCoord;
 
 const REGION_SIDE: i64 = 32;
-const MAX_REGION_FILE_BYTES: u64 = 64 * 1024 * 1024;
-const MAX_CHUNK_NBT_BYTES: usize = 8 * 1024 * 1024;
+use crate::security::{MAX_CHUNK_NBT_BYTES, MAX_REGION_FILE_BYTES};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RegionReadError {
