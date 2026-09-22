@@ -386,8 +386,12 @@ fn decode_biomes(chunk: &JavaChunk, height: &HeightData) -> Result<BiomeData, An
 }
 
 pub(crate) fn stable_id(value: &str) -> u32 {
+    let canonical = value
+        .strip_prefix("minecraft:")
+        .unwrap_or(value)
+        .to_ascii_lowercase();
     let mut hash = 2_166_136_261u32;
-    for byte in value.as_bytes() {
+    for byte in canonical.as_bytes() {
         hash ^= u32::from(*byte);
         hash = hash.wrapping_mul(16_777_619);
     }
