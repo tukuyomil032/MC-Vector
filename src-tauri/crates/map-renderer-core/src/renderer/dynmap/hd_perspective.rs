@@ -161,8 +161,9 @@ fn trace_pixel(
                 }
             }
             if let Some((_, u, v, patch)) = nearest {
+                let (texture_u, texture_v) = patch.texture_uv.sample(u, v);
                 let color = atlas
-                    .sample(patch.texture_index, u, v)
+                    .sample(patch.texture_index, texture_u, texture_v)
                     .map_err(RenderError::Texture)?;
                 let face_factor = match patch.step {
                     BlockStep::YPlus => 1.0,

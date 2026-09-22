@@ -38,6 +38,43 @@ pub struct PatchHit {
     pub shade: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextureUv {
+    pub min_u: f64,
+    pub max_u: f64,
+    pub min_v: f64,
+    pub max_v: f64,
+    pub rotation: u16,
+}
+
+impl Default for TextureUv {
+    fn default() -> Self {
+        Self {
+            min_u: 0.0,
+            max_u: 1.0,
+            min_v: 0.0,
+            max_v: 1.0,
+            rotation: 0,
+        }
+    }
+}
+
+impl TextureUv {
+    pub fn sample(self, u: f64, v: f64) -> (f64, f64) {
+        let (u, v) = match self.rotation {
+            0 => (u, v),
+            90 => (1.0 - v, u),
+            180 => (1.0 - u, 1.0 - v),
+            270 => (v, 1.0 - u),
+            _ => (u, v),
+        };
+        (
+            self.min_u + (self.max_u - self.min_u) * u,
+            self.min_v + (self.max_v - self.min_v) * v,
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum PatchError {
     NonFiniteCoordinate,
@@ -62,6 +99,8 @@ pub struct PatchDefinition {
     pub vmax_at_umax: f64,
     pub side_visible: SideVisible,
     pub texture_index: i32,
+    pub texture_uv: TextureUv,
+    pub cullface: Option<BlockStep>,
     pub shade: bool,
     pub step: BlockStep,
 }
@@ -143,9 +182,21 @@ impl PatchDefinition {
             vmax_at_umax,
             side_visible,
             texture_index,
+            texture_uv: TextureUv::default(),
+            cullface: None,
             shade,
             step: dominant_step(normal),
         })
+    }
+
+    pub fn with_texture_uv(mut self, texture_uv: TextureUv) -> Self {
+        self.texture_uv = texture_uv;
+        self
+    }
+
+    pub fn with_cullface(mut self, cullface: Option<BlockStep>) -> Self {
+        self.cullface = cullface;
+        self
     }
 
     pub fn u_vector(self) -> Vec3 {
@@ -284,7 +335,7 @@ fn dominant_step(normal: Vec3) -> BlockStep {
 
 #[cfg(test)]
 mod tests {
-    use super::{PatchDefinition, PatchDefinitionFactory, PatchError, Ray};
+    use super::{PatchDefinition, PatchDefinitionFactory, PatchError, Ray, TextureUv};
     use crate::renderer::dynmap::types::{SideVisible, Vec3};
 
     fn square_patch() -> PatchDefinition {
@@ -418,5 +469,18 @@ mod tests {
             ),
             Err(PatchError::InvalidUClip)
         );
+    }
+
+    #[test]
+    fn texture_uv_rotation_is_separate_from_surface_coordinates() {
+        let uv = TextureUv {
+            min_u: 0.25,
+            max_u: 0.75,
+            min_v: 0.0,
+            max_v: 1.0,
+            rotation: 90,
+        };
+        assert_eq!(uv.sample(0.0, 0.0), (0.75, 0.0));
+        assert_eq!(uv.sample(1.0, 1.0), (0.25, 1.0));
     }
 }
