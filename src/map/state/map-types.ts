@@ -735,6 +735,9 @@ export function isMapTileRequestReady(
   isLoading = false,
   isActing = false,
 ): boolean {
+  const coreArtifactReady =
+    status?.coreArtifact?.state === 'installed' && status.coreArtifact.verification === 'verified';
+
   return (
     !statusError &&
     !assetStatusError &&
@@ -745,6 +748,7 @@ export function isMapTileRequestReady(
     status.configState === 'valid' &&
     (status.component === 'active' || status.component === 'waiting_restart') &&
     status.bridge === 'connected' &&
+    coreArtifactReady &&
     !isMapAssetWarningState(status.assetState) &&
     status.assetState !== 'not_applicable'
   );

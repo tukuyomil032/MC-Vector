@@ -3369,12 +3369,27 @@ mod tests {
 
     #[test]
     fn unavailable_live_reasons_are_redacted_and_do_not_look_like_empty_terrain() {
-        assert_eq!(
-            TileUnavailableReason::from_bridge_reason("not_loaded"),
-            TileUnavailableReason::NotLoaded
-        );
+        let reasons = [
+            ("not_loaded", TileUnavailableReason::NotLoaded),
+            ("world_unavailable", TileUnavailableReason::WorldUnavailable),
+            ("queue_full", TileUnavailableReason::QueueFull),
+            ("timeout", TileUnavailableReason::Timeout),
+        ];
+        for (wire_code, reason) in reasons {
+            assert_eq!(TileUnavailableReason::from_bridge_reason(wire_code), reason);
+            assert_eq!(
+                serde_json::to_value(reason).expect("reason should serialize"),
+                serde_json::json!(wire_code)
+            );
+            assert!(!reason.message().contains('/'));
+            assert!(!reason.message().contains("token"));
+        }
         assert_eq!(
             TileUnavailableReason::from_bridge_reason("private token /tmp/world"),
+            TileUnavailableReason::InvalidSnapshot
+        );
+        assert_eq!(
+            TileUnavailableReason::from_bridge_reason("bridge_disconnected"),
             TileUnavailableReason::InvalidSnapshot
         );
         assert_eq!(

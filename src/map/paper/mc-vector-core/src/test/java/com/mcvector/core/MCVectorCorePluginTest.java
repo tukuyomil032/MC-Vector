@@ -161,6 +161,9 @@ class MCVectorCorePluginTest {
         assertNotNull(snapshot);
         assertTrue(snapshot.message().contains("\"type\":\"chunk_snapshot\""));
         assertTrue(snapshot.message().contains("\"requestId\":\"loaded\""));
+        assertTrue(snapshot.message().contains("\"dimension\":\"minecraft:overworld\""));
+        assertTrue(snapshot.message().contains("\"chunkX\":0"));
+        assertTrue(snapshot.message().contains("\"chunkZ\":0"));
         assertTrue(snapshot.message().contains("\"payload\":\""));
 
         plugin.serveSnapshotRequestForTests();
@@ -169,6 +172,8 @@ class MCVectorCorePluginTest {
         assertTrue(unavailable.message().contains("\"type\":\"chunk_snapshot_unavailable\""));
         assertTrue(unavailable.message().contains("\"requestId\":\"unloaded\""));
         assertTrue(unavailable.message().contains("\"reason\":\"not_loaded\""));
+        assertFalse(unavailable.message().contains("/tmp"));
+        assertFalse(unavailable.message().contains("token"));
         assertFalse(world.isChunkLoaded(unloadedChunkX, unloadedChunkZ));
     }
 

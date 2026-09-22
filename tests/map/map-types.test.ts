@@ -556,6 +556,10 @@ describe('map tile diagnostics', () => {
       configState: 'valid' as const,
       protocolVersion: 2,
       assetState: 'auto_detected' as const,
+      coreArtifact: {
+        state: 'installed' as const,
+        verification: 'verified' as const,
+      },
     };
 
     expect(isMapTileRequestReady(status, null, true)).toBe(true);
@@ -565,6 +569,44 @@ describe('map tile diagnostics', () => {
     expect(isMapTileRequestReady(status, null, true, null, false, true)).toBe(false);
     expect(isMapTileRequestReady({ ...status, assetState: 'missing' }, null, true)).toBe(false);
     expect(isMapTileRequestReady({ ...status, component: 'paused' }, null, true)).toBe(false);
+  });
+
+  it('does not treat a connected bridge as renderer-ready before Core verification', async () => {
+    const { isMapTileRequestReady } = await import('@/map/state/map-types');
+    const status = {
+      serverId: 'server-1',
+      component: 'active' as const,
+      bridge: 'connected' as const,
+      configState: 'valid' as const,
+      protocolVersion: 2,
+      assetState: 'auto_detected' as const,
+      coreArtifact: {
+        state: 'download_required' as const,
+        verification: 'unverified' as const,
+      },
+    };
+
+    expect(isMapTileRequestReady(status, null, true)).toBe(false);
+    expect(
+      isMapTileRequestReady(
+        {
+          ...status,
+          coreArtifact: { state: 'installed', verification: 'failed' },
+        },
+        null,
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      isMapTileRequestReady(
+        {
+          ...status,
+          coreArtifact: { state: 'installed', verification: 'verified' },
+        },
+        null,
+        true,
+      ),
+    ).toBe(true);
   });
 });
 
