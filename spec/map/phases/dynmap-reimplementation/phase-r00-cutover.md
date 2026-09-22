@@ -39,7 +39,8 @@ test ! -d src-tauri/src/map
 
 ## Gate
 
-The remaining diff contains only the four keep-set changes and no Map feature
+The remaining diff contains the four keep-set changes plus this
+`dynmap-reimplementation` planning track, and no Map application
 implementation. Commit as:
 
 ```text
