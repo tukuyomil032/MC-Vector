@@ -2,9 +2,9 @@
 
 ## Status
 
-`fixture_contract_verified`; the official client/server artifacts, real Anvil
-world fixture, Paper artifact, and Dynmap reference capture remain separate
-version-matrix gates.
+`deterministic_region_fixture_verified`; the official client/server artifacts,
+real captured Anvil world fixture, Paper artifact, and Dynmap reference capture
+remain separate version-matrix gates.
 
 ## Adapter contract
 
@@ -23,9 +23,12 @@ biome, and heightmap validation.
 
 ## Evidence boundary
 
-The current focused evidence is a deterministic serialized fixture and an
-explicit neighboring-version rejection test. This is not real-world artifact
-verification, version-wide Anvil parity, or Dynmap pixel parity.
+The focused evidence writes a deterministic Anvil region, reads its compressed
+chunk through `RegionSource`, and passes the extracted bytes through the
+1.21.4 adapter into the shared `MapChunkCache` contract. It also repeats the
+source digest read to prove stable input bytes. This is a generated test
+fixture, not a captured world, official artifact verification, version-wide
+Anvil parity, or Dynmap pixel parity.
 
 ## Gate
 
