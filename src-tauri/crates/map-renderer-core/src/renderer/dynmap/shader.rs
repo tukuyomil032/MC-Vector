@@ -73,7 +73,98 @@ pub enum TintChannel {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ShaderError {
     MissingBiome { biome_id: u32, channel: TintChannel },
+    MissingHeight,
+    UnknownShader,
     InvalidTint,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct ShaderState {
+    pub biome_id: Option<u32>,
+    pub height: Option<i32>,
+    pub sky_light: u8,
+    pub block_light: u8,
+    pub underwater: bool,
+    pub cave: bool,
+}
+
+pub trait HdShader {
+    fn shade(&self, color: ShaderColor, state: ShaderState) -> Result<ShaderColor, ShaderError>;
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DefaultHdShader;
+
+impl HdShader for DefaultHdShader {
+    fn shade(&self, color: ShaderColor, _state: ShaderState) -> Result<ShaderColor, ShaderError> {
+        Ok(color)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TexturePackHdShader;
+
+impl HdShader for TexturePackHdShader {
+    fn shade(&self, color: ShaderColor, _state: ShaderState) -> Result<ShaderColor, ShaderError> {
+        Ok(color)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TexturePackHdUnderwaterShader {
+    pub tint: [u8; 3],
+}
+
+impl Default for TexturePackHdUnderwaterShader {
+    fn default() -> Self {
+        Self {
+            tint: [128, 180, 255],
+        }
+    }
+}
+
+impl HdShader for TexturePackHdUnderwaterShader {
+    fn shade(&self, color: ShaderColor, state: ShaderState) -> Result<ShaderColor, ShaderError> {
+        Ok(if state.underwater {
+            color.tinted(self.tint)
+        } else {
+            color
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TexturePackHdCaveShader {
+    pub tint: [u8; 3],
+}
+
+impl Default for TexturePackHdCaveShader {
+    fn default() -> Self {
+        Self {
+            tint: [128, 128, 128],
+        }
+    }
+}
+
+impl HdShader for TexturePackHdCaveShader {
+    fn shade(&self, color: ShaderColor, state: ShaderState) -> Result<ShaderColor, ShaderError> {
+        Ok(if state.cave {
+            color.tinted(self.tint)
+        } else {
+            color
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TopoHdShader;
+
+impl HdShader for TopoHdShader {
+    fn shade(&self, color: ShaderColor, state: ShaderState) -> Result<ShaderColor, ShaderError> {
+        let height = state.height.ok_or(ShaderError::MissingHeight)?;
+        let intensity = ((height + 64).clamp(0, 320) * 255 / 320) as u8;
+        Ok(ShaderColor([intensity, intensity, intensity, color.0[3]]))
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
@@ -131,7 +222,11 @@ fn composite_channel(
 
 #[cfg(test)]
 mod tests {
-    use super::{shade_material, BiomeTintMap, ShaderColor, TintChannel};
+    use super::{
+        shade_material, BiomeTintMap, DefaultHdShader, HdShader, ShaderColor, ShaderError,
+        ShaderState, TexturePackHdCaveShader, TexturePackHdUnderwaterShader, TintChannel,
+        TopoHdShader,
+    };
     use crate::domain::{Material, MaterialOpacity, TextureReference};
 
     #[test]
@@ -190,6 +285,50 @@ mod tests {
                 .unwrap()
                 .0[3],
             17
+        );
+    }
+
+    fn state() -> ShaderState {
+        ShaderState {
+            biome_id: Some(1),
+            height: Some(64),
+            sky_light: 15,
+            block_light: 0,
+            underwater: true,
+            cave: true,
+        }
+    }
+
+    #[test]
+    fn builtin_shader_states_have_explicit_transitions() {
+        let color = ShaderColor([200, 100, 50, 128]);
+        assert_eq!(DefaultHdShader.shade(color, state()).unwrap(), color);
+        assert_ne!(
+            TexturePackHdUnderwaterShader::default()
+                .shade(color, state())
+                .unwrap(),
+            color
+        );
+        assert_ne!(
+            TexturePackHdCaveShader::default()
+                .shade(color, state())
+                .unwrap(),
+            color
+        );
+        assert_eq!(TopoHdShader.shade(color, state()).unwrap().0[0], 102);
+    }
+
+    #[test]
+    fn topo_shader_does_not_guess_missing_height() {
+        assert_eq!(
+            TopoHdShader.shade(
+                ShaderColor([1, 2, 3, 255]),
+                ShaderState {
+                    height: None,
+                    ..state()
+                },
+            ),
+            Err(ShaderError::MissingHeight)
         );
     }
 }
