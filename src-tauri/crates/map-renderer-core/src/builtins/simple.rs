@@ -238,6 +238,15 @@ pub(crate) fn box_patches(
     texture_index: i32,
     shade: bool,
 ) -> Result<Vec<PatchDefinition>, CustomRendererError> {
+    box_patches_with_textures(factory, bounds, [texture_index; 6], shade)
+}
+
+pub(crate) fn box_patches_with_textures(
+    factory: &RenderPatchFactory,
+    bounds: CuboidBounds,
+    texture_indices: [i32; 6],
+    shade: bool,
+) -> Result<Vec<PatchDefinition>, CustomRendererError> {
     let bounds = bounds.validate()?;
     let min = bounds.min;
     let max = bounds.max;
@@ -281,7 +290,8 @@ pub(crate) fn box_patches(
     ];
     faces
         .into_iter()
-        .map(|(origin, u_end, v_end, cullface)| {
+        .zip(texture_indices)
+        .map(|((origin, u_end, v_end, cullface), texture_index)| {
             Ok(factory
                 .patch(origin, u_end, v_end, texture_index, shade)?
                 .with_cullface(Some(cullface)))

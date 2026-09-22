@@ -8,7 +8,10 @@
 
 use std::collections::BTreeMap;
 
+use crate::renderer::dynmap::custom::CustomRenderer;
+
 pub mod advanced;
+pub mod closure;
 pub mod connected;
 pub mod containers;
 pub mod doors;
@@ -22,6 +25,7 @@ pub const DYNMAP_SOURCE_REVISION: &str = "93b454efb8802dc7406d6873434f2aeec5c636
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum BuiltinImplementationStatus {
     NotStarted,
+    Translated,
     Verified,
     Unsupported,
 }
@@ -30,6 +34,7 @@ impl BuiltinImplementationStatus {
     fn parse(value: &str) -> Option<Self> {
         match value {
             "not_started" => Some(Self::NotStarted),
+            "translated" => Some(Self::Translated),
             "verified" => Some(Self::Verified),
             "unsupported" => Some(Self::Unsupported),
             _ => None,
@@ -150,6 +155,94 @@ impl BuiltinRendererRegistry {
             .values()
             .all(|entry| entry.implementation_status == BuiltinImplementationStatus::Verified)
     }
+
+    /// Construct the Rust renderer registered for a pinned Dynmap class.
+    ///
+    /// Keeping this match exhaustive at the class-string boundary prevents a
+    /// catalog entry from existing without an actual Rust registration.  The
+    /// reference/pixel evidence state remains in the catalog and is audited
+    /// separately by the coverage checker.
+    pub fn renderer_for(&self, class: &str) -> Option<Box<dyn CustomRenderer>> {
+        use advanced::{RotatedBoxRenderer, RotatedPatchRenderer, SlabRenderer, StairRenderer};
+        use closure::{
+            BoxStateRenderer, ChestStateRenderer, CopyStairBlockRenderer, CtmVertTextureRenderer,
+            DoorStateRenderer, FenceGateBlockRenderer, FenceGateBlockStateRenderer,
+            FenceWallBlockRenderer, FenceWallBlockStateRenderer, FluidStateRenderer,
+            GlowLichenStateRenderer, ImmibisMicroRenderer, PaneStateRenderer,
+            RailCraftSlabBlockRenderer, RailCraftTrackRenderer, RedstoneWireStateRenderer,
+            RpMicroRenderer, RpRotatedBoxRenderer, RpSupportFrameRenderer, StairBlockRenderer,
+            StairStateRenderer, TfcLooseRockRenderer, TfcSupportRenderer, TfcWoodRenderer,
+            ThaumFurnaceRenderer, VineStateRenderer,
+        };
+        use connected::{ConnectedPaneRenderer, FenceRenderer, WallRenderer};
+        use containers::{ChestRenderer, HeadRenderer, SkullRenderer, WallHeadRenderer};
+        use doors::{DoorRenderer, TrapdoorRenderer};
+        use foliage::{GlowLichenRenderer, LeavesRenderer, VineRenderer};
+        use rails::{RailRenderer, RedstoneWireRenderer};
+        use simple::{BoxRenderer, CuboidRenderer, FrameRenderer, PaneRenderer, PlantRenderer};
+
+        match class {
+            "BoxRenderer" => Some(Box::new(BoxRenderer::default())),
+            "BoxStateRenderer" => Some(Box::new(BoxStateRenderer::default())),
+            "CTMVertTextureRenderer" => Some(Box::new(CtmVertTextureRenderer)),
+            "ChestRenderer" => Some(Box::new(ChestRenderer::default())),
+            "ChestStateRenderer" => Some(Box::new(ChestStateRenderer)),
+            "CopyStairBlockRenderer" => Some(Box::new(CopyStairBlockRenderer)),
+            "CuboidRenderer" => Some(Box::new(CuboidRenderer::new(
+                simple::CuboidBounds::UNIT,
+                0,
+                true,
+            ))),
+            "DoorRenderer" => Some(Box::new(DoorRenderer::default())),
+            "DoorStateRenderer" => Some(Box::new(DoorStateRenderer)),
+            "FenceGateBlockRenderer" => Some(Box::new(FenceGateBlockRenderer)),
+            "FenceGateBlockStateRenderer" => Some(Box::new(FenceGateBlockStateRenderer)),
+            "FenceWallBlockRenderer" => Some(Box::new(FenceWallBlockRenderer)),
+            "FenceWallBlockStateRenderer" => Some(Box::new(FenceWallBlockStateRenderer)),
+            "FluidStateRenderer" => Some(Box::new(FluidStateRenderer)),
+            "FrameRenderer" => Some(Box::new(FrameRenderer::default())),
+            "GlowLichenStateRenderer" => Some(Box::new(GlowLichenStateRenderer)),
+            "HeadRenderer" => Some(Box::new(HeadRenderer::default())),
+            "ImmibisMicroRenderer" => Some(Box::new(ImmibisMicroRenderer)),
+            "PaneRenderer" => Some(Box::new(PaneRenderer::default())),
+            "PaneStateRenderer" => Some(Box::new(PaneStateRenderer)),
+            "PlantRenderer" => Some(Box::new(PlantRenderer::default())),
+            "RPMicroRenderer" => Some(Box::new(RpMicroRenderer)),
+            "RPRotatedBoxRenderer" => Some(Box::new(RpRotatedBoxRenderer)),
+            "RPSupportFrameRenderer" => Some(Box::new(RpSupportFrameRenderer)),
+            "RailCraftSlabBlockRenderer" => Some(Box::new(RailCraftSlabBlockRenderer)),
+            "RailCraftTrackRenderer" => Some(Box::new(RailCraftTrackRenderer)),
+            "RedstoneWireRenderer" => Some(Box::new(RedstoneWireRenderer::default())),
+            "RedstoneWireStateRenderer" => Some(Box::new(RedstoneWireStateRenderer)),
+            "RotatedBoxRenderer" => Some(Box::new(RotatedBoxRenderer::new(
+                simple::CuboidBounds::UNIT,
+                0,
+                0,
+                true,
+            ))),
+            "RotatedPatchRenderer" => Some(Box::new(RotatedPatchRenderer::default())),
+            "SkullRenderer" => Some(Box::new(SkullRenderer::default())),
+            "StairBlockRenderer" => Some(Box::new(StairBlockRenderer)),
+            "StairStateRenderer" => Some(Box::new(StairStateRenderer)),
+            "TFCLooseRockRenderer" => Some(Box::new(TfcLooseRockRenderer)),
+            "TFCSupportRenderer" => Some(Box::new(TfcSupportRenderer)),
+            "TFCWoodRenderer" => Some(Box::new(TfcWoodRenderer)),
+            "ThaumFurnaceRenderer" => Some(Box::new(ThaumFurnaceRenderer)),
+            "VineStateRenderer" => Some(Box::new(VineStateRenderer)),
+            "WallHeadRenderer" => Some(Box::new(WallHeadRenderer::default())),
+            "FenceRenderer" => Some(Box::new(FenceRenderer::default())),
+            "WallRenderer" => Some(Box::new(WallRenderer::default())),
+            "ConnectedPaneRenderer" => Some(Box::new(ConnectedPaneRenderer::default())),
+            "LeavesRenderer" => Some(Box::new(LeavesRenderer::default())),
+            "VineRenderer" => Some(Box::new(VineRenderer::default())),
+            "GlowLichenRenderer" => Some(Box::new(GlowLichenRenderer::default())),
+            "TrapdoorRenderer" => Some(Box::new(TrapdoorRenderer::default())),
+            "RailRenderer" => Some(Box::new(RailRenderer::default())),
+            "SlabRenderer" => Some(Box::new(SlabRenderer::default())),
+            "StairRenderer" => Some(Box::new(StairRenderer::default())),
+            _ => None,
+        }
+    }
 }
 
 fn required_string(
@@ -224,6 +317,23 @@ mod tests {
                 .implementation_status,
             BuiltinImplementationStatus::NotStarted
         );
+    }
+
+    #[test]
+    fn pinned_catalog_has_a_rust_registration_for_every_class() {
+        let registry =
+            BuiltinRendererRegistry::from_catalog_json(CATALOG, super::DYNMAP_SOURCE_REVISION)
+                .expect("pinned builtin catalog must be valid");
+        for entry in registry.iter() {
+            let renderer = registry
+                .renderer_for(&entry.class)
+                .unwrap_or_else(|| panic!("missing Rust registration for {}", entry.class));
+            assert!(
+                !renderer.name().is_empty(),
+                "empty renderer name for {}",
+                entry.class
+            );
+        }
     }
 
     #[test]

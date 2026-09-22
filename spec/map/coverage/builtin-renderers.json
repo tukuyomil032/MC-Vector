@@ -9,469 +9,469 @@
       "class": "BoxRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/BoxRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/simple.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "BoxStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/BoxStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "CTMVertTextureRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/CTMVertTextureRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "ChestRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/ChestRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/containers.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "ChestStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/ChestStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "CopyStairBlockRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/CopyStairBlockRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "CuboidRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/CuboidRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/simple.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "DoorRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/DoorRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/doors.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "DoorStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/DoorStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "FenceGateBlockRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/FenceGateBlockRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "FenceGateBlockStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/FenceGateBlockStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "FenceWallBlockRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/FenceWallBlockRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "FenceWallBlockStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/FenceWallBlockStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "FluidStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/FluidStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "FrameRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/FrameRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/simple.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "GlowLichenStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/GlowLichenStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "HeadRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/HeadRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/containers.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "ImmibisMicroRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/ImmibisMicroRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "PaneRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/PaneRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/simple.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "PaneStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/PaneStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "PlantRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/PlantRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/simple.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RPMicroRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RPMicroRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RPRotatedBoxRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RPRotatedBoxRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RPSupportFrameRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RPSupportFrameRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RailCraftSlabBlockRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RailCraftSlabBlockRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RailCraftTrackRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RailCraftTrackRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RedstoneWireRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RedstoneWireRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/rails.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RedstoneWireStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RedstoneWireStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RotatedBoxRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RotatedBoxRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/advanced.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "RotatedPatchRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/RotatedPatchRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/advanced.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "SkullRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/SkullRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/containers.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "StairBlockRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/StairBlockRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "StairStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/StairStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "TFCLooseRockRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/TFCLooseRockRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "TFCSupportRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/TFCSupportRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "TFCWoodRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/TFCWoodRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "ThaumFurnaceRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/ThaumFurnaceRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "VineStateRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/VineStateRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/closure.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     },
     {
       "class": "WallHeadRenderer",
       "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java",
       "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
-      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/WallHeadRenderer.rs",
+      "rustModule": "src-tauri/crates/map-renderer-core/src/builtins/containers.rs",
       "requiredAssets": [],
       "fixtures": [],
       "referenceTrace": null,
       "pixelGolden": null,
       "status": "cataloged",
-      "implementationStatus": "not_started"
+      "implementationStatus": "translated"
     }
   ]
 }
