@@ -1,4 +1,5 @@
 mod commands;
+mod map;
 mod state;
 
 use tauri::Manager;
