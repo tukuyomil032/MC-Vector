@@ -41,6 +41,7 @@
     "test:map:reference:fixtures": "bun scripts/verify-map-reference-fixtures.mjs",
     "test:map:renderer:quality": "node scripts/check-map-renderer-quality.mjs",
     "test:map:version-matrix": "node scripts/map-version-matrix-output.mjs",
+    "test:map:acceptance:evidence": "node scripts/check-map-acceptance-evidence.mjs",
     "test:provider:live": "vitest run --config vitest.live.config.ts",
     "test:all": "bun run check && bun run test && cd src-tauri && cargo test",
     "e2e": "playwright test",

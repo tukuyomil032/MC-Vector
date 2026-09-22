@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "versionMatrix": "spec/map/coverage/version-matrix.json",
+  "status": "blocked",
+  "reason": "Real Paper and Tauri environments have not been provisioned for the complete version matrix.",
+  "defaultRecord": {
+    "status": "blocked",
+    "reason": "No real Paper/Tauri acceptance artifact and run record is attached.",
+    "evidence": {
+      "coreArtifact": { "status": "blocked" },
+      "paperPluginLoad": { "status": "blocked" },
+      "bridgeHandshake": { "status": "blocked" },
+      "loadedSnapshot": { "status": "blocked" },
+      "savedLiveSource": { "status": "blocked" },
+      "terrainRender": { "status": "blocked" },
+      "tileCache": { "status": "blocked" },
+      "realTauriIpc": { "status": "blocked" },
+      "mapUi": { "status": "blocked" },
+      "zoomPan": { "status": "blocked" },
+      "failureSafety": { "status": "blocked" },
+      "shutdown": { "status": "blocked" },
+      "javaExit": { "status": "blocked" },
+      "portRelease": { "status": "blocked" }
+    }
+  },
+  "overrides": {}
+}

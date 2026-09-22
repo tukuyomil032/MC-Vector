@@ -20,3 +20,9 @@ renderer parity, and a passing mock does not prove real Tauri behavior.
 
 No row may be marked verified without a command, fixture/artifact identity,
 timestamp, commit, and result reference.
+
+Per-version real Paper/Tauri acceptance is tracked separately in
+`real-acceptance-matrix.json`. Its default state is intentionally `blocked`;
+run `bun run test:map:acceptance:evidence` to validate the evidence shape and
+`node scripts/check-map-acceptance-evidence.mjs --require-complete` only when
+all target versions have real evidence.

@@ -105,3 +105,11 @@ jobs:
         run: |
           bun run check
           bun run typecheck:tests
+
+  acceptance-evidence-shape:
+    name: Validate real acceptance evidence shape
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Validate evidence matrix
+        run: bun run test:map:acceptance:evidence
