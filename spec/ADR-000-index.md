@@ -72,6 +72,7 @@ Only evidence at or above the requested claim may be used for the final score.
 - [Dynmap v3.0 renderer research corpus](./dynmap/README.md)
 - [Complete in-app map capability contract](./dynmap/map-capability-complete.md)
 - [MC-Vector Map implementation plan](./map/README.md)
+- [Dynmap renderer reimplementation track](./map/phases/dynmap-reimplementation/README.md)
 
 ## Map ADRs
 

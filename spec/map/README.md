@@ -72,6 +72,15 @@ evidence are recorded.
 Do not use this ledger to describe the Map renderer as Dynmap-complete. The
 only completion label for that claim is the Phase 27 gate.
 
+## Dynmap reimplementation track
+
+The current branch also contains an explicit reset-and-rebuild track at
+`phases/dynmap-reimplementation/`. That track is the execution plan for
+replacing the incomplete renderer with a source-faithful Dynmap translation.
+Its R00 cutover must complete before new Map application code is written.
+The historical Phase 00-27 documents remain as provenance and capability
+requirements; they are not evidence that the current renderer is complete.
+
 ## Agent model
 
 - Main session: source research, contracts/spec/ADR, integration, shared files,
