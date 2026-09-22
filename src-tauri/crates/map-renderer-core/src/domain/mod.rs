@@ -2,7 +2,10 @@
 
 use std::fmt;
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct MinecraftVersionId(String);
 
 impl MinecraftVersionId {
