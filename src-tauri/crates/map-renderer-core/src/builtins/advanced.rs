@@ -16,6 +16,68 @@ use crate::renderer::dynmap::types::{BlockStep, Vec3};
 use super::simple::{box_patches, CuboidBounds};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub(crate) enum Facing {
+    North,
+    South,
+    West,
+    East,
+}
+
+impl Facing {
+    pub(crate) fn parse(
+        state: &DynmapBlockState,
+        property: &str,
+    ) -> Result<Self, CustomRendererError> {
+        match state.properties.get(property).map(String::as_str) {
+            None | Some("north") => Ok(Self::North),
+            Some("south") => Ok(Self::South),
+            Some("west") => Ok(Self::West),
+            Some("east") => Ok(Self::East),
+            Some(_) => Err(CustomRendererError::UnsupportedState),
+        }
+    }
+
+    pub(crate) const fn quarter_turns(self) -> u8 {
+        match self {
+            Self::North => 0,
+            Self::East => 1,
+            Self::South => 2,
+            Self::West => 3,
+        }
+    }
+}
+
+pub(crate) fn rotate_bounds_for_facing(bounds: CuboidBounds, facing: Facing) -> CuboidBounds {
+    let turns = facing.quarter_turns();
+    let points = [
+        Vec3::new(bounds.min.x, bounds.min.y, bounds.min.z),
+        Vec3::new(bounds.min.x, bounds.min.y, bounds.max.z),
+        Vec3::new(bounds.max.x, bounds.min.y, bounds.min.z),
+        Vec3::new(bounds.max.x, bounds.min.y, bounds.max.z),
+    ];
+    let rotated = points.map(|point| {
+        let mut x = point.x;
+        let mut z = point.z;
+        for _ in 0..turns {
+            (x, z) = (1.0 - z, x);
+        }
+        Vec3::new(x, point.y, z)
+    });
+    let mut min = rotated[0];
+    let mut max = rotated[0];
+    for point in rotated.into_iter().skip(1) {
+        min.x = min.x.min(point.x);
+        min.z = min.z.min(point.z);
+        max.x = max.x.max(point.x);
+        max.z = max.z.max(point.z);
+    }
+    CuboidBounds::new(
+        Vec3::new(min.x, bounds.min.y, min.z),
+        Vec3::new(max.x, bounds.max.y, max.z),
+    )
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum StairHalf {
     Bottom,
     Top,

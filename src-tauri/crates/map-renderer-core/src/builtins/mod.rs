@@ -9,6 +9,7 @@
 use std::collections::BTreeMap;
 
 pub mod advanced;
+pub mod doors;
 pub mod simple;
 
 pub const DYNMAP_SOURCE_REVISION: &str = "93b454efb8802dc7406d6873434f2aeec5c636f4";
