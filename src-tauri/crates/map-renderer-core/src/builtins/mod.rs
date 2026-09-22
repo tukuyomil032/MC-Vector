@@ -9,6 +9,7 @@
 use std::collections::BTreeMap;
 
 pub mod advanced;
+pub mod connected;
 pub mod doors;
 pub mod simple;
 
