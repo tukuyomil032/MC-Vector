@@ -95,7 +95,6 @@ pub fn decode_chunk(
     let java_chunk = JavaChunk::from_bytes(bytes).map_err(|_| AnvilError::MalformedNbt)?;
     let root_value: Value = fastnbt::from_bytes(bytes).map_err(|_| AnvilError::MalformedNbt)?;
     let root = root_compound(&root_value).ok_or(AnvilError::MalformedNbt)?;
-
     let header = decode_header(root)?;
     if header.coordinate != expected_chunk {
         return Err(AnvilError::InvalidChunkCoordinate);
@@ -192,6 +191,12 @@ pub fn decode_header(root: &HashMap<String, Value>) -> Result<AnvilChunkHeader, 
         status,
         coordinate: ChunkCoord::new(x, z),
     })
+}
+
+pub fn read_header(bytes: &[u8]) -> Result<AnvilChunkHeader, AnvilError> {
+    let root_value: Value = fastnbt::from_bytes(bytes).map_err(|_| AnvilError::MalformedNbt)?;
+    let root = root_compound(&root_value).ok_or(AnvilError::MalformedNbt)?;
+    decode_header(root)
 }
 
 fn root_compound(value: &Value) -> Option<&HashMap<String, Value>> {
