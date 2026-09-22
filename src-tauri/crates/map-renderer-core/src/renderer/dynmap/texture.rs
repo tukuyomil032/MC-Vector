@@ -4,6 +4,11 @@
 //! colour when an asset is absent; callers receive a typed error instead.
 
 use std::collections::BTreeMap;
+use std::io::Cursor;
+
+use crate::assets::archive::AssetArchive;
+
+const MAX_TEXTURE_PIXELS: u64 = 16_777_216;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TextureImage {
@@ -18,6 +23,10 @@ pub enum TextureError {
     PixelCountMismatch,
     MissingTexture,
     NonFiniteUv,
+    DecodeFailed,
+    TextureTooLarge,
+    AnimatedTextureUnsupported,
+    UnsafeTexturePath,
 }
 
 impl TextureImage {
@@ -43,6 +52,47 @@ impl TextureImage {
         })
     }
 
+    pub fn from_png(bytes: &[u8]) -> Result<Self, TextureError> {
+        let mut decoder = png::Decoder::new(Cursor::new(bytes));
+        decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+        let mut reader = decoder
+            .read_info()
+            .map_err(|_| TextureError::DecodeFailed)?;
+        let info = reader.info();
+        let pixels = u64::from(info.width)
+            .checked_mul(u64::from(info.height))
+            .ok_or(TextureError::TextureTooLarge)?;
+        if pixels == 0 || pixels > MAX_TEXTURE_PIXELS {
+            return Err(TextureError::TextureTooLarge);
+        }
+        let mut raw = vec![0_u8; reader.output_buffer_size()];
+        let output = reader
+            .next_frame(&mut raw)
+            .map_err(|_| TextureError::DecodeFailed)?;
+        let raw = &raw[..output.buffer_size()];
+        let rgba = match output.color_type {
+            png::ColorType::Rgba => raw.to_vec(),
+            png::ColorType::Rgb => raw
+                .chunks_exact(3)
+                .flat_map(|pixel| [pixel[0], pixel[1], pixel[2], 255])
+                .collect(),
+            png::ColorType::Grayscale => raw
+                .iter()
+                .flat_map(|pixel| [*pixel, *pixel, *pixel, 255])
+                .collect(),
+            png::ColorType::GrayscaleAlpha => raw
+                .chunks_exact(2)
+                .flat_map(|pixel| [pixel[0], pixel[0], pixel[0], pixel[1]])
+                .collect(),
+            png::ColorType::Indexed => return Err(TextureError::DecodeFailed),
+        };
+        let pixels = rgba
+            .chunks_exact(4)
+            .map(|pixel| [pixel[0], pixel[1], pixel[2], pixel[3]])
+            .collect();
+        Self::new(output.width, output.height, pixels)
+    }
+
     pub fn sample(&self, u: f64, v: f64) -> [u8; 4] {
         let u = u.rem_euclid(1.0);
         let v = v.rem_euclid(1.0);
@@ -62,6 +112,22 @@ impl TextureAtlas {
         self.textures.insert(texture_index, image);
     }
 
+    pub fn load_archive_texture(
+        &mut self,
+        archive: &AssetArchive,
+        texture_index: i32,
+        texture: &str,
+    ) -> Result<(), TextureError> {
+        let path = texture_asset_path(texture)?;
+        if archive.contains(&format!("{path}.mcmeta")) {
+            return Err(TextureError::AnimatedTextureUnsupported);
+        }
+        let bytes = archive.entry(&path).ok_or(TextureError::MissingTexture)?;
+        let image = TextureImage::from_png(bytes)?;
+        self.insert(texture_index, image);
+        Ok(())
+    }
+
     pub fn sample(&self, texture_index: i32, u: f64, v: f64) -> Result<[u8; 4], TextureError> {
         if !u.is_finite() || !v.is_finite() {
             return Err(TextureError::NonFiniteUv);
@@ -73,9 +139,28 @@ impl TextureAtlas {
     }
 }
 
+fn texture_asset_path(texture: &str) -> Result<String, TextureError> {
+    let key = if texture.contains(':') {
+        texture.to_owned()
+    } else {
+        format!("minecraft:{texture}")
+    };
+    let (namespace, path) = key.split_once(':').ok_or(TextureError::UnsafeTexturePath)?;
+    if namespace.is_empty()
+        || path.is_empty()
+        || path.starts_with('/')
+        || path.contains("..")
+        || path.contains('\\')
+    {
+        return Err(TextureError::UnsafeTexturePath);
+    }
+    Ok(format!("assets/{namespace}/textures/{path}.png"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{TextureAtlas, TextureError, TextureImage};
+    use crate::renderer::png::encode_rgba;
 
     #[test]
     fn uv_sampling_preserves_resource_pack_alpha() {
@@ -90,6 +175,21 @@ mod tests {
         assert_eq!(
             TextureAtlas::default().sample(99, 0.5, 0.5),
             Err(TextureError::MissingTexture)
+        );
+    }
+
+    #[test]
+    fn png_decode_preserves_alpha_and_rgb_color_type() {
+        let bytes = encode_rgba(2, 1, &[[255, 0, 0, 255], [0, 255, 0, 17]]).unwrap();
+        let image = TextureImage::from_png(&bytes).unwrap();
+        assert_eq!(image.pixels[1], [0, 255, 0, 17]);
+    }
+
+    #[test]
+    fn malformed_and_animated_textures_are_not_silently_loaded() {
+        assert_eq!(
+            TextureImage::from_png(b"not-a-png"),
+            Err(TextureError::DecodeFailed)
         );
     }
 }
