@@ -36,6 +36,13 @@ pub struct RenderedTile {
     pub coverage_ratio: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VoxelVisit {
+    pub block: BlockCoord,
+    pub entry_distance: f64,
+    pub exit_distance: f64,
+}
+
 impl RenderedTile {
     pub fn png(&self) -> Result<Vec<u8>, RenderError> {
         encode_rgba(self.width, self.height, &self.pixels).map_err(RenderError::Png)
@@ -119,30 +126,8 @@ fn trace_pixel(
 ) -> Result<[u8; 4], RenderError> {
     let ray =
         projection.ray_for_boundary(screen_x, screen_y, boundary.min.y, boundary.max_exclusive.y);
-    let Some((entry, exit)) = ray_box_intersection(ray, boundary) else {
-        return Ok([0, 0, 0, 0]);
-    };
-    let mut distance = entry.max(0.0) + 1e-7;
-    if distance > exit {
-        return Ok([0, 0, 0, 0]);
-    }
-
-    let point = ray.origin + ray.direction * distance;
-    let mut block_x = point.x.floor() as i64;
-    let mut block_y = point.y.floor() as i32;
-    let mut block_z = point.z.floor() as i64;
-    let step_x = axis_step(ray.direction.x);
-    let step_y = axis_step(ray.direction.y);
-    let step_z = axis_step(ray.direction.z);
-    let delta_x = reciprocal_abs(ray.direction.x);
-    let delta_y = reciprocal_abs(ray.direction.y);
-    let delta_z = reciprocal_abs(ray.direction.z);
-    let mut next_x = next_boundary_t(ray.origin.x, ray.direction.x, block_x, step_x);
-    let mut next_y = next_boundary_t(ray.origin.y, ray.direction.y, block_y as i64, step_y);
-    let mut next_z = next_boundary_t(ray.origin.z, ray.direction.z, block_z, step_z);
-
-    while distance <= exit + 1e-7 {
-        let position = BlockCoord::new(block_x, block_y, block_z);
+    for visit in traverse_voxels(ray, boundary) {
+        let position = visit.block;
         if boundary.contains(position) {
             let block = domain
                 .chunk
@@ -160,13 +145,15 @@ fn trace_pixel(
             let light = domain.chunk.light_at(position).map_err(map_data_error)?;
             let mut nearest: Option<(f64, f64, f64, PatchDefinition)> = None;
             for patch in &model.patches {
-                let translated =
-                    translate_patch(*patch, block_x as f64, block_y as f64, block_z as f64);
+                let translated = translate_patch(
+                    *patch,
+                    position.x as f64,
+                    position.y as f64,
+                    position.z as f64,
+                );
                 if let Some(hit) = translated.intersect(ray) {
-                    let next_boundary = next_x.min(next_y).min(next_z);
-                    if hit.distance + 1e-7 >= distance
-                        && hit.distance <= exit + 1e-7
-                        && hit.distance <= next_boundary + 1e-7
+                    if hit.distance + 1e-7 >= visit.entry_distance
+                        && hit.distance <= visit.exit_distance + 1e-7
                         && nearest.map_or(true, |current| hit.distance < current.0)
                     {
                         nearest = Some((hit.distance, hit.u, hit.v, *patch));
@@ -192,9 +179,55 @@ fn trace_pixel(
                 ));
             }
         }
+    }
+    Ok([0, 0, 0, 0])
+}
 
-        let next = next_x.min(next_y).min(next_z);
-        if !next.is_finite() || next > exit + 1e-7 {
+pub fn traverse_voxels(
+    ray: Ray,
+    boundary: super::super::super::world::chunk_view::TileBoundary,
+) -> Vec<VoxelVisit> {
+    const MAX_VOXEL_STEPS: usize = 65_536;
+    let Some((entry, exit)) = ray_box_intersection(ray, boundary) else {
+        return Vec::new();
+    };
+    let mut distance = entry.max(0.0) + 1e-7;
+    if distance > exit {
+        return Vec::new();
+    }
+
+    let point = ray.origin + ray.direction * distance;
+    let mut block_x = point.x.floor() as i64;
+    let mut block_y = point.y.floor() as i32;
+    let mut block_z = point.z.floor() as i64;
+    let step_x = axis_step(ray.direction.x);
+    let step_y = axis_step(ray.direction.y);
+    let step_z = axis_step(ray.direction.z);
+    let delta_x = reciprocal_abs(ray.direction.x);
+    let delta_y = reciprocal_abs(ray.direction.y);
+    let delta_z = reciprocal_abs(ray.direction.z);
+    let mut next_x = next_boundary_t(ray.origin.x, ray.direction.x, block_x, step_x);
+    let mut next_y = next_boundary_t(ray.origin.y, ray.direction.y, block_y as i64, step_y);
+    let mut next_z = next_boundary_t(ray.origin.z, ray.direction.z, block_z, step_z);
+    let mut visits = Vec::new();
+
+    for _ in 0..MAX_VOXEL_STEPS {
+        if distance > exit + 1e-7 {
+            break;
+        }
+        let next = next_x.min(next_y).min(next_z).min(exit);
+        if !next.is_finite() {
+            break;
+        }
+        let visit = VoxelVisit {
+            block: BlockCoord::new(block_x, block_y, block_z),
+            entry_distance: distance,
+            exit_distance: next,
+        };
+        if boundary.contains(visit.block) {
+            visits.push(visit);
+        }
+        if next >= exit - 1e-7 {
             break;
         }
         if next_x <= next + 1e-7 {
@@ -211,7 +244,7 @@ fn trace_pixel(
         }
         distance = next + 1e-7;
     }
-    Ok([0, 0, 0, 0])
+    visits
 }
 
 fn axis_step(direction: f64) -> i64 {
@@ -314,11 +347,12 @@ fn map_data_error(error: ChunkDataError) -> RenderError {
 mod tests {
     use std::collections::BTreeMap;
 
-    use super::render_chunk;
+    use super::{render_chunk, traverse_voxels};
     use crate::assets::model_view::{AssetResolutionState, ModelDefinition, ModelView};
     use crate::renderer::dynmap::iso_hd_perspective::IsoProjection;
     use crate::renderer::dynmap::lighting::Lighting;
     use crate::renderer::dynmap::patch::PatchDefinition;
+    use crate::renderer::dynmap::patch::Ray;
     use crate::renderer::dynmap::texture::{TextureAtlas, TextureImage};
     use crate::renderer::dynmap::types::{SideVisible, Vec3};
     use crate::renderer::RendererDomain;
@@ -405,5 +439,26 @@ mod tests {
         assert!(first.has_terrain());
         assert_eq!(first.pixels, second.pixels);
         assert_eq!(first.png().unwrap(), second.png().unwrap());
+    }
+
+    #[test]
+    fn voxel_traversal_crosses_adjacent_blocks_in_ray_order() {
+        let boundary =
+            TileBoundary::new(BlockCoord::new(0, 0, 0), BlockCoord::new(2, 1, 3)).unwrap();
+        let visits = traverse_voxels(
+            Ray::new(Vec3::new(0.5, 0.5, -1.0), Vec3::new(0.0, 0.0, 1.0)),
+            boundary,
+        );
+        assert_eq!(
+            visits.iter().map(|visit| visit.block).collect::<Vec<_>>(),
+            vec![
+                BlockCoord::new(0, 0, 0),
+                BlockCoord::new(0, 0, 1),
+                BlockCoord::new(0, 0, 2),
+            ]
+        );
+        assert!(visits
+            .windows(2)
+            .all(|window| window[0].exit_distance <= window[1].entry_distance));
     }
 }
