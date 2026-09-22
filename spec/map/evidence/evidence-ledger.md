@@ -1,7 +1,9 @@
 # Map Renderer Evidence Ledger
 
-Evidence is recorded separately by boundary. A passing build does not prove
-renderer parity, and a passing mock does not prove real Tauri behavior.
+Evidence is recorded separately by boundary and linked per source symbol,
+resource, built-in and exact Minecraft release. A passing build does not prove
+renderer parity, and a passing mock does not prove real Tauri behavior. The
+canonical evidence protocol is in [`spec/map/plan/evidence/README.md`](../plan/evidence/README.md).
 
 | Evidence class | Required proof | Status |
 | --- | --- | --- |

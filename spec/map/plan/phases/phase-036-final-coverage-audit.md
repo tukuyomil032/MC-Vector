@@ -1,0 +1,47 @@
+# P-036: Strict final source-to-runtime closure audit
+
+## 目的と固定対象
+
+- 対象source/symbol: AST/resource/builtin/version catalogs, Java references, Rust tests, all acceptance rows。詳細な宣言IDはP-000 AST ledgerを正とする。
+- Rust destination / output: immutable final audit report and complete Goal status。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
+- 依存phase: 000-035 and all generated specialist phases。依存gateが未達のまま、このphaseを実装済みにしない。
+- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+
+## 入力・failure contract
+
+入力はrevision/hash固定されたsource、対象version metadata、domain contract、固定fixtureのいずれかに限る。missing・unsupported・malformed・unavailable・timeout・resource limitは別のstructured failureで返す。欠落情報をair、推測model/color/light、transparent successへ変換せえへん。
+このphase固有の失敗条件: any required blocker, test skip, unsourced claim, uncommitted plan/code, mismatched evidence digest or incomplete release.
+
+## 実装作業
+
+1. Run strict source-symbol/resource/builtin/version/fixture/reference/evidence coverage checks.
+2. Cross-check every required source symbol→Rust owner→fixture→Java trace→focused test→evidence edge.
+3. Run all repository/Rust/frontend/build checks and review each evidence class separately.
+4. Verify no planned/unverified/blocked required entry, legacy phase link, false translated status or warning suppression remains.
+5. Record unsupported product boundaries explicitly and ensure none is a required renderer feature.
+
+- 固定fixture / reference: clean-room final audit from committed tree, regenerated plan index and version/source manifest change detection.
+- 期待値はpinned Java reference harnessから事前captureしてhash固定する。テスト中にgoldenを生成・更新しない。source差分は許容値を広げず、symbolまたはresource consumerへ帰属させる。
+
+## 検証gate
+
+- 合格条件: zero unresolved required coverage/evidence rows and all final gates pass from a clean committed tree.
+- Rust品質条件: `cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check` と当該crateのtest/check/clippy `-D warnings`を実行し、未使用warning抑制で作業を隠さない。
+- 成果物条件: 実装diff、focused test、fixture/reference IDとdigest、failure tests、coverage rowを同じphase evidenceへ記録する。
+
+```bash
+bun run test:map:final-audit && bun scripts/check-map-renderer-coverage.mjs --require-all-symbols --require-all-resources --require-all-builtins --require-all-versions --require-reference-evidence && bun scripts/check-map-acceptance-evidence.mjs --require-complete && git diff --check
+git diff --check
+```
+
+## 完了状態の記録
+
+完了していない場合は理由を `blocked` / `failed` / `not_applicable` のいずれかと具体的証拠で記録し、隣接phaseやmockの結果を代用しない。required itemが一つでも未確認ならこのphaseは未完了。
+
+## Commit
+
+このphase内の独立した作業単位を一つずつcommitする。次の文字列はこのphaseの最終gateを満たした変更だけに使う。
+
+```text
+test: close complete map renderer coverage audit
+```
