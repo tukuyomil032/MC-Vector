@@ -1,19 +1,19 @@
-# Dynmap Porting Manifest
+# Dynmap Origin Manifest
 
 Pinned source revision for every row:
 `93b454efb8802dc7406d6873434f2aeec5c636f4`.
 
 | Upstream unit | Rust destination | License | Port method | Fixture ID | Status |
 | --- | --- | --- | --- | --- | --- |
-| `DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java` | `src-tauri/src/map/renderer/dynmap/perspective.rs` | Apache-2.0 | Rust translation of renderer contract | `iso_flat_1_21_10` | locked |
-| `DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java` | `src-tauri/src/map/renderer/dynmap/iso.rs` | Apache-2.0 | Rust translation of transform, ray, and tile traversal | `iso_flat_1_21_10` | locked |
-| `DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java` | `src-tauri/src/map/renderer/dynmap/patch.rs` | Apache-2.0 | Rust translation of patch intersection and UV clipping | `patch_shapes` | locked |
-| `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java` | `src-tauri/src/map/renderer/dynmap/models.rs` | Apache-2.0 | Rust model registry fed by Minecraft assets | `models_stairs_slabs` | locked |
-| `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java` | `src-tauri/src/map/renderer/dynmap/textures.rs` | Apache-2.0 | Rust texture/model resolution using user assets | `textures_uv_alpha` | locked |
-| `DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java` | `src-tauri/src/map/renderer/dynmap/shader.rs` | Apache-2.0 | Rust shader and alpha contract | `lighting_alpha` | locked |
-| `DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java` | `src-tauri/src/map/renderer/dynmap/lighting.rs` | Apache-2.0 | Rust light input and shade contract | `lighting_alpha` | locked |
-| `DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java` | `src-tauri/src/map/renderer/dynmap/transform.rs` | Apache-2.0 | Rust matrix operations | `iso_transform_round_trip` | locked |
-| `DynmapCore/src/main/resources/shaders.txt` | `src-tauri/src/map/renderer/dynmap/shader.rs` | Apache-2.0 | Rust parser/constant mapping | `lighting_alpha` | locked |
+| `DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java` | `src-tauri/crates/map-renderer-core/src/projection` | Apache-2.0 | Rust translation of renderer contract | R08 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java` | `src-tauri/crates/map-renderer-core/src/projection` | Apache-2.0 | Rust translation of transform, ray, and tile traversal | R08-R10 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java` | `src-tauri/crates/map-renderer-core/src/geometry` | Apache-2.0 | Rust translation of patch intersection and UV clipping | R09 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java` | `src-tauri/crates/map-renderer-core/src/models` | Apache-2.0 | Rust model registry fed by versioned assets | R13 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java` | `src-tauri/crates/map-renderer-core/src/textures` | Apache-2.0 | Rust texture/model resolution using verified assets | R14 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java` | `src-tauri/crates/map-renderer-core/src/shaders` | Apache-2.0 | Rust shader and alpha contract | R17 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java` | `src-tauri/crates/map-renderer-core/src/lighting` | Apache-2.0 | Rust light input and shade contract | R16 | inventory_required |
+| `DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java` | `src-tauri/crates/map-renderer-core/src/projection` | Apache-2.0 | Rust matrix operations | R08 | inventory_required |
+| `DynmapCore/src/main/resources/shaders.txt` | `src-tauri/crates/map-renderer-core/src/shaders` | Apache-2.0 | Rust parser/constant mapping | R17 | inventory_required |
 
 `locked` means the source path and destination are fixed. It does not mean the
 Rust implementation is complete. R02-R05 must provide the contract,
@@ -25,8 +25,9 @@ are explicitly excluded.
 
 ## Exact method mapping
 
-The following method-level entries are the only renderer symbols admitted to
-R02-R04. A class-level source row without a method row is not sufficient
+The following legacy method-level rows are retained only as migration hints.
+R02 replaces them with the complete symbol catalog under
+`spec/map/coverage/source-symbols.json`; a class-level row is never sufficient
 evidence for a port.
 
 | Upstream method | Rust destination function | Fixture ID |

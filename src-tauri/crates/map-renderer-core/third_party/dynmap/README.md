@@ -11,8 +11,7 @@ or Paper plugin.
 - Branch context: `v3.0`
 - Immutable ref: `93b454efb8802dc7406d6873434f2aeec5c636f4`
 - Source and hash inventory: [SOURCE-REF.md](SOURCE-REF.md)
-- Porting decisions: [porting-manifest.md](porting-manifest.md) and
-  [porting-notes.md](porting-notes.md)
+- Source provenance: [ORIGIN-MANIFEST.md](ORIGIN-MANIFEST.md)
 - License: [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0)
 - Attribution and boundary notice: [NOTICE](NOTICE)
 
@@ -31,8 +30,8 @@ block-model, texture-pack, shader, and lighting boundaries:
 The original upstream contents are retained. These files are for source review
 and selective translation only; they are not Java build inputs for MC-Vector.
 The corresponding Rust implementation is tracked separately under
-`src-tauri/src/map/renderer/dynmap` and remains incomplete until its fixtures
-and parity gates pass.
+`src-tauri/crates/map-renderer-core/src` and remains incomplete until its
+fixtures and parity gates pass.
 
 ## Intentionally excluded
 
@@ -45,6 +44,7 @@ adapters, lifecycle, storage, web UI, commands, and user assets remain
 excluded.
 
 Dynmap platform adapters, lifecycle, storage, web UI, commands, server assets,
-and Minecraft client assets are outside this boundary. MC-Vector is an
+and Minecraft client assets are outside this source snapshot boundary. Their
+renderer-facing contracts are specified in `spec/map/plan`. MC-Vector is an
 independent project and is not affiliated with, endorsed by, or sponsored by
 Dynmap or its contributors.

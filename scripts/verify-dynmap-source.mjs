@@ -3,7 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const repositoryRoot = resolve(import.meta.dirname, '..');
-const boundaryRoot = resolve(repositoryRoot, 'src/map/dynmap');
+const boundaryRoot = resolve(
+  repositoryRoot,
+  'src-tauri/crates/map-renderer-core/third_party/dynmap',
+);
 const pinnedRevision = '93b454efb8802dc7406d6873434f2aeec5c636f4';
 
 const expectedSources = new Map([
@@ -56,13 +59,13 @@ const readBoundaryFile = async (relativePath) => {
 };
 
 const sourceReference = await readBoundaryFile('SOURCE-REF.md');
-const manifest = await readBoundaryFile('porting-manifest.md');
+const manifest = await readBoundaryFile('ORIGIN-MANIFEST.md');
 const notice = await readBoundaryFile('NOTICE');
 
 if (!sourceReference.includes(pinnedRevision))
   errors.push(`SOURCE-REF.md does not pin ${pinnedRevision}`);
 if (!manifest.includes(pinnedRevision))
-  errors.push(`porting-manifest.md does not pin ${pinnedRevision}`);
+  errors.push(`ORIGIN-MANIFEST.md does not pin ${pinnedRevision}`);
 if (!notice.includes('Apache License 2.0'))
   errors.push('NOTICE does not record the Apache-2.0 boundary');
 
@@ -76,7 +79,7 @@ for (const [relativePath, expectedHash] of expectedSources) {
       errors.push(`SOURCE-REF.md does not list ${relativePath}`);
     const upstreamPath = relativePath.replace(/^upstream\//, '');
     if (!manifest.includes(upstreamPath))
-      errors.push(`porting-manifest.md does not list ${upstreamPath}`);
+      errors.push(`ORIGIN-MANIFEST.md does not list ${upstreamPath}`);
   } catch {
     errors.push(`missing pinned source: ${relativePath}`);
   }
