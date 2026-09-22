@@ -3,8 +3,6 @@ import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { isEulaRequiredError } from '@/lib/eula-commands';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
-import { enableMap, onMapCoreArtifactProgress } from '@/map/api/map-commands';
-import type { MapCoreArtifactProgressEvent, MapCoreArtifactStatus } from '@/map/state/map-types';
 import {
   type ServerTemplate,
   getServerTemplates,
@@ -36,7 +34,7 @@ import { useServerRuntimeListeners } from '@/renderer/hooks/use-server-runtime-l
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
 import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
-import { isMapEnabled, type MinecraftServer } from '@/renderer/shared/server declaration';
+import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import { getHeaderTitle } from '@/renderer/shared/view-labels';
 import { useConsoleStore } from '@/store/consoleStore';
 import { useServerStore } from '@/store/serverStore';
@@ -71,9 +69,6 @@ function MainApp() {
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
   const [showImportServerModal, setShowImportServerModal] = useState(false);
   const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
-  const [mapSetupServer, setMapSetupServer] = useState<MinecraftServer | null>(null);
-  const [mapCoreProgress, setMapCoreProgress] = useState<MapCoreArtifactProgressEvent | null>(null);
-  const [mapCoreStatus, setMapCoreStatus] = useState<MapCoreArtifactStatus | null>(null);
 
   const [downloadStatus, setDownloadStatus] = useState<{
     id: string;
@@ -108,38 +103,7 @@ function MainApp() {
     handleDismissUpdate,
   } = useAppUpdater();
 
-  const activeServer = servers.find((s) => s.id === selectedServerId);
-  const showMap = isMapEnabled(activeServer);
-
-  useViewCycleShortcut({ currentView, setCurrentView, includeMap: showMap });
-
-  useEffect(() => {
-    setMapCoreProgress(null);
-    setMapCoreStatus(null);
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void onMapCoreArtifactProgress((event) => {
-      if (mapSetupServer?.id === event.serverId) {
-        setMapCoreProgress(event);
-      }
-    }).then((cleanup) => {
-      if (disposed) {
-        cleanup();
-      } else {
-        unlisten = cleanup;
-      }
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [mapSetupServer?.id]);
-
-  useEffect(() => {
-    if (currentView === 'map' && !showMap) {
-      setCurrentView('dashboard');
-    }
-  }, [currentView, setCurrentView, showMap]);
+  useViewCycleShortcut({ currentView, setCurrentView });
 
   const serverActionsRef = useRef<{
     handleStart: () => void;
@@ -154,10 +118,6 @@ function MainApp() {
   });
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      return;
-    }
-
     void registerGlobalShortcuts({
       onStartStop: () => {
         const {
@@ -244,6 +204,7 @@ function MainApp() {
     handleServerStatusChange,
   });
 
+  const activeServer = servers.find((s) => s.id === selectedServerId);
   const { handleStart, handleStop, handleRestart } = useServerProcessActions({
     activeServer,
     selectedServerId,
@@ -355,49 +316,6 @@ function MainApp() {
       showToast(t('server.toast.saveFailed'), 'error');
     }
   };
-
-  const persistMapConsent = useCallback(
-    async (consent: 'enabled' | 'disabled') => {
-      const pendingServer = mapSetupServer;
-      if (!pendingServer) {
-        return;
-      }
-      if (consent === 'enabled') {
-        try {
-          const status = await enableMap(pendingServer.id);
-          setMapCoreStatus(status.coreArtifact ?? null);
-          const ready =
-            status.coreArtifact?.state === 'installed' &&
-            (status.component === 'active' || status.component === 'waiting_restart');
-          if (!ready) {
-            showToast(t('map.management.coreError'), 'warning');
-            return;
-          }
-        } catch (error) {
-          logError('Failed to prepare Map integration', error, { serverId: pendingServer.id });
-          showToast(t('map.toast.failed'), 'error');
-          return;
-        }
-      }
-      setMapCoreProgress(null);
-      const updatedServer = { ...pendingServer, map: { consent } };
-      try {
-        await updateServerApi(updatedServer);
-        setServers((prev) =>
-          prev.map((server) => (server.id === updatedServer.id ? updatedServer : server)),
-        );
-        setMapSetupServer(null);
-        if (consent === 'enabled') {
-          showToast(t('map.toast.enabled'), 'success');
-        }
-      } catch (error) {
-        logError('Failed to persist Map consent', error, { serverId: pendingServer.id });
-        showToast(t('server.toast.saveFailed'), 'error');
-      }
-    },
-    [mapSetupServer, setServers, showToast, t],
-  );
-
   const { handleAddServer } = useServerCreateAction({
     setServers,
     setSelectedServerId,
@@ -405,7 +323,6 @@ function MainApp() {
     setDownloadStatus,
     showToast,
     t,
-    onMapSetupRequested: setMapSetupServer,
   });
   const { handleBuildProxyNetwork } = useProxyNetworkAction({
     servers,
@@ -448,7 +365,6 @@ function MainApp() {
           currentView={currentView}
           setCurrentView={setCurrentView}
           t={t}
-          showMap={showMap}
         />
 
         <AppServerSidebar
@@ -499,7 +415,6 @@ function MainApp() {
           ngrokData={ngrokData}
           onBuildProxyNetwork={handleBuildProxyNetwork}
           onUpdateServer={handleUpdateServer}
-          onOpenMap={() => setCurrentView('map')}
           t={t}
         />
       </main>
@@ -538,11 +453,6 @@ function MainApp() {
         onAcceptEula={acceptPendingEula}
         onCancelEula={cancelPendingEula}
         t={t}
-        mapSetupServer={mapSetupServer}
-        onEnableMap={() => persistMapConsent('enabled')}
-        onSkipMap={() => persistMapConsent('disabled')}
-        mapCoreProgress={mapCoreProgress}
-        mapCoreStatus={mapCoreStatus}
       />
     </div>
   );

@@ -19,8 +19,6 @@ export function getViewLabel(view: AppView, t: Translate): string {
       return t('nav.properties');
     case 'general-settings':
       return t('nav.generalSettings');
-    case 'map':
-      return t('nav.map');
     case 'proxy':
       return t('nav.proxyNetwork');
     case 'app-settings':
@@ -50,9 +48,6 @@ export function getHeaderTitle(
   }
   if (view === 'ngrok-guide') {
     return t('ngrokGuide.title');
-  }
-  if (view === 'map') {
-    return t('nav.map');
   }
   return activeServerName || t('nav.servers');
 }

@@ -4,7 +4,6 @@ pub mod eula;
 pub mod file_utils;
 pub mod health_check;
 pub mod java;
-pub mod map;
 pub mod ngrok;
 pub mod perf;
 pub mod process_stats;

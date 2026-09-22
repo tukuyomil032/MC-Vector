@@ -1,5 +1,4 @@
 mod commands;
-mod map;
 mod state;
 
 use tauri::Manager;
@@ -59,7 +58,6 @@ pub fn run() {
         .manage(commands::server::CommandLimiter::default())
         .manage(state::operation_manager::ServerOperationManager::default())
         .manage(commands::ngrok::NgrokManager::default())
-        .manage(commands::map::MapBridgeManager::default())
         .manage(commands::file_utils::ServerImportManager::default())
         .manage(commands::health_check::ProbeLimiter::default())
         .invoke_handler(tauri::generate_handler![
@@ -117,24 +115,6 @@ pub fn run() {
             commands::perf::parse_ansi_lines,
             // ヘルスチェック
             commands::health_check::ping_server,
-            // Map integration
-            commands::map::status::get_map_status,
-            commands::map::world::get_map_worlds,
-            commands::map::world::get_map_world_info,
-            commands::map::markers::get_map_markers,
-            commands::map::markers::create_map_marker,
-            commands::map::markers::update_map_marker,
-            commands::map::markers::delete_map_marker,
-            commands::map::lifecycle::repair_map_bridge,
-            commands::map::assets::get_map_asset_status,
-            commands::map::assets::get_map_asset_candidates,
-            commands::map::assets::select_map_asset,
-            commands::map::tiles::request_map_render,
-            commands::map::tiles::get_map_tile,
-            commands::map::lifecycle::enable_map,
-            commands::map::lifecycle::pause_map,
-            commands::map::lifecycle::restore_map,
-            commands::map::lifecycle::remove_map_component,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

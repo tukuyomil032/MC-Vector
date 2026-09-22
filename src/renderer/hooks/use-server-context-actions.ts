@@ -134,9 +134,6 @@ export function useServerContextActions({
           path: candidatePath,
           status: 'offline',
           createdDate: new Date().toISOString(),
-          // A clone is a new server identity. Map consent and its bridge
-          // credentials must never be copied into the new server record.
-          map: { consent: 'undecided' },
         };
 
         await addServerApi(duplicatedServer);

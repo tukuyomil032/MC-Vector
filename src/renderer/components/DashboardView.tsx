@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -240,8 +240,6 @@ export default function DashboardView({ server }: Props) {
     server.status === 'online' ? Date.now() : null,
   );
   const [uptime, setUptime] = useState<string>('--:--:--');
-  const tpsRequestInFlightRef = useRef<Promise<void> | null>(null);
-  const lastTpsRequestAtRef = useRef(0);
 
   useEffect(() => {
     setResourceStats([]);
@@ -430,22 +428,10 @@ export default function DashboardView({ server }: Props) {
     }
 
     const requestTps = async () => {
-      const now = Date.now();
-      if (
-        tpsRequestInFlightRef.current ||
-        now - lastTpsRequestAtRef.current < TPS_POLL_INTERVAL_MS
-      ) {
-        return;
-      }
-      lastTpsRequestAtRef.current = now;
-      const request = sendCommand(server.id, 'tps').catch(() => undefined);
-      tpsRequestInFlightRef.current = request;
       try {
-        await request;
-      } finally {
-        if (tpsRequestInFlightRef.current === request) {
-          tpsRequestInFlightRef.current = null;
-        }
+        await sendCommand(server.id, 'tps');
+      } catch {
+        // nop
       }
     };
 

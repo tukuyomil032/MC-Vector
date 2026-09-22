@@ -6,11 +6,9 @@ on:
     branches:
       - '**'
     paths:
-      - src/map/**
       - src/**
       - src-tauri/**
       - tests/**
-      - spec/**
       - docs/src/**
       - docs/scripts/**
       - docs/package.json
@@ -31,8 +29,7 @@ on:
       - tsconfig.tests.json
       - vite.config.ts
       - vitest.config.ts
-      - .github/workflows/**
-  pull_request:
+      - .github/workflows/ci.yml
 
 permissions:
   contents: read
@@ -82,53 +79,11 @@ jobs:
           bun run test
           bun run typecheck:tests
           bun run check:workflow-actions
-      - name: Build frontend
-        run: bun run build
       - name: Run cargo test
         run: cargo test
         working-directory: src-tauri
       - name: Build (debug mode)
         run: bun run tauri build --debug --no-bundle
-
-  java-bridge:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: gradle
-      - name: Build and test MC-Vector Core
-        run: ./gradlew --no-daemon clean test jar -PcoreVersion="$(jq -r .version ../../../../package.json)"
-        working-directory: src/map/paper/mc-vector-core
-      - name: Verify plugin artifact
-        working-directory: src/map/paper/mc-vector-core
-        run: |
-          VERSION=$(jq -r .version ../../../../package.json)
-          test -f "build/libs/mc-vector-core-${VERSION}.jar"
-          jar tf "build/libs/mc-vector-core-${VERSION}.jar" | awk '
-            $0 == "plugin.yml" || $0 ~ /\/plugin\.yml$/ { plugin = 1 }
-            $0 == "com/mcvector/core/MCVectorCorePlugin.class" { main = 1 }
-            END { exit !(plugin && main) }
-          '
-          unzip -p "build/libs/mc-vector-core-${VERSION}.jar" plugin.yml | rg -n "^version: ${VERSION}$|^main: com\\.mcvector\\.core\\.MCVectorCorePlugin$|^protocol-version: 2$"
-      - name: Verify Map source and distribution boundary
-        run: |
-          VERSION=$(jq -r .version package.json)
-          test -f src/map/dynmap/LICENSE-APACHE-2.0
-          test -f src/map/dynmap/NOTICE
-          test -f src/map/dynmap/SOURCE-REF.md
-          test -f src/map/dynmap/porting-manifest.md
-          test ! -d bridge
-          if rg -n 'bridge/mc-vector-core' .github src src-tauri package.json justfile; then
-            echo 'Found a stale root bridge path reference'
-            exit 1
-          fi
-          if jar tf "src/map/paper/mc-vector-core/build/libs/mc-vector-core-${VERSION}.jar" | awk '/dynmap|minecraft/ { found = 1 } END { exit found ? 0 : 1 }'; then
-            echo 'Paper plugin must not bundle Dynmap sources or Minecraft assets'
-            exit 1
-          fi
 
   cargo-audit:
     runs-on: ubuntu-latest

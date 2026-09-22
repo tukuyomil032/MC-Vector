@@ -259,21 +259,10 @@ function toListedPluginFileName(value: string): string {
   return segments.length > 0 ? segments[segments.length - 1] : normalized;
 }
 
-function isManagedMapPluginFile(fileName: string): boolean {
-  const normalized = toListedPluginFileName(fileName).toLowerCase();
-  return normalized === 'mc-vector-core.jar' || normalized === 'mc-vector-core.jar.disabled';
-}
-
-function collectPluginFileNames(
-  entries: Array<{ name: string; isDirectory: boolean }>,
-  excludeManagedMap = false,
-): string[] {
+function collectPluginFileNames(entries: Array<{ name: string; isDirectory: boolean }>): string[] {
   return entries
     .filter((entry) => {
       if (entry.isDirectory) {
-        return false;
-      }
-      if (excludeManagedMap && isManagedMapPluginFile(entry.name)) {
         return false;
       }
       const lower = entry.name.toLowerCase();
@@ -673,7 +662,7 @@ export default function PluginBrowser({ server }: Props) {
     try {
       const dirPath = `${server.path}/${folderName}`;
       const entries = await listFiles(dirPath);
-      const nextInstalledFiles = collectPluginFileNames(entries, server.map?.consent === 'enabled');
+      const nextInstalledFiles = collectPluginFileNames(entries);
       setInstalledFiles(nextInstalledFiles);
     } catch (error) {
       logError('Failed to refresh installed plugin list', error, {
@@ -1606,7 +1595,7 @@ export default function PluginBrowser({ server }: Props) {
 
       try {
         const entries = await listFiles(pluginDir);
-        const files = collectPluginFileNames(entries, server.map?.consent === 'enabled');
+        const files = collectPluginFileNames(entries);
         const resolvedInstalled = resolveInstalledFileMatch(files, installedFile);
         if (!resolvedInstalled) {
           existingDeleted = true;
@@ -2023,7 +2012,7 @@ export default function PluginBrowser({ server }: Props) {
       }
 
       const entries = await listFiles(pluginDir);
-      const files = collectPluginFileNames(entries, server.map?.consent === 'enabled');
+      const files = collectPluginFileNames(entries);
       availableFiles = files;
 
       stage = 'resolve-source';
@@ -2146,7 +2135,7 @@ export default function PluginBrowser({ server }: Props) {
       }
 
       const entries = await listFiles(pluginDir);
-      const files = collectPluginFileNames(entries, server.map?.consent === 'enabled');
+      const files = collectPluginFileNames(entries);
       const resolved = resolveInstalledFileMatch(files, entry.fileName);
       if (!resolved) {
         throw new Error(`Installed file not found for uninstall: ${entry.fileName}`);

@@ -14,9 +14,6 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 build/*
-.gradle/
-/src/map/paper/mc-vector-core/.gradle/
-/src/map/paper/mc-vector-core/build/
 temp/**/*
 .agents/skills/ci-monitoring/node_modules
 

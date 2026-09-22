@@ -9,7 +9,6 @@ export { default as iconFiles } from './files.svg';
 export { default as iconFolder } from './folder.svg';
 export { default as iconImport } from './import.svg';
 export { default as iconMenu } from './menu.svg';
-export { default as iconMap } from './map.svg';
 export { default as iconMove } from './move.svg';
 export { default as iconOpenFolder } from './open-folder.svg';
 export { default as iconPlugins } from './plugins.svg';

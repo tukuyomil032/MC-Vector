@@ -14,13 +14,15 @@ None. This phase must finish before any renderer source is edited.
 The Map changes introduced after `origin/main`, beginning at
 `de34583 feat: add MC-Vector map integration`.
 
-Keep `b61c62d`, `e8080a7`, `8c00128`, and `c18a339` as separately identified
-non-Map/user-owned changes.
+Keep the tree changes from `e8080a7`, `8c00128`, and `c18a339`. Keep
+`b61c62d` in history only: its old Map CI job, including the `awk` change, is
+not reapplied because the old Map workflow is removed. The resulting rollback
+commit must not erase the history of any of these commits.
 
 ## Implementation tasks
 
 - create a recoverable backup ref for the current `HEAD`;
-- restore the tree to `origin/main` and reapply only the four keep-set changes;
+- restore the tree to `origin/main` and reapply only the three tree changes;
 - remove `src-tauri/src/commands/map.rs`, `src-tauri/src/commands/map/`, and
   `src-tauri/src/map/`;
 - remove Map-only React, Paper, tests, source snapshots, specs, workflows, and

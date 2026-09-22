@@ -7,8 +7,6 @@ on:
     paths:
       - package.json
       - bun.lock
-      - scripts/prepare-core-release.mjs
-      - src/map/paper/mc-vector-core/**
       - src-tauri/Cargo.toml
       - src-tauri/Cargo.lock
       - src-tauri/tauri.conf.json
@@ -233,46 +231,6 @@ jobs:
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # ── Core plugin release-like artifact ──
-  build-core-plugin:
-    needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: gradle
-
-      - name: Build and test Core plugin
-        working-directory: src/map/paper/mc-vector-core
-        run: ./gradlew --no-daemon clean test jar -PcoreVersion="${{ needs.check-version.outputs.version }}"
-
-      - name: Validate and generate Core release assets
-        env:
-          VERSION: ${{ needs.check-version.outputs.version }}
-          SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          node scripts/prepare-core-release.mjs \
-            --version "$VERSION" \
-            --source-commit "$SOURCE_COMMIT" \
-            --jar "src/map/paper/mc-vector-core/build/libs/mc-vector-core-${VERSION}.jar" \
-            --output core-release
-
-      - name: Upload Core release assets
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: core-release
-          path: core-release/
-          if-no-files-found: error
-          retention-days: 5
-
   # ── マルチプラットフォームビルド ──
   build:
     needs: check-version
@@ -423,7 +381,7 @@ jobs:
 
   # ── リリース作成 + gh-pages デプロイ ──
   release:
-    needs: [check-version, build, build-core-plugin]
+    needs: [check-version, build]
     if: needs.check-version.outputs.should_release == 'true'
     permissions:
       contents: write
@@ -480,9 +438,6 @@ jobs:
           MAC_X64_SIG=$(pick_single_required "artifacts/mac-x64" '*.app.tar.gz.sig' "macOS x64 updater signature")
           WIN_X64_EXE=$(pick_single_required "artifacts/win-x64" '*-setup.exe' "windows updater installer")
           WIN_X64_SIG=$(pick_single_required "artifacts/win-x64" '*-setup.exe.sig' "windows updater signature")
-          CORE_JAR=$(pick_single_required "artifacts/core-release" "mc-vector-core-${VERSION}.jar" "MC-Vector Core JAR")
-          CORE_SHA=$(pick_single_required "artifacts/core-release" "mc-vector-core-${VERSION}.jar.sha256" "MC-Vector Core SHA-256 sidecar")
-          CORE_MANIFEST=$(pick_single_required "artifacts/core-release" "mc-vector-core-${VERSION}.manifest.json" "MC-Vector Core manifest")
 
           require_file "$MAC_ARM64_APP" "macOS arm64 updater archive"
           require_file "$MAC_ARM64_SIG" "macOS arm64 updater signature"
@@ -490,9 +445,6 @@ jobs:
           require_file "$MAC_X64_SIG" "macOS x64 updater signature"
           require_file "$WIN_X64_EXE" "windows updater installer"
           require_file "$WIN_X64_SIG" "windows updater signature"
-          require_file "$CORE_JAR" "MC-Vector Core JAR"
-          require_file "$CORE_SHA" "MC-Vector Core SHA-256 sidecar"
-          require_file "$CORE_MANIFEST" "MC-Vector Core manifest"
           require_non_empty_file "$MAC_ARM64_SIG" "macOS arm64 updater signature"
           require_non_empty_file "$MAC_X64_SIG" "macOS x64 updater signature"
           require_non_empty_file "$WIN_X64_SIG" "windows updater signature"
@@ -507,9 +459,6 @@ jobs:
           cp "$MAC_X64_SIG" "release-assets/${MAC_X64_OUT}.sig"
           cp "$WIN_X64_EXE" "release-assets/${WIN_X64_OUT}"
           cp "$WIN_X64_SIG" "release-assets/${WIN_X64_OUT}.sig"
-          cp "$CORE_JAR" "release-assets/"
-          cp "$CORE_SHA" "release-assets/"
-          cp "$CORE_MANIFEST" "release-assets/"
           echo "WIN_X64_OUT=${WIN_X64_OUT}" >> "$GITHUB_ENV"
 
           find artifacts -type f -name '*.dmg' -exec cp {} release-assets/ \;

@@ -38,22 +38,7 @@ const CORE_COMMANDS = [
   'migrate_managed_server_directory',
   'can_update_app',
   'get_app_location',
-  'get_map_status',
-  'get_map_worlds',
-  'get_map_world_info',
-  'get_map_markers',
-  'create_map_marker',
-  'update_map_marker',
-  'delete_map_marker',
-  'repair_map_bridge',
-  'get_map_asset_status',
-  'select_map_asset',
-  'get_map_tile',
-  'enable_map',
-  'pause_map',
   'request_map_render',
-  'restore_map',
-  'remove_map_component',
 ] as const;
 
 const PERFORMANCE_COMMANDS = ['parse_ansi_lines'] as const;
