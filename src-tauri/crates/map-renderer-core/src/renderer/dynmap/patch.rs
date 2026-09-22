@@ -33,6 +33,9 @@ pub struct PatchHit {
     pub point: Vec3,
     pub u: f64,
     pub v: f64,
+    pub step: BlockStep,
+    pub texture_index: i32,
+    pub shade: bool,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -61,6 +64,35 @@ pub struct PatchDefinition {
     pub texture_index: i32,
     pub shade: bool,
     pub step: BlockStep,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PatchDefinitionFactory;
+
+impl PatchDefinitionFactory {
+    pub fn create(
+        origin: Vec3,
+        u_end: Vec3,
+        v_end: Vec3,
+        side_visible: SideVisible,
+        texture_index: i32,
+        shade: bool,
+    ) -> Result<PatchDefinition, PatchError> {
+        PatchDefinition::new(
+            origin,
+            u_end,
+            v_end,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            side_visible,
+            texture_index,
+            shade,
+        )
+    }
 }
 
 impl PatchDefinition {
@@ -197,6 +229,9 @@ impl PatchDefinition {
             point,
             u,
             v,
+            step: self.step,
+            texture_index: self.texture_index,
+            shade: self.shade,
         })
     }
 }
@@ -249,7 +284,7 @@ fn dominant_step(normal: Vec3) -> BlockStep {
 
 #[cfg(test)]
 mod tests {
-    use super::{PatchDefinition, Ray};
+    use super::{PatchDefinition, PatchDefinitionFactory, PatchError, Ray};
     use crate::renderer::dynmap::types::{SideVisible, Vec3};
 
     fn square_patch() -> PatchDefinition {
@@ -316,5 +351,72 @@ mod tests {
         .unwrap();
         assert!(patch.contains_uv(1.0, 0.5));
         assert!(!patch.contains_uv(1.0, 0.2));
+    }
+
+    #[test]
+    fn factory_creates_a_full_unit_patch_with_explicit_metadata() {
+        let patch = PatchDefinitionFactory::create(
+            Vec3::ZERO,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, 1.0, 0.0),
+            SideVisible::Both,
+            7,
+            false,
+        )
+        .unwrap();
+        let hit = patch
+            .intersect(Ray::new(
+                Vec3::new(0.5, 0.5, 1.0),
+                Vec3::new(0.0, 0.0, -1.0),
+            ))
+            .unwrap();
+        assert_eq!(hit.texture_index, 7);
+        assert!(!hit.shade);
+    }
+
+    #[test]
+    fn parallel_and_backface_rays_are_rejected_by_visibility_contract() {
+        let patch = square_patch();
+        assert!(patch
+            .intersect(Ray::new(Vec3::new(0.5, 0.5, 1.0), Vec3::new(1.0, 0.0, 0.0)))
+            .is_none());
+        assert!(patch
+            .intersect(Ray::new(
+                Vec3::new(0.5, 0.5, -1.0),
+                Vec3::new(0.0, 0.0, -1.0),
+            ))
+            .is_none());
+    }
+
+    #[test]
+    fn degenerate_and_reversed_clips_are_rejected() {
+        assert_eq!(
+            PatchDefinitionFactory::create(
+                Vec3::ZERO,
+                Vec3::ZERO,
+                Vec3::new(0.0, 1.0, 0.0),
+                SideVisible::Both,
+                0,
+                true,
+            ),
+            Err(PatchError::DegenerateSurface)
+        );
+        assert_eq!(
+            PatchDefinition::new(
+                Vec3::ZERO,
+                Vec3::new(1.0, 0.0, 0.0),
+                Vec3::new(0.0, 1.0, 0.0),
+                1.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                1.0,
+                SideVisible::Both,
+                0,
+                true,
+            ),
+            Err(PatchError::InvalidUClip)
+        );
     }
 }
