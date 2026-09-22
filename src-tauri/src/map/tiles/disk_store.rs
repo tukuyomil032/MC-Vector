@@ -172,6 +172,9 @@ mod tests {
             has_terrain: true,
             coverage_ratio: 0.25,
             message: None,
+            source: crate::map::renderer::TileRenderSource::Saved,
+            live_requested_count: 0,
+            live_received_count: 0,
             stale: false,
         };
         write_metadata_atomic(&path, &expected).expect("metadata should be written");

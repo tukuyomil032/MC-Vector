@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::map::renderer::TileRenderSource;
+
 use super::tile_key::TileKey;
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -11,6 +13,12 @@ pub(crate) struct TileMetadata {
     pub(crate) has_terrain: bool,
     pub(crate) coverage_ratio: f32,
     pub(crate) message: Option<String>,
+    #[serde(default)]
+    pub(crate) source: TileRenderSource,
+    #[serde(default)]
+    pub(crate) live_requested_count: usize,
+    #[serde(default)]
+    pub(crate) live_received_count: usize,
     #[serde(default)]
     pub(crate) stale: bool,
 }
@@ -162,6 +170,9 @@ mod tests {
             has_terrain: true,
             coverage_ratio: 0.42,
             message: None,
+            source: TileRenderSource::SavedAndLive,
+            live_requested_count: 8,
+            live_received_count: 3,
             stale: false,
         };
         cache.insert(
@@ -172,5 +183,21 @@ mod tests {
             },
         );
         assert_eq!(cache.get(&key(0)).expect("cached tile").metadata, metadata);
+    }
+
+    #[test]
+    fn legacy_metadata_defaults_to_saved_source_without_live_counts() {
+        let metadata: TileMetadata = serde_json::from_value(serde_json::json!({
+            "renderedChunkCount": 2,
+            "hasTerrain": true,
+            "coverageRatio": 0.5,
+            "message": null,
+            "stale": false
+        }))
+        .expect("legacy metadata should remain readable");
+
+        assert_eq!(metadata.source, TileRenderSource::Saved);
+        assert_eq!(metadata.live_requested_count, 0);
+        assert_eq!(metadata.live_received_count, 0);
     }
 }

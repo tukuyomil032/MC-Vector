@@ -17,7 +17,8 @@ use crate::map::sources::{
 use crate::map::tile_buffer::{Rgba, RgbaTileBuffer};
 
 use super::{
-    render_iso_tile, IsoHDPerspective, LiveChunkMap, TileRenderResult, MAX_ZOOM, TILE_SIZE,
+    render_iso_tile, tile_render_source, IsoHDPerspective, LiveChunkMap, TileRenderResult,
+    MAX_ZOOM, TILE_SIZE,
 };
 
 const RAY_CHUNK_PADDING_BLOCKS: i64 = 16;
@@ -359,6 +360,7 @@ pub(crate) fn render_overview_tile(
     tile_y: i32,
     assets: Option<&MapAssets>,
     live_chunks: Option<&LiveChunkMap>,
+    live_requested_count: usize,
 ) -> Result<TileRenderResult, String> {
     let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     if geometry.plane != MapTilePlane::WorldXZ {
@@ -380,6 +382,7 @@ pub(crate) fn render_overview_tile(
             }
         }
     }
+    let has_saved_source = !coordinates.is_empty();
 
     let mut tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
     let mut rendered_chunk_count = 0;
@@ -421,6 +424,7 @@ pub(crate) fn render_overview_tile(
     let has_terrain = tile_buffer.covered_pixels() > 0;
     let coverage_ratio = tile_buffer.coverage_ratio();
     let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &tile_buffer.into_scanlines())?;
+    let live_received_count = live_chunks.map_or(0, LiveChunkMap::len);
     Ok(TileRenderResult {
         png,
         rendered_chunk_count,
@@ -428,6 +432,9 @@ pub(crate) fn render_overview_tile(
         has_terrain,
         coverage_ratio,
         message: diagnostic,
+        source: tile_render_source(has_saved_source, live_received_count > 0),
+        live_requested_count,
+        live_received_count,
     })
 }
 
@@ -438,16 +445,25 @@ pub(crate) fn render_world_tile_detailed(
     tile_y: i32,
     assets: Option<&MapAssets>,
     live_chunks: Option<&LiveChunkMap>,
+    live_requested_count: usize,
 ) -> Result<TileRenderResult, String> {
     let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, zoom, tile_x, tile_y)?;
     if geometry.plane == MapTilePlane::WorldXZ {
-        return render_overview_tile(world_root, zoom, tile_x, tile_y, assets, live_chunks);
+        return render_overview_tile(
+            world_root,
+            zoom,
+            tile_x,
+            tile_y,
+            assets,
+            live_chunks,
+            live_requested_count,
+        );
     }
     let saved_chunk_coordinates = ray_chunk_coordinates_for_tile(world_root, zoom, tile_x, tile_y)?;
     if live_chunks.is_none_or(HashMap::is_empty) && saved_chunk_coordinates.is_empty() {
         // Avoid walking tens of thousands of air voxels for a tile whose
         // region headers already prove that no saved chunk intersects it.
-        return empty_tile_result();
+        return empty_tile_result(live_requested_count);
     }
 
     let mut chunks: HashMap<(i64, i64), Result<Option<JavaChunk>, String>> = HashMap::new();
@@ -543,6 +559,7 @@ pub(crate) fn render_world_tile_detailed(
     let pixels = rgba_pixels_to_scanlines(&rendered.pixels, TILE_SIZE as usize, TILE_SIZE as usize);
     let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &pixels)?;
     let has_terrain = rendered.coverage_ratio > 0.0;
+    let live_received_count = live_chunks.len();
     Ok(TileRenderResult {
         png,
         rendered_chunk_count: rendered_chunks.len(),
@@ -550,10 +567,13 @@ pub(crate) fn render_world_tile_detailed(
         has_terrain,
         coverage_ratio: rendered.coverage_ratio,
         message: diagnostic,
+        source: tile_render_source(!saved_chunk_coordinates.is_empty(), live_received_count > 0),
+        live_requested_count,
+        live_received_count,
     })
 }
 
-fn empty_tile_result() -> Result<TileRenderResult, String> {
+fn empty_tile_result(live_requested_count: usize) -> Result<TileRenderResult, String> {
     let tile_buffer = RgbaTileBuffer::new(TILE_SIZE as usize, TILE_SIZE as usize);
     let png = encode_png_rgba(TILE_SIZE, TILE_SIZE, &tile_buffer.into_scanlines())?;
     Ok(TileRenderResult {
@@ -563,6 +583,9 @@ fn empty_tile_result() -> Result<TileRenderResult, String> {
         has_terrain: false,
         coverage_ratio: 0.0,
         message: None,
+        source: tile_render_source(false, false),
+        live_requested_count,
+        live_received_count: 0,
     })
 }
 

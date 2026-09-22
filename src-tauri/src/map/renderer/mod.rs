@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub(crate) mod dynmap;
 pub(crate) mod world_tile;
@@ -32,6 +32,15 @@ pub(crate) const TILE_SIZE: u32 = 256;
 
 pub(crate) type LiveChunkMap = HashMap<(i64, i64), ChunkView>;
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum TileRenderSource {
+    #[default]
+    Saved,
+    Live,
+    SavedAndLive,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TileRenderResult {
@@ -41,6 +50,20 @@ pub(crate) struct TileRenderResult {
     pub(crate) has_terrain: bool,
     pub(crate) coverage_ratio: f32,
     pub(crate) message: Option<String>,
+    pub(crate) source: TileRenderSource,
+    pub(crate) live_requested_count: usize,
+    pub(crate) live_received_count: usize,
+}
+
+pub(crate) fn tile_render_source(
+    has_saved_source: bool,
+    has_live_source: bool,
+) -> TileRenderSource {
+    match (has_saved_source, has_live_source) {
+        (true, true) => TileRenderSource::SavedAndLive,
+        (true, false) => TileRenderSource::Saved,
+        (false, true) | (false, false) => TileRenderSource::Live,
+    }
 }
 
 /// Render through the existing world-tile path while applying model-face UV
