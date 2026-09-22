@@ -36,6 +36,7 @@
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
     "test:typecheck": "tsc -p tsconfig.tests.json --noEmit",
     "check:workflow-actions": "node scripts/check-workflow-actions.mjs",
+    "prepare:core-release": "node scripts/prepare-core-release.mjs",
     "test:tauri:e2e": "node scripts/tauri-smoke-e2e.mjs",
     "test:provider:live": "vitest run --config vitest.live.config.ts",
     "test:all": "bun run check && bun run test && cd src-tauri && cargo test",

@@ -3,6 +3,7 @@ import type {
   MapAssetCandidate,
   MapAssetStatus,
   MapChatMessageEvent,
+  MapCoreArtifactProgressEvent,
   MapBridgeStatusEvent,
   MapMarker,
   MapMarkerInput,
@@ -144,4 +145,10 @@ export function onMapRenderProgress(
   callback: (event: MapRenderProgressEvent) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('map-render-progress', callback);
+}
+
+export function onMapCoreArtifactProgress(
+  callback: (event: MapCoreArtifactProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return tauriListen('map-core-artifact-progress', callback);
 }

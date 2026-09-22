@@ -6,6 +6,7 @@ pub struct MapStatus {
     pub server_id: String,
     pub component: String,
     pub artifact: Option<String>,
+    pub core_artifact: crate::map::core_artifact::CoreArtifactStatus,
     pub restart_required: bool,
     pub bridge: String,
     pub config_state: String,

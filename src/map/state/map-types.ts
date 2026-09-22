@@ -27,6 +27,37 @@ export type MapAssetState =
 
 export type MapConfigState = 'valid' | 'missing' | 'invalid' | 'stale' | 'conflict';
 
+export type MapCoreArtifactState =
+  | 'missing'
+  | 'download_required'
+  | 'downloading'
+  | 'verifying'
+  | 'installed'
+  | 'outdated'
+  | 'invalid'
+  | 'conflict'
+  | 'error';
+
+export type MapCoreArtifactProvenance = 'development' | 'bundled' | 'github_release';
+
+export type MapCoreArtifactVerification = 'unverified' | 'verifying' | 'verified' | 'failed';
+
+export interface MapCoreArtifactStatus {
+  state: MapCoreArtifactState;
+  version?: string | null;
+  provenance?: MapCoreArtifactProvenance | null;
+  releaseTag?: string | null;
+  verification: MapCoreArtifactVerification;
+  errorReason?: string | null;
+}
+
+export interface MapCoreArtifactProgressEvent {
+  serverId: string;
+  state: MapCoreArtifactState;
+  downloadedBytes: number;
+  totalBytes: number | null;
+}
+
 export type MapTileRenderState =
   | 'terrain'
   | 'empty'
@@ -42,6 +73,7 @@ export interface MapStatus {
   serverId: string;
   component: MapComponentState;
   artifact?: 'active' | 'paused' | null;
+  coreArtifact?: MapCoreArtifactStatus;
   restartRequired?: boolean;
   bridge: MapBridgeState;
   configState: MapConfigState;

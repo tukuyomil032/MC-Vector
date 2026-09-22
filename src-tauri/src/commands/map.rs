@@ -30,6 +30,9 @@ use crate::map::bridge::protocol::{
     hello_ack, hello_rejection_reason, parse_chat_message, parse_hello, parse_world_status_message,
     validate_hello, BridgeStatusPayload, ChatMessageEventPayload, WorldStatusEventPayload,
 };
+use crate::map::core_artifact::{
+    self as core_artifact, CoreArtifactStatus, ManagedMetadata, CORE_JAR_NAME,
+};
 use crate::map::domain::{ChunkKey, ChunkView};
 use crate::map::projection::{floor_div, MapTileGeometry, MapTilePlane};
 use crate::map::renderer::{
@@ -58,8 +61,7 @@ pub mod world;
 use status::MapStatus;
 use world::{MapWorldBorder, MapWorldInfo};
 
-const CORE_JAR_NAME: &str = "mc-vector-core.jar";
-const CORE_DISABLED_JAR_NAME: &str = "mc-vector-core.jar.disabled";
+const CORE_DISABLED_JAR_NAME: &str = core_artifact::CORE_DISABLED_JAR_NAME;
 const CORE_CONFIG_NAME: &str = "mc-vector-core.yml";
 const CORE_METADATA_NAME: &str = "mc-vector-core.managed.json";
 const MAX_LIVE_CHUNKS_PER_TILE: usize = 64;
@@ -132,6 +134,8 @@ pub struct MapBridgeManager {
     live_snapshots: Arc<Mutex<LiveSnapshotCache>>,
     tile_scheduler: Arc<TileScheduler>,
     render_generations: Arc<Mutex<HashMap<(String, String), u64>>>,
+    core_artifact_locks: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
+    core_artifact_errors: Arc<Mutex<HashMap<String, CoreArtifactStatus>>>,
 }
 
 impl Default for MapBridgeManager {
@@ -147,20 +151,10 @@ impl Default for MapBridgeManager {
             live_snapshots: Arc::new(Mutex::new(LiveSnapshotCache::new(2_000))),
             tile_scheduler: Arc::new(TileScheduler::new(64, 2)),
             render_generations: Arc::default(),
+            core_artifact_locks: Arc::default(),
+            core_artifact_errors: Arc::default(),
         }
     }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ManagedMetadata {
-    managed_by: String,
-    schema_version: u32,
-    artifact_name: String,
-    artifact_provenance: String,
-    removal_requested: bool,
-    #[serde(default)]
-    restart_required: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -309,62 +303,80 @@ fn read_json_file<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Option<T>
 fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     let bytes = serde_json::to_vec_pretty(value)
         .map_err(|error| format!("Failed to serialize managed map metadata: {error}"))?;
-    fs::write(path, bytes).map_err(|error| format!("Failed to write managed map metadata: {error}"))
-}
-
-fn locate_core_artifact(app: &AppHandle) -> Option<PathBuf> {
-    let mut candidates = Vec::new();
-    if let Ok(resource_dir) = app.path().resource_dir() {
-        candidates.push(resource_dir.join(CORE_JAR_NAME));
+    let temporary = path.with_extension(format!("json.tmp-{}", Uuid::new_v4()));
+    let result = (|| {
+        let mut file = fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&temporary)
+            .map_err(|error| format!("Failed to stage managed map metadata: {error}"))?;
+        use std::io::Write;
+        file.write_all(&bytes)
+            .map_err(|error| format!("Failed to stage managed map metadata: {error}"))?;
+        file.sync_all()
+            .map_err(|error| format!("Failed to sync managed map metadata: {error}"))?;
+        let rollback = path.with_extension(format!("json.rollback-{}", Uuid::new_v4()));
+        let existing = match fs::symlink_metadata(path) {
+            Ok(metadata) if is_link_or_reparse_point(&metadata) || !metadata.is_file() => {
+                return Err("Managed map metadata path is not a regular file".to_string());
+            }
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => {
+                return Err(format!("Failed to inspect managed map metadata: {error}"));
+            }
+        };
+        if existing {
+            fs::rename(path, &rollback)
+                .map_err(|error| format!("Failed to stage managed map metadata: {error}"))?;
+        }
+        match fs::rename(&temporary, path) {
+            Ok(()) => {
+                if existing {
+                    let _ = fs::remove_file(&rollback);
+                }
+                Ok(())
+            }
+            Err(error) => {
+                let _ = fs::remove_file(&temporary);
+                if existing {
+                    fs::rename(&rollback, path).map_err(|restore_error| {
+                        format!(
+                            "Failed to replace managed map metadata and restore the previous file: {error}; {restore_error}"
+                        )
+                    })?;
+                }
+                Err(format!("Failed to replace managed map metadata: {error}"))
+            }
+        }
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
     }
-    candidates.push(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../src/map/paper/mc-vector-core/build/libs")
-            .join(CORE_JAR_NAME),
-    );
-
-    candidates.into_iter().find(|path| {
-        fs::symlink_metadata(path)
-            .is_ok_and(|metadata| metadata.is_file() && !is_link_or_reparse_point(&metadata))
-    })
-}
-
-fn install_core_artifact(source: &Path, destination: &Path) -> Result<(), String> {
-    if existing_normal_file(destination)? {
-        return Err("Refusing to overwrite an existing MC-Vector Core artifact".to_string());
-    }
-    let staging = destination.with_extension("jar.part");
-    if fs::symlink_metadata(&staging).is_ok() {
-        return Err("A pending MC-Vector Core installation already exists".to_string());
-    }
-    fs::copy(source, &staging)
-        .map_err(|error| format!("Failed to stage MC-Vector Core: {error}"))?;
-    if let Err(error) = fs::rename(&staging, destination) {
-        let _ = fs::remove_file(&staging);
-        return Err(format!("Failed to install MC-Vector Core: {error}"));
-    }
-    Ok(())
+    result
 }
 
 fn default_metadata() -> ManagedMetadata {
     ManagedMetadata {
         managed_by: "MC-Vector".to_string(),
-        schema_version: 1,
+        schema_version: 2,
         artifact_name: CORE_JAR_NAME.to_string(),
-        artifact_provenance: "pending".to_string(),
+        artifact_provenance: "development".to_string(),
+        plugin_version: None,
+        protocol_version: None,
+        sha256: None,
+        byte_length: None,
+        release_tag: None,
+        source_commit: None,
+        asset_url: None,
+        verified_at: None,
         removal_requested: false,
         restart_required: false,
     }
 }
 
 fn validate_metadata(metadata: &ManagedMetadata) -> Result<(), String> {
-    if metadata.managed_by != "MC-Vector"
-        || metadata.schema_version != 1
-        || metadata.artifact_name != CORE_JAR_NAME
-    {
-        return Err("Map component metadata is not managed by MC-Vector".to_string());
-    }
-    Ok(())
+    core_artifact::validate_metadata(metadata).map_err(|error| error.to_string())
 }
 
 fn load_metadata(paths: &MapPaths) -> Result<Option<ManagedMetadata>, String> {
@@ -468,7 +480,7 @@ fn component_state(
     }
 
     if active {
-        if metadata.artifact_provenance == "managed" {
+        if core_artifact::metadata_is_verified(metadata) {
             if metadata.restart_required {
                 (
                     "waiting_restart".to_string(),
@@ -484,7 +496,7 @@ fn component_state(
             )
         }
     } else if disabled {
-        if metadata.artifact_provenance == "managed" {
+        if core_artifact::metadata_is_verified(metadata) {
             if metadata.restart_required {
                 (
                     "waiting_restart".to_string(),
@@ -522,6 +534,7 @@ async fn build_status(
             server_id: server_id.to_string(),
             component: "absent".to_string(),
             artifact: None,
+            core_artifact: CoreArtifactStatus::missing("artifact_download_required"),
             restart_required: false,
             bridge: "not_applicable".to_string(),
             config_state: "missing".to_string(),
@@ -542,10 +555,27 @@ async fn build_status(
     let disabled = existing_normal_file(&paths.disabled_jar)?;
     let (metadata, metadata_message) = match load_metadata(&paths) {
         Ok(metadata) => (metadata, None),
-        Err(error) => (None, Some(error)),
+        Err(_) => {
+            log::warn!(
+                "Map Core metadata could not be verified for server {}: artifact_invalid_manifest",
+                server_id
+            );
+            (None, Some("artifact_invalid_manifest".to_string()))
+        }
     };
     let (raw_component, raw_component_message) =
         component_state(active, disabled, metadata.as_ref());
+    let mut core_artifact_status =
+        core_artifact::status_for_files(&paths.active_jar, &paths.disabled_jar, metadata.as_ref());
+    if let Some(error_status) = manager
+        .core_artifact_errors
+        .lock()
+        .await
+        .get(server_id)
+        .cloned()
+    {
+        core_artifact_status = error_status;
+    }
     let artifact = if active {
         Some("active".to_string())
     } else if disabled {
@@ -570,45 +600,74 @@ async fn build_status(
         Err(error) => map_assets::AssetStatus::invalid(error),
     };
 
-    if let Some(config) = config.as_ref() {
-        let _ = ensure_bridge_listener(app.clone(), manager, config.clone()).await;
+    let core_config_mismatch = config.as_ref().is_some_and(|config| {
+        core_artifact_status.state == "installed"
+            && core_artifact_status.version.as_deref() != Some(config.plugin_version.as_str())
+    });
+    let active_verified = active
+        && core_artifact_status.state == "installed"
+        && core_artifact_status.verification == "verified"
+        && !core_config_mismatch;
+    if active_verified {
+        if let Some(config) = config.as_ref() {
+            let _ = ensure_bridge_listener(app.clone(), manager, config.clone()).await;
+        }
+    } else {
+        stop_bridge_listener(manager, server_id).await;
     }
 
     let runtime = runtime_status(manager, server_id).await;
-    let bridge = match &inspection {
-        BridgeConfigInspection::Invalid(issue) => {
-            if issue.state == "invalid" {
-                "error".to_string()
-            } else {
-                "incompatible".to_string()
+    let bridge = if core_config_mismatch {
+        "incompatible".to_string()
+    } else {
+        match &inspection {
+            BridgeConfigInspection::Invalid(issue) => {
+                if issue.state == "invalid" {
+                    "error".to_string()
+                } else {
+                    "incompatible".to_string()
+                }
             }
-        }
-        BridgeConfigInspection::Missing => {
-            if active || disabled {
-                "disconnected".to_string()
-            } else {
-                "not_applicable".to_string()
+            BridgeConfigInspection::Missing => {
+                if active || disabled {
+                    "disconnected".to_string()
+                } else {
+                    "not_applicable".to_string()
+                }
             }
+            BridgeConfigInspection::Valid(_) => runtime
+                .as_ref()
+                .map(|status| status.bridge.clone())
+                .unwrap_or_else(|| "disconnected".to_string()),
         }
-        BridgeConfigInspection::Valid(_) => runtime
-            .as_ref()
-            .map(|status| status.bridge.clone())
-            .unwrap_or_else(|| "disconnected".to_string()),
+    };
+    let (component, component_message) = if core_config_mismatch {
+        (
+            "conflict".to_string(),
+            Some("artifact_version_mismatch".to_string()),
+        )
+    } else if config_issue.is_some_and(|issue| issue.state == "conflict") {
+        (
+            "conflict".to_string(),
+            config_issue.map(|issue| issue.message.clone()),
+        )
+    } else if raw_component == "waiting_restart" && bridge == "connected" {
+        if active {
+            ("active".to_string(), None)
+        } else {
+            ("paused".to_string(), None)
+        }
+    } else {
+        (raw_component, raw_component_message)
     };
     let (component, component_message) =
-        if config_issue.is_some_and(|issue| issue.state == "conflict") {
+        if core_artifact_status.state != "installed" && (active || disabled) {
             (
                 "conflict".to_string(),
-                config_issue.map(|issue| issue.message.clone()),
+                core_artifact_status.error_reason.clone(),
             )
-        } else if raw_component == "waiting_restart" && bridge == "connected" {
-            if active {
-                ("active".to_string(), None)
-            } else {
-                ("paused".to_string(), None)
-            }
         } else {
-            (raw_component, raw_component_message)
+            (component, component_message)
         };
     let restart_required = metadata
         .as_ref()
@@ -617,6 +676,7 @@ async fn build_status(
     let message = config_issue
         .map(|issue| issue.message.clone())
         .or(metadata_message)
+        .or(core_artifact_status.error_reason.clone())
         .or(component_message)
         .or_else(|| {
             if component == "active" && bridge == "disconnected" {
@@ -637,6 +697,7 @@ async fn build_status(
         server_id: server_id.to_string(),
         component,
         artifact,
+        core_artifact: core_artifact_status,
         restart_required,
         bridge,
         config_state,
@@ -1462,8 +1523,47 @@ impl MapBridgeManager {
             live_snapshots: Arc::clone(&self.live_snapshots),
             tile_scheduler: Arc::clone(&self.tile_scheduler),
             render_generations: Arc::clone(&self.render_generations),
+            core_artifact_locks: Arc::clone(&self.core_artifact_locks),
+            core_artifact_errors: Arc::clone(&self.core_artifact_errors),
         }
     }
+}
+
+async fn core_artifact_lock(manager: &MapBridgeManager, server_id: &str) -> Arc<Mutex<()>> {
+    let mut locks = manager.core_artifact_locks.lock().await;
+    Arc::clone(
+        locks
+            .entry(server_id.to_string())
+            .or_insert_with(|| Arc::new(Mutex::new(()))),
+    )
+}
+
+async fn set_core_artifact_error(
+    manager: &MapBridgeManager,
+    server_id: &str,
+    error: &core_artifact::ArtifactError,
+) {
+    let state = if matches!(
+        error,
+        core_artifact::ArtifactError::Conflict
+            | core_artifact::ArtifactError::InvalidJar
+            | core_artifact::ArtifactError::InvalidManifest
+    ) {
+        "conflict"
+    } else {
+        "error"
+    };
+    manager.core_artifact_errors.lock().await.insert(
+        server_id.to_string(),
+        CoreArtifactStatus {
+            state: state.to_string(),
+            version: None,
+            provenance: None,
+            release_tag: None,
+            verification: "failed".to_string(),
+            error_reason: Some(error.to_string()),
+        },
+    );
 }
 
 async fn stop_bridge_listener(manager: &MapBridgeManager, server_id: &str) {
@@ -1486,9 +1586,33 @@ pub(crate) async fn prepare_bridge_for_server(
     let Ok(Some(paths)) = map_paths(&root, false) else {
         return;
     };
+    let Ok(metadata) = load_metadata(&paths) else {
+        return;
+    };
+    if !existing_normal_file(&paths.active_jar).unwrap_or(false)
+        || !metadata
+            .as_ref()
+            .is_some_and(core_artifact::metadata_is_verified)
+        || core_artifact::status_for_files(
+            &paths.active_jar,
+            &paths.disabled_jar,
+            metadata.as_ref(),
+        )
+        .state
+            != "installed"
+    {
+        return;
+    }
     let Ok(Some(config)) = read_bridge_config(&paths.config) else {
         return;
     };
+    if metadata
+        .as_ref()
+        .and_then(|metadata| metadata.plugin_version.as_deref())
+        != Some(config.plugin_version.as_str())
+    {
+        return;
+    }
     if let Err(error) = ensure_bridge_listener(app, manager, config).await {
         log::warn!(
             "Map bridge listener unavailable for server {}: {}",
@@ -1512,11 +1636,20 @@ async fn repair_map_bridge_impl(
     let metadata =
         load_metadata(&paths)?.ok_or_else(|| "Map component metadata is missing".to_string())?;
     validate_metadata(&metadata)?;
-    if metadata.artifact_provenance != "managed" {
+    if !core_artifact::metadata_is_verified(&metadata) {
         return Err("Refusing to repair an unverified MC-Vector Core artifact".to_string());
     }
-    if !existing_normal_file(&paths.active_jar)? && !existing_normal_file(&paths.disabled_jar)? {
+    let active = existing_normal_file(&paths.active_jar)?;
+    let disabled = existing_normal_file(&paths.disabled_jar)?;
+    if !active && !disabled {
         return Err("MC-Vector Core artifact is missing".to_string());
+    }
+    let artifact_status =
+        core_artifact::status_for_files(&paths.active_jar, &paths.disabled_jar, Some(&metadata));
+    if artifact_status.state != "installed" {
+        return Err(artifact_status
+            .error_reason
+            .unwrap_or_else(|| "artifact_invalid_manifest".to_string()));
     }
 
     let inspection = inspect_bridge_config(&paths.config, Some(&server_id))?;
@@ -1536,12 +1669,22 @@ async fn repair_map_bridge_impl(
     if can_repair {
         stop_bridge_listener(&manager, &server_id).await;
     }
-    let config = write_bridge_config(&paths.config, &server_id)?;
+    let config = write_bridge_config(
+        &paths.config,
+        &server_id,
+        metadata
+            .plugin_version
+            .as_deref()
+            .ok_or_else(|| "Verified Core artifact has no plugin version".to_string())?,
+    )?;
     let running = servers.servers.lock().await.contains_key(&server_id);
     let mut metadata = metadata;
     metadata.restart_required = running;
     write_json_file(&paths.metadata, &metadata)?;
-    ensure_bridge_listener(app.clone(), &manager, config).await?;
+    if active {
+        ensure_bridge_listener(app.clone(), &manager, config).await?;
+    }
+    manager.core_artifact_errors.lock().await.remove(&server_id);
     build_status(&app, &manager, &server_id).await
 }
 
@@ -1714,42 +1857,45 @@ async fn enable_map_impl(
     servers: State<'_, ServerManager>,
     server_id: String,
 ) -> Result<MapStatus, String> {
+    let lock = core_artifact_lock(&manager, &server_id).await;
+    let _guard = lock.lock().await;
     let app_data = app_data_dir(&app)?;
     let root = server_dir(&app_data, &server_id)?;
     let Some(paths) = map_paths(&root, true)? else {
         return Err("Failed to prepare the plugins directory".to_string());
     };
-    let active = existing_normal_file(&paths.active_jar)?;
-    let disabled = existing_normal_file(&paths.disabled_jar)?;
-    if active && disabled {
-        return Err("Both active and disabled MC-Vector Core files exist".to_string());
-    }
-
-    let metadata = load_metadata(&paths)?.unwrap_or_else(default_metadata);
-    validate_metadata(&metadata)?;
-    if active && metadata.artifact_provenance != "managed" {
-        return Err("Refusing to overwrite an unknown same-named plugin JAR".to_string());
-    }
-    if disabled {
-        if metadata.artifact_provenance != "managed" {
-            return Err("Refusing to restore an unknown same-named plugin JAR".to_string());
+    let mut metadata = match core_artifact::ensure_installed(
+        &app,
+        &server_id,
+        &paths.active_jar,
+        &paths.disabled_jar,
+        &paths.metadata,
+    )
+    .await
+    {
+        Ok(metadata) => metadata,
+        Err(error) => {
+            core_artifact::emit_failure_progress(&app, &server_id, &error);
+            if !matches!(error, core_artifact::ArtifactError::VersionMismatch) {
+                set_core_artifact_error(&manager, &server_id, &error).await;
+            }
+            stop_bridge_listener(&manager, &server_id).await;
+            return build_status(&app, &manager, &server_id).await;
         }
-        fs::rename(&paths.disabled_jar, &paths.active_jar)
-            .map_err(|error| format!("Failed to restore MC-Vector Core: {error}"))?;
-    }
-
-    let mut metadata = metadata;
+    };
+    manager.core_artifact_errors.lock().await.remove(&server_id);
     metadata.removal_requested = false;
-    if !active && !disabled {
-        if let Some(source) = locate_core_artifact(&app) {
-            install_core_artifact(&source, &paths.active_jar)?;
-            metadata.artifact_provenance = "managed".to_string();
-        }
-    }
     metadata.restart_required = servers.servers.lock().await.contains_key(&server_id)
-        && (active || disabled || existing_normal_file(&paths.active_jar)?);
+        && existing_normal_file(&paths.active_jar)?;
     write_json_file(&paths.metadata, &metadata)?;
-    let config = write_bridge_config(&paths.config, &server_id)?;
+    let config = write_bridge_config(
+        &paths.config,
+        &server_id,
+        metadata
+            .plugin_version
+            .as_deref()
+            .ok_or_else(|| "Verified Core artifact has no plugin version".to_string())?,
+    )?;
     ensure_bridge_listener(app.clone(), &manager, config).await?;
     build_status(&app, &manager, &server_id).await
 }
@@ -1768,7 +1914,11 @@ async fn pause_map_impl(
     let mut metadata = load_metadata(&paths)?
         .ok_or_else(|| "Refusing to rename an unknown same-named plugin JAR".to_string())?;
     validate_metadata(&metadata)?;
-    if metadata.artifact_provenance != "managed" {
+    if !core_artifact::metadata_is_verified(&metadata)
+        || core_artifact::status_for_files(&paths.active_jar, &paths.disabled_jar, Some(&metadata))
+            .state
+            != "installed"
+    {
         return Err("Refusing to rename an unverified plugin JAR".to_string());
     }
     let active = existing_normal_file(&paths.active_jar)?;
@@ -1785,6 +1935,7 @@ async fn pause_map_impl(
     }
     metadata.restart_required = servers.servers.lock().await.contains_key(&server_id);
     write_json_file(&paths.metadata, &metadata)?;
+    manager.core_artifact_errors.lock().await.remove(&server_id);
     build_status(&app, &manager, &server_id).await
 }
 
@@ -1802,14 +1953,26 @@ async fn restore_map_impl(
     let mut metadata = load_metadata(&paths)?
         .ok_or_else(|| "Refusing to restore an unknown same-named plugin JAR".to_string())?;
     validate_metadata(&metadata)?;
-    if metadata.artifact_provenance != "managed" {
+    if !core_artifact::metadata_is_verified(&metadata)
+        || core_artifact::status_for_files(&paths.active_jar, &paths.disabled_jar, Some(&metadata))
+            .state
+            != "installed"
+    {
         return Err("Refusing to restore an unverified plugin JAR".to_string());
     }
     if existing_normal_file(&paths.active_jar)? {
         metadata.restart_required = servers.servers.lock().await.contains_key(&server_id);
         write_json_file(&paths.metadata, &metadata)?;
-        let config = write_bridge_config(&paths.config, &server_id)?;
+        let config = write_bridge_config(
+            &paths.config,
+            &server_id,
+            metadata
+                .plugin_version
+                .as_deref()
+                .ok_or_else(|| "Verified Core artifact has no plugin version".to_string())?,
+        )?;
         ensure_bridge_listener(app.clone(), &manager, config).await?;
+        manager.core_artifact_errors.lock().await.remove(&server_id);
         return build_status(&app, &manager, &server_id).await;
     }
     if !existing_normal_file(&paths.disabled_jar)? {
@@ -1819,8 +1982,16 @@ async fn restore_map_impl(
         .map_err(|error| format!("Failed to restore MC-Vector Core: {error}"))?;
     metadata.restart_required = servers.servers.lock().await.contains_key(&server_id);
     write_json_file(&paths.metadata, &metadata)?;
-    let config = write_bridge_config(&paths.config, &server_id)?;
+    let config = write_bridge_config(
+        &paths.config,
+        &server_id,
+        metadata
+            .plugin_version
+            .as_deref()
+            .ok_or_else(|| "Verified Core artifact has no plugin version".to_string())?,
+    )?;
     ensure_bridge_listener(app.clone(), &manager, config).await?;
+    manager.core_artifact_errors.lock().await.remove(&server_id);
     build_status(&app, &manager, &server_id).await
 }
 
@@ -1835,8 +2006,11 @@ async fn remove_map_component_impl(
     let Some(paths) = map_paths(&root, false)? else {
         return build_status(&app, &manager, &server_id).await;
     };
-    let mut metadata = load_metadata(&paths)?.unwrap_or_else(default_metadata);
-    validate_metadata(&metadata)?;
+    let metadata = load_metadata(&paths)?;
+    if let Some(metadata) = metadata.as_ref() {
+        validate_metadata(metadata)?;
+    }
+    let mut metadata = metadata.unwrap_or_else(default_metadata);
 
     let running = servers.servers.lock().await.contains_key(&server_id);
     if running {
@@ -1847,10 +2021,28 @@ async fn remove_map_component_impl(
 
     let active = existing_normal_file(&paths.active_jar)?;
     let disabled = existing_normal_file(&paths.disabled_jar)?;
-    if active && metadata.artifact_provenance != "managed" {
+    if active
+        && (!core_artifact::metadata_is_verified(&metadata)
+            || core_artifact::status_for_files(
+                &paths.active_jar,
+                &paths.disabled_jar,
+                Some(&metadata),
+            )
+            .state
+                != "installed")
+    {
         return Err("Refusing to delete an unknown same-named plugin JAR".to_string());
     }
-    if disabled && metadata.artifact_provenance != "managed" {
+    if disabled
+        && (!core_artifact::metadata_is_verified(&metadata)
+            || core_artifact::status_for_files(
+                &paths.active_jar,
+                &paths.disabled_jar,
+                Some(&metadata),
+            )
+            .state
+                != "installed")
+    {
         return Err("Refusing to delete an unknown disabled plugin JAR".to_string());
     }
 
@@ -1888,6 +2080,8 @@ async fn remove_map_component_impl(
             }
         }
     }
+
+    manager.core_artifact_errors.lock().await.remove(&server_id);
 
     build_status(&app, &manager, &server_id).await
 }
@@ -2199,6 +2393,22 @@ async fn request_map_render_impl(
 ) -> Result<MapRenderRequestResult, String> {
     if server_id.trim().is_empty() || world_id.trim().is_empty() {
         return Err("Server and world IDs are required".to_string());
+    }
+    let app_data = app_data_dir(&app)?;
+    let root = server_dir(&app_data, &server_id)?;
+    let Some(paths) = map_paths(&root, false)? else {
+        return Err("artifact_missing".to_string());
+    };
+    let metadata = load_metadata(&paths)?;
+    let artifact_status =
+        core_artifact::status_for_files(&paths.active_jar, &paths.disabled_jar, metadata.as_ref());
+    if !existing_normal_file(&paths.active_jar)?
+        || artifact_status.state != "installed"
+        || artifact_status.verification != "verified"
+    {
+        return Err(artifact_status
+            .error_reason
+            .unwrap_or_else(|| "artifact_missing".to_string()));
     }
     let geometry = MapTileGeometry::new(TILE_SIZE as usize, MAX_ZOOM, viewport.zoom, 0, 0)?;
     let coordinates = viewport_tile_coordinates(&viewport)?;
@@ -2581,7 +2791,6 @@ fn inspect_world_info(world_root: &Path, world_id: &str) -> Result<MapWorldInfo,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::map::bridge::config::CORE_PLUGIN_VERSION;
     use crate::map::bridge::protocol::{HelloRequest, MAX_CHAT_MESSAGE_BYTES};
     use crate::map::projection::floor_mod;
     use crate::map::renderer::world_tile::{
@@ -2601,7 +2810,7 @@ mod tests {
             port: 45_678,
             token: "1234567890abcdef".to_string(),
             protocol_version: MAP_PROTOCOL_VERSION,
-            plugin_version: CORE_PLUGIN_VERSION.to_string(),
+            plugin_version: "2.0.63".to_string(),
             minecraft_version: "1.21.x".to_string(),
         }
     }
@@ -2697,7 +2906,14 @@ mod tests {
         assert!(message.is_some());
 
         let mut metadata = default_metadata();
-        metadata.artifact_provenance = "managed".to_string();
+        metadata.artifact_provenance = "github_release".to_string();
+        metadata.plugin_version = Some("2.0.63".to_string());
+        metadata.protocol_version = Some(MAP_PROTOCOL_VERSION);
+        metadata.sha256 = Some("0".repeat(64));
+        metadata.byte_length = Some(1);
+        metadata.release_tag = Some("v2.0.63".to_string());
+        metadata.source_commit = Some("0123456789abcdef0123456789abcdef01234567".to_string());
+        metadata.verified_at = Some(1);
         let (state, message) = component_state(true, false, Some(&metadata));
         assert_eq!(state, "active");
         assert!(message.is_none());
@@ -2751,8 +2967,8 @@ mod tests {
             }
             other => panic!("expected conflict config, got {other:?}"),
         }
-        let error =
-            write_bridge_config(&path, "server-1").expect_err("conflict must not be overwritten");
+        let error = write_bridge_config(&path, "server-1", "2.0.63")
+            .expect_err("conflict must not be overwritten");
         assert!(error.contains("another server"));
         fs::remove_dir_all(root).expect("test root should be removed");
     }

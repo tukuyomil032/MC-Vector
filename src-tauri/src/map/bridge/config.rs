@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub(crate) const MAP_PROTOCOL_VERSION: u32 = 2;
-pub(crate) const CORE_PLUGIN_VERSION: &str = "0.1.0";
 
 fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -272,9 +271,16 @@ pub(crate) fn allocate_port() -> Result<u16, String> {
         .map_err(|error| format!("Failed to inspect allocated map bridge port: {error}"))
 }
 
-pub(crate) fn write_bridge_config(path: &Path, server_id: &str) -> Result<BridgeConfig, String> {
+pub(crate) fn write_bridge_config(
+    path: &Path,
+    server_id: &str,
+    plugin_version: &str,
+) -> Result<BridgeConfig, String> {
     match inspect_bridge_config(path, Some(server_id))? {
-        BridgeConfigInspection::Valid(existing) => return Ok(existing),
+        BridgeConfigInspection::Valid(existing) if existing.plugin_version == plugin_version => {
+            return Ok(existing)
+        }
+        BridgeConfigInspection::Valid(_) => {}
         BridgeConfigInspection::Invalid(issue)
             if issue.managed_by.as_deref() == Some("MC-Vector")
                 && issue.server_id.as_deref() == Some(server_id) => {}
@@ -290,7 +296,7 @@ pub(crate) fn write_bridge_config(path: &Path, server_id: &str) -> Result<Bridge
         port: allocate_port()?,
         token: Uuid::new_v4().to_string(),
         protocol_version: MAP_PROTOCOL_VERSION,
-        plugin_version: CORE_PLUGIN_VERSION.to_string(),
+        plugin_version: plugin_version.to_string(),
         minecraft_version: "1.21.x".to_string(),
     };
 

@@ -100,19 +100,22 @@ jobs:
           java-version: '21'
           cache: gradle
       - name: Build and test MC-Vector Core
-        run: ./gradlew --no-daemon clean test jar
+        run: ./gradlew --no-daemon clean test jar -PcoreVersion="$(jq -r .version ../../../../package.json)"
         working-directory: src/map/paper/mc-vector-core
       - name: Verify plugin artifact
         working-directory: src/map/paper/mc-vector-core
         run: |
-          test -f build/libs/mc-vector-core.jar
-          jar tf build/libs/mc-vector-core.jar | awk '
+          VERSION=$(jq -r .version ../../../../package.json)
+          test -f "build/libs/mc-vector-core-${VERSION}.jar"
+          jar tf "build/libs/mc-vector-core-${VERSION}.jar" | awk '
             $0 == "plugin.yml" || $0 ~ /\/plugin\.yml$/ { plugin = 1 }
             $0 == "com/mcvector/core/MCVectorCorePlugin.class" { main = 1 }
             END { exit !(plugin && main) }
           '
+          unzip -p "build/libs/mc-vector-core-${VERSION}.jar" plugin.yml | rg -n "^version: ${VERSION}$|^main: com\\.mcvector\\.core\\.MCVectorCorePlugin$|^protocol-version: 2$"
       - name: Verify Map source and distribution boundary
         run: |
+          VERSION=$(jq -r .version package.json)
           test -f src/map/dynmap/LICENSE-APACHE-2.0
           test -f src/map/dynmap/NOTICE
           test -f src/map/dynmap/SOURCE-REF.md
@@ -122,7 +125,7 @@ jobs:
             echo 'Found a stale root bridge path reference'
             exit 1
           fi
-          if jar tf src/map/paper/mc-vector-core/build/libs/mc-vector-core.jar | awk '/dynmap|minecraft/ { found = 1 } END { exit found ? 0 : 1 }'; then
+          if jar tf "src/map/paper/mc-vector-core/build/libs/mc-vector-core-${VERSION}.jar" | awk '/dynmap|minecraft/ { found = 1 } END { exit found ? 0 : 1 }'; then
             echo 'Paper plugin must not bundle Dynmap sources or Minecraft assets'
             exit 1
           fi

@@ -243,7 +243,14 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
     }
     setIsPreparingMap(true);
     try {
-      await enableMap(server.id);
+      const status = await enableMap(server.id);
+      const ready =
+        status.coreArtifact?.state === 'installed' &&
+        (status.component === 'active' || status.component === 'waiting_restart');
+      if (!ready) {
+        showToast(t('map.management.coreError'), 'warning');
+        return;
+      }
       await onSave({ ...server, map: { consent: 'enabled' } });
       showToast(t('map.toast.enabled'), 'success');
     } catch (error) {

@@ -826,6 +826,7 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
     status?.component,
     status?.configState,
     status?.assetState,
+    status?.coreArtifact?.state,
     status?.bridge,
     server.status,
     mapTileRequestReady,
@@ -910,6 +911,44 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
         return t('map.asset.invalid');
       default:
         return t('map.asset.notApplicable');
+    }
+  };
+
+  const coreArtifact = status?.coreArtifact ?? {
+    state: 'download_required' as const,
+    version: null,
+    provenance: null,
+    releaseTag: null,
+    verification: 'unverified' as const,
+    errorReason: 'artifact_download_required',
+  };
+
+  const coreArtifactStateLabel = () => {
+    switch (coreArtifact.state) {
+      case 'downloading':
+        return t('map.management.coreDownloading');
+      case 'verifying':
+        return t('map.management.coreVerifying');
+      case 'installed':
+        return t('map.management.coreInstalled');
+      case 'download_required':
+      case 'missing':
+        return t('map.management.coreDownloadRequired');
+      default:
+        return t('map.management.coreError');
+    }
+  };
+
+  const coreProvenanceLabel = () => {
+    switch (coreArtifact.provenance) {
+      case 'development':
+        return t('map.management.coreProvenanceDevelopment');
+      case 'bundled':
+        return t('map.management.coreProvenanceBundled');
+      case 'github_release':
+        return t('map.management.coreProvenanceGithubRelease');
+      default:
+        return '—';
     }
   };
 
@@ -1958,6 +1997,35 @@ export default function MapView({ server, onSave, onOpenSettings }: MapViewProps
               </div>
             </div>
             <p className="map-view__management-note">{t('map.management.paperPluginNote')}</p>
+            <div className="map-view__asset-panel" data-testid="map-core-artifact-panel">
+              <div>
+                <span>{t('map.management.coreState')}</span>
+                <strong>{coreArtifactStateLabel()}</strong>
+                {coreArtifact.errorReason && (
+                  <span role="alert" className="map-view__asset-error">
+                    {coreArtifact.errorReason}
+                  </span>
+                )}
+              </div>
+              <dl className="map-view__asset-details">
+                <div>
+                  <dt>{t('map.management.coreVersion')}</dt>
+                  <dd>{coreArtifact.version ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>{t('map.management.coreProvenance')}</dt>
+                  <dd>{coreProvenanceLabel()}</dd>
+                </div>
+                <div>
+                  <dt>{t('map.management.coreReleaseTag')}</dt>
+                  <dd>{coreArtifact.releaseTag ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>{t('map.management.coreVerification')}</dt>
+                  <dd>{coreArtifact.verification}</dd>
+                </div>
+              </dl>
+            </div>
             <div className="map-view__asset-panel">
               <div>
                 <span>{t('map.asset.title')}</span>

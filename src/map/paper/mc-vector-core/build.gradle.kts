@@ -3,7 +3,15 @@ plugins {
 }
 
 group = "com.mcvector"
-version = "0.1.0"
+
+val requestedCoreVersion = providers.gradleProperty("coreVersion")
+requestedCoreVersion.orNull?.let {
+    check(it.matches(Regex("[0-9]+\\.[0-9]+\\.[0-9]+"))) {
+        "coreVersion must be an exact semantic release version"
+    }
+}
+val coreVersion = requestedCoreVersion.orElse("0.1.0")
+version = coreVersion.get()
 
 java {
     toolchain {
@@ -29,7 +37,13 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.processResources {
+    filesMatching("plugin.yml") {
+        expand("coreVersion" to project.version.toString())
+    }
+}
+
 tasks.jar {
     archiveBaseName.set("mc-vector-core")
-    archiveVersion.set("")
+    archiveVersion.set(project.version.toString())
 }

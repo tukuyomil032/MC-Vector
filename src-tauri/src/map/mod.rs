@@ -1,6 +1,7 @@
 pub(crate) mod application;
 pub mod assets;
 pub(crate) mod bridge;
+pub(crate) mod core_artifact;
 pub(crate) mod domain;
 pub mod projection;
 pub mod render;

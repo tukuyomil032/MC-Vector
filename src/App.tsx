@@ -3,7 +3,8 @@ import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { isEulaRequiredError } from '@/lib/eula-commands';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '@/lib/global-shortcut-commands';
-import { enableMap } from '@/map/api/map-commands';
+import { enableMap, onMapCoreArtifactProgress } from '@/map/api/map-commands';
+import type { MapCoreArtifactProgressEvent, MapCoreArtifactStatus } from '@/map/state/map-types';
 import {
   type ServerTemplate,
   getServerTemplates,
@@ -71,6 +72,8 @@ function MainApp() {
   const [showImportServerModal, setShowImportServerModal] = useState(false);
   const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
   const [mapSetupServer, setMapSetupServer] = useState<MinecraftServer | null>(null);
+  const [mapCoreProgress, setMapCoreProgress] = useState<MapCoreArtifactProgressEvent | null>(null);
+  const [mapCoreStatus, setMapCoreStatus] = useState<MapCoreArtifactStatus | null>(null);
 
   const [downloadStatus, setDownloadStatus] = useState<{
     id: string;
@@ -109,6 +112,28 @@ function MainApp() {
   const showMap = isMapEnabled(activeServer);
 
   useViewCycleShortcut({ currentView, setCurrentView, includeMap: showMap });
+
+  useEffect(() => {
+    setMapCoreProgress(null);
+    setMapCoreStatus(null);
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void onMapCoreArtifactProgress((event) => {
+      if (mapSetupServer?.id === event.serverId) {
+        setMapCoreProgress(event);
+      }
+    }).then((cleanup) => {
+      if (disposed) {
+        cleanup();
+      } else {
+        unlisten = cleanup;
+      }
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [mapSetupServer?.id]);
 
   useEffect(() => {
     if (currentView === 'map' && !showMap) {
@@ -339,13 +364,22 @@ function MainApp() {
       }
       if (consent === 'enabled') {
         try {
-          await enableMap(pendingServer.id);
+          const status = await enableMap(pendingServer.id);
+          setMapCoreStatus(status.coreArtifact ?? null);
+          const ready =
+            status.coreArtifact?.state === 'installed' &&
+            (status.component === 'active' || status.component === 'waiting_restart');
+          if (!ready) {
+            showToast(t('map.management.coreError'), 'warning');
+            return;
+          }
         } catch (error) {
           logError('Failed to prepare Map integration', error, { serverId: pendingServer.id });
           showToast(t('map.toast.failed'), 'error');
           return;
         }
       }
+      setMapCoreProgress(null);
       const updatedServer = { ...pendingServer, map: { consent } };
       try {
         await updateServerApi(updatedServer);
@@ -507,6 +541,8 @@ function MainApp() {
         mapSetupServer={mapSetupServer}
         onEnableMap={() => persistMapConsent('enabled')}
         onSkipMap={() => persistMapConsent('disabled')}
+        mapCoreProgress={mapCoreProgress}
+        mapCoreStatus={mapCoreStatus}
       />
     </div>
   );

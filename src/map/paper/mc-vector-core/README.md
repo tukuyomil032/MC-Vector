@@ -18,10 +18,14 @@ an explicit `not_loaded` response when a requested chunk is unavailable.
 ## Build
 
 ```bash
-./gradlew clean test jar
+./gradlew --no-daemon clean test jar -PcoreVersion=2.0.63
 ```
 
-The output artifact is `build/libs/mc-vector-core.jar`.
+Release-like builds require `-PcoreVersion=X.Y.Z` and produce
+`build/libs/mc-vector-core-X.Y.Z.jar`. The repository release workflow validates
+that the generated `plugin.yml` version, protocol metadata, SHA-256 sidecar,
+and manifest all use the same app version. Local development may omit the
+property and uses the development version `0.1.0`.
 
 The supported API target is Paper 1.21.x and the plugin is compiled for Java
 21. The Gradle Wrapper pins Gradle 9.6.1 so the build does not depend on a

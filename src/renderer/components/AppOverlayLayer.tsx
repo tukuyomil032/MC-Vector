@@ -4,6 +4,10 @@ import MapSetupModal from '../../map/components/MapSetupModal';
 import type { UpdatePromptState } from '../hooks/use-app-updater';
 import type { PendingServerEula } from '../hooks/use-server-eula-gate';
 import type { MinecraftServer } from '../shared/server declaration';
+import type {
+  MapCoreArtifactProgressEvent,
+  MapCoreArtifactStatus,
+} from '../../map/state/map-types';
 import AddServerModal from './AddServerModal';
 import AppDownloadToast from './AppDownloadToast';
 import AppUpdateModal from './AppUpdateModal';
@@ -38,6 +42,8 @@ interface AppOverlayLayerProps {
   mapSetupServer: MinecraftServer | null;
   onEnableMap: () => Promise<void>;
   onSkipMap: () => Promise<void>;
+  mapCoreProgress: MapCoreArtifactProgressEvent | null;
+  mapCoreStatus: MapCoreArtifactStatus | null;
 }
 
 export default function AppOverlayLayer({
@@ -62,6 +68,8 @@ export default function AppOverlayLayer({
   mapSetupServer,
   onEnableMap,
   onSkipMap,
+  mapCoreProgress,
+  mapCoreStatus,
 }: AppOverlayLayerProps) {
   return (
     <>
@@ -94,7 +102,13 @@ export default function AppOverlayLayer({
         onInstall={onInstallUpdate}
       />
       <ServerEulaModal pending={pendingEula} onAccept={onAcceptEula} onCancel={onCancelEula} />
-      <MapSetupModal server={mapSetupServer} onEnable={onEnableMap} onSkip={onSkipMap} />
+      <MapSetupModal
+        server={mapSetupServer}
+        onEnable={onEnableMap}
+        onSkip={onSkipMap}
+        coreProgress={mapCoreProgress}
+        coreStatus={mapCoreStatus}
+      />
     </>
   );
 }
