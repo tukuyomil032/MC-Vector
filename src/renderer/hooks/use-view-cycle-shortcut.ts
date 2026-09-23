@@ -9,6 +9,7 @@ const TAB_CYCLE: AppView[] = [
   'plugins',
   'backups',
   'properties',
+  'map',
   'general-settings',
   'proxy',
 ];

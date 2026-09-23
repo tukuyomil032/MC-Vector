@@ -3,6 +3,7 @@ import {
   iconConsole,
   iconDashboard,
   iconFiles,
+  iconMap,
   iconPlugins,
   iconProperties,
   iconProxy,
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItemConfig[] = [
   { view: 'plugins', labelKey: 'nav.pluginsMods', iconSrc: iconPlugins },
   { view: 'backups', labelKey: 'nav.backups', iconSrc: iconBackups },
   { view: 'properties', labelKey: 'nav.properties', iconSrc: iconProperties },
+  { view: 'map', labelKey: 'nav.map', iconSrc: iconMap },
   { view: 'general-settings', labelKey: 'nav.generalSettings', iconSrc: iconSettings },
   {
     view: 'proxy',

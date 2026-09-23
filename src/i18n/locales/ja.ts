@@ -219,6 +219,50 @@ export const ja: TranslationDictionary = {
     },
   },
 
+  map: {
+    title: 'Map',
+    subtitle: 'Dynmap互換地形レンダラーの診断',
+    status: {
+      bridge: 'Coreブリッジ',
+      terrain: '地形',
+      renderer: 'レンダラー',
+      cache: 'タイルキャッシュ',
+      source: 'ソース',
+      chunks: 'チャンク',
+    },
+    states: {
+      queued: '待機中',
+      rendering: '描画中',
+      ready: '準備完了',
+      empty: '空',
+      failed: '失敗',
+      retryable: '再試行可能',
+      cancelled: 'キャンセル済み',
+      blocked: '停止中',
+    },
+    reasons: {
+      rendererNotConnected: '検証済みレンダラーが接続されていません。',
+      bridgeNotConnected: 'Paperブリッジが接続されていません。',
+      notLoaded: '要求したチャンクがロードされていません。',
+      worldUnavailable: '要求したワールドを利用できません。',
+      queueFull: '描画キューが満杯です。',
+      timeout: 'スナップショット要求がタイムアウトしました。',
+      invalidSnapshot: 'スナップショットが不正です。',
+      missingAsset: '必要なMinecraftアセットがありません。',
+      malformedAnvil: '保存済みAnvilデータが壊れています。',
+      unsupportedVersion: 'このMinecraftバージョンは未対応です。',
+      checksumMismatch: 'キャッシュ済みアセットのチェックサム検証に失敗しました。',
+      cacheCorrupt: 'キャッシュ済みタイルが壊れているか信頼できません。',
+      noGeneratedTerrain: 'この範囲から生成済み地形が返されませんでした。',
+    },
+    blockedTitle: '地形描画はまだ利用できません',
+    blockedDescription:
+      'Coreブリッジの接続状態とレンダラーの準備状態は別々に表示しています。検証済みレンダラーと有効なデータソースが接続するまで、地形タイルを成功扱いしません。',
+    diagnostics: 'レンダラー診断',
+    refresh: '診断を更新',
+    noServer: 'サーバーを選択するとMapレンダラーを確認できます。',
+  },
+
   console: {
     actions: {
       find: '検索',
@@ -673,6 +717,7 @@ export const ja: TranslationDictionary = {
     files: 'ファイル',
     pluginsMods: 'プラグイン / Mod',
     backups: 'バックアップ',
+    map: 'Map',
     properties: 'プロパティ',
     generalSettings: '全般設定',
     proxyNetwork: 'プロキシネットワーク',
