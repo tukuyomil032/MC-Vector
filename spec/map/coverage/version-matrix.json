@@ -5,6 +5,41 @@
     "maximum": "26.3",
     "edition": "java"
   },
+  "snapshotDate": "2026-09-23",
+  "officialManifestSnapshot": {
+    "source": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+    "retrievedDate": "2026-09-23",
+    "rawArchive": "mojang-version-manifest-2026-09-23.json.gz",
+    "rawManifestSha256": "6ea1a62a6df711ed21ae74696566b7407ec537ea363ed6eba85c13a1278f0b3f",
+    "rawManifestByteLength": 276870,
+    "compressedArchiveSha256": "26e6d78a9f9fa21bc375148cc501eb86f55be950870abf3764544c26cacc4440",
+    "releaseSetFile": "mojang-version-release-set-2026-09-23.json",
+    "releaseSetSha256": "3dd6e43804c8fb3e89bdbc38bc2e80480018096ec776be00af2921208f8035d9",
+    "stableReleaseCount": 48
+  },
+  "latestStableReleaseAtSnapshot": {
+    "id": "26.3",
+    "releaseDate": "2026-09-15",
+    "officialAnnouncement": "https://www.minecraft.net/en-us/article/minecraft-java-edition-26-3"
+  },
+  "paperVersionListingSnapshot": {
+    "auditedAt": "2026-09-23",
+    "source": "https://fill.papermc.io/v3/projects/paper",
+    "listedExactMinecraftVersions": [
+      "1.14", "1.14.1", "1.14.2", "1.14.3", "1.14.4",
+      "1.15", "1.15.1", "1.15.2",
+      "1.16.1", "1.16.2", "1.16.3", "1.16.4", "1.16.5",
+      "1.17", "1.17.1",
+      "1.18", "1.18.1", "1.18.2",
+      "1.19", "1.19.1", "1.19.2", "1.19.3", "1.19.4",
+      "1.20", "1.20.1", "1.20.2", "1.20.4", "1.20.5", "1.20.6",
+      "1.21", "1.21.1", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11",
+      "26.1.1", "26.1.2", "26.2", "26.3"
+    ],
+    "exactMinecraftVersionsNotListed": ["1.16", "1.20.3", "1.21.2", "26.1"],
+    "buildAndArtifactDigestsVerified": false,
+    "note": "Project version listing is not proof that a stable build or downloadable JAR exists for every listed version. Resolve build channel and artifact SHA-256 in the version-specific Paper phase."
+  },
   "source": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
   "generatedBy": "scripts/fetch-map-version-metadata.mjs",
   "status": "metadata_cataloged",

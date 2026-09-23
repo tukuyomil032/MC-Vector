@@ -1,11 +1,28 @@
 # P-026: WorldXZ/Iso tile geometry and zoom pyramid
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-026",
+  "kind": "common",
+  "document": "phases/phase-026-tile-geometry-pyramid.md",
+  "dependsOn": [
+    "P-009",
+    "P-011",
+    "P-025"
+  ],
+  "commitMessage": "feat: implement map tile geometry and zoom pyramid"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: Dynmap tile/perspective bounds plus MC-Vector zoom 0..8 contract。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: version/world/zoom tile coordinates, requested chunks and adjacent continuity。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 009,011,025。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 

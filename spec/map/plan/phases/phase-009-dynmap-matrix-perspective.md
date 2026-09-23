@@ -1,11 +1,27 @@
 # P-009: Matrix/vector and HD perspective transforms
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-009",
+  "kind": "common",
+  "document": "phases/phase-009-dynmap-matrix-perspective.md",
+  "dependsOn": [
+    "P-004",
+    "P-006"
+  ],
+  "commitMessage": "feat: port dynmap matrix and perspective transforms"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: Matrix3D, Vector3D, HDPerspective, IsoHDPerspective, HDPerspectiveState。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: operation-order-compatible transform/projection/ray setup and exact tile bounds。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 004,006。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 

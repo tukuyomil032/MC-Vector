@@ -1,11 +1,59 @@
 # P-034: Warning-clean Rust and exhaustive CI matrix
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-034",
+  "kind": "common",
+  "document": "phases/phase-034-ci-warning-quality.md",
+  "dependsOn": [
+    "P-000",
+    "P-001",
+    "P-002",
+    "P-003",
+    "P-004",
+    "P-005",
+    "P-006",
+    "P-007",
+    "P-008",
+    "P-009",
+    "P-010",
+    "P-011",
+    "P-012",
+    "P-013",
+    "P-014",
+    "P-015",
+    "P-016",
+    "P-017",
+    "P-018",
+    "P-019",
+    "P-020",
+    "P-021",
+    "P-022",
+    "P-023",
+    "P-024",
+    "P-025",
+    "P-026",
+    "P-027",
+    "P-028",
+    "P-029",
+    "P-030",
+    "P-031",
+    "P-032",
+    "P-033"
+  ],
+  "commitMessage": "ci: enforce map renderer coverage matrix"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: Cargo workspace, Java/Gradle harness, TypeScript scripts and catalogs。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: reproducible CI gates derived from source/version manifests。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 000-033。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 

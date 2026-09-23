@@ -1,8 +1,43 @@
-# V-26.3-reference-and-parity: 26.3 Java reference and pixel parity
+# V-26.3-reference-and-parity: 26.3 version-delta Java reference and pixel parity
+
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "V-26.3-reference-and-parity",
+  "kind": "version",
+  "document": "phases/versions/26.3/reference-and-parity.md",
+  "dependsOn": [
+    "P-002",
+    "P-004",
+    "P-009",
+    "P-010",
+    "P-011",
+    "P-012",
+    "P-013",
+    "P-014",
+    "P-015",
+    "P-016",
+    "P-017",
+    "P-018",
+    "P-019",
+    "P-020",
+    "P-021",
+    "P-022",
+    "P-023",
+    "V-26.3-anvil",
+    "V-26.3-assets"
+  ],
+  "commitMessage": "test: verify dynmap parity for minecraft 26.3"
+}
+```
 
 ## exact version identity
 
 - 対象はこのrelease一件だけ。family代表・隣接patchのpassで代用しない。
+- 直前stable release: 26.2
+- Required delta reports: assets=`spec/map/evidence/version-deltas/26.3/assets.json`, Anvil=`spec/map/evidence/version-deltas/26.3/anvil.json`, Dynmap oracle=`spec/map/evidence/version-deltas/26.3/dynmap-oracle.json`, Dynmap source delta=`spec/map/evidence/version-deltas/26.3/dynmap-source-delta.json`, Paper=`spec/map/evidence/version-deltas/26.3/paper.json`, parity=`spec/map/evidence/version-deltas/26.3/parity.json`.
 - current version matrix record:
 
 | 項目 | exact matrix value |
@@ -13,24 +48,30 @@
 | server JAR | https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar; SHA-1 33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c; 62294556 bytes |
 | asset index | id 34; SHA-1 32a06dd28a0a8a981f4a1dffbdb3931f3075ca6c; 597035 bytes; https://piston-meta.mojang.com/v1/packages/32a06dd28a0a8a981f4a1dffbdb3931f3075ca6c/34.json |
 | DataVersion / minimum Java | 未取得。公式server artifactから抽出 / 25 |
+| Paper version catalog | exact version listed; build/channel/artifact unverified |
 | Paper build / jar SHA-256 | 未登録 / 未登録 |
 | Anvil / Paper snapshot / reference | 未登録 / 未登録 / 未登録 |
 | matrix state | metadata_verified; artifact not_downloaded |
 
 ## 目的と依存
 
-同じversion-bound assets/chunk/settingsをpinned Java rendererとRust rendererへ渡してtraceと画像を比較する。
+この版で追加/変更されたrenderer input/state、Dynmap version-specific source change、format-boundary fixtureについて対応済みJava referenceとRust outputを比較する。
 
-- 入力契約: 上表の公式release artifact、revision-pinned Dynmap reference、shared renderer contract。
+## データ差分と実装profileの判定
+
+このrelease固有のデータ差分は省略せず記録・fixture化する。一方、データfingerprintが違うことだけを理由にRust adapterを追加しない。既存汎用profileが全対象difference caseでexact-version reference parityを通せば共有し、既存profileで再現できないformat/API/render behavior gapが具体的traceで確認された場合だけ、phase graphに独立したadapter実装phaseを追加する。データfingerprint一致はno-delta判定の条件であり、implementation profile共有の唯一条件ではない。
+
+- 入力契約: 上表の公式release artifact、dynmap-oracle reportが選定したexact-version対応Dynmap source/build、shared renderer contract。
 - 依存: phases 002–006のversion/source/domain gateと、このstageが使うcore phase。
 - この文書作成時点では、matrix metadata verifiedはartifact取得・adapter実装・実Paper検証の代わりにならない。
 
 ## 個別作業
 
-1. ray origin/direction/step/hit/face/patch/UV/rotation/shade/light/alpha/projected pixelを固定schemaでcaptureする。
-2. reference trace/PNGをtest時に生成せず、capture source commit、input digest、toolchain、PNG hashを固定する。
-3. normalized RGBAをpixel単位比較する。許容差を広げて差分を隠さず、差異はsource symbolへ帰属させる。
-4. 当該versionで登録される全required symbols/resources/built-insにfixtureまたは根拠付き非適用記録を結びつける。
+1. `spec/map/evidence/version-deltas/26.3/assets.json`、`anvil.json`、`dynmap-oracle.json`、`dynmap-source-delta.json`で列挙された全renderer-visible/data/source changeをfixtureへ展開し、変更なしはhash-verified shared-profile fixtureへ割り当てる。
+2. 選定済みの`selected exact-version Dynmap source revision`でreference harnessをbuild・実行し、source capabilityとMinecraft releaseの適合を確認する。pinned baselineを無条件にreferenceに使わない。
+3. ray origin/direction/step/hit/face/patch/UV/rotation/shade/light/alpha/projected pixelとversion-specific resolution branchをcaptureする。
+4. reference trace/PNGはtest時に生成せず、capture source commit、input digest、exact client/server/asset digest、toolchain、PNG hashを固定する。
+5. normalized RGBAをpixel単位比較し、差異をspecific block/state/resource/Anvil profile/Dynmap source symbolへ帰属させる。release IDだけを変えたshared goldenは認めない。
 
 ## 失敗と検証
 

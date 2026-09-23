@@ -1,0 +1,4706 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "https://github.com/webbukkit/dynmap",
+  "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+  "sourceTreeSha1": "632ec26b9f995c8c7acaf525325b359a8a996175",
+  "generatedBy": "spec/map/plan/tools/materialize-builtin-dispatch-inventory.mjs",
+  "configurationSearch": {
+    "resourcePathRule": "tracked .txt files under */renderdata/ and tracked models_<integer>.txt files",
+    "scannedFileCount": 79,
+    "scannedFileSha256": "f6ad85c9e2287995fae6f8ef60a9f362b3acd67701cffe0c4b62a83554c1a479",
+    "matchingCustomBlockRecordCount": 204,
+    "files": [
+      {
+        "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+        "gitBlobSha1": "65b5122e1d002cce16365dd932684d0f02495c32",
+        "contentSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+        "matchedRecords": 29
+      },
+      {
+        "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+        "gitBlobSha1": "5292b24387fc46f80d9231e3c3e7a5ec638a836c",
+        "contentSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+        "matchedRecords": 59
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/AWWayofTime-models.txt",
+        "gitBlobSha1": "38c78c6bdf4e4d1d02042307027921f27e988b99",
+        "contentSha256": "cd1d7ab10cc60505e8a1eecd88d0ef36fd19edb9cf5002aa6333529f82c5ae9e",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/AWWayofTime-texture.txt",
+        "gitBlobSha1": "f06712f24941ac220b30c6aaa62ac92e1318ee98",
+        "contentSha256": "7e4fffb73d6f9cfad48979831930907a67e0670233c01d0cd037934db040f6bb",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioCraft-models.txt",
+        "gitBlobSha1": "0f96310979668b23b00ad8171965d965058a4181",
+        "contentSha256": "da6eaf9dd0ea19170990cda27180d139e61845dd224244f8ba2bbb877aa1b2f2",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioCraft-texture.txt",
+        "gitBlobSha1": "de675c80e95489067511e3ddb70fd8a237324179",
+        "contentSha256": "979425ca25ed678e63367f879b4cfc96d802c44daecd2b3a31a32fc02d173206",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioWoodsBoP-models.txt",
+        "gitBlobSha1": "5693d071efa53a4ffa438afff4b5f8c134d17ec4",
+        "contentSha256": "702c570dbb959f2dfb8499d1ae4867f9a48366db019743bb0886985fae85fbc4",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioWoodsBoP-texture.txt",
+        "gitBlobSha1": "19603ec489ad965daa5e66d96e54aa0f617a8073",
+        "contentSha256": "c89b2d25be008b9969de3669c066e1b70adc72b10df1c1c2d97c47d46cc5ac96",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioWoodsForestry-models.txt",
+        "gitBlobSha1": "36c1c2a28ad7b38124a2a1327d571a22ba9a1adf",
+        "contentSha256": "5eeb7025c978f5026b48ebc5e8fbe793edfaf96de68c1c0e1ac7574d8d598441",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioWoodsForestry-texture.txt",
+        "gitBlobSha1": "5f65e081b49a32f66d57bcf278d631f844c53dd2",
+        "contentSha256": "2e50124f14cb10c824522e097e439cfca1f193e40ac6eb391aae8d18bd40bcc0",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioWoodsNatura-models.txt",
+        "gitBlobSha1": "28f0c40a416c7dac051d9580300b4941b3f20eb7",
+        "contentSha256": "728b5ce6dc395b8c874bdcdc6a902543ab84c141bad2c5ff0f6436237fe95442",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiblioWoodsNatura-texture.txt",
+        "gitBlobSha1": "1a03aced2582dfc07280543d619773679b53c083",
+        "contentSha256": "506b369cdeac526c6f9b59befc45670825948510e394c6ea2b568199f5ad696a",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+        "gitBlobSha1": "6753ac732d8e72b985394b4f8c8f13424b28eca8",
+        "contentSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+        "matchedRecords": 15
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-texture.txt",
+        "gitBlobSha1": "a219b1be8fbbf19c798629e914b0001059ffc14b",
+        "contentSha256": "00a1802d7c1f02c98ef377d704fcdec4a46d67cdc502a40c11b8bb70cd37c0ab",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+        "gitBlobSha1": "8c49cebceb6a130a4b2e2e15f03e1190f0b2320f",
+        "contentSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+        "matchedRecords": 21
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-texture.txt",
+        "gitBlobSha1": "cc5ceed255c1dfd5bb2e4ba6d70f20a8fbf1106f",
+        "contentSha256": "0a19fb62fdf5fdb52437bf8f2ff7bc0bdbf306fdcb6a2731d9e09ce54e8a093e",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BuildCraft_Core-models.txt",
+        "gitBlobSha1": "19a8d63191b85a565f5f9ce63621dfb809fbef83",
+        "contentSha256": "6d55b1357d2387a94704100e6d373e39db2c322ecbd93cdf83c2266a4a976935",
+        "matchedRecords": 2
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BuildCraft_Core-texture.txt",
+        "gitBlobSha1": "a39a87e790126272625443d9871d1ab6c3388a35",
+        "contentSha256": "857a45123eb92dc44b076f5452ab918a21b6024cf4f8fdfa9a77f1cfb3929c00",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/CarpentersBlocks-models.txt",
+        "gitBlobSha1": "28b197b288842456ac8881f85a41175ad2568afa",
+        "contentSha256": "24590bf2958c9820d668a4f41a29b803538131c5d5e919e74534167ecccc68e2",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/CarpentersBlocks-texture.txt",
+        "gitBlobSha1": "62773869ff87182e75aa3bd839f6dd3e138076df",
+        "contentSha256": "3143146630730b3f5b4b6118e5a5cd67cf051f09a33cb66f9bc421688604dc70",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EE3-models.txt",
+        "gitBlobSha1": "f43d419d47cdc8f33bd53540208841e2247fc4df",
+        "contentSha256": "75bd9deebcf5921937e1cf29ab188ee9b245f9c43c163d1f790fd883ee063c58",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EE3-texture.txt",
+        "gitBlobSha1": "eab7c3653bab08814b17364c40ce89a1e64bd38a",
+        "contentSha256": "59c522c7e73e87f83006ca4fb129f965a273e63dcf519eee6804777e7ff1c57e",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EnderIO-models.txt",
+        "gitBlobSha1": "ddcc2006ffdc34b7fc8a324f4fa1da4b25c5eb62",
+        "contentSha256": "f727b0bcf4d740c8f2a9ca00c51a5e17e4d1e2f124135a1d18cb4865de63b319",
+        "matchedRecords": 4
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EnderIO-texture.txt",
+        "gitBlobSha1": "c5b86bcdc17463e7b5446ffd62e34b3438a787a3",
+        "contentSha256": "bd988df685716f987aabea42508e28484b1a0ee2b66632f0b8fadcfe846f33c9",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Forestry-models.txt",
+        "gitBlobSha1": "4601954c1ab2eaf22dbb01519349763b75aedb53",
+        "contentSha256": "88b46b7a292bc7787b97fbd42492b64da796964cc95820b974a6e5284872ce8b",
+        "matchedRecords": 3
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Forestry-texture.txt",
+        "gitBlobSha1": "1636e4a27ccfadb44ad2681056c625cb912275a2",
+        "contentSha256": "6205c1a48c59d260ea5c0a0d11c07daae03b6e0b58cb16a66d1e3d2e5911e2d2",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/HardcoreEnderExpansion-models.txt",
+        "gitBlobSha1": "db03b9cae0fbf91004f1e953638f0ae5dc18bae0",
+        "contentSha256": "caeb034d357e1e0dcca49c2fe420700577cd4d3a45fc872944518f18f8556bc3",
+        "matchedRecords": 1
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/HardcoreEnderExpansion-texture.txt",
+        "gitBlobSha1": "871819aa928370dfd514680afa3f7933a77728f5",
+        "contentSha256": "2b9dab6cabd08ced7008a41cb96b20a738482bf461056b66c2800a4ad30570c6",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IC2-models.txt",
+        "gitBlobSha1": "3696276f5a4a015f729ef1e5581df6a912dbdb3c",
+        "contentSha256": "6e5285b960e1b516e8aa09e569e4b4d07e36733c9c83d428fae17d7e4305481b",
+        "matchedRecords": 3
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IC2-texture.txt",
+        "gitBlobSha1": "4edde1917d4c7f9118214a0b5cc2981168708445",
+        "contentSha256": "72656d2c1b8aa3c3d1637eee91946a8cc9ee10a3d6da6f927894f5c326deb97c",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IronChest-models.txt",
+        "gitBlobSha1": "3333b5a7940dba8e46e6a6c2c938cb60085418c9",
+        "contentSha256": "c2ade66e80a7d44313842c1edb022f59ce435c64904f22d45b33f786938230bd",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IronChest-texture.txt",
+        "gitBlobSha1": "ee22b660541b0aab4f0ce574fb7b469ba5d4fff5",
+        "contentSha256": "0499da0010b870873fafbc2738d9d56b9ef3255c742cf91605c6921df3e3469e",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Mariculture-models.txt",
+        "gitBlobSha1": "b982aafb2592e5d36aedcea35cee4f91e0206b20",
+        "contentSha256": "66a3df17f0874be552922a013237b1aab7ba4da9a79a020a45939bad850af17b",
+        "matchedRecords": 4
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Mariculture-texture.txt",
+        "gitBlobSha1": "56b34a816fb5a506c09689b48bf68b9ecf8403fd",
+        "contentSha256": "4cb890424df9d8a2d54d5b183c987456bf33756cff8b37643d48b3e1aa0d0c89",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/MineFactoryReloaded-models.txt",
+        "gitBlobSha1": "90ab2d5894bfaf495749ea4b7a785e3ecda1cb34",
+        "contentSha256": "54034f5d9a01a82a7c2daf08db2f523bc0c689aacb4dcd2b188936a2b9f65c9a",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/MineFactoryReloaded-texture.txt",
+        "gitBlobSha1": "f13199861ddfc8b095576a51d1c4311c8661c66d",
+        "contentSha256": "da0344deef1fd97e0081620f98d28d1e85e369d10185cead396106bc08fe3e81",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+        "gitBlobSha1": "0e1c83878bd08aec6112c7590da77034250183a5",
+        "contentSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+        "matchedRecords": 34
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-texture.txt",
+        "gitBlobSha1": "471c156e9f37e7bd8d4fc3d10001a405dd657075",
+        "contentSha256": "f34f2f9201d00d5d02e0d58a160b6d8c178baa7c1ced15d3537000064afc02f4",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/NetherOres-texture.txt",
+        "gitBlobSha1": "212639d8c2ce544f98785752e57684a0b3fc9122",
+        "contentSha256": "407ec5c0b350f5bda2f51ad98444a2ea612b2c073c606a9cbe51ad0cfad6089f",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ObsidiPlates-models.txt",
+        "gitBlobSha1": "7fae54e7c6570ac5d57c18cdda17b8fafb6e8e4b",
+        "contentSha256": "78e50cccebb951443162a38f52f95322fdf8d4514c893586810c8a2c10353abe",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ObsidiPlates-texture.txt",
+        "gitBlobSha1": "dd7c93be4dc021e3e72cfc967b3c5a3cad35e05c",
+        "contentSha256": "f9417a770d2b14346912dd611a4af71cb658025e409a62f096bbcea7f5ef5c32",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/OpenBlocks-models.txt",
+        "gitBlobSha1": "8a50f308d0d86d00e615627db296dd8b631d06ac",
+        "contentSha256": "8d2abe0522c1d296750529effa1df08f859688056dc1007252e7134624e5f659",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/OpenBlocks-texture.txt",
+        "gitBlobSha1": "6372c126598ef647b9606fa92740e30de62d110e",
+        "contentSha256": "e65915e5ae90bccb2e63dc07ae4aee560063868f832e0ccc31d37357d222b4a6",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/PaintedStone-texture.txt",
+        "gitBlobSha1": "58b59c2b63d4c003da7f12f899ffe6100bbe55ef",
+        "contentSha256": "1440b64085022536cd3124fa04aa5742f9fa4ac6fdb6188ad9f5219d1a3985ae",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ProjRed_Exploration-models.txt",
+        "gitBlobSha1": "37a4187f4b46128d7f631d01d6a1e1a05b427b29",
+        "contentSha256": "6e44275ff9891b10d8234bbf8d98025300653a74c2aa1064d30aa1bea63a6cef",
+        "matchedRecords": 1
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ProjRed_Exploration-texture.txt",
+        "gitBlobSha1": "0fefc4d92a6e788d5d9c8eb0b83a6561dcc29c43",
+        "contentSha256": "a718d1cd2040c6315b8fe7768a1b7177a1ecdf816df2d3335258fc856bdafea5",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ProjRed_Illumination-texture.txt",
+        "gitBlobSha1": "5da7a8d299b06a77b5dde53313a17c92259540f6",
+        "contentSha256": "9c059b81d0152f595da8088ccf38d02bc3dcfa836012bfdca87a6405c463b737",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/RIO-texture.txt",
+        "gitBlobSha1": "4b27d9f04904cbb85fcfbe51f3aceca0517110fb",
+        "contentSha256": "2a13b853a72337790be6a981b63f75905838999682b9282e8b260f2074f5a61f",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+        "gitBlobSha1": "bff64e8ce4c7c3b360f99bf0d6978f1624f87ce7",
+        "contentSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+        "matchedRecords": 21
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-texture.txt",
+        "gitBlobSha1": "df33505f878c1a34621b11ef6d85382b94265516",
+        "contentSha256": "90927d04eb170f2d5556c001ce540dad9573343e1181ecd76b265bb348591a31",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/RandomThings-models.txt",
+        "gitBlobSha1": "987577e4fe04e2d41b0b369861cd29732f705997",
+        "contentSha256": "5ca0196bff007665df1b275375060428510f8fec9833429235eaa645b4d107d7",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/RandomThings-texture.txt",
+        "gitBlobSha1": "e6d372155fc0af835a6e7172dfeb8337692ef440",
+        "contentSha256": "92f92607efafaff25ec1c7cecd8fbab09bc9281bd150d081dfec8cb85928e898",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/RedLogic-models.txt",
+        "gitBlobSha1": "d5f3b50e0c9cb2ebf24a427bbd8bbe8f59ca14b4",
+        "contentSha256": "e7aa8d9502b149078dafa9fa91c5df2dd21cee4aab2dc0a4b05862a07067bd4b",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/RedLogic-texture.txt",
+        "gitBlobSha1": "2e20a12cc5968266b0dab3b9417ec6bd4a3bb46d",
+        "contentSha256": "496b34f3b65ea50686bc031b92d0cc994d229d0d1d21fb59673854e68b4fbfcd",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/RedstoneArsenal-texture.txt",
+        "gitBlobSha1": "2bd33b73de2f1f6cc3034d33113b1b3d0774fccb",
+        "contentSha256": "08bcb42e259b4deba18526435fe40b166f9220fae786e7c0c348aeea1c433251",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Steamcraft-models.txt",
+        "gitBlobSha1": "17eea1ce77c4a9cf1ea32921524337feb7f0d77d",
+        "contentSha256": "bff979b1928e31147ffdc811ce955363560e6b6f5c4c275ee70464a82fcc2e03",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Steamcraft-texture.txt",
+        "gitBlobSha1": "1444a03b5dca87c76d7e19fefd6fe821d85ac3cb",
+        "contentSha256": "5586ca172f88b002eb11a09183148241f991b4b1617afdfa9d6f2bfbe63c1f33",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TConstruct-models.txt",
+        "gitBlobSha1": "6d69fa337bd8b5daa3e4a229bf01428a6b8072d0",
+        "contentSha256": "49ef418e5537c2d7c05f2939bd53f5e3c7c9efea09b385456b455b3c08b74fd6",
+        "matchedRecords": 1
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TConstruct-texture.txt",
+        "gitBlobSha1": "b4b6f5d222b3d83c7b1c39f39c755f4a56b3d83f",
+        "contentSha256": "d22363f94e61d7a5197d5717d19370dd0cfa180a5e404068b13316997d60095b",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TMechworks-models.txt",
+        "gitBlobSha1": "75a40f314d01eca8cbeb521e76fa0fd42151de3d",
+        "contentSha256": "ef9e33686cfb616e52c623ed65de0644185141e364a03888cd0ad87edea192e3",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TMechworks-texture.txt",
+        "gitBlobSha1": "940594c695a62e3bedcc88939c781771b96c96e1",
+        "contentSha256": "6fc7c1621e58b0deff67a87c21d40a815332c386d7872298c53f6d517622c073",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Thaumcraft-models.txt",
+        "gitBlobSha1": "7af7b732a93d3f8781b360931a46b52962a26d67",
+        "contentSha256": "a7ae8ec479abb72d28bb2236b07271308888a03f87230f0e03d217d171b7d7c2",
+        "matchedRecords": 1
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Thaumcraft-texture.txt",
+        "gitBlobSha1": "4c3bbfd641575a85f59c24d74efed8acf6876dee",
+        "contentSha256": "f9c709e44fd7266992ae9c31d73aaff015e41ae3d02cc0cdbd8aec6dca500e30",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Translocator-texture.txt",
+        "gitBlobSha1": "23e3b3f757f948028256bb35a7e21d21164b048c",
+        "contentSha256": "bba8d8223ac9352fd3871db0cffa1a4e0c39f68ff08033858b7253fdb5f59140",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TwilightForest-models.txt",
+        "gitBlobSha1": "e08793808b15fb4ebe92a46c6abc2128e1858d50",
+        "contentSha256": "9c154b6f31ddc1639a47abfd3796db53f1205b5553432ee45987b8d16da898eb",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TwilightForest-texture.txt",
+        "gitBlobSha1": "03eb92fdc793a433200d125b8e143e6dc5f829ed",
+        "contentSha256": "36ea6e85f02d3155dbeb17d46529630b0eaca7e4440f3bf16562fac16d294210",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/advancedgenetics-models.txt",
+        "gitBlobSha1": "fc1cbfae609695ddd95509b098376b093ae0d6ef",
+        "contentSha256": "42b2ee572a545ac4c45c8a6f6288002809ed3de18a23e1cea079a1391133c54c",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/advancedgenetics-texture.txt",
+        "gitBlobSha1": "876c28fb8340b754744f19efb15a14a7442c6b29",
+        "contentSha256": "d0a75120b056ead3ab4c2954d05e735aeda59373598611f6a73ffba35344b315",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ae2tech-texture.txt",
+        "gitBlobSha1": "a091e6d45dd745aa1a7839789fa61125f889b481",
+        "contentSha256": "89ae7aad540210e34434a710a6d0430b52457577c4f84cba47bef8657b3950e6",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/appliedenergistics2-models.txt",
+        "gitBlobSha1": "57ebfd97924cb86f1593194f261bbc7a0ed6f823",
+        "contentSha256": "4eb56296b95b757a5bdf6d5e7e82587f51059f8db13494fa4d39e667c4a84c15",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/appliedenergistics2-texture.txt",
+        "gitBlobSha1": "965d2a95a6ccec441978637aebb1f38397c193f8",
+        "contentSha256": "fb185fe60a8224894a3870b343a27b0877746046a578e2b2c85583a834652fe5",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/bluepower-models.txt",
+        "gitBlobSha1": "e96deffeff4245dcfc92edc25d6872a9a13d496d",
+        "contentSha256": "00b9d6691cd32f29cd3160a5b1365d0b117b967b6be39766fa15781d93ca8424",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/bluepower-texture.txt",
+        "gitBlobSha1": "6b0c7aa33eb0823734736a9a330a08f586436d1a",
+        "contentSha256": "b934f1b1032c3066f5a95fcde0897a0d34ecd9c7c63a0a802207df8ef18712b7",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/harvestcraft-models.txt",
+        "gitBlobSha1": "5df720f9da9d293232d0262847bdee915ce76d0d",
+        "contentSha256": "85e77b2084ba758201e3e87dbcd8908b9282391dc6deed9338e1ae298e211371",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/harvestcraft-texture.txt",
+        "gitBlobSha1": "f2e0fac0f17863d5b8e94b39029d770600545d1d",
+        "contentSha256": "23516e5a2cb5d60d81ba86250e165a9b49b6caa81992bc4166469c89f7261b9e",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/totemic-models.txt",
+        "gitBlobSha1": "41843f2b71be9f8a74cf66d6dcd3e4956bedcfe2",
+        "contentSha256": "a8de42f09ad1f48c5b8c5f683995600225cbbbc73a9324ed1756d46f92f68d3a",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/totemic-texture.txt",
+        "gitBlobSha1": "d217fa089f02fcc7aa7e304c73098888e3c2b3bb",
+        "contentSha256": "4d6d9d0e68907e527d64741cf7b4db98d247cf868a67676fe0baec08fa02876e",
+        "matchedRecords": 0
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-models.txt",
+        "gitBlobSha1": "5e03deef526bdf7011637e3f82f9a1133d3def72",
+        "contentSha256": "6aa0bad0a084f7126608198d9d75421c745ce544f080f214e301e3756e6ef584",
+        "matchedRecords": 5
+      },
+      {
+        "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-texture.txt",
+        "gitBlobSha1": "807e264fe1a2193ea0e29ec965f6d16b3c39c7c5",
+        "contentSha256": "3fec58670bda71465a76529046a788b881bbae985f430eee9a564f765bf87adf",
+        "matchedRecords": 0
+      }
+    ]
+  },
+  "dynamicDispatch": {
+    "routeId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+    "configurationKey": "customblock:class",
+    "parserSymbolId": "method:type:org.dynmap.hdmap.HDBlockModels#loadModelFile(InputStream,String,ConfigurationNode,DynmapCore,String)",
+    "parserSignature": "org.dynmap.hdmap.HDBlockModels#loadModelFile(InputStream,String,ConfigurationNode,DynmapCore,String)->void",
+    "parserSourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java",
+    "parserStartLine": 336,
+    "parserEndLine": 1206,
+    "classLoaderSymbolId": "constructor:type:org.dynmap.hdmap.CustomBlockModel#%3cinit%3e(DynmapBlockState,BitSet,String,Map%3cString%2c%20String%3e,String)",
+    "classLoaderSourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CustomBlockModel.java",
+    "classLoaderLine": 18,
+    "classLoaderCall": "Class.forName",
+    "missingStaticDefinitionsRemainDynamicallyReachable": true
+  },
+  "classes": [
+    {
+      "class": "BoxRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java",
+      "sourceGitBlobSha1": "7349cc54de59aeb70a374884a2acfa01409c8d58",
+      "sourceContentSha256": "2393cfeeaf7bb9caf64d491dc85df7ff30c7ece90a2ad13c003e2b5c434987b0",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "BoxStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java",
+      "sourceGitBlobSha1": "70052ebbb8b18c2a8198283c5db7db8f044ff012",
+      "sourceContentSha256": "7f353d500541f6c4bf93821ad10e8e2bd4cf509655baa7540d5d17c91d05ca0b",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-300321f947764ed2",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1440,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "5ffaebf65dae7b26fba3347bf90006413443df48f7977f392739e00027502bf9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "red_mushroom_block",
+            "brown_mushroom_block",
+            "mushroom_stem"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "ChestRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java",
+      "sourceGitBlobSha1": "23aff683ecedff59989894890154cfdb70fc9e63",
+      "sourceContentSha256": "31ceeeb0771544b5b10f9adbc08d155075f2d0a8c62c668f1c0fc62a7515d07d",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-fc4ec5fa040578c3",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 909,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "d12f932c17624168dc9dbdc477d4bd574341a39b99e2fa09734d1a98dc9224d9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "chest",
+            "trapped_chest"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-6ba7bc9096d0cde8",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 949,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "12ab2b1704395f81c16906aa717ece26563e58c91fe671ce34793b0d90427133",
+          "versionGuard": null,
+          "blockSelectors": [
+            "ender_chest"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "doublechest"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "ChestStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java",
+      "sourceGitBlobSha1": "57f37576bd04dfbfc51091609b28d982b95b56fb",
+      "sourceContentSha256": "181b5b87165b5a125e89fab113f226f7aa816e46a02078a0a29236ced9309d58",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-2ce5cbf1a397e848",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 981,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "5914e98f1716458d33f82ddc9369a35613865f53b4e04ec1d8751f4aaa17be92",
+          "versionGuard": null,
+          "blockSelectors": [
+            "chest",
+            "trapped_chest"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "doublechest"
+          ]
+        },
+        {
+          "evidenceId": "REG-340f7c551a92dc41",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1010,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "14d41bf763e839671602595a2d759d9585b2584926f3540adb0ddb1515739197",
+          "versionGuard": null,
+          "blockSelectors": [
+            "ender_chest"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "doublechest"
+          ]
+        },
+        {
+          "evidenceId": "REG-8e0a4c156be0e142",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 4732,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "d53e5126731772a1e8eb3be2b8a26fd78aa8043727191c24180ebd79d1dd8115",
+          "versionGuard": "1.21.9-",
+          "blockSelectors": [
+            "copper_chest",
+            "exposed_copper_chest",
+            "weathered_copper_chest",
+            "oxidized_copper_chest",
+            "waxed_copper_chest",
+            "waxed_exposed_copper_chest",
+            "waxed_weathered_copper_chest",
+            "waxed_oxidized_copper_chest"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "doublechest"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "CopyStairBlockRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java",
+      "sourceGitBlobSha1": "d80419b1bdcab49ff4591a395bb4cd4373cf0a7e",
+      "sourceContentSha256": "5e5f610e072f7fd3f52f7c756318a480adc7195f990a40fff4f805f4d5a8b871",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "CTMVertTextureRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java",
+      "sourceGitBlobSha1": "d641fee1964507fb61661fee2efb97f8a2d5dd17",
+      "sourceContentSha256": "a259832639512541320d66b247f98f784f6b003bf58faef38ec5cc1a3650967e",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-042ef0f986d23185",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 249,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "0d9755b446dc127409652acf7f13c3bc13ac9aba09bdc28da0a0a4bf69ae78a7",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.glass"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "CuboidRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java",
+      "sourceGitBlobSha1": "db2f3be21ff15019f57ad4d3b3aec43c5b39446f",
+      "sourceContentSha256": "a1d79b426b1a0a0db45eb6899a8dc3558838d3b1ca28ce868fa18111535c3750",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-5f0fa4a1cc0a59af",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1382,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "bcd8d98ce83a6b1fddad593a34aea25ddd017856830eec633754726b33c8c645",
+          "versionGuard": null,
+          "blockSelectors": [
+            "turtle_egg"
+          ],
+          "legacyDataSelectors": [
+            "0",
+            "1",
+            "2"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0"
+          ]
+        },
+        {
+          "evidenceId": "REG-1c863b3aa5e9c603",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1384,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "69e4a953937c8fc685868265da3a39f0fcad2fc0f564d20e2a0e2fe81d6651b4",
+          "versionGuard": null,
+          "blockSelectors": [
+            "turtle_egg"
+          ],
+          "legacyDataSelectors": [
+            "3",
+            "4",
+            "5"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1"
+          ]
+        },
+        {
+          "evidenceId": "REG-b8723affae7faad0",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1386,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "3eab86fd10536d64f7f26da983f80e478fffcaee1c7a6650d0f7d71985499d8b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "turtle_egg"
+          ],
+          "legacyDataSelectors": [
+            "6",
+            "7",
+            "8"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1",
+            "cuboid2"
+          ]
+        },
+        {
+          "evidenceId": "REG-f1e81120bc236000",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1388,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "72a914078f06f67fe89435047e4898fae635515e01e8fe7acbe3e3af0778f846",
+          "versionGuard": null,
+          "blockSelectors": [
+            "turtle_egg"
+          ],
+          "legacyDataSelectors": [
+            "9",
+            "10",
+            "11"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1",
+            "cuboid2",
+            "cuboid3"
+          ]
+        },
+        {
+          "evidenceId": "REG-b7a0cada690561ba",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1418,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "3b63ca55b5b1e72c23820480e840e80ba4f44dca4a3a6944b570ed1740f99921",
+          "versionGuard": null,
+          "blockSelectors": [
+            "sea_pickle"
+          ],
+          "legacyDataSelectors": [
+            "0",
+            "1"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0"
+          ]
+        },
+        {
+          "evidenceId": "REG-0e3aa58a5a4a2bac",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1420,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "eb8d99aea4df6afb8fe851ed46e8178d24e1ac7f92a54fcf3de830bbf095a12e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "sea_pickle"
+          ],
+          "legacyDataSelectors": [
+            "2",
+            "3"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1"
+          ]
+        },
+        {
+          "evidenceId": "REG-d5d439c72952b2c0",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1422,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "873457e9f7a5443ee68ac88ccd89f301f4da89d7f28a72abaa96267531f051fa",
+          "versionGuard": null,
+          "blockSelectors": [
+            "sea_pickle"
+          ],
+          "legacyDataSelectors": [
+            "4",
+            "5"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1",
+            "cuboid2"
+          ]
+        },
+        {
+          "evidenceId": "REG-a462b6dae2c9b998",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1424,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "97a4f76c866f8b3552d51876a227a66921dba234efbe29a2d21ca165a6c64a63",
+          "versionGuard": null,
+          "blockSelectors": [
+            "sea_pickle"
+          ],
+          "legacyDataSelectors": [
+            "6",
+            "7"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1",
+            "cuboid2",
+            "cuboid3"
+          ]
+        },
+        {
+          "evidenceId": "REG-bcd914a1a0e90277",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1443,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "a727d22c2ad6e63bd49f2f4d332999bfd4b63febea7a79f1b4e69da70e974999",
+          "versionGuard": null,
+          "blockSelectors": [
+            "white_banner",
+            "orange_banner",
+            "magenta_banner",
+            "light_blue_banner",
+            "yellow_banner",
+            "lime_banner",
+            "pink_banner",
+            "gray_banner",
+            "light_gray_banner",
+            "cyan_banner",
+            "purple_banner",
+            "blue_banner",
+            "brown_banner",
+            "green_banner",
+            "red_banner",
+            "black_banner"
+          ],
+          "legacyDataSelectors": [
+            "0-15"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1",
+            "cuboid2",
+            "rotlist"
+          ]
+        },
+        {
+          "evidenceId": "REG-d5c3bf5a1848c70a",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1444,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "71309659d1643929b8b84d4476b7056213c699afbcb3f6cba40b632f986ce42e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "white_wall_banner",
+            "orange_wall_banner",
+            "magenta_wall_banner",
+            "light_blue_wall_banner",
+            "yellow_wall_banner",
+            "lime_wall_banner",
+            "pink_wall_banner",
+            "gray_wall_banner",
+            "light_gray_wall_banner",
+            "cyan_wall_banner",
+            "purple_wall_banner",
+            "blue_wall_banner",
+            "brown_wall_banner",
+            "green_wall_banner",
+            "red_wall_banner",
+            "black_wall_banner"
+          ],
+          "legacyDataSelectors": [
+            "0-3"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "cuboid0",
+            "cuboid1",
+            "rotlist"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "DoorRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java",
+      "sourceGitBlobSha1": "d29b9b08fa4af032287752ce714962a898ab2b6a",
+      "sourceContentSha256": "fc2ac367695e75ac69d74eed84a8c9ac4866d0676ba8b2485c6749b9395a3af7",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-e6852691ab381453",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 467,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "380ff5dae37cb28f3f4e502b287f3099d98952d7a40462503b5b5887391d9463",
+          "versionGuard": null,
+          "blockSelectors": [
+            "wooden_door",
+            "iron_door"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-6411478d8ff5bf56",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1194,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "5773c85a30eba8ac53b1b3ad78ad97d6ddf7841bb587f62ca47eb2d6093db070",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "spruce_door",
+            "birch_door",
+            "jungle_door",
+            "acacia_door",
+            "dark_oak_door"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-2f6b0005170d8139",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IC2-models.txt",
+          "sourceLine": 167,
+          "sourceFileSha256": "6e5285b960e1b516e8aa09e569e4b4d07e36733c9c83d428fae17d7e4305481b",
+          "recordSha256": "17fe218205d466f4ffe4999923cba22ebaf408832282c2bae4d1bb8b85b735c6",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockDoorAlloy"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-04ff10cab0773326",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 41,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "e22554fb4fcd67c61d41d4abcf50492d37e14d2bfe5c9435f007fab6f9f3d2cd",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.redwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-1022804a678fe04a",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 44,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "6c3cb5e7e5d23cfc1baf6f0081371c73bd7dc25b749d38189b3f7a3de4cccf8f",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.eucalyptus"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-f21a178c36fc4563",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 47,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "9b2319f0655ddfeb058f413f44a9f071c5694f698e2cf01bc66280a8d052d1d9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.hopseed"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-fb4b2d009e81df7a",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 50,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "8188d7f68c87629caaa9ed01ea0f7e9f64e288f8c947167c092ee4b3d171a50a",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.sakura"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-5ec0a0d30585bbe5",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 53,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "8ea81b005da84542915b6f5358f25dbaf5c60618a0fa92d46ad2d465f8b91848",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.ghostwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-b0a87093f6f2bd4c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 56,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "7b671d3e1bdaf88abfac66bd3c463e1853e9ff838c156608e467d4de2043f3cc",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.bloodwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-0489ab12bccf1f8c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 59,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "53afabe109d9e4ccdcbd5fb5d891151f9dba62d3c62ccd60663aeeb99e6f9317",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%door.redwoodbark"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-afb90108946d062d",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Thaumcraft-models.txt",
+          "sourceLine": 95,
+          "sourceFileSha256": "a7ae8ec479abb72d28bb2236b07271308888a03f87230f0e03d217d171b7d7c2",
+          "recordSha256": "d8d9aea93be648f29fea771a2b9f72b0997301fa53de0f72dbde3c77730dc414",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockArcaneDoor"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-83b5b013a5f4096d",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-models.txt",
+          "sourceLine": 110,
+          "sourceFileSha256": "6aa0bad0a084f7126608198d9d75421c745ce544f080f214e301e3756e6ef584",
+          "recordSha256": "088c7fec4fcb512171646d1cf6dd4c691173f0dd41bb0b62847bafd657737ffa",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%rowanwooddoor"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-e277b1567a2e9bd5",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-models.txt",
+          "sourceLine": 113,
+          "sourceFileSha256": "6aa0bad0a084f7126608198d9d75421c745ce544f080f214e301e3756e6ef584",
+          "recordSha256": "1eee26b9125dd8dbd2a340359c5d2685ace7cb8c86a0485a265f84ef8ac427a7",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%alderwooddoor"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "DoorStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java",
+      "sourceGitBlobSha1": "8a5ae848e909ea74e998a0597430189e2fa4202a",
+      "sourceContentSha256": "2c6eb8f1f814773a3b3f7131bf07a422059bafeef867ceca7125ff131f8ba87f",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-ea0c51923faec04d",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 593,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "3c50f0bfc06885762b974aa9a522e46f163b3ce4d2ac02e5909c1c4de8c16c32",
+          "versionGuard": null,
+          "blockSelectors": [
+            "oak_door",
+            "iron_door"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-31b6b4a499230653",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1265,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "3d459a3cb4c37d2d840c3bf7fa0a39ed3159cecabf46a76398a7d549b7a75f5e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "spruce_door",
+            "birch_door",
+            "jungle_door",
+            "acacia_door",
+            "dark_oak_door"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-2ee657ff31855dcf",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1816,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "574af51589f5bd1a81b7840f208174f2dad0c217af47b28a022fbd36ccfc1e44",
+          "versionGuard": "1.16-",
+          "blockSelectors": [
+            "crimson_door",
+            "warped_door"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-bb1986a0340f66d4",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3458,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "ccd036ba5a36d96a6fcbe4776f9f72c645900b480fecb41eef0a07147e90af53",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%copper_door",
+            "%exposed_copper_door",
+            "%oxidized_copper_door",
+            "%weathered_copper_door"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-b5f98960bf29a16c",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3459,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "9b9a3121547387d378b909a49caf515e14f91a7ad98b6efac4c3a7a6c54ea5bf",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%waxed_copper_door",
+            "%waxed_exposed_copper_door",
+            "%waxed_oxidized_copper_door",
+            "%waxed_weathered_copper_door"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "FenceGateBlockRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java",
+      "sourceGitBlobSha1": "d7c868b92f72d002941ead4287a24932e4fbaecd",
+      "sourceContentSha256": "a86c77abb005e62ea76832d149438612640b92ac6e12c23a5b7a0e5bdfc4187a",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-0e7c1ab568fa2da0",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 743,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "e7de24c28488bf978ac45eea7a5573497f55b142cf91c00d0dec09dc8c484e06",
+          "versionGuard": null,
+          "blockSelectors": [
+            "fence_gate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-d4ad1f6b0fbf49b7",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1160,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "42d7b15128df41fc5aa138c281b753ea2db16eef5dcaec93dbcbf826a161ebae",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "spruce_fence_gate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-0c96416bc751b2fc",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1163,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "503797f73c7e1c05447b73fa7007f4ccf1a38ac5004309d5acdd240720d482c2",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "birch_fence_gate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-54ac6d1e705fd321",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1166,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "5e91c53aa473c8d2b10470d0aee6b16932b5a6f431cf374fa92263b95d29289a",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "jungle_fence_gate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-3e809a001b6edd7a",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1169,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "cdeba655d8e90767a68203284a5739ec208e609dba13d196bde29a55df89a966",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "dark_oak_fence_gate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-bdcfa5bc03a29c22",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1172,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "9ebd7bdbc97401eedaadc8d2c09b294e61a5f5edfab7b07be53a438a65d5947c",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "acacia_fence_gate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-c4f9227bd9c1b836",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Mariculture-models.txt",
+          "sourceLine": 77,
+          "sourceFileSha256": "66a3df17f0874be552922a013237b1aab7ba4da9a79a020a45939bad850af17b",
+          "recordSha256": "f401ee69610c8094c2ae97cc2e98d0d5e5bdddbfa58d556c3e503fa1f658487e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customGate"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-467d743346d939f0",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 269,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "601ae2f82c191113556178a0f58f43b622d56d8547fb9fb4a161ef3393c2d7b0",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.eucalyptus"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-43dd1acb9bc0a295",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 299,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "42cdc685178b63c803feba728380aeb782ee8c724a2987613d8cdac4a7a994c9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.sakura"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-bb6e1082126dfcfd",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 329,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "8c580d615f360ed690f4ad1983dc1a88de9745014272b83e4e248a4ef4e569ff",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.ghostwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-088dbf4ad94b7b15",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 359,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "3c4ece9c10280980abd2ad69c8b574d92362c3b128911041929ecdbce505a7d0",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.redwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-7ad1a9b2c162adbf",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 389,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "1001f20439e66aa9729690db338ce6f5dac4debf2aeb7af0310502ee361dbc91",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.bloodwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-9545293071f59f9a",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 419,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "30c2449e52f7d12f7a540df6746801f640616ee166e8fb6e360c8d45c9bdda78",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.hopseed"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-a56181248b188235",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 449,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "4e1148e22575dffd1e59015044d963cded91b37902537ff2e3f6306f41ac4cae",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.maple"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-5c4802ce3c9edf1d",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 479,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "0b75116fad051c69444e554bbe80fa4de483362711ac68f3258e08cb21ad66b9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.amaranth"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-ca7e2d70771bd0d0",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 509,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "e773e8ee26abfb70a485f07f0d1f26a6172cf84e6aa49404ee3a0480b123c522",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.silverbell"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-8506aa275cfb2b4c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 539,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "b1318d2302f2bf306d7e9a74ea3259329e6ebe484035021c57a9f3cb7c104462",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.tiger"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-df93d47d4dd759e7",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 569,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "87a7d98bfdf327ddabbfbeabac002424d10081cb87662ac6ed9fa28e82ce67db",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.willow"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0662f58ac334b04b",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 599,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "25e0eed76937b2ebf6d297bbe92897598a58b6b9f866f00e1ed726e508627ec6",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.darkwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-81072dc45ebb040b",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 629,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "16ee8f0af53f2fc1f2365e5ac4c51a01785e1147121e4e8a34032931492c8b1b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%fenceGate.fusewood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "FenceGateBlockStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java",
+      "sourceGitBlobSha1": "61b0da6a7f8008b7dd09ddad6070ae1cc8ed3943",
+      "sourceContentSha256": "7d8b886904eb062e702bc7941addae0f0e9f5c4414b35670fe74f5997c151308",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-7867728643596dc9",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 902,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "29d861a25f547830d60d790433a54519e18e964018ebc6bf2468d66be57ea437",
+          "versionGuard": null,
+          "blockSelectors": [
+            "oak_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-0d01319edd5d8ea1",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1231,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "7a08f431b8b7cea8f9739eeaeed93620a80ae8a4044c977c35946938455491ec",
+          "versionGuard": null,
+          "blockSelectors": [
+            "spruce_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-a77f9e7977fe05cd",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1234,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "4db79508e289c3578c78531c28e83dc0de99e96c60b2ed4bb97b03ba3b1775d2",
+          "versionGuard": null,
+          "blockSelectors": [
+            "birch_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-418471f57607f0b2",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1237,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "d392f9a3494bd734a3710ea0990ecad64fc2faba18bfeb946a5817c3af6d0e89",
+          "versionGuard": null,
+          "blockSelectors": [
+            "jungle_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-f53e98829f2b5492",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1240,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "f6c89d9e583d67d1d7b4468072b51c3ca28fc51d341609a08ef595b6f516142b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "dark_oak_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-fce32a86a98ed16f",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1243,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "03f167096ab1b577b10bd546741dcbd2ec3b4fc5bc79dcc9af80fc3a88b3dafb",
+          "versionGuard": null,
+          "blockSelectors": [
+            "acacia_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-d8821662985089be",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1796,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "334a3b781a531006d8ea7cbe45cbf7fee3a6a3a4a70e44547a34521ef48aeb1f",
+          "versionGuard": "1.16-",
+          "blockSelectors": [
+            "crimson_fence_gate",
+            "warped_fence_gate"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "FenceWallBlockRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java",
+      "sourceGitBlobSha1": "5dd6909b33a7a4149f393c577811f1bd23a8f089",
+      "sourceContentSha256": "af5d3ee0bd992d14196949d2ef35e852232d4a2b4b3e559144fafce4c6b3f6f0",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-139066b4cf112f9e",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 219,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "598fb6de95f0ea1dcc36ee8ba372a6576c964549b8b7bf18d05b1c199cbf0c81",
+          "versionGuard": null,
+          "blockSelectors": [
+            "fence",
+            "nether_brick_fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0036194a015c685b",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 955,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "00055df9e56ccc8c23848556df667dbbc5da4dcc186b60058f339b2840c4cd13",
+          "versionGuard": null,
+          "blockSelectors": [
+            "cobblestone_wall"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-8595aafd95e52257",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1175,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "f294fe7f8f0c67bb0ef91ebc23444a6beb8c213280df278e5d4d8fde943bc593",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "spruce_fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-8f93f8cf0926ab03",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1178,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "100ca57da9d7cecea169af3de91632fc1837223e5478e270e5c0af5581a5086c",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "birch_fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-46b56724937c354e",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1181,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "d45eb37c2833d325738a256e1dbf1cb69e219b224521a4d316de9f43fbcf6a09",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "jungle_fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-f42b81f962ec925d",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1184,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "a6d0d5d4d281a0c65315292fafba31aca6e717b7781b2a9c9cc3f8de0183e612",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "dark_oak_fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-7311b76a98d3e959",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1187,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "c225a761aa4709caf39f4cdf0a5b6da4dd5403f32204133b0b9320060be55c6c",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "acacia_fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-e7ed27120c8cb18a",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1202,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "528fa5ff53cb5942808a877d2c140c1c9c5eabbf58163e0d156fdb3349e8e2c6",
+          "versionGuard": "1.9.0-",
+          "blockSelectors": [
+            "chorus_plant"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-58ddf73dff8cce01",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EnderIO-models.txt",
+          "sourceLine": 43,
+          "sourceFileSha256": "f727b0bcf4d740c8f2a9ca00c51a5e17e4d1e2f124135a1d18cb4865de63b319",
+          "recordSha256": "3fcb047d5feb1179843642120b99fe87fff99a25d22034b2affbce748d2f5773",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockPaintedFence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-cda57a0495bbf42c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EnderIO-models.txt",
+          "sourceLine": 64,
+          "sourceFileSha256": "f727b0bcf4d740c8f2a9ca00c51a5e17e4d1e2f124135a1d18cb4865de63b319",
+          "recordSha256": "be6c36971f8bc68c3891ad96425200f69dfef722054192208c342f496ed56368",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockPaintedWall"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0fb0d96c23d606ab",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Forestry-models.txt",
+          "sourceLine": 47,
+          "sourceFileSha256": "88b46b7a292bc7787b97fbd42492b64da796964cc95820b974a6e5284872ce8b",
+          "recordSha256": "c0f1ec5280b962c1a51f4001e53584afd875109d7e1ebb648727afa8668f213b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.for.fences"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-273933520d34ab88",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Forestry-models.txt",
+          "sourceLine": 50,
+          "sourceFileSha256": "88b46b7a292bc7787b97fbd42492b64da796964cc95820b974a6e5284872ce8b",
+          "recordSha256": "06063d64758c940ac1e13f68c569b645a4725be5dfd8c6a07ec1b007ca7a3448",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.for.fences2"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-5c823c01eace2edf",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IC2-models.txt",
+          "sourceLine": 164,
+          "sourceFileSha256": "6e5285b960e1b516e8aa09e569e4b4d07e36733c9c83d428fae17d7e4305481b",
+          "recordSha256": "109298f5a7d7c767302f3d3f1fd7d337f9d62d6f2633811b5217fd2556d31465",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockFenceIron"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-bd52f8cfc8180d02",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/IC2-models.txt",
+          "sourceLine": 170,
+          "sourceFileSha256": "6e5285b960e1b516e8aa09e569e4b4d07e36733c9c83d428fae17d7e4305481b",
+          "recordSha256": "74434e9e3a1b5f6ad2840fec24982874a5dd68ce72502d89e1d7e9dcfe9f3522",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockWall"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-4a97c6a968ef2826",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Mariculture-models.txt",
+          "sourceLine": 74,
+          "sourceFileSha256": "66a3df17f0874be552922a013237b1aab7ba4da9a79a020a45939bad850af17b",
+          "recordSha256": "672432711d9df53b563e4568806ab3cbec1cccf1ceecc9d1e87f2adfe6f1adcd",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customFence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-7af642dda2326584",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Mariculture-models.txt",
+          "sourceLine": 80,
+          "sourceFileSha256": "66a3df17f0874be552922a013237b1aab7ba4da9a79a020a45939bad850af17b",
+          "recordSha256": "4f226c6d063d55e0dae1274a8eb51c41034be2b2b784f8c69c2a42c6331801c9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customWall"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0038ddff47a3e44e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 188,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "dcafaa9bd3ccac92a26df5bbb614df34be9ce2f10f02f73bd0715816a1334db0",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%Natura.fence"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0ebc1282985aae54",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/ProjRed_Exploration-models.txt",
+          "sourceLine": 25,
+          "sourceFileSha256": "6e44275ff9891b10d8234bbf8d98025300653a74c2aa1064d30aa1bea63a6cef",
+          "recordSha256": "52953cbe3f081052561c103b3bc9aa110ecb1e382af554b2f7705ed4f92e86d3",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%projectred.exploration.stonewalls"
+          ],
+          "legacyDataSelectors": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-882f7b6c7ea6aa79",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 236,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "c82efb99c0a492b1c38872bdb41702f4cd59703c78738b40bc9ce2884216989b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.post",
+            "%tile.railcraft.post.metal"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0cca40bc092b3dfa",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 240,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "7613c1b6c13aaf9a5161d481ef170752966eb992a73b5e25e4677f54bcb13654",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.wall.alpha",
+            "%tile.railcraft.wall.beta"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "link1",
+            "link2",
+            "type"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "FenceWallBlockStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java",
+      "sourceGitBlobSha1": "150d2cf167f843ba2a5d776f993d67c6995e24c7",
+      "sourceContentSha256": "ccaf21f6c6dceba0c7c0b295d6f79be6c69296daf25552c10f0df7ee9b2c66dc",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-8db76231fc755d79",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 248,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "13fd520065188504d6e36791420bf1e7f5a979d52db04b1fbc122551cdbb5385",
+          "versionGuard": null,
+          "blockSelectors": [
+            "oak_fence",
+            "spruce_fence",
+            "birch_fence",
+            "jungle_fence",
+            "acacia_fence",
+            "dark_oak_fence",
+            "nether_brick_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0588e4e11b7a8bb0",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1017,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "0f93fa236e77fa26cee48b44c39a0fd40b7561237002696f018ee404bb7c6eb3",
+          "versionGuard": "-1.15.2",
+          "blockSelectors": [
+            "cobblestone_wall",
+            "mossy_cobblestone_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-05078151859281f0",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1018,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "34ba9f5a7d32416935f520062e529829d50151aa0a55b00f9f799135d51cfd2e",
+          "versionGuard": "1.16.0-",
+          "blockSelectors": [
+            "cobblestone_wall",
+            "mossy_cobblestone_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-f78c14684b867d56",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1246,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "c2724a22e861931cb8b9a226cf7c1138e2fe3e628c59b604e32f73ee8786bf79",
+          "versionGuard": null,
+          "blockSelectors": [
+            "spruce_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-0af164a6d91addea",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1249,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "b3b71ce223b3f9f93635b9f0cf3cfecb0f17650dfb827654a5e0307bbeb4b50d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "birch_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-27b35c82008a12f0",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1252,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "57c28de6bb319dc2e532b7e888707dc5c86d16eea1ed49f96e358c1ed5977ac9",
+          "versionGuard": null,
+          "blockSelectors": [
+            "jungle_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-5508bc69287f53f1",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1255,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "41d102ac16a89b9b869ef8f3dfda1588b0fbe7f7f9c9b5d589661191c573f423",
+          "versionGuard": null,
+          "blockSelectors": [
+            "dark_oak_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-096e247a44b309b5",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1258,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "49e8d5c0ad2c3249773fb6df355156277aa812b4e6a8911fb6a8cf30e17523c1",
+          "versionGuard": null,
+          "blockSelectors": [
+            "acacia_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "link0",
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-7a5b714a42ba4a29",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1532,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "951ce4e8808d90c8f578b17634611d24b27f460f699647120fe459a502634caa",
+          "versionGuard": "1.14-1.15.2",
+          "blockSelectors": [
+            "brick_wall",
+            "prismarine_wall",
+            "red_sandstone_wall",
+            "mossy_stone_brick_wall",
+            "granite_wall",
+            "stone_brick_wall",
+            "nether_brick_wall",
+            "andesite_wall",
+            "red_nether_brick_wall",
+            "sandstone_wall",
+            "end_stone_brick_wall",
+            "diorite_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-4e0b9c8b9057e1b0",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1533,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "44e5850f07095e90a57064a43de8065ce27a3b25a4d704a6f1404a1d4806ebe8",
+          "versionGuard": "1.16-",
+          "blockSelectors": [
+            "brick_wall",
+            "prismarine_wall",
+            "red_sandstone_wall",
+            "mossy_stone_brick_wall",
+            "granite_wall",
+            "stone_brick_wall",
+            "nether_brick_wall",
+            "andesite_wall",
+            "red_nether_brick_wall",
+            "sandstone_wall",
+            "end_stone_brick_wall",
+            "diorite_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-71789b8287794c94",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1785,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "20bf00d47bd21790cbcb1377711a6fce4890786fdc22581eb876607f2f64adb8",
+          "versionGuard": "1.16-",
+          "blockSelectors": [
+            "crimson_fence",
+            "warped_fence"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-60df2bda2e57d658",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1849,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "1123893d29cb4b9025581b30534886ce50e95368f19e20142c317e0940a5ab25",
+          "versionGuard": "1.16-",
+          "blockSelectors": [
+            "blackstone_wall",
+            "polished_blackstone_wall",
+            "polished_blackstone_brick_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-6e54ab5cf0889d7c",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1885,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "955768c8b576746cb525b944d3627392a24f493b442cbbba84d7234e6359cb96",
+          "versionGuard": "1.17-",
+          "blockSelectors": [
+            "cobbled_deepslate_wall",
+            "deepslate_brick_wall",
+            "deepslate_tile_wall",
+            "polished_deepslate_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-2941973fd1658d2f",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3449,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "7af3d39848b3d88ed0fc3d448c3d4ef8ca7506884d619239c33987329851a123",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%tuff_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-67d8d68a819b9b55",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3453,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "b4ad7dea12d1a6d07d4c8c5a7570e81aa4b66a3c2507d1f1f50fb64a5f3001f7",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%polished_tuff_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        },
+        {
+          "evidenceId": "REG-dcc5e3d77b329c9f",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3457,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "106a1c24afa37a0ee599f05ca38dffc0786c51e382b401df3fdd78e721e3c008",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%tuff_brick_wall"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "type"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "FluidStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java",
+      "sourceGitBlobSha1": "286f024182397bb485d74d56db56bd86f074599f",
+      "sourceContentSha256": "436d5c0729dde3d60b922477b609408b27cd20a8acc35b1a61156e88336bc6d3",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-7acd86b2142373e8",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 768,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "510d8496b533dff9517cf729204836d116286679dc19e626309e621b51973247",
+          "versionGuard": null,
+          "blockSelectors": [
+            "flowing_water",
+            "water",
+            "flowing_lava",
+            "lava"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-8f07523cbe8856e3",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 906,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "f5970af454e3d17987e6103e96c0634d81e87eeef33cbd94e9754216ce93a21c",
+          "versionGuard": null,
+          "blockSelectors": [
+            "water",
+            "lava"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "FrameRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java",
+      "sourceGitBlobSha1": "6016f1b005a5163a22aecf7edb33db8d83a4c65a",
+      "sourceContentSha256": "b9d16c527d02b0f8d5edbf5dedbfae4d3d685c7ea6fd9a4a2881dfaed5f775ed",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-fa4fe799eb7a1505",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BuildCraft_Core-models.txt",
+          "sourceLine": 81,
+          "sourceFileSha256": "6d55b1357d2387a94704100e6d373e39db2c322ecbd93cdf83c2266a4a976935",
+          "recordSha256": "197636e12bc04703bac69a3d9a45db839ee670b8b7b6b7f630ce9c233117b1e2",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%pipeBlock"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "linkid_0",
+            "linkid_1",
+            "linkid_2",
+            "linkid_3",
+            "linkid_4",
+            "linkid_5",
+            "linkid_6",
+            "linkid_7",
+            "linkid_8",
+            "linkid_9",
+            "linkset",
+            "textureDefault",
+            "textureIndex",
+            "textureMap",
+            "textureOffset"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "GlowLichenStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java",
+      "sourceGitBlobSha1": "c1c120eff2d6c15947a941bbd964f6fe523714ce",
+      "sourceContentSha256": "51207e46b478e0e5ce5941dcd32ea831fe3465c1cfd761217bf7e1af0fc331b2",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-a8aa8b7a42b8a8d7",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1887,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "1529f07a6704e02cb8f4e34a31cd747542b92a8fd98ddb5990d27379f31227c0",
+          "versionGuard": "1.17-",
+          "blockSelectors": [
+            "glow_lichen"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "HeadRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java",
+      "sourceGitBlobSha1": "96129b173533d6253930d65f45968949e50e9da4",
+      "sourceContentSha256": "ebe893be99349f48f68d5f541ea7db478eada6b10382032a6c37e126c9e5d0a5",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-ded61ecef945250d",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1069,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "6a06c1d90bc1f96b4f7760f853ec5f865484e849318e0f0550ab259eb5fcf50d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "skeleton_skull",
+            "wither_skeleton_skull",
+            "zombie_head",
+            "player_head",
+            "creeper_head",
+            "dragon_head"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "ImmibisMicroRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java",
+      "sourceGitBlobSha1": "8268fb5b97471381b21c3bf0e7ef0ba00ee3af08",
+      "sourceContentSha256": "392eb6cfcb310686830e91cb24f201dc8967f873ab203e8bdd2347e91e89076d",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "PaneRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java",
+      "sourceGitBlobSha1": "de0bb7a0f3eb41d51c701e3773b3483e5c566102",
+      "sourceContentSha256": "f0eb54b2f6bb82b0cf81fc7d29116e8572372e3867194e0c4014eb83f184fd89",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-1ff2008ad9017cc8",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 699,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "80d58967783cfceb959d4191b07701a8bc193e851817a4271c3266dc8c868395",
+          "versionGuard": null,
+          "blockSelectors": [
+            "glass_pane",
+            "iron_bars"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-8442384edf0b9d76",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1128,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "bbe8af935cd76c6b7a5861c71a9c01c241bd6ed63f96b89e93bd10fda9712006",
+          "versionGuard": "1.7.0-",
+          "blockSelectors": [
+            "stained_glass_pane"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-06c898bd8606c3e1",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EnderIO-models.txt",
+          "sourceLine": 154,
+          "sourceFileSha256": "f727b0bcf4d740c8f2a9ca00c51a5e17e4d1e2f124135a1d18cb4865de63b319",
+          "recordSha256": "dbf9809ceb94f971b095bdd1c6ad67a5d7d85ef6070cfe2ddae2f6a9c18f30a6",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockDarkIronBars"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-3f0fa0be2a65ad81",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/TConstruct-models.txt",
+          "sourceLine": 541,
+          "sourceFileSha256": "49ef418e5537c2d7c05f2939bd53f5e3c7c9efea09b385456b455b3c08b74fd6",
+          "recordSha256": "c970f7c548d532254926395f6447a724e181374d699685c33a8383562e9a6726",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%GlassPaneClearStained"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "PaneStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java",
+      "sourceGitBlobSha1": "9d42e1c814a36c1c374f3fe1f5b0d45e3ccd5303",
+      "sourceContentSha256": "1d863a2ae62bd376be4beebeb6b1086d8142077fa66bd5d8d3c7e65bf0c85978",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-fc3c7b6acf48e52b",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1200,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "7e12dc9b09bec7aecf51ddceba5e8d395af364def6e534798832903eef53c548",
+          "versionGuard": null,
+          "blockSelectors": [
+            "glass_pane"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "PlantRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java",
+      "sourceGitBlobSha1": "c11918ff2c124182054b51796e09f8b098d96f8f",
+      "sourceContentSha256": "6cc87434b6c3cec1435fcff3cb356f1b44466e090f2e27d3fd4eb13f91404058",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-e647ed254b5f2309",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1136,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "9f3686c639b1453c2fc5cb94c8c9d60f2a8cb3114692e8d35b6871db8250b24c",
+          "versionGuard": "1.7.0-",
+          "blockSelectors": [
+            "double_plant"
+          ],
+          "legacyDataSelectors": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "metacnt"
+          ]
+        },
+        {
+          "evidenceId": "REG-ce1324992d0e37d1",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1137,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "5f1b21ffec90b1b1e7861aa3e793076aceff086686f6f9d80a7c476122fc6c44",
+          "versionGuard": "1.7.0-",
+          "blockSelectors": [
+            "double_plant"
+          ],
+          "legacyDataSelectors": [
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "metacnt",
+            "metasrc"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RailCraftSlabBlockRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java",
+      "sourceGitBlobSha1": "16658785920ae780cc4d3946b91750894136386a",
+      "sourceContentSha256": "dfa779b6533178e1e3a1726fbf7e5538a5aff5d475f11dc1d78e4115a6b70cbb",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-27b89540f1f9b405",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 246,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "eac25421ae16e5b76a4965e35f9ea27e02e21bd8c7cc5d0f1a7c691b9f761be8",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.slab"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "textmap0",
+            "textmap1",
+            "textmap10",
+            "textmap11",
+            "textmap12",
+            "textmap13",
+            "textmap14",
+            "textmap15",
+            "textmap16",
+            "textmap17",
+            "textmap18",
+            "textmap19",
+            "textmap2",
+            "textmap20",
+            "textmap21",
+            "textmap22",
+            "textmap23",
+            "textmap24",
+            "textmap25",
+            "textmap26",
+            "textmap27",
+            "textmap28",
+            "textmap29",
+            "textmap3",
+            "textmap30",
+            "textmap31",
+            "textmap32",
+            "textmap33",
+            "textmap34",
+            "textmap35",
+            "textmap4",
+            "textmap5",
+            "textmap6",
+            "textmap7",
+            "textmap8",
+            "textmap9",
+            "texturecnt"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RailCraftTrackRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java",
+      "sourceGitBlobSha1": "df8af5d89e5b0d9fb0e52f32601a865cd0a0b8e8",
+      "sourceContentSha256": "93fddd6f6b65942bf963c73917e97a7631c3367f1714ac5e241bc3d322e7d770",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-71ee223680f79288",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 34,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "81561a06820853cca5b5e9b6e036ea0189077b679ceaeb292b9c725b6f19fa1e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "0"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-9090ddff4b4f69ff",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 35,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "9b555e7b81cce01e0c17519ffe54774c2f1a46b4135afdcb2009a819d7783f48",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "1"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-c38e4d3b8bfda5d5",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 36,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "eac493ce23fd21a51f730f6af725ab95621a524b311bec25d520fd50c69e146e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "2"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-277a6f58190ff48d",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 37,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "810fdc82bba034929ffd24caa1e7abef73131d26a344e1d6053a9eefd7a7224a",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "3"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-a584b8be76c3f9de",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 38,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "b0aedf371c87f99136815835f5038b12dd686cc1ac312599bf8e4d4754448e21",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "4"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-52d222f559892837",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 39,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "460df4901a912596b5242c591561f07d30fa16f24148011f299f67d16345020a",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "5"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-d3392e3f69c80916",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 40,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "00ce9b292bedbf10aa659cc171dd3ec0889bed4ba389c3a9ac12205c34c5b9e3",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "6"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-1860b1a630710bc6",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 41,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "2dcc25a25de4198d056cebae36233e4ed8f398c70e767f076bb574450225af4f",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "7"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-7ea19cd19f3108ac",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 42,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "00e2a71b03cb3e4b4f240eeb84a6223fa9eef3709ba23a6128bd7883e18593e3",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "8"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-46f39ecb460a3544",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 43,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "e40ceb8649543b1564c20632815c0d4e7a507202494a34a46de0679501efe42d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "9"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-9ca677143d76d864",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 44,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "aabe091e9b4862aa90a214e22773f852f491d1bd73b78fa73716445dfdb199d5",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "10"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-7d2e4e969f2ef266",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 45,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "3129d17e7e88e7fe5369292f56f523eab7201cf237c8cdb74f027d3cabcaf158",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "11"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-60a282c0107fcd0e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 46,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "27d2e6f547c99d8bbe253e0990f2976c30c9752b4cc8a93171eef988363ed757",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "12"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        },
+        {
+          "evidenceId": "REG-cf23d31c2dd552d0",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 47,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "1b9b7d52889e7e63cf38fdba5544f35834a272d3e93cbff29ef052c5babccc93",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.track"
+          ],
+          "legacyDataSelectors": [
+            "13"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "maxTrackId",
+            "patch"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RedstoneWireRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java",
+      "sourceGitBlobSha1": "89db407cd42a587f22e523bba4776f9e4c6fbcba",
+      "sourceContentSha256": "4735957ac36e78989fc2200d32b22e265912aee13e1f09c83172dd059c240de8",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-8a780c6098655b5b",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 322,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "7842dd0859d2ec640d312e36eb7d5ae056476b21ff0015a9ab05bb16ede79946",
+          "versionGuard": null,
+          "blockSelectors": [
+            "redstone_wire"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RedstoneWireStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java",
+      "sourceGitBlobSha1": "7eef5828b021dd704682deb5866babb5b9b4701e",
+      "sourceContentSha256": "7365af8c0170d5604121cceabafc49cab5ab544d7363c5557b780347ce343d3d",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-96aa7cad02579532",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 381,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "fd7357c631261527394e24d35f52169864f5aff1a818b63fb839c0555cd75e3d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "redstone_wire"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RotatedBoxRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java",
+      "sourceGitBlobSha1": "764bf61595bd2a27169df218ef82dcca17e4a7aa",
+      "sourceContentSha256": "a8f95210f5d728c6a25277b305605f252088ff60b3854fbfc3e8df788ca2bc4a",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-325893acf221ae87",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 26,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "e4cb72ec7cb86f9d3263cfb6da5d0409f3fd326246cf09acd2ad9d512536191e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.detector"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "index0",
+            "index1",
+            "index2",
+            "index3",
+            "index4",
+            "index5",
+            "map0",
+            "map1",
+            "map2",
+            "map3",
+            "map4",
+            "map5",
+            "textureIndex"
+          ]
+        },
+        {
+          "evidenceId": "REG-dd6c8d4743a8d78f",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 29,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "7c983aa106399944101c95433eacf757c7e57f18924b757ba9c55ce821584168",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.machine.gamma"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "index0",
+            "index1",
+            "index2",
+            "index3",
+            "index4",
+            "index5",
+            "map0",
+            "map1",
+            "map2",
+            "map3",
+            "map4",
+            "map5",
+            "textureIndex"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RotatedPatchRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java",
+      "sourceGitBlobSha1": "18b1e9801a18641f5ca42a10a4eedb25694f6434",
+      "sourceContentSha256": "58d4977c668f4642dfe63e44a7c099c59583fae388474bd07ce3fb18fd1ccd10",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-1c2f6332d964ebdc",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BuildCraft_Core-models.txt",
+          "sourceLine": 91,
+          "sourceFileSha256": "6d55b1357d2387a94704100e6d373e39db2c322ecbd93cdf83c2266a4a976935",
+          "recordSha256": "07bffb3dd6e204986222d92e3286d78723e76f01f370e18700c9907beed97a3c",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%engineBlock"
+          ],
+          "legacyDataSelectors": [
+            "0",
+            "1",
+            "2"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "index",
+            "patch0",
+            "patch1",
+            "patch10",
+            "patch11",
+            "patch12",
+            "patch13",
+            "patch14",
+            "patch2",
+            "patch3",
+            "patch4",
+            "patch5",
+            "patch6",
+            "patch7",
+            "patch8",
+            "patch9",
+            "rot0",
+            "rot2",
+            "rot3",
+            "rot4",
+            "rot5"
+          ]
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "RPMicroRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java",
+      "sourceGitBlobSha1": "f8d73bd48ff062cc944a04eb1281abe283682e64",
+      "sourceContentSha256": "09e641b0cae2ddf350bdfeefd47e128905132f4995ad92bd763a617dc857b4ee",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "RPRotatedBoxRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java",
+      "sourceGitBlobSha1": "797c5875781fbf978e69ecc050b4607ddd48ca8a",
+      "sourceContentSha256": "ac879bf370757ae15b6e71a9cb1e407e77cac9d57413e515ffab0e5d4abfaedb",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "RPSupportFrameRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java",
+      "sourceGitBlobSha1": "179e8a5e40f56063643a8651f0220d1d87462121",
+      "sourceContentSha256": "d200298eebd390015c23bfa3b3ad8a299ce56e25d0676dfdae6119bf95fce5ac",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "SkullRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java",
+      "sourceGitBlobSha1": "34a1a8fdf2dfbe3ab43ee9138996f443dbd0854c",
+      "sourceContentSha256": "6093880278bcf5d99d10c3a57f10f70f12651756fb2d1f3bdc6d68dc985f280a",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-9073ade857dc3c9b",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 970,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "23173bbc79a5e3dfdb5d3b22564a0317cad4cae2839e7b1162b069cddcee3d91",
+          "versionGuard": null,
+          "blockSelectors": [
+            "skull"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "StairBlockRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java",
+      "sourceGitBlobSha1": "e5248c6546c75ded693858520757425f0a42f101",
+      "sourceContentSha256": "dd4a3eea67ea12ba2af1f2f9f6bed48b4df7c485a8611f59691994a76f48391b",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-a9d2da42eefb6bcf",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 178,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "b1f7324b4e49fc21fe2f99ca8c8879190db4dafbdd9643af68b5c55448831608",
+          "versionGuard": null,
+          "blockSelectors": [
+            "oak_stairs",
+            "stone_stairs",
+            "brick_stairs",
+            "stone_brick_stairs",
+            "nether_brick_stairs",
+            "sandstone_stairs",
+            "spruce_stairs",
+            "birch_stairs",
+            "jungle_stairs",
+            "quartz_stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-ad8a21c4cfd6e86a",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1131,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "dee69374c0dc764e2eec775f9c14986aa1443f592a498a9e8403782f33e7c5e4",
+          "versionGuard": "1.7.0-",
+          "blockSelectors": [
+            "acacia_stairs",
+            "dark_oak_stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-6271ace929ac4843",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1153,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "d686bbd7bd8345e4b592eeaf57b479390b1e87957785fbf0c1ffda39d6681950",
+          "versionGuard": "1.8.0-",
+          "blockSelectors": [
+            "red_sandstone_stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-d34cc237dd2d0589",
+          "sourcePath": "DynmapCore/src/main/resources/models_0.txt",
+          "sourceLine": 1230,
+          "sourceFileSha256": "cb81d77b745be37de203c1ab97006f65cc0900e1b5c850279b1eec7ad8bff433",
+          "recordSha256": "be3f70166ce127f0a6493a5ca08b66dc230efd0df8e4de286bb7b916d599ca78",
+          "versionGuard": "1.9.0-",
+          "blockSelectors": [
+            "purpur_stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-6889c2297bfabc4b",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 196,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "1e5f98004cf2a0b0a6bc8df17c6988df69b1880ad86317499f841b96eddc9640",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%sacredoakStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-2f64652bd1faa38c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 199,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "1daa28a719239ecbb3277a855c99546f28eb4dca498812da9ccdd61916adcad3",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%cherryStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-8ca10a1b7fc9f0db",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 202,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "60f123ad51456a4a569b67876a582303111197a47316e713ea65dd0ac62826b3",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%darkStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-a2d71cbe8d50338c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 205,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "36a76ea28fafb9f06b67cfeba91050eed3e25dbe19f06ff1b3ff4e4f32f6b934",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%firStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-8dbf5618f67abb0e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 208,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "89ce9da91a2be86bffb10c7d819412e72c0d47fb6bf88b8ef1e2d7a7735f4029",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%holyStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-b2038b909fbc91d4",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 211,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "d2b499ed59313f77b831840afa64fd2eb62365dd95afd3afb166de7dfc961fab",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%magicStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-ecd3906ffc3f17be",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 214,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "7c4d6be7483340a22e863b7afab0193891923d77c7a6dc39bebab19a6123ef43",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%mangroveStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-46fa1cb38784e1d3",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 217,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "2ca912b62478833d17400f64bfe25f815d189949f361f208836cd2056e4379eb",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%palmStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-85b044e57834a271",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 220,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "4cb7c45d5c5932303767fa5ce6743a27f0025b828d3b3c037236f51130a9e3b7",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%redwoodStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-59437e6202fee281",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 223,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "dda1697d56101f9defa15e3788c717243d465e377a33ff5c4b6de127679a6fee",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%willowStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-1fa5e7b2978425f9",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 226,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "3d362bb7471b25e0214129ded89048e1a0ee23db426358208bdb1f270ecc9c09",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%pineStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-ea123e6ca364f577",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 229,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "60282857f2c82fbb977f5da79e8c77c854da8c9294c56d0382395d7cae1d39c7",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%hellBarkStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-a2047b775b588953",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 232,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "a5a6b6a78954849472c399ac87b6315f47eb0681b62e838d3ca3ec7f7046446f",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%jacarandaStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-8f258b1acd964f8c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 235,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "138dd129822bb6980b16ae02ea2318b1b954a201370d60729bdc84515602a194",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%mahoganyStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-2e83c8862bdf0a54",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/BiomesOPlenty-models.txt",
+          "sourceLine": 238,
+          "sourceFileSha256": "d9e8c78dab82d4a1f4d1ff90a18d05648b9bfd5b5b17086ac34d69daeed4af18",
+          "recordSha256": "478bb5de3655305c266c5a645016f1403b160e5bc7e4c74d402ea9c069ae7a93",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%mudBricksStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-bcca8cb722215a37",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 90,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "801fce9494de8822ab70d060cd8d797367710d09c4b9f619a62b64031ff02c48",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%livingwood0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-09ef7fa6e0918f45",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 93,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "e8d0ffc41778de03651a18f198716b71e6810ebc082a9654db4b45c85fad5f00",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%livingwood1Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-900b2b60a189d899",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 96,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "fdb3bb965d7c06322891a9884f0366f48dc2abaa6e760c9eb69a01d6f3ca0f20",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%livingrock0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-570ccbbe9c74fd44",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 99,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "83fdcb5971032752f01dbb13e0751e0765b9a2070cdd12f9891f3ea6baa09193",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%livingrock1Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-71d3f238005a5fac",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 102,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "177f28b9cffdfb3a29ca7def3ebd0883c082aa7596192d0eb622aeef0f8eff22",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%dreamwood0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-34513e76dc08a9c9",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 105,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "27b50c2588709df01d6cb01601523ec84e44748f222cd201bb180396ed74ad1c",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%dreamwood1Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-65fe303c7767d54e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 108,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "d84dd508bab326edf90128dcbf6c9f46f9be9f8f4718d39d989fcaf2f55397f3",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%reedBlock0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-da9c246813f1bff6",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 111,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "e9d18656a0c1d3ea3bbb180e2e0958ffb6a6ad49179920162679a7149be2cb1e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%thatch0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-07f2e7099aee8a5e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 114,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "173879b2e780a990b22b73974303940b15c54e1c52ea2cac057f55ab29d6652b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%prismarine0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-5c66cd630ce8b113",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 117,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "9d109c9b15ec788884b2c8db142794ca3bbc459e868aa0db88d5ab2aed9fa1ac",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%prismarine1Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-b5101fb22bdfc1fd",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 120,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "a5bc38d4f5f0d25f4461b6dd7a1f3e5538df727ea519b2b98adf5f69aed7519d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%prismarine2Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-f2a96ecfd00eb364",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 123,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "1eccc00b53b4d28ea63190a82db1e847bee79bfa832df3b644cc1466ca70fefa",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customBrick0Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-7dd076c951a6c6e3",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 126,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "e1dfb055ac8f6f0ebae2808d510035befadcbcaaa2d15f3f44ae320b2a6b6bee",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customBrick1Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-84bea3711c07aa96",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 129,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "a3e31db066a2a51cd9019a71ed2a2f318bffd1b32edd74fbe563dda940070027",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customBrick2Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-282451dfa93d4b46",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 132,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "944e4fbc4a9c0b1d92d98a794d357680ee40df90060a9addbfc431a172ea5d11",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customBrick3Stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-894d94cc13d7c27e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 135,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "f3bc8dbcd68905738db12ee9ae4f644b705a92e7d1d9556a9a9ee2eeed5ad4a7",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%quartzStairsDark"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-e92a66fc18f259fd",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 138,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "8b7fdceb92ded05dcda64d7f8e788835172ee0be965e70111a984639bd42d44c",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%quartzStairsMana"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-23af2a24e9eb15c4",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 141,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "6c9addbac005e5f8a4d70541a6f665a873e0ea9f84450c3323e068c08a438992",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%quartzStairsBlaze"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-088759d5bf0d1a79",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 144,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "2267fbedc3aa9167ffa2de8f6350792b4cb457ad61f4787f620178820d76c39f",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%quartzStairsLavender"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-711a7ac03a09f4dd",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 147,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "90f2263dc9e9fd684a0406ad8bdef0dda3eacc020a1683569bb9344bfb2ba4a0",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%quartzStairsRed"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-1169fb1d97e5a62d",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Botania-models.txt",
+          "sourceLine": 150,
+          "sourceFileSha256": "32d4b6b695c074cc66ba2aa986badc268fc4d0b76f21cfb4abfdf5e55975ec7d",
+          "recordSha256": "53bf2fb6b30d55d74999754cf6d6ccf5091bb15f1dc8ff80cfe5276ccbe1766d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%quartzStairsElf"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-007d68bb8a320132",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/EnderIO-models.txt",
+          "sourceLine": 67,
+          "sourceFileSha256": "f727b0bcf4d740c8f2a9ca00c51a5e17e4d1e2f124135a1d18cb4865de63b319",
+          "recordSha256": "b928dd94fe412554a14fce0615319fcd2c7d5ecb35f95d8961524fcbb1ef4c52",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%blockPaintedStair"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-7eb480acbb28378e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Forestry-models.txt",
+          "sourceLine": 53,
+          "sourceFileSha256": "88b46b7a292bc7787b97fbd42492b64da796964cc95820b974a6e5284872ce8b",
+          "recordSha256": "6cbd94c28ee67a1ab13cfd9cad2edebd0de49214fea10fa7010faf3e2bd3c7af",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.for.stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-5668d99307505286",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/HardcoreEnderExpansion-models.txt",
+          "sourceLine": 26,
+          "sourceFileSha256": "caeb034d357e1e0dcca49c2fe420700577cd4d3a45fc872944518f18f8556bc3",
+          "recordSha256": "3c864acd1b50451315b1921554c7148f82cc7c17f068e1e83c2918b43ded8499",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%obsidian_stairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-e9248fab017f7e88",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Mariculture-models.txt",
+          "sourceLine": 67,
+          "sourceFileSha256": "66a3df17f0874be552922a013237b1aab7ba4da9a79a020a45939bad850af17b",
+          "recordSha256": "4ddb6acc2caefaf7e3b24b08cc5a84c78fbd3c575c9fb76ebf6b1c27b097c967",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%customStairs"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-7a643897e5bfa4cf",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 203,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "fa01019cb3fc50d93b4edd2f5430c70d2df747f72d774089a621e375f19a99cf",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.eucalyptus"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-08da596a41ee6888",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 206,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "30dcc2a67c580e636f038b54b17cdde7213b863d9efbb0cb1c4a301e2f78b07b",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.sakura"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-0fb8ab4a6e9f8fb0",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 209,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "09c46be8da28573a708eddb92761123a4537d0b25cefbda6833ab40a504d7676",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.ghostwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-5fa32891a1355f6c",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 212,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "46255d3db4a94119e40a10fd762ad64ab1515ecee4ff2e5a374782a8e16e2e74",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.redwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-682e3a3833debc23",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 215,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "d6a7c82869ec5eaccdb6165cffe38df160c0391bc0ebb88a7794e2bfc603fbc6",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.bloodwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-10c8739f52a1a978",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 218,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "103b4663014cf052bdeae0a372757b63038116836d021cc727bc7d2326109711",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.hopseed"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-666b41d337b73ef1",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 221,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "b8ffafc265c69551367c983570c6eb76c2127fbdf85a6b6341ee38325d616912",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.maple"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-5470ee79b47869ca",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 224,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "f088cfd3acc12cc1e97680f5db159ca0cf08d2c196f5fa1b1938491af37eb0c2",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.silverbell"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-438bc677e68e3bce",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 227,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "3d030333592685d918ff6daf3bbfd7865446e8a2afe3337aae5bbd04fc98651e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.amaranth"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-b0539244b4ba1bdf",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 230,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "a33c342046d8b6126c143be0a91196ae007e44b3ad8ad79f78723540ba8c719d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.tiger"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-471a8b0817aa974e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 233,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "24e077352b398680f76e6ded7d0dc485dd9c3016232240cd1fc2129a225f0fd8",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.willow"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-504d83ad4ee31ecc",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 236,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "e9cc2db2f6572e91d24a905a282f85229e902e2ff1b59d2251ac9c35c80c058c",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.darkwood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-4925d3aa45a86ff7",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Natura-models.txt",
+          "sourceLine": 239,
+          "sourceFileSha256": "de32c60554166baee80208fb4907fdc460d5d367aa1be34e37b36f5038fa8573",
+          "recordSha256": "0e19336dabfb8aae889bccf9353d2a8f465ca193fc853b69480402a959553791",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stair.fusewood"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-5b8f069b5315dbde",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/Railcraft-models.txt",
+          "sourceLine": 243,
+          "sourceFileSha256": "2d57130bed20cdbb8a4f7ea5acf266c898105e754533ed024ee9b9f0fdb06b40",
+          "recordSha256": "fcc34b88b8ec8c030c91270d77600ab7e843257e36f571af3c8ba92996d4201e",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%tile.railcraft.stair"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": [
+            "textmap0",
+            "textmap1",
+            "textmap10",
+            "textmap11",
+            "textmap12",
+            "textmap13",
+            "textmap14",
+            "textmap15",
+            "textmap16",
+            "textmap17",
+            "textmap18",
+            "textmap19",
+            "textmap2",
+            "textmap20",
+            "textmap21",
+            "textmap22",
+            "textmap23",
+            "textmap24",
+            "textmap25",
+            "textmap26",
+            "textmap27",
+            "textmap28",
+            "textmap29",
+            "textmap3",
+            "textmap30",
+            "textmap31",
+            "textmap32",
+            "textmap33",
+            "textmap34",
+            "textmap35",
+            "textmap4",
+            "textmap5",
+            "textmap6",
+            "textmap7",
+            "textmap8",
+            "textmap9",
+            "texturecnt",
+            "textureindex"
+          ]
+        },
+        {
+          "evidenceId": "REG-e3727ba1985be73e",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-models.txt",
+          "sourceLine": 97,
+          "sourceFileSha256": "6aa0bad0a084f7126608198d9d75421c745ce544f080f214e301e3756e6ef584",
+          "recordSha256": "a0aa57684c4de25c61d7ceec455ebabb92261776a34bddd5456e6f217549be38",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stairswoodrowan"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-f4e30fdf887dcf5a",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-models.txt",
+          "sourceLine": 100,
+          "sourceFileSha256": "6aa0bad0a084f7126608198d9d75421c745ce544f080f214e301e3756e6ef584",
+          "recordSha256": "aa3abbca8093515c1c8d884bbcc4f0732a0b532e775a7fdf67a0873f2ef57bbe",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stairswoodalder"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-182dad35ceb32b73",
+          "sourcePath": "forge-1.12.2/src/main/resources/renderdata/witchery-models.txt",
+          "sourceLine": 103,
+          "sourceFileSha256": "6aa0bad0a084f7126608198d9d75421c745ce544f080f214e301e3756e6ef584",
+          "recordSha256": "5ecc242246d02ace9032693856e393dcd7ad5cd89108da269fed406b554f3059",
+          "versionGuard": null,
+          "blockSelectors": [
+            "%stairswoodhawthorn"
+          ],
+          "legacyDataSelectors": [
+            "*"
+          ],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "StairStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java",
+      "sourceGitBlobSha1": "28d30e89c5e5b3c9a05106bb2aa7f823d399c106",
+      "sourceContentSha256": "d15d31fc62d558c63fa8d2820a057d3694be04d621872ebcc60402d45267f36c",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-e41dfdd33ccc9cd4",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 181,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "2a90741d4e563d28536b9948290cbc0a03819d9d6a1193bbfef28c1cf1dd4a25",
+          "versionGuard": null,
+          "blockSelectors": [
+            "oak_stairs",
+            "cobblestone_stairs",
+            "brick_stairs",
+            "stone_brick_stairs",
+            "nether_brick_stairs",
+            "sandstone_stairs",
+            "spruce_stairs",
+            "birch_stairs",
+            "jungle_stairs",
+            "quartz_stairs",
+            "prismarine_stairs",
+            "prismarine_brick_stairs",
+            "dark_prismarine_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-07dbd53c3e79199b",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1222,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "b33b6ee604884d8f0a7c0414531e5cef8a26aee0a12923b1bf9fba3a622f069d",
+          "versionGuard": null,
+          "blockSelectors": [
+            "acacia_stairs",
+            "dark_oak_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-b979d703a31a3794",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1228,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "4e41ef9c185998c0d079ad08ebb1216ca09d59fe32fcfdc907976f5234781809",
+          "versionGuard": null,
+          "blockSelectors": [
+            "red_sandstone_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-57a42cfd6edce854",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1354,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "3358659ecf64c566d199cd96047a88c57a7453629f6e725b819cf7d67a40faa0",
+          "versionGuard": null,
+          "blockSelectors": [
+            "purpur_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-6bbcf769c341dd68",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1505,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "1fe5cc3d6d307b278e5afdc030c10142185e29ee193ee034df55a40c7d5fcba1",
+          "versionGuard": "1.14-",
+          "blockSelectors": [
+            "polished_granite_stairs",
+            "smooth_red_sandstone_stairs",
+            "mossy_stone_brick_stairs",
+            "polished_diorite_stairs",
+            "mossy_cobblestone_stairs",
+            "end_stone_brick_stairs",
+            "stone_stairs",
+            "smooth_sandstone_stairs",
+            "smooth_quartz_stairs",
+            "granite_stairs",
+            "andesite_stairs",
+            "red_nether_brick_stairs",
+            "polished_andesite_stairs",
+            "diorite_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-3370a36b6efc4242",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1802,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "2424b7e944705ca472169b578c78eb03bd600883598a3d74e84d97cd759c2db4",
+          "versionGuard": "1.16-",
+          "blockSelectors": [
+            "crimson_stairs",
+            "warped_stairs",
+            "blackstone_stairs",
+            "polished_blackstone_stairs",
+            "polished_blackstone_brick_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-d806fff51c82af82",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1866,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "6bbe00c68b09912610ccc689e8ca8d865561b452e689bf7f37deb1187e152ea5",
+          "versionGuard": "1.17-",
+          "blockSelectors": [
+            "cobbled_deepslate_stairs",
+            "deepslate_brick_stairs",
+            "deepslate_tile_stairs",
+            "polished_deepslate_stairs",
+            "cut_copper_stairs",
+            "oxidized_cut_copper_stairs",
+            "exposed_cut_copper_stairs",
+            "weathered_cut_copper_stairs",
+            "waxed_cut_copper_stairs",
+            "waxed_oxidized_cut_copper_stairs",
+            "waxed_exposed_cut_copper_stairs",
+            "waxed_weathered_cut_copper_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-ba50d8032e310efa",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3448,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "1faf025259c1ceac63a03aa7d7e17ec66476186272c0ba7c22ff82ab4683d69d",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%tuff_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-72ffb202028bb194",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3452,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "9be706b8408e9f89437b2196ba0de2c467ed3d9abbc811c396e7f53efd6bf237",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%polished_tuff_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        },
+        {
+          "evidenceId": "REG-68410b1d28142ba1",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 3454,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "897986f9953376ce514efefaca77c05ffd86223dc1f4bc916845e91aed55d6f2",
+          "versionGuard": "1.20.3-",
+          "blockSelectors": [
+            "%tuff_brick_stairs"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "TFCLooseRockRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java",
+      "sourceGitBlobSha1": "8fabcf5d676ed94d1713f6776d95d0625e6df33e",
+      "sourceContentSha256": "36fc92781b68664de58736ec1c44488ccf9b3c3127aeab5c74b6fbdce19cb1cd",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "TFCSupportRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java",
+      "sourceGitBlobSha1": "48a2f2798c937b891e95c89aa9a8fcc1e1671a59",
+      "sourceContentSha256": "061bb1979ea70a5a8bb5f2577df42949a753bd7887970882a1997c0cd457b22a",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "TFCWoodRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java",
+      "sourceGitBlobSha1": "757b4f40377b37b4660a347bebb230cec78e5ab6",
+      "sourceContentSha256": "d113409930703dc3ca99e157adcf003a351974282887421151060100f36dfbae",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "ThaumFurnaceRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java",
+      "sourceGitBlobSha1": "a1866218b4005f68159442e8caf3d1fb4691d160",
+      "sourceContentSha256": "3899c004a3069c5937ee019f3d5f70ea4860aef4aef8b1931453e32185ad30c1",
+      "dispatchKind": "reflection_configuration_only",
+      "directDefinitions": [],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": "all_pinned_models_and_renderdata_text_files",
+      "evidenceRequirement": "Test caller-supplied customblock definitions through the pinned reflection and initializer contract; no pinned static record exists."
+    },
+    {
+      "class": "VineStateRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java",
+      "sourceGitBlobSha1": "f7ff12cea0ad10925d930babb930c7ed9dc49d8c",
+      "sourceContentSha256": "f03f78a4f7235bd3138174c5ff69b374522b3b150f25568a7e66d50e52bd111a",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-649308032bc9c30c",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 899,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "a79d0a6955dc9ced28664c859ed60553ce9e82601e7f80ce7d1aebce2b68fb05",
+          "versionGuard": null,
+          "blockSelectors": [
+            "vine"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    },
+    {
+      "class": "WallHeadRenderer",
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java",
+      "sourceGitBlobSha1": "a5129062a95a8da3ad27dc5b60c2a4e44070a53e",
+      "sourceContentSha256": "1e972307baf7cf46f0216374b551ca9f3de140894fe7fb1915cf767ba4a634f2",
+      "dispatchKind": "pinned_configuration_and_reflection",
+      "directDefinitions": [
+        {
+          "evidenceId": "REG-b7ca54f42647b8be",
+          "sourcePath": "DynmapCore/src/main/resources/models_1.txt",
+          "sourceLine": 1067,
+          "sourceFileSha256": "890fc054a59980ad7b78555673e10495b920a405bc6be5f37531b01bae073ca4",
+          "recordSha256": "327910208e464b0383ed1a1be051e99f3b1cacc34ec7b0a0723d5e018a92c882",
+          "versionGuard": null,
+          "blockSelectors": [
+            "skeleton_wall_skull",
+            "wither_skeleton_wall_skull",
+            "zombie_wall_head",
+            "player_wall_head",
+            "creeper_wall_head",
+            "dragon_wall_head"
+          ],
+          "legacyDataSelectors": [],
+          "stateSelectors": [],
+          "parameterKeys": []
+        }
+      ],
+      "reflectiveDispatchId": "DISPATCH-CUSTOMBLOCK-CLASS-REFLECTION",
+      "negativeSearchScope": null,
+      "evidenceRequirement": "Cover every matching pinned definition and its version guard, selectors, and parameter keys."
+    }
+  ],
+  "counts": {
+    "catalogClasses": 39,
+    "classesWithPinnedDefinitions": 29,
+    "reflectionOnlyClasses": 10,
+    "matchingCustomBlockRecords": 204
+  }
+}

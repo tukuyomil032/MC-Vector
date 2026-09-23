@@ -20,5 +20,6 @@
 | [0014](ADR-MAP-0014-ipc-and-consent.md) | IPC/UIのMap enabledはrenderer/terrain gateを通った状態だけにする |
 | [0015](ADR-MAP-0015-viewport-interaction.md) | Cursor-anchor smooth zoomとcommitted panはtileが成立した後に戻す |
 | [0016](ADR-MAP-0016-evidence-and-completion.md) | Build/test/mock/real acceptanceは別証拠で、未解決requiredがあれば未完了 |
+| [0017](ADR-MAP-0017-versioned-dynmap-oracle.md) | 各releaseの実block/state/model/Anvil dataと適合するDynmap oracleを証明し、必要なrenderer source deltaも追跡する |
 
 **Status:** Accepted as execution constraints. 2026-09-23時点の実装statusを示すものではない。

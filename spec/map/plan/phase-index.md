@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- |
 | P-000 | Pinned source AST と依存closure | [phase file](phases/phase-000-source-ast-closure.md) | なし | `chore: close pinned dynmap renderer source inventory` |
 | P-001 | 全renderer resource consumer closure | [phase file](phases/phase-001-resource-closure.md) | 000 | `chore: close dynmap renderer resource inventory` |
-| P-002 | Minecraft exact release matrixとartifact lock | [phase file](phases/phase-002-version-matrix-lock.md) | 000,001 | `chore: lock exact minecraft release matrix` |
+| P-002 | Exact release inventoryとrenderer/Anvil/Paper data-delta profiles | [phase file](phases/phase-002-version-matrix-lock.md) | 000,001 | `chore: lock exact minecraft release matrix` |
 | P-003 | Apache-2.0 source attribution and distribution boundary | [phase file](phases/phase-003-license-source-boundary.md) | 000,001 | `chore: define map renderer source and license boundary` |
 | P-004 | Pinned Java reference renderer harness | [phase file](phases/phase-004-java-reference-harness.md) | 000,001,003 | `test: build pinned dynmap java reference harness` |
 | P-005 | Warning-clean Rust renderer crate boundary | [phase file](phases/phase-005-renderer-core-isolation.md) | 000,003 | `ref: isolate map renderer core boundary` |
@@ -25,9 +25,9 @@
 | P-016 | Biome tint, color multipliers and materials | [phase file](phases/phase-016-biome-color-material.md) | 006,007,012,014 | `feat: port dynmap biome colors and materials` |
 | P-017 | HDLighting implementations | [phase file](phases/phase-017-hd-lighting.md) | 006,007,010,011,016 | `feat: port dynmap hd lighting` |
 | P-018 | HDShader lifecycle and shader resources | [phase file](phases/phase-018-hd-shader.md) | 001,014,016,017 | `feat: port dynmap hd shader lifecycle` |
-| P-019 | Dynmap CustomRenderer/MapDataContext API contract | [phase file](phases/phase-019-custom-renderer-api.md) | 000,006,010,013 | `feat: port dynmap renderer api contracts` |
+| P-019 | Dynmap CustomRenderer/MapDataContext API contract | [phase file](phases/phase-019-custom-renderer-api.md) | 000,006,010 | `feat: port dynmap renderer api contracts` |
 | P-020 | Complete built-in renderer registry | [phase file](phases/phase-020-builtin-registry.md) | 000,019 | `chore: map every dynmap builtin to an implementation phase` |
-| P-021 | 39 individual built-in renderer phases | [phase file](phases/phase-021-builtin-renderer-family-gate.md) | 004,006,009-020 | `feat: complete dynmap builtin renderer set` |
+| P-021 | Individual built-in renderer phases | [phase file](phases/phase-021-builtin-renderer-family-gate.md) | 004,006,009-020 and every built-in renderer phase | `feat: complete dynmap builtin renderer set` |
 | P-022 | Pixel rasterization and alpha compositing | [phase file](phases/phase-022-raster-compositing.md) | 014,016,017,018 | `feat: port dynmap raster and alpha compositing` |
 | P-023 | Full intermediate trace and pixel parity | [phase file](phases/phase-023-reference-pixel-parity.md) | 004,009-022 | `test: enforce full dynmap reference and pixel parity` |
 | P-024 | Paper snapshot provider, Core artifact and protocol | [phase file](phases/phase-024-paper-snapshot-protocol.md) | 002,003,006,007,019 | `feat: implement paper snapshot provider protocol` |
@@ -44,20 +44,22 @@
 | P-035 | All-version Paper/Tauri acceptance runs | [phase file](phases/phase-035-real-acceptance-orchestration.md) | 023-034 and every version real-acceptance child | `test: record complete map renderer real acceptance` |
 | P-036 | Strict final source-to-runtime closure audit | [phase file](phases/phase-036-final-coverage-audit.md) | 000-035 and all generated specialist phases | `test: close complete map renderer coverage audit` |
 
+- 機械検証可能な依存DAG: [phase-graph.json](coverage/phase-graph.json)。全common/built-in/exact-version phaseのID・文書・依存edgeを収録し、cycle・missing dependency・unreachable nodeはvalidatorで拒否する。
+
 ## 必須の個別phase
 
-- [39 built-in renderer個別phaseとversion stage index](phases/generated-index.md)
-- 48 exact releaseごとのassets / Anvil / Paper snapshot / reference parity / real acceptance: **240個の版別文書**。それぞれ別gate・証拠・commitを持つ。
+- [built-in renderer個別phaseとversion stage index](phases/generated-index.md)
+- 各exact stable release（snapshot時点48件）にはassets / Anvil / Paper snapshot / reference parity / real acceptanceの個別検証文書を持つ。ただし240というページ数はversion coverageを意味しない。全releaseのblock/state/model/texture・chunk schemaの実差分台帳が先に完成する。データfingerprintが同じ場合だけno-deltaとする。データfingerprintが異なる場合はchange IDごとのfixture/reference trace/pixel parityが通れば既存generic profileを共有でき、別adapterは既存profileの失敗が実測された場合にだけ作る。
 - AST closureで追加されるpinned source class/method group/resource consumerにもimplementation phaseを追加する。予定済み件数でclosureを切らない。
 
 ## 実行順
 
 1. P-000〜P-005でsource/resource/version/license/oracle/crate境界を確定する。
-2. P-006〜P-023でdomain、version adapters、Dynmap renderer、built-insを実装し、全39個別renderer phaseを各自で完了する。
-3. 48版それぞれのassets/Anvil/Paper/reference parity stageを、その版の依存が満たされた順に実施する。
+2. P-006〜P-023でdomain、必要なversion adapters、Dynmap renderer、built-insを実装し、catalog確定後の全個別renderer phaseを各自で完了する。
+3. [P-002のrenderer data delta実行詳細](phase-details/phase-002-renderer-data-delta.md)に従って、全releaseのrenderer asset・Anvil schema deltaを実artifactから確定する。その後、全exact releaseのverification stageを実差分とprofile ownerに沿って実施し、現行generic implementationで処理できないbehavior gapだけを追加adapter phaseへ分ける。
 4. P-024〜P-025でPaper protocolとsaved/live equivalenceを完成する。
 5. P-026〜P-034でtile/cache/scheduler/IPC/UI/zoom/failure/security/CIを接続する。
-6. 全48版のreal acceptance pageを実施する。Paper unavailableな版はblockedでありpassではない。
+6. 全matrix版のreal acceptance pageを実施する。Paper unavailableな版はblockedでありpassではない。
 7. P-035が版別acceptance証拠を統合し、P-036が全source/resource/version/feature coverageをfail-closedで監査する。
 
-一つの巨大phaseをまとめてcommitしない。各個別built-in、各version-stage、追加source method groupを一つのレビュー可能な作業単位とし、他のunrelated changesをstageせえへん。
+一つの巨大phaseをまとめてcommitしない。各個別built-in、実差分から導いたversion profile/adapter、追加source method groupを一つのレビュー可能な作業単位とし、他のunrelated changesをstageせえへん。

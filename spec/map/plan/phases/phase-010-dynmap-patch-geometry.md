@@ -1,11 +1,28 @@
 # P-010: RenderPatch/patch factory geometry
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-010",
+  "kind": "common",
+  "document": "phases/phase-010-dynmap-patch-geometry.md",
+  "dependsOn": [
+    "P-004",
+    "P-006",
+    "P-009"
+  ],
+  "commitMessage": "feat: port dynmap patch geometry and intersections"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: PatchDefinition, PatchDefinitionFactory, RenderPatch, RenderPatchFactory, Polygon。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: face/partial/rotated patch construction, intersection and UV basis。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 004,006,009。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 

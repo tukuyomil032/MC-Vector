@@ -1,0 +1,643 @@
+{
+  "schemaVersion": 1,
+  "revision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+  "trust": "candidate ownership map only; not proof of complete dependency closure or implementation",
+  "entries": [
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CTMTexturePack.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-015-ctm-texture-pack.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CaveHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/ChunkStatusHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/ChunkVersionHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CustomBlockModel.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDLighting.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-017-hd-lighting.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModel.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockPatchModel.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockStateTextureMap.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockVolumetricModel.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-017-hd-lighting.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDMap.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-000-source-ast-closure.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDMapManager.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-000-source-ast-closure.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDMapTile.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-000-source-ast-closure.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/projection/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspectiveState.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/projection/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDScaledBlockModels.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-013-hd-block-model-registry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDShaderState.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/InhabitedHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/projection/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/LightLevelHDLighting.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-017-hd-lighting.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/ShadowHDLighting.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-017-hd-lighting.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDCaveShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDUnderwaterShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackLoader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "candidateOwnerDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TopoHDShader.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-018-hd-shader.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFBandedWoodColorMultiplier.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-016-biome-color-material.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFMagicLeafColorMultiplier.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-016-biome-color-material.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFSpecialLeafColorMultiplier.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "candidateOwnerDocument": "phases/phase-016-biome-color-material.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/box-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/box-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/ctmvert-texture-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/chest-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/chest-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/copy-stair-block-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/cuboid-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/door-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/door-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/fence-gate-block-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/fence-gate-block-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/fence-wall-block-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/fence-wall-block-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/fluid-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/frame-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/glow-lichen-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/head-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/immibis-micro-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/pane-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/pane-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/plant-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rpmicro-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rprotated-box-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rpsupport-frame-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rail-craft-slab-block-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rail-craft-track-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/redstone-wire-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/redstone-wire-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rotated-box-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/rotated-patch-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/skull-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/stair-block-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/stair-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/tfcloose-rock-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/tfcsupport-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/tfcwood-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/thaum-furnace-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/vine-state-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/builtins/wall-head-renderer.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BlockStateParser.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-007-saved-anvil-common-decoder.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BlockStep.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BufferInputStream.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-007-saved-anvil-common-decoder.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BufferOutputStream.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-007-saved-anvil-common-decoder.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DataBitsPacked.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-007-saved-anvil-common-decoder.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynIntHashMap.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-006-source-independent-domain.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynLongHashMap.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-006-source-independent-domain.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynmapBufferedImage.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-022-raster-compositing.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynmapLogger.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-000-source-ast-closure.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/ForgeConfigFile.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-000-source-ast-closure.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/ImageIOManager.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-022-raster-compositing.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3D.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3DList.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/IpAddressMatcher.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-000-source-ast-closure.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/LRULinkedHashMap.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-006-source-independent-domain.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/LightLevels.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-017-hd-lighting.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/MapChunkCache.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/MapIterator.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/geometry/",
+      "candidateOwnerDocument": "phases/phase-010-dynmap-patch-geometry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/PatchDefinitionFactory.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/geometry/",
+      "candidateOwnerDocument": "phases/phase-010-dynmap-patch-geometry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/Polygon.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/geometry/",
+      "candidateOwnerDocument": "phases/phase-010-dynmap-patch-geometry.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/RectangleVisibilityLimit.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/RoundVisibilityLimit.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/TileFlags.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/Vector3D.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "candidateOwnerDocument": "phases/phase-009-dynmap-matrix-perspective.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/VisibilityLimit.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "candidateOwnerDocument": "phases/phase-011-dynmap-voxel-traversal.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomColorMultiplier.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/phase-019-custom-renderer-api.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomRenderer.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/phase-019-custom-renderer-api.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/DynmapBlockState.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/phase-019-custom-renderer-api.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/MapDataContext.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/phase-019-custom-renderer-api.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatch.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/phase-019-custom-renderer-api.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatchFactory.java",
+      "candidateRustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "candidateOwnerDocument": "phases/phase-019-custom-renderer-api.md",
+      "classification": "candidate_requires_ast_call_and_resource_review"
+    }
+  ]
+}

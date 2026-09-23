@@ -1,11 +1,27 @@
 # P-020: Complete built-in renderer registry
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-020",
+  "kind": "common",
+  "document": "phases/phase-020-builtin-registry.md",
+  "dependsOn": [
+    "P-000",
+    "P-019"
+  ],
+  "commitMessage": "chore: map every dynmap builtin to an implementation phase"
+}
+```
+
 ## 目的と固定対象
 
-- 対象source/symbol: all 39 pinned hdmap/renderer Java classes and registration call sites。詳細な宣言IDはP-000 AST ledgerを正とする。
-- Rust destination / output: one-to-one registry map and 39 child phase ownership entries。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
+- 対象source/symbol: all pinned Dynmap renderer implementations and their registration/dispatch call sites。詳細な宣言IDはP-000 AST ledgerを正とする。
+- Rust destination / output: one-to-one registry map and a class-specific phase owner for every verified built-in。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 000,019。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 
@@ -14,9 +30,9 @@
 
 ## 実装作業
 
-1. Compare Java AST class list and registration references with the 39 candidate catalog.
+1. Compare Java AST class list and registration/dispatch references with the seed catalog and full pinned source tree.
 2. Record identifiers, state selectors, version/mod gates, construction inputs and implementation page for each class.
-3. Add generator/coverage rule that newly discovered upstream built-in adds a child phase before implementation.
+3. Add generator/coverage rule that every discovered built-in has a child phase before implementation.
 4. Mark every old translated flag unverified until child fixture/reference/pixel gate passes.
 
 - 固定fixture / reference: source class/registration set equality, duplicate registration, unknown class and all condition branches.
@@ -24,7 +40,7 @@
 
 ## 検証gate
 
-- 合格条件: every pinned Dynmap built-in has exactly one child page and a registry owner; no extra claimed built-in.
+- 合格条件: every in-scope pinned Dynmap built-in has exactly one child phase and registry owner; no extra or missing class.
 - Rust品質条件: `cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check` と当該crateのtest/check/clippy `-D warnings`を実行し、未使用warning抑制で作業を隠さない。
 - 成果物条件: 実装diff、focused test、fixture/reference IDとdigest、failure tests、coverage rowを同じphase evidenceへ記録する。
 

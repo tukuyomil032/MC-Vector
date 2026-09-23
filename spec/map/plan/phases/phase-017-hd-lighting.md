@@ -1,11 +1,30 @@
 # P-017: HDLighting implementations
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-017",
+  "kind": "common",
+  "document": "phases/phase-017-hd-lighting.md",
+  "dependsOn": [
+    "P-006",
+    "P-007",
+    "P-010",
+    "P-011",
+    "P-016"
+  ],
+  "commitMessage": "feat: port dynmap hd lighting"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: HDLighting, DefaultHDLighting, LightLevelHDLighting, ShadowHDLighting, LightLevels。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: exact face shade, ambient, sky/block light, shadow and brightness result。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 006,007,010,011,016。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 

@@ -1,11 +1,31 @@
 # P-032: Cross-layer failure and consent safety
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-032",
+  "kind": "common",
+  "document": "phases/phase-032-failure-safety.md",
+  "dependsOn": [
+    "P-025",
+    "P-027",
+    "P-028",
+    "P-029",
+    "P-030",
+    "P-031"
+  ],
+  "commitMessage": "fix: enforce map renderer failure safety"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: artifact/source/render/cache/IPC/UI failure transitions。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: single failure taxonomy and no false terrain/consent success path。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 025,027-031。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 

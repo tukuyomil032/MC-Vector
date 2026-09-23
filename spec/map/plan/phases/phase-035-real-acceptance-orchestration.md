@@ -1,11 +1,85 @@
 # P-035: All-version Paper/Tauri acceptance runs
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-035",
+  "kind": "common",
+  "document": "phases/phase-035-real-acceptance-orchestration.md",
+  "dependsOn": [
+    "P-023",
+    "P-024",
+    "P-025",
+    "P-026",
+    "P-027",
+    "P-028",
+    "P-029",
+    "P-030",
+    "P-031",
+    "P-032",
+    "P-033",
+    "P-034",
+    "V-1.14-real-acceptance",
+    "V-1.14.1-real-acceptance",
+    "V-1.14.2-real-acceptance",
+    "V-1.14.3-real-acceptance",
+    "V-1.14.4-real-acceptance",
+    "V-1.15-real-acceptance",
+    "V-1.15.1-real-acceptance",
+    "V-1.15.2-real-acceptance",
+    "V-1.16-real-acceptance",
+    "V-1.16.1-real-acceptance",
+    "V-1.16.2-real-acceptance",
+    "V-1.16.3-real-acceptance",
+    "V-1.16.4-real-acceptance",
+    "V-1.16.5-real-acceptance",
+    "V-1.17-real-acceptance",
+    "V-1.17.1-real-acceptance",
+    "V-1.18-real-acceptance",
+    "V-1.18.1-real-acceptance",
+    "V-1.18.2-real-acceptance",
+    "V-1.19-real-acceptance",
+    "V-1.19.1-real-acceptance",
+    "V-1.19.2-real-acceptance",
+    "V-1.19.3-real-acceptance",
+    "V-1.19.4-real-acceptance",
+    "V-1.20-real-acceptance",
+    "V-1.20.1-real-acceptance",
+    "V-1.20.2-real-acceptance",
+    "V-1.20.3-real-acceptance",
+    "V-1.20.4-real-acceptance",
+    "V-1.20.5-real-acceptance",
+    "V-1.20.6-real-acceptance",
+    "V-1.21-real-acceptance",
+    "V-1.21.1-real-acceptance",
+    "V-1.21.10-real-acceptance",
+    "V-1.21.11-real-acceptance",
+    "V-1.21.2-real-acceptance",
+    "V-1.21.3-real-acceptance",
+    "V-1.21.4-real-acceptance",
+    "V-1.21.5-real-acceptance",
+    "V-1.21.6-real-acceptance",
+    "V-1.21.7-real-acceptance",
+    "V-1.21.8-real-acceptance",
+    "V-1.21.9-real-acceptance",
+    "V-26.1-real-acceptance",
+    "V-26.1.1-real-acceptance",
+    "V-26.1.2-real-acceptance",
+    "V-26.2-real-acceptance",
+    "V-26.3-real-acceptance"
+  ],
+  "commitMessage": "test: record complete map renderer real acceptance"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: all exact-version real-acceptance pages and evidence matrix。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: one evidence record per exact release and final UI/process/port results。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 023-034 and every version real-acceptance child。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 
@@ -25,7 +99,7 @@
 
 ## 検証gate
 
-- 合格条件: all 48 baseline exact releases have independently verified real evidence; unresolved row blocks entire Goal.
+- 合格条件: all exact releases in the verified manifest snapshot have independently verified real evidence; unresolved row blocks entire Goal.
 - Rust品質条件: `cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check` と当該crateのtest/check/clippy `-D warnings`を実行し、未使用warning抑制で作業を隠さない。
 - 成果物条件: 実装diff、focused test、fixture/reference IDとdigest、failure tests、coverage rowを同じphase evidenceへ記録する。
 

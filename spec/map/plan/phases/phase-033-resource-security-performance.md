@@ -1,11 +1,31 @@
 # P-033: Renderer input bounds, security and memory
 
+## Machine-checked dependency contract
+
+```json
+{
+  "schemaVersion": 1,
+  "phaseId": "P-033",
+  "kind": "common",
+  "document": "phases/phase-033-resource-security-performance.md",
+  "dependsOn": [
+    "P-007",
+    "P-008",
+    "P-011",
+    "P-027",
+    "P-028",
+    "P-029"
+  ],
+  "commitMessage": "fix: bound map renderer resource usage"
+}
+```
+
 ## 目的と固定対象
 
 - 対象source/symbol: ZIP/NBT/Anvil/model/texture/cache/network inputs and worker concurrency。詳細な宣言IDはP-000 AST ledgerを正とする。
 - Rust destination / output: explicit byte/count/time/memory ceilings with safe cancellation。具体的なmodule ownerはAST・coverage ledgerで全symbolへ割り当てる。
 - 依存phase: 007,008,011,027-029。依存gateが未達のまま、このphaseを実装済みにしない。
-- version scope: pinned Dynmap revisionを共通対象にし、該当Minecraft release差分はその版の5 stage pageとversion adapterへ反映する。
+- version scope: pinned Dynmap revisionを共通behavior baselineとするが、各Minecraft releaseを処理できるDynmap source revision/moduleを独立に選定する。baselineとの差分はrelease evidenceへ記録し、Rust implementation phaseは既存profileで処理できないbehavior gapがある場合だけ追加する。
 
 ## 入力・failure contract
 
