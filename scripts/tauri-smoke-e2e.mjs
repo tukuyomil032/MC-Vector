@@ -428,10 +428,15 @@ async function startWebDriver(environment, port) {
 }
 
 async function createWebDriver(serverUrl, binary) {
+  const tauriOptions = isMac
+    ? { binary }
+    : isWindows
+      ? { application: binary, webviewOptions: {} }
+      : { application: binary };
   const capabilities = {
     browserName: isMac ? 'tauri' : 'wry',
     platformName: isMac ? 'mac' : isWindows ? 'windows' : 'linux',
-    'tauri:options': isMac ? { binary } : { application: binary },
+    'tauri:options': tauriOptions,
   };
   const driver = await new Builder().usingServer(serverUrl).withCapabilities(capabilities).build();
   await driver.manage().setTimeouts({ implicit: 500, pageLoad: 10_000, script: 15_000 });
