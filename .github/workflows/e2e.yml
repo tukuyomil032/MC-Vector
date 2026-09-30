@@ -133,6 +133,122 @@ jobs:
         run: bun ci
       - name: Install Windows Tauri driver
         run: cargo install tauri-driver --locked
+      - name: Record Windows WebView2 diagnostics
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $diagnosticPath = 'test-results/tauri-e2e/windows-webview-diagnostics.txt'
+          New-Item -ItemType Directory -Force -Path (Split-Path -Parent $diagnosticPath) | Out-Null
+
+          function Write-Diagnostic {
+            param([string]$Line)
+            Write-Host $Line
+            Add-Content -LiteralPath $diagnosticPath -Value $Line
+          }
+
+          function Write-DriverVersion {
+            param(
+              [string]$Label,
+              [string]$ExecutablePath
+            )
+
+            if (-not (Test-Path -LiteralPath $ExecutablePath -PathType Leaf -ErrorAction SilentlyContinue)) {
+              Write-Diagnostic "$Label --version exit code: <not run>"
+              Write-Diagnostic "$Label --version: <missing executable>"
+              return
+            }
+
+            try {
+              $version = (& $ExecutablePath --version 2>&1 | Out-String).Trim()
+              $exitCode = $LASTEXITCODE
+              Write-Diagnostic "$Label --version exit code: $exitCode"
+              if ([string]::IsNullOrWhiteSpace($version)) {
+                $version = '<no output>'
+              } else {
+                $version = $version -replace '\r?\n', ' | '
+              }
+              if ($exitCode -ne 0) {
+                Write-Diagnostic "$Label --version: ERROR (exit code $exitCode): $version"
+              } else {
+                Write-Diagnostic "$Label --version: $version"
+              }
+            } catch {
+              Write-Diagnostic "$Label --version exit code: <error>"
+              Write-Diagnostic "$Label --version: <error>"
+            }
+          }
+
+          Write-Diagnostic 'Windows WebView2 diagnostics'
+
+          $pathCommands = @(Get-Command -Name 'msedgedriver.exe' -CommandType Application -All -ErrorAction SilentlyContinue)
+          if ($pathCommands.Count -eq 0) {
+            Write-Diagnostic 'PATH Get-Command msedgedriver.exe: <missing>'
+          } else {
+            foreach ($command in $pathCommands) {
+              $resolvedPath = $command.Source
+              if ([string]::IsNullOrWhiteSpace($resolvedPath)) {
+                $resolvedPath = $command.Path
+              }
+              Write-Diagnostic "PATH Get-Command msedgedriver.exe: $resolvedPath"
+              Write-DriverVersion -Label "PATH $resolvedPath" -ExecutablePath $resolvedPath
+            }
+          }
+
+          $edgeWebDriver = $env:EDGEWEBDRIVER
+          if ([string]::IsNullOrWhiteSpace($edgeWebDriver)) {
+            Write-Diagnostic 'EDGEWEBDRIVER: <unset>'
+          } else {
+            Write-Diagnostic "EDGEWEBDRIVER: $edgeWebDriver"
+            $edgeWebDriverExecutable = $edgeWebDriver
+            if (Test-Path -LiteralPath $edgeWebDriver -PathType Container -ErrorAction SilentlyContinue) {
+              $edgeWebDriverExecutable = Join-Path $edgeWebDriver 'msedgedriver.exe'
+            }
+            Write-DriverVersion -Label "EDGEWEBDRIVER $edgeWebDriverExecutable" -ExecutablePath $edgeWebDriverExecutable
+          }
+
+          $programFilesX86 = ${env:ProgramFiles(x86)}
+          $localAppData = $env:LOCALAPPDATA
+          $webViewRootPaths = @()
+          $webViewExecutables = @()
+          if ([string]::IsNullOrWhiteSpace($programFilesX86)) {
+            Write-Diagnostic 'WebView2 Runtime root (ProgramFiles(x86)): <missing>'
+          } else {
+            $webViewRootPaths += Join-Path $programFilesX86 'Microsoft\EdgeWebView\Application'
+          }
+          if ([string]::IsNullOrWhiteSpace($localAppData)) {
+            Write-Diagnostic 'WebView2 Runtime root (LOCALAPPDATA): <missing>'
+          } else {
+            $webViewRootPaths += Join-Path $localAppData 'Microsoft\EdgeWebView\Application'
+          }
+          foreach ($webViewRoot in ($webViewRootPaths | Select-Object -Unique)) {
+            Write-Diagnostic "WebView2 Runtime root: $webViewRoot"
+            if (Test-Path -LiteralPath $webViewRoot -PathType Container -ErrorAction SilentlyContinue) {
+              $webViewExecutables += @(Get-ChildItem -LiteralPath $webViewRoot -Filter 'msedgewebview2.exe' -File -Recurse -ErrorAction SilentlyContinue)
+            }
+          }
+          if ($webViewExecutables.Count -eq 0) {
+            Write-Diagnostic 'WebView2 Runtime executable: <missing>'
+          } else {
+            foreach ($executable in $webViewExecutables) {
+              $productVersion = $executable.VersionInfo.ProductVersion
+              if ([string]::IsNullOrWhiteSpace($productVersion)) {
+                $productVersion = '<missing>'
+              }
+              Write-Diagnostic "WebView2 Runtime executable: $($executable.FullName) ProductVersion: $productVersion"
+            }
+          }
+
+          foreach ($registryPath in @(
+            'HKLM:\SOFTWARE\Policies\Microsoft\Edge',
+            'HKCU:\SOFTWARE\Policies\Microsoft\Edge'
+          )) {
+            $policy = Get-ItemProperty -LiteralPath $registryPath -Name 'RemoteDebuggingAllowed' -ErrorAction SilentlyContinue
+            if ($null -eq $policy -or $null -eq $policy.RemoteDebuggingAllowed) {
+              Write-Diagnostic "$registryPath RemoteDebuggingAllowed: <unset>"
+            } else {
+              Write-Diagnostic "$registryPath RemoteDebuggingAllowed: $($policy.RemoteDebuggingAllowed)"
+            }
+          }
       - name: Run unsigned real Tauri E2E
         run: bun run test:tauri:e2e
         env:
