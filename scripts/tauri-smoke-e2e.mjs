@@ -946,6 +946,9 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (process.env.MC_VECTOR_TAURI_E2E_VERBOSE === '1') {
+    console.error(describeError(error));
+  }
   console.error(
     `[real-tauri-e2e] failed (error ${errorFingerprint(error)}); inspect retained diagnostics for details`,
   );
