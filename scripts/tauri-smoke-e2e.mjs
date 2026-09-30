@@ -428,11 +428,7 @@ async function startWebDriver(environment, port) {
 }
 
 async function createWebDriver(serverUrl, binary) {
-  const tauriOptions = isMac
-    ? { binary }
-    : isWindows
-      ? { application: binary, webviewOptions: {} }
-      : { application: binary };
+  const tauriOptions = isMac ? { binary } : { application: binary };
   const capabilities = {
     browserName: isMac ? 'tauri' : 'wry',
     platformName: isMac ? 'mac' : isWindows ? 'windows' : 'linux',
