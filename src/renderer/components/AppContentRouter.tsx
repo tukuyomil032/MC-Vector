@@ -3,6 +3,7 @@ import type { Translate } from '../../i18n';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import BackupsView from './BackupsView';
 import ConsoleView from './ConsoleView';
+import MapView from './MapView';
 import NgrokGuideView from './NgrokGuideView';
 import ProxyHelpView from './ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './ProxySetupView';
@@ -80,6 +81,7 @@ export default function AppContentRouter({
     files: () => <FilesView key={contentKey} server={activeServer} />,
     plugins: () => <PluginBrowser key={contentKey} server={activeServer} />,
     backups: () => <BackupsView key={contentKey} server={activeServer} />,
+    map: () => <MapView key={contentKey} server={activeServer} />,
     'general-settings': () => (
       <ServerSettings
         key={contentKey}

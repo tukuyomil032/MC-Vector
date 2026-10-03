@@ -238,6 +238,50 @@ export interface TranslationDictionary {
     };
   };
 
+  /** Map renderer diagnostics translations */
+  map: {
+    title: string;
+    subtitle: string;
+    status: {
+      bridge: string;
+      terrain: string;
+      renderer: string;
+      cache: string;
+      source: string;
+      chunks: string;
+    };
+    states: {
+      queued: string;
+      rendering: string;
+      ready: string;
+      empty: string;
+      failed: string;
+      retryable: string;
+      cancelled: string;
+      blocked: string;
+    };
+    reasons: {
+      rendererNotConnected: string;
+      bridgeNotConnected: string;
+      notLoaded: string;
+      worldUnavailable: string;
+      queueFull: string;
+      timeout: string;
+      invalidSnapshot: string;
+      missingAsset: string;
+      malformedAnvil: string;
+      unsupportedVersion: string;
+      checksumMismatch: string;
+      cacheCorrupt: string;
+      noGeneratedTerrain: string;
+    };
+    blockedTitle: string;
+    blockedDescription: string;
+    diagnostics: string;
+    refresh: string;
+    noServer: string;
+  };
+
   /** Console view translations */
   console: {
     actions: {
@@ -680,6 +724,7 @@ export interface TranslationDictionary {
     files: string;
     pluginsMods: string;
     backups: string;
+    map: string;
     properties: string;
     generalSettings: string;
     proxyNetwork: string;

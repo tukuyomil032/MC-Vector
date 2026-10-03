@@ -8,6 +8,10 @@ repository = "https://github.com/tukuyomil032/MC-Vector"
 edition = "2021"
 rust-version = "1.77.2"
 
+[workspace]
+members = ["crates/map-renderer-core"]
+resolver = "2"
+
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -16,6 +20,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5.4", features = [] }
 
 [dependencies]
+map-renderer-core = { path = "crates/map-renderer-core" }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 log = "0.4"

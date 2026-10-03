@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "webbukkit/dynmap",
+  "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+  "status": "partial",
+  "entries": [
+    {
+      "id": "r29-box",
+      "renderer": "BoxRenderer",
+      "minecraftVersion": null,
+      "inputDigest": "fixture-only-empty-context",
+      "assetDigest": "fixture-only-no-asset-lookup",
+      "referenceTrace": "tests/fixtures/map/dynmap-reference/r29/box.json",
+      "referencePng": null,
+      "referenceSha256": null,
+      "status": "captured"
+    },
+    {
+      "id": "r29-cuboid",
+      "renderer": "CuboidRenderer",
+      "minecraftVersion": null,
+      "inputDigest": "fixture-only-empty-context",
+      "assetDigest": "fixture-only-no-asset-lookup",
+      "referenceTrace": "tests/fixtures/map/dynmap-reference/r29/cuboid.json",
+      "referencePng": null,
+      "referenceSha256": null,
+      "status": "captured"
+    },
+    {
+      "id": "r29-pane",
+      "renderer": "PaneRenderer",
+      "minecraftVersion": null,
+      "inputDigest": "fixture-only-empty-context",
+      "assetDigest": "fixture-only-transparency-stub",
+      "referenceTrace": "tests/fixtures/map/dynmap-reference/r29/pane.json",
+      "referencePng": null,
+      "referenceSha256": null,
+      "status": "captured"
+    },
+    {
+      "id": "r29-plant",
+      "renderer": "PlantRenderer",
+      "minecraftVersion": null,
+      "inputDigest": "fixture-only-empty-context",
+      "assetDigest": "fixture-only-no-asset-lookup",
+      "referenceTrace": "tests/fixtures/map/dynmap-reference/r29/plant.json",
+      "referencePng": null,
+      "referenceSha256": null,
+      "status": "captured"
+    }
+  ]
+}

@@ -38,6 +38,7 @@ const CORE_COMMANDS = [
   'migrate_managed_server_directory',
   'can_update_app',
   'get_app_location',
+  'request_map_render',
 ] as const;
 
 const PERFORMANCE_COMMANDS = ['parse_ansi_lines'] as const;

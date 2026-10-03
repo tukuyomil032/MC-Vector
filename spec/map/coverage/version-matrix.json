@@ -1,0 +1,1597 @@
+{
+  "schemaVersion": 2,
+  "range": {
+    "minimum": "1.14",
+    "maximum": "26.3",
+    "edition": "java"
+  },
+  "source": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+  "generatedBy": "scripts/fetch-map-version-metadata.mjs",
+  "status": "metadata_cataloged",
+  "entries": [
+    {
+      "minecraftVersion": "1.14",
+      "versionFamily": "1.14",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/0fd01dd81eaa451d3130b1cf025a10f129585b10/1.14.json",
+      "releaseTime": "2019-04-23T14:52:44+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/7a762a59345c13af7d87111207a93f5a8607f6c0/client.jar",
+        "sha1": "7a762a59345c13af7d87111207a93f5a8607f6c0",
+        "byteLength": 18796546
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/f1a0073671057f01aa843443fef34330281333ce/server.jar",
+        "sha1": "f1a0073671057f01aa843443fef34330281333ce",
+        "byteLength": 35914001
+      },
+      "assetIndex": {
+        "id": "1.14",
+        "url": "https://piston-meta.mojang.com/v1/packages/43b2f3021fe9f7d768378de95538e22da3ee8301/1.14.json",
+        "sha1": "43b2f3021fe9f7d768378de95538e22da3ee8301",
+        "byteLength": 227730
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.14.1",
+      "versionFamily": "1.14",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/183e49ba0fabb5ef8a304f8f5907fa887f40c466/1.14.1.json",
+      "releaseTime": "2019-05-13T11:10:12+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/55ba86ddcbc3579397f41910463ffd4056e1e523/client.jar",
+        "sha1": "55ba86ddcbc3579397f41910463ffd4056e1e523",
+        "byteLength": 18814947
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/ed76d597a44c5266be2a7fcd77a8270f1f0bc118/server.jar",
+        "sha1": "ed76d597a44c5266be2a7fcd77a8270f1f0bc118",
+        "byteLength": 35927691
+      },
+      "assetIndex": {
+        "id": "1.14",
+        "url": "https://piston-meta.mojang.com/v1/packages/43b2f3021fe9f7d768378de95538e22da3ee8301/1.14.json",
+        "sha1": "43b2f3021fe9f7d768378de95538e22da3ee8301",
+        "byteLength": 227730
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.14.2",
+      "versionFamily": "1.14",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/83299b3bf3139ebd9ae5547b3144dcf68d4cb1fd/1.14.2.json",
+      "releaseTime": "2019-05-27T11:48:25+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/ca6c5a139045967229975c0c0b7f93e78b4314c2/client.jar",
+        "sha1": "ca6c5a139045967229975c0c0b7f93e78b4314c2",
+        "byteLength": 18794327
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/808be3869e2ca6b62378f9f4b33c946621620019/server.jar",
+        "sha1": "808be3869e2ca6b62378f9f4b33c946621620019",
+        "byteLength": 35932967
+      },
+      "assetIndex": {
+        "id": "1.14",
+        "url": "https://piston-meta.mojang.com/v1/packages/43b2f3021fe9f7d768378de95538e22da3ee8301/1.14.json",
+        "sha1": "43b2f3021fe9f7d768378de95538e22da3ee8301",
+        "byteLength": 227730
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.14.3",
+      "versionFamily": "1.14",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/e21618620e02be5a14543d1d17ffdba941d09aa8/1.14.3.json",
+      "releaseTime": "2019-06-24T12:52:52+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/af100b34ec7ef2b8b9cf7775b544d21d690dddec/client.jar",
+        "sha1": "af100b34ec7ef2b8b9cf7775b544d21d690dddec",
+        "byteLength": 18813147
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/d0d0fe2b1dc6ab4c65554cb734270872b72dadd6/server.jar",
+        "sha1": "d0d0fe2b1dc6ab4c65554cb734270872b72dadd6",
+        "byteLength": 35952401
+      },
+      "assetIndex": {
+        "id": "1.14",
+        "url": "https://piston-meta.mojang.com/v1/packages/43b2f3021fe9f7d768378de95538e22da3ee8301/1.14.json",
+        "sha1": "43b2f3021fe9f7d768378de95538e22da3ee8301",
+        "byteLength": 227730
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.14.4",
+      "versionFamily": "1.14",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/be146d5f66a3627ed0a87c234c4d8dde8ab35098/1.14.4.json",
+      "releaseTime": "2019-07-19T09:25:47+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/8c325a0c5bd674dd747d6ebaa4c791fd363ad8a9/client.jar",
+        "sha1": "8c325a0c5bd674dd747d6ebaa4c791fd363ad8a9",
+        "byteLength": 25191691
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/3dc3d84a581f14691199cf6831b71ed1296a9fdf/server.jar",
+        "sha1": "3dc3d84a581f14691199cf6831b71ed1296a9fdf",
+        "byteLength": 35958734
+      },
+      "assetIndex": {
+        "id": "1.14",
+        "url": "https://piston-meta.mojang.com/v1/packages/43b2f3021fe9f7d768378de95538e22da3ee8301/1.14.json",
+        "sha1": "43b2f3021fe9f7d768378de95538e22da3ee8301",
+        "byteLength": 227730
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.15",
+      "versionFamily": "1.15",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/833322370ab320e77717097082effe1d124d48bd/1.15.json",
+      "releaseTime": "2019-12-09T13:13:38+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/7b07fd09d1e3aae1bc7a1304fedc73bfe5d81800/client.jar",
+        "sha1": "7b07fd09d1e3aae1bc7a1304fedc73bfe5d81800",
+        "byteLength": 15517346
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/e9f105b3c5c7e85c7b445249a93362a22f62442d/server.jar",
+        "sha1": "e9f105b3c5c7e85c7b445249a93362a22f62442d",
+        "byteLength": 36164465
+      },
+      "assetIndex": {
+        "id": "1.15",
+        "url": "https://piston-meta.mojang.com/v1/packages/58c12b1e2878e0a78719778acb803746450b3f1c/1.15.json",
+        "sha1": "58c12b1e2878e0a78719778acb803746450b3f1c",
+        "byteLength": 234331
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.15.1",
+      "versionFamily": "1.15",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/18c3063de87ae126b4e017121219ba802be0755b/1.15.1.json",
+      "releaseTime": "2019-12-16T10:29:47+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/8b11614bea9293592a947ea8f4fd72981ea66677/client.jar",
+        "sha1": "8b11614bea9293592a947ea8f4fd72981ea66677",
+        "byteLength": 15518397
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/4d1826eebac84847c71a77f9349cc22afd0cf0a1/server.jar",
+        "sha1": "4d1826eebac84847c71a77f9349cc22afd0cf0a1",
+        "byteLength": 36164938
+      },
+      "assetIndex": {
+        "id": "1.15",
+        "url": "https://piston-meta.mojang.com/v1/packages/58c12b1e2878e0a78719778acb803746450b3f1c/1.15.json",
+        "sha1": "58c12b1e2878e0a78719778acb803746450b3f1c",
+        "byteLength": 234331
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.15.2",
+      "versionFamily": "1.15",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/e9d0adb8f642abe422909ede50f651b2b58a3573/1.15.2.json",
+      "releaseTime": "2020-01-17T10:03:52+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/e3f78cd16f9eb9a52307ed96ebec64241cc5b32d/client.jar",
+        "sha1": "e3f78cd16f9eb9a52307ed96ebec64241cc5b32d",
+        "byteLength": 15531492
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/bb2b6b1aefcd70dfd1892149ac3a215f6c636b07/server.jar",
+        "sha1": "bb2b6b1aefcd70dfd1892149ac3a215f6c636b07",
+        "byteLength": 36175593
+      },
+      "assetIndex": {
+        "id": "1.15",
+        "url": "https://piston-meta.mojang.com/v1/packages/58c12b1e2878e0a78719778acb803746450b3f1c/1.15.json",
+        "sha1": "58c12b1e2878e0a78719778acb803746450b3f1c",
+        "byteLength": 234331
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.16",
+      "versionFamily": "1.16",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/e9d21d375f9c961f0e9731d4e463306d76e77c48/1.16.json",
+      "releaseTime": "2020-06-23T16:20:52+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/228fdf45541c4c2fe8aec4f20e880cb8fcd46621/client.jar",
+        "sha1": "228fdf45541c4c2fe8aec4f20e880cb8fcd46621",
+        "byteLength": 17492200
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/a0d03225615ba897619220e256a266cb33a44b6b/server.jar",
+        "sha1": "a0d03225615ba897619220e256a266cb33a44b6b",
+        "byteLength": 37968865
+      },
+      "assetIndex": {
+        "id": "1.16",
+        "url": "https://piston-meta.mojang.com/v1/packages/f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2/1.16.json",
+        "sha1": "f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2",
+        "byteLength": 295227
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.16.1",
+      "versionFamily": "1.16",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/54fa3af57d041d2771e66d390197b2c0288e697c/1.16.1.json",
+      "releaseTime": "2020-06-24T10:31:40+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c9abbe8ee4fa490751ca70635340b7cf00db83ff/client.jar",
+        "sha1": "c9abbe8ee4fa490751ca70635340b7cf00db83ff",
+        "byteLength": 17492432
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/a412fd69db1f81db3f511c1463fd304675244077/server.jar",
+        "sha1": "a412fd69db1f81db3f511c1463fd304675244077",
+        "byteLength": 37968964
+      },
+      "assetIndex": {
+        "id": "1.16",
+        "url": "https://piston-meta.mojang.com/v1/packages/f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2/1.16.json",
+        "sha1": "f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2",
+        "byteLength": 295227
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.16.2",
+      "versionFamily": "1.16",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/998d9ef5770d05c20d760dc16cf85151f35009f2/1.16.2.json",
+      "releaseTime": "2020-08-11T10:13:46+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/653e97a2d1d76f87653f02242d243cdee48a5144/client.jar",
+        "sha1": "653e97a2d1d76f87653f02242d243cdee48a5144",
+        "byteLength": 17505439
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c5f6fb23c3876461d46ec380421e42b289789530/server.jar",
+        "sha1": "c5f6fb23c3876461d46ec380421e42b289789530",
+        "byteLength": 37942337
+      },
+      "assetIndex": {
+        "id": "1.16",
+        "url": "https://piston-meta.mojang.com/v1/packages/f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2/1.16.json",
+        "sha1": "f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2",
+        "byteLength": 295227
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.16.3",
+      "versionFamily": "1.16",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/6485dd131ef68c968041a9f6fd73094b027e42e1/1.16.3.json",
+      "releaseTime": "2020-09-10T13:42:37+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/1321521b2caf934f7fc9665aab7e059a7b2bfcdf/client.jar",
+        "sha1": "1321521b2caf934f7fc9665aab7e059a7b2bfcdf",
+        "byteLength": 17505781
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/f02f4473dbf152c23d7d484952121db0b36698cb/server.jar",
+        "sha1": "f02f4473dbf152c23d7d484952121db0b36698cb",
+        "byteLength": 37942656
+      },
+      "assetIndex": {
+        "id": "1.16",
+        "url": "https://piston-meta.mojang.com/v1/packages/f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2/1.16.json",
+        "sha1": "f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2",
+        "byteLength": 295227
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.16.4",
+      "versionFamily": "1.16",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/596ad61fda7612d9edf8881cf81869276bdb7f82/1.16.4.json",
+      "releaseTime": "2020-10-29T15:49:37+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/1952d94a0784e7abda230aae6a1e8fc0522dba99/client.jar",
+        "sha1": "1952d94a0784e7abda230aae6a1e8fc0522dba99",
+        "byteLength": 17546582
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/35139deedbd5182953cf1caa23835da59ca3d7cd/server.jar",
+        "sha1": "35139deedbd5182953cf1caa23835da59ca3d7cd",
+        "byteLength": 37961464
+      },
+      "assetIndex": {
+        "id": "1.16",
+        "url": "https://piston-meta.mojang.com/v1/packages/f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2/1.16.json",
+        "sha1": "f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2",
+        "byteLength": 295227
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.16.5",
+      "versionFamily": "1.16",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/fba9f7833e858a1257d810d21a3a9e3c967f9077/1.16.5.json",
+      "releaseTime": "2021-01-14T16:05:32+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/37fd3c903861eeff3bc24b71eed48f828b5269c8/client.jar",
+        "sha1": "37fd3c903861eeff3bc24b71eed48f828b5269c8",
+        "byteLength": 17547153
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/1b557e7b033b583cd9f66746b7a9ab1ec1673ced/server.jar",
+        "sha1": "1b557e7b033b583cd9f66746b7a9ab1ec1673ced",
+        "byteLength": 37962360
+      },
+      "assetIndex": {
+        "id": "1.16",
+        "url": "https://piston-meta.mojang.com/v1/packages/f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2/1.16.json",
+        "sha1": "f3c4aa96e12951cd2781b3e1c0e8ab82bf719cf2",
+        "byteLength": 295227
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 8,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.17",
+      "versionFamily": "1.17",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/0d9ace8a2ecfd1f4c782786f4b985a499240ff12/1.17.json",
+      "releaseTime": "2021-06-08T11:00:40+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/1cf89c77ed5e72401b869f66410934804f3d6f52/client.jar",
+        "sha1": "1cf89c77ed5e72401b869f66410934804f3d6f52",
+        "byteLength": 19536133
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/0a269b5f2c5b93b1712d0f5dc43b6182b9ab254e/server.jar",
+        "sha1": "0a269b5f2c5b93b1712d0f5dc43b6182b9ab254e",
+        "byteLength": 43621201
+      },
+      "assetIndex": {
+        "id": "1.17",
+        "url": "https://piston-meta.mojang.com/v1/packages/f425401a00adf0112fde624ee80c66333530f8a1/1.17.json",
+        "sha1": "f425401a00adf0112fde624ee80c66333530f8a1",
+        "byteLength": 346398
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 16,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.17.1",
+      "versionFamily": "1.17",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/e0e7ab5ed6f55bbd874ef95be3c9356d67e64b57/1.17.1.json",
+      "releaseTime": "2021-07-06T12:01:34+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/8d9b65467c7913fcf6f5b2e729d44a1e00fde150/client.jar",
+        "sha1": "8d9b65467c7913fcf6f5b2e729d44a1e00fde150",
+        "byteLength": 19546842
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/a16d67e5807f57fc4e550299cf20226194497dc2/server.jar",
+        "sha1": "a16d67e5807f57fc4e550299cf20226194497dc2",
+        "byteLength": 43626592
+      },
+      "assetIndex": {
+        "id": "1.17",
+        "url": "https://piston-meta.mojang.com/v1/packages/f425401a00adf0112fde624ee80c66333530f8a1/1.17.json",
+        "sha1": "f425401a00adf0112fde624ee80c66333530f8a1",
+        "byteLength": 346398
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 16,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.18",
+      "versionFamily": "1.18",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/7367ea8b7cad7c7830192441bb2846be0d2ceeac/1.18.json",
+      "releaseTime": "2021-11-30T09:16:29+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/d49eb6caed53d23927648c97451503442f9e26fd/client.jar",
+        "sha1": "d49eb6caed53d23927648c97451503442f9e26fd",
+        "byteLength": 20038427
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/3cf24a8694aca6267883b17d934efacc5e44440d/server.jar",
+        "sha1": "3cf24a8694aca6267883b17d934efacc5e44440d",
+        "byteLength": 46323386
+      },
+      "assetIndex": {
+        "id": "1.18",
+        "url": "https://piston-meta.mojang.com/v1/packages/d31a2e85ae149dd1b1a7070b22cb8887892fda6c/1.18.json",
+        "sha1": "d31a2e85ae149dd1b1a7070b22cb8887892fda6c",
+        "byteLength": 348724
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.18.1",
+      "versionFamily": "1.18",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/7ff864e988a2c29907154d5f9701e87e5d5e554a/1.18.1.json",
+      "releaseTime": "2021-12-10T08:23:00+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/7e46fb47609401970e2818989fa584fd467cd036/client.jar",
+        "sha1": "7e46fb47609401970e2818989fa584fd467cd036",
+        "byteLength": 20042090
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/125e5adf40c659fd3bce3e66e67a16bb49ecc1b9/server.jar",
+        "sha1": "125e5adf40c659fd3bce3e66e67a16bb49ecc1b9",
+        "byteLength": 46324407
+      },
+      "assetIndex": {
+        "id": "1.18",
+        "url": "https://piston-meta.mojang.com/v1/packages/d31a2e85ae149dd1b1a7070b22cb8887892fda6c/1.18.json",
+        "sha1": "d31a2e85ae149dd1b1a7070b22cb8887892fda6c",
+        "byteLength": 348724
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.18.2",
+      "versionFamily": "1.18",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/334b33fcba3c9be4b7514624c965256535bd7eba/1.18.2.json",
+      "releaseTime": "2022-02-28T10:42:45+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/2e9a3e3107cca00d6bc9c97bf7d149cae163ef21/client.jar",
+        "sha1": "2e9a3e3107cca00d6bc9c97bf7d149cae163ef21",
+        "byteLength": 20259661
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c8f83c5655308435b3dcf03c06d9fe8740a77469/server.jar",
+        "sha1": "c8f83c5655308435b3dcf03c06d9fe8740a77469",
+        "byteLength": 46592587
+      },
+      "assetIndex": {
+        "id": "1.18",
+        "url": "https://piston-meta.mojang.com/v1/packages/d31a2e85ae149dd1b1a7070b22cb8887892fda6c/1.18.json",
+        "sha1": "d31a2e85ae149dd1b1a7070b22cb8887892fda6c",
+        "byteLength": 348724
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.19",
+      "versionFamily": "1.19",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/14bbfb25fb1c1c798e3c9b9482b081a78d1f3a9d/1.19.json",
+      "releaseTime": "2022-06-07T09:42:18+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c0898ec7c6a5a2eaa317770203a1554260699994/client.jar",
+        "sha1": "c0898ec7c6a5a2eaa317770203a1554260699994",
+        "byteLength": 21462385
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/e00c4052dac1d59a1188b2aa9d5a87113aaf1122/server.jar",
+        "sha1": "e00c4052dac1d59a1188b2aa9d5a87113aaf1122",
+        "byteLength": 45538778
+      },
+      "assetIndex": {
+        "id": "1.19",
+        "url": "https://piston-meta.mojang.com/v1/packages/a9c8b05a8082a65678beda6dfa2b8f21fa627bce/1.19.json",
+        "sha1": "a9c8b05a8082a65678beda6dfa2b8f21fa627bce",
+        "byteLength": 385608
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.19.1",
+      "versionFamily": "1.19",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/39d5e8925d37490c6f2abb2e02b8c6f1b35719df/1.19.1.json",
+      "releaseTime": "2022-07-27T09:25:33+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/90d438c3e432add8848a9f9f368ce5a52f6bc4a7/client.jar",
+        "sha1": "90d438c3e432add8848a9f9f368ce5a52f6bc4a7",
+        "byteLength": 21643604
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/8399e1211e95faa421c1507b322dbeae86d604df/server.jar",
+        "sha1": "8399e1211e95faa421c1507b322dbeae86d604df",
+        "byteLength": 45609936
+      },
+      "assetIndex": {
+        "id": "1.19",
+        "url": "https://piston-meta.mojang.com/v1/packages/a9c8b05a8082a65678beda6dfa2b8f21fa627bce/1.19.json",
+        "sha1": "a9c8b05a8082a65678beda6dfa2b8f21fa627bce",
+        "byteLength": 385608
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.19.2",
+      "versionFamily": "1.19",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/ed548106acf3ac7e8205a6ee8fd2710facfa164f/1.19.2.json",
+      "releaseTime": "2022-08-05T11:57:05+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/055b30d860ead928cba3849ba920c88b6950b654/client.jar",
+        "sha1": "055b30d860ead928cba3849ba920c88b6950b654",
+        "byteLength": 21644740
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar",
+        "sha1": "f69c284232d7c7580bd89a5a4931c3581eae1378",
+        "byteLength": 45609512
+      },
+      "assetIndex": {
+        "id": "1.19",
+        "url": "https://piston-meta.mojang.com/v1/packages/a9c8b05a8082a65678beda6dfa2b8f21fa627bce/1.19.json",
+        "sha1": "a9c8b05a8082a65678beda6dfa2b8f21fa627bce",
+        "byteLength": 385608
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.19.3",
+      "versionFamily": "1.19",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/a515312b57766db0d55f23f2ca4db4f67654621d/1.19.3.json",
+      "releaseTime": "2022-12-07T08:17:18+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/977727ec9ab8b4631e5c12839f064092f17663f8/client.jar",
+        "sha1": "977727ec9ab8b4631e5c12839f064092f17663f8",
+        "byteLength": 22704188
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c9df48efed58511cdd0213c56b9013a7b5c9ac1f/server.jar",
+        "sha1": "c9df48efed58511cdd0213c56b9013a7b5c9ac1f",
+        "byteLength": 47162712
+      },
+      "assetIndex": {
+        "id": "2",
+        "url": "https://piston-meta.mojang.com/v1/packages/743a4a3fb4dedbba8d405a9907c400aa5fb36786/2.json",
+        "sha1": "743a4a3fb4dedbba8d405a9907c400aa5fb36786",
+        "byteLength": 407568
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.19.4",
+      "versionFamily": "1.19",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/34363790e6c3684954487c713d615c178aad2c55/1.19.4.json",
+      "releaseTime": "2023-03-14T12:56:18+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/958928a560c9167687bea0cefeb7375da1e552a8/client.jar",
+        "sha1": "958928a560c9167687bea0cefeb7375da1e552a8",
+        "byteLength": 23476620
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/8f3112a1049751cc472ec13e397eade5336ca7ae/server.jar",
+        "sha1": "8f3112a1049751cc472ec13e397eade5336ca7ae",
+        "byteLength": 47515675
+      },
+      "assetIndex": {
+        "id": "3",
+        "url": "https://piston-meta.mojang.com/v1/packages/1505aada4b2f7121756cfdac5ab4d37e3857ef6d/3.json",
+        "sha1": "1505aada4b2f7121756cfdac5ab4d37e3857ef6d",
+        "byteLength": 411679
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/50af6da98cdb14993372ce281e03ced670e9a495/1.20.json",
+      "releaseTime": "2023-06-02T08:36:17+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/e575a48efda46cf88111ba05b624ef90c520eef1/client.jar",
+        "sha1": "e575a48efda46cf88111ba05b624ef90c520eef1",
+        "byteLength": 23028278
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/15c777e2cfe0556eef19aab534b186c0c6f277e1/server.jar",
+        "sha1": "15c777e2cfe0556eef19aab534b186c0c6f277e1",
+        "byteLength": 47787288
+      },
+      "assetIndex": {
+        "id": "5",
+        "url": "https://piston-meta.mojang.com/v1/packages/e1e23f09e9f518f5b8f76dac10524ebf07691d86/5.json",
+        "sha1": "e1e23f09e9f518f5b8f76dac10524ebf07691d86",
+        "byteLength": 413067
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20.1",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/2492c9d294776667e63b56a73a611ae327948de2/1.20.1.json",
+      "releaseTime": "2023-06-12T13:25:51+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/0c3ec587af28e5a785c0b4a7b8a30f9a8f78f838/client.jar",
+        "sha1": "0c3ec587af28e5a785c0b4a7b8a30f9a8f78f838",
+        "byteLength": 23028853
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/84194a2f286ef7c14ed7ce0090dba59902951553/server.jar",
+        "sha1": "84194a2f286ef7c14ed7ce0090dba59902951553",
+        "byteLength": 47791053
+      },
+      "assetIndex": {
+        "id": "5",
+        "url": "https://piston-meta.mojang.com/v1/packages/e1e23f09e9f518f5b8f76dac10524ebf07691d86/5.json",
+        "sha1": "e1e23f09e9f518f5b8f76dac10524ebf07691d86",
+        "byteLength": 413067
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20.2",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/e19d30ded4f25b8149bb43ab7493a9953a2f16b9/1.20.2.json",
+      "releaseTime": "2023-09-20T09:02:57+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/82d1974e75fc984c5ed4b038e764e50958ac61a0/client.jar",
+        "sha1": "82d1974e75fc984c5ed4b038e764e50958ac61a0",
+        "byteLength": 23186213
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/5b868151bd02b41319f54c8d4061b8cae84e665c/server.jar",
+        "sha1": "5b868151bd02b41319f54c8d4061b8cae84e665c",
+        "byteLength": 48285806
+      },
+      "assetIndex": {
+        "id": "8",
+        "url": "https://piston-meta.mojang.com/v1/packages/be795ea589c9dc3f23a1573de90699fea1696bb1/8.json",
+        "sha1": "be795ea589c9dc3f23a1573de90699fea1696bb1",
+        "byteLength": 416952
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20.3",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/c3e59ea063e3dc6d12ad7a2fc51076a5134d57eb/1.20.3.json",
+      "releaseTime": "2023-12-04T12:10:32+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/b178a327a96f2cf1c9f98a45e5588d654a3e4369/client.jar",
+        "sha1": "b178a327a96f2cf1c9f98a45e5588d654a3e4369",
+        "byteLength": 24445920
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/4fb536bfd4a83d61cdbaf684b8d311e66e7d4c49/server.jar",
+        "sha1": "4fb536bfd4a83d61cdbaf684b8d311e66e7d4c49",
+        "byteLength": 49152320
+      },
+      "assetIndex": {
+        "id": "12",
+        "url": "https://piston-meta.mojang.com/v1/packages/c6d49c16d8b3efe401c37e2f4f18495da97c1781/12.json",
+        "sha1": "c6d49c16d8b3efe401c37e2f4f18495da97c1781",
+        "byteLength": 437886
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20.4",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/a8203fe4dde85f7ff8fa480a6fbf645d9d29b04f/1.20.4.json",
+      "releaseTime": "2023-12-07T12:56:20+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/fd19469fed4a4b4c15b2d5133985f0e3e7816a8a/client.jar",
+        "sha1": "fd19469fed4a4b4c15b2d5133985f0e3e7816a8a",
+        "byteLength": 24445539
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/8dd1a28015f51b1803213892b50b7b4fc76e594d/server.jar",
+        "sha1": "8dd1a28015f51b1803213892b50b7b4fc76e594d",
+        "byteLength": 49150256
+      },
+      "assetIndex": {
+        "id": "12",
+        "url": "https://piston-meta.mojang.com/v1/packages/c6d49c16d8b3efe401c37e2f4f18495da97c1781/12.json",
+        "sha1": "c6d49c16d8b3efe401c37e2f4f18495da97c1781",
+        "byteLength": 437886
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 17,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20.5",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/f884bec1bcf9fb50b1ade2406310cb12aaf422fd/1.20.5.json",
+      "releaseTime": "2024-04-23T11:54:12+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c6b92b2374a629f20802bb284f98a4ee790e950a/client.jar",
+        "sha1": "c6b92b2374a629f20802bb284f98a4ee790e950a",
+        "byteLength": 26565623
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/79493072f65e17243fd36a699c9a96b4381feb91/server.jar",
+        "sha1": "79493072f65e17243fd36a699c9a96b4381feb91",
+        "byteLength": 51424012
+      },
+      "assetIndex": {
+        "id": "16",
+        "url": "https://piston-meta.mojang.com/v1/packages/c1fa4a8d41b8104ae6a8f9d32b5de21e72f49cdd/16.json",
+        "sha1": "c1fa4a8d41b8104ae6a8f9d32b5de21e72f49cdd",
+        "byteLength": 446564
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.20.6",
+      "versionFamily": "1.20",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/c9b52edcb15feffc8ea0c4c90027e20cdcb1b1f6/1.20.6.json",
+      "releaseTime": "2024-04-29T12:40:45+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/05b6f1c6b46a29d6ea82b4e0d42190e42402030f/client.jar",
+        "sha1": "05b6f1c6b46a29d6ea82b4e0d42190e42402030f",
+        "byteLength": 26565641
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/145ff0858209bcfc164859ba735d4199aafa1eea/server.jar",
+        "sha1": "145ff0858209bcfc164859ba735d4199aafa1eea",
+        "byteLength": 51420480
+      },
+      "assetIndex": {
+        "id": "16",
+        "url": "https://piston-meta.mojang.com/v1/packages/c1fa4a8d41b8104ae6a8f9d32b5de21e72f49cdd/16.json",
+        "sha1": "c1fa4a8d41b8104ae6a8f9d32b5de21e72f49cdd",
+        "byteLength": 446564
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/277bb6c4867b96ae9e51a3e2a7589c14363bff48/1.21.json",
+      "releaseTime": "2024-06-13T08:24:03+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/0e9a07b9bb3390602f977073aa12884a4ce12431/client.jar",
+        "sha1": "0e9a07b9bb3390602f977073aa12884a4ce12431",
+        "byteLength": 26836080
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/450698d1863ab5180c25d7c804ef0fe6369dd1ba/server.jar",
+        "sha1": "450698d1863ab5180c25d7c804ef0fe6369dd1ba",
+        "byteLength": 51623779
+      },
+      "assetIndex": {
+        "id": "17",
+        "url": "https://piston-meta.mojang.com/v1/packages/de573f83da62843433ec9951c66feec7ed0a60a1/17.json",
+        "sha1": "de573f83da62843433ec9951c66feec7ed0a60a1",
+        "byteLength": 449557
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.1",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/eb17d0d5933eec4a056c9f649db1e33c69622785/1.21.1.json",
+      "releaseTime": "2024-08-08T12:24:45+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/30c73b1c5da787909b2f73340419fdf13b9def88/client.jar",
+        "sha1": "30c73b1c5da787909b2f73340419fdf13b9def88",
+        "byteLength": 26836906
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/59353fb40c36d304f2035d51e7d6e6baa98dc05c/server.jar",
+        "sha1": "59353fb40c36d304f2035d51e7d6e6baa98dc05c",
+        "byteLength": 51627615
+      },
+      "assetIndex": {
+        "id": "17",
+        "url": "https://piston-meta.mojang.com/v1/packages/de573f83da62843433ec9951c66feec7ed0a60a1/17.json",
+        "sha1": "de573f83da62843433ec9951c66feec7ed0a60a1",
+        "byteLength": 449557
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.2",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/1a7c9df30ab5916a361f117ecea4e07f2a3cfd14/1.21.2.json",
+      "releaseTime": "2024-10-22T09:58:55+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/c7ac2d0d86f4ca416cab9064ff8a281852ad0c7b/client.jar",
+        "sha1": "c7ac2d0d86f4ca416cab9064ff8a281852ad0c7b",
+        "byteLength": 27842947
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/7bf95409b0d9b5388bfea3704ec92012d273c14c/server.jar",
+        "sha1": "7bf95409b0d9b5388bfea3704ec92012d273c14c",
+        "byteLength": 56120171
+      },
+      "assetIndex": {
+        "id": "18",
+        "url": "https://piston-meta.mojang.com/v1/packages/fa0e9bba478d434dd64e7e334f84a4e6307a4283/18.json",
+        "sha1": "fa0e9bba478d434dd64e7e334f84a4e6307a4283",
+        "byteLength": 457929
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.3",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/9f85d75329f168ca8e13f2e3fae74ec94974882a/1.21.3.json",
+      "releaseTime": "2024-10-23T12:28:15+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/6f67d19b4467240639cb2c368ffd4b94ba889705/client.jar",
+        "sha1": "6f67d19b4467240639cb2c368ffd4b94ba889705",
+        "byteLength": 27844259
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/45810d238246d90e811d896f87b14695b7fb6839/server.jar",
+        "sha1": "45810d238246d90e811d896f87b14695b7fb6839",
+        "byteLength": 56122038
+      },
+      "assetIndex": {
+        "id": "18",
+        "url": "https://piston-meta.mojang.com/v1/packages/fa0e9bba478d434dd64e7e334f84a4e6307a4283/18.json",
+        "sha1": "fa0e9bba478d434dd64e7e334f84a4e6307a4283",
+        "byteLength": 457929
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.4",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/c16bd1251bdf2cab3d7c3b30393427eeb19c6b2e/1.21.4.json",
+      "releaseTime": "2024-12-03T10:12:57+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/a7e5a6024bfd3cd614625aa05629adf760020304/client.jar",
+        "sha1": "a7e5a6024bfd3cd614625aa05629adf760020304",
+        "byteLength": 28335587
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/4707d00eb834b446575d89a61a11b5d548d8c001/server.jar",
+        "sha1": "4707d00eb834b446575d89a61a11b5d548d8c001",
+        "byteLength": 56880250
+      },
+      "assetIndex": {
+        "id": "19",
+        "url": "https://piston-meta.mojang.com/v1/packages/f08a9f07a863fe31e36f76f19b261cd0648b3c5a/19.json",
+        "sha1": "f08a9f07a863fe31e36f76f19b261cd0648b3c5a",
+        "byteLength": 464718
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": 4189,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": "world::anvil_versions::v1_21_4",
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.5",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/085c81eae857c821a14d1694519a0f6569a00427/1.21.5.json",
+      "releaseTime": "2025-03-25T12:14:58+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/b88808bbb3da8d9f453694b5d8f74a3396f1a533/client.jar",
+        "sha1": "b88808bbb3da8d9f453694b5d8f74a3396f1a533",
+        "byteLength": 28984409
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/e6ec2f64e6080b9b5d9b471b291c33cc7f509733/server.jar",
+        "sha1": "e6ec2f64e6080b9b5d9b471b291c33cc7f509733",
+        "byteLength": 57269758
+      },
+      "assetIndex": {
+        "id": "24",
+        "url": "https://piston-meta.mojang.com/v1/packages/bb262ea084de8fe98954101443ba34c8425a68ab/24.json",
+        "sha1": "bb262ea084de8fe98954101443ba34c8425a68ab",
+        "byteLength": 483183
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.6",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/870ceb0e45bc251e1345dd8714261e8d153189cc/1.21.6.json",
+      "releaseTime": "2025-06-17T11:10:28+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/740a125b83dd3447feaa3c5e891ead7fbb21ae28/client.jar",
+        "sha1": "740a125b83dd3447feaa3c5e891ead7fbb21ae28",
+        "byteLength": 29516555
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/6e64dcabba3c01a7271b4fa6bd898483b794c59b/server.jar",
+        "sha1": "6e64dcabba3c01a7271b4fa6bd898483b794c59b",
+        "byteLength": 57554576
+      },
+      "assetIndex": {
+        "id": "26",
+        "url": "https://piston-meta.mojang.com/v1/packages/62ed5debfe241ed0ab32c3b6fcf50a80ce11a59a/26.json",
+        "sha1": "62ed5debfe241ed0ab32c3b6fcf50a80ce11a59a",
+        "byteLength": 491670
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.7",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/5297156351f0ae2d132e7bb89fbee25a8127c15d/1.21.7.json",
+      "releaseTime": "2025-06-30T09:32:16+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/a2db1ea98c37b2d00c83f6867fb8bb581a593e07/client.jar",
+        "sha1": "a2db1ea98c37b2d00c83f6867fb8bb581a593e07",
+        "byteLength": 29522178
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/05e4b48fbc01f0385adb74bcff9751d34552486c/server.jar",
+        "sha1": "05e4b48fbc01f0385adb74bcff9751d34552486c",
+        "byteLength": 57556704
+      },
+      "assetIndex": {
+        "id": "26",
+        "url": "https://piston-meta.mojang.com/v1/packages/62ed5debfe241ed0ab32c3b6fcf50a80ce11a59a/26.json",
+        "sha1": "62ed5debfe241ed0ab32c3b6fcf50a80ce11a59a",
+        "byteLength": 491670
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.8",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/a21c1bcedfdfa920f132c35390732b8040e75101/1.21.8.json",
+      "releaseTime": "2025-07-17T12:04:02+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/a19d9badbea944a4369fd0059e53bf7286597576/client.jar",
+        "sha1": "a19d9badbea944a4369fd0059e53bf7286597576",
+        "byteLength": 29525242
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/6bce4ef400e4efaa63a13d5e6f6b500be969ef81/server.jar",
+        "sha1": "6bce4ef400e4efaa63a13d5e6f6b500be969ef81",
+        "byteLength": 57555044
+      },
+      "assetIndex": {
+        "id": "26",
+        "url": "https://piston-meta.mojang.com/v1/packages/62ed5debfe241ed0ab32c3b6fcf50a80ce11a59a/26.json",
+        "sha1": "62ed5debfe241ed0ab32c3b6fcf50a80ce11a59a",
+        "byteLength": 491670
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.9",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/a6ad3cf935ede641f441a2fd9e0e4fea2961f43f/1.21.9.json",
+      "releaseTime": "2025-09-30T11:58:43+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/ce92fd8d1b2460c41ceda07ae7b3fe863a80d045/client.jar",
+        "sha1": "ce92fd8d1b2460c41ceda07ae7b3fe863a80d045",
+        "byteLength": 30591861
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/11e54c2081420a4d49db3007e66c80a22579ff2a/server.jar",
+        "sha1": "11e54c2081420a4d49db3007e66c80a22579ff2a",
+        "byteLength": 58638725
+      },
+      "assetIndex": {
+        "id": "27",
+        "url": "https://piston-meta.mojang.com/v1/packages/dedfb9bd5580d6c267cb72b34ecc2526b6894f47/27.json",
+        "sha1": "dedfb9bd5580d6c267cb72b34ecc2526b6894f47",
+        "byteLength": 507956
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.10",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/b8512e6cd971bd5df0087af7cf6fb28e8694c2d9/1.21.10.json",
+      "releaseTime": "2025-10-07T09:17:23+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/d3bdf582a7fa723ce199f3665588dcfe6bf9aca8/client.jar",
+        "sha1": "d3bdf582a7fa723ce199f3665588dcfe6bf9aca8",
+        "byteLength": 30592168
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/95495a7f485eedd84ce928cef5e223b757d2f764/server.jar",
+        "sha1": "95495a7f485eedd84ce928cef5e223b757d2f764",
+        "byteLength": 58642415
+      },
+      "assetIndex": {
+        "id": "27",
+        "url": "https://piston-meta.mojang.com/v1/packages/dedfb9bd5580d6c267cb72b34ecc2526b6894f47/27.json",
+        "sha1": "dedfb9bd5580d6c267cb72b34ecc2526b6894f47",
+        "byteLength": 507956
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "1.21.11",
+      "versionFamily": "1.21",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/bc03bf4398acc192063d758aecb1cb299f05d793/1.21.11.json",
+      "releaseTime": "2025-12-09T12:23:30+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd/client.jar",
+        "sha1": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd",
+        "byteLength": 31152600
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/64bb6d763bed0a9f1d632ec347938594144943ed/server.jar",
+        "sha1": "64bb6d763bed0a9f1d632ec347938594144943ed",
+        "byteLength": 56327581
+      },
+      "assetIndex": {
+        "id": "29",
+        "url": "https://piston-meta.mojang.com/v1/packages/adb0a43fae291fd88ee27d85a372ba6f2072b0a3/29.json",
+        "sha1": "adb0a43fae291fd88ee27d85a372ba6f2072b0a3",
+        "byteLength": 529966
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 21,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "26.1",
+      "versionFamily": "26.1",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/15eef5a21b9c6457613432a235efeb8dc1f533bc/26.1.json",
+      "releaseTime": "2026-03-24T12:11:04+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/191771837687b766537a8c4607cb6fad79c533a1/client.jar",
+        "sha1": "191771837687b766537a8c4607cb6fad79c533a1",
+        "byteLength": 38113398
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/3872a7f07a1a595e651aef8b058dfc2bb3772f46/server.jar",
+        "sha1": "3872a7f07a1a595e651aef8b058dfc2bb3772f46",
+        "byteLength": 60417588
+      },
+      "assetIndex": {
+        "id": "30",
+        "url": "https://piston-meta.mojang.com/v1/packages/1cf55e789e49796e91b0258d4012e653b0e6acc3/30.json",
+        "sha1": "1cf55e789e49796e91b0258d4012e653b0e6acc3",
+        "byteLength": 548391
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 25,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "26.1.1",
+      "versionFamily": "26.1",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/e5cbc96c826605221c7107aa8f45087d3569c447/26.1.1.json",
+      "releaseTime": "2026-04-01T09:06:36+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/377031a9e733ba8ab4d355959a8f6fb8eb707556/client.jar",
+        "sha1": "377031a9e733ba8ab4d355959a8f6fb8eb707556",
+        "byteLength": 38113231
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/49c8195703ad0ba4f0a4efbccfd85a4a8ca57431/server.jar",
+        "sha1": "49c8195703ad0ba4f0a4efbccfd85a4a8ca57431",
+        "byteLength": 60417481
+      },
+      "assetIndex": {
+        "id": "30",
+        "url": "https://piston-meta.mojang.com/v1/packages/1cf55e789e49796e91b0258d4012e653b0e6acc3/30.json",
+        "sha1": "1cf55e789e49796e91b0258d4012e653b0e6acc3",
+        "byteLength": 548391
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 25,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "26.1.2",
+      "versionFamily": "26.1",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/50187e15f4fe9e772e617db26c58d789f9ec2b31/26.1.2.json",
+      "releaseTime": "2026-04-09T10:12:23+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/4e618f09a0c649dde3fdf829df443ce0b8831e65/client.jar",
+        "sha1": "4e618f09a0c649dde3fdf829df443ce0b8831e65",
+        "byteLength": 38113927
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51/server.jar",
+        "sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+        "byteLength": 60417480
+      },
+      "assetIndex": {
+        "id": "30",
+        "url": "https://piston-meta.mojang.com/v1/packages/1cf55e789e49796e91b0258d4012e653b0e6acc3/30.json",
+        "sha1": "1cf55e789e49796e91b0258d4012e653b0e6acc3",
+        "byteLength": 548391
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 25,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "26.2",
+      "versionFamily": "26.2",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/33c420747ce582e48dff1d8c5d8e67e5bb6257c9/26.2.json",
+      "releaseTime": "2026-06-16T12:03:33+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/2dc72797acbc1b63fc16a11c4ac393605f453754/client.jar",
+        "sha1": "2dc72797acbc1b63fc16a11c4ac393605f453754",
+        "byteLength": 39193383
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/823e2250d24b3ddac457a60c92a6a941943fcd6a/server.jar",
+        "sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+        "byteLength": 60894273
+      },
+      "assetIndex": {
+        "id": "32",
+        "url": "https://piston-meta.mojang.com/v1/packages/52695890153d94cf946455da532806db8c530831/32.json",
+        "sha1": "52695890153d94cf946455da532806db8c530831",
+        "byteLength": 586366
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 25,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    },
+    {
+      "minecraftVersion": "26.3",
+      "versionFamily": "26.3",
+      "officialVersionManifestEntry": "https://piston-meta.mojang.com/v1/packages/bc098d111a72e9f6178801544a42099bdfbb0cf2/26.3.json",
+      "releaseTime": "2026-09-15T11:23:02+00:00",
+      "clientJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/e877b6a07acd633fb3bb475002175cec036e7b87/client.jar",
+        "sha1": "e877b6a07acd633fb3bb475002175cec036e7b87",
+        "byteLength": 41483720
+      },
+      "serverJar": {
+        "url": "https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar",
+        "sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+        "byteLength": 62294556
+      },
+      "assetIndex": {
+        "id": "34",
+        "url": "https://piston-meta.mojang.com/v1/packages/32a06dd28a0a8a981f4a1dffbdb3931f3075ca6c/34.json",
+        "sha1": "32a06dd28a0a8a981f4a1dffbdb3931f3075ca6c",
+        "byteLength": 597035
+      },
+      "paperBuild": null,
+      "paperJarSha256": null,
+      "dataVersion": null,
+      "minJavaVersion": 25,
+      "chunkFormat": "anvil",
+      "assetFormat": "minecraft-resource-index",
+      "anvilAdapter": null,
+      "paperSnapshotAdapter": null,
+      "referenceCapture": null,
+      "status": "metadata_verified",
+      "artifactStatus": "not_downloaded"
+    }
+  ]
+}
