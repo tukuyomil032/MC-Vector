@@ -86,6 +86,23 @@ docs: document local validation commands
 
 Prefer one commit per logical task. Do not add a `Co-Authored-By` trailer unless the project maintainer explicitly requests one.
 
+Release notes are generated from commits since the previous published release. Use these prefixes so each change lands in the right section:
+
+- `feat` — Features
+- `fix` — Bug Fixes
+- `perf` — Performance
+- `type!` or a `BREAKING CHANGE` footer — Breaking Changes
+- `chore`, `docs`, `ci`, `test`, `build`, `style`, and `ref` — Maintenance
+- Other commit types — Other Changes
+
+Merge commits and release preparation commits are omitted from the generated notes.
+
+## Release process
+
+To prepare a stable release, authenticate the [GitHub CLI](https://cli.github.com/) with `gh auth login`, then run `just release` and enter the exact target version as `X.Y.Z` or `vX.Y.Z`. The command dispatches the **Prepare Release PR** workflow on `main`. The workflow validates the target version, updates the synchronized version files, generates the next `CHANGELOG.md` entry from commits after the latest published GitHub Release, and opens a pull request for review.
+
+Wait for the workflow run to finish, review the generated changelog and version changes in the pull request, then merge it. The existing **Release** workflow builds the installers, creates the GitHub Release with the complete entry, and publishes updater metadata with only Breaking Changes, Features, Bug Fixes, and Performance. MC-Vector publishes one stable update channel.
+
 ### Coding guidelines
 
 - Keep TypeScript changes compatible with the existing strict configuration.
