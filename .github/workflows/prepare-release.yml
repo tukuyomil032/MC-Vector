@@ -1,0 +1,116 @@
+name: Prepare Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact target version for the next stable release (X.Y.Z or vX.Y.Z)
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+
+      - name: Find latest published release
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          previous_tag=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq '[.[] | select(.draft == false and .prerelease == false)] | sort_by(.published_at) | last | .tag_name')
+          if [ -z "$previous_tag" ] || [ "$previous_tag" = "null" ]; then
+            echo "No published GitHub Release was found; cannot choose a changelog range." >&2
+            exit 1
+          fi
+          echo "tag=$previous_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Validate requested version
+        id: version
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          VERSION="${REQUESTED_VERSION#v}"
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable X.Y.Z version, got: $REQUESTED_VERSION" >&2
+            exit 1
+          fi
+
+          CURRENT_VERSION=$(jq -er '.version | select(type == "string" and length > 0)' package.json)
+          if [[ ! "$CURRENT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected package.json to contain a stable X.Y.Z version, got: $CURRENT_VERSION" >&2
+            exit 1
+          fi
+
+          IFS=. read -r TARGET_MAJOR TARGET_MINOR TARGET_PATCH <<< "$VERSION"
+          IFS=. read -r CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH <<< "$CURRENT_VERSION"
+          if (( TARGET_MAJOR < CURRENT_MAJOR ||
+                (TARGET_MAJOR == CURRENT_MAJOR && TARGET_MINOR < CURRENT_MINOR) ||
+                (TARGET_MAJOR == CURRENT_MAJOR && TARGET_MINOR == CURRENT_MINOR && TARGET_PATCH <= CURRENT_PATCH) )); then
+            echo "Target version $VERSION must be greater than current version $CURRENT_VERSION." >&2
+            exit 1
+          fi
+
+          if git rev-parse --verify --quiet "refs/tags/v$VERSION" >/dev/null; then
+            echo "Tag v$VERSION already exists." >&2
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update version files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bun run release:prepare "$VERSION"
+
+      - name: Generate changelog entry
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS_TAG: ${{ steps.previous.outputs.tag }}
+        run: node scripts/changelog.mjs generate "$VERSION" "$PREVIOUS_TAG"
+
+      - name: Create release pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ github.token }}
+          add-paths: |
+            CHANGELOG.md
+            README.md
+            package.json
+            src/lib/adapters/plugin/http-client.ts
+            src/lib/version-commands.ts
+            tests/lib/adapters/plugin/http-client.test.ts
+            src-tauri/Cargo.toml
+            src-tauri/Cargo.lock
+            src-tauri/tauri.conf.json
+            src-tauri/src/commands/download.rs
+          commit-message: 'chore: prepare release v${{ steps.version.outputs.version }}'
+          branch: release/v${{ steps.version.outputs.version }}
+          title: 'chore: prepare release v${{ steps.version.outputs.version }}'
+          body: |
+            This pull request prepares the next stable release.
+
+            - Version: `v${{ steps.version.outputs.version }}`
+            - Changelog range starts after `${{ steps.previous.outputs.tag }}`

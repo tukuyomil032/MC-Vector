@@ -249,6 +249,7 @@ just tauri-build --debug --no-bundle
 
 ```
 MC-Vector/
+├── CHANGELOG.md                      # Published release history and generated notes
 ├── src/                              # Frontend source code
 │   ├── App.tsx                       # Main application component
 │   ├── main.tsx                      # React entry point
@@ -303,9 +304,11 @@ MC-Vector/
 │   └── pull_request_template.md      # PR description template
 │
 ├── scripts/
+│   ├── changelog.mjs                 # Generate and backfill release notes
 │   ├── cargo-optional.mjs            # check Cargo dependencies
 │   ├── install-extensions.mjs.       # Install VS Code extensions
-│   ├── prepare-release.mjs           # prepare a release
+│   ├── prepare-release.mjs           # Update version files for a release
+│   ├── request-release.mjs            # Dispatch the release preparation workflow
 │   └── update-minecraft-versions.js  # Update supported Minecraft versions
 │
 ├── justfile                          # Modern task runner
@@ -365,7 +368,7 @@ For a detailed architecture overview, see [Architecture Documentation](docs/src/
 | Prepare release    | `just release`            | Prepare a release                    |
 | Update Minecraft versions | `just update-minecraft-versions` | Update supported Minecraft versions |
 
-To prepare a release, run `just release` and enter `X.Y.Z` or `vX.Y.Z` when prompted. Copy or run the printed commit command, push `main`, and GitHub Actions creates the tag and release.
+To prepare a release, authenticate the [GitHub CLI](https://cli.github.com/) first with `gh auth login`, then run `just release` and enter the exact target version as `X.Y.Z` or `vX.Y.Z`. The command dispatches the **Prepare Release PR** workflow on `main`. Wait for the workflow run to create the reviewable pull request, review it, and merge it. The existing **Release** workflow builds and publishes the stable release after the merge. MC-Vector uses one stable update channel.
 
 For detailed command usage, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).
 
