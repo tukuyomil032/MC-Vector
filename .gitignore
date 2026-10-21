@@ -193,3 +193,7 @@ apps/native-macos/*.trace/
 .agents/**
 .claude/skills/**
 .vscode/launch.json
+
+# Generated symbol disposition ledger exceeds GitHub's 100MB file limit; regenerate locally
+# with spec/map/plan/tools/materialize-builtin-source-dispositions.mjs instead of committing it.
+spec/map/coverage/source-symbol-dispositions.json
