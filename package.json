@@ -125,7 +125,9 @@
   "overrides": {
     "dompurify": "3.4.17",
     "devalue": "^5.9.4",
-    "http-cache-semantics": "4.3.0"
+    "http-cache-semantics": "4.3.0",
+    "postcss-nested": "^7.0.2",
+    "postcss-selector-parser": "^7.1.7"
   },
   "packageManager": "bun@1.4.2",
   "productName": "MC-Vector",
