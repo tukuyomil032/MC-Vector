@@ -1,0 +1,3315 @@
+{
+  "schemaVersion": 1,
+  "shardId": "part-c-platform-staging",
+  "sourceRepository": "https://github.com/webbukkit/dynmap",
+  "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+  "sourceTreeSha1": "632ec26b9f995c8c7acaf525325b359a8a996175",
+  "inventorySha256": "169d460c2a9878ec8f89775121287805e345ef188abd1352abdc9c709003cdfa",
+  "sourceShard": "resource-consumer-shards/part-c.json",
+  "selection": {
+    "population": "113 non-modern-texture rows from part-c's existing unresolved slice; standard Minecraft textures are in resource-c-shards/standard-textures.json",
+    "sortOrder": "sourcePath ascending by Unicode code-point order",
+    "selectedCount": 113,
+    "assignedCount": 55,
+    "unresolvedCount": 58
+  },
+  "pinnedSource": {
+    "checkout": "/private/tmp/mc-vector-dynmap-audit.0IpvKg",
+    "head": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+    "treeSha1": "632ec26b9f995c8c7acaf525325b359a8a996175",
+    "status": "clean at verified pinned revision"
+  },
+  "counts": {
+    "assigned": 55,
+    "covered": 55,
+    "unresolved": 58,
+    "byScope": {
+      "excluded": 23,
+      "boundary-adapter": 1,
+      "renderer-runtime": 31
+    }
+  },
+  "evidence": {
+    "SRC-PINNED-CORE-CONFIGURATION-WORLDS": {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/DynmapCore.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "sourceBlobSha1": "bd0e12d5bc85329c65fb1c1761adef5179247a1a",
+      "symbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()"
+      ],
+      "sourceSpan": "initConfiguration(EnableCoreCallbacks) copies /configuration.txt, constructs ConfigurationNode and calls load() at lines 398-418; it then calls HDBlockModels.loadModels and TexturePack.loadTextureMapping. The same method copies /worlds.txt and calls world_config.load() at lines 609-615."
+    },
+    "SRC-PINNED-LEGACY-TERRAIN-ATLAS-TRACE": {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "sourceBlobSha1": "99dc4334f2b487866ecdc351bc193561514ab71b",
+      "symbolIds": [
+        "method:type:org.dynmap.hdmap.TexturePack#loadTerrain(boolean)",
+        "method:type:org.dynmap.hdmap.TexturePack#getRPFileName(int)",
+        "field:type:org.dynmap.hdmap.TexturePack#terrain_rp_map"
+      ],
+      "sourceSpan": "loadTerrain(boolean) walks per-texture files derived from getRPFileName/terrain_rp_map (lines 280-362, 1139 onward); the packaged terrain.png row is not the single-image path used by that loop. P-001 expressly requires this exact atlas trace before exclusion."
+    },
+    "SRC-PINNED-TEXTUREPACK-PACK-METADATA-LOOKUP": {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "sourceBlobSha1": "99dc4334f2b487866ecdc351bc193561514ab71b",
+      "symbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "sourceSpan": "TexturePack constructor opens the exact literal pack.mcmeta at line 639. Forge adapter openResource resolves null-modid requests through mod classloaders; module-specific source anchors are recorded per pack.mcmeta row. The resource winner remains planned evidence."
+    },
+    "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY": {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/DynmapCore.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "sourceBlobSha1": "bd0e12d5bc85329c65fb1c1761adef5179247a1a",
+      "symbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "sourceSpan": "The callee copies the requested classpath resource to the supplied data-folder file. Each platform permissions row also cites its exact pinned DynmapPlugin.java callsite anchor."
+    },
+    "PLAN-P001-LEGACY-TERRAIN-ATLAS-SCOPE": {
+      "document": "phases/phase-001-resource-closure.md",
+      "sourceSpan": "Per-resource requirement to trace the packaged legacy terrain atlas and compatibility branches before exclusion; this is a scheduled disposition, not global closure."
+    },
+    "PLAN-P001-LEGACY-PLATFORM-VERSION-SCOPE": {
+      "document": "phases/phase-001-resource-closure.md",
+      "sourceSpan": "The pinned product version policy is Minecraft 1.14+; this planned exclusion is limited to the Forge 1.12.2 packaged configuration resource."
+    }
+  },
+  "entries": [
+    {
+      "sourcePath": "DynmapCore/src/main/resources/texturepacks/standard/terrain.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "044809b2c2ab445f15edc8a7853def2ed5260a72",
+      "contentSha256": "e9720cb0acb2f7d8b266f5c8688f1e4c87796015e4a4b784e8cc89238b5241ec",
+      "byteLength": 1163,
+      "candidateScope": "renderer-asset",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-LEGACY-TERRAIN-ATLAS-28c0305f79fc97a180b9c863601935e9a469c1eb2088e14f4e37f7404fbf9fb6",
+        "PLAN-P001-LEGACY-TERRAIN-ATLAS-28c0305f79fc97a180b9"
+      ],
+      "exclusionRationale": "For this exact packaged terrain.png row, the pinned TexturePack terrain path walks mapped individual texture files through getRPFileName/terrain_rp_map rather than opening the packaged atlas as a single image. This excludes only this atlas resource; its legacy parser/mappings remain separately owned and global closure is pending. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-LEGACY-TERRAIN-ATLAS-TRACE",
+        "PLAN-P001-LEGACY-TERRAIN-ATLAS-SCOPE"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/resources/worlds.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "1e199199524d03fd59f27b0d9573b2d11edcc9b2",
+      "contentSha256": "5685d406d3865566fdb0968e6772e9fd743929f8421330511dd929c59bcd3e74",
+      "byteLength": 4949,
+      "candidateScope": "platform-or-administration",
+      "scope": "boundary-adapter",
+      "scopeStatus": "planned_boundary_adapter_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-32fa011322f9e7563309"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-32fa011322f9e7563309"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-32fa011322f9e7563309"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-32fa011322f9e7563309525135e417878e54d4b3d66537de754acc9679bab216",
+        "PLAN-PLATFORM-32fa011322f9e7563309"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_boundary_adapter_pending_global_consumer_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.14.4/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "e0334afaf84d7ceeff1faf9b3f083ef0aa45d93c",
+      "contentSha256": "d9ac89ce6e4d6eb079bbc0184e89f12e9be805c0b5544d8f2e258d4fa476f642",
+      "byteLength": 21304,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-01858f96055c4d939f6b"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-01858f96055c4d939f6b"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-01858f96055c4d939f6b"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-01858f96055c4d939f6b3513a4155e627aa0825c3fc91075672c46751806e47b",
+        "PLAN-PLATFORM-01858f96055c4d939f6b"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.14.4/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-09d9699dcdc4a9b46cffc5889be023147978dda66fefe001b78bcfbbc2bcb61a",
+        "PLAN-PLATFORM-09d9699dcdc4a9b46cff"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.15.2/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "e0334afaf84d7ceeff1faf9b3f083ef0aa45d93c",
+      "contentSha256": "d9ac89ce6e4d6eb079bbc0184e89f12e9be805c0b5544d8f2e258d4fa476f642",
+      "byteLength": 21304,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-099c918a3b4719290d06"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-099c918a3b4719290d06"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-099c918a3b4719290d06"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-099c918a3b4719290d06aa7cf20358bc9e062b75de7a8664a9a2319c71666494",
+        "PLAN-PLATFORM-099c918a3b4719290d06"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.15.2/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-02db3a9baf3bd7fdd7fa607c4412d1f217e56e09b41819848a6ab1d1c8c2bfbc",
+        "PLAN-PLATFORM-02db3a9baf3bd7fdd7fa"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.16.4/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "c8205d76e9058304685f34e3483adc0f1ee3dbd8",
+      "contentSha256": "c00e4231f48f69dbd3f36c192714ca5efa32c81d9ff9a04b30dca14c0b166c20",
+      "byteLength": 21757,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-9b1653016332e1fe0805"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-9b1653016332e1fe0805"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-9b1653016332e1fe0805"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-9b1653016332e1fe08052d799d64ec2c8df4ac1da8c4924734efb3a8e8b094e5",
+        "PLAN-PLATFORM-9b1653016332e1fe0805"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.16.4/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-ad797abbe56c5b27c268896301e705ddaf687021b36c4d49a00d7bec21f40e3a",
+        "PLAN-PLATFORM-ad797abbe56c5b27c268"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.17.1/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "c8205d76e9058304685f34e3483adc0f1ee3dbd8",
+      "contentSha256": "c00e4231f48f69dbd3f36c192714ca5efa32c81d9ff9a04b30dca14c0b166c20",
+      "byteLength": 21757,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-89d3560f4eb859eddac7"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-89d3560f4eb859eddac7"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-89d3560f4eb859eddac7"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-89d3560f4eb859eddac70f60033d0bba9daef00d3045ba3c071b486e08fc9cc9",
+        "PLAN-PLATFORM-89d3560f4eb859eddac7"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.17.1/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-9da72451a37aad62210c0144592a64841f1c5e81ecb8e71837651f1c391189bd",
+        "PLAN-PLATFORM-9da72451a37aad62210c"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.18.2/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "b1f4d747016a422383f09c7e2474d873964b7fdb",
+      "contentSha256": "be7ff7862534d50bf1e6b79db0b25f55426a0a2e8937ad9733754756a72201d6",
+      "byteLength": 21719,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-4e5f319d2ff409865488"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-4e5f319d2ff409865488"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-4e5f319d2ff409865488"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-4e5f319d2ff4098654884783f8ed0bfc917ada1565bb8712319ff6dda9cafa3d",
+        "PLAN-PLATFORM-4e5f319d2ff409865488"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.18.2/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-3e09635988e200f019a7f664b3bbff8506aa94a53963952c93a588bc58df5d3d",
+        "PLAN-PLATFORM-3e09635988e200f019a7"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.19.4/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "c17b0b96e69e8c0297751f721b34c90e09c05825",
+      "contentSha256": "6b20a0a430986dd8eb48c79f91b49d68f7d70ef623ade742350630fa965b25dc",
+      "byteLength": 21574,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-fd3a90c2a7c2b5bce72a"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-fd3a90c2a7c2b5bce72a"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-fd3a90c2a7c2b5bce72a"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-fd3a90c2a7c2b5bce72aaebfdf88f2e4edf0019760afc870dabc9c5992e56308",
+        "PLAN-PLATFORM-fd3a90c2a7c2b5bce72a"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.19.4/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-ef96e42b364e7e93d2a622a848caf26ccbaa64d46c95d175f116282ec20e154e",
+        "PLAN-PLATFORM-ef96e42b364e7e93d2a6"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.20.6/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "bb8b456cac14510d531ab524e7c0de2c3a361a4b",
+      "contentSha256": "ffc06c3fb24ff91d666e5a833eb54f382b9056944a1131eb5b36bfdd57ea2349",
+      "byteLength": 21536,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-da0b64eb7a3598d026e0"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-da0b64eb7a3598d026e0"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-da0b64eb7a3598d026e0"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-da0b64eb7a3598d026e0e3bce0b59a3209e3b9b5edd44117eebd3d44971a25d4",
+        "PLAN-PLATFORM-da0b64eb7a3598d026e0"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.20.6/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-f66c6f60dc27aa8d42bc108d2dc8b8cf4263f972621855d79fdc9f4b2abcd5ea",
+        "PLAN-PLATFORM-f66c6f60dc27aa8d42bc"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.21.11/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "bb8b456cac14510d531ab524e7c0de2c3a361a4b",
+      "contentSha256": "ffc06c3fb24ff91d666e5a833eb54f382b9056944a1131eb5b36bfdd57ea2349",
+      "byteLength": 21536,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-cea1fd2225031f60baa6"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-cea1fd2225031f60baa6"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-cea1fd2225031f60baa6"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-cea1fd2225031f60baa6feaff1198fe7e1b2d87494ad7d07394814cdd7643905",
+        "PLAN-PLATFORM-cea1fd2225031f60baa6"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.11/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-f4d88dc7d56373e4830192f62c79dea697dff9625bffb4d63c77408ee8c82c91",
+        "PLAN-PLATFORM-f4d88dc7d56373e48301"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.21.6/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "bb8b456cac14510d531ab524e7c0de2c3a361a4b",
+      "contentSha256": "ffc06c3fb24ff91d666e5a833eb54f382b9056944a1131eb5b36bfdd57ea2349",
+      "byteLength": 21536,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-f0e752c3a045e7838590"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-f0e752c3a045e7838590"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-f0e752c3a045e7838590"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-f0e752c3a045e783859063192730263681f366cd280bdeb11d5e13d240e29119",
+        "PLAN-PLATFORM-f0e752c3a045e7838590"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.6/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-aa6c96cf63c6d0a7424c954de9632acd8c8234fb0dbc5600a1f2d44b02ffecf9",
+        "PLAN-PLATFORM-aa6c96cf63c6d0a7424c"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "fabric-1.21.9-10/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "bb8b456cac14510d531ab524e7c0de2c3a361a4b",
+      "contentSha256": "ffc06c3fb24ff91d666e5a833eb54f382b9056944a1131eb5b36bfdd57ea2349",
+      "byteLength": 21536,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-615d5076542b2536a6a7"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-615d5076542b2536a6a7"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-615d5076542b2536a6a7"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-615d5076542b2536a6a760bd8caaa1bbb516e596040370c4b809b3e736012f54",
+        "PLAN-PLATFORM-615d5076542b2536a6a7"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.9-10/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-0bef3b249ddd6f5244555190cf8ee034249d85d5916e2cbe0fa4d22b2860d273",
+        "PLAN-PLATFORM-0bef3b249ddd6f524455"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.12.2/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "75c3d2075410a572fec3578b0b719044f9fafbcf",
+      "contentSha256": "96f9aeff9bced134c1c57594b66eedaa6ca562bd52a326932608dcbffc74dbfa",
+      "byteLength": 20770,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-9b4ab75849aacfc823a3ab22bb1c6c918520a3ca28abb371682c9abb375fa348",
+        "PLAN-PLATFORM-9b4ab75849aacfc823a3"
+      ],
+      "exclusionRationale": "This exact packaged Forge 1.12.2 configuration default is outside P-001's Minecraft 1.14+ target policy. The pinned core parser remains in scope for supported modules; only this legacy packaged row is excluded. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-CORE-CONFIGURATION-WORLDS",
+        "PLAN-P001-LEGACY-PLATFORM-VERSION-SCOPE"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.12.2/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-14c64191f9f4831fbc0ddfd7868ac0065c0de1654312eac4a3ba5c75e3cebc4f",
+        "PLAN-PLATFORM-14c64191f9f4831fbc0d"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.14.4/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "4c2fbf504e201ae197c819191c40e6bdfcb50bc1",
+      "contentSha256": "f99de3ec880d14456b799698873d61a71d326058ecfbf94c5acc51b72c91d0af",
+      "byteLength": 21761,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-d11c24d42d1b26c52a95"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-d11c24d42d1b26c52a95"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-d11c24d42d1b26c52a95"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-d11c24d42d1b26c52a957289c1b438d56d4f6f9fe7464d5f884fe9b9cc983466",
+        "PLAN-PLATFORM-d11c24d42d1b26c52a95"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.14.4/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "ee818eacc56e72bbbdbfd85170a340d6ae6b7484",
+      "contentSha256": "aada9154557791be1de294e861d939f5afa82f30fe166f53810ddc431f495b10",
+      "byteLength": 92,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-8a4e73724802250ca461"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-8a4e73724802250ca461"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-8a4e73724802250ca461"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-8a4e73724802250ca4616d26ff1dd218145fa0aa832bf81045e2856da7bc3516",
+        "PLAN-P014-PACK-META-8a4e73724802250ca461"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.14.4/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-9e3945d4fead3786a9ba1a7b41ed5c3b19f0e6bbbc577937f1f56d80f1065d58",
+        "PLAN-PLATFORM-9e3945d4fead3786a9ba"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.15.2/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "4c2fbf504e201ae197c819191c40e6bdfcb50bc1",
+      "contentSha256": "f99de3ec880d14456b799698873d61a71d326058ecfbf94c5acc51b72c91d0af",
+      "byteLength": 21761,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-faa7a483d540f28acdf1"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-faa7a483d540f28acdf1"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-faa7a483d540f28acdf1"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-faa7a483d540f28acdf104eb1335aa297e8f7c271aea4806b36442b3850148a2",
+        "PLAN-PLATFORM-faa7a483d540f28acdf1"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.15.2/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "e5d0faf8ba8ad3283501708bd84a28b0f0af581d",
+      "contentSha256": "cda14f3d3a6a402a39c10f2e65b7617ff6c700f48f07575a0413750230614107",
+      "byteLength": 92,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-3444670a4029d4a3853d"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-3444670a4029d4a3853d"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-3444670a4029d4a3853d"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-3444670a4029d4a3853d1e453fbaadd3ae24c878794e39e70240c8338376a59f",
+        "PLAN-P014-PACK-META-3444670a4029d4a3853d"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.15.2/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-0c8e19070d7ec3e0ce2928fba8b31dd98108e9cb8dcb89e233f2a7af64c7b83e",
+        "PLAN-PLATFORM-0c8e19070d7ec3e0ce29"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.16.5/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-d51a26af13d3f145abbf"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-d51a26af13d3f145abbf"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-d51a26af13d3f145abbf"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-d51a26af13d3f145abbf092c658898112b9f3267e03637ce3c1ed171f47d886f",
+        "PLAN-PLATFORM-d51a26af13d3f145abbf"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.16.5/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "8b9653c16109da004aa6e6c0bd2bf2fcec733fd7",
+      "contentSha256": "404c147af42a3e8cd2101cfd8103b85ef7d92dfa2188c1220ac67a5e43e24bcb",
+      "byteLength": 92,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-9e9f8eb88e3188052454"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-9e9f8eb88e3188052454"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-9e9f8eb88e3188052454"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-9e9f8eb88e3188052454a9be4c670fd9a022b273b8b8cc3f7b3edb96d4dd0cf9",
+        "PLAN-P014-PACK-META-9e9f8eb88e3188052454"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.16.5/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-3f7709ae15ffd74c5f5bafea8bc203aef94cbd7a2a08570549f6fd6549671497",
+        "PLAN-PLATFORM-3f7709ae15ffd74c5f5b"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.17.1/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9257fbaaeba1a45dfc58209c091178c34fc8252a",
+      "contentSha256": "ac04010dae10cfab8738f880731d6dc0649d181f82d1c3b220d8583ae5adbb34",
+      "byteLength": 21753,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-03570d373ec8719a62e9"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-03570d373ec8719a62e9"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-03570d373ec8719a62e9"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-03570d373ec8719a62e9aa5e07a98b9c5471269155f3d92c1aa43adaa4f7dc88",
+        "PLAN-PLATFORM-03570d373ec8719a62e9"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.17.1/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "43a6cde22555e18a3d37912fe2c11fcce145dc54",
+      "contentSha256": "c0ea55c60aa71258804f90d63e32c21d9d351a54d1cb23ed639d9950ddb45884",
+      "byteLength": 92,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-8038be6008821412a996"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-8038be6008821412a996"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-8038be6008821412a996"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-8038be6008821412a996202d699f3efa1325a3c57620e9322ac13fde05771c7b",
+        "PLAN-P014-PACK-META-8038be6008821412a996"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.17.1/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-d79518246f4cc8a730054b31c46b7788e3c6ac51ba890da08f3ba4d1bb6afb10",
+        "PLAN-PLATFORM-d79518246f4cc8a73005"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.18.2/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-16d5b94cd61caa12b57a"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-16d5b94cd61caa12b57a"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-16d5b94cd61caa12b57a"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-16d5b94cd61caa12b57ab0c26789681a6832cb206ab519b26f39f975f775b6e9",
+        "PLAN-PLATFORM-16d5b94cd61caa12b57a"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.18.2/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "8ae5db1a9a6db5a824103720519f62757a8e627b",
+      "contentSha256": "00059f0e3239f5c42f06d661a4d888d5366ad68e3551b767ff5ee27caee5e0d5",
+      "byteLength": 92,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-c5f97bca6ff7b0513e34"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-c5f97bca6ff7b0513e34"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-c5f97bca6ff7b0513e34"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-c5f97bca6ff7b0513e346e3cb81d48ae5ba4fc7f737d49696832dee972c1c893",
+        "PLAN-P014-PACK-META-c5f97bca6ff7b0513e34"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.18.2/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-cd15231d774281ec1adb6c135d7834a495acfb6df29a7a63d3438b09df1ae924",
+        "PLAN-PLATFORM-cd15231d774281ec1adb"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.19.3/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-b7e3f176f1b696f02aed"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-b7e3f176f1b696f02aed"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-b7e3f176f1b696f02aed"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-b7e3f176f1b696f02aedb8710d1569fa9950a8c2e57ab63a3d27d660e51e9a14",
+        "PLAN-PLATFORM-b7e3f176f1b696f02aed"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.19.3/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "8ae5db1a9a6db5a824103720519f62757a8e627b",
+      "contentSha256": "00059f0e3239f5c42f06d661a4d888d5366ad68e3551b767ff5ee27caee5e0d5",
+      "byteLength": 92,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-5801af8877afad007d65"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-5801af8877afad007d65"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-5801af8877afad007d65"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-5801af8877afad007d658d47b50b44096f11ec44cfe35bc376e4cfcb4c4b9071",
+        "PLAN-P014-PACK-META-5801af8877afad007d65"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.19.3/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-50a5f76a52730647a952849a16bee792d694656e9c95b7ff1c92abb11bfd8b4d",
+        "PLAN-PLATFORM-50a5f76a52730647a952"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.20.6/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-a09c244116968b78f5d6"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-a09c244116968b78f5d6"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-a09c244116968b78f5d6"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-a09c244116968b78f5d66e4e72e5018619c71268720d317278b0fd75ab29c064",
+        "PLAN-PLATFORM-a09c244116968b78f5d6"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.20.6/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "64ff3854a61337b152201470904c7154fa9cad9e",
+      "contentSha256": "9c4caecfde52fd30a7ba73f6f23e5900e5907780842deebc74b6178991f15214",
+      "byteLength": 124,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-d236a623af7a912ccd03"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-d236a623af7a912ccd03"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-d236a623af7a912ccd03"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-d236a623af7a912ccd0361061b2ca4beb4fda7cf788cecfecf328805d9ba3ca0",
+        "PLAN-P014-PACK-META-d236a623af7a912ccd03"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.20.6/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-75fb52dbf56afcb40884ab05c735c90ab043ce2b8bd3c4fa10baf3a60b9ed7d2",
+        "PLAN-PLATFORM-75fb52dbf56afcb40884"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.21.10/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-580ea2fe0be9b130143a"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-580ea2fe0be9b130143a"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-580ea2fe0be9b130143a"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-580ea2fe0be9b130143a8d199abaeb8176bb4c4d8e8da4f91651cefe44204285",
+        "PLAN-PLATFORM-580ea2fe0be9b130143a"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.10/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "64ff3854a61337b152201470904c7154fa9cad9e",
+      "contentSha256": "9c4caecfde52fd30a7ba73f6f23e5900e5907780842deebc74b6178991f15214",
+      "byteLength": 124,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-a27c7f93d29148cf0a58"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-a27c7f93d29148cf0a58"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-a27c7f93d29148cf0a58"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-a27c7f93d29148cf0a58630a3aa46e618cea4c1970314483c96e8e7c2eb0eff8",
+        "PLAN-P014-PACK-META-a27c7f93d29148cf0a58"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.10/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-2f051c878cd0c6c9e7cbc5eb898506ca21359ad19c0a863ce1c1315d535c0d60",
+        "PLAN-PLATFORM-2f051c878cd0c6c9e7cb"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.21.11/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-4940688dee15fe616359"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-4940688dee15fe616359"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-4940688dee15fe616359"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-4940688dee15fe616359ad4fe2fa553fad05291a2849fb43d03a33f0bce25f08",
+        "PLAN-PLATFORM-4940688dee15fe616359"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.11/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "64ff3854a61337b152201470904c7154fa9cad9e",
+      "contentSha256": "9c4caecfde52fd30a7ba73f6f23e5900e5907780842deebc74b6178991f15214",
+      "byteLength": 124,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-7185caf667b4127f1c76"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-7185caf667b4127f1c76"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-7185caf667b4127f1c76"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-7185caf667b4127f1c76ca35b8fbcad79b9e07a64015e96b5cf865a5e613fbfb",
+        "PLAN-P014-PACK-META-7185caf667b4127f1c76"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.11/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-2f73c9ffcdc77069487fb7e00a050f133742f44e2d05de0edf53b143349e835e",
+        "PLAN-PLATFORM-2f73c9ffcdc77069487f"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "forge-1.21.6/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "38174f817e8bdce3ee05327b7e60d6c3a762c274",
+      "contentSha256": "4896dbb9f9a5109cc6b9dd9b910f7f850e40a12b875ef18a89dc41bd58fb4aea",
+      "byteLength": 21749,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-d76214f5c1f101da7286"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-d76214f5c1f101da7286"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-d76214f5c1f101da7286"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-d76214f5c1f101da72869a39cf6e84b5f6fb677d4ab7c6ce13a84812151fc7b0",
+        "PLAN-PLATFORM-d76214f5c1f101da7286"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.6/src/main/resources/pack.mcmeta",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "64ff3854a61337b152201470904c7154fa9cad9e",
+      "contentSha256": "9c4caecfde52fd30a7ba73f6f23e5900e5907780842deebc74b6178991f15214",
+      "byteLength": 124,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "constructor:type:org.dynmap.hdmap.TexturePack#%3cinit%3e(DynmapCore,String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openTPResource(String)",
+        "method:type:org.dynmap.hdmap.TexturePackLoader#openModTPResource(String,String)",
+        "method:type:org.dynmap.common.DynmapServerInterface#openResource(String,String)"
+      ],
+      "ownerPhaseId": "P-014",
+      "phaseDocument": "phases/phase-014-texture-pack-and-atlas.md",
+      "fixturePlanIds": [
+        "FIX-P014-PACK-META-bb4edc89215556f02cb4"
+      ],
+      "referencePlanIds": [
+        "REF-P014-PACK-META-bb4edc89215556f02cb4"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-P014-PACK-META-bb4edc89215556f02cb4"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-bb4edc89215556f02cb4026fd7d643c9d913ac78cfeddd645b8cea8530374844",
+        "PLAN-P014-PACK-META-bb4edc89215556f02cb4"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.6/src/main/resources/permissions.yml.example",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a25f9adcaed8b8568e9301917b9471aade065b3d",
+      "contentSha256": "cd533f0e1d8ea7a7232337a45bd01a7ead44a7324e1a3a90b35d43e1563171e4",
+      "byteLength": 909,
+      "candidateScope": "unclassified",
+      "scope": "excluded",
+      "scopeStatus": "planned_exclusion_pending_global_consumer_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-c62e80819c73955d8ed50dfff09abd091840c3e33d70af1f14acafe54eb41130",
+        "PLAN-PLATFORM-c62e80819c73955d8ed5"
+      ],
+      "exclusionRationale": "The exact pinned platform bootstrap call copies /permissions.yml.example to the server data folder for operator administration; it is not loaded by the renderer parser. This is a per-resource adapter/admin exclusion, not a license determination. License remains unverified.",
+      "exclusionEvidenceIds": [
+        "SRC-PINNED-PLATFORM-PERMISSIONS-EXAMPLE-COPY"
+      ],
+      "status": "planned_exclusion_pending_global_consumer_closure",
+      "implementationStatus": "not_applicable"
+    },
+    {
+      "sourcePath": "spigot/src/main/resources/configuration.txt",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "84a2acb3a8e4fae2253e8dfc7d88ceea7a30438e",
+      "contentSha256": "9a534ba53dd3675d2d6dafc46b409e63edb499aae12928601d667c132e733a1d",
+      "byteLength": 23094,
+      "candidateScope": "unclassified",
+      "scope": "renderer-runtime",
+      "scopeStatus": "planned_renderer_runtime_pending_license_and_global_closure",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [
+        "method:type:org.dynmap.DynmapCore#initConfiguration(EnableCoreCallbacks)",
+        "method:type:org.dynmap.DynmapCore#createDefaultFileFromResource(String,File)",
+        "method:type:org.dynmap.ConfigurationNode#load()",
+        "method:type:org.dynmap.hdmap.HDBlockModels#loadModels(DynmapCore,ConfigurationNode)",
+        "method:type:org.dynmap.hdmap.TexturePack#loadTextureMapping(DynmapCore,ConfigurationNode)"
+      ],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [
+        "FIX-PLATFORM-261854bc914680941f74"
+      ],
+      "referencePlanIds": [
+        "REF-PLATFORM-261854bc914680941f74"
+      ],
+      "focusedTestPlanIds": [
+        "TEST-PLATFORM-261854bc914680941f74"
+      ],
+      "evidencePlanIds": [
+        "RES-FAMILY-PLATFORM-261854bc914680941f74e0b32535cdfb603a96dfb171825531228998b1c66573",
+        "PLAN-PLATFORM-261854bc914680941f74"
+      ],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "planned_renderer_runtime_pending_license_and_global_closure",
+      "implementationStatus": "not_started"
+    }
+  ],
+  "unresolvedEntries": [
+    {
+      "sourcePath": "fabric-1.14.4/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.14.4/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "8d77a3abf38c47f2b5fa79510c8e1df00c9594d4",
+      "contentSha256": "41dd0e4e3ff3b449651de69f17558bd8832a6bd679b3ffee5174c0e1cfacbc7a",
+      "byteLength": 415,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.14.4/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "b20f558ce948714504d1e756e190afed8f92e922",
+      "contentSha256": "30caab40173ddee72146843dd4cc8c3f7a6bb18f6d011a28a54ca155a8cd3e8e",
+      "byteLength": 693,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.15.2/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.15.2/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "14afa2ed324477a4dbb162604b35ccda1ce70b28",
+      "contentSha256": "17997a82ef26f94cc7fac8a0c40728e9c5e622a6b22292d0b14a2608c504659b",
+      "byteLength": 415,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.15.2/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "8c44af70334c5a9d4adb6a83a6b8ecf2ddd3724d",
+      "contentSha256": "ad62690a265d8b4b49edca10e7a4202fdfad6cfcb6380100eccf0005eafdcc6f",
+      "byteLength": 693,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.16.4/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.16.4/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "f6204367ea16b7e2a4266498231b215c02f492f0",
+      "contentSha256": "0feffd7c35ef496ba66592a7db724b9b999ac3fcdd9e312137f488f07c7dd397",
+      "byteLength": 443,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.16.4/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "2a6863f6270a6bb95d0b6160961bdf96726b78d8",
+      "contentSha256": "15afbb5112b6d4c9c8261bfa87b5d6462f3840b4f593377420d32e9a4035ebd5",
+      "byteLength": 705,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.17.1/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.17.1/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "3e47145f0daee7ddc8528d21c2fdfc1fbe7ac0be",
+      "contentSha256": "d89cac7d9a2cd9c4e90f0e01b5df73f293fa98cd641dc404bab8183816ee4d68",
+      "byteLength": 444,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.17.1/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "940cdba4a682717b83e43fad6aee27efedb2bad1",
+      "contentSha256": "3775c6f5743053a6a065c973dec5e4261af480fc35e9ff208b1f44909e0af9a8",
+      "byteLength": 693,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.18.2/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.18.2/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9ab81811f78c6d3f74c6ea7b2eaed4a1399159e4",
+      "contentSha256": "1667c24808b071514f1694221cca1e232603f5753a634125013c46307b0bce86",
+      "byteLength": 426,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.18.2/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "3ccd3cfb6a6769dd48fde46fea55fee2478e4269",
+      "contentSha256": "a44ca5b02066d30278852708230197c0cc72dcf5dc7e7019bf82b5432816823c",
+      "byteLength": 692,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.19.4/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.19.4/src/main/resources/dynmap.accesswidener",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "053a611098220f63c380a35b8ed6334897a43c63",
+      "contentSha256": "221f34ff168f804a984db9b17c0c5b05209931f762197bb67953fda13decee69",
+      "byteLength": 201,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.19.4/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "b9f3f9e2c6f60c5ce80de962b48d6da5e8fdbc08",
+      "contentSha256": "b4667aa3a29e1de68e7782a493c9ee9df7f723d389d40acad431312764b4fbc1",
+      "byteLength": 426,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.19.4/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "fd75fed3751d42c6af10df94449afd6b4853be3f",
+      "contentSha256": "04e7607553967ba808ceba3565f1a4262d670b9af8ff9fb8b3cb4c74b55bd88b",
+      "byteLength": 739,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.20.6/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.20.6/src/main/resources/dynmap.accesswidener",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "053a611098220f63c380a35b8ed6334897a43c63",
+      "contentSha256": "221f34ff168f804a984db9b17c0c5b05209931f762197bb67953fda13decee69",
+      "byteLength": 201,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.20.6/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "21f2081311b3f334e68436a0ea37fcf20e78def3",
+      "contentSha256": "656ad685673337a0ea2c6e49106005e627e05da584ecd6990195b1fd06650f80",
+      "byteLength": 426,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.20.6/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "ea83e0e60897cec2c9df1dc79687635fb1089e68",
+      "contentSha256": "3055de75e06a8b3ffcfd3a9c6baa31095b68082ea1cb16834088d20d703d5a83",
+      "byteLength": 749,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.11/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.11/src/main/resources/dynmap.accesswidener",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "053a611098220f63c380a35b8ed6334897a43c63",
+      "contentSha256": "221f34ff168f804a984db9b17c0c5b05209931f762197bb67953fda13decee69",
+      "byteLength": 201,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.11/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "6790f8e1be9cb4d1aaa0c5bea79aaf8dc4e23ea7",
+      "contentSha256": "a97ba78e19134fad09de243b9cd4fdff458da88426ae95f748a3028cb590f804",
+      "byteLength": 414,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.11/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "26cfc2f408027f414cde9d2a31aab4a7ae96fc1f",
+      "contentSha256": "bfe7b8e577c9d71cffd359124a6ad99f3009d02959091a247df0f7344b98009d",
+      "byteLength": 743,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.6/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.6/src/main/resources/dynmap.accesswidener",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "053a611098220f63c380a35b8ed6334897a43c63",
+      "contentSha256": "221f34ff168f804a984db9b17c0c5b05209931f762197bb67953fda13decee69",
+      "byteLength": 201,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.6/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9b16183393e086330563d7ee28e3d50444462c8f",
+      "contentSha256": "9a717c508b5adef011a1e7ba3e8abe288ba25b6602436f08b102af3667b1910f",
+      "byteLength": 416,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.6/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "6718f719d37414c25f1086f400017e5e18ed7dee",
+      "contentSha256": "b1d81bcd20f052cc923b90c75ef8a3461de1ff212a11231d16123b38508ab3d1",
+      "byteLength": 760,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.9-10/src/main/resources/assets/dynmap/icon.png",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "d18f3e145d02440b065b2365ff14b9261b5877c4",
+      "contentSha256": "f7853eb5504b8f979cbebf785c7b6893fc61b2b42540c334a53a9686ff5a63cd",
+      "byteLength": 34043,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.9-10/src/main/resources/dynmap.accesswidener",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "053a611098220f63c380a35b8ed6334897a43c63",
+      "contentSha256": "221f34ff168f804a984db9b17c0c5b05209931f762197bb67953fda13decee69",
+      "byteLength": 201,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.9-10/src/main/resources/dynmap.mixins.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "ace8e2d34362dbccc6a8ddccf836f87e902de513",
+      "contentSha256": "e947fda497e3a68fc57eb8da948d433e296e57b9c397f70e9d0c49937472f307",
+      "byteLength": 419,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "fabric-1.21.9-10/src/main/resources/fabric.mod.json",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "94996de558848b91a4fc22c2272eefb7315916d5",
+      "contentSha256": "80e869a16ad69d4fef0030abb4e2a181f25084ac1f7f220b36d5db2ce9f042c4",
+      "byteLength": 755,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.12.2/src/main/resources/dynmap_at.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "e97eb6d837dcfd41cb3d24e8b1c2bb0d88ee4f4e",
+      "contentSha256": "7f963230c401b1316a00a480e732b8cd274864bcc3bff531ed6b65b7de63ae22",
+      "byteLength": 304,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.12.2/src/main/resources/mcmod.info",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "e7ce71447ddc302de4b213884ee5b9353c442144",
+      "contentSha256": "2910ab1ac177b75ac5f5c46f5c95c0bc59209374cef848f959d0ad61dc74d074",
+      "byteLength": 384,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.14.4/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "1f870f5b4833b93c186a1fa9ed97e80072ff6773",
+      "contentSha256": "81e42dc90e550bd935b3bfb9f43c5d8eda39bfbe8cdd2321cccfc4465660363d",
+      "byteLength": 164,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.14.4/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "217f96b886a170f55123cb004018dc68548aa695",
+      "contentSha256": "3c54b9f0705590fc7aa97644103ea6da27183c87c6d559857895866e1d11a3eb",
+      "byteLength": 598,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.15.2/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "c61c62323471865b65ad8be3c542daf79c54b24f",
+      "contentSha256": "79b358188a994c657b655c98fa23000e31fabb43d297d47759e7b9c9524e2242",
+      "byteLength": 357,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.15.2/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "bc8cc8ebf0e0000b3e16726ee10cb134eb79d8d8",
+      "contentSha256": "e43010736e8433b53c9227ab3927bd205fab439529226c6fe0a607b5babb2ed6",
+      "byteLength": 598,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.16.5/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "b9c90dd429094ce575fbd9b44b63d01a7d6d6c85",
+      "contentSha256": "4af1124087eda894e1687b3e5b433b617ba7f6644b23335b8749b59d1e765ce1",
+      "byteLength": 239,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.16.5/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a14c59d586a2af178ea496843b3ee5950d531a02",
+      "contentSha256": "6c876b723b88f3b7bac3d4c5007ba2825c780fe7474b5a13e358e94948d8ee8d",
+      "byteLength": 638,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.17.1/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a57b1bacdce1fcc4fa7ddcb4c4ed0ff95464f41d",
+      "contentSha256": "d5d2d925cbe54fdf95b3c7aa3427d418f24f59710dc075ea36a0310741bbfe51",
+      "byteLength": 367,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.17.1/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "4d01e7991c08deb1d3238f987bf3fcfed603b89e",
+      "contentSha256": "c49c8db82679d3cf927ffae8aeba380b7711cfab97f8b64f1198ce6349ffcd22",
+      "byteLength": 638,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.18.2/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "a57b1bacdce1fcc4fa7ddcb4c4ed0ff95464f41d",
+      "contentSha256": "d5d2d925cbe54fdf95b3c7aa3427d418f24f59710dc075ea36a0310741bbfe51",
+      "byteLength": 367,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.18.2/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "0ddcec46d44d5aafecdee99d1e324bf3f65e7bdb",
+      "contentSha256": "62c0a8e07715fa001e0c194fc725c90ee1e3ba3db6e4702de1b6e38a455057f8",
+      "byteLength": 638,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.19.3/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "58a91d303d45396965c146d4655ec33cdbbb65e3",
+      "contentSha256": "cbb2b6f9253882d01e063718667a9df24e7431d0c22ca2d182a4ecd759cfcba9",
+      "byteLength": 376,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.19.3/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "54510bb1395f87e986752befaf398e0efd1a2e84",
+      "contentSha256": "cbce5dac9e1e3ccf64169b93b12f0ee95603ab831c26eea6c71d3e509c66a0af",
+      "byteLength": 638,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.20.6/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9f6e7211e0a9f8daa6724cd419cdea457a3414ee",
+      "contentSha256": "df413a94f1ad0a21dfff9dfa0c4f3d8bae6ce694fa3b1a66892ad8d8b8ae5c71",
+      "byteLength": 376,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.20.6/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "626de0437dc72b78a3bda767e56a97e4b553cb4d",
+      "contentSha256": "f456de46c241ebdc8f12d71b5f8d60fbb6dcbff52d0cf85160e49c665834cf6b",
+      "byteLength": 638,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.10/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9f6e7211e0a9f8daa6724cd419cdea457a3414ee",
+      "contentSha256": "df413a94f1ad0a21dfff9dfa0c4f3d8bae6ce694fa3b1a66892ad8d8b8ae5c71",
+      "byteLength": 376,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.10/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "163811904f0698a3ed0662c88b8f8039957834a7",
+      "contentSha256": "4dcfd65c1d394677b3846e6b4a94a059f2f47fe3f66ea8a100ecb4db7c59b2cd",
+      "byteLength": 642,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.11/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9f6e7211e0a9f8daa6724cd419cdea457a3414ee",
+      "contentSha256": "df413a94f1ad0a21dfff9dfa0c4f3d8bae6ce694fa3b1a66892ad8d8b8ae5c71",
+      "byteLength": 376,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.11/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "c0a418ec64eca4c690f8e05d8636de93fd665b6c",
+      "contentSha256": "1165686017a184b93387a37b930a9a8320e6dd3d4fdea70faf729d1c9da278e4",
+      "byteLength": 639,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.6/src/main/resources/META-INF/accesstransformer.cfg",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "9f6e7211e0a9f8daa6724cd419cdea457a3414ee",
+      "contentSha256": "df413a94f1ad0a21dfff9dfa0c4f3d8bae6ce694fa3b1a66892ad8d8b8ae5c71",
+      "byteLength": 376,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "forge-1.21.6/src/main/resources/META-INF/mods.toml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "87aaf230525f0618292cba7a9b1d799317cc7008",
+      "contentSha256": "37c92c055a10145e536483d82d41054dc93c09d4a48daba4b4425c7bbc7e981f",
+      "byteLength": 638,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    },
+    {
+      "sourcePath": "spigot/src/main/resources/plugin.yml",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "gitBlobSha1": "8efeee429711b0cf97d0a025c87cdac400abc883",
+      "contentSha256": "ef78cfe283cc992b2fea206e80305f5b30e6553f7e965eddcdc38445f2f88510",
+      "byteLength": 19293,
+      "candidateScope": "unclassified",
+      "scope": "unclassified",
+      "scopeStatus": "pending_source_and_consumer_review",
+      "license": null,
+      "licenseStatus": "unverified_per_resource",
+      "consumerSymbolIds": [],
+      "ownerPhaseId": "P-001",
+      "phaseDocument": "phases/phase-001-resource-closure.md",
+      "fixturePlanIds": [],
+      "referencePlanIds": [],
+      "focusedTestPlanIds": [],
+      "evidencePlanIds": [],
+      "exclusionRationale": null,
+      "exclusionEvidenceIds": [],
+      "status": "unclassified",
+      "implementationStatus": "not_started"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "messages": [
+    "hello_request",
+    "hello_response",
+    "heartbeat",
+    "snapshot_request",
+    "snapshot_response"
+  ],
+  "snapshotStatuses": [
+    "loaded",
+    "not_loaded",
+    "world_unavailable",
+    "queue_full",
+    "timeout",
+    "invalid_snapshot"
+  ],
+  "identityFields": [
+    "request_id",
+    "server_id",
+    "minecraft_version",
+    "world_id",
+    "dimension",
+    "chunk_x",
+    "chunk_z"
+  ],
+  "rendererOwner": "rust",
+  "paperOwner": "snapshot-provider"
+}

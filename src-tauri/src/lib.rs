@@ -60,6 +60,7 @@ pub fn run() {
         .manage(commands::ngrok::NgrokManager::default())
         .manage(commands::file_utils::ServerImportManager::default())
         .manage(commands::health_check::ProbeLimiter::default())
+        .manage(commands::map_render::MapRenderManager::default())
         .invoke_handler(tauri::generate_handler![
             // サーバー操作
             commands::server::start_server,
@@ -115,6 +116,8 @@ pub fn run() {
             commands::perf::parse_ansi_lines,
             // ヘルスチェック
             commands::health_check::ping_server,
+            // Map renderer diagnostics
+            commands::map_render::request_map_render,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

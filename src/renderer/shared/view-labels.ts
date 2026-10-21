@@ -15,6 +15,8 @@ export function getViewLabel(view: AppView, t: Translate): string {
       return t('nav.pluginsMods');
     case 'backups':
       return t('nav.backups');
+    case 'map':
+      return t('nav.map');
     case 'properties':
       return t('nav.properties');
     case 'general-settings':

@@ -13,6 +13,7 @@
 
 @import './views/console-view.css';
 @import './views/backups-view.css';
+@import './views/map-view.css';
 @import './views/files-view.css';
 @import './views/dashboard-view.css';
 @import './views/java-manager-modal.css';

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+  "referenceStatus": "rust-contract-recorded-dynmap-java-capture-pending",
+  "expectedGeneratedAt": null,
+  "cases": [
+    { "id": "flat", "sourceSymbol": "IsoHDPerspective", "expectedGeneratedAt": null },
+    { "id": "mountain-cliff", "sourceSymbol": "HDPerspective", "expectedGeneratedAt": null },
+    { "id": "water", "sourceSymbol": "PatchDefinition", "expectedGeneratedAt": null },
+    { "id": "forest-leaves", "sourceSymbol": "HDShader", "expectedGeneratedAt": null },
+    { "id": "snow", "sourceSymbol": "HDLighting", "expectedGeneratedAt": null },
+    { "id": "stairs", "sourceSymbol": "HDBlockModels", "expectedGeneratedAt": null },
+    { "id": "slabs", "sourceSymbol": "HDBlockModels", "expectedGeneratedAt": null },
+    { "id": "fences", "sourceSymbol": "HDBlockModels", "expectedGeneratedAt": null },
+    { "id": "doors", "sourceSymbol": "HDBlockModels", "expectedGeneratedAt": null },
+    { "id": "glass", "sourceSymbol": "HDShader", "expectedGeneratedAt": null },
+    { "id": "chunk-boundary", "sourceSymbol": "HDPerspective", "expectedGeneratedAt": null },
+    { "id": "missing-texture", "sourceSymbol": "TexturePack", "expectedGeneratedAt": null },
+    { "id": "malformed-chunk", "sourceSymbol": "HDPerspective", "expectedGeneratedAt": null },
+    { "id": "unloaded-chunk", "sourceSymbol": "HDPerspective", "expectedGeneratedAt": null },
+    { "id": "custom-resource-pack", "sourceSymbol": "TexturePack", "expectedGeneratedAt": null }
+  ]
+}

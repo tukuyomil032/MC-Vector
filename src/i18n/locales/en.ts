@@ -222,6 +222,50 @@ export const en: TranslationDictionary = {
     },
   },
 
+  map: {
+    title: 'Map',
+    subtitle: 'Dynmap-compatible terrain renderer diagnostics',
+    status: {
+      bridge: 'Core bridge',
+      terrain: 'Terrain',
+      renderer: 'Renderer',
+      cache: 'Tile cache',
+      source: 'Source',
+      chunks: 'Chunks',
+    },
+    states: {
+      queued: 'Queued',
+      rendering: 'Rendering',
+      ready: 'Ready',
+      empty: 'Empty',
+      failed: 'Failed',
+      retryable: 'Retryable',
+      cancelled: 'Cancelled',
+      blocked: 'Blocked',
+    },
+    reasons: {
+      rendererNotConnected: 'The verified renderer is not connected.',
+      bridgeNotConnected: 'The Paper bridge is not connected.',
+      notLoaded: 'The requested chunk is not loaded.',
+      worldUnavailable: 'The requested world is unavailable.',
+      queueFull: 'The render queue is full.',
+      timeout: 'The snapshot request timed out.',
+      invalidSnapshot: 'The snapshot was invalid.',
+      missingAsset: 'A required Minecraft asset is missing.',
+      malformedAnvil: 'The saved Anvil data is malformed.',
+      unsupportedVersion: 'This Minecraft version is not supported.',
+      checksumMismatch: 'A cached asset failed checksum verification.',
+      cacheCorrupt: 'The cached tile is corrupt or untrusted.',
+      noGeneratedTerrain: 'No generated terrain was returned for this area.',
+    },
+    blockedTitle: 'Terrain rendering is not available yet',
+    blockedDescription:
+      'The Core bridge status is reported separately from renderer readiness. No terrain tile is treated as successful until the verified renderer and a valid source are connected.',
+    diagnostics: 'Renderer diagnostics',
+    refresh: 'Refresh diagnostics',
+    noServer: 'Select a server to inspect its map renderer.',
+  },
+
   console: {
     actions: {
       find: 'Find',
@@ -676,6 +720,7 @@ export const en: TranslationDictionary = {
     files: 'Files',
     pluginsMods: 'Plugins / Mods',
     backups: 'Backups',
+    map: 'Map',
     properties: 'Properties',
     generalSettings: 'General Settings',
     proxyNetwork: 'Proxy Network',

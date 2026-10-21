@@ -33,6 +33,12 @@ lib-cov
 coverage
 *.lcov
 
+# Canonical Map renderer plan inventories and ledgers are intentional source data.
+!spec/map/coverage/
+!spec/map/coverage/**
+!spec/map/plan/coverage/
+!spec/map/plan/coverage/**
+
 # nyc test coverage
 .nyc_output
 
@@ -187,3 +193,7 @@ apps/native-macos/*.trace/
 .agents/**
 .claude/skills/**
 .vscode/launch.json
+
+# Generated symbol disposition ledger exceeds GitHub's 100MB file limit; regenerate locally
+# with spec/map/plan/tools/materialize-builtin-source-dispositions.mjs instead of committing it.
+spec/map/coverage/source-symbol-dispositions.json

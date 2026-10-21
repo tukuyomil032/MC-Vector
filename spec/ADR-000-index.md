@@ -109,3 +109,16 @@ A 10 requires the 9.5 conditions plus real failure recovery and catalog recovery
 ## Non-Goals
 
 This suite does not introduce paid signing certificates, notarization services, a new deployment platform, a complete CI redesign, or a requirement to run the real Tauri suite on every pull request.
+
+## Map Renderer Plan
+
+The Map renderer has a separate, source- and version-level plan. It is not
+covered by the numbered hardening ADR sequence above.
+
+- Canonical plan: [`spec/map/plan/README.md`](map/plan/README.md)
+- Phase index: [`spec/map/plan/phase-index.md`](map/plan/phase-index.md)
+- Definition of done: [`spec/map/plan/definition-of-done.md`](map/plan/definition-of-done.md)
+- Coverage catalogs: [`spec/map/plan/coverage/README.md`](map/plan/coverage/README.md)
+- Evidence ledger: [`spec/map/evidence/evidence-ledger.md`](map/evidence/evidence-ledger.md)
+- Map ADR index: [`spec/map/plan/adr/README.md`](map/plan/adr/README.md)
+- Persistent execution Goal: [`spec/map/plan/goal-prompt.md`](map/plan/goal-prompt.md)

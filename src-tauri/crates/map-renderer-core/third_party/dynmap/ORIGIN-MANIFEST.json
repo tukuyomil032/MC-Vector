@@ -1,0 +1,7027 @@
+{
+  "schemaVersion": 2,
+  "repository": "webbukkit/dynmap",
+  "revision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+  "license": "Apache-2.0",
+  "generatedBy": "scripts/vendor-dynmap-renderer-source.mjs",
+  "sourceOnly": true,
+  "runtimeDependency": false,
+  "entries": [
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CaveHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/CaveHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "fe41c4a53b653c6f5350cbc68193eb19be1f86f086af0379d38f193c7583eba2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "CaveHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "CaveHDShader",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHidden",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setHidden",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/ChunkStatusHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/ChunkStatusHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "98b6fc66db71e8a8617af5adaa153e7f042c08e4778f3942f7f6bcc533a8fe7e",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "ChunkStatusHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "ChunkStatusMap",
+          "kind": "class"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "addChunkStatusMap",
+          "kind": "method"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "ChunkStatusHDShader",
+          "kind": "method"
+        },
+        {
+          "name": "ChunkStatusMap",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/ChunkVersionHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/ChunkVersionHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f494f68f1fe3834f5d1400ce2b1ee4cb04075c653a35ae6b35e46ca4fce7e4c6",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "ChunkVersionHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "DataVersionMap",
+          "kind": "class"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "ChunkVersionHDShader",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "DataVersionMap",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFBandedWoodColorMultiplier.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFBandedWoodColorMultiplier.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "8277704e98c2ba4793db9ef95680211f1b839f81de39acd9c71198ef7977c1ae",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "TFBandedWoodColorMultiplier",
+          "kind": "class"
+        },
+        {
+          "name": "getColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "TFBandedWoodColorMultiplier",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFMagicLeafColorMultiplier.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFMagicLeafColorMultiplier.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "ed6239adb4532e29b7e321868a1cbee7333d89c8bc1edc3627e10d6b6dd273bc",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "TFMagicLeafColorMultiplier",
+          "kind": "class"
+        },
+        {
+          "name": "getColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "TFMagicLeafColorMultiplier",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFSpecialLeafColorMultiplier.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/colormult/TFSpecialLeafColorMultiplier.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "7b1e81504ba66687dfe5a207919a532d6136c949cdde49908e64577f0335cff8",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "TFSpecialLeafColorMultiplier",
+          "kind": "class"
+        },
+        {
+          "name": "getColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "TFSpecialLeafColorMultiplier",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CTMTexturePack.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/CTMTexturePack.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "2a5a4ce6d1002d964ff19504c8b07ea2e61c3ec55510f845fdc7c576b2ce7dd2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "Context",
+          "kind": "class"
+        },
+        {
+          "name": "CTMProps",
+          "kind": "class"
+        },
+        {
+          "name": "CTMTexturePack",
+          "kind": "class"
+        },
+        {
+          "name": "CTMConnect",
+          "kind": "enum"
+        },
+        {
+          "name": "CTMMethod",
+          "kind": "enum"
+        },
+        {
+          "name": "CTMSymmetry",
+          "kind": "enum"
+        },
+        {
+          "name": "add",
+          "kind": "method"
+        },
+        {
+          "name": "addBaseBlockStateToIDSet",
+          "kind": "method"
+        },
+        {
+          "name": "addBlockStateToIDSet",
+          "kind": "method"
+        },
+        {
+          "name": "addToList",
+          "kind": "method"
+        },
+        {
+          "name": "checkMaterialMatch",
+          "kind": "method"
+        },
+        {
+          "name": "Context",
+          "kind": "method"
+        },
+        {
+          "name": "CTMProps",
+          "kind": "method"
+        },
+        {
+          "name": "CTMSymmetry",
+          "kind": "method"
+        },
+        {
+          "name": "CTMTexturePack",
+          "kind": "method"
+        },
+        {
+          "name": "exclude",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getBiomes",
+          "kind": "method"
+        },
+        {
+          "name": "getConnect",
+          "kind": "method"
+        },
+        {
+          "name": "getFaces",
+          "kind": "method"
+        },
+        {
+          "name": "getIDList",
+          "kind": "method"
+        },
+        {
+          "name": "getMatchBlocks",
+          "kind": "method"
+        },
+        {
+          "name": "getMatchTiles",
+          "kind": "method"
+        },
+        {
+          "name": "getMethod",
+          "kind": "method"
+        },
+        {
+          "name": "getOrientationFromMetadata",
+          "kind": "method"
+        },
+        {
+          "name": "getRandom",
+          "kind": "method"
+        },
+        {
+          "name": "getSymmetry",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isPrevMatch",
+          "kind": "method"
+        },
+        {
+          "name": "isValid",
+          "kind": "method"
+        },
+        {
+          "name": "isValidCtm",
+          "kind": "method"
+        },
+        {
+          "name": "isValidFixed",
+          "kind": "method"
+        },
+        {
+          "name": "isValidHorizontal",
+          "kind": "method"
+        },
+        {
+          "name": "isValidHorizontalVertical",
+          "kind": "method"
+        },
+        {
+          "name": "isValidRandom",
+          "kind": "method"
+        },
+        {
+          "name": "isValidRepeat",
+          "kind": "method"
+        },
+        {
+          "name": "isValidTop",
+          "kind": "method"
+        },
+        {
+          "name": "isValidVertical",
+          "kind": "method"
+        },
+        {
+          "name": "isValidVerticalHorizontal",
+          "kind": "method"
+        },
+        {
+          "name": "mapTexture",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureByList",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureByProp",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureCtm",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureFixed",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureHorizontal",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureHorizontalVertical",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureRandom",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureRepeat",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureTop",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureVertical",
+          "kind": "method"
+        },
+        {
+          "name": "mapTextureVerticalHorizontal",
+          "kind": "method"
+        },
+        {
+          "name": "NONE",
+          "kind": "method"
+        },
+        {
+          "name": "parseInt",
+          "kind": "method"
+        },
+        {
+          "name": "parseInts",
+          "kind": "method"
+        },
+        {
+          "name": "parseRenderPass",
+          "kind": "method"
+        },
+        {
+          "name": "parseTileNames",
+          "kind": "method"
+        },
+        {
+          "name": "processFiles",
+          "kind": "method"
+        },
+        {
+          "name": "registerTiles",
+          "kind": "method"
+        },
+        {
+          "name": "reorient",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "rotateUV",
+          "kind": "method"
+        },
+        {
+          "name": "RuntimeException",
+          "kind": "method"
+        },
+        {
+          "name": "setMatch",
+          "kind": "method"
+        },
+        {
+          "name": "shouldConnect",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "tokenize",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/CustomBlockModel.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/CustomBlockModel.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f2a8fc2a93aeee753c9b55c34b4d2fbf28d66e83715efea400a760b687b8193c",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "CustomBlockModel",
+          "kind": "class"
+        },
+        {
+          "name": "CustomBlockModel",
+          "kind": "method"
+        },
+        {
+          "name": "getMeshForBlock",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "removed",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDLighting.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDLighting.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "1a28537a553019fe86ed4a05b5bea5731b78b4b0fd669a614e1eef2bc9520d0c",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "DefaultHDLighting",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "applyLighting",
+          "kind": "method"
+        },
+        {
+          "name": "checkGrayscale",
+          "kind": "method"
+        },
+        {
+          "name": "DefaultHDLighting",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getBrightnessTable",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isNightAndDayEnabled",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/DefaultHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "20a9a9342ffc35b28d595fb02da224eca772de0096c2a0b529186762dc243de7",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "DefaultHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "OurBiomeRainfallShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "OurBiomeShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "OurBiomeTempShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "BiomeColorOption",
+          "kind": "enum"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "DefaultHDShader",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockColors",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurBiomeRainfallShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "OurBiomeShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "OurBiomeTempShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModel.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModel.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "66cb9f59df04ef273b6cee91248dbbf6594c64b91a9f2f3531789e1ef79d5586",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "HDBlockModel",
+          "kind": "class"
+        },
+        {
+          "name": "getBlockSet",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "HDBlockModel",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "removed",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockModels.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "cbd857b896f10bb08b057a3f9ddf01ba53242b3ebd9116b163bf26739b0c48c0",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "BoxLimits",
+          "kind": "class"
+        },
+        {
+          "name": "HDBlockModels",
+          "kind": "class"
+        },
+        {
+          "name": "ModelBox",
+          "kind": "class"
+        },
+        {
+          "name": "ModelBoxSide",
+          "kind": "class"
+        },
+        {
+          "name": "addFiles",
+          "kind": "method"
+        },
+        {
+          "name": "checkVersionRange",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getIntValue",
+          "kind": "method"
+        },
+        {
+          "name": "getMaxPatchCount",
+          "kind": "method"
+        },
+        {
+          "name": "getModelsForScale",
+          "kind": "method"
+        },
+        {
+          "name": "getModIDFromFileName",
+          "kind": "method"
+        },
+        {
+          "name": "getNeededTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchDefinitionFactory",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "handleBlockAlias",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isChangeIgnoredBlock",
+          "kind": "method"
+        },
+        {
+          "name": "loadModelFile",
+          "kind": "method"
+        },
+        {
+          "name": "loadModels",
+          "kind": "method"
+        },
+        {
+          "name": "normalizeVersion",
+          "kind": "method"
+        },
+        {
+          "name": "NumberFormatException",
+          "kind": "method"
+        },
+        {
+          "name": "parseVersion",
+          "kind": "method"
+        },
+        {
+          "name": "remapModel",
+          "kind": "method"
+        },
+        {
+          "name": "resetIfNotBlockSet",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "Vector3D",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockPatchModel.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockPatchModel.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3a90c81e0c6eabc304228aadf48c27e6fe47b67a22b683073cf4c8adc0c166af",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "HDBlockPatchModel",
+          "kind": "class"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getPatches",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "HDBlockPatchModel",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "setPatches",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockStateTextureMap.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockStateTextureMap.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "996b15babff3347a7b1799472ae694f8d270652a6a9fac46e55ff8962e01cda7",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "HDBlockStateTextureMap",
+          "kind": "class"
+        },
+        {
+          "name": "addToTable",
+          "kind": "method"
+        },
+        {
+          "name": "copyToStateIndex",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getByBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "getByGlobalIndex",
+          "kind": "method"
+        },
+        {
+          "name": "getColorizingData",
+          "kind": "method"
+        },
+        {
+          "name": "getIndexForFace",
+          "kind": "method"
+        },
+        {
+          "name": "getStateMap",
+          "kind": "method"
+        },
+        {
+          "name": "getTransparency",
+          "kind": "method"
+        },
+        {
+          "name": "HDBlockStateTextureMap",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeTable",
+          "kind": "method"
+        },
+        {
+          "name": "remapTexture",
+          "kind": "method"
+        },
+        {
+          "name": "resize",
+          "kind": "method"
+        },
+        {
+          "name": "resizeFaces",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockVolumetricModel.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDBlockVolumetricModel.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "368be333a349dd093f27fa6b574f818265707c8dfb050fcf7f34253077163339",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "HDBlockVolumetricModel",
+          "kind": "class"
+        },
+        {
+          "name": "getScaledMap",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "HDBlockVolumetricModel",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isSubblockSet",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "setSubblock",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDLighting.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "0dea1ddbb370e04ba49cd8f05d12c46e1cb0e3af0963a4f7dc86cd5c88da5413",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "HDLighting",
+          "kind": "interface"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "applyLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getBrightnessTable",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isNightAndDayEnabled",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDMap.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDMap.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "14cc1808ddcc3a482cb4c8fc1913d24c4b55c524a0e1014b0072e6b6a9738aeb",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "HDMap",
+          "kind": "class"
+        },
+        {
+          "name": "a",
+          "kind": "method"
+        },
+        {
+          "name": "addMapTiles",
+          "kind": "method"
+        },
+        {
+          "name": "buildClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getAdjecentTiles",
+          "kind": "method"
+        },
+        {
+          "name": "getAppendToWorld",
+          "kind": "method"
+        },
+        {
+          "name": "getBackgroundARGBDay",
+          "kind": "method"
+        },
+        {
+          "name": "getBackgroundARGBNight",
+          "kind": "method"
+        },
+        {
+          "name": "getBoostZoom",
+          "kind": "method"
+        },
+        {
+          "name": "getIcon",
+          "kind": "method"
+        },
+        {
+          "name": "getImageFormat",
+          "kind": "method"
+        },
+        {
+          "name": "getImageFormatSetting",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getMapNamesSharingRender",
+          "kind": "method"
+        },
+        {
+          "name": "getMapsSharingRender",
+          "kind": "method"
+        },
+        {
+          "name": "getMapZoomIn",
+          "kind": "method"
+        },
+        {
+          "name": "getMapZoomOutLevels",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getPerspective",
+          "kind": "method"
+        },
+        {
+          "name": "getPrefix",
+          "kind": "method"
+        },
+        {
+          "name": "getRequiredChunks",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getTileCoords",
+          "kind": "method"
+        },
+        {
+          "name": "getTileScale",
+          "kind": "method"
+        },
+        {
+          "name": "getTileSize",
+          "kind": "method"
+        },
+        {
+          "name": "getTitle",
+          "kind": "method"
+        },
+        {
+          "name": "getVariants",
+          "kind": "method"
+        },
+        {
+          "name": "HDMap",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "parseColor",
+          "kind": "method"
+        },
+        {
+          "name": "purgeOldTiles",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "saveConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "setAppendToWorld",
+          "kind": "method"
+        },
+        {
+          "name": "setBoostZoom",
+          "kind": "method"
+        },
+        {
+          "name": "setIcon",
+          "kind": "method"
+        },
+        {
+          "name": "setImageFormatSetting",
+          "kind": "method"
+        },
+        {
+          "name": "setLighting",
+          "kind": "method"
+        },
+        {
+          "name": "setMapZoomIn",
+          "kind": "method"
+        },
+        {
+          "name": "setMapZoomOut",
+          "kind": "method"
+        },
+        {
+          "name": "setPerspective",
+          "kind": "method"
+        },
+        {
+          "name": "setPrefix",
+          "kind": "method"
+        },
+        {
+          "name": "setProtected",
+          "kind": "method"
+        },
+        {
+          "name": "setReadOnly",
+          "kind": "method"
+        },
+        {
+          "name": "setShader",
+          "kind": "method"
+        },
+        {
+          "name": "setTileScale",
+          "kind": "method"
+        },
+        {
+          "name": "setTileUpdateDelay",
+          "kind": "method"
+        },
+        {
+          "name": "setTitle",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDMapManager.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDMapManager.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "6501715d53f8a9eed2751185ce3320a4ec87458ac7cdd9961ed004f1ac3acf60",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "HDMapManager",
+          "kind": "class"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCachedFlags",
+          "kind": "method"
+        },
+        {
+          "name": "getShaderStateForTile",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "loadHDLightings",
+          "kind": "method"
+        },
+        {
+          "name": "loadHDPerspectives",
+          "kind": "method"
+        },
+        {
+          "name": "loadHDShaders",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDMapTile.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDMapTile.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "6b3bf566437980c7f32fe7347d0d29acbdb5a59398950c9c51246c007b843e8f",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "HDMapTile",
+          "kind": "class"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "getAdjecentTiles",
+          "kind": "method"
+        },
+        {
+          "name": "getRequiredChunks",
+          "kind": "method"
+        },
+        {
+          "name": "getTileSize",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "HDMapTile",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "render",
+          "kind": "method"
+        },
+        {
+          "name": "saveTileData",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        },
+        {
+          "name": "tileOrdinalX",
+          "kind": "method"
+        },
+        {
+          "name": "tileOrdinalY",
+          "kind": "method"
+        },
+        {
+          "name": "toString",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspective.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "1bd07eb34fbde3638c541807ed93c4545ae845e5f43364d4f82a0af9beee301f",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/projection/",
+      "symbols": [
+        {
+          "name": "HDPerspective",
+          "kind": "interface"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "getAdjecentTiles",
+          "kind": "method"
+        },
+        {
+          "name": "getModelScale",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRequiredChunks",
+          "kind": "method"
+        },
+        {
+          "name": "getScale",
+          "kind": "method"
+        },
+        {
+          "name": "getTileCoords",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "render",
+          "kind": "method"
+        },
+        {
+          "name": "transformWorldToMapCoord",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspectiveState.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDPerspectiveState.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3271db2dcb3ebf072f248b79189223ad7d8b084033115332aac6d7628567f5e5",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/projection/",
+      "symbols": [
+        {
+          "name": "HDPerspectiveState",
+          "kind": "interface"
+        },
+        {
+          "name": "getBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "getCachedLightLevels",
+          "kind": "method"
+        },
+        {
+          "name": "getLastBlockStep",
+          "kind": "method"
+        },
+        {
+          "name": "getLightLevels",
+          "kind": "method"
+        },
+        {
+          "name": "getLightLevelsAtStep",
+          "kind": "method"
+        },
+        {
+          "name": "getMapIterator",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchU",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchV",
+          "kind": "method"
+        },
+        {
+          "name": "getPixelX",
+          "kind": "method"
+        },
+        {
+          "name": "getPixelY",
+          "kind": "method"
+        },
+        {
+          "name": "getRayEnd",
+          "kind": "method"
+        },
+        {
+          "name": "getRayStart",
+          "kind": "method"
+        },
+        {
+          "name": "getScale",
+          "kind": "method"
+        },
+        {
+          "name": "getShade",
+          "kind": "method"
+        },
+        {
+          "name": "getSubblockCoord",
+          "kind": "method"
+        },
+        {
+          "name": "getSubmodelAlpha",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIndex",
+          "kind": "method"
+        },
+        {
+          "name": "isOnFace",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDScaledBlockModels.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDScaledBlockModels.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "6b277973afbd94d81dba404e02360053d80aaf3d91a6c4d6ebbce82ddcb7644f",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "HDScaledBlockModels",
+          "kind": "class"
+        },
+        {
+          "name": "getCustomBlockModel",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchModel",
+          "kind": "method"
+        },
+        {
+          "name": "getScaledModel",
+          "kind": "method"
+        },
+        {
+          "name": "HDScaledBlockModels",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "7075f40adc82b7e02a10305f97e78da8eb3809e017b675c1edd8d225e817e896",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "HDShader",
+          "kind": "interface"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/HDShaderState.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/HDShaderState.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "5fd338979cd60c3f39f87fc56588847bc8ebdee1e85bfac80993447cecff33a2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "HDShaderState",
+          "kind": "interface"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/InhabitedHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/InhabitedHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "5eed79d24d9ae1f42e6bb545d5a03a740c69ffe34179b59de183a91a7de04a82",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "InhabitedHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "Color",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "InhabitedHDShader",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "readColor",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/IsoHDPerspective.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "dcbaacc681a6930ee3ae8e7ee7eb227382e5eb4db69d1564d2f759e4274d3692",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/projection/",
+      "symbols": [
+        {
+          "name": "IsoHDPerspective",
+          "kind": "class"
+        },
+        {
+          "name": "OurPerspectiveState",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "fastFloor",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getAdjecentTiles",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "getCachedLightLevels",
+          "kind": "method"
+        },
+        {
+          "name": "getCustomFluidMesh",
+          "kind": "method"
+        },
+        {
+          "name": "getCustomMesh",
+          "kind": "method"
+        },
+        {
+          "name": "getCustomMeshForState",
+          "kind": "method"
+        },
+        {
+          "name": "getLastBlockStep",
+          "kind": "method"
+        },
+        {
+          "name": "getLightLevels",
+          "kind": "method"
+        },
+        {
+          "name": "getLightLevelsAtStep",
+          "kind": "method"
+        },
+        {
+          "name": "getMapIterator",
+          "kind": "method"
+        },
+        {
+          "name": "getModelScale",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getPatches",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchU",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchV",
+          "kind": "method"
+        },
+        {
+          "name": "getPixelX",
+          "kind": "method"
+        },
+        {
+          "name": "getPixelY",
+          "kind": "method"
+        },
+        {
+          "name": "getRayEnd",
+          "kind": "method"
+        },
+        {
+          "name": "getRayStart",
+          "kind": "method"
+        },
+        {
+          "name": "getRequiredChunks",
+          "kind": "method"
+        },
+        {
+          "name": "getScale",
+          "kind": "method"
+        },
+        {
+          "name": "getShade",
+          "kind": "method"
+        },
+        {
+          "name": "getSubblockCoord",
+          "kind": "method"
+        },
+        {
+          "name": "getSubmodelAlpha",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIndex",
+          "kind": "method"
+        },
+        {
+          "name": "getTileCoords",
+          "kind": "method"
+        },
+        {
+          "name": "handlePatch",
+          "kind": "method"
+        },
+        {
+          "name": "handlePatches",
+          "kind": "method"
+        },
+        {
+          "name": "handleSubModel",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "IsoHDPerspective",
+          "kind": "method"
+        },
+        {
+          "name": "isOnFace",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurPerspectiveState",
+          "kind": "method"
+        },
+        {
+          "name": "raytrace",
+          "kind": "method"
+        },
+        {
+          "name": "raytrace_init",
+          "kind": "method"
+        },
+        {
+          "name": "raytrace_section_init",
+          "kind": "method"
+        },
+        {
+          "name": "raytraceSkipEmpty",
+          "kind": "method"
+        },
+        {
+          "name": "raytraceStepIterator",
+          "kind": "method"
+        },
+        {
+          "name": "raytraceSubblock",
+          "kind": "method"
+        },
+        {
+          "name": "render",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setCustomFluidMesh",
+          "kind": "method"
+        },
+        {
+          "name": "setCustomMesh",
+          "kind": "method"
+        },
+        {
+          "name": "setCustomMeshForState",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "transformWorldToMapCoord",
+          "kind": "method"
+        },
+        {
+          "name": "updateLightLevel",
+          "kind": "method"
+        },
+        {
+          "name": "updateSemitransparentLight",
+          "kind": "method"
+        },
+        {
+          "name": "visit_block",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/LightLevelHDLighting.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/LightLevelHDLighting.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "b5036944e9229da3577c0b041b08ca31b42bd5a740494e98405174d76c3975e7",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "LightLevelHDLighting",
+          "kind": "class"
+        },
+        {
+          "name": "applyLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getBrightnessTable",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isNightAndDayEnabled",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "LightLevelHDLighting",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "2393cfeeaf7bb9caf64d491dc85df7ff30c7ece90a2ad13c003e2b5c434987b0",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "BoxRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/BoxStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "7f353d500541f6c4bf93821ad10e8e2bd4cf509655baa7540d5d17c91d05ca0b",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "BoxStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "31ceeeb0771544b5b10f9adbc08d155075f2d0a8c62c668f1c0fc62a7515d07d",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "ChestRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "ChestData",
+          "kind": "enum"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ChestStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "181b5b87165b5a125e89fab113f226f7aa816e46a02078a0a29236ced9309d58",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "ChestStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "ChestData",
+          "kind": "enum"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CopyStairBlockRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "5e5f610e072f7fd3f52f7c756318a480adc7195f990a40fff4f805f4d5a8b871",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "CopyStairBlockRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildCornerStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildIntCornerStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getBaseRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "setID",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CTMVertTextureRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "a259832639512541320d66b247f98f784f6b003bf58faef38ec5cc1a3650967e",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "CTMVertTextureRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/CuboidRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "a1d79b426b1a0a0db45eb6899a8dc3558838d3b1ca28ce868fa18111535c3750",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "CuboidRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "clamp",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "fc2ac367695e75ac69d74eed84a8c9ac4866d0676ba8b2485c6749b9395a3af7",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "DoorRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getBoundsByMeta",
+          "kind": "method"
+        },
+        {
+          "name": "getCombinedMeta",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "sideAndMetaToTexture",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/DoorStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "2c6eb8f1f814773a3b3f7131bf07a422059bafeef867ceca7125ff131f8ba87f",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "DoorStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "a86c77abb005e62ea76832d149438612640b92ac6e12c23a5b7a0e5bdfc4187a",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "FenceGateBlockRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceGateBlockStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "7d8b886904eb062e702bc7941addae0f0e9f5c4414b35670fe74f5997c151308",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "FenceGateBlockStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "rotateModel",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "af5d3ee0bd992d14196949d2ef35e852232d4a2b4b3e559144fafce4c6b3f6f0",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "FenceWallBlockRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "addIDs",
+          "kind": "method"
+        },
+        {
+          "name": "buildFenceMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildWallMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FenceWallBlockStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "ccaf21f6c6dceba0c7c0b295d6f79be6c69296daf25552c10f0df7ee9b2c66dc",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "FenceWallBlockStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildFenceMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildTallWallMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildWallMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FluidStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "436d5c0729dde3d60b922477b609408b27cd20a8acc35b1a61156e88336bc6d3",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "FluidStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addSide",
+          "kind": "method"
+        },
+        {
+          "name": "addTop",
+          "kind": "method"
+        },
+        {
+          "name": "getAirHeight",
+          "kind": "method"
+        },
+        {
+          "name": "getCachedModel",
+          "kind": "method"
+        },
+        {
+          "name": "getCornerHeight",
+          "kind": "method"
+        },
+        {
+          "name": "getFluidState",
+          "kind": "method"
+        },
+        {
+          "name": "getFullCulledModel",
+          "kind": "method"
+        },
+        {
+          "name": "getIntKey",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "init",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isUpperCornerHeightFull",
+          "kind": "method"
+        },
+        {
+          "name": "putCachedModel",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/FrameRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "b9d16c527d02b0f8d5edbf5dedbfae4d3d685c7ea6fd9a4a2881dfaed5f775ed",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "FrameRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "addIDs",
+          "kind": "method"
+        },
+        {
+          "name": "buildModel",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/GlowLichenStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "51207e46b478e0e5ce5941dcd32ea831fe3465c1cfd761217bf7e1af0fc331b2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "GlowLichenStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "buildPatches",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/HeadRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "ebe893be99349f48f68d5f541ea7db478eada6b10382032a6c37e126c9e5d0a5",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "HeadRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ImmibisMicroRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "392eb6cfcb310686830e91cb24f201dc8967f873ab203e8bdd2347e91e89076d",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "ImmibisMicroRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "AxisPos",
+          "kind": "enum"
+        },
+        {
+          "name": "addPatchesFor",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getAxisMax",
+          "kind": "method"
+        },
+        {
+          "name": "getAxisMin",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getThickness",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isHollow",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f0eb54b2f6bb82b0cf81fc7d29116e8572372e3867194e0c4014eb83f184fd89",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "PaneRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "buildPatches",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PaneStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "1d863a2ae62bd376be4beebeb6b1086d8142077fa66bd5d8d3c7e65bf0c85978",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "PaneStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/PlantRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "6cc87434b6c3cec1435fcff3cb356f1b44466e090f2e27d3fd4eb13f91404058",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "PlantRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "buildPatches",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftSlabBlockRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "dfa779b6533178e1e3a1726fbf7e5538a5aff5d475f11dc1d78e4115a6b70cbb",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RailCraftSlabBlockRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "setID",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RailCraftTrackRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "93fddd6f6b65942bf963c73917e97a7631c3367f1714ac5e241bc3d322e7d770",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RailCraftTrackRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "4735957ac36e78989fc2200d32b22e265912aee13e1f09c83172dd059c240de8",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RedstoneWireRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "buildMesh",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getMesh",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RedstoneWireStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "7365af8c0170d5604121cceabafc49cab5ab544d7363c5557b780347ce343d3d",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RedstoneWireStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMesh",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedBoxRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "a8f95210f5d728c6a25277b305605f252088ff60b3854fbfc3e8df788ca2bc4a",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RotatedBoxRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RotatedPatchRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "58d4977c668f4642dfe63e44a7c099c59583fae388474bd07ce3fb18fd1ccd10",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RotatedPatchRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPMicroRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "09e641b0cae2ddf350bdfeefd47e128905132f4995ad92bd763a617dc857b4ee",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RPMicroRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addPatchesFor",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getThickness",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isHollow",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPRotatedBoxRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "ac879bf370757ae15b6e71a9cb1e407e77cac9d57413e515ffab0e5d4abfaedb",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RPRotatedBoxRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/RPSupportFrameRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "d200298eebd390015c23bfa3b3ad8a299ce56e25d0676dfdae6119bf95fce5ac",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RPSupportFrameRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/SkullRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "6093880278bcf5d99d10c3a57f10f70f12651756fb2d1f3bdc6d68dc985f280a",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "SkullRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairBlockRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "dd4a3eea67ea12ba2af1f2f9f6bed48b4df7c485a8611f59691994a76f48391b",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "StairBlockRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildCornerStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildIntCornerStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getBaseRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "setID",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/StairStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "d15d31fc62d558c63fa8d2820a057d3694be04d621872ebcc60402d45267f36c",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "StairStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildCornerStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildIntCornerStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "buildStepMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCLooseRockRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "36fc92781b68664de58736ec1c44488ccf9b3c3127aeab5c74b6fbdce19cb1cd",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "TFCLooseRockRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCSupportRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "061bb1979ea70a5a8bb5f2577df42949a753bd7887970882a1997c0cd457b22a",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "TFCSupportRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "setID",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/TFCWoodRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "d113409930703dc3ca99e157adcf003a351974282887421151060100f36dfbae",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "TFCWoodRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "buildMeshes",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/ThaumFurnaceRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3899c004a3069c5937ee019f3d5f70ea4860aef4aef8b1931453e32185ad30c1",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "ThaumFurnaceRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "blockTouching",
+          "kind": "method"
+        },
+        {
+          "name": "calcLevel",
+          "kind": "method"
+        },
+        {
+          "name": "calcTexture",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/VineStateRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f03f78a4f7235bd3138174c5ff69b374522b3b150f25568a7e66d50e52bd111a",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "VineStateRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "buildPatches",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/renderer/WallHeadRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "1e972307baf7cf46f0216374b551ca9f3de140894fe7fb1915cf767ba4a634f2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "WallHeadRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/ShadowHDLighting.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/ShadowHDLighting.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "c8a08ada2f72806200a3882d3e72f01b4d8c2022fa90f1db130f6e7dd8251ab8",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "ShadowHDLighting",
+          "kind": "class"
+        },
+        {
+          "name": "applyLighting",
+          "kind": "method"
+        },
+        {
+          "name": "applySmoothedLightToColor",
+          "kind": "method"
+        },
+        {
+          "name": "applySmoothLighting",
+          "kind": "method"
+        },
+        {
+          "name": "checkGrayscale",
+          "kind": "method"
+        },
+        {
+          "name": "computeSmoothedCscale",
+          "kind": "method"
+        },
+        {
+          "name": "getBrightnessTable",
+          "kind": "method"
+        },
+        {
+          "name": "getLightLevel",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isNightAndDayEnabled",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "ShadowHDLighting",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePack.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "ce8a720df763ac3c0815fe4fbe69e5a6673b02f73be464ea869111ca952ecf1c",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "ColorizingData",
+          "kind": "class"
+        },
+        {
+          "name": "CustomTileRec",
+          "kind": "class"
+        },
+        {
+          "name": "DynamicTileFile",
+          "kind": "class"
+        },
+        {
+          "name": "ExportedTexture",
+          "kind": "class"
+        },
+        {
+          "name": "ExportedTexturePack",
+          "kind": "class"
+        },
+        {
+          "name": "LoadedImage",
+          "kind": "class"
+        },
+        {
+          "name": "TextureMap",
+          "kind": "class"
+        },
+        {
+          "name": "TexturePack",
+          "kind": "class"
+        },
+        {
+          "name": "BlockTransparency",
+          "kind": "enum"
+        },
+        {
+          "name": "HandlePos",
+          "kind": "enum"
+        },
+        {
+          "name": "MaterialType",
+          "kind": "enum"
+        },
+        {
+          "name": "TileFileFormat",
+          "kind": "enum"
+        },
+        {
+          "name": "addFiles",
+          "kind": "method"
+        },
+        {
+          "name": "addImageToZip",
+          "kind": "method"
+        },
+        {
+          "name": "addTextureByKey",
+          "kind": "method"
+        },
+        {
+          "name": "addTextureIndex",
+          "kind": "method"
+        },
+        {
+          "name": "combineSubimageFromImage",
+          "kind": "method"
+        },
+        {
+          "name": "copySubimageFromImage",
+          "kind": "method"
+        },
+        {
+          "name": "CustomTileRec",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsOBJMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "fastFloor",
+          "kind": "method"
+        },
+        {
+          "name": "File",
+          "kind": "method"
+        },
+        {
+          "name": "findDynamicTile",
+          "kind": "method"
+        },
+        {
+          "name": "findOrAddDynamicTile",
+          "kind": "method"
+        },
+        {
+          "name": "findOrAddDynamicTileFile",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getBiomeTonedColor",
+          "kind": "method"
+        },
+        {
+          "name": "getBlkStateValue",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockFileName",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockName",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getCustomBlockMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getIntValue",
+          "kind": "method"
+        },
+        {
+          "name": "getMaterialTypeByTile",
+          "kind": "method"
+        },
+        {
+          "name": "getMatIDForTileID",
+          "kind": "method"
+        },
+        {
+          "name": "getRPFileName",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIDAt",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIndexFromTextureMap",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureMapLength",
+          "kind": "method"
+        },
+        {
+          "name": "getTexturePack",
+          "kind": "method"
+        },
+        {
+          "name": "getTexturePackDirectory",
+          "kind": "method"
+        },
+        {
+          "name": "getTileARGB",
+          "kind": "method"
+        },
+        {
+          "name": "getTileARGBCount",
+          "kind": "method"
+        },
+        {
+          "name": "getTrivialFoliageMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getTrivialGrassMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getTrivialWaterMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "GLASS",
+          "kind": "method"
+        },
+        {
+          "name": "handleBlockAlias",
+          "kind": "method"
+        },
+        {
+          "name": "hasBlkStateValue",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "loadBiomeShadingImage",
+          "kind": "method"
+        },
+        {
+          "name": "loadImage",
+          "kind": "method"
+        },
+        {
+          "name": "loadTerrain",
+          "kind": "method"
+        },
+        {
+          "name": "loadTextureFile",
+          "kind": "method"
+        },
+        {
+          "name": "loadTextureMapping",
+          "kind": "method"
+        },
+        {
+          "name": "loadTileSetsFile",
+          "kind": "method"
+        },
+        {
+          "name": "makeAlphaPure",
+          "kind": "method"
+        },
+        {
+          "name": "makeChestSideImage",
+          "kind": "method"
+        },
+        {
+          "name": "makeChestTopBottomImage",
+          "kind": "method"
+        },
+        {
+          "name": "makeFaceImage",
+          "kind": "method"
+        },
+        {
+          "name": "makeShulkerSideImage",
+          "kind": "method"
+        },
+        {
+          "name": "makeShulkerTopBottomImage",
+          "kind": "method"
+        },
+        {
+          "name": "makeSignImage",
+          "kind": "method"
+        },
+        {
+          "name": "MaterialType",
+          "kind": "method"
+        },
+        {
+          "name": "NumberFormatException",
+          "kind": "method"
+        },
+        {
+          "name": "parseTextureIndex",
+          "kind": "method"
+        },
+        {
+          "name": "patchBedImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchChestImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchCustomImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchLargeChestImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchShulkerImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchSignImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchSkinImages",
+          "kind": "method"
+        },
+        {
+          "name": "patchTextureWithImage",
+          "kind": "method"
+        },
+        {
+          "name": "processCustomColorMap",
+          "kind": "method"
+        },
+        {
+          "name": "processCustomColors",
+          "kind": "method"
+        },
+        {
+          "name": "processDynamicImage",
+          "kind": "method"
+        },
+        {
+          "name": "processTextureMaps",
+          "kind": "method"
+        },
+        {
+          "name": "readColor",
+          "kind": "method"
+        },
+        {
+          "name": "resampleTexturePack",
+          "kind": "method"
+        },
+        {
+          "name": "resetFiles",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "scaleTerrainPNG",
+          "kind": "method"
+        },
+        {
+          "name": "scaleTerrainPNGSubImage",
+          "kind": "method"
+        },
+        {
+          "name": "scrubValues",
+          "kind": "method"
+        },
+        {
+          "name": "setBlkStateValue",
+          "kind": "method"
+        },
+        {
+          "name": "setMatIDForTileID",
+          "kind": "method"
+        },
+        {
+          "name": "setTileARGB",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "synchronized",
+          "kind": "method"
+        },
+        {
+          "name": "tallyMemory",
+          "kind": "method"
+        },
+        {
+          "name": "TextureMap",
+          "kind": "method"
+        },
+        {
+          "name": "TexturePack",
+          "kind": "method"
+        },
+        {
+          "name": "this",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDCaveShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDCaveShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "a9bfd81000975918f0e5fb9a24896b084166642b047ccb832ce30db6d365a46c",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "CaveShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "TexturePackHDCaveShader",
+          "kind": "class"
+        },
+        {
+          "name": "CaveShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        },
+        {
+          "name": "TexturePackHDCaveShader",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "b3b788ab9ef1861aac9fa6b1a79f580f2a00e3b301f6895b73ca942ebe8a3763",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "ShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "TexturePackHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLastBlockHit",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "getTexturePack",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "ShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "TexturePackHDShader",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDUnderwaterShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackHDUnderwaterShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "b9508c216de2a5d8b21a2ba69b8cea3a60c2a61027a0f466b3ab4cce6f1ef759",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "TexturePackHDUnderwaterShader",
+          "kind": "class"
+        },
+        {
+          "name": "UnderwaterShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        },
+        {
+          "name": "TexturePackHDUnderwaterShader",
+          "kind": "method"
+        },
+        {
+          "name": "UnderwaterShaderState",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackLoader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TexturePackLoader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "e48d0906707f03c01c0b01e0b5ca5fcf08241a6cb36b144bb5b9a7d0fef2e874",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/assets/",
+      "symbols": [
+        {
+          "name": "ModSource",
+          "kind": "class"
+        },
+        {
+          "name": "TexturePackLoader",
+          "kind": "class"
+        },
+        {
+          "name": "addFiles",
+          "kind": "method"
+        },
+        {
+          "name": "BufferedInputStream",
+          "kind": "method"
+        },
+        {
+          "name": "close",
+          "kind": "method"
+        },
+        {
+          "name": "closeResource",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getEntries",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "openModTPResource",
+          "kind": "method"
+        },
+        {
+          "name": "openTPResource",
+          "kind": "method"
+        },
+        {
+          "name": "TexturePackLoader",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/hdmap/TopoHDShader.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/hdmap/TopoHDShader.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "cb713814721cf0a2089cafd8ba27798986b027e57f06032ef79a6ccce3219cc3",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/shaders/",
+      "symbols": [
+        {
+          "name": "OurShaderState",
+          "kind": "class"
+        },
+        {
+          "name": "TopoHDShader",
+          "kind": "class"
+        },
+        {
+          "name": "addClientConfiguration",
+          "kind": "method"
+        },
+        {
+          "name": "cleanup",
+          "kind": "method"
+        },
+        {
+          "name": "exportAsMaterialLibrary",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getCTMTextureCache",
+          "kind": "method"
+        },
+        {
+          "name": "getCurrentBlockMaterials",
+          "kind": "method"
+        },
+        {
+          "name": "getLighting",
+          "kind": "method"
+        },
+        {
+          "name": "getLightingTable",
+          "kind": "method"
+        },
+        {
+          "name": "getMap",
+          "kind": "method"
+        },
+        {
+          "name": "getName",
+          "kind": "method"
+        },
+        {
+          "name": "getRayColor",
+          "kind": "method"
+        },
+        {
+          "name": "getShader",
+          "kind": "method"
+        },
+        {
+          "name": "getStateInstance",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isBlockTypeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isEmittedLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isHidden",
+          "kind": "method"
+        },
+        {
+          "name": "isHightestBlockYDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isRawBiomeDataNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "isSkyLightLevelNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "OurShaderState",
+          "kind": "method"
+        },
+        {
+          "name": "processBlock",
+          "kind": "method"
+        },
+        {
+          "name": "rayFinished",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "s",
+          "kind": "method"
+        },
+        {
+          "name": "setHidden",
+          "kind": "method"
+        },
+        {
+          "name": "setLastBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "TopoHDShader",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BlockStateParser.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/BlockStateParser.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "5e78fd6666bc4e5b2f770bc2aebd88535252fe636e9e301b7b1c80bd59ea3e06",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "BlockStateParser",
+          "kind": "class"
+        },
+        {
+          "name": "BlockStateParser",
+          "kind": "method"
+        },
+        {
+          "name": "getBadTokens",
+          "kind": "method"
+        },
+        {
+          "name": "getIntValue",
+          "kind": "method"
+        },
+        {
+          "name": "getMatchingStates",
+          "kind": "method"
+        },
+        {
+          "name": "handleBlockData",
+          "kind": "method"
+        },
+        {
+          "name": "handleBlockName",
+          "kind": "method"
+        },
+        {
+          "name": "handleBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "NumberFormatException",
+          "kind": "method"
+        },
+        {
+          "name": "processLine",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BlockStep.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/BlockStep.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "1ff162764fa66893dceabceb1bb60e824094cc89b1b68a009c47a41f301aa941",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "BlockStep",
+          "kind": "enum"
+        },
+        {
+          "name": "BlockStep",
+          "kind": "method"
+        },
+        {
+          "name": "getFaceEntered",
+          "kind": "method"
+        },
+        {
+          "name": "opposite",
+          "kind": "method"
+        },
+        {
+          "name": "X_PLUS",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BufferInputStream.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/BufferInputStream.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "0f65b6e274d923044663a7d2061e8644e0803952ec2e20f9f5fbe5d7fd936387",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "BufferInputStream",
+          "kind": "class"
+        },
+        {
+          "name": "available",
+          "kind": "method"
+        },
+        {
+          "name": "buffer",
+          "kind": "method"
+        },
+        {
+          "name": "BufferInputStream",
+          "kind": "method"
+        },
+        {
+          "name": "close",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "length",
+          "kind": "method"
+        },
+        {
+          "name": "mark",
+          "kind": "method"
+        },
+        {
+          "name": "markSupported",
+          "kind": "method"
+        },
+        {
+          "name": "read",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "skip",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/BufferOutputStream.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/BufferOutputStream.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "bc407cc23fdfb02b591d51ddaa98d7e55ef0d4ebaa8baaf926718e544486965d",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "BufferOutputStream",
+          "kind": "class"
+        },
+        {
+          "name": "BufferOutputStream",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "write",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DataBitsPacked.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/DataBitsPacked.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "794eba710d94ec052e6628dcab6d6232096759e95983913fdb1d73d89c5f7043",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "DataBitsPacked",
+          "kind": "class"
+        },
+        {
+          "name": "calcLongCount",
+          "kind": "method"
+        },
+        {
+          "name": "DataBitsPacked",
+          "kind": "method"
+        },
+        {
+          "name": "getAt",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IllegalArgumentException",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynIntHashMap.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/DynIntHashMap.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "7c5ff20142324070298568698591c4a89ac1bff050664384227a2f95dd83bcff",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "DynIntHashMap",
+          "kind": "class"
+        },
+        {
+          "name": "Entry",
+          "kind": "class"
+        },
+        {
+          "name": "capacity",
+          "kind": "method"
+        },
+        {
+          "name": "clear",
+          "kind": "method"
+        },
+        {
+          "name": "ConcurrentModificationException",
+          "kind": "method"
+        },
+        {
+          "name": "containsKey",
+          "kind": "method"
+        },
+        {
+          "name": "containsValue",
+          "kind": "method"
+        },
+        {
+          "name": "DynIntHashMap",
+          "kind": "method"
+        },
+        {
+          "name": "Entry",
+          "kind": "method"
+        },
+        {
+          "name": "eq",
+          "kind": "method"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "get",
+          "kind": "method"
+        },
+        {
+          "name": "getEntry",
+          "kind": "method"
+        },
+        {
+          "name": "getKey",
+          "kind": "method"
+        },
+        {
+          "name": "getValue",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isEmpty",
+          "kind": "method"
+        },
+        {
+          "name": "keysWithValue",
+          "kind": "method"
+        },
+        {
+          "name": "loadFactor",
+          "kind": "method"
+        },
+        {
+          "name": "newEntry",
+          "kind": "method"
+        },
+        {
+          "name": "put",
+          "kind": "method"
+        },
+        {
+          "name": "rehash",
+          "kind": "method"
+        },
+        {
+          "name": "remove",
+          "kind": "method"
+        },
+        {
+          "name": "removeEntry",
+          "kind": "method"
+        },
+        {
+          "name": "removeEntryForKey",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "setValue",
+          "kind": "method"
+        },
+        {
+          "name": "size",
+          "kind": "method"
+        },
+        {
+          "name": "this",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynLongHashMap.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/DynLongHashMap.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "23ef1934c57f15945d6f3c0aecfbc38615bebd0bd3e01efcb4ec9be8e1e7dc70",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "DynLongHashMap",
+          "kind": "class"
+        },
+        {
+          "name": "Entry",
+          "kind": "class"
+        },
+        {
+          "name": "capacity",
+          "kind": "method"
+        },
+        {
+          "name": "clear",
+          "kind": "method"
+        },
+        {
+          "name": "ConcurrentModificationException",
+          "kind": "method"
+        },
+        {
+          "name": "containsKey",
+          "kind": "method"
+        },
+        {
+          "name": "containsValue",
+          "kind": "method"
+        },
+        {
+          "name": "DynLongHashMap",
+          "kind": "method"
+        },
+        {
+          "name": "Entry",
+          "kind": "method"
+        },
+        {
+          "name": "eq",
+          "kind": "method"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "get",
+          "kind": "method"
+        },
+        {
+          "name": "getEntry",
+          "kind": "method"
+        },
+        {
+          "name": "getKey",
+          "kind": "method"
+        },
+        {
+          "name": "getValue",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isEmpty",
+          "kind": "method"
+        },
+        {
+          "name": "loadFactor",
+          "kind": "method"
+        },
+        {
+          "name": "newEntry",
+          "kind": "method"
+        },
+        {
+          "name": "put",
+          "kind": "method"
+        },
+        {
+          "name": "rehash",
+          "kind": "method"
+        },
+        {
+          "name": "remove",
+          "kind": "method"
+        },
+        {
+          "name": "removeEntry",
+          "kind": "method"
+        },
+        {
+          "name": "removeEntryForKey",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "setValue",
+          "kind": "method"
+        },
+        {
+          "name": "size",
+          "kind": "method"
+        },
+        {
+          "name": "this",
+          "kind": "method"
+        },
+        {
+          "name": "toHash",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynmapBufferedImage.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/DynmapBufferedImage.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f9c28c3fde7aab4e4ef5188c370837322365891b9519a18452243caac94f0972",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "DynmapBufferedImage",
+          "kind": "class"
+        },
+        {
+          "name": "allocateBufferedImage",
+          "kind": "method"
+        },
+        {
+          "name": "BufferedImage",
+          "kind": "method"
+        },
+        {
+          "name": "createBufferedImage",
+          "kind": "method"
+        },
+        {
+          "name": "freeBufferedImage",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "synchronized",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/DynmapLogger.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/DynmapLogger.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "9bf832f488b38fc68565624672a246a8f3bedca3590e3f8b7d1a65c38d8ada03",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "DynmapLogger",
+          "kind": "interface"
+        },
+        {
+          "name": "info",
+          "kind": "method"
+        },
+        {
+          "name": "severe",
+          "kind": "method"
+        },
+        {
+          "name": "verboseinfo",
+          "kind": "method"
+        },
+        {
+          "name": "warning",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/ForgeConfigFile.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/ForgeConfigFile.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3a53bf335ab740959557713519bf8875ef3d1ffef01807ad893497bfc5c0205f",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "ForgeConfigFile",
+          "kind": "class"
+        },
+        {
+          "name": "addBlockIDs",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "ForgeConfigFile",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockID",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "load",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/ImageIOManager.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/ImageIOManager.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "958e2d3f04312599525d073e306232c96326065b85770721d1300f606293375e",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "ImageIOManager",
+          "kind": "class"
+        },
+        {
+          "name": "doWEBPDecode",
+          "kind": "method"
+        },
+        {
+          "name": "doWEBPEncode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "imageIODecode",
+          "kind": "method"
+        },
+        {
+          "name": "imageIODecodeUnsafe",
+          "kind": "method"
+        },
+        {
+          "name": "imageIOEncode",
+          "kind": "method"
+        },
+        {
+          "name": "imageIOEncodeUnsafe",
+          "kind": "method"
+        },
+        {
+          "name": "IOException",
+          "kind": "method"
+        },
+        {
+          "name": "isRequiredJDKVersion",
+          "kind": "method"
+        },
+        {
+          "name": "parseInt",
+          "kind": "method"
+        },
+        {
+          "name": "synchronized",
+          "kind": "method"
+        },
+        {
+          "name": "validateFormat",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3D.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3D.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "902be820167a9eba17daed20e63e0a6a6c4a759dfd551aeed9305f17769a38cc",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "IndexedVector3D",
+          "kind": "class"
+        },
+        {
+          "name": "IndexedVector3D",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3DList.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/IndexedVector3DList.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3dc9dc4487da44354e00a3eb53adc0dae5de619fbbc69204f28d684d4248c3e2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "IndexedVector3DList",
+          "kind": "class"
+        },
+        {
+          "name": "ListCallback",
+          "kind": "interface"
+        },
+        {
+          "name": "elementAdded",
+          "kind": "method"
+        },
+        {
+          "name": "getVectorIndex",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IndexedVector3DList",
+          "kind": "method"
+        },
+        {
+          "name": "resetSet",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/IpAddressMatcher.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/IpAddressMatcher.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "c1fe8d561082b0d472a859bc3213ea527ccfa7636399666e8fccd339c1c41918",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "IpAddressMatcher",
+          "kind": "class"
+        },
+        {
+          "name": "assert",
+          "kind": "method"
+        },
+        {
+          "name": "catch",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "IllegalArgumentException",
+          "kind": "method"
+        },
+        {
+          "name": "IpAddressMatcher",
+          "kind": "method"
+        },
+        {
+          "name": "matches",
+          "kind": "method"
+        },
+        {
+          "name": "parseAddress",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/LightLevels.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/LightLevels.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "790f276d5a6faabc580728e8f3bdf54f300065041b83346b622391300315b524",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "LightLevels",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/LRULinkedHashMap.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/LRULinkedHashMap.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "d400acd43bd51572e0aff162fe1513d5e3de6bc72d0dab4cf70f777b55d1d45a",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "LRULinkedHashMap",
+          "kind": "class"
+        },
+        {
+          "name": "LRULinkedHashMap",
+          "kind": "method"
+        },
+        {
+          "name": "removeEldestEntry",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "super",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/MapChunkCache.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/MapChunkCache.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "e69a0ff36e98c2f325446a66a0d5f724040af039d27ac8e2e7ac880cdbd4541f",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "MapChunkCache",
+          "kind": "class"
+        },
+        {
+          "name": "ChunkStats",
+          "kind": "enum"
+        },
+        {
+          "name": "HiddenChunkStyle",
+          "kind": "enum"
+        },
+        {
+          "name": "CACHED_SNAPSHOT_HIT",
+          "kind": "method"
+        },
+        {
+          "name": "ChunkStats",
+          "kind": "method"
+        },
+        {
+          "name": "endChunkLoad",
+          "kind": "method"
+        },
+        {
+          "name": "FILL_AIR",
+          "kind": "method"
+        },
+        {
+          "name": "fromValue",
+          "kind": "method"
+        },
+        {
+          "name": "getChunksLoaded",
+          "kind": "method"
+        },
+        {
+          "name": "getIterator",
+          "kind": "method"
+        },
+        {
+          "name": "getLabel",
+          "kind": "method"
+        },
+        {
+          "name": "getTotalRuntimeNanos",
+          "kind": "method"
+        },
+        {
+          "name": "getValue",
+          "kind": "method"
+        },
+        {
+          "name": "getWorld",
+          "kind": "method"
+        },
+        {
+          "name": "HiddenChunkStyle",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "isDoneLoading",
+          "kind": "method"
+        },
+        {
+          "name": "isEmpty",
+          "kind": "method"
+        },
+        {
+          "name": "isEmptySection",
+          "kind": "method"
+        },
+        {
+          "name": "loadChunks",
+          "kind": "method"
+        },
+        {
+          "name": "setChunkDataTypes",
+          "kind": "method"
+        },
+        {
+          "name": "setHiddenFillStyle",
+          "kind": "method"
+        },
+        {
+          "name": "setHiddenRange",
+          "kind": "method"
+        },
+        {
+          "name": "setVisibleRange",
+          "kind": "method"
+        },
+        {
+          "name": "unloadChunks",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/MapIterator.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/MapIterator.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "09e041a6c63703bc69f3d4e6a55e82cb914389be634b7cdc775c5eb300626e53",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "MapIterator",
+          "kind": "interface"
+        },
+        {
+          "name": "getBiome",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockEmittedLight",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockKey",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockLight",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockSkyLight",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockTypeAt",
+          "kind": "method"
+        },
+        {
+          "name": "getChunkStatus",
+          "kind": "method"
+        },
+        {
+          "name": "getDataVersion",
+          "kind": "method"
+        },
+        {
+          "name": "getInhabitedTicks",
+          "kind": "method"
+        },
+        {
+          "name": "getLastStep",
+          "kind": "method"
+        },
+        {
+          "name": "getSmoothColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getSmoothFoliageColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getSmoothGrassColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getSmoothWaterColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getWorldHeight",
+          "kind": "method"
+        },
+        {
+          "name": "getWorldSeaLevel",
+          "kind": "method"
+        },
+        {
+          "name": "getWorldYMin",
+          "kind": "method"
+        },
+        {
+          "name": "initialize",
+          "kind": "method"
+        },
+        {
+          "name": "setY",
+          "kind": "method"
+        },
+        {
+          "name": "stepPosition",
+          "kind": "method"
+        },
+        {
+          "name": "unstepPosition",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/Matrix3D.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3b4731e0352a4764dfd975d97e0f1447d294e6b46160ce00805feba4352934e2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "Matrix3D",
+          "kind": "class"
+        },
+        {
+          "name": "Matrix3D",
+          "kind": "method"
+        },
+        {
+          "name": "multiply",
+          "kind": "method"
+        },
+        {
+          "name": "rotateXY",
+          "kind": "method"
+        },
+        {
+          "name": "rotateXZ",
+          "kind": "method"
+        },
+        {
+          "name": "rotateYZ",
+          "kind": "method"
+        },
+        {
+          "name": "scale",
+          "kind": "method"
+        },
+        {
+          "name": "shearZ",
+          "kind": "method"
+        },
+        {
+          "name": "toJSON",
+          "kind": "method"
+        },
+        {
+          "name": "toString",
+          "kind": "method"
+        },
+        {
+          "name": "transform",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/PatchDefinition.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3e1db6c77caeb84fe2bcbb7d70b5db0b57a204d5b8ff4f139bfda36a54f69dcd",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/geometry/",
+      "symbols": [
+        {
+          "name": "PatchDefinition",
+          "kind": "class"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIndex",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "outOfRange",
+          "kind": "method"
+        },
+        {
+          "name": "PatchDefinition",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "rotatePrecomputed",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        },
+        {
+          "name": "this",
+          "kind": "method"
+        },
+        {
+          "name": "toString",
+          "kind": "method"
+        },
+        {
+          "name": "update",
+          "kind": "method"
+        },
+        {
+          "name": "updateModelFace",
+          "kind": "method"
+        },
+        {
+          "name": "validate",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/PatchDefinitionFactory.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/PatchDefinitionFactory.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "9ea1ef21260874c926c0aaa26c566a4b60c7076e954e7ad5553f5cd4f2e92977",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/geometry/",
+      "symbols": [
+        {
+          "name": "PatchDefinitionFactory",
+          "kind": "class"
+        },
+        {
+          "name": "getModelFace",
+          "kind": "method"
+        },
+        {
+          "name": "getNamedPatch",
+          "kind": "method"
+        },
+        {
+          "name": "getPatch",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchByName",
+          "kind": "method"
+        },
+        {
+          "name": "getRotatedPatch",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureCountFromMap",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIndexFromMap",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "PatchDefinitionFactory",
+          "kind": "method"
+        },
+        {
+          "name": "setPatchNameMape",
+          "kind": "method"
+        },
+        {
+          "name": "synchronized",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/Polygon.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/Polygon.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "8b598c4c36ff903c51054a4560fb87b171075c498882ad0a5c19c667663d8294",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/geometry/",
+      "symbols": [
+        {
+          "name": "Point2D",
+          "kind": "class"
+        },
+        {
+          "name": "Polygon",
+          "kind": "class"
+        },
+        {
+          "name": "addVertex",
+          "kind": "method"
+        },
+        {
+          "name": "clip",
+          "kind": "method"
+        },
+        {
+          "name": "getVertex",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "Point2D",
+          "kind": "method"
+        },
+        {
+          "name": "size",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/RectangleVisibilityLimit.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/RectangleVisibilityLimit.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f2ab42b227cc08e2f663f160a4c8796110eff20587e9152e7181448aad1c8eaf",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "RectangleVisibilityLimit",
+          "kind": "class"
+        },
+        {
+          "name": "doIntersectChunk",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "RectangleVisibilityLimit",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "xCenter",
+          "kind": "method"
+        },
+        {
+          "name": "zCenter",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/RoundVisibilityLimit.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/RoundVisibilityLimit.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "d3558de69092b2355e9ddc909b78bb2a3b4aee721130ec48122d9bbe65f434c9",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "RoundVisibilityLimit",
+          "kind": "class"
+        },
+        {
+          "name": "doIntersectChunk",
+          "kind": "method"
+        },
+        {
+          "name": "RoundVisibilityLimit",
+          "kind": "method"
+        },
+        {
+          "name": "xCenter",
+          "kind": "method"
+        },
+        {
+          "name": "zCenter",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/TileFlags.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/TileFlags.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "e2527f0e09dbe5a7d2e7f8eb3e698e071dd1c1ad508d4cc1fae1b5aa836377a2",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "Iterator",
+          "kind": "class"
+        },
+        {
+          "name": "TileCoord",
+          "kind": "class"
+        },
+        {
+          "name": "TileFlags",
+          "kind": "class"
+        },
+        {
+          "name": "clear",
+          "kind": "method"
+        },
+        {
+          "name": "countFlags",
+          "kind": "method"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getFlag",
+          "kind": "method"
+        },
+        {
+          "name": "getIterator",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "hasNext",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "Iterator",
+          "kind": "method"
+        },
+        {
+          "name": "iterSource",
+          "kind": "method"
+        },
+        {
+          "name": "load",
+          "kind": "method"
+        },
+        {
+          "name": "next",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "save",
+          "kind": "method"
+        },
+        {
+          "name": "setFlag",
+          "kind": "method"
+        },
+        {
+          "name": "TileCoord",
+          "kind": "method"
+        },
+        {
+          "name": "TileFlags",
+          "kind": "method"
+        },
+        {
+          "name": "union",
+          "kind": "method"
+        },
+        {
+          "name": "while",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/Vector3D.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/Vector3D.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "3a14c93f62c477d70fbd41f1aa8564ed81a73fe77e7672247755f2876897b588",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/domain/",
+      "symbols": [
+        {
+          "name": "Vector3D",
+          "kind": "class"
+        },
+        {
+          "name": "add",
+          "kind": "method"
+        },
+        {
+          "name": "crossProduct",
+          "kind": "method"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "innerProduct",
+          "kind": "method"
+        },
+        {
+          "name": "length",
+          "kind": "method"
+        },
+        {
+          "name": "return",
+          "kind": "method"
+        },
+        {
+          "name": "scale",
+          "kind": "method"
+        },
+        {
+          "name": "set",
+          "kind": "method"
+        },
+        {
+          "name": "setFromLocation",
+          "kind": "method"
+        },
+        {
+          "name": "subtract",
+          "kind": "method"
+        },
+        {
+          "name": "toString",
+          "kind": "method"
+        },
+        {
+          "name": "Vector3D",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCore/src/main/java/org/dynmap/utils/VisibilityLimit.java",
+      "localPath": "upstream/DynmapCore/src/main/java/org/dynmap/utils/VisibilityLimit.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "57ef1b45ee47b2e586549cc3c4438c707134286c532ae4daa7a74c3c514fb720",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/support/",
+      "symbols": [
+        {
+          "name": "VisibilityLimit",
+          "kind": "interface"
+        },
+        {
+          "name": "doIntersectChunk",
+          "kind": "method"
+        },
+        {
+          "name": "xCenter",
+          "kind": "method"
+        },
+        {
+          "name": "zCenter",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomColorMultiplier.java",
+      "localPath": "upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomColorMultiplier.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "708243b92e419a0c9abac0a894d4270f2d1acf9bbf18fa8739d61b32617d4712",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "CustomColorMultiplier",
+          "kind": "class"
+        },
+        {
+          "name": "cleanupColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "CustomColorMultiplier",
+          "kind": "method"
+        },
+        {
+          "name": "getColorMultiplier",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomRenderer.java",
+      "localPath": "upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/CustomRenderer.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "42bcf79d9037219e5dd395ab6daca8ead608c1adce1dc5cf30c7bc8d59acc8bd",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "CustomRenderer",
+          "kind": "class"
+        },
+        {
+          "name": "addBox",
+          "kind": "method"
+        },
+        {
+          "name": "addIfNonNull",
+          "kind": "method"
+        },
+        {
+          "name": "cleanupRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "CustomRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "getMaximumTextureCount",
+          "kind": "method"
+        },
+        {
+          "name": "getRenderPatchList",
+          "kind": "method"
+        },
+        {
+          "name": "getSidePatch",
+          "kind": "method"
+        },
+        {
+          "name": "getTileEntityFieldsNeeded",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "initializeRenderer",
+          "kind": "method"
+        },
+        {
+          "name": "isOnlyBlockStateSensitive",
+          "kind": "method"
+        },
+        {
+          "name": "switch",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/DynmapBlockState.java",
+      "localPath": "upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/DynmapBlockState.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "b27bd6638839d535d5489adce04299e1fcefac89a37a1610bc165943f1d4d364",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "Builder",
+          "kind": "class"
+        },
+        {
+          "name": "DynmapBlockState",
+          "kind": "class"
+        },
+        {
+          "name": "addWaterBlock",
+          "kind": "method"
+        },
+        {
+          "name": "build",
+          "kind": "method"
+        },
+        {
+          "name": "Builder",
+          "kind": "method"
+        },
+        {
+          "name": "DynmapBlockState",
+          "kind": "method"
+        },
+        {
+          "name": "equals",
+          "kind": "method"
+        },
+        {
+          "name": "finalizeBlockStates",
+          "kind": "method"
+        },
+        {
+          "name": "for",
+          "kind": "method"
+        },
+        {
+          "name": "getBaseStateByName",
+          "kind": "method"
+        },
+        {
+          "name": "getGlobalIndexMax",
+          "kind": "method"
+        },
+        {
+          "name": "getLightAttenuation",
+          "kind": "method"
+        },
+        {
+          "name": "getLiquidState",
+          "kind": "method"
+        },
+        {
+          "name": "getState",
+          "kind": "method"
+        },
+        {
+          "name": "getStateByGlobalIndex",
+          "kind": "method"
+        },
+        {
+          "name": "getStateByIndex",
+          "kind": "method"
+        },
+        {
+          "name": "getStateByLegacyBlockID",
+          "kind": "method"
+        },
+        {
+          "name": "getStateByNameAndIndex",
+          "kind": "method"
+        },
+        {
+          "name": "getStateByNameAndState",
+          "kind": "method"
+        },
+        {
+          "name": "getStateCount",
+          "kind": "method"
+        },
+        {
+          "name": "hashCode",
+          "kind": "method"
+        },
+        {
+          "name": "if",
+          "kind": "method"
+        },
+        {
+          "name": "is",
+          "kind": "method"
+        },
+        {
+          "name": "isAir",
+          "kind": "method"
+        },
+        {
+          "name": "isGrass",
+          "kind": "method"
+        },
+        {
+          "name": "isLeaves",
+          "kind": "method"
+        },
+        {
+          "name": "isLog",
+          "kind": "method"
+        },
+        {
+          "name": "isNotAir",
+          "kind": "method"
+        },
+        {
+          "name": "isSnow",
+          "kind": "method"
+        },
+        {
+          "name": "isSolid",
+          "kind": "method"
+        },
+        {
+          "name": "isStateMatch",
+          "kind": "method"
+        },
+        {
+          "name": "isWater",
+          "kind": "method"
+        },
+        {
+          "name": "isWaterFilled",
+          "kind": "method"
+        },
+        {
+          "name": "isWaterlogged",
+          "kind": "method"
+        },
+        {
+          "name": "matchingBaseState",
+          "kind": "method"
+        },
+        {
+          "name": "reset",
+          "kind": "method"
+        },
+        {
+          "name": "setAir",
+          "kind": "method"
+        },
+        {
+          "name": "setAttenuatesLight",
+          "kind": "method"
+        },
+        {
+          "name": "setBaseState",
+          "kind": "method"
+        },
+        {
+          "name": "setBlockName",
+          "kind": "method"
+        },
+        {
+          "name": "setBlocksLight",
+          "kind": "method"
+        },
+        {
+          "name": "setCustomWater",
+          "kind": "method"
+        },
+        {
+          "name": "setLeaves",
+          "kind": "method"
+        },
+        {
+          "name": "setLegacyBlockID",
+          "kind": "method"
+        },
+        {
+          "name": "setLog",
+          "kind": "method"
+        },
+        {
+          "name": "setMaterial",
+          "kind": "method"
+        },
+        {
+          "name": "setSolid",
+          "kind": "method"
+        },
+        {
+          "name": "setStateIndex",
+          "kind": "method"
+        },
+        {
+          "name": "setStateName",
+          "kind": "method"
+        },
+        {
+          "name": "setWaterlogged",
+          "kind": "method"
+        },
+        {
+          "name": "this",
+          "kind": "method"
+        },
+        {
+          "name": "toString",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/MapDataContext.java",
+      "localPath": "upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/MapDataContext.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "f6f859c3e6d7c69214581e05be428da57f0f392648b3ab1e89aa0ad1a6bf1480",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "MapDataContext",
+          "kind": "interface"
+        },
+        {
+          "name": "getBlockTileEntityField",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockTileEntityFieldAt",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockType",
+          "kind": "method"
+        },
+        {
+          "name": "getBlockTypeAt",
+          "kind": "method"
+        },
+        {
+          "name": "getPatchFactory",
+          "kind": "method"
+        },
+        {
+          "name": "getX",
+          "kind": "method"
+        },
+        {
+          "name": "getY",
+          "kind": "method"
+        },
+        {
+          "name": "getZ",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatch.java",
+      "localPath": "upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatch.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "2cf0fd5687697d47b710eff263e0c118b2b94d0d379e81e8a3fba950f624ea3b",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "RenderPatch",
+          "kind": "interface"
+        },
+        {
+          "name": "getTextureIndex",
+          "kind": "method"
+        }
+      ]
+    },
+    {
+      "sourcePath": "DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatchFactory.java",
+      "localPath": "upstream/DynmapCoreAPI/src/main/java/org/dynmap/renderer/RenderPatchFactory.java",
+      "sourceRevision": "93b454efb8802dc7406d6873434f2aeec5c636f4",
+      "license": "Apache-2.0",
+      "sha256": "5529bb3016c8101f71d7afebf41832243eadaf169c74267fcc560ccefd9d0f54",
+      "rustDestination": "src-tauri/crates/map-renderer-core/src/builtins/",
+      "symbols": [
+        {
+          "name": "SideVisible",
+          "kind": "enum"
+        },
+        {
+          "name": "RenderPatchFactory",
+          "kind": "interface"
+        },
+        {
+          "name": "getNamedPatch",
+          "kind": "method"
+        },
+        {
+          "name": "getPatch",
+          "kind": "method"
+        },
+        {
+          "name": "getRotatedPatch",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureCountFromMap",
+          "kind": "method"
+        },
+        {
+          "name": "getTextureIndexFromMap",
+          "kind": "method"
+        }
+      ]
+    }
+  ]
+}

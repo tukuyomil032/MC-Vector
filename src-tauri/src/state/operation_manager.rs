@@ -12,7 +12,6 @@ pub enum OperationKind {
     BackupCreate,
     BackupRestore,
     BackupDelete,
-    BackupMove,
     FileMutation,
     ArtifactInstall,
 }
@@ -25,7 +24,6 @@ impl fmt::Display for OperationKind {
             Self::BackupCreate => "backup-create",
             Self::BackupRestore => "backup-restore",
             Self::BackupDelete => "backup-delete",
-            Self::BackupMove => "backup-move",
             Self::FileMutation => "file-mutation",
             Self::ArtifactInstall => "artifact-install",
         };
