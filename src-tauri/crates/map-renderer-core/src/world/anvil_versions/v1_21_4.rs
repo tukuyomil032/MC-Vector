@@ -145,10 +145,8 @@ mod tests {
 
     #[test]
     fn deterministic_region_fixture_round_trips_through_the_version_adapter() {
-        let root = std::env::temp_dir().join(format!(
-            "mc-vector-anvil-version-1-21-4-fixture-{}",
-            std::process::id()
-        ));
+        let temp = tempfile::tempdir().expect("temporary fixture directory");
+        let root = temp.path();
         let region_dir = root.join("region");
         std::fs::create_dir_all(&region_dir).expect("fixture directory");
 
@@ -159,7 +157,7 @@ mod tests {
         let region_bytes = region.into_inner().expect("finish region").into_inner();
         std::fs::write(region_dir.join("r.0.0.mca"), region_bytes).expect("write region");
 
-        let source = RegionSource::new(&root);
+        let source = RegionSource::new(root);
         let extracted = source
             .read_chunk_nbt(ChunkCoord::new(0, 0))
             .expect("read region")
@@ -182,6 +180,5 @@ mod tests {
             source.read_chunk_digest(ChunkCoord::new(0, 0)),
             source.read_chunk_digest(ChunkCoord::new(0, 0))
         );
-        std::fs::remove_dir_all(root).expect("remove fixture");
     }
 }

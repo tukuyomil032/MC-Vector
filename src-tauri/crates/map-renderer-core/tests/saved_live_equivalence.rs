@@ -103,10 +103,8 @@ fn request() -> SnapshotRequest {
 
 #[test]
 fn saved_and_live_sources_produce_the_same_renderer_data() {
-    let root = std::env::temp_dir().join(format!(
-        "mc-vector-saved-live-equivalence-{}",
-        std::process::id()
-    ));
+    let temp = tempfile::tempdir().expect("temporary fixture directory");
+    let root = temp.path();
     let region_dir = root.join("region");
     std::fs::create_dir_all(&region_dir).expect("fixture directory");
     let mut region = Region::create(Cursor::new(Vec::new())).expect("create region");
@@ -116,7 +114,7 @@ fn saved_and_live_sources_produce_the_same_renderer_data() {
     let region_bytes = region.into_inner().expect("finish region").into_inner();
     std::fs::write(region_dir.join("r.-1.0.mca"), region_bytes).expect("write region");
 
-    let saved = SavedAnvilSource::new(&root)
+    let saved = SavedAnvilSource::new(root)
         .load_chunk(ChunkCoord::new(-2, 4))
         .expect("read saved chunk")
         .expect("saved chunk exists");
@@ -146,6 +144,4 @@ fn saved_and_live_sources_produce_the_same_renderer_data() {
         live.light_at(BlockCoord::new(-32, 0, 64))
             .expect("live light")
     );
-
-    std::fs::remove_dir_all(root).expect("remove fixture");
 }

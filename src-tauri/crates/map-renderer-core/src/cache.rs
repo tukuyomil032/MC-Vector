@@ -393,18 +393,15 @@ mod tests {
         }
     }
 
-    fn unique_root(label: &str) -> PathBuf {
-        let sequence = TEMP_FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-        std::env::temp_dir().join(format!(
-            "mc-vector-map-cache-{label}-{}-{sequence}",
-            std::process::id()
-        ))
+    fn cache_dir() -> tempfile::TempDir {
+        tempfile::tempdir().expect("temporary cache directory")
     }
 
     #[test]
     fn verified_success_round_trips_as_a_fresh_hit() {
-        let root = unique_root("hit");
-        let store = TileCacheStore::new(&root).expect("valid cache root");
+        let temp = cache_dir();
+        let root = temp.path();
+        let store = TileCacheStore::new(root).expect("valid cache root");
         let png = b"deterministic-png";
         let metadata = TileCacheMetadata::new(
             key(),
@@ -421,18 +418,18 @@ mod tests {
             store.read(&key()).unwrap(),
             TileCacheLookup::Hit { .. }
         ));
-        assert!(fs::read_dir(&root).unwrap().all(|entry| !entry
+        assert!(fs::read_dir(root).unwrap().all(|entry| !entry
             .unwrap()
             .file_name()
             .to_string_lossy()
             .contains(".part.")));
-        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
     fn checksum_mismatch_is_not_a_cache_hit() {
-        let root = unique_root("checksum");
-        let store = TileCacheStore::new(&root).expect("valid cache root");
+        let temp = cache_dir();
+        let root = temp.path();
+        let store = TileCacheStore::new(root).expect("valid cache root");
         let png = b"original";
         let metadata = TileCacheMetadata::new(
             key(),
@@ -451,24 +448,21 @@ mod tests {
             store.read(&key()).unwrap(),
             TileCacheLookup::Corrupt(CacheCorruption::ChecksumMismatch)
         );
-        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
     fn metadata_less_png_is_untrusted() {
-        let root = unique_root("legacy");
-        let store = TileCacheStore::new(&root).expect("valid cache root");
-        fs::create_dir_all(&root).unwrap();
+        let temp = cache_dir();
+        let store = TileCacheStore::new(temp.path()).expect("valid cache root");
         let paths = store.paths(&key()).unwrap();
         fs::write(paths.png, b"legacy-png").unwrap();
         assert_eq!(store.read(&key()).unwrap(), TileCacheLookup::Untrusted);
-        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
     fn empty_and_retryable_states_are_observable_but_not_fresh() {
-        let root = unique_root("state");
-        let store = TileCacheStore::new(&root).expect("valid cache root");
+        let temp = cache_dir();
+        let store = TileCacheStore::new(temp.path()).expect("valid cache root");
         for state in [TileRenderState::Empty, TileRenderState::Retryable] {
             let metadata = TileCacheMetadata::new(
                 key(),
@@ -487,13 +481,12 @@ mod tests {
                     if found.render_state == state
             ));
         }
-        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
     fn stale_state_does_not_delete_or_trust_the_old_png() {
-        let root = unique_root("stale");
-        let store = TileCacheStore::new(&root).expect("valid cache root");
+        let temp = cache_dir();
+        let store = TileCacheStore::new(temp.path()).expect("valid cache root");
         let png = b"old-valid-png";
         let fresh = TileCacheMetadata::new(
             key(),
@@ -521,6 +514,5 @@ mod tests {
             store.read(&key()).unwrap(),
             TileCacheLookup::Unusable { metadata } if metadata.render_state == TileRenderState::Stale
         ));
-        fs::remove_dir_all(root).unwrap();
     }
 }

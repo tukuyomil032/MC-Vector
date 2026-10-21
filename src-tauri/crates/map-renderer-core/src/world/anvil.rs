@@ -474,8 +474,8 @@ mod tests {
 
     #[test]
     fn anvil_region_round_trip_is_deterministic() {
-        let root =
-            std::env::temp_dir().join(format!("mc-vector-anvil-fixture-{}", std::process::id()));
+        let temp = tempfile::tempdir().expect("temporary fixture directory");
+        let root = temp.path();
         let region_dir = root.join("region");
         std::fs::create_dir_all(&region_dir).expect("fixture directory");
 
@@ -486,7 +486,7 @@ mod tests {
         let bytes = region.into_inner().expect("finish region").into_inner();
         std::fs::write(region_dir.join("r.0.0.mca"), bytes).expect("write fixture region");
 
-        let source = super::SavedAnvilSource::new(&root);
+        let source = super::SavedAnvilSource::new(root);
         let first = source
             .load_chunk(ChunkCoord::new(0, 0))
             .expect("read fixture")
@@ -500,7 +500,6 @@ mod tests {
             source.chunk_source_digest(ChunkCoord::new(0, 0)),
             source.chunk_source_digest(ChunkCoord::new(0, 0))
         );
-        std::fs::remove_dir_all(root).expect("remove temporary fixture");
     }
 
     #[test]
