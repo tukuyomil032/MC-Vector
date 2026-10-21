@@ -11,8 +11,6 @@ on:
       - src-tauri/Cargo.lock
       - src-tauri/tauri.conf.json
       - .github/workflows/release.yml
-  workflow_dispatch:
-
 permissions: {}
 
 jobs:
@@ -390,6 +388,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Generate release notes
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          node scripts/changelog.mjs section "$VERSION" > "$RUNNER_TEMP/release-notes.md"
+          node scripts/changelog.mjs notes "$VERSION" > "$RUNNER_TEMP/updater-notes.md"
+          if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then
+            echo "No CHANGELOG.md section found for v${VERSION}" >&2
+            exit 1
+          fi
+
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -504,7 +514,7 @@ jobs:
 
           jq -n \
             --arg version "$VERSION" \
-            --arg notes "MC-Vector ${TAG}" \
+            --rawfile notes "$RUNNER_TEMP/updater-notes.md" \
             --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg mac_arm64_sig "$MAC_ARM64_SIG" \
             --arg mac_x64_sig "$MAC_X64_SIG" \
@@ -535,6 +545,7 @@ jobs:
 
           jq -e '
             (.version | type == "string") and
+            (.notes | type == "string") and
             (.platforms | type == "object") and
             (.platforms["darwin-aarch64"].url | type == "string") and
             (.platforms["darwin-aarch64"].signature | type == "string") and
@@ -552,6 +563,7 @@ jobs:
         with:
           tag_name: v${{ needs.check-version.outputs.version }}
           name: MC-Vector v${{ needs.check-version.outputs.version }}
+          body_path: ${{ runner.temp }}/release-notes.md
           draft: false
           prerelease: false
           files: release-assets/*

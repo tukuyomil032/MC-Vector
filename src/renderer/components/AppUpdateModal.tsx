@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import type { Translate } from '../../i18n';
 import { Button } from './ui/Button';
 import { Progress } from './ui/Progress';
+import ReleaseNotes from './ReleaseNotes';
 
 interface UpdatePromptState {
   version?: string;
@@ -20,35 +21,6 @@ interface AppUpdateModalProps {
   onInstall: () => void;
 }
 
-function getReleaseNotesText(releaseNotes: unknown): string {
-  if (!releaseNotes) {
-    return '';
-  }
-  if (typeof releaseNotes === 'string') {
-    return releaseNotes;
-  }
-  if (!Array.isArray(releaseNotes)) {
-    return '';
-  }
-  return releaseNotes
-    .map((entry) => {
-      if (typeof entry === 'string') {
-        return entry;
-      }
-      if (
-        entry &&
-        typeof entry === 'object' &&
-        'body' in entry &&
-        typeof (entry as Record<string, unknown>).body === 'string'
-      ) {
-        return (entry as Record<string, unknown>).body as string;
-      }
-      return '';
-    })
-    .filter(Boolean)
-    .join('\n');
-}
-
 export default function AppUpdateModal({
   updatePrompt,
   updateProgress,
@@ -61,7 +33,6 @@ export default function AppUpdateModal({
 }: AppUpdateModalProps) {
   const isOpen = !!(updatePrompt || updateError);
   const isDownloading = updateProgress !== null && !updateReady;
-  const releaseNotesText = getReleaseNotesText(updatePrompt?.releaseNotes);
 
   return (
     <Dialog.Root
@@ -90,15 +61,13 @@ export default function AppUpdateModal({
               : t('settings.update.title')}
           </Dialog.Title>
 
-          {releaseNotesText && updatePrompt && (
-            <div className="mb-4">
-              <div className="app-update-modal__notes-label mb-1 text-xs text-text-secondary">
-                {t('settings.update.releaseNotes')}
-              </div>
-              <pre className="app-update-modal__notes max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-border-color bg-bg-primary p-3 text-xs">
-                {releaseNotesText}
-              </pre>
-            </div>
+          {updatePrompt && (
+            <ReleaseNotes
+              releaseNotes={updatePrompt.releaseNotes}
+              version={updatePrompt.version}
+              label={t('settings.update.releaseNotes')}
+              className="mb-4"
+            />
           )}
 
           {updateError && (

@@ -437,13 +437,16 @@ fn validate_entry_limits(
     Ok(safe_name)
 }
 
-fn validate_zip_entry(
-    file: &zip::read::ZipFile<'_>,
+fn validate_zip_entry<R: Read + ?Sized>(
+    file: &zip::read::ZipFile<'_, R>,
     totals: &mut ResourceTotals,
     policy: ArchivePolicy,
 ) -> Result<PathBuf, String> {
+    let entry_name = file
+        .name()
+        .map_err(|error| format!("Failed to read zip entry name: {error}"))?;
     let validated_name = validate_entry_limits(
-        file.name(),
+        &entry_name,
         file.is_symlink(),
         file.compressed_size(),
         file.size(),
@@ -988,11 +991,15 @@ fn preflight_archive<R: Read + Seek>(
         } else {
             ArchiveEntryKind::File
         };
+        let entry_name = file
+            .name()
+            .map_err(|error| format!("Failed to read zip entry name: {error}"))?
+            .into_owned();
         register_archive_entry(&mut paths, &safe_path, kind)
-            .map_err(|reason| format!("Archive entry '{}' is invalid: {reason}", file.name()))?;
+            .map_err(|reason| format!("Archive entry '{entry_name}' is invalid: {reason}"))?;
         entries.push(ArchiveEntryRecord {
             path: safe_path,
-            name: file.name().to_string(),
+            name: entry_name,
         });
     }
 
@@ -1227,7 +1234,7 @@ fn extract_archive_to_directory(
         if copied != entry.size() {
             return Err(format!(
                 "Archive entry size changed while extracting: {}",
-                entry.name()
+                entry.name().unwrap_or_default()
             ));
         }
         output

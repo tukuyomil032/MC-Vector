@@ -783,7 +783,10 @@ fn extract_zip_archive(archive_path: &str, dest_dir: &str) -> Result<String, Str
         let file = archive
             .by_index(index)
             .map_err(|error| format!("Zip entry error: {error}"))?;
-        let relative = safe_archive_entry_name(file.name())?;
+        let entry_name = file
+            .name()
+            .map_err(|error| format!("Zip entry name error: {error}"))?;
+        let relative = safe_archive_entry_name(&entry_name)?;
         if file.is_symlink() {
             return Err("Java archive contains a link or colliding entry".to_string());
         }

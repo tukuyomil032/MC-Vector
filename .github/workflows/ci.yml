@@ -29,7 +29,8 @@ on:
       - tsconfig.tests.json
       - vite.config.ts
       - vitest.config.ts
-      - .github/workflows/ci.yml
+      - .github/workflows/**
+      - CHANGELOG.md
 
 permissions:
   contents: read

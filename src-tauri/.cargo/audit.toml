@@ -1,0 +1,10 @@
+# tauri-plugin-webdriver-automation (E2E helper, macOS debug builds only) pulls
+# zip 4.6.1. The plugin is linked only under cfg(all(debug_assertions,
+# target_os = "macos")) and never ships in release builds. No upstream release
+# of the plugin uses zip >= 9 yet. Remove these entries once the plugin updates zip.
+[advisories]
+ignore = [
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
+]

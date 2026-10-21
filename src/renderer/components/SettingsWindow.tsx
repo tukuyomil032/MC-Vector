@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { saveAppSettings } from '../../lib/config-commands';
@@ -7,6 +7,7 @@ import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-comm
 import { useSettingsStore } from '../../store/settingsStore';
 import { Button } from './ui/Button';
 import { NativeSelect } from './ui/Field';
+import ReleaseNotes from './ReleaseNotes';
 
 interface UpdateState {
   status:
@@ -23,33 +24,6 @@ interface UpdateState {
   error?: string;
 }
 
-function normalizeReleaseNotes(notes: unknown): string {
-  if (typeof notes === 'string') {
-    return notes;
-  }
-  if (Array.isArray(notes)) {
-    return notes
-      .map((entry) => {
-        if (typeof entry === 'string') {
-          return entry;
-        }
-
-        if (
-          entry &&
-          typeof entry === 'object' &&
-          'body' in entry &&
-          typeof (entry as Record<string, unknown>).body === 'string'
-        ) {
-          return (entry as Record<string, unknown>).body as string;
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
-  }
-  return '';
-}
-
 const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
@@ -62,11 +36,6 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   );
   const setAllowUnverifiedPluginDownloads = useSettingsStore(
     (state) => state.setAllowUnverifiedPluginDownloads,
-  );
-
-  const releaseNotesText = useMemo(
-    () => normalizeReleaseNotes(updateState.releaseNotes),
-    [updateState.releaseNotes],
   );
 
   const handleCheck = async () => {
@@ -223,13 +192,13 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
             )}
           </div>
 
-          {releaseNotesText && (
-            <div className="settings-window__release-notes">
-              <div className="settings-window__release-notes-label">
-                {t('settings.update.releaseNotes')}
-              </div>
-              <pre className="settings-window__release-notes-body">{releaseNotesText}</pre>
-            </div>
+          {Boolean(updateState.releaseNotes) && (
+            <ReleaseNotes
+              releaseNotes={updateState.releaseNotes}
+              version={updateState.version}
+              label={t('settings.update.releaseNotes')}
+              className="settings-window__release-notes"
+            />
           )}
         </section>
 

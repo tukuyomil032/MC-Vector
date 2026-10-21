@@ -720,7 +720,10 @@ pub async fn download_ngrok(
             let file = zip
                 .by_index(i)
                 .map_err(|e| format!("Zip entry error: {}", e))?;
-            let relative = safe_ngrok_entry_name(file.name())?;
+            let entry_name = file
+                .name()
+                .map_err(|e| format!("Zip entry name error: {}", e))?;
+            let relative = safe_ngrok_entry_name(&entry_name)?;
             if file.is_symlink()
                 || paths.iter().any(|existing: &PathBuf| {
                     relative.starts_with(existing) || existing.starts_with(&relative)
@@ -745,7 +748,10 @@ pub async fn download_ngrok(
             let mut file = zip
                 .by_index(i)
                 .map_err(|e| format!("Zip entry error: {}", e))?;
-            let relative = safe_ngrok_entry_name(file.name())?;
+            let entry_name = file
+                .name()
+                .map_err(|e| format!("Zip entry name error: {}", e))?;
+            let relative = safe_ngrok_entry_name(&entry_name)?;
             if file.is_dir() {
                 ensure_ngrok_directory(&dest, Some(&relative))?;
                 continue;
