@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { appendFileSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -18,11 +18,7 @@ const include = matrix.entries.map((entry) => ({
   artifactStatus: entry.artifactStatus,
 }));
 const output = JSON.stringify({ include });
-const outputPath = process.env.GITHUB_OUTPUT;
 
-if (outputPath) {
-  appendFileSync(outputPath, `matrix=${output}\n`, 'utf8');
-}
-
-console.log(`Generated map version matrix with ${include.length} entries`);
+// stdout carries only the JSON so workflows can capture it into $GITHUB_OUTPUT.
+console.error(`Generated map version matrix with ${include.length} entries`);
 console.log(output);

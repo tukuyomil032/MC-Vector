@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: matrix
         name: Generate matrix
-        run: node scripts/map-version-matrix-output.mjs
+        run: echo "matrix=$(node scripts/map-version-matrix-output.mjs)" >> "$GITHUB_OUTPUT"
 
   version-metadata:
     name: Metadata ${{ matrix.minecraftVersion }}
