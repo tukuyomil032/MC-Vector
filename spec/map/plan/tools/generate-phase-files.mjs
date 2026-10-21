@@ -123,7 +123,7 @@ const ownerFor = (entry) => {
   if (/^(HDBlockModel|HDBlockModels|HDScaledBlockModels|HDBlockPatchModel|HDBlockVolumetricModel|CustomBlockModel|HDBlockStateTextureMap)$/.test(name)) return 'phases/phase-013-hd-block-model-registry.md';
   if (/^(TexturePack|TexturePackLoader)$/.test(name)) return 'phases/phase-014-texture-pack-and-atlas.md';
   if (name === 'CTMTexturePack') return 'phases/phase-015-ctm-texture-pack.md';
-  if (/ColorMultiplier$/.test(name)) return 'phases/phase-016-biome-color-material.md';
+  if (name.endsWith('ColorMultiplier')) return 'phases/phase-016-biome-color-material.md';
   if (/Lighting$|^LightLevels$/.test(name)) return 'phases/phase-017-hd-lighting.md';
   if (/Shader$|ShaderState$/.test(name)) return 'phases/phase-018-hd-shader.md';
   if (/^(DynmapBufferedImage|ImageIOManager)$/.test(name)) return 'phases/phase-022-raster-compositing.md';
@@ -440,7 +440,6 @@ const paperUnlistedVersions = matrix.paperVersionListingSnapshot?.exactMinecraft
 const pendingAssetDeltas = versionDeltas.entries.filter((entry) => entry.rendererAssets.status !== 'verified').length;
 const pendingAnvilDeltas = versionDeltas.entries.filter((entry) => entry.savedAnvil.status !== 'verified').length;
 const pendingPaperDeltas = versionDeltas.entries.filter((entry) => entry.paperLive.status === 'unverified').length;
-const legacySymbols = sourceCatalog.entries.reduce((sum, entry) => sum + entry.symbols.length, 0);
 const lexicalMethods = sourceCatalog.entries.reduce((sum, entry) => sum + entry.symbols.filter((symbol) => symbol.kind === 'method').length, 0);
 const rendererRootRows = sourceRootCandidateAudit.rendererDispatchRoots.map((entry) => `| \`${entry.symbolId}\` | ${entry.sourcePath} | ${entry.startLine}-${entry.endLine} |`).join('\n');
 add('coverage/current-catalog-audit.md', `# 現行implementation/evidence台帳の監査

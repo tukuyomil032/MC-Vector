@@ -72,7 +72,7 @@ const versionStageDependencies = (version, stage) => {
     assets: [p(2), p(8), p(12), p(14), p(16), p(18)],
     anvil: [p(2), p(6), p(7), p(11)],
     'paper-snapshot': [p(2), p(6), p(7), p(24)],
-    'reference-and-parity': [...[p(2), p(4), ...range(9, 23), own('assets'), own('anvil')]],
+    'reference-and-parity': [p(2), p(4), ...range(9, 23), own('assets'), own('anvil')],
     'real-acceptance': [
       p(2), p(23), p(24), p(25), p(26), p(27), p(28), p(29), p(30), p(31), p(32), p(33), p(34),
       own('paper-snapshot'), own('reference-and-parity'),

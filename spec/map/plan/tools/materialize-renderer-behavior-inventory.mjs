@@ -80,7 +80,6 @@ export async function materializeRendererBehaviorInventory({ sourceRoot, gitDire
     const sourcePath = record.slice(tabIndex + 1);
     if (kind === 'blob' && mode !== '120000' && sourcePath.endsWith('.java')) trackedJava.set(sourcePath, objectId);
   }
-  const astDeclarations = new Map(ast.declarations.map((entry) => [entry.symbolId, entry]));
   const classes = [];
   let methodCount = 0;
   let branchSiteCount = 0;

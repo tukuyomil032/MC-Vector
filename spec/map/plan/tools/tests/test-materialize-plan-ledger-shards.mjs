@@ -12,7 +12,6 @@ function declaration(symbolId, sourcePath) {
     startLine: 1,
     endLine: 1,
     sourceSpan: { startLine: 1, endLine: 1 },
-    sourceSpan: { startLine: 1, endLine: 1 },
     sourceGitBlobSha1: 'a'.repeat(40),
     sourceContentSha256: 'b'.repeat(64),
   };

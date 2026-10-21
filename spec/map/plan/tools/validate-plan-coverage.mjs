@@ -33,7 +33,6 @@ const astPaths = new Set((ast.sourceFiles ?? []).map((entry) => entry.sourcePath
 const inventoryPathMap = new Map((resourceInventory.entries ?? []).map((entry) => [entry.sourcePath, entry]));
 const resourceRows = new Map((resources.entries ?? []).map((entry) => [entry.sourcePath, entry]));
 const sourceOwnerByPath = new Map((sourceMap.entries ?? []).map((entry) => [entry.sourcePath, entry.candidateOwnerDocument]));
-const sourceDocuments = new Set([...sourceOwnerByPath.values()]);
 const resourceDocuments = new Set((resources.entries ?? []).map((entry) => entry.phaseDocument));
 const allJavaDeclarationCount = ast.declarations?.length ?? 0;
 const mappedSourceFileCount = [...sourceOwnerByPath.keys()].filter((path) => astPaths.has(path)).length;
