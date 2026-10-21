@@ -7,7 +7,7 @@
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
@@ -184,6 +184,7 @@ pub enum TileCacheError {
     SchemaMismatch,
     ByteLengthMismatch,
     ChecksumMismatch,
+    InvalidRoot,
 }
 
 impl From<io::Error> for TileCacheError {
@@ -197,8 +198,16 @@ pub struct TileCacheStore {
 }
 
 impl TileCacheStore {
-    pub fn new(root: impl Into<PathBuf>) -> Self {
-        Self { root: root.into() }
+    pub fn new(root: impl Into<PathBuf>) -> Result<Self, TileCacheError> {
+        let root = root.into();
+        let is_safe = root.is_absolute()
+            && root
+                .components()
+                .all(|component| !matches!(component, Component::ParentDir | Component::Prefix(_)));
+        if !is_safe {
+            return Err(TileCacheError::InvalidRoot);
+        }
+        Ok(Self { root })
     }
 
     pub fn read(&self, key: &TileCacheKey) -> Result<TileCacheLookup, TileCacheError> {
@@ -349,6 +358,19 @@ mod tests {
     use super::*;
     use crate::renderer::dynmap::tile::TileCoordinate;
 
+    #[test]
+    fn store_rejects_relative_and_traversing_roots() {
+        assert!(matches!(
+            TileCacheStore::new("relative/cache"),
+            Err(TileCacheError::InvalidRoot)
+        ));
+        assert!(matches!(
+            TileCacheStore::new(std::env::temp_dir().join("..").join("escape")),
+            Err(TileCacheError::InvalidRoot)
+        ));
+        assert!(TileCacheStore::new(std::env::temp_dir().join("mc-vector-cache")).is_ok());
+    }
+
     fn key() -> TileCacheKey {
         TileCacheKey {
             minecraft_version: MinecraftVersionId::new("1.21.4").expect("fixture version"),
@@ -382,7 +404,7 @@ mod tests {
     #[test]
     fn verified_success_round_trips_as_a_fresh_hit() {
         let root = unique_root("hit");
-        let store = TileCacheStore::new(&root);
+        let store = TileCacheStore::new(&root).expect("valid cache root");
         let png = b"deterministic-png";
         let metadata = TileCacheMetadata::new(
             key(),
@@ -410,7 +432,7 @@ mod tests {
     #[test]
     fn checksum_mismatch_is_not_a_cache_hit() {
         let root = unique_root("checksum");
-        let store = TileCacheStore::new(&root);
+        let store = TileCacheStore::new(&root).expect("valid cache root");
         let png = b"original";
         let metadata = TileCacheMetadata::new(
             key(),
@@ -435,7 +457,7 @@ mod tests {
     #[test]
     fn metadata_less_png_is_untrusted() {
         let root = unique_root("legacy");
-        let store = TileCacheStore::new(&root);
+        let store = TileCacheStore::new(&root).expect("valid cache root");
         fs::create_dir_all(&root).unwrap();
         let paths = store.paths(&key()).unwrap();
         fs::write(paths.png, b"legacy-png").unwrap();
@@ -446,7 +468,7 @@ mod tests {
     #[test]
     fn empty_and_retryable_states_are_observable_but_not_fresh() {
         let root = unique_root("state");
-        let store = TileCacheStore::new(&root);
+        let store = TileCacheStore::new(&root).expect("valid cache root");
         for state in [TileRenderState::Empty, TileRenderState::Retryable] {
             let metadata = TileCacheMetadata::new(
                 key(),
@@ -471,7 +493,7 @@ mod tests {
     #[test]
     fn stale_state_does_not_delete_or_trust_the_old_png() {
         let root = unique_root("stale");
-        let store = TileCacheStore::new(&root);
+        let store = TileCacheStore::new(&root).expect("valid cache root");
         let png = b"old-valid-png";
         let fresh = TileCacheMetadata::new(
             key(),
