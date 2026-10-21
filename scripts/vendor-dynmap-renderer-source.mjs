@@ -2,25 +2,37 @@
 
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 
 const repository = 'webbukkit/dynmap';
 const revision = '93b454efb8802dc7406d6873434f2aeec5c636f4';
 const root = resolve(import.meta.dirname, '..');
 const boundary = resolve(root, 'src-tauri/crates/map-renderer-core/third_party/dynmap');
+const rawOrigin = 'https://raw.githubusercontent.com';
+const rawPrefix = `/${repository}/${revision}/`;
+const sourcePathPattern = /^(?:DynmapCore|DynmapCoreAPI)\/src\/main\/java\/[A-Za-z0-9_/.-]+\.java$/;
 const catalog = JSON.parse(
   await readFile(resolve(root, 'spec/map/coverage/source-symbols.json'), 'utf8'),
 );
 
 if (catalog.sourceRevision !== revision) throw new Error('source catalog revision mismatch');
 
+const assertSafeSourcePath = (path) => {
+  if (!sourcePathPattern.test(path) || path.split('/').includes('..')) {
+    throw new Error(`unsafe source path in catalog: ${path}`);
+  }
+  return path;
+};
+
 const fetchSource = async (path) => {
-  const response = await fetch(
-    `https://raw.githubusercontent.com/${repository}/${revision}/${path}`,
-    {
-      headers: { 'User-Agent': 'MC-Vector-map-source-vendor' },
-    },
-  );
+  const encodedPath = assertSafeSourcePath(path).split('/').map(encodeURIComponent).join('/');
+  const url = new URL(`${rawPrefix}${encodedPath}`, rawOrigin);
+  if (url.origin !== rawOrigin || !url.pathname.startsWith(rawPrefix)) {
+    throw new Error(`refusing to fetch outside the pinned revision: ${path}`);
+  }
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'MC-Vector-map-source-vendor' },
+  });
   if (!response.ok) throw new Error(`source request failed for ${path}: ${response.status}`);
   return Buffer.from(await response.arrayBuffer());
 };
@@ -34,6 +46,9 @@ for (let index = 0; index < catalog.entries.length; index += 8) {
     const bytes = contents[offset];
     const localPath = `upstream/${entry.sourcePath}`;
     const destination = resolve(boundary, localPath);
+    if (!destination.startsWith(`${boundary}${sep}`)) {
+      throw new Error(`destination escapes the vendor boundary: ${localPath}`);
+    }
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, bytes);
     entries.push({
