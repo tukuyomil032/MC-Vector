@@ -2,9 +2,22 @@
 # zip 4.6.1. The plugin is linked only under cfg(all(debug_assertions,
 # target_os = "macos")) and never ships in release builds. No upstream release
 # of the plugin uses zip >= 9 yet. Remove these entries once the plugin updates zip.
+# The following advisories are unmaintained or unsound crates that the latest
+# stable Tauri 2.x (2.12.x) still pins. No patched release can be selected in our
+# dependency tree without a Tauri major upgrade (3.x is alpha only).
+# Remove each entry once the Tauri or plugin release that drops the crate lands.
+#   - glib 0.18 / proc-macro-error: gtk 0.18 is pinned by tauri and tauri-runtime-wry
+#     for Linux builds only.
+#   - zbus_names / zvariant / zvariant_derive: zbus 5 is pinned by
+#     tauri-plugin-notification (zbus ^5).
 [advisories]
 ignore = [
   "RUSTSEC-2026-0367",
   "RUSTSEC-2026-0368",
   "RUSTSEC-2026-0369",
+  "RUSTSEC-2024-0429", # glib 0.18 unsound (gtk 0.18, Linux only)
+  "RUSTSEC-2024-0370", # proc-macro-error unmaintained (glib-macros 0.18)
+  "RUSTSEC-2026-0371", # zbus_names unmaintained (zbus 5)
+  "RUSTSEC-2026-0370", # zvariant unmaintained (zbus 5)
+  "RUSTSEC-2026-0372", # zvariant_derive unmaintained (zbus 5)
 ]
