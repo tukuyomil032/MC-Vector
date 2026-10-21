@@ -62,7 +62,8 @@ impl AssetArchive {
             let mut entry = archive
                 .by_index(index)
                 .map_err(|_| ArchiveError::MalformedArchive)?;
-            let name = validate_entry_path(entry.name())?;
+            let raw_name = entry.name().map_err(|_| ArchiveError::MalformedArchive)?;
+            let name = validate_entry_path(&raw_name)?;
             if !seen.insert(name.clone()) {
                 return Err(ArchiveError::DuplicateEntry);
             }
