@@ -63,6 +63,7 @@ permissions:
 jobs:
   playwright:
     name: Playwright E2E
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
