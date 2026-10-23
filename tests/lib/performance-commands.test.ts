@@ -14,7 +14,8 @@ describe('performance-commands', () => {
   });
 
   describe('parseAnsiLines', () => {
-    it('returns parsed ANSI segments for each line', async () => {
+    // The ANSI parsing itself is tested in Rust (src-tauri/src/commands/perf.rs).
+    it('forwards the lines to parse_ansi_lines and returns the IPC result', async () => {
       const parsed = [
         [{ text: 'INFO', color: '#00ff00', backgroundColor: null, fontWeight: null }],
         [{ text: 'WARN', color: '#ffff00', backgroundColor: null, fontWeight: 700 }],
@@ -26,25 +27,6 @@ describe('performance-commands', () => {
         lines: ['INFO', 'WARN'],
       });
       expect(result).toEqual(parsed);
-    });
-
-    it('returns empty array for empty input', async () => {
-      tauriInvokeMock.mockResolvedValueOnce([]);
-      const { parseAnsiLines } = await import('@/lib/performance-commands');
-      const result = await parseAnsiLines([]);
-      expect(tauriInvokeMock).toHaveBeenCalledWith('parse_ansi_lines', { lines: [] });
-      expect(result).toEqual([]);
-    });
-
-    it('returns null color for plain text without ANSI codes', async () => {
-      const parsed = [
-        [{ text: 'plain text', color: null, backgroundColor: null, fontWeight: null }],
-      ];
-      tauriInvokeMock.mockResolvedValueOnce(parsed);
-      const { parseAnsiLines } = await import('@/lib/performance-commands');
-      const result = await parseAnsiLines(['plain text']);
-      expect(result[0][0].color).toBeNull();
-      expect(result[0][0].text).toBe('plain text');
     });
   });
 });

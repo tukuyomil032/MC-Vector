@@ -16,31 +16,21 @@ describe('tauriInvoke', () => {
     invokeMock.mockReset();
   });
 
-  it('allows registered command and calls invoke', async () => {
-    invokeMock.mockResolvedValueOnce(true);
+  it.each([
+    { command: 'is_server_running', args: { serverId: 'test-server' }, result: true },
+    {
+      command: 'get_server_eula_status',
+      args: { serverId: 'server-1' },
+      result: { accepted: false, fileExists: false },
+    },
+  ])('allows registered command $command and calls invoke', async ({ command, args, result }) => {
+    invokeMock.mockResolvedValueOnce(result);
 
     const { tauriInvoke } = await import('@/lib/tauri-api');
 
-    await expect(tauriInvoke('is_server_running', { serverId: 'test-server' })).resolves.toBe(true);
+    await expect(tauriInvoke(command, args)).resolves.toStrictEqual(result);
 
-    expect(invokeMock).toHaveBeenCalledWith('is_server_running', {
-      serverId: 'test-server',
-    });
-  });
-
-  it('allows the server EULA commands', async () => {
-    invokeMock.mockResolvedValueOnce({ accepted: false, fileExists: false });
-
-    const { tauriInvoke } = await import('@/lib/tauri-api');
-
-    await expect(tauriInvoke('get_server_eula_status', { serverId: 'server-1' })).resolves.toEqual({
-      accepted: false,
-      fileExists: false,
-    });
-
-    expect(invokeMock).toHaveBeenCalledWith('get_server_eula_status', {
-      serverId: 'server-1',
-    });
+    expect(invokeMock).toHaveBeenCalledWith(command, args);
   });
 
   it("throws 'Blocked tauri command' for unregistered command", async () => {
