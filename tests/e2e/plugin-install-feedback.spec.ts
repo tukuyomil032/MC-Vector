@@ -87,11 +87,21 @@ test.describe('plugin install and feedback flows', () => {
     await result.getByRole('button', { name: /install/i }).click();
     const dialog = page.locator('[data-testid="feedback-dialog"]');
     await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('role', 'dialog');
+    await expect(dialog.getByRole('heading')).toBeVisible();
+    await expect(dialog.getByLabel('Close')).toBeVisible();
     await expect(dialog).toContainText('WirelessRedstone');
     await expect(dialog).toContainText('Paper 1.21.10');
     await expect(dialog).toContainText('1.20.1');
     await expect(dialog).toContainText('cannot be installed');
     await expect(dialog.getByRole('button', { name: /continue|proceed/i })).toHaveCount(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(document.activeElement?.closest('[data-testid="feedback-dialog"]')),
+        ),
+      )
+      .toBe(true);
     await app.expectNoIpcCall('download_plugin_artifact');
     await app.expectNoIpcCall('move_managed_path');
     await app.expectNoIpcCall('delete_managed_path');
@@ -115,8 +125,11 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Unverified plugin download blocked');
     await expect(dialog).toContainText('provider did not supply a checksum');
+    await expect(dialog).not.toContainText('https://');
+    await expect(dialog).not.toContainText('/mock/');
     await expect(page.getByText('Install error', { exact: true })).toHaveCount(0);
     await expect(dialog.getByRole('button', { name: 'Open General Settings' })).toBeVisible();
+    await expect(dialog.getByLabel('Close')).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Open General Settings' }).click();
     await expect(page.locator('[data-testid="app-settings-view"]')).toBeVisible();
@@ -172,12 +185,17 @@ test.describe('plugin install and feedback flows', () => {
     const error = result.locator('[data-testid="plugin-install-error-veinminer-project"]');
     await expect(error).toBeVisible({ timeout: 15_000 });
     await expect(error).toHaveAttribute('role', 'alert');
+    await expect(page.locator('[data-testid="feedback-dialog"]')).toHaveCount(0);
+    await expect(page.getByText('Install error', { exact: true })).toHaveCount(0);
     await expect(result.getByText('Installed', { exact: true })).toHaveCount(0);
 
     await error.getByRole('button', { name: /retry/i }).click();
     await expect
       .poll(() => runtimeFiles(page))
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
+    await expect(
+      page.locator('[data-testid="plugin-install-error-veinminer-project"]'),
+    ).toHaveCount(0);
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible({
       timeout: 15_000,
     });
