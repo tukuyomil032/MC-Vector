@@ -218,7 +218,6 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
         throw errorWithCode('unverified-artifact-blocked');
       }
       if (scenario === 'checksum-mismatch') throw errorWithCode('checksum-mismatch');
-      if (scenario === 'checksum-invalid') throw errorWithCode('checksum-invalid');
       if (scenario === 'network-retry' && state.pluginDownloadAttempts === 1) {
         throw errorWithCode('network');
       }
