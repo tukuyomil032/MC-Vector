@@ -44,6 +44,22 @@ test.describe('server management', () => {
     await expect(modal.locator('[data-testid="import-server-submit"]')).toBeDisabled();
   });
 
+  test('cancels the new-server form opened from the add-server choice dialog', async ({
+    page,
+    app,
+  }) => {
+    await app.gotoApp();
+    await page.locator('[data-testid="create-server-button"]').click();
+    await expect(page.locator('[data-testid="add-server-choice-modal"]')).toBeVisible();
+    await page.locator('[data-testid="choice-new-server-button"]').click();
+
+    const modal = page.locator('[data-testid="add-server-modal"]');
+    await expect(modal).toBeVisible();
+    await modal.locator('[data-testid="cancel-server-button"]').click();
+
+    await expect(modal).toHaveCount(0);
+  });
+
   test('requires the explicit native confirmation before deleting a server', async ({
     page,
     app,
