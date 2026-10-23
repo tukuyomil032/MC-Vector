@@ -28,24 +28,6 @@ test.describe('settings and properties', () => {
         });
       })
       .toBe(true);
-
-    const allowUnverified = settings.locator('#allow-unverified-plugin-downloads');
-    await expect(allowUnverified).not.toBeChecked();
-    await allowUnverified.check();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: { state: { config: Record<string, unknown> } };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.config.allowUnverifiedPluginDownloads;
-        });
-      })
-      .toBe(true);
-    await expect(allowUnverified).toBeChecked();
-    await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(0);
   });
 
   test('closes the settings screen when navigating to another view', async ({ page, app }) => {

@@ -149,6 +149,7 @@ test.describe('plugin install and feedback flows', () => {
         }),
       )
       .toBe(true);
+    await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(1);
 
     await app.openView('plugins');
     await page.locator('[data-testid="plugin-provider-spigot"]').click();
