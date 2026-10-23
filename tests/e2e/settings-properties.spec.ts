@@ -48,6 +48,17 @@ test.describe('settings and properties', () => {
     await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(0);
   });
 
+  test('closes the settings screen when navigating to another view', async ({ page, app }) => {
+    await app.gotoApp();
+    await app.openView('app-settings');
+
+    const settings = page.locator('[data-testid="settings-window"]');
+    await expect(settings).toBeVisible({ timeout: 10_000 });
+
+    await app.openView('dashboard');
+    await expect(settings).toHaveCount(0);
+  });
+
   test('edits server properties and opens the managed Java manager', async ({ page, app }) => {
     await app.gotoApp('paper-plugin-success');
     await app.openView('properties');
