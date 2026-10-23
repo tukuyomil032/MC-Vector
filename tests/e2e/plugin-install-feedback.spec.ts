@@ -11,17 +11,6 @@ async function openPluginBrowser(page: Page, app: AppFixture, scenario: E2eScena
   });
 }
 
-async function runtimeFiles(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const runtime = (
-      window as Window & {
-        __MC_VECTOR_E2E__?: { state: { files: Record<string, unknown> } };
-      }
-    ).__MC_VECTOR_E2E__;
-    return runtime ? Object.keys(runtime.state.files) : [];
-  });
-}
-
 test.describe('plugin install and feedback flows', () => {
   test('installs a Modrinth plugin to the final plugins jar path', async ({ page, app }) => {
     await openPluginBrowser(page, app, 'paper-plugin-success');
@@ -32,7 +21,7 @@ test.describe('plugin install and feedback flows', () => {
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
     await expect.poll(async () => (await app.ipcCalls('download_plugin_artifact')).length).toBe(1);
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
     await page.getByRole('tab', { name: /Installed \(1\)/ }).click();
@@ -51,9 +40,9 @@ test.describe('plugin install and feedback flows', () => {
     expect(request).toHaveProperty('checksum');
     expect(JSON.stringify(request)).not.toContain('allowUnverifiedPluginDownloads');
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
-    expect((await runtimeFiles(page)).some((path) => path.includes('.tmp-'))).toBe(false);
+    expect((await app.runtimeFiles()).some((path) => path.includes('.tmp-'))).toBe(false);
     await app.expectNoIpcCall('move_managed_path');
   });
 
@@ -61,7 +50,7 @@ test.describe('plugin install and feedback flows', () => {
     await openPluginBrowser(page, app, 'fabric-mod-success');
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/mods/VeinMiner-1.21.4.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
     await page.getByRole('tab', { name: /Installed \(1\)/ }).click();
@@ -157,7 +146,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(retryResult).toBeVisible();
     await retryResult.locator('[data-testid="plugin-install-1"]').click();
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/veinminer-1.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
     expect((await app.ipcCalls('download_plugin_artifact')).at(-1)?.args).toMatchObject({
@@ -176,7 +165,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toContainText('Plugin integrity check failed');
     await expect(dialog).toContainText('not placed in the server folder');
     expect(
-      (await runtimeFiles(page)).some((path) => /\/(?:plugins|mods)\/[^/]+\.jar$/i.test(path)),
+      (await app.runtimeFiles()).some((path) => /\/(?:plugins|mods)\/[^/]+\.jar$/i.test(path)),
     ).toBe(false);
   });
 
@@ -193,7 +182,7 @@ test.describe('plugin install and feedback flows', () => {
 
     await error.getByRole('button', { name: /retry/i }).click();
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
     await expect(
       page.locator('[data-testid="plugin-install-error-veinminer-project"]'),
