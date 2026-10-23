@@ -53,6 +53,10 @@ jobs:
           bun run check
           bun run rustfmt:check
           git diff --exit-code
+      - name: Typecheck tests and check workflow actions
+        run: |
+          bun run typecheck:tests
+          bun run check:workflow-actions
 
   build-check:
     runs-on: ${{ matrix.platform }}
@@ -73,11 +77,8 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
       - run: bun ci
-      - name: Run Vitest and test typecheck
-        run: |
-          bun run test
-          bun run typecheck:tests
-          bun run check:workflow-actions
+      - name: Run Vitest
+        run: bun run test
       - name: Run cargo test
         run: cargo test
         working-directory: src-tauri
