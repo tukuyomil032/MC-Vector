@@ -22,6 +22,7 @@ describe('feedback presentation policy', () => {
     expect(resolveFeedbackPresentation({ requiresDecision: true })).toBe('dialog');
     expect(pluginInstallFailurePresentation('unverified-artifact-blocked')).toBe('dialog');
     expect(pluginInstallFailurePresentation('checksum-mismatch')).toBe('dialog');
+    expect(pluginInstallFailurePresentation('source-rejected')).toBe('dialog');
   });
 
   it('prioritizes progress surfaces for long-running work', () => {
