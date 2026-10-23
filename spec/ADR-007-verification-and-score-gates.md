@@ -50,13 +50,13 @@ checkout; they do not substitute for Windows or release-signing evidence.
 
 | Gate | Result | Evidence boundary |
 | --- | --- | --- |
-| `bun run test` | 42 files and 395 tests passed | Renderer and unit behavior |
+| `bun run test` | 41 files and 392 tests passed | Renderer and unit behavior |
 | `bun run typecheck:tests` | Passed | TypeScript test sources |
 | `bun run check` | Passed | Oxlint and Oxfmt checks for configured source paths |
 | `bun run build` | Passed | Vite production frontend build |
 | `bun run rustfmt:check` | Passed | Rust formatting |
 | `cargo test --manifest-path src-tauri/Cargo.toml --quiet` | 100 passed, 1 ignored | Rust implementation and temporary-files tests |
-| `bun run e2e` | 54 passed | Mock Tauri UI regression suite |
+| `bun run e2e` | 30 passed | Mock Tauri UI regression suite |
 | `bun run test:tauri:e2e` | Passed | Unsigned E2E debug app (`com.tukuyomi032.mcvector.e2e`), real IPC, Rust, process, filesystem, ZIP, Java/plugin fixtures, token UI, catalog reload, and rollback injection |
 | `bun run tauri:build:debug` | Passed | Unsigned packaged `MC-Vector Debug.app`; `CFBundleIdentifier` verified as `com.tukuyomi032.mcvector.debug` |
 | `bun run check:workflow-actions` | Passed | All workflow action refs are commit-SHA pinned |
