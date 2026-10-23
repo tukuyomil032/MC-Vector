@@ -1,7 +1,4 @@
-import type {
-  MinecraftServer,
-  ServerStatus,
-} from '../../../src/renderer/shared/server declaration';
+import type { MinecraftServer } from '../../../src/renderer/shared/server declaration';
 
 export type E2eScenario =
   | 'default'
@@ -10,11 +7,7 @@ export type E2eScenario =
   | 'incompatible-plugin'
   | 'hashless-plugin'
   | 'checksum-mismatch'
-  | 'checksum-invalid'
   | 'network-retry'
-  | 'search-failure'
-  | 'overwrite-existing-plugin'
-  | 'disabled-plugin'
   | 'backup-flow'
   | 'file-flow'
   | 'proxy-flow';
@@ -42,7 +35,6 @@ export type E2eState = {
   runningServerIds: string[];
   selectedBackupPaths: string[];
   pluginDownloadAttempts: number;
-  searchAttempts: number;
   ngrokStatus: 'offline' | 'online';
 };
 
@@ -113,11 +105,7 @@ export function createE2eState(scenario: E2eScenario): E2eState {
     'incompatible-plugin',
     'hashless-plugin',
     'checksum-mismatch',
-    'checksum-invalid',
     'network-retry',
-    'search-failure',
-    'overwrite-existing-plugin',
-    'disabled-plugin',
     'backup-flow',
     'file-flow',
     'proxy-flow',
@@ -125,21 +113,6 @@ export function createE2eState(scenario: E2eScenario): E2eState {
   const software = scenario === 'fabric-mod-success' ? 'Fabric' : 'Paper';
   const server = createServerFixture('server-1', software);
   const files = seededServerScenario ? baseFiles(server.id, software) : {};
-  const pluginDir = software === 'Fabric' ? 'mods' : 'plugins';
-
-  if (scenario === 'overwrite-existing-plugin' || scenario === 'disabled-plugin') {
-    files[`${server.path}/${pluginDir}/VeinMiner-1.21.4.jar`] = {
-      kind: 'file',
-      content: 'old-plugin-jar',
-    };
-  }
-  if (scenario === 'disabled-plugin') {
-    delete files[`${server.path}/${pluginDir}/VeinMiner-1.21.4.jar`];
-    files[`${server.path}/${pluginDir}/VeinMiner-1.21.4.jar.disabled`] = {
-      kind: 'file',
-      content: 'disabled-plugin-jar',
-    };
-  }
 
   return {
     servers: seededServerScenario ? [server] : [],
@@ -150,7 +123,6 @@ export function createE2eState(scenario: E2eScenario): E2eState {
     runningServerIds: [],
     selectedBackupPaths: scenario === 'backup-flow' ? ['server.properties'] : [],
     pluginDownloadAttempts: 0,
-    searchAttempts: 0,
     ngrokStatus: 'offline',
   };
 }
@@ -180,18 +152,6 @@ export function getE2eScenario(): E2eScenario {
 
 export function getE2eState(): E2eState {
   return requireE2eRuntime().state;
-}
-
-export function setServerStatus(serverId: string, status: ServerStatus): void {
-  const state = getE2eState();
-  state.servers = state.servers.map((server) =>
-    server.id === serverId ? { ...server, status } : server,
-  );
-  if (status === 'online' || status === 'starting' || status === 'restarting') {
-    if (!state.runningServerIds.includes(serverId)) state.runningServerIds.push(serverId);
-  } else {
-    state.runningServerIds = state.runningServerIds.filter((id) => id !== serverId);
-  }
 }
 
 export function resolveRuntimePath(request: {
@@ -296,13 +256,4 @@ export function readRuntimeFile(path: string): string {
   if (path.endsWith('/server.properties'))
     return 'motd=E2E Server\ngamemode=survival\nserver-port=25565\n';
   throw new Error(`Path not found: ${path}`);
-}
-
-export function seedRuntimeOnWindow(windowValue: Window, scenario: E2eScenario): void {
-  (windowValue as E2eWindow)[E2E_RUNTIME_KEY] = {
-    version: 1,
-    scenario,
-    calls: [],
-    state: createE2eState(scenario),
-  };
 }

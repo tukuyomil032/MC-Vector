@@ -1,16 +1,5 @@
 import { expect, test } from './support/app-fixture';
 
-async function runtimeFiles(page: import('@playwright/test').Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const runtime = (
-      window as Window & {
-        __MC_VECTOR_E2E__?: { state: { files: Record<string, unknown> } };
-      }
-    ).__MC_VECTOR_E2E__;
-    return runtime ? Object.keys(runtime.state.files) : [];
-  });
-}
-
 test.describe('files and backups', () => {
   test('navigates managed folders, creates a file, and opens the text editor', async ({
     page,
@@ -58,11 +47,11 @@ test.describe('files and backups', () => {
       timeout: 15_000,
     });
     await expect.poll(async () => (await app.ipcCalls('create_managed_backup')).length).toBe(1);
-    expect(await runtimeFiles(page)).toContain('/mock/app-data/backups/server-1/e2e-backup.zip');
-    expect(await runtimeFiles(page)).toContain(
+    expect(await app.runtimeFiles()).toContain('/mock/app-data/backups/server-1/e2e-backup.zip');
+    expect(await app.runtimeFiles()).toContain(
       '/mock/app-data/backups/server-1/.mc-vector-backup-meta.json',
     );
-    expect(await runtimeFiles(page)).not.toContain(
+    expect(await app.runtimeFiles()).not.toContain(
       '/mock/app-data/servers/server-1/backups/.mc-vector-backup-meta.json',
     );
   });

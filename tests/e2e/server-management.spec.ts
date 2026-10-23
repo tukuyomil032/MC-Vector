@@ -18,17 +18,9 @@ test.describe('server management', () => {
 
     await expect(page.getByText('Settings saved', { exact: true })).toBeVisible();
     await expect
-      .poll(() =>
-        page.evaluate((id) => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: {
-                state: { servers: Array<{ id: string; name: string }> };
-              };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.servers.find((server) => server.id === id)?.name;
-        }, serverId),
+      .poll(
+        async () =>
+          (await app.runtimeState())?.servers.find((server) => server.id === serverId)?.name,
       )
       .toBe('renamed-managed-server');
   });
@@ -44,14 +36,28 @@ test.describe('server management', () => {
     await expect(modal.locator('[data-testid="import-server-submit"]')).toBeDisabled();
   });
 
+  test('cancels the new-server form opened from the add-server choice dialog', async ({
+    page,
+    app,
+  }) => {
+    await app.gotoApp();
+    await page.locator('[data-testid="create-server-button"]').click();
+    await expect(page.locator('[data-testid="add-server-choice-modal"]')).toBeVisible();
+    await page.locator('[data-testid="choice-new-server-button"]').click();
+
+    const modal = page.locator('[data-testid="add-server-modal"]');
+    await expect(modal).toBeVisible();
+    await modal.locator('[data-testid="cancel-server-button"]').click();
+
+    await expect(modal).toHaveCount(0);
+  });
+
   test('requires the explicit native confirmation before deleting a server', async ({
     page,
     app,
   }) => {
     await app.gotoApp('paper-plugin-success');
-    await page.evaluate(() => {
-      (window as unknown as Record<string, unknown>).__dialogConfirm = true;
-    });
+    await app.confirmDialogs();
 
     const serverCard = page.locator('[data-testid="server-card-server-1"]');
     await serverCard.click({ button: 'right' });

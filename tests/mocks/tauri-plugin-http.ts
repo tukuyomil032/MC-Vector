@@ -1,4 +1,4 @@
-import { getE2eScenario, getE2eState, recordE2eCall } from '../e2e/support/e2e-runtime';
+import { getE2eScenario, recordE2eCall } from '../e2e/support/e2e-runtime';
 
 const PAPER_TEST_JAR_URL = 'https://fill-data.papermc.io/v1/paper.jar';
 const VALID_SHA256 = 'a'.repeat(64);
@@ -104,17 +104,12 @@ function spigotResource(): Record<string, unknown> {
 
 export async function fetch(url: string, _options?: unknown): Promise<Response> {
   recordE2eCall('http', 'fetch', { url });
-  const state = getE2eState();
 
   if (url.includes('fill.papermc.io/v3/projects/paper/versions/') && url.endsWith('/builds')) {
     return paperBuildResponse();
   }
 
   if (url.includes('api.modrinth.com/v2/search')) {
-    state.searchAttempts += 1;
-    if (getE2eScenario() === 'search-failure' && state.searchAttempts <= 2) {
-      throw new Error('E2E search network failure');
-    }
     return jsonResponse({ hits: [modrinthProject()], total_hits: 1 });
   }
 

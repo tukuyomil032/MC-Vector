@@ -32,7 +32,7 @@ const SERVER_BASE = {
   status: 'offline' as const,
 };
 
-describe('server-commands (CRUD)', () => {
+describe('server-commands', () => {
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();
@@ -260,6 +260,84 @@ describe('server-commands (CRUD)', () => {
       await deleteServerTemplate('t1');
       expect(setMock).toHaveBeenCalledWith('serverTemplates', [templates[1]]);
       expect(saveMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('startServer', () => {
+    it('invokes start_server with correct args (no jvmExtraArgs)', async () => {
+      tauriInvokeMock.mockResolvedValueOnce(undefined);
+
+      const { startServer } = await import('@/lib/server-commands');
+
+      await startServer('server-1', 'C:\\Java\\bin\\java.exe', 4096, 'server.jar');
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
+        serverId: 'server-1',
+        javaPath: 'C:\\Java\\bin\\java.exe',
+        memory: 4096,
+        jarFile: 'server.jar',
+        jvmExtraArgs: null,
+      });
+    });
+
+    it('passes jvmExtraArgs when provided', async () => {
+      tauriInvokeMock.mockResolvedValueOnce(undefined);
+
+      const { startServer } = await import('@/lib/server-commands');
+
+      await startServer('server-1', '/usr/bin/java', 2048, 'server.jar', '-XX:+UseG1GC');
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
+        serverId: 'server-1',
+        javaPath: '/usr/bin/java',
+        memory: 2048,
+        jarFile: 'server.jar',
+        jvmExtraArgs: '-XX:+UseG1GC',
+      });
+    });
+  });
+
+  describe('stopServer', () => {
+    it('invokes stop_server with serverId', async () => {
+      tauriInvokeMock.mockResolvedValueOnce(undefined);
+
+      const { stopServer } = await import('@/lib/server-commands');
+
+      await stopServer('server-1');
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('stop_server', {
+        serverId: 'server-1',
+      });
+    });
+  });
+
+  describe('sendCommand', () => {
+    it('invokes send_command with serverId and command', async () => {
+      tauriInvokeMock.mockResolvedValueOnce(undefined);
+
+      const { sendCommand } = await import('@/lib/server-commands');
+
+      await sendCommand('server-1', 'stop');
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('send_command', {
+        serverId: 'server-1',
+        command: 'stop',
+      });
+    });
+  });
+
+  describe('isServerRunning', () => {
+    it('invokes is_server_running and returns boolean', async () => {
+      tauriInvokeMock.mockResolvedValueOnce(true);
+
+      const { isServerRunning } = await import('@/lib/server-commands');
+
+      const result = await isServerRunning('server-1');
+
+      expect(tauriInvokeMock).toHaveBeenCalledWith('is_server_running', {
+        serverId: 'server-1',
+      });
+      expect(result).toBe(true);
     });
   });
 });

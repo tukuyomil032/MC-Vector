@@ -57,6 +57,11 @@ describe('ngrok-commands', () => {
     expect(tauriInvokeMock).toHaveBeenNthCalledWith(2, 'get_ngrok_token_status', {});
   });
 
+  it('does not expose a token-valued getter', async () => {
+    const commands = await import('@/lib/ngrok-commands');
+    expect('getNgrokToken' in commands).toBe(false);
+  });
+
   it('writes and clears credentials through Rust commands', async () => {
     tauriInvokeMock.mockResolvedValue(undefined);
     const { setNgrokToken, clearNgrokToken } = await import('@/lib/ngrok-commands');

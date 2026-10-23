@@ -8,6 +8,7 @@ type E2eWindow = Window & {
     calls: E2eCall[];
     state: E2eState;
   };
+  __dialogConfirm?: boolean;
 };
 
 export interface AppFixture {
@@ -20,6 +21,9 @@ export interface AppFixture {
   selectServer(serverId: string): Promise<void>;
   openView(view: string): Promise<void>;
   setBackupSelection(paths: string[]): Promise<void>;
+  runtimeFiles(): Promise<string[]>;
+  runtimeState(): Promise<E2eState | undefined>;
+  confirmDialogs(): Promise<void>;
   ipcCalls(name?: string): Promise<E2eCall[]>;
   clearCalls(): Promise<void>;
   expectNoIpcCall(name: string): Promise<void>;
@@ -110,6 +114,23 @@ export function createAppFixture(page: Page): AppFixture {
         const runtime = (window as E2eWindow).__MC_VECTOR_E2E__;
         if (runtime) runtime.state.selectedBackupPaths = selectedPaths;
       }, paths);
+    },
+
+    async runtimeFiles() {
+      return page.evaluate(() => {
+        const runtime = (window as E2eWindow).__MC_VECTOR_E2E__;
+        return runtime ? Object.keys(runtime.state.files) : [];
+      });
+    },
+
+    async runtimeState() {
+      return page.evaluate(() => (window as E2eWindow).__MC_VECTOR_E2E__?.state);
+    },
+
+    async confirmDialogs() {
+      await page.evaluate(() => {
+        (window as E2eWindow).__dialogConfirm = true;
+      });
     },
 
     async ipcCalls(name?: string) {

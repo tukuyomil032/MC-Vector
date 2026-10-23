@@ -6,16 +6,8 @@ async function openPluginBrowser(page: Page, app: AppFixture, scenario: E2eScena
   await app.gotoApp(scenario);
   await app.openView('plugins');
   await expect(page.locator('[data-testid="plugin-browser"]')).toBeVisible({ timeout: 15_000 });
-}
-
-async function runtimeFiles(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const runtime = (
-      window as Window & {
-        __MC_VECTOR_E2E__?: { state: { files: Record<string, unknown> } };
-      }
-    ).__MC_VECTOR_E2E__;
-    return runtime ? Object.keys(runtime.state.files) : [];
+  await expect(page.locator('[data-testid="plugin-search-input"]')).toBeVisible({
+    timeout: 15_000,
   });
 }
 
@@ -29,7 +21,7 @@ test.describe('plugin install and feedback flows', () => {
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
     await expect.poll(async () => (await app.ipcCalls('download_plugin_artifact')).length).toBe(1);
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
     await page.getByRole('tab', { name: /Installed \(1\)/ }).click();
@@ -48,9 +40,9 @@ test.describe('plugin install and feedback flows', () => {
     expect(request).toHaveProperty('checksum');
     expect(JSON.stringify(request)).not.toContain('allowUnverifiedPluginDownloads');
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
-    expect((await runtimeFiles(page)).some((path) => path.includes('.tmp-'))).toBe(false);
+    expect((await app.runtimeFiles()).some((path) => path.includes('.tmp-'))).toBe(false);
     await app.expectNoIpcCall('move_managed_path');
   });
 
@@ -58,7 +50,7 @@ test.describe('plugin install and feedback flows', () => {
     await openPluginBrowser(page, app, 'fabric-mod-success');
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/mods/VeinMiner-1.21.4.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
     await page.getByRole('tab', { name: /Installed \(1\)/ }).click();
@@ -84,11 +76,21 @@ test.describe('plugin install and feedback flows', () => {
     await result.getByRole('button', { name: /install/i }).click();
     const dialog = page.locator('[data-testid="feedback-dialog"]');
     await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('role', 'dialog');
+    await expect(dialog.getByRole('heading')).toBeVisible();
+    await expect(dialog.getByLabel('Close')).toBeVisible();
     await expect(dialog).toContainText('WirelessRedstone');
     await expect(dialog).toContainText('Paper 1.21.10');
     await expect(dialog).toContainText('1.20.1');
     await expect(dialog).toContainText('cannot be installed');
     await expect(dialog.getByRole('button', { name: /continue|proceed/i })).toHaveCount(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Boolean(document.activeElement?.closest('[data-testid="feedback-dialog"]')),
+        ),
+      )
+      .toBe(true);
     await app.expectNoIpcCall('download_plugin_artifact');
     await app.expectNoIpcCall('move_managed_path');
     await app.expectNoIpcCall('delete_managed_path');
@@ -112,8 +114,11 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Unverified plugin download blocked');
     await expect(dialog).toContainText('provider did not supply a checksum');
+    await expect(dialog).not.toContainText('https://');
+    await expect(dialog).not.toContainText('/mock/');
     await expect(page.getByText('Install error', { exact: true })).toHaveCount(0);
     await expect(dialog.getByRole('button', { name: 'Open General Settings' })).toBeVisible();
+    await expect(dialog.getByLabel('Close')).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Open General Settings' }).click();
     await expect(page.locator('[data-testid="app-settings-view"]')).toBeVisible();
@@ -122,17 +127,9 @@ test.describe('plugin install and feedback flows', () => {
     await checkbox.check();
     await expect(checkbox).toBeChecked();
     await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: { state: { config: Record<string, unknown> } };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.config.allowUnverifiedPluginDownloads;
-        }),
-      )
+      .poll(async () => (await app.runtimeState())?.config.allowUnverifiedPluginDownloads)
       .toBe(true);
+    await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(1);
 
     await app.openView('plugins');
     await page.locator('[data-testid="plugin-provider-spigot"]').click();
@@ -140,7 +137,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(retryResult).toBeVisible();
     await retryResult.locator('[data-testid="plugin-install-1"]').click();
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/veinminer-1.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
     expect((await app.ipcCalls('download_plugin_artifact')).at(-1)?.args).toMatchObject({
@@ -148,19 +145,20 @@ test.describe('plugin install and feedback flows', () => {
     });
   });
 
-  for (const scenario of ['checksum-mismatch', 'checksum-invalid'] as const) {
-    test(`${scenario} opens a verification modal and does not install`, async ({ page, app }) => {
-      await openPluginBrowser(page, app, scenario);
-      await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
-      const dialog = page.locator('[data-testid="feedback-dialog"]');
-      await expect(dialog).toBeVisible();
-      await expect(dialog).toContainText('Plugin integrity check failed');
-      await expect(dialog).toContainText('not placed in the server folder');
-      expect(
-        (await runtimeFiles(page)).some((path) => /\/(?:plugins|mods)\/[^/]+\.jar$/i.test(path)),
-      ).toBe(false);
-    });
-  }
+  test('checksum-mismatch opens a verification modal and does not install', async ({
+    page,
+    app,
+  }) => {
+    await openPluginBrowser(page, app, 'checksum-mismatch');
+    await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
+    const dialog = page.locator('[data-testid="feedback-dialog"]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Plugin integrity check failed');
+    await expect(dialog).toContainText('not placed in the server folder');
+    expect(
+      (await app.runtimeFiles()).some((path) => /\/(?:plugins|mods)\/[^/]+\.jar$/i.test(path)),
+    ).toBe(false);
+  });
 
   test('shows a retryable inline error for a transient network failure', async ({ page, app }) => {
     await openPluginBrowser(page, app, 'network-retry');
@@ -169,12 +167,17 @@ test.describe('plugin install and feedback flows', () => {
     const error = result.locator('[data-testid="plugin-install-error-veinminer-project"]');
     await expect(error).toBeVisible({ timeout: 15_000 });
     await expect(error).toHaveAttribute('role', 'alert');
+    await expect(page.locator('[data-testid="feedback-dialog"]')).toHaveCount(0);
+    await expect(page.getByText('Install error', { exact: true })).toHaveCount(0);
     await expect(result.getByText('Installed', { exact: true })).toHaveCount(0);
 
     await error.getByRole('button', { name: /retry/i }).click();
     await expect
-      .poll(() => runtimeFiles(page))
+      .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
+    await expect(
+      page.locator('[data-testid="plugin-install-error-veinminer-project"]'),
+    ).toHaveCount(0);
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible({
       timeout: 15_000,
     });

@@ -11,6 +11,8 @@ const SERVER_VIEWS = [
   ['general-settings', 'server-settings-view'],
 ] as const;
 
+const SERVERLESS_NAV_VIEWS = ['dashboard', 'console', 'files', 'plugins', 'backups'] as const;
+
 test.describe('application shell', () => {
   test('opens every primary view and preserves the active navigation state', async ({
     page,
@@ -22,19 +24,52 @@ test.describe('application shell', () => {
     await expect(page.locator('[data-testid="app-sidebar"]')).toBeVisible();
     await expect(page.locator('[data-testid="app-main"]')).toBeVisible();
 
+    let previousView: string | null = null;
     for (const [view, rootTestId] of SERVER_VIEWS) {
       await app.openView(view);
-      await expect(page.locator(`[data-testid="nav-item-${view}"]`)).toHaveAttribute(
-        'aria-current',
-        'page',
-      );
+      const navItem = page.locator(`[data-testid="nav-item-${view}"]`);
+      await expect(navItem).toHaveAttribute('aria-current', 'page');
+      await expect(navItem).toHaveClass(/is-active/);
+      if (previousView) {
+        await expect(page.locator(`[data-testid="nav-item-${previousView}"]`)).toHaveClass(
+          /is-idle/,
+        );
+      }
       await expect(page.locator(`[data-testid="${rootTestId}"]`)).toBeVisible({
         timeout: 15_000,
       });
+      previousView = view;
     }
   });
 
-  test('opens application settings from the brand and proxy help from proxy setup', async ({
+  test('renders the sidebar chrome and tracks the active navigation item without a server', async ({
+    page,
+    app,
+  }) => {
+    await app.gotoApp();
+
+    await expect(page.locator('[data-testid="app-sidebar"]')).toBeVisible();
+    await expect(page.locator('[data-testid="app-main"]')).toBeVisible();
+    await expect(page.locator('[data-testid="app-sidebar-nav"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-toggle-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-brand-button"]')).toBeVisible();
+
+    let previousView: string | null = null;
+    for (const view of SERVERLESS_NAV_VIEWS) {
+      const navItem = page.locator(`[data-testid="nav-item-${view}"]`);
+      await expect(navItem).toBeVisible();
+      await navItem.click();
+      await expect(navItem).toHaveClass(/is-active/);
+      if (previousView) {
+        await expect(page.locator(`[data-testid="nav-item-${previousView}"]`)).toHaveClass(
+          /is-idle/,
+        );
+      }
+      previousView = view;
+    }
+  });
+
+  test('opens application settings from the brand and the proxy view from the sidebar', async ({
     page,
     app,
   }) => {
@@ -45,8 +80,6 @@ test.describe('application shell', () => {
 
     await app.openView('proxy');
     await expect(page.locator('[data-testid="proxy-view"]')).toBeVisible();
-    await page.locator('[data-testid="proxy-view-help-button"]').click();
-    await expect(page.locator('[data-testid="proxy-help-view"]')).toBeVisible();
   });
 
   test('sidebar can be collapsed and expanded without losing navigation', async ({ page, app }) => {

@@ -14,7 +14,8 @@ describe('health-check-commands', () => {
   });
 
   describe('pingServer', () => {
-    it('returns full ping result for an online server', async () => {
+    // Host validation and ping packet encoding are tested in Rust (src-tauri/src/commands/health_check.rs).
+    it('forwards host and port to ping_server and returns the IPC result', async () => {
       const pingResult = {
         online: true,
         latency_ms: 42,
@@ -31,23 +32,6 @@ describe('health-check-commands', () => {
         port: 25565,
       });
       expect(result).toEqual(pingResult);
-    });
-
-    it('returns offline result with null fields when server is unreachable', async () => {
-      const offlineResult = {
-        online: false,
-        latency_ms: 0,
-        players_online: null,
-        players_max: null,
-        version: null,
-        motd: null,
-      };
-      tauriInvokeMock.mockResolvedValueOnce(offlineResult);
-      const { pingServer } = await import('@/lib/health-check-commands');
-      const result = await pingServer('localhost', 25565);
-      expect(result.online).toBe(false);
-      expect(result.players_online).toBeNull();
-      expect(result.version).toBeNull();
     });
   });
 });

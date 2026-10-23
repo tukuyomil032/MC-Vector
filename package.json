@@ -35,7 +35,6 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
-    "test:typecheck": "tsc -p tsconfig.tests.json --noEmit",
     "check:workflow-actions": "node scripts/check-workflow-actions.mjs",
     "test:tauri:e2e": "node scripts/tauri-smoke-e2e.mjs",
     "test:provider:live": "vitest run --config vitest.live.config.ts",

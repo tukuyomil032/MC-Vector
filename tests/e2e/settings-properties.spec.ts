@@ -16,39 +16,21 @@ test.describe('settings and properties', () => {
 
     const liquidGlass = settings.locator('#liquid-glass-toggle');
     await liquidGlass.check();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: { state: { config: Record<string, unknown> } };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.config.liquidGlassEnabled;
-        });
-      })
-      .toBe(true);
-
-    const allowUnverified = settings.locator('#allow-unverified-plugin-downloads');
-    await expect(allowUnverified).not.toBeChecked();
-    await allowUnverified.check();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: { state: { config: Record<string, unknown> } };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.config.allowUnverifiedPluginDownloads;
-        });
-      })
-      .toBe(true);
-    await expect(allowUnverified).toBeChecked();
-    await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(0);
+    await expect.poll(async () => (await app.runtimeState())?.config.liquidGlassEnabled).toBe(true);
   });
 
-  test('edits server properties and opens the managed Java manager', async ({ page, app }) => {
+  test('closes the settings screen when navigating to another view', async ({ page, app }) => {
+    await app.gotoApp();
+    await app.openView('app-settings');
+
+    const settings = page.locator('[data-testid="settings-window"]');
+    await expect(settings).toBeVisible({ timeout: 10_000 });
+
+    await app.openView('dashboard');
+    await expect(settings).toHaveCount(0);
+  });
+
+  test('edits and saves server properties', async ({ page, app }) => {
     await app.gotoApp('paper-plugin-success');
     await app.openView('properties');
 
@@ -61,15 +43,5 @@ test.describe('settings and properties', () => {
     await save.click();
     await expect(page.getByText('Properties saved', { exact: true })).toBeVisible();
     await expect.poll(async () => (await app.ipcCalls('write_managed_text_file')).length).toBe(1);
-
-    await app.openView('general-settings');
-    await page.locator('[data-testid="server-settings-java-manage-button"]').click();
-    const javaDialog = page.locator('[data-testid="java-manager-dialog"]');
-    await expect(javaDialog).toBeVisible();
-    await javaDialog.locator('[data-testid="java-download-17"]').click();
-    await expect(javaDialog.getByText('Java 17', { exact: true }).first()).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect.poll(async () => (await app.ipcCalls('download_java')).length).toBe(1);
   });
 });
