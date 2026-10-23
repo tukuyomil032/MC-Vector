@@ -6,6 +6,9 @@ async function openPluginBrowser(page: Page, app: AppFixture, scenario: E2eScena
   await app.gotoApp(scenario);
   await app.openView('plugins');
   await expect(page.locator('[data-testid="plugin-browser"]')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[data-testid="plugin-search-input"]')).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 async function runtimeFiles(page: Page): Promise<string[]> {
