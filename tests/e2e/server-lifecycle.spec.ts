@@ -29,14 +29,7 @@ test.describe('Server Lifecycle', () => {
     await expect
       .poll(
         async () =>
-          page.evaluate((id) => {
-            const runtime = (
-              window as Window & {
-                __MC_VECTOR_E2E__?: { state: { files: Record<string, { content?: string }> } };
-              }
-            ).__MC_VECTOR_E2E__;
-            return runtime?.state.files[`/mock/app-data/servers/${id}/eula.txt`]?.content;
-          }, serverId),
+          (await app.runtimeState())?.files[`/mock/app-data/servers/${serverId}/eula.txt`]?.content,
         { timeout: 10_000 },
       )
       .toBe('eula=true\n');

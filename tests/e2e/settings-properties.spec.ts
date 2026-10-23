@@ -16,18 +16,7 @@ test.describe('settings and properties', () => {
 
     const liquidGlass = settings.locator('#liquid-glass-toggle');
     await liquidGlass.check();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: { state: { config: Record<string, unknown> } };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.config.liquidGlassEnabled;
-        });
-      })
-      .toBe(true);
+    await expect.poll(async () => (await app.runtimeState())?.config.liquidGlassEnabled).toBe(true);
   });
 
   test('closes the settings screen when navigating to another view', async ({ page, app }) => {

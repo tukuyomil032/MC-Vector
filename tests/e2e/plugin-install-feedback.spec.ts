@@ -127,16 +127,7 @@ test.describe('plugin install and feedback flows', () => {
     await checkbox.check();
     await expect(checkbox).toBeChecked();
     await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: { state: { config: Record<string, unknown> } };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.config.allowUnverifiedPluginDownloads;
-        }),
-      )
+      .poll(async () => (await app.runtimeState())?.config.allowUnverifiedPluginDownloads)
       .toBe(true);
     await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(1);
 

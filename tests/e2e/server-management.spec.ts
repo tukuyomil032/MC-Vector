@@ -18,17 +18,9 @@ test.describe('server management', () => {
 
     await expect(page.getByText('Settings saved', { exact: true })).toBeVisible();
     await expect
-      .poll(() =>
-        page.evaluate((id) => {
-          const runtime = (
-            window as Window & {
-              __MC_VECTOR_E2E__?: {
-                state: { servers: Array<{ id: string; name: string }> };
-              };
-            }
-          ).__MC_VECTOR_E2E__;
-          return runtime?.state.servers.find((server) => server.id === id)?.name;
-        }, serverId),
+      .poll(
+        async () =>
+          (await app.runtimeState())?.servers.find((server) => server.id === serverId)?.name,
       )
       .toBe('renamed-managed-server');
   });
@@ -65,9 +57,7 @@ test.describe('server management', () => {
     app,
   }) => {
     await app.gotoApp('paper-plugin-success');
-    await page.evaluate(() => {
-      (window as unknown as Record<string, unknown>).__dialogConfirm = true;
-    });
+    await app.confirmDialogs();
 
     const serverCard = page.locator('[data-testid="server-card-server-1"]');
     await serverCard.click({ button: 'right' });
