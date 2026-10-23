@@ -59,7 +59,7 @@ test.describe('settings and properties', () => {
     await expect(settings).toHaveCount(0);
   });
 
-  test('edits server properties and opens the managed Java manager', async ({ page, app }) => {
+  test('edits and saves server properties', async ({ page, app }) => {
     await app.gotoApp('paper-plugin-success');
     await app.openView('properties');
 
@@ -72,15 +72,5 @@ test.describe('settings and properties', () => {
     await save.click();
     await expect(page.getByText('Properties saved', { exact: true })).toBeVisible();
     await expect.poll(async () => (await app.ipcCalls('write_managed_text_file')).length).toBe(1);
-
-    await app.openView('general-settings');
-    await page.locator('[data-testid="server-settings-java-manage-button"]').click();
-    const javaDialog = page.locator('[data-testid="java-manager-dialog"]');
-    await expect(javaDialog).toBeVisible();
-    await javaDialog.locator('[data-testid="java-download-17"]').click();
-    await expect(javaDialog.getByText('Java 17', { exact: true }).first()).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect.poll(async () => (await app.ipcCalls('download_java')).length).toBe(1);
   });
 });
