@@ -72,8 +72,6 @@ jobs:
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: ./src-tauri -> target
-      - name: Install just
-        uses: taiki-e/install-action@ae666e311a8d98d0043e81161903fc9f9beb8689 # just
       - run: bun ci
       - name: Run Vitest and test typecheck
         run: |
