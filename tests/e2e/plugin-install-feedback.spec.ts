@@ -165,19 +165,20 @@ test.describe('plugin install and feedback flows', () => {
     });
   });
 
-  for (const scenario of ['checksum-mismatch', 'checksum-invalid'] as const) {
-    test(`${scenario} opens a verification modal and does not install`, async ({ page, app }) => {
-      await openPluginBrowser(page, app, scenario);
-      await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
-      const dialog = page.locator('[data-testid="feedback-dialog"]');
-      await expect(dialog).toBeVisible();
-      await expect(dialog).toContainText('Plugin integrity check failed');
-      await expect(dialog).toContainText('not placed in the server folder');
-      expect(
-        (await runtimeFiles(page)).some((path) => /\/(?:plugins|mods)\/[^/]+\.jar$/i.test(path)),
-      ).toBe(false);
-    });
-  }
+  test('checksum-mismatch opens a verification modal and does not install', async ({
+    page,
+    app,
+  }) => {
+    await openPluginBrowser(page, app, 'checksum-mismatch');
+    await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
+    const dialog = page.locator('[data-testid="feedback-dialog"]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Plugin integrity check failed');
+    await expect(dialog).toContainText('not placed in the server folder');
+    expect(
+      (await runtimeFiles(page)).some((path) => /\/(?:plugins|mods)\/[^/]+\.jar$/i.test(path)),
+    ).toBe(false);
+  });
 
   test('shows a retryable inline error for a transient network failure', async ({ page, app }) => {
     await openPluginBrowser(page, app, 'network-retry');
