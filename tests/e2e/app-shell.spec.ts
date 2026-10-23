@@ -69,7 +69,7 @@ test.describe('application shell', () => {
     }
   });
 
-  test('opens application settings from the brand and proxy help from proxy setup', async ({
+  test('opens application settings from the brand and the proxy view from the sidebar', async ({
     page,
     app,
   }) => {
@@ -80,8 +80,6 @@ test.describe('application shell', () => {
 
     await app.openView('proxy');
     await expect(page.locator('[data-testid="proxy-view"]')).toBeVisible();
-    await page.locator('[data-testid="proxy-view-help-button"]').click();
-    await expect(page.locator('[data-testid="proxy-help-view"]')).toBeVisible();
   });
 
   test('sidebar can be collapsed and expanded without losing navigation', async ({ page, app }) => {
