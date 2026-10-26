@@ -525,11 +525,9 @@ jobs:
           BASE_URL="https://github.com/tukuyomil032/MC-Vector/releases/download/${TAG}"
           node scripts/release-manifest.mjs apply \
             "$VERSION" \
-            "$RUNNER_TEMP/updater-notes.md" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             "$BASE_URL" \
-            "release-assets" \
-            "gh-pages-deploy"
+            < "$RUNNER_TEMP/updater-notes.md"
 
           if [ "$PRERELEASE" = "true" ]; then
             MANIFESTS=$(printf '%s\n' gh-pages-deploy/updates/beta-*.json)

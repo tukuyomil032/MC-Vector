@@ -20,6 +20,20 @@ export const PLATFORM_TARGETS = {
   },
 };
 
+function resolveWorkspacePath(...segments) {
+  const workspaceRoot = path.resolve(process.cwd());
+  const resolvedPath = path.resolve(workspaceRoot, ...segments);
+  const relativePath = path.relative(workspaceRoot, resolvedPath);
+  if (
+    relativePath === '..' ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new Error('Updater files must stay within the current workspace');
+  }
+  return resolvedPath;
+}
+
 export function feedTargetsForRelease(version, latestBetaChannelVersion) {
   const normalized = normalizeVersion(version);
   const channel = isPrerelease(normalized) ? 'beta' : 'stable';
@@ -47,12 +61,15 @@ function readSignature(filePath) {
   return signature;
 }
 
-function latestBetaChannelVersion(outputDirectory) {
+function latestBetaChannelVersion() {
   const versions = [];
-  const updatesDirectory = path.join(outputDirectory, 'updates');
   for (const platform of Object.keys(PLATFORM_TARGETS)) {
     for (const channel of ['beta']) {
-      const filePath = path.join(updatesDirectory, `${channel}-${platform}.json`);
+      const filePath = resolveWorkspacePath(
+        'gh-pages-deploy',
+        'updates',
+        `${channel}-${platform}.json`,
+      );
       if (!fs.existsSync(filePath)) continue;
       try {
         const manifest = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -71,23 +88,22 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-function applyRelease([versionArg, notesFile, pubDate, baseUrl, assetsDirectory, outputDirectory]) {
-  if (!versionArg || !notesFile || !pubDate || !baseUrl || !assetsDirectory || !outputDirectory) {
+function applyRelease([versionArg, pubDate, baseUrl], notes) {
+  if (!versionArg || !pubDate || !baseUrl) {
     throw new Error(
-      'Usage: node scripts/release-manifest.mjs apply <version> <notes-file> <pub-date> <base-url> <assets-dir> <output-dir>',
+      'Usage: node scripts/release-manifest.mjs apply <version> <pub-date> <base-url> < <notes-file>',
     );
   }
   const version = normalizeVersion(versionArg);
-  const notes = fs.readFileSync(notesFile, 'utf8');
-  const existingBeta = latestBetaChannelVersion(outputDirectory);
+  const existingBeta = latestBetaChannelVersion();
   const { channel, targets } = feedTargetsForRelease(version, existingBeta);
   const manifests = new Map();
 
   for (const target of targets) {
     const platform = target.replace(/^(?:stable|beta)-/, '');
     const assetName = PLATFORM_TARGETS[platform].asset(version);
-    const assetPath = path.join(assetsDirectory, assetName);
-    const signaturePath = `${assetPath}.sig`;
+    const assetPath = resolveWorkspacePath('release-assets', assetName);
+    const signaturePath = resolveWorkspacePath('release-assets', `${assetName}.sig`);
     if (!fs.existsSync(assetPath) || !fs.existsSync(signaturePath)) {
       throw new Error(`Missing updater asset or signature for ${target}: ${assetName}`);
     }
@@ -98,7 +114,7 @@ function applyRelease([versionArg, notesFile, pubDate, baseUrl, assetsDirectory,
       url: `${baseUrl.replace(/\/$/, '')}/${assetName}`,
       signature: readSignature(signaturePath),
     });
-    const manifestPath = path.join(outputDirectory, 'updates', `${target}.json`);
+    const manifestPath = resolveWorkspacePath('gh-pages-deploy', 'updates', `${target}.json`);
     writeJson(manifestPath, manifest);
     manifests.set(platform, manifest);
   }
@@ -110,7 +126,7 @@ function applyRelease([versionArg, notesFile, pubDate, baseUrl, assetsDirectory,
         return [platform, { signature: manifest.signature, url: manifest.url }];
       }),
     );
-    writeJson(path.join(outputDirectory, 'latest.json'), {
+    writeJson(resolveWorkspacePath('gh-pages-deploy', 'latest.json'), {
       version,
       notes,
       pub_date: pubDate,
@@ -122,7 +138,7 @@ function applyRelease([versionArg, notesFile, pubDate, baseUrl, assetsDirectory,
 
 if (process.argv[2] === 'apply') {
   try {
-    applyRelease(process.argv.slice(3));
+    applyRelease(process.argv.slice(3), fs.readFileSync(0, 'utf8'));
   } catch (error) {
     console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

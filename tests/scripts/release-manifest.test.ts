@@ -12,8 +12,8 @@ const manifestScript = join(repositoryRoot, 'scripts/release-manifest.mjs');
 
 function createReleaseFixture(version: string) {
   const root = mkdtempSync(join(tmpdir(), 'mc-vector-manifest-'));
-  const assets = join(root, 'assets');
-  const output = join(root, 'pages');
+  const assets = join(root, 'release-assets');
+  const output = join(root, 'gh-pages-deploy');
   const notes = join(root, 'notes.md');
   mkdirSync(assets);
   writeFileSync(notes, 'release notes\n');
@@ -31,17 +31,8 @@ function createReleaseFixture(version: string) {
 function applyFixture(fixture: ReturnType<typeof createReleaseFixture>, version: string) {
   const result = spawnSync(
     process.execPath,
-    [
-      manifestScript,
-      'apply',
-      version,
-      fixture.notes,
-      '2026-10-26T00:00:00Z',
-      'https://example.invalid/release',
-      fixture.assets,
-      fixture.output,
-    ],
-    { encoding: 'utf8' },
+    [manifestScript, 'apply', version, '2026-10-26T00:00:00Z', 'https://example.invalid/release'],
+    { cwd: fixture.root, encoding: 'utf8', input: readFileSync(fixture.notes, 'utf8') },
   );
   if (result.status !== 0) throw new Error(result.stderr);
 }
@@ -92,20 +83,22 @@ describe('release updater feed routing', () => {
     const beta = createReleaseFixture('2.0.64-beta.2');
     try {
       applyFixture(beta, '2.0.64-beta.2');
-      const olderStable = createReleaseFixture('2.0.63');
-      try {
-        olderStable.output = beta.output;
-        applyFixture(olderStable, '2.0.63');
-        const betaManifest = JSON.parse(
-          readFileSync(join(beta.output, 'updates', 'beta-darwin-aarch64.json'), 'utf8'),
-        );
-        expect(betaManifest.version).toBe('2.0.64-beta.2');
-        expect(JSON.parse(readFileSync(join(beta.output, 'latest.json'), 'utf8')).version).toBe(
-          '2.0.63',
-        );
-      } finally {
-        rmSync(olderStable.root, { force: true, recursive: true });
+      for (const asset of [
+        'MC-Vector_2.0.63_darwin-aarch64.app.tar.gz',
+        'MC-Vector_2.0.63_darwin-x86_64.app.tar.gz',
+        'MC-Vector_2.0.63_windows-x86_64-setup.exe',
+      ]) {
+        writeFileSync(join(beta.assets, asset), 'artifact');
+        writeFileSync(join(beta.assets, `${asset}.sig`), 'c2ln');
       }
+      applyFixture(beta, '2.0.63');
+      const betaManifest = JSON.parse(
+        readFileSync(join(beta.output, 'updates', 'beta-darwin-aarch64.json'), 'utf8'),
+      );
+      expect(betaManifest.version).toBe('2.0.64-beta.2');
+      expect(JSON.parse(readFileSync(join(beta.output, 'latest.json'), 'utf8')).version).toBe(
+        '2.0.63',
+      );
     } finally {
       rmSync(beta.root, { force: true, recursive: true });
     }
