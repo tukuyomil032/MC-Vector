@@ -99,9 +99,13 @@ Merge commits and release preparation commits are omitted from the generated not
 
 ## Release process
 
-To prepare a stable release, authenticate the [GitHub CLI](https://cli.github.com/) with `gh auth login`, then run `just release` and enter the exact target version as `X.Y.Z` or `vX.Y.Z`. The command dispatches the **Prepare Release PR** workflow on `main`. The workflow validates the target version, updates the synchronized version files, generates the next `CHANGELOG.md` entry from commits after the latest published GitHub Release, and opens a pull request for review.
+To prepare a release, authenticate the [GitHub CLI](https://cli.github.com/) with `gh auth login`, then run `just release` and enter the exact target version as `X.Y.Z`, `X.Y.Z-beta.N`, or a `v`-prefixed version. The command dispatches the **Prepare Release PR** workflow on `main`. The workflow validates version progression and duplicate tags, updates the synchronized version files, generates the next `CHANGELOG.md` entry, and opens a pull request for review.
 
-Wait for the workflow run to finish, review the generated changelog and version changes in the pull request, then merge it. The existing **Release** workflow builds the installers, creates the GitHub Release with the complete entry, and publishes updater metadata with only Breaking Changes, Features, Bug Fixes, and Performance. MC-Vector publishes one stable update channel.
+For a beta release, the changelog entry covers commits since the previous beta in the same version series, or since the latest stable release for `.beta.1`. Beta releases are published as GitHub prereleases. The next stable release uses the latest published stable tag as its changelog base, so its entry includes all changes since that stable release, including changes already listed in beta entries. Beta changelog entries remain in the history.
+
+Review the generated changelog and version changes in the pull request, then merge it. The **Release** workflow builds the installers, creates a GitHub Release, and updates the signed updater feeds. Beta releases update the beta feeds; stable releases update the stable feeds and advance the beta feeds when the stable version is newer. The legacy `latest.json` feed remains stable-only for older app versions.
+
+Users can choose **Stable** or **Beta** in Application Settings. Stable is the default, and the choice persists across updates. An app version without the channel selector needs a one-time manual installation of the first beta; subsequent beta updates use the in-app updater. Switching back to Stable does not downgrade a newer beta installation.
 
 ### Coding guidelines
 

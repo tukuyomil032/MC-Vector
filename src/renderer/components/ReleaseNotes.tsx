@@ -27,7 +27,10 @@ function getReleaseNotesText(releaseNotes: unknown): string {
     .join('\n');
 }
 
-function parseReleaseNotes(releaseNotes: unknown, fallbackVersion?: string): ParsedReleaseNotes {
+export function parseReleaseNotes(
+  releaseNotes: unknown,
+  fallbackVersion?: string,
+): ParsedReleaseNotes {
   const text = getReleaseNotesText(releaseNotes);
   let version = fallbackVersion?.replace(/^v/i, '') || '';
   let currentSection: VisibleSection | null = null;
@@ -36,7 +39,7 @@ function parseReleaseNotes(releaseNotes: unknown, fallbackVersion?: string): Par
   );
 
   for (const line of text.split(/\r?\n/)) {
-    const releaseHeading = /^##\s+v?(\d+\.\d+\.\d+)\s*$/.exec(line.trim());
+    const releaseHeading = /^##\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*$/.exec(line.trim());
     if (releaseHeading) {
       if (!version) version = releaseHeading[1];
       currentSection = null;

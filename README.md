@@ -368,7 +368,9 @@ For a detailed architecture overview, see [Architecture Documentation](docs/src/
 | Prepare release    | `just release`            | Prepare a release                    |
 | Update Minecraft versions | `just update-minecraft-versions` | Update supported Minecraft versions |
 
-To prepare a release, authenticate the [GitHub CLI](https://cli.github.com/) first with `gh auth login`, then run `just release` and enter the exact target version as `X.Y.Z` or `vX.Y.Z`. The command dispatches the **Prepare Release PR** workflow on `main`. Wait for the workflow run to create the reviewable pull request, review it, and merge it. The existing **Release** workflow builds and publishes the stable release after the merge. MC-Vector uses one stable update channel.
+To prepare a release, authenticate the [GitHub CLI](https://cli.github.com/) first with `gh auth login`, then run `just release` and enter the exact target version as `X.Y.Z`, `X.Y.Z-beta.N`, or a `v`-prefixed version. The command dispatches the **Prepare Release PR** workflow on `main`. Wait for the workflow run to create the reviewable pull request, review it, and merge it. The **Release** workflow publishes beta versions as GitHub prereleases and stable versions as regular releases. Beta changelog entries cover the changes since the previous beta; the next stable entry covers every change since the previous stable release, including changes already listed in beta entries.
+
+Users choose **Stable** or **Beta** in Application Settings. Stable is the default, and the selection persists across app updates. Users on a version that predates the channel selector need to install the first beta manually from GitHub Releases; later beta updates arrive through the in-app updater. Switching back to stable never downgrades the app; updates resume when a stable version is newer than the installed version.
 
 For detailed command usage, see the [Development Guide](docs/src/content/docs/dev/setup.mdx).
 

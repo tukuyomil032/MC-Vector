@@ -46,6 +46,15 @@ export const en: TranslationDictionary = {
       downloaded: 'Download complete. Ready to restart and apply.',
       error: 'Error: {message}',
       releaseNotes: 'Release Notes:',
+      channelLabel: 'Update channel',
+      channels: {
+        stable: 'Stable releases',
+        beta: 'Beta releases',
+      },
+      stableDescription: 'Use the latest tested releases recommended for everyday use.',
+      betaDescription: 'Receive prerelease builds for early access to upcoming changes.',
+      channelSaveError:
+        'The update channel could not be saved. The previous selection was restored.',
     },
     language: {
       title: 'Language',

@@ -102,11 +102,13 @@ describe('config-commands', () => {
         locale: 'ja',
         liquidGlassEnabled: true,
         allowUnverifiedPluginDownloads: true,
+        updateChannel: 'stable',
       });
     });
 
     it('defaults allowUnverifiedPluginDownloads to false when it is not set', async () => {
       getMock
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
@@ -117,6 +119,7 @@ describe('config-commands', () => {
       expect(result.locale).toBeUndefined();
       expect(result.liquidGlassEnabled).toBeUndefined();
       expect(result.allowUnverifiedPluginDownloads).toBe(false);
+      expect(result.updateChannel).toBe('stable');
     });
 
     it('defaults allowUnverifiedPluginDownloads to false for non-boolean stored values', async () => {
@@ -124,10 +127,26 @@ describe('config-commands', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce('true');
+        .mockResolvedValueOnce('true')
+        .mockResolvedValueOnce('beta');
       const { getAppSettings } = await import('@/lib/config-commands');
       const result = await getAppSettings();
       expect(result.allowUnverifiedPluginDownloads).toBe(false);
+      expect(result.updateChannel).toBe('beta');
+    });
+
+    it('normalizes an invalid saved update channel to stable', async () => {
+      getMock
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce('nightly');
+      const { getAppSettings } = await import('@/lib/config-commands');
+
+      const result = await getAppSettings();
+
+      expect(result.updateChannel).toBe('stable');
     });
   });
 
@@ -139,11 +158,13 @@ describe('config-commands', () => {
         locale: 'ja',
         liquidGlassEnabled: true,
         allowUnverifiedPluginDownloads: true,
+        updateChannel: 'beta',
       });
       expect(setMock).toHaveBeenCalledWith('theme', 'dark');
       expect(setMock).toHaveBeenCalledWith('locale', 'ja');
       expect(setMock).toHaveBeenCalledWith('liquidGlassEnabled', true);
       expect(setMock).toHaveBeenCalledWith('allowUnverifiedPluginDownloads', true);
+      expect(setMock).toHaveBeenCalledWith('updateChannel', 'beta');
       expect(saveMock).toHaveBeenCalled();
     });
 

@@ -36,6 +36,16 @@ export function useAppUpdater() {
       }
     };
     void doUpdateCheck();
+
+    const handleChannelChanged = () => {
+      setUpdatePrompt(null);
+      setUpdateProgress(null);
+      setUpdateError(null);
+      void doUpdateCheck();
+    };
+    window.addEventListener('mc-vector:update-channel-changed', handleChannelChanged);
+    return () =>
+      window.removeEventListener('mc-vector:update-channel-changed', handleChannelChanged);
   }, []);
 
   const handleUpdateNow = useCallback(async () => {

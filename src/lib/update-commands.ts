@@ -1,11 +1,77 @@
 import { getVersion } from '@tauri-apps/api/app';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { arch, platform } from '@tauri-apps/plugin-os';
 import { type Update, check } from '@tauri-apps/plugin-updater';
 import { getTranslation } from '../i18n';
+import { getAppSettings } from './config-commands';
 import { logError } from './error-utils';
 import { tauriInvoke } from './tauri-api';
+import {
+  DEFAULT_UPDATE_CHANNEL,
+  normalizeUpdateChannel,
+  type UpdateChannel,
+} from '../store/settingsStore';
 
-let currentUpdate: Update | null = null;
+export type { UpdateChannel } from '../store/settingsStore';
+
+interface PendingUpdate {
+  update: Update;
+  channel: UpdateChannel;
+  target: string;
+  generation: number;
+}
+
+let currentUpdate: PendingUpdate | null = null;
+let updateGeneration = 0;
+
+export function getUpdateTarget(channel: UpdateChannel, os: string, architecture: string): string {
+  const platformId = os === 'macos' ? 'darwin' : os === 'windows' ? 'windows' : null;
+  if (!platformId) {
+    throw new Error(`Unsupported update platform: ${os}`);
+  }
+  if (platformId === 'darwin' && !['aarch64', 'x86_64'].includes(architecture)) {
+    throw new Error(`Unsupported update architecture: ${architecture}`);
+  }
+  if (platformId === 'windows' && architecture !== 'x86_64') {
+    throw new Error(`Unsupported update architecture: ${architecture}`);
+  }
+  return `${channel}-${platformId}-${architecture}`;
+}
+
+async function getSavedUpdateChannel(): Promise<UpdateChannel> {
+  try {
+    return normalizeUpdateChannel((await getAppSettings()).updateChannel);
+  } catch (error) {
+    logError('Failed to load update channel; using stable', error);
+    return DEFAULT_UPDATE_CHANNEL;
+  }
+}
+
+async function getCurrentUpdateTarget(channel: UpdateChannel): Promise<string> {
+  return getUpdateTarget(channel, await platform(), await arch());
+}
+
+export function clearPendingUpdate(): void {
+  currentUpdate = null;
+  updateGeneration += 1;
+}
+
+async function ensurePendingUpdateIsCurrent(pending: PendingUpdate): Promise<void> {
+  const currentChannel = await getSavedUpdateChannel();
+  if (pending.generation === updateGeneration && pending.channel === currentChannel) {
+    return;
+  }
+
+  if (currentUpdate === pending) {
+    clearPendingUpdate();
+  }
+  try {
+    await pending.update.close();
+  } catch (error) {
+    logError('Failed to close stale update candidate', error);
+  }
+  throw new Error('Update channel changed. Check for updates again.');
+}
 
 interface UpdateCheckResult {
   can_update: boolean;
@@ -41,9 +107,15 @@ export async function checkForUpdates(): Promise<{
   error?: string;
 }> {
   try {
-    const update = await check();
+    const channel = await getSavedUpdateChannel();
+    const target = await getCurrentUpdateTarget(channel);
+    const generation = updateGeneration;
+    const update = await check({ target });
+    if (generation !== updateGeneration) {
+      return { available: false };
+    }
     if (update) {
-      currentUpdate = update;
+      currentUpdate = { update, channel, target, generation };
       return {
         available: true,
         version: update.version,
@@ -78,12 +150,16 @@ export async function getAppLocation(): Promise<string> {
 export async function downloadAndInstallUpdate(
   onProgress?: (downloaded: number, total: number) => void,
 ): Promise<void> {
-  const latestUpdate = await check();
-  if (latestUpdate) {
-    currentUpdate = latestUpdate;
+  let pending = currentUpdate;
+  if (!pending) {
+    const result = await checkForUpdates();
+    pending = currentUpdate;
+    if (!result.available || !pending) {
+      throw new Error('No update available');
+    }
   }
 
-  if (!currentUpdate) throw new Error('No update available');
+  await ensurePendingUpdateIsCurrent(pending);
 
   // Check if the app can be updated before proceeding
   const updateCheck = await canUpdateApp();
@@ -106,11 +182,11 @@ export async function downloadAndInstallUpdate(
   let downloaded = 0;
   let contentLength = 0;
 
-  const installWithProgress = async () => {
+  const downloadWithProgress = async () => {
     downloaded = 0;
     contentLength = 0;
 
-    await currentUpdate?.downloadAndInstall((event) => {
+    await pending.update.download((event) => {
       switch (event.event) {
         case 'Started':
           contentLength = event.data.contentLength ?? 0;
@@ -126,7 +202,10 @@ export async function downloadAndInstallUpdate(
   };
 
   try {
-    await installWithProgress();
+    await ensurePendingUpdateIsCurrent(pending);
+    await downloadWithProgress();
+    await ensurePendingUpdateIsCurrent(pending);
+    await pending.update.install();
 
     await relaunch();
   } catch (error) {

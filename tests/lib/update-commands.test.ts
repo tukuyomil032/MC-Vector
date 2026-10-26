@@ -5,11 +5,16 @@ const relaunchMock = vi.fn();
 const checkMock = vi.fn();
 const tauriInvokeMock = vi.fn();
 const logErrorMock = vi.fn();
+const platformMock = vi.fn();
+const archMock = vi.fn();
+const getAppSettingsMock = vi.fn();
 
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: getVersionMock }));
 vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: relaunchMock }));
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: checkMock }));
+vi.mock('@tauri-apps/plugin-os', () => ({ platform: platformMock, arch: archMock }));
 vi.mock('@/lib/tauri-api', () => ({ tauriInvoke: tauriInvokeMock, tauriListen: vi.fn() }));
+vi.mock('@/lib/config-commands', () => ({ getAppSettings: getAppSettingsMock }));
 vi.mock('@/lib/error-utils', () => ({ logError: logErrorMock }));
 vi.mock('@/i18n', () => ({
   getTranslation: vi.fn().mockReturnValue((key: string) => key),
@@ -19,7 +24,9 @@ function makeUpdate(overrides?: Partial<{ version: string; body: string | null }
   return {
     version: overrides?.version ?? '2.0.56',
     body: overrides?.body !== undefined ? overrides.body : 'Bug fixes',
-    downloadAndInstall: vi.fn().mockResolvedValue(undefined),
+    download: vi.fn().mockResolvedValue(undefined),
+    install: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -30,6 +37,9 @@ beforeEach(() => {
   checkMock.mockReset();
   tauriInvokeMock.mockReset();
   logErrorMock.mockReset();
+  platformMock.mockReset().mockReturnValue('macos');
+  archMock.mockReset().mockReturnValue('aarch64');
+  getAppSettingsMock.mockReset().mockResolvedValue({ updateChannel: 'stable' });
 });
 
 describe('getAppVersion', () => {
@@ -42,6 +52,28 @@ describe('getAppVersion', () => {
   });
 });
 
+describe('update targets and channels', () => {
+  it.each([
+    ['stable', 'macos', 'aarch64', 'stable-darwin-aarch64'],
+    ['beta', 'macos', 'x86_64', 'beta-darwin-x86_64'],
+    ['stable', 'windows', 'x86_64', 'stable-windows-x86_64'],
+    ['beta', 'windows', 'x86_64', 'beta-windows-x86_64'],
+  ] as const)('maps %s %s/%s to %s', async (channel, os, architecture, expected) => {
+    const { getUpdateTarget } = await import('@/lib/update-commands');
+    expect(getUpdateTarget(channel, os, architecture)).toBe(expected);
+  });
+
+  it('rejects unsupported platform and architecture combinations', async () => {
+    const { getUpdateTarget } = await import('@/lib/update-commands');
+    expect(() => getUpdateTarget('stable', 'linux', 'x86_64')).toThrow(
+      'Unsupported update platform',
+    );
+    expect(() => getUpdateTarget('stable', 'windows', 'aarch64')).toThrow(
+      'Unsupported update architecture',
+    );
+  });
+});
+
 describe('checkForUpdates', () => {
   it('returns available=true with version and body when update exists', async () => {
     checkMock.mockResolvedValue(makeUpdate({ version: '2.1.0', body: 'New features' }));
@@ -49,6 +81,31 @@ describe('checkForUpdates', () => {
     const { checkForUpdates } = await import('@/lib/update-commands');
     const result = await checkForUpdates();
     expect(result).toEqual({ available: true, version: '2.1.0', body: 'New features' });
+    expect(checkMock).toHaveBeenCalledWith({ target: 'stable-darwin-aarch64' });
+  });
+
+  it('keeps beta selected when the beta feed returns a stable-version response', async () => {
+    getAppSettingsMock.mockResolvedValue({ updateChannel: 'beta' });
+    checkMock.mockResolvedValue(makeUpdate({ version: '2.0.64' }));
+
+    const { checkForUpdates } = await import('@/lib/update-commands');
+    const result = await checkForUpdates();
+
+    expect(result).toEqual({ available: true, version: '2.0.64', body: 'Bug fixes' });
+    expect(checkMock).toHaveBeenCalledWith({ target: 'beta-darwin-aarch64' });
+    expect(getAppSettingsMock).toHaveBeenCalledTimes(1);
+    await expect(getAppSettingsMock()).resolves.toEqual({ updateChannel: 'beta' });
+  });
+
+  it('does not opt into updater downgrades for a stable target', async () => {
+    checkMock.mockResolvedValue(makeUpdate({ version: '2.0.64' }));
+
+    const { checkForUpdates } = await import('@/lib/update-commands');
+    await checkForUpdates();
+
+    expect(checkMock).toHaveBeenCalledTimes(1);
+    expect(checkMock).toHaveBeenCalledWith({ target: 'stable-darwin-aarch64' });
+    expect(checkMock.mock.calls[0][0]).not.toHaveProperty('allowDowngrades');
   });
 
   it('returns available=false when no update', async () => {
@@ -125,7 +182,8 @@ describe('downloadAndInstallUpdate', () => {
     const { downloadAndInstallUpdate } = await import('@/lib/update-commands');
     await downloadAndInstallUpdate();
 
-    expect(update.downloadAndInstall).toHaveBeenCalled();
+    expect(update.download).toHaveBeenCalled();
+    expect(update.install).toHaveBeenCalled();
     expect(relaunchMock).toHaveBeenCalled();
   });
 
@@ -171,7 +229,7 @@ describe('downloadAndInstallUpdate', () => {
   it('throws read-only error when installWithProgress fails with Read-only file system', async () => {
     const update = {
       ...makeUpdate(),
-      downloadAndInstall: vi.fn().mockRejectedValue(new Error('Read-only file system')),
+      install: vi.fn().mockRejectedValue(new Error('Read-only file system')),
     };
     checkMock.mockResolvedValue(update);
     tauriInvokeMock
@@ -187,7 +245,7 @@ describe('downloadAndInstallUpdate', () => {
   it('throws read-only error when installWithProgress fails with os error 30', async () => {
     const update = {
       ...makeUpdate(),
-      downloadAndInstall: vi.fn().mockRejectedValue(new Error('os error 30')),
+      install: vi.fn().mockRejectedValue(new Error('os error 30')),
     };
     checkMock.mockResolvedValue(update);
     tauriInvokeMock
@@ -204,7 +262,7 @@ describe('downloadAndInstallUpdate', () => {
     const onProgress = vi.fn();
     const update = {
       ...makeUpdate(),
-      downloadAndInstall: vi.fn().mockImplementation(async (cb: (event: unknown) => void) => {
+      download: vi.fn().mockImplementation(async (cb: (event: unknown) => void) => {
         cb({ event: 'Started', data: { contentLength: 1000 } });
         cb({ event: 'Progress', data: { chunkLength: 500 } });
         cb({ event: 'Progress', data: { chunkLength: 500 } });
@@ -220,5 +278,66 @@ describe('downloadAndInstallUpdate', () => {
 
     expect(onProgress).toHaveBeenCalledWith(500, 1000);
     expect(onProgress).toHaveBeenCalledWith(1000, 1000);
+  });
+
+  it('uses the same channel target for checking and installing the offered update', async () => {
+    const update = makeUpdate({ version: '2.1.0-beta.2' });
+    checkMock.mockResolvedValue(update);
+    getAppSettingsMock.mockResolvedValue({ updateChannel: 'beta' });
+    tauriInvokeMock.mockResolvedValue({ can_update: true });
+    relaunchMock.mockResolvedValue(undefined);
+
+    const { checkForUpdates, downloadAndInstallUpdate } = await import('@/lib/update-commands');
+    await checkForUpdates();
+    await downloadAndInstallUpdate();
+
+    expect(checkMock).toHaveBeenCalledTimes(1);
+    expect(checkMock).toHaveBeenCalledWith({ target: 'beta-darwin-aarch64' });
+    expect(update.download).toHaveBeenCalled();
+    expect(update.install).toHaveBeenCalled();
+  });
+
+  it('does not install a beta update after the channel changes during download', async () => {
+    let finishDownload!: () => void;
+    const downloadFinished = new Promise<void>((resolve) => {
+      finishDownload = resolve;
+    });
+    const update = {
+      ...makeUpdate(),
+      download: vi.fn().mockImplementation(() => downloadFinished),
+    };
+    getAppSettingsMock.mockResolvedValue({ updateChannel: 'beta' });
+    checkMock.mockResolvedValue(update);
+    tauriInvokeMock.mockResolvedValue({ can_update: true });
+
+    const { checkForUpdates, clearPendingUpdate, downloadAndInstallUpdate } =
+      await import('@/lib/update-commands');
+    await checkForUpdates();
+    const downloadPromise = downloadAndInstallUpdate();
+    await vi.waitFor(() => expect(update.download).toHaveBeenCalledTimes(1));
+
+    clearPendingUpdate();
+    getAppSettingsMock.mockResolvedValue({ updateChannel: 'stable' });
+    finishDownload();
+
+    await expect(downloadPromise).rejects.toThrow('Update channel changed');
+    expect(update.install).not.toHaveBeenCalled();
+    expect(update.close).toHaveBeenCalledTimes(1);
+    expect(relaunchMock).not.toHaveBeenCalled();
+  });
+
+  it('invalidates a pending candidate when the channel is switched', async () => {
+    const update = makeUpdate();
+    checkMock.mockResolvedValueOnce(update).mockResolvedValueOnce(null);
+    const { checkForUpdates, clearPendingUpdate, downloadAndInstallUpdate } =
+      await import('@/lib/update-commands');
+    await checkForUpdates();
+    clearPendingUpdate();
+    getAppSettingsMock.mockResolvedValue({ updateChannel: 'beta' });
+
+    await expect(downloadAndInstallUpdate()).rejects.toThrow('No update available');
+    expect(update.download).not.toHaveBeenCalled();
+    expect(update.install).not.toHaveBeenCalled();
+    expect(checkMock).toHaveBeenLastCalledWith({ target: 'beta-darwin-aarch64' });
   });
 });

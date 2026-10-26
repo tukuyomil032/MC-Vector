@@ -1,22 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import process from 'node:process';
+import { normalizeVersion } from './release-version.mjs';
 
 const WORKFLOW_FILE = 'prepare-release.yml';
 const REPOSITORY_URL = 'https://github.com/tukuyomil032/MC-Vector';
-const VERSION_PATTERN = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
 
 function fail(message) {
   throw new Error(message);
-}
-
-function normalizeVersion(value) {
-  const candidate = value.trim();
-  const normalized = candidate.startsWith('v') ? candidate.slice(1) : candidate;
-  if (!VERSION_PATTERN.test(normalized)) {
-    fail(`Invalid version "${candidate}". Use stable X.Y.Z or vX.Y.Z.`);
-  }
-  return normalized;
 }
 
 function assertMainBranch() {
@@ -49,7 +40,7 @@ function assertMainBranch() {
 
 async function getRequestedVersion() {
   if (process.argv.length > 3) {
-    fail('Usage: bun run release [X.Y.Z|vX.Y.Z]');
+    fail('Usage: bun run release [X.Y.Z|X.Y.Z-beta.N|vX.Y.Z|vX.Y.Z-beta.N]');
   }
 
   if (process.argv.length === 3) {
@@ -58,7 +49,7 @@ async function getRequestedVersion() {
 
   const readline = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    return await readline.question('Release version (X.Y.Z or vX.Y.Z): ');
+    return await readline.question('Release version (X.Y.Z, X.Y.Z-beta.N, or v-prefixed): ');
   } finally {
     readline.close();
   }

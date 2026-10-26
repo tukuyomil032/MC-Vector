@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { compareVersions, normalizeVersion } from './release-version.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -71,14 +72,6 @@ function runGit(args) {
     fail(`git ${args.join(' ')} failed${detail ? `: ${detail}` : '.'}`);
   }
   return result.stdout;
-}
-
-function normalizeVersion(value) {
-  const version = value.startsWith('v') ? value.slice(1) : value;
-  if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    fail(`Invalid version "${value}". Use X.Y.Z or vX.Y.Z.`);
-  }
-  return version;
 }
 
 function escapeMarkdown(value) {
@@ -272,7 +265,9 @@ function writeChangelog(content) {
 
 function generate(versionArg, previousTag) {
   if (!versionArg || !previousTag) {
-    fail('Usage: node scripts/changelog.mjs generate <X.Y.Z> <previous-published-tag>');
+    fail(
+      'Usage: node scripts/changelog.mjs generate <X.Y.Z|X.Y.Z-beta.N> <previous-published-tag>',
+    );
   }
   const version = normalizeVersion(versionArg);
   const previousCommit = resolveCommit(previousTag);
@@ -319,6 +314,13 @@ function backfill(tagArgs) {
     }
     seenCommits.set(release.commit, release.tag);
   }
+  for (let index = 1; index < tags.length; index += 1) {
+    if (compareVersions(tags[index - 1].version, tags[index].version) >= 0) {
+      fail(
+        `Release tags must be in strictly increasing SemVer order: ${tags[index - 1].tag} must precede ${tags[index].tag}.`,
+      );
+    }
+  }
   validateTagChronology(tags);
   const sections = tags.map(({ tag, version }, index) => {
     const range = index === 0 ? tag : `${tags[index - 1].tag}..${tag}`;
@@ -327,7 +329,11 @@ function backfill(tagArgs) {
   const existing = readChangelog();
   if (!replace) {
     const headings = new Set(
-      [...existing.matchAll(/^## v(\d+\.\d+\.\d+)$/gm)].map((match) => match[1]),
+      [
+        ...existing.matchAll(
+          /^## v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-beta\.[1-9]\d*)?)$/gm,
+        ),
+      ].map((match) => match[1]),
     );
     const collisions = tags
       .map(({ version }) => version)
@@ -345,7 +351,7 @@ function backfill(tagArgs) {
 }
 
 function printSection(command, versionArg) {
-  if (!versionArg) fail(`Usage: node scripts/changelog.mjs ${command} <X.Y.Z>`);
+  if (!versionArg) fail(`Usage: node scripts/changelog.mjs ${command} <X.Y.Z|X.Y.Z-beta.N>`);
   const version = normalizeVersion(versionArg);
   const release = getReleaseSection(readChangelog(), version);
   process.stdout.write(command === 'notes' ? filterUpdaterNotes(release) : release);
@@ -359,10 +365,10 @@ function main() {
   else {
     fail(
       'Usage: node scripts/changelog.mjs <generate|backfill|section|notes> ...\n' +
-        '  generate <X.Y.Z> <previous-published-tag>\n' +
+        '  generate <X.Y.Z|X.Y.Z-beta.N> <previous-published-tag>\n' +
         '  backfill [--replace] <oldest-published-tag> [... <newest-published-tag>]\n' +
-        '  section <X.Y.Z>\n' +
-        '  notes <X.Y.Z>',
+        '  section <X.Y.Z|X.Y.Z-beta.N>\n' +
+        '  notes <X.Y.Z|X.Y.Z-beta.N>',
     );
   }
 }

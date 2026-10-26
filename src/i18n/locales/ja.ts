@@ -46,6 +46,14 @@ export const ja: TranslationDictionary = {
       downloaded: 'ダウンロード完了。再起動して適用できます。',
       error: 'エラー: {message}',
       releaseNotes: 'リリースノート:',
+      channelLabel: 'アップデートチャンネル',
+      channels: {
+        stable: '安定版（Stable）',
+        beta: 'ベータ版（Beta）',
+      },
+      stableDescription: '日常利用におすすめの、確認済みの安定版を使用します。',
+      betaDescription: '今後の変更を先行して試せる、公開前のベータ版を受け取ります。',
+      channelSaveError: 'アップデートチャンネルを保存できなかったため、元の選択に戻しました。',
     },
     language: {
       title: '言語',

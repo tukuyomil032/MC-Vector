@@ -4,10 +4,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
+import { normalizeVersion, VERSION_PATTERN } from './release-version.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
-const VERSION_PATTERN = /^v?\d+\.\d+\.\d+$/;
 const RELEASE_FILE_ORDER = [
   'package.json',
   'README.md',
@@ -166,10 +166,11 @@ function updateJsonVersion(relativePath, text, currentVersion, nextVersion) {
 }
 
 function updateReadmeVersion(text, currentVersion, nextVersion) {
+  const badgeVersion = (version) => version.replaceAll('-', '--');
   return replaceExactly(
     text,
-    new RegExp(`version-${escapeRegExp(currentVersion)}-green`, 'g'),
-    `version-${nextVersion}-green`,
+    new RegExp(`version-${escapeRegExp(badgeVersion(currentVersion))}-green`, 'g'),
+    `version-${badgeVersion(nextVersion)}-green`,
     'README.md version badge',
   );
 }
@@ -386,7 +387,7 @@ function copyToClipboard(value) {
 
 async function getRequestedVersion() {
   if (process.argv.length > 3) {
-    fail('Usage: node scripts/prepare-release.mjs [X.Y.Z|vX.Y.Z]');
+    fail('Usage: node scripts/prepare-release.mjs [X.Y.Z|X.Y.Z-beta.N|vX.Y.Z|vX.Y.Z-beta.N]');
   }
 
   if (process.argv.length === 3) {
@@ -395,7 +396,7 @@ async function getRequestedVersion() {
 
   const readline = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    return await readline.question('Release version (X.Y.Z or vX.Y.Z): ');
+    return await readline.question('Release version (X.Y.Z, X.Y.Z-beta.N, or v-prefixed): ');
   } finally {
     readline.close();
   }
@@ -404,12 +405,10 @@ async function getRequestedVersion() {
 async function main() {
   const requestedVersion = await getRequestedVersion();
   if (!VERSION_PATTERN.test(requestedVersion)) {
-    fail(`Invalid version "${requestedVersion}". Use stable X.Y.Z or vX.Y.Z.`);
+    fail(`Invalid version "${requestedVersion}". Use X.Y.Z, X.Y.Z-beta.N, or a v prefix.`);
   }
 
-  const nextVersion = requestedVersion.startsWith('v')
-    ? requestedVersion.slice(1)
-    : requestedVersion;
+  const nextVersion = normalizeVersion(requestedVersion);
   const nextTag = `v${nextVersion}`;
   const files = new Map(
     RELEASE_FILE_ORDER.map((relativePath) => [relativePath, readTarget(relativePath)]),

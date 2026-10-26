@@ -49,7 +49,7 @@
     "updater": {
       "active": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3QzBFQUM3M0Q1M0I4NkYKUldSdnVGTTl4K3JBRjYwTGVybGpXNHRiNlZPbldzM3hUU1B2WkZEV1YvZzlwemNmekxreDl2aXgK",
-      "endpoints": ["https://tukuyomil032.github.io/MC-Vector/latest.json"],
+      "endpoints": ["https://tukuyomil032.github.io/MC-Vector/updates/{{target}}.json"],
       "windows": {
         "installMode": "passive"
       }
