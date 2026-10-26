@@ -1,0 +1,7 @@
+{
+  "version": "2.0.64-beta.1",
+  "notes": "## v2.0.64-beta.1\n\n### Bug Fixes\n- unblock cargo-audit CI failure on main (#230)\n",
+  "pub_date": "2026-10-26T04:56:50Z",
+  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64-beta.1/MC-Vector_2.0.64-beta.1_windows-x86_64-setup.exe",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjFXSEd0bndsUi94RlphcTdacWdLSllHdXRwZHFBNDdaQ2djekxTRG4wMHpPMUVkTzNWWm04MlBNRFpSc3ZqcVAzS0lJajdIelo1VTdIRi9ONFZxYVFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTkwNTUyCWZpbGU6TUMtVmVjdG9yXzIuMC42NC1iZXRhLjFfeDY0LXNldHVwLmV4ZQp2eFV3TGpha0h5aWZlaXAxMmplNlhzaE9UUWp5QnMxMFF6VmF3R2ROSGpVcUdWMndMUkZ4YmpDaHI0YWxZc1JTWExjeVc0YlFIQXlDRzVKVEx4dFVDUT09Cg=="
+}

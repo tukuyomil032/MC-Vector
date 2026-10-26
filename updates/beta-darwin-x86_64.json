@@ -1,0 +1,7 @@
+{
+  "version": "2.0.64-beta.1",
+  "notes": "## v2.0.64-beta.1\n\n### Bug Fixes\n- unblock cargo-audit CI failure on main (#230)\n",
+  "pub_date": "2026-10-26T04:56:50Z",
+  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64-beta.1/MC-Vector_2.0.64-beta.1_darwin-x86_64.app.tar.gz",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjlTenlyYjkxZEZyR2g3ekQyY2ZrRGMwRnBwZlRxSnVsWWNYeXhQOTJmOXRLeGIrTWxDblVNMExFNC91UjZRMWNVcW5PWXNvZTUraVBkODVkbGR5SGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTkwMzU4CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKNld5ajNhYTBMaXFuMlJtSWJMZ1hKRlNVTjRXNzEyTXhKRDhRN2p0WXYzNzhVb1BJKzhKSCtSTWFRdmFTUC9PMnduMnVWSXFVenU4K055Q1krVlRXQnc9PQo="
+}
