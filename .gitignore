@@ -187,3 +187,6 @@ apps/native-macos/*.trace/
 .agents/**
 .claude/skills/**
 .vscode/launch.json
+
+# Local planning specifications and implementation evidence
+/spec/
