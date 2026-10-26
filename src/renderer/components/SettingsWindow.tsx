@@ -3,8 +3,12 @@ import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { saveAppSettings } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
-import { checkForUpdates, downloadAndInstallUpdate } from '../../lib/update-commands';
-import { useSettingsStore } from '../../store/settingsStore';
+import {
+  checkForUpdates,
+  clearPendingUpdate,
+  downloadAndInstallUpdate,
+} from '../../lib/update-commands';
+import { useSettingsStore, type UpdateChannel } from '../../store/settingsStore';
 import { Button } from './ui/Button';
 import { NativeSelect } from './ui/Field';
 import ReleaseNotes from './ReleaseNotes';
@@ -29,6 +33,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
   const [isSavingSecuritySetting, setIsSavingSecuritySetting] = useState(false);
   const [securitySettingError, setSecuritySettingError] = useState<string | undefined>();
+  const [updateChannelError, setUpdateChannelError] = useState<string | undefined>();
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const setLiquidGlassEnabled = useSettingsStore((state) => state.setLiquidGlassEnabled);
   const allowUnverifiedPluginDownloads = useSettingsStore(
@@ -37,6 +42,8 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const setAllowUnverifiedPluginDownloads = useSettingsStore(
     (state) => state.setAllowUnverifiedPluginDownloads,
   );
+  const updateChannel = useSettingsStore((state) => state.updateChannel);
+  const setUpdateChannel = useSettingsStore((state) => state.setUpdateChannel);
 
   const handleCheck = async () => {
     setUpdateState({ status: 'checking' });
@@ -58,6 +65,23 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
       }
     } catch (e) {
       setUpdateState({ status: 'error', error: String(e) });
+    }
+  };
+
+  const handleUpdateChannelChange = async (channel: UpdateChannel) => {
+    const previousChannel = updateChannel;
+    setUpdateChannel(channel);
+    setUpdateChannelError(undefined);
+    clearPendingUpdate();
+    setUpdateState({ status: 'idle' });
+    try {
+      await saveAppSettings({ updateChannel: channel });
+      await handleCheck();
+      window.dispatchEvent(new CustomEvent('mc-vector:update-channel-changed'));
+    } catch (error) {
+      setUpdateChannel(previousChannel);
+      setUpdateChannelError(t('settings.update.channelSaveError'));
+      logError('Failed to persist update channel', error, { channel });
     }
   };
 
@@ -189,6 +213,34 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
               <div className="text-red-400">
                 {t('settings.update.error', { message: updateState.error || '' })}
               </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <label className="text-sm text-zinc-300 block mb-2" htmlFor="update-channel-select">
+              {t('settings.update.channelLabel')}
+            </label>
+            <NativeSelect
+              id="update-channel-select"
+              value={updateChannel}
+              disabled={updateState.status === 'downloading'}
+              aria-describedby="update-channel-description"
+              onChange={(event) =>
+                void handleUpdateChannelChange(event.target.value as UpdateChannel)
+              }
+            >
+              <option value="stable">{t('settings.update.channels.stable')}</option>
+              <option value="beta">{t('settings.update.channels.beta')}</option>
+            </NativeSelect>
+            <p id="update-channel-description" className="text-sm text-zinc-400 mt-2 mb-0">
+              {updateChannel === 'beta'
+                ? t('settings.update.betaDescription')
+                : t('settings.update.stableDescription')}
+            </p>
+            {updateChannelError && (
+              <p className="text-sm text-red-400 mt-2 mb-0" role="alert">
+                {updateChannelError}
+              </p>
             )}
           </div>
 

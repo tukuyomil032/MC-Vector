@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Exact target version for the next stable release (X.Y.Z or vX.Y.Z)
+        description: Exact target version (X.Y.Z, X.Y.Z-beta.N, or v-prefixed)
         required: true
         type: string
 
@@ -36,14 +36,11 @@ jobs:
         id: previous
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          previous_tag=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-            --jq '[.[] | select(.draft == false and .prerelease == false)] | sort_by(.published_at) | last | .tag_name')
-          if [ -z "$previous_tag" ] || [ "$previous_tag" = "null" ]; then
-            echo "No published GitHub Release was found; cannot choose a changelog range." >&2
-            exit 1
-          fi
+          gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          previous_tag=$(node scripts/release-version.mjs base "$REQUESTED_VERSION" < "$RUNNER_TEMP/releases.json")
           echo "tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
       - name: Validate requested version
@@ -52,24 +49,11 @@ jobs:
           REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          VERSION="${REQUESTED_VERSION#v}"
-          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Expected a stable X.Y.Z version, got: $REQUESTED_VERSION" >&2
-            exit 1
-          fi
-
           CURRENT_VERSION=$(jq -er '.version | select(type == "string" and length > 0)' package.json)
-          if [[ ! "$CURRENT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Expected package.json to contain a stable X.Y.Z version, got: $CURRENT_VERSION" >&2
-            exit 1
-          fi
-
-          IFS=. read -r TARGET_MAJOR TARGET_MINOR TARGET_PATCH <<< "$VERSION"
-          IFS=. read -r CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH <<< "$CURRENT_VERSION"
-          if (( TARGET_MAJOR < CURRENT_MAJOR ||
-                (TARGET_MAJOR == CURRENT_MAJOR && TARGET_MINOR < CURRENT_MINOR) ||
-                (TARGET_MAJOR == CURRENT_MAJOR && TARGET_MINOR == CURRENT_MINOR && TARGET_PATCH <= CURRENT_PATCH) )); then
-            echo "Target version $VERSION must be greater than current version $CURRENT_VERSION." >&2
+          VERSION_OUTPUT=$(node scripts/release-version.mjs validate "$REQUESTED_VERSION" "$CURRENT_VERSION")
+          VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | sed -n 's/^version=//p')
+          if [ -z "$VERSION" ]; then
+            echo "Version validator did not return a normalized version" >&2
             exit 1
           fi
 
@@ -110,7 +94,7 @@ jobs:
           branch: release/v${{ steps.version.outputs.version }}
           title: 'chore: prepare release v${{ steps.version.outputs.version }}'
           body: |
-            This pull request prepares the next stable release.
+            This pull request prepares the next release.
 
             - Version: `v${{ steps.version.outputs.version }}`
             - Changelog range starts after `${{ steps.previous.outputs.tag }}`

@@ -1,5 +1,7 @@
 import { appDataDir } from '@tauri-apps/api/path';
 import { load } from '@tauri-apps/plugin-store';
+import { normalizeUpdateChannel } from '../store/settingsStore';
+import type { UpdateChannel } from '../store/settingsStore';
 
 const STORE_NAME = 'config.json';
 
@@ -40,6 +42,8 @@ export interface AppSettings {
   liquidGlassEnabled?: boolean;
   /** Whether plugin downloads without verification are allowed */
   allowUnverifiedPluginDownloads: boolean;
+  /** Release channel used for application updates */
+  updateChannel?: UpdateChannel;
   /** Allow additional dynamic settings */
   [key: string]: unknown;
 }
@@ -54,11 +58,13 @@ export async function getAppSettings(): Promise<AppSettings> {
   const locale = await store.get<string>('locale');
   const liquidGlassEnabled = await store.get<boolean>('liquidGlassEnabled');
   const allowUnverifiedPluginDownloads = await store.get<boolean>('allowUnverifiedPluginDownloads');
+  const updateChannel = await store.get<unknown>('updateChannel');
   return {
     theme: theme ?? undefined,
     locale: locale ?? undefined,
     liquidGlassEnabled: liquidGlassEnabled ?? undefined,
     allowUnverifiedPluginDownloads: allowUnverifiedPluginDownloads === true,
+    updateChannel: normalizeUpdateChannel(updateChannel),
   };
 }
 

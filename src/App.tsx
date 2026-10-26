@@ -24,6 +24,7 @@ import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
 import { useLiquidGlassSync } from '@/renderer/hooks/use-liquid-glass-sync';
+import { useUpdateChannelSync } from '@/renderer/hooks/use-update-channel-sync';
 import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action';
 import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
 import { useServerContextActions } from '@/renderer/hooks/use-server-context-actions';
@@ -93,6 +94,7 @@ function MainApp() {
   const setAllowUnverifiedPluginDownloads = useSettingsStore(
     (state) => state.setAllowUnverifiedPluginDownloads,
   );
+  const setUpdateChannel = useSettingsStore((state) => state.setUpdateChannel);
   const {
     updatePrompt,
     updateProgress,
@@ -149,6 +151,7 @@ function MainApp() {
 
   useAppThemeSync({ setAppTheme });
   useLiquidGlassSync({ setLiquidGlassEnabled, setAllowUnverifiedPluginDownloads });
+  useUpdateChannelSync({ setUpdateChannel });
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);

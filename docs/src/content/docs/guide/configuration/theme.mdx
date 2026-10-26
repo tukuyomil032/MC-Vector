@@ -31,8 +31,11 @@ Open **Application Settings** (gear icon in the sidebar footer, or `Cmd/Ctrl+K` 
 
 The Application Settings panel also shows the current app version and provides access to the update flow:
 
-1. Click **"Check for Updates"** to query the latest release.
-2. If an update is available, click **"Download"** — progress is shown in real-time.
-3. Click **"Install & Restart"** to apply the update.
+1. Choose the **Stable** or **Beta** update channel. Stable is selected by default, and your choice is saved across app updates.
+2. Click **"Check for Updates"** to query the selected channel.
+3. If an update is available, click **"Download"** — progress is shown in real-time.
+4. Click **"Install & Restart"** to apply the update.
 
 Release notes are displayed in Markdown format before you install.
+
+Beta releases may contain unfinished changes. If you switch from a newer beta build back to Stable, MC-Vector waits for a stable release that is newer than your installed version instead of downgrading. If you are using an app version without the channel selector, install the first beta manually from the [GitHub Releases page](https://github.com/tukuyomil032/MC-Vector/releases); later beta updates use the in-app updater.

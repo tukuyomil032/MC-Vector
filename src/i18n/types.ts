@@ -67,6 +67,14 @@ export interface TranslationDictionary {
       downloaded: string;
       error: string;
       releaseNotes: string;
+      channelLabel: string;
+      channels: {
+        stable: string;
+        beta: string;
+      };
+      stableDescription: string;
+      betaDescription: string;
+      channelSaveError: string;
     };
     language: {
       title: string;
