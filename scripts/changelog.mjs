@@ -283,7 +283,8 @@ function generate(versionArg, previousTag) {
     fail(`CHANGELOG.md already contains version ${version}.`);
   }
   const release = renderSection(version, `${previousTag}..HEAD`);
-  const updated = `${changelog.startsWith('# Changelog') ? changelog : '# Changelog\n\n'}${release}\n${changelog.replace(/^# Changelog\s*/m, '').trimStart()}`;
+  const existingEntries = changelog.replace(/^# Changelog\s*/m, '').trimStart();
+  const updated = `# Changelog\n\n${release}\n${existingEntries}`;
   writeChangelog(updated);
   process.stdout.write(release);
 }
