@@ -349,7 +349,11 @@ export function createTargetManifest({ version, signature, assetPath, baseUrl })
   assertLoopbackHttpUrl(baseUrl);
   return {
     version,
-    notes: `Local updater harness candidate ${version}`,
+    notes: [
+      `## v${version}`,
+      version.includes('-beta.') ? '### Bug Fixes' : '### Features',
+      `- Local updater harness candidate ${version}`,
+    ].join('\n'),
     pub_date: '2026-10-27T00:00:00Z',
     url: new URL(assetPath, baseUrl).toString(),
     signature,
@@ -870,6 +874,24 @@ async function saveScreenshot(driver, resultsPath, name) {
   appendLog(resultsPath, `screenshot ${path.basename(screenshotPath)}`);
 }
 
+async function savePageDiagnostics(driver, resultsPath, name) {
+  const diagnostics = await driver.executeScript(() => ({
+    title: document.title,
+    bodyText: document.body?.innerText.slice(0, 4_000) ?? '',
+    appRootPresent: Boolean(document.querySelector('[data-testid="app-root"]')),
+    settingsViewPresent: Boolean(document.querySelector('[data-testid="app-settings-view"]')),
+    settingsWindowPresent: Boolean(document.querySelector('[data-testid="settings-window"]')),
+    updateStatus: document.querySelector('[data-testid="update-status"]')?.textContent ?? null,
+    updateModal: document.querySelector('.app-update-modal')?.textContent ?? null,
+    visibleDialogs: Array.from(document.querySelectorAll('[role="dialog"]')).map((dialog) =>
+      dialog.textContent?.slice(0, 1_000),
+    ),
+  }));
+  const diagnosticsPath = path.join(resultsPath, `${name}.json`);
+  writeFileSync(diagnosticsPath, `${JSON.stringify(diagnostics, null, 2)}\n`);
+  appendLog(resultsPath, `page diagnostics ${path.basename(diagnosticsPath)}`);
+}
+
 async function selectChannel(driver, channel) {
   await driver.executeScript(
     `
@@ -898,7 +920,17 @@ async function selectChannel(driver, channel) {
 
 async function openSettings(driver, resultsPath, screenshotName) {
   await click(driver, '[data-testid="sidebar-brand-button"]');
-  await visibleElement(driver, '[data-testid="settings-window"]');
+  try {
+    await visibleElement(driver, '[data-testid="settings-window"]');
+  } catch (error) {
+    try {
+      await savePageDiagnostics(driver, resultsPath, `${screenshotName}-settings-not-opened`);
+      await saveScreenshot(driver, resultsPath, `${screenshotName}-settings-not-opened`);
+    } catch (diagnosticsError) {
+      appendLog(resultsPath, `settings diagnostics failed: ${String(diagnosticsError)}`);
+    }
+    throw error;
+  }
   await delay(2_000);
   await saveScreenshot(driver, resultsPath, screenshotName);
 }
@@ -910,6 +942,26 @@ export async function waitForAvailableVersion(driver, version) {
       version,
     );
   }, `Expected updater to offer ${version}`);
+}
+
+async function waitForReleaseNote(driver, version) {
+  const expectedNote = `Local updater harness candidate ${version}`;
+  await waitFor(
+    () =>
+      driver.executeScript(
+        `
+          const modal = document.querySelector('.app-update-modal');
+          const notes = modal?.querySelector('[aria-label="Release notes"]');
+          return Boolean(
+            modal?.textContent?.includes(arguments[0]) &&
+            notes?.textContent?.includes(arguments[1])
+          );
+        `,
+        version,
+        expectedNote,
+      ),
+    `Expected update modal release notes for ${version}`,
+  );
 }
 
 async function waitForResultScreen(driver, resultsPath, screenshotName) {
@@ -974,19 +1026,18 @@ async function applyUpdateAutomatically({
   serverUrl,
   appPath,
   channel,
+  trigger,
   expectedVersion,
   resultsPath,
   screenshotPrefix,
 }) {
-  if (channel === 'stable') {
+  if (trigger === 'settings') {
     await click(driver, '[data-testid="update-check-button"]');
     await waitForAvailableVersion(driver, expectedVersion);
-  } else {
-    await selectChannel(driver, 'beta');
-    await waitForAvailableVersion(driver, expectedVersion);
   }
+  await waitForReleaseNote(driver, expectedVersion);
   await waitForResultScreen(driver, resultsPath, `${screenshotPrefix}-available`);
-  await click(driver, '[data-testid="update-download-button"]');
+  await click(driver, '[data-testid="update-modal-download-button"]');
   await delay(2_000);
   try {
     await saveScreenshot(driver, resultsPath, `${screenshotPrefix}-download-started`);
@@ -1007,6 +1058,13 @@ async function applyUpdateAutomatically({
   appendLog(resultsPath, `installed channel=${channel} version=${expectedVersion}`);
   await delay(5_000);
   const currentDriver = await reconnectDriver(driver, serverUrl, appPath, resultsPath);
+  try {
+    await visibleElement(currentDriver, '[data-testid="app-root"]', 45_000);
+    await savePageDiagnostics(currentDriver, resultsPath, `${screenshotPrefix}-after-restart`);
+    await saveScreenshot(currentDriver, resultsPath, `${screenshotPrefix}-after-restart`);
+  } catch (error) {
+    appendLog(resultsPath, `post-restart diagnostics failed: ${String(error)}`);
+  }
   await visibleElement(currentDriver, '[data-testid="app-settings-view"]', 45_000).catch(
     async () => {
       await openSettings(currentDriver, resultsPath, `${screenshotPrefix}-after-restart`);
@@ -1030,12 +1088,12 @@ async function runAutomaticTests({
   try {
     const stable = releases.stable.initial;
     driver = await createWebDriver(webDriverServer.serverUrl, stable.appPath);
-    await openSettings(driver, resultsPath, 'stable-before-update');
     driver = await applyUpdateAutomatically({
       driver,
       serverUrl: webDriverServer.serverUrl,
       appPath: stable.appPath,
       channel: 'stable',
+      trigger: 'startup',
       expectedVersion: releases.stable.candidate.version,
       resultsPath,
       screenshotPrefix: 'stable-update',
@@ -1051,13 +1109,22 @@ async function runAutomaticTests({
 
     const beta = releases.beta.initial;
     await driver.quit().catch(() => undefined);
+    manifests.set('stable', makeManifest(releases.stable.initial, feedServer.baseUrl));
+    manifests.set('beta', makeManifest(beta, feedServer.baseUrl));
     driver = await createWebDriver(webDriverServer.serverUrl, beta.appPath);
     await openSettings(driver, resultsPath, 'beta-before-update');
+    await selectChannel(driver, 'beta');
+    await waitFor(async () => {
+      const status = await driver.findElement(By.css('[data-testid="update-status"]'));
+      return /up to date|latest|最新/i.test(await status.getText());
+    }, 'Beta channel check did not finish before the Settings update check');
+    manifests.set('beta', makeManifest(releases.beta.candidate, feedServer.baseUrl));
     driver = await applyUpdateAutomatically({
       driver,
       serverUrl: webDriverServer.serverUrl,
       appPath: beta.appPath,
       channel: 'beta',
+      trigger: 'settings',
       expectedVersion: releases.beta.candidate.version,
       resultsPath,
       screenshotPrefix: 'beta-update',
@@ -1089,7 +1156,7 @@ async function runAutomaticTests({
     await selectChannel(driver, 'beta');
     await waitForAvailableVersion(driver, TEST_RELEASES.beta.invalidVersion);
     await waitForResultScreen(driver, resultsPath, 'invalid-signature-candidate');
-    await click(driver, '[data-testid="update-download-button"]');
+    await click(driver, '[data-testid="update-modal-download-button"]');
     await delay(2_000);
     try {
       await saveScreenshot(driver, resultsPath, 'invalid-signature-download-started');
@@ -1097,7 +1164,7 @@ async function runAutomaticTests({
       appendLog(resultsPath, `invalid-signature screen closed before screenshot: ${String(error)}`);
     }
     await waitFor(async () => {
-      const status = await driver.findElement(By.css('[data-testid="update-status"]'));
+      const status = await driver.findElement(By.css('.app-update-modal'));
       return /signature verification|signature|署名の検証/i.test(await status.getText());
     }, 'Updater did not report rejection of the invalid update signature');
     await waitForResultScreen(driver, resultsPath, 'invalid-signature-rejected');
