@@ -3,34 +3,20 @@ import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { saveAppSettings } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
-import {
-  checkForUpdates,
-  clearPendingUpdate,
-  downloadAndInstallUpdate,
-} from '../../lib/update-commands';
+import type { AppUpdaterSettings } from '../hooks/use-app-updater';
 import { useSettingsStore, type UpdateChannel } from '../../store/settingsStore';
 import { Button } from './ui/Button';
 import { NativeSelect } from './ui/Field';
-import ReleaseNotes from './ReleaseNotes';
 
-interface UpdateState {
-  status:
-    | 'idle'
-    | 'checking'
-    | 'available'
-    | 'not-available'
-    | 'downloading'
-    | 'downloaded'
-    | 'error';
-  version?: string;
-  releaseNotes?: unknown;
-  progress?: number;
-  error?: string;
-}
-
-const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
+const SettingsWindow = ({
+  onClose,
+  onCheckForUpdates,
+  updateCheckStatus,
+  updateCheckError,
+  updatePrompt,
+  updateProgress,
+}: AppUpdaterSettings & { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
-  const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
   const [isSavingSecuritySetting, setIsSavingSecuritySetting] = useState(false);
   const [securitySettingError, setSecuritySettingError] = useState<string | undefined>();
   const [updateChannelError, setUpdateChannelError] = useState<string | undefined>();
@@ -45,64 +31,18 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
   const updateChannel = useSettingsStore((state) => state.updateChannel);
   const setUpdateChannel = useSettingsStore((state) => state.setUpdateChannel);
 
-  const handleCheck = async () => {
-    setUpdateState({ status: 'checking' });
-    try {
-      const result = await checkForUpdates();
-      if (result.error) {
-        setUpdateState({ status: 'error', error: result.error });
-        return;
-      }
-
-      if (result.available) {
-        setUpdateState({
-          status: 'available',
-          version: result.version,
-          releaseNotes: result.body,
-        });
-      } else {
-        setUpdateState({ status: 'not-available' });
-      }
-    } catch (e) {
-      setUpdateState({ status: 'error', error: String(e) });
-    }
-  };
-
   const handleUpdateChannelChange = async (channel: UpdateChannel) => {
     const previousChannel = updateChannel;
     setUpdateChannel(channel);
     setUpdateChannelError(undefined);
-    clearPendingUpdate();
-    setUpdateState({ status: 'idle' });
     try {
       await saveAppSettings({ updateChannel: channel });
-      await handleCheck();
       window.dispatchEvent(new CustomEvent('mc-vector:update-channel-changed'));
     } catch (error) {
       setUpdateChannel(previousChannel);
       setUpdateChannelError(t('settings.update.channelSaveError'));
       logError('Failed to persist update channel', error, { channel });
     }
-  };
-
-  const handleDownload = async () => {
-    setUpdateState((prev) => ({
-      ...prev,
-      status: 'downloading',
-      progress: prev.progress ?? 0,
-    }));
-    try {
-      await downloadAndInstallUpdate((downloaded, total) => {
-        const pct = total > 0 ? (downloaded / total) * 100 : 0;
-        setUpdateState((prev) => ({ ...prev, progress: pct }));
-      });
-    } catch (e) {
-      setUpdateState({ status: 'error', error: String(e) });
-    }
-  };
-
-  const handleInstall = async () => {
-    await handleDownload();
   };
 
   const handleLanguageChange = async (value: LocaleCode) => {
@@ -160,71 +100,43 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
               <p className="text-sm text-zinc-400 m-0">{t('settings.update.description')}</p>
             </div>
             <div className="flex gap-2">
-              {['idle', 'not-available', 'error'].includes(updateState.status) && (
+              {updateCheckStatus !== 'checking' && (
                 <Button
                   variant="secondary"
                   data-testid="update-check-button"
-                  onClick={handleCheck}
-                  disabled={updateState.status === 'checking'}
+                  onClick={() => void onCheckForUpdates()}
+                  disabled={updateProgress !== null}
                 >
-                  {updateState.status === 'checking'
-                    ? t('settings.update.checking')
-                    : t('settings.update.checkButton')}
-                </Button>
-              )}
-              {updateState.status === 'available' && (
-                <Button
-                  variant="secondary"
-                  data-testid="update-download-button"
-                  onClick={handleDownload}
-                >
-                  {t('settings.update.download')}
-                </Button>
-              )}
-              {updateState.status === 'downloaded' && (
-                <Button
-                  variant="primary"
-                  data-testid="update-restart-button"
-                  onClick={handleInstall}
-                >
-                  {t('settings.update.restart')}
+                  {t('settings.update.checkButton')}
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="settings-window__status-body" data-testid="update-status">
-            {updateState.status === 'idle' && <div>{t('settings.update.idle')}</div>}
-            {updateState.status === 'checking' && <div>{t('settings.update.checkingStatus')}</div>}
-            {updateState.status === 'available' && (
+          <div
+            className="settings-window__status-body"
+            data-testid="update-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {updateCheckStatus === 'idle' && <div>{t('settings.update.idle')}</div>}
+            {updateCheckStatus === 'checking' && <div>{t('settings.update.checkingStatus')}</div>}
+            {updateCheckStatus === 'available' && updatePrompt && (
               <div
                 className="text-accent font-semibold"
                 data-testid="update-status-version"
-                data-version={updateState.version || 'unknown'}
+                data-version={updatePrompt.version || 'unknown'}
               >
-                {t('settings.update.available', { version: updateState.version || 'unknown' })}
+                {t('settings.update.available', { version: updatePrompt.version || 'unknown' })}
               </div>
             )}
-            {updateState.status === 'not-available' && (
+            {updateCheckStatus === 'not-available' && (
               <div>{t('settings.update.notAvailable')}</div>
             )}
-            {updateState.status === 'downloading' && (
-              <div>
-                {t('settings.update.downloading', {
-                  progress: Math.round(updateState.progress || 0),
-                })}
-                <div className="settings-window__progress-track">
-                  <div
-                    className="settings-window__progress-bar"
-                    style={{ width: `${Math.min(100, Math.round(updateState.progress || 0))}%` }}
-                  />
-                </div>
-              </div>
-            )}
-            {updateState.status === 'downloaded' && <div>{t('settings.update.downloaded')}</div>}
-            {updateState.status === 'error' && (
+            {updateCheckStatus === 'error' && (
               <div className="text-red-400">
-                {t('settings.update.error', { message: updateState.error || '' })}
+                {t('settings.update.error', { message: updateCheckError || '' })}
               </div>
             )}
           </div>
@@ -237,7 +149,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
               id="update-channel-select"
               data-testid="update-channel-select"
               value={updateChannel}
-              disabled={updateState.status === 'downloading'}
+              disabled={updateProgress !== null}
               aria-describedby="update-channel-description"
               onChange={(event) =>
                 void handleUpdateChannelChange(event.target.value as UpdateChannel)
@@ -257,15 +169,6 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
               </p>
             )}
           </div>
-
-          {Boolean(updateState.releaseNotes) && (
-            <ReleaseNotes
-              releaseNotes={updateState.releaseNotes}
-              version={updateState.version}
-              label={t('settings.update.releaseNotes')}
-              className="settings-window__release-notes"
-            />
-          )}
         </section>
 
         <section className="settings-window__section">

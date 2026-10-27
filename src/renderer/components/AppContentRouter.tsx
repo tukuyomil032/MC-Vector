@@ -1,5 +1,6 @@
 import { type JSX, lazy } from 'react';
 import type { Translate } from '../../i18n';
+import type { AppUpdaterSettings } from '../hooks/use-app-updater';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import BackupsView from './BackupsView';
 import ConsoleView from './ConsoleView';
@@ -25,6 +26,7 @@ interface AppContentRouterProps {
   ngrokData: Record<string, string | null>;
   onBuildProxyNetwork: (config: ProxyNetworkConfig) => Promise<void>;
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
+  updaterSettings: AppUpdaterSettings;
   t: Translate;
 }
 
@@ -36,12 +38,15 @@ export default function AppContentRouter({
   ngrokData,
   onBuildProxyNetwork,
   onUpdateServer,
+  updaterSettings,
   t,
 }: AppContentRouterProps) {
   type ViewRenderer = () => JSX.Element;
 
   const staticViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
-    'app-settings': () => <SettingsWindow onClose={() => setCurrentView('dashboard')} />,
+    'app-settings': () => (
+      <SettingsWindow onClose={() => setCurrentView('dashboard')} {...updaterSettings} />
+    ),
     'proxy-help': () => <ProxyHelpView />,
     'ngrok-guide': () => <NgrokGuideView />,
     proxy: () => (
