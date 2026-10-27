@@ -25,9 +25,9 @@ pub fn run() {
         }));
 
     // Register this before Tauri creates the configured windows so its JS init
-    // script is injected into the main webview. The plugin is debug-only and
-    // macOS-only because it exists solely to drive real local smoke E2E tests.
-    #[cfg(all(debug_assertions, target_os = "macos"))]
+    // script is injected into the main webview. The plugin is available in macOS
+    // debug builds and opt-in release QA builds via the updater-e2e feature.
+    #[cfg(all(target_os = "macos", any(debug_assertions, feature = "updater-e2e")))]
     {
         builder = builder.plugin(tauri_plugin_webdriver_automation::init());
     }
