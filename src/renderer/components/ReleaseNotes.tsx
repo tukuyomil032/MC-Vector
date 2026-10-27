@@ -4,6 +4,7 @@ type VisibleSection = (typeof VISIBLE_SECTIONS)[number];
 interface ParsedReleaseNotes {
   version: string;
   sections: Array<{ title: VisibleSection; entries: string[] }>;
+  plainText: string;
 }
 
 function getReleaseNotesText(releaseNotes: unknown): string {
@@ -34,11 +35,14 @@ export function parseReleaseNotes(
   const text = getReleaseNotesText(releaseNotes);
   let version = fallbackVersion?.replace(/^v/i, '') || '';
   let currentSection: VisibleSection | null = null;
+  let hasMarkdownStructure = false;
   const entries = new Map<VisibleSection, string[]>(
     VISIBLE_SECTIONS.map((section) => [section, []]),
   );
 
   for (const line of text.split(/\r?\n/)) {
+    if (/^\s{0,3}#{1,6}\s/.test(line)) hasMarkdownStructure = true;
+
     const releaseHeading = /^##\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*$/.exec(line.trim());
     if (releaseHeading) {
       if (!version) version = releaseHeading[1];
@@ -64,6 +68,7 @@ export function parseReleaseNotes(
       const sectionEntries = entries.get(title) ?? [];
       return sectionEntries.length > 0 ? [{ title, entries: sectionEntries }] : [];
     }),
+    plainText: hasMarkdownStructure ? '' : text.trim(),
   };
 }
 
@@ -95,7 +100,7 @@ export default function ReleaseNotes({
   className?: string;
 }) {
   const parsed = parseReleaseNotes(releaseNotes, version);
-  if (parsed.sections.length === 0) return null;
+  if (parsed.sections.length === 0 && !parsed.plainText) return null;
 
   return (
     <div className={['release-notes-wrapper', className].filter(Boolean).join(' ')}>
@@ -103,25 +108,29 @@ export default function ReleaseNotes({
       <article className="release-notes" aria-label="Release notes">
         {parsed.version && <h3 className="release-notes__version">Version {parsed.version}</h3>}
         <div className="release-notes__content">
-          {parsed.sections.map(({ title, entries: sectionEntries }) => (
-            <section className="release-notes__section" key={title}>
-              <h4 className="release-notes__section-title">{title}</h4>
-              <ul className="release-notes__list">
-                {(() => {
-                  const occurrences = new Map<string, number>();
-                  return sectionEntries.map((entry) => {
-                    const occurrence = occurrences.get(entry) ?? 0;
-                    occurrences.set(entry, occurrence + 1);
-                    return (
-                      <li className="release-notes__item" key={`${title}-${entry}-${occurrence}`}>
-                        {renderInlineText(entry)}
-                      </li>
-                    );
-                  });
-                })()}
-              </ul>
-            </section>
-          ))}
+          {parsed.sections.length === 0 ? (
+            <p className="release-notes__plain-text whitespace-pre-wrap">{parsed.plainText}</p>
+          ) : (
+            parsed.sections.map(({ title, entries: sectionEntries }) => (
+              <section className="release-notes__section" key={title}>
+                <h4 className="release-notes__section-title">{title}</h4>
+                <ul className="release-notes__list">
+                  {(() => {
+                    const occurrences = new Map<string, number>();
+                    return sectionEntries.map((entry) => {
+                      const occurrence = occurrences.get(entry) ?? 0;
+                      occurrences.set(entry, occurrence + 1);
+                      return (
+                        <li className="release-notes__item" key={`${title}-${entry}-${occurrence}`}>
+                          {renderInlineText(entry)}
+                        </li>
+                      );
+                    });
+                  })()}
+                </ul>
+              </section>
+            ))
+          )}
         </div>
       </article>
     </div>

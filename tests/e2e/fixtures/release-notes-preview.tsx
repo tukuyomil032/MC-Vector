@@ -4,9 +4,6 @@ import { getTranslation } from '../../../src/i18n';
 import AppUpdateModal from '../../../src/renderer/components/AppUpdateModal';
 import '../../../src/styles/index.css';
 
-document.body.classList.add('app-shell', 'theme-dark');
-document.body.dataset.theme = 'dark';
-
 const SHORT_RELEASE_NOTES = `## v2.4.0
 
 ### Breaking Changes
