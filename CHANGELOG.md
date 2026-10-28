@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.0.64-beta.2
+
+### Features
+- retain dashboard metrics while servers run (#242)
+
+### Bug Fixes
+- unify updater checks and show release notes (#239)
+- bootstrap missing stable updater feeds (#236)
+- prepend generated release changelog entries (#235)
+
+### Maintenance
+- add local updater harness (#238)
+
 ## v2.0.64-beta.1
 
 ### Bug Fixes
