@@ -219,6 +219,10 @@ export const en: TranslationDictionary = {
       memoryLast60s: 'Memory Usage (MB) - Last 60s',
       tpsLast60s: 'TPS - Last 60s',
       tpsNoData: 'TPS data is not available yet. Keep the server online and wait for log sampling.',
+      metricsNoData: 'Waiting for the first measurement.',
+      elapsedSeconds: '{seconds}s',
+      elapsedTime: 'Time since startup (seconds)',
+      heldSince: 'Held since {{time}} (last measured)',
     },
     healthCheck: {
       title: 'Server Health (SLP Ping)',

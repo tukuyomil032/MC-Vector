@@ -277,6 +277,7 @@ describe('server-commands', () => {
         memory: 4096,
         jarFile: 'server.jar',
         jvmExtraArgs: null,
+        software: 'Unknown',
       });
     });
 
@@ -285,7 +286,7 @@ describe('server-commands', () => {
 
       const { startServer } = await import('@/lib/server-commands');
 
-      await startServer('server-1', '/usr/bin/java', 2048, 'server.jar', '-XX:+UseG1GC');
+      await startServer('server-1', '/usr/bin/java', 2048, 'server.jar', '-XX:+UseG1GC', 'Paper');
 
       expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
         serverId: 'server-1',
@@ -293,6 +294,7 @@ describe('server-commands', () => {
         memory: 2048,
         jarFile: 'server.jar',
         jvmExtraArgs: '-XX:+UseG1GC',
+        software: 'Paper',
       });
     });
   });

@@ -48,7 +48,14 @@ export function useServerProcessActions({
   const startServerProcess = useCallback(async (server: MinecraftServer) => {
     const javaPath = server.javaPath || 'java';
     const jarFile = server.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-    await startServerApi(server.id, javaPath, server.memory, jarFile, server.jvmArgs);
+    await startServerApi(
+      server.id,
+      javaPath,
+      server.memory,
+      jarFile,
+      server.jvmArgs,
+      server.software,
+    );
   }, []);
 
   const startServerProcessWithEula = useCallback(

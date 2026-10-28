@@ -1,6 +1,7 @@
 import { appDataDir } from '@tauri-apps/api/path';
 import { load } from '@tauri-apps/plugin-store';
 import type { MinecraftServer } from '../renderer/shared/server declaration';
+import type { MetricHistorySnapshot } from '../renderer/shared/server-metrics';
 import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
 
 const STORE_NAME = 'servers.json';
@@ -144,6 +145,7 @@ export async function startServer(
   memory: number,
   jarFile: string,
   jvmExtraArgs?: string,
+  software?: string,
 ): Promise<void> {
   return tauriInvoke('start_server', {
     serverId,
@@ -151,6 +153,7 @@ export async function startServer(
     memory,
     jarFile,
     jvmExtraArgs: jvmExtraArgs ?? null,
+    software: software ?? 'Unknown',
   });
 }
 
@@ -198,6 +201,12 @@ export async function getServerStats(serverId: string): Promise<{ cpu: number; m
   return tauriInvoke('get_server_stats', { serverId });
 }
 
+export async function getServerMetricHistory(
+  serverId: string,
+): Promise<MetricHistorySnapshot | null> {
+  return tauriInvoke('get_server_metric_history', { serverId });
+}
+
 // --- イベントリスナー ---
 
 export function onServerLog(
@@ -206,8 +215,14 @@ export function onServerLog(
   return tauriListen('server-log', callback);
 }
 
+export function onServerMetricsUpdated(
+  callback: (snapshot: MetricHistorySnapshot) => void,
+): Promise<UnlistenFn> {
+  return tauriListen('server-metrics-updated', callback);
+}
+
 export function onServerStatusChange(
-  callback: (data: { serverId: string; status: string }) => void,
+  callback: (data: { serverId: string; generation?: number; status: string }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('server-status-change', callback);
 }

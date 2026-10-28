@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -7,49 +7,59 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  type DotItemDotProps,
+  type TooltipContentProps,
 } from 'recharts';
+import type { ReactNode } from 'react';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { sendServerNotification } from '../../lib/notification-commands';
-import { sendCommand } from '../../lib/server-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import type { MinecraftServer, ServerStatus } from '../components/../shared/server declaration';
+import {
+  type DisplayOnlyMetricPoint,
+  type MetricDisplayPoint,
+  type ResourcePoint,
+  type TpsPoint,
+  clampMetric,
+  createMetricDisplaySeries,
+  formatMetricUptime,
+  getMetricWindowPoints,
+  getMetricTimeDomain,
+  getMetricTimeTicks,
+  normalizeMetric,
+} from '../shared/server-metrics';
+import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
 
 interface Props {
   server: MinecraftServer;
 }
 
-type ResourcePoint = {
-  timestamp: number;
-  timeLabel: string;
-  cpu: number;
-  memory: number;
-};
+interface ChartTimeAxisProps {
+  timeDomain: [number, number];
+  timeTicks: number[];
+  formatElapsed: (elapsedMs: number) => string;
+  elapsedAxisLabel: string;
+  heldSinceLabel: (elapsedMs: number) => string;
+}
 
-type TpsPoint = {
-  timestamp: number;
-  timeLabel: string;
-  tps: number;
-};
-
-interface ResourceChartCardProps {
+interface ResourceChartCardProps extends ChartTimeAxisProps {
   title: string;
-  data: ResourcePoint[];
+  data: MetricDisplayPoint<ResourcePoint>[];
   dataKey: 'cpu' | 'memory';
   stroke: string;
   fill: string;
   yDomain?: [number, number];
-}
-
-interface TpsChartCardProps {
-  title: string;
-  data: TpsPoint[];
   emptyLabel: string;
 }
 
-const METRIC_WINDOW_MS = 60_000;
-const TPS_POLL_INTERVAL_MS = 5_000;
-const STATS_DEDUPE_WINDOW_MS = 1_000;
-const ANSI_ESCAPE_REGEX = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+interface TpsChartCardProps extends ChartTimeAxisProps {
+  title: string;
+  data: MetricDisplayPoint<TpsPoint>[];
+  emptyLabel: string;
+}
+
+const EMPTY_RESOURCE_STATS: ResourcePoint[] = [];
+const EMPTY_TPS_STATS: TpsPoint[] = [];
 
 const AXIS_STROKE_COLOR = '#94a3b8';
 const GRID_STROKE_COLOR = '#334155';
@@ -79,58 +89,74 @@ const STATUS_LABEL_KEYS: Record<ServerStatus, TranslationKey> = {
   crashed: 'dashboard.stats.statusValues.crashed',
 };
 
-const clamp = (value: number, min: number, max: number): number => {
-  return Math.min(max, Math.max(min, value));
-};
-
-const normalizeMetric = (value: number, precision = 1): number => {
-  const scale = 10 ** precision;
-  return Math.round(value * scale) / scale;
-};
-
-const formatMetricTimeLabel = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleTimeString([], {
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
-
-const pruneMetricWindow = <T extends { timestamp: number }>(points: T[], now: number): T[] => {
-  return points.filter((point) => now - point.timestamp <= METRIC_WINDOW_MS);
-};
-
-const stripFormattingCodes = (line: string): string => {
-  return line
-    .replace(/§x(§[0-9A-Fa-f]){6}/g, '')
-    .replace(/[§&][0-9A-FK-ORX]/gi, '')
-    .replace(ANSI_ESCAPE_REGEX, '');
-};
-
-const extractTpsFromLogLine = (line: string): number | null => {
-  const normalizedLine = stripFormattingCodes(line);
-  const matches = [
-    normalizedLine.match(/TPS(?:\s+from\s+last[\w\s,]+)?\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)/i),
-    normalizedLine.match(/Current\s+TPS\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)/i),
-    normalizedLine.match(/\bTPS\b[^0-9]+([0-9]+(?:\.[0-9]+)?)/i),
-  ];
-
-  for (const match of matches) {
-    const raw = match?.[1];
-    if (!raw) {
-      continue;
-    }
-
-    const parsed = Number.parseFloat(raw);
-    if (Number.isFinite(parsed)) {
-      return clamp(normalizeMetric(parsed, 2), 0, 25);
-    }
-  }
-
-  return null;
-};
-
 const getStatusColor = (status: ServerStatus): string => {
   return STATUS_COLORS[status] ?? '#aaa';
+};
+
+const isDisplayOnlyMetricPoint = (point: unknown): point is DisplayOnlyMetricPoint => {
+  return (
+    typeof point === 'object' &&
+    point !== null &&
+    'displayOnly' in point &&
+    point.displayOnly === true &&
+    'measuredAtElapsedMs' in point &&
+    typeof point.measuredAtElapsedMs === 'number'
+  );
+};
+
+interface MetricChartTooltipProps extends Pick<
+  TooltipContentProps,
+  'active' | 'label' | 'payload'
+> {
+  formatElapsed: (elapsedMs: number) => string;
+  heldSinceLabel: (elapsedMs: number) => string;
+}
+
+const MetricChartTooltip = memo(function MetricChartTooltip({
+  active,
+  label,
+  payload,
+  formatElapsed,
+  heldSinceLabel,
+}: MetricChartTooltipProps) {
+  const item = payload[0];
+  if (!active || !item) {
+    return null;
+  }
+
+  const point = item.payload as
+    | { displayOnly?: boolean; measuredAtElapsedMs?: number; windowAnchor?: boolean }
+    | undefined;
+  if (point?.windowAnchor) {
+    return null;
+  }
+  const heldSinceElapsedMs = point?.displayOnly ? point.measuredAtElapsedMs : undefined;
+
+  return (
+    <div style={TOOLTIP_STYLE}>
+      <p>{formatElapsed(Number(label))}</p>
+      <p>
+        {item.name}: {String(item.value ?? '')}
+      </p>
+      {typeof heldSinceElapsedMs === 'number' && <p>{heldSinceLabel(heldSinceElapsedMs)}</p>}
+    </div>
+  );
+});
+
+const renderActualSampleDot = (props: DotItemDotProps): ReactNode => {
+  if (isDisplayOnlyMetricPoint(props.payload)) {
+    return null;
+  }
+
+  return (
+    <circle
+      cx={props.cx}
+      cy={props.cy}
+      r={3}
+      fill={props.fill ?? props.stroke}
+      stroke={props.stroke}
+    />
+  );
 };
 
 const getStatusLabel = (status: ServerStatus, t: Translate): string => {
@@ -152,6 +178,19 @@ const getTpsColor = (tps: number | null): string => {
   return '#ef4444';
 };
 
+const getMetricAxisDomain = (values: readonly number[]): [number, number] | undefined => {
+  if (values.length === 0) {
+    return undefined;
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min;
+  const padding = range === 0 ? Math.max(Math.abs(min) * 0.05, 1) : range * 0.05;
+
+  return [Math.max(0, min - padding), max + padding];
+};
+
 const ResourceChartCard = memo(function ResourceChartCard({
   title,
   data,
@@ -159,61 +198,142 @@ const ResourceChartCard = memo(function ResourceChartCard({
   stroke,
   fill,
   yDomain,
+  emptyLabel,
+  timeDomain,
+  timeTicks,
+  formatElapsed,
+  elapsedAxisLabel,
+  heldSinceLabel,
 }: ResourceChartCardProps) {
+  const actualValues = data
+    .filter((point) => !isDisplayOnlyMetricPoint(point))
+    .map((point) => point[dataKey]);
+  const actualPointCount = actualValues.length;
+  const actualDataYDomain = getMetricAxisDomain(actualValues);
+
   return (
     <article className="dashboard-view__chart-card surface-card rounded-2xl">
       <h3 className="dashboard-view__chart-title section-title">{title}</h3>
       <div className="dashboard-view__chart-body">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
-            <XAxis
-              dataKey="timeLabel"
-              stroke={AXIS_STROKE_COLOR}
-              tick={TICK_STYLE}
-              minTickGap={24}
-            />
-            <YAxis stroke={AXIS_STROKE_COLOR} tick={TICK_STYLE} domain={yDomain} />
-            <Tooltip contentStyle={TOOLTIP_STYLE} />
-            <Area
-              type="monotone"
-              dataKey={dataKey}
-              stroke={stroke}
-              fill={fill}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {actualPointCount === 0 ? (
+          <div className="dashboard-view__chart-empty">{emptyLabel}</div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+            <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 20, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
+              <XAxis
+                dataKey="elapsedMs"
+                type="number"
+                domain={timeDomain}
+                ticks={timeTicks}
+                tickFormatter={formatElapsed}
+                allowDataOverflow
+                label={{
+                  value: elapsedAxisLabel,
+                  position: 'insideBottom',
+                  offset: -12,
+                  fontSize: 10,
+                  fill: AXIS_STROKE_COLOR,
+                }}
+                stroke={AXIS_STROKE_COLOR}
+                tick={TICK_STYLE}
+                minTickGap={24}
+              />
+              <YAxis
+                stroke={AXIS_STROKE_COLOR}
+                tick={TICK_STYLE}
+                domain={yDomain ?? actualDataYDomain}
+                allowDataOverflow
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                content={(props) => (
+                  <MetricChartTooltip
+                    {...props}
+                    formatElapsed={formatElapsed}
+                    heldSinceLabel={heldSinceLabel}
+                  />
+                )}
+              />
+              <Area
+                type="monotone"
+                dataKey={dataKey}
+                stroke={stroke}
+                fill={fill}
+                isAnimationActive={false}
+                dot={actualPointCount === 1 ? renderActualSampleDot : false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </article>
   );
 });
 
-const TpsChartCard = memo(function TpsChartCard({ title, data, emptyLabel }: TpsChartCardProps) {
+const TpsChartCard = memo(function TpsChartCard({
+  title,
+  data,
+  emptyLabel,
+  timeDomain,
+  timeTicks,
+  formatElapsed,
+  elapsedAxisLabel,
+  heldSinceLabel,
+}: TpsChartCardProps) {
+  const actualPointCount = data.filter((point) => !isDisplayOnlyMetricPoint(point)).length;
+
   return (
     <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card rounded-2xl">
       <h3 className="dashboard-view__chart-title section-title">{title}</h3>
       <div className="dashboard-view__chart-body">
-        {data.length === 0 ? (
+        {actualPointCount === 0 ? (
           <div className="dashboard-view__chart-empty">{emptyLabel}</div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+            <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 20, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
               <XAxis
-                dataKey="timeLabel"
+                dataKey="elapsedMs"
+                type="number"
+                domain={timeDomain}
+                ticks={timeTicks}
+                tickFormatter={formatElapsed}
+                allowDataOverflow
+                label={{
+                  value: elapsedAxisLabel,
+                  position: 'insideBottom',
+                  offset: -12,
+                  fontSize: 10,
+                  fill: AXIS_STROKE_COLOR,
+                }}
                 stroke={AXIS_STROKE_COLOR}
                 tick={TICK_STYLE}
                 minTickGap={24}
               />
-              <YAxis stroke={AXIS_STROKE_COLOR} tick={TICK_STYLE} domain={TPS_Y_DOMAIN} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <YAxis
+                stroke={AXIS_STROKE_COLOR}
+                tick={TICK_STYLE}
+                domain={TPS_Y_DOMAIN}
+                allowDataOverflow
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                content={(props) => (
+                  <MetricChartTooltip
+                    {...props}
+                    formatElapsed={formatElapsed}
+                    heldSinceLabel={heldSinceLabel}
+                  />
+                )}
+              />
               <Area
                 type="monotone"
                 dataKey="tps"
                 stroke="#22c55e"
                 fill="rgba(34, 197, 94, 0.24)"
                 isAnimationActive={false}
+                dot={actualPointCount === 1 ? renderActualSampleDot : false}
                 connectNulls
               />
             </AreaChart>
@@ -224,78 +344,79 @@ const TpsChartCard = memo(function TpsChartCard({ title, data, emptyLabel }: Tps
   );
 });
 
-function formatUptime(startedAt: number): string {
-  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-  const h = Math.floor(elapsed / 3600);
-  const m = Math.floor((elapsed % 3600) / 60);
-  const s = elapsed % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 export default function DashboardView({ server }: Props) {
   const { t } = useTranslation();
-  const [resourceStats, setResourceStats] = useState<ResourcePoint[]>([]);
-  const [tpsStats, setTpsStats] = useState<TpsPoint[]>([]);
-  const [startedAt, setStartedAt] = useState<number | null>(
-    server.status === 'online' ? Date.now() : null,
+  const snapshot = useServerMetricHistoryStore((state) => state.snapshotsByServer[server.id]);
+  const receivedAt = useServerMetricHistoryStore(
+    (state) => state.receivedAtByServer[server.id] ?? 0,
   );
-  const [uptime, setUptime] = useState<string>('--:--:--');
+  const [clockNow, setClockNow] = useState(() => performance.now());
+  const generation = snapshot?.generation;
 
   useEffect(() => {
-    setResourceStats([]);
-    setTpsStats([]);
-  }, [server.id, server.software]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | undefined;
-    void tauriListen<{ serverId: string; status: string }>('server-status-change', (data) => {
-      if (data.serverId !== server.id) {
-        return;
-      }
-      if (data.status === 'online') {
-        setStartedAt(Date.now());
-      } else {
-        setStartedAt(null);
-        setUptime('--:--:--');
-      }
-    }).then((u) => {
-      if (cancelled) {
-        u();
-        return;
-      }
-      unlisten = u;
-    });
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, [server.id]);
-
-  useEffect(() => {
-    if (startedAt === null) {
+    if (generation === undefined) {
       return;
     }
-    setUptime(formatUptime(startedAt));
-    const id = window.setInterval(() => setUptime(formatUptime(startedAt)), 1000);
+    setClockNow(performance.now());
+    const id = window.setInterval(() => setClockNow(performance.now()), 1000);
     return () => window.clearInterval(id);
-  }, [startedAt]);
+  }, [server.id, generation]);
+
+  const elapsedMs = snapshot ? snapshot.elapsedMs + Math.max(0, clockNow - receivedAt) : 0;
+  const uptime = snapshot ? formatMetricUptime(elapsedMs) : '--:--:--';
+  const timeDomain = useMemo(() => getMetricTimeDomain(elapsedMs), [elapsedMs]);
+  const timeTicks = useMemo(() => getMetricTimeTicks(timeDomain), [timeDomain]);
+  const formatElapsed = useCallback(
+    (value: number) => t('dashboard.charts.elapsedSeconds', { seconds: Math.floor(value / 1_000) }),
+    [t],
+  );
+  const resourceStats = useMemo(
+    () =>
+      snapshot?.resource.map((point) => ({
+        ...point,
+        cpu: normalizeMetric(clampMetric(point.cpu, 0, 100), 1),
+        memory: Math.max(0, Math.round(point.memory / 1024 / 1024)),
+      })) ?? EMPTY_RESOURCE_STATS,
+    [snapshot?.resource],
+  );
+  const tpsStats = snapshot?.tps ?? EMPTY_TPS_STATS;
+  const resourceWindowStats = useMemo(
+    () => getMetricWindowPoints(resourceStats, elapsedMs),
+    [elapsedMs, resourceStats],
+  );
+  const tpsWindowStats = useMemo(
+    () => getMetricWindowPoints(tpsStats, elapsedMs),
+    [elapsedMs, tpsStats],
+  );
+  const resourceChartStats = useMemo(
+    () => createMetricDisplaySeries(resourceStats, elapsedMs),
+    [elapsedMs, resourceStats],
+  );
+  const tpsChartStats = useMemo(
+    () => createMetricDisplaySeries(tpsStats, elapsedMs),
+    [elapsedMs, tpsStats],
+  );
+  const heldSinceLabel = useCallback(
+    (sampleElapsedMs: number) =>
+      t('dashboard.charts.heldSince', { time: formatElapsed(sampleElapsedMs) }),
+    [formatElapsed, t],
+  );
 
   const supportsTpsPolling = useMemo(() => {
     return server.software === 'Paper' || server.software === 'LeafMC';
   }, [server.software]);
 
   const currentCpu = useMemo(() => {
-    return resourceStats[resourceStats.length - 1]?.cpu ?? 0;
-  }, [resourceStats]);
+    return resourceWindowStats[resourceWindowStats.length - 1]?.cpu ?? 0;
+  }, [resourceWindowStats]);
 
   const currentMem = useMemo(() => {
-    return resourceStats[resourceStats.length - 1]?.memory ?? 0;
-  }, [resourceStats]);
+    return resourceWindowStats[resourceWindowStats.length - 1]?.memory ?? 0;
+  }, [resourceWindowStats]);
 
   const currentTps = useMemo(() => {
-    return tpsStats[tpsStats.length - 1]?.tps ?? null;
-  }, [tpsStats]);
+    return tpsWindowStats[tpsWindowStats.length - 1]?.tps ?? null;
+  }, [tpsWindowStats]);
 
   const statusColor = useMemo(() => {
     return getStatusColor(server.status);
@@ -319,40 +440,16 @@ export default function DashboardView({ server }: Props) {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
     void tauriListen<{ serverId: string; cpu: number; memory: number }>('server-stats', (data) => {
-      if (data.serverId !== server.id) {
+      if (
+        data.serverId !== server.id ||
+        typeof data.cpu !== 'number' ||
+        !Number.isFinite(data.cpu)
+      ) {
         return;
       }
 
       const now = Date.now();
-      const rawCpu = typeof data.cpu === 'number' && Number.isFinite(data.cpu) ? data.cpu : 0;
-      const rawMemory =
-        typeof data.memory === 'number' && Number.isFinite(data.memory) ? data.memory : 0;
-      const cpuVal = normalizeMetric(clamp(rawCpu, 0, 100), 1);
-      const memVal = Math.max(0, Math.round(rawMemory / 1024 / 1024));
-
-      setResourceStats((prev) => {
-        const latest = prev[prev.length - 1];
-        if (
-          latest &&
-          now - latest.timestamp < STATS_DEDUPE_WINDOW_MS &&
-          latest.cpu === cpuVal &&
-          latest.memory === memVal
-        ) {
-          return prev;
-        }
-
-        const next = [
-          ...prev,
-          {
-            timestamp: now,
-            timeLabel: formatMetricTimeLabel(now),
-            cpu: cpuVal,
-            memory: memVal,
-          },
-        ];
-        return pruneMetricWindow(next, now);
-      });
-
+      const cpuVal = normalizeMetric(clampMetric(data.cpu, 0, 100), 1);
       if (server.notifyOnHighCpu) {
         const threshold = server.notifyHighCpuThreshold ?? 90;
         if (cpuVal >= threshold) {
@@ -377,73 +474,6 @@ export default function DashboardView({ server }: Props) {
       unlisten?.();
     };
   }, [server.id, server.notifyOnHighCpu, server.notifyHighCpuThreshold, server.name, t]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | undefined;
-    void tauriListen<{ serverId: string; line: string }>('server-log', (data) => {
-      if (data.serverId !== server.id) {
-        return;
-      }
-
-      const tpsValue = extractTpsFromLogLine(data.line);
-      if (tpsValue === null) {
-        return;
-      }
-
-      const now = Date.now();
-      setTpsStats((prev) => {
-        const latest = prev[prev.length - 1];
-        if (latest && now - latest.timestamp < STATS_DEDUPE_WINDOW_MS && latest.tps === tpsValue) {
-          return prev;
-        }
-
-        const next = [
-          ...prev,
-          {
-            timestamp: now,
-            timeLabel: formatMetricTimeLabel(now),
-            tps: tpsValue,
-          },
-        ];
-        return pruneMetricWindow(next, now);
-      });
-    }).then((u) => {
-      if (cancelled) {
-        u();
-        return;
-      }
-      unlisten = u;
-    });
-
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, [server.id]);
-
-  useEffect(() => {
-    if (!supportsTpsPolling || server.status !== 'online') {
-      return;
-    }
-
-    const requestTps = async () => {
-      try {
-        await sendCommand(server.id, 'tps');
-      } catch {
-        // nop
-      }
-    };
-
-    void requestTps();
-    const intervalId = window.setInterval(() => {
-      void requestTps();
-    }, TPS_POLL_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [server.id, server.status, supportsTpsPolling]);
 
   return (
     <div
@@ -509,25 +539,42 @@ export default function DashboardView({ server }: Props) {
       <section className="dashboard-view__chart-grid">
         <ResourceChartCard
           title={t('dashboard.charts.cpuLast60s')}
-          data={resourceStats}
+          data={resourceChartStats}
           dataKey="cpu"
           stroke="#38bdf8"
           fill="rgba(56, 189, 248, 0.28)"
           yDomain={CPU_Y_DOMAIN}
+          emptyLabel={t('dashboard.charts.metricsNoData')}
+          timeDomain={timeDomain}
+          timeTicks={timeTicks}
+          formatElapsed={formatElapsed}
+          elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
+          heldSinceLabel={heldSinceLabel}
         />
 
         <ResourceChartCard
           title={t('dashboard.charts.memoryLast60s')}
-          data={resourceStats}
+          data={resourceChartStats}
           dataKey="memory"
           stroke="#34d399"
           fill="rgba(52, 211, 153, 0.24)"
+          emptyLabel={t('dashboard.charts.metricsNoData')}
+          timeDomain={timeDomain}
+          timeTicks={timeTicks}
+          formatElapsed={formatElapsed}
+          elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
+          heldSinceLabel={heldSinceLabel}
         />
 
         <TpsChartCard
           title={t('dashboard.charts.tpsLast60s')}
-          data={tpsStats}
+          data={tpsChartStats}
           emptyLabel={t('dashboard.charts.tpsNoData')}
+          timeDomain={timeDomain}
+          timeTicks={timeTicks}
+          formatElapsed={formatElapsed}
+          elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
+          heldSinceLabel={heldSinceLabel}
         />
       </section>
     </div>

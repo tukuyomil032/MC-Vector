@@ -10,6 +10,8 @@ use tokio::sync::{mpsc, Mutex};
 use super::eula::ensure_server_eula_accepted;
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::java::{validate_java_executable_path, validate_jvm_extra_args};
+use crate::metric_history::{should_poll_tps, MetricHistory, MetricHistorySnapshot};
+use crate::server_stdout::route_stdout_line;
 use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
 const MAX_RUNNING_SERVERS: usize = 8;
@@ -21,6 +23,7 @@ const COMMAND_QUEUE_CAPACITY: usize = 256;
 const LOG_BUFFER_CAPACITY: usize = 4096;
 const LOG_EMIT_INTERVAL: Duration = Duration::from_millis(50);
 const LOG_EMIT_LINES_PER_TICK: usize = 200;
+const TPS_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -40,6 +43,7 @@ pub(crate) struct RunningServer {
     command_tx: mpsc::Sender<String>,
     pub(crate) pid: u32,
     pub(crate) generation: u64,
+    pub(crate) metrics: Arc<Mutex<MetricHistory>>,
     // child は tokio::spawn 内で管理されるため、ここには保持しない
 }
 
@@ -60,6 +64,7 @@ pub struct CommandLimiter {
 struct ServerLogPayload {
     #[serde(rename = "serverId")]
     server_id: String,
+    generation: u64,
     line: String,
     stream: String,
 }
@@ -68,6 +73,7 @@ struct ServerLogPayload {
 struct ServerStatusPayload {
     #[serde(rename = "serverId")]
     server_id: String,
+    generation: u64,
     status: String,
 }
 
@@ -140,6 +146,7 @@ pub async fn start_server(
     memory: u32,
     jar_file: String,
     jvm_extra_args: Option<String>,
+    software: String,
 ) -> Result<(), String> {
     let validated_server_id = validate_server_id(&server_id)?;
     let app_data_dir = app
@@ -216,10 +223,17 @@ pub async fn start_server(
         .map_err(|e| format!("Failed to start server: {}", e))?;
 
     let pid = child.id().unwrap_or(0);
+    let started_at = Instant::now();
     let generation = state
         .next_generation
         .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         .saturating_add(1);
+    let metrics = Arc::new(Mutex::new(MetricHistory::new(
+        validated_server_id.clone(),
+        generation,
+        started_at,
+    )));
+    let poll_tps = should_poll_tps(&software);
 
     let stdin = child
         .stdin
@@ -236,6 +250,7 @@ pub async fn start_server(
 
     // stdin への書き込みをサーバーごとのキュー経由にし、バースト時の失敗を抑える
     let (command_tx, mut command_rx) = mpsc::channel::<String>(COMMAND_QUEUE_CAPACITY);
+    let command_tx_for_tps = command_tx.clone();
     tokio::spawn(async move {
         let mut stdin = stdin;
         let mut last_sent_at: Option<Instant> = None;
@@ -267,6 +282,7 @@ pub async fn start_server(
                 command_tx,
                 pid,
                 generation,
+                metrics: metrics.clone(),
             },
         );
     }
@@ -276,6 +292,7 @@ pub async fn start_server(
         "server-status-change",
         ServerStatusPayload {
             server_id: validated_server_id.clone(),
+            generation,
             status: "online".to_string(),
         },
     );
@@ -285,6 +302,7 @@ pub async fn start_server(
     let (stdout_log_tx, mut stdout_log_rx) = mpsc::channel::<String>(LOG_BUFFER_CAPACITY);
     let app_stdout_emit = app.clone();
     let sid_stdout_emit = validated_server_id.clone();
+    let generation_stdout_emit = generation;
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(LOG_EMIT_INTERVAL);
         loop {
@@ -297,6 +315,7 @@ pub async fn start_server(
                             "server-log",
                             ServerLogPayload {
                                 server_id: sid_stdout_emit.clone(),
+                                generation: generation_stdout_emit,
                                 line,
                                 stream: "stdout".to_string(),
                             },
@@ -309,11 +328,34 @@ pub async fn start_server(
             }
         }
     });
+    let stdout_metrics = metrics.clone();
+    let stdout_servers = state.servers.clone();
+    let stdout_app = app.clone();
+    let stdout_server_id = validated_server_id.clone();
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
         let mut dropped_lines = 0usize;
         while let Ok(Some(line)) = lines.next_line().await {
+            let is_current_generation = {
+                let servers = stdout_servers.lock().await;
+                servers
+                    .get(&stdout_server_id)
+                    .is_some_and(|server| server.generation == generation)
+            };
+            let routed_line = if is_current_generation {
+                let mut history = stdout_metrics.lock().await;
+                route_stdout_line(Some(&mut *history), line)
+            } else {
+                route_stdout_line(None, line)
+            };
+            if let Some(snapshot) = routed_line.metric_snapshot {
+                let _ = stdout_app.emit("server-metrics-updated", snapshot);
+            }
+            let Some(line) = routed_line.console_line else {
+                continue;
+            };
+
             if dropped_lines > 0 {
                 let notice = format!(
                     "[mc-vector] {} log lines skipped due to high throughput",
@@ -355,10 +397,36 @@ pub async fn start_server(
         }
     });
 
-    // プロセス統計を定期的に emit (CPU / メモリ)
+    // Paper/LeafMC は起動直後と5秒ごとにTPSコマンドを送る。
+    if poll_tps {
+        let servers_tps_ref = state.servers.clone();
+        let sid_tps = validated_server_id.clone();
+        tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(TPS_POLL_INTERVAL);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                ticker.tick().await;
+                let is_current_generation = {
+                    let servers = servers_tps_ref.lock().await;
+                    servers
+                        .get(&sid_tps)
+                        .is_some_and(|server| server.generation == generation)
+                };
+                if !is_current_generation {
+                    break;
+                }
+                if command_tx_for_tps.send("tps\n".to_string()).await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
+
+    // プロセス統計を定期的に保持し、互換イベントと履歴スナップショットを送る。
     let app_stats = app.clone();
     let sid_stats = validated_server_id.clone();
     let servers_stats_ref = state.servers.clone();
+    let stats_metrics = metrics.clone();
     tokio::spawn(async move {
         let mut sys = sysinfo::System::new_all();
         let spid = sysinfo::Pid::from_u32(pid);
@@ -366,30 +434,42 @@ pub async fn start_server(
 
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-            // サーバーが管理マップに存在するか確認
-            {
+            // 起動世代も照合し、古いプロセスの遅延計測を新世代へ混ぜない。
+            let is_current_generation = {
                 let servers = servers_stats_ref.lock().await;
-                if !servers.contains_key(&sid_stats) {
-                    break;
-                }
+                servers
+                    .get(&sid_stats)
+                    .is_some_and(|server| server.generation == generation)
+            };
+            if !is_current_generation {
+                break;
             }
             sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[spid]), true);
             if let Some(process) = sys.process(spid) {
                 let raw_cpu = process.cpu_usage();
+                let memory = process.memory();
                 let cpu_usage = if raw_cpu.is_finite() {
                     raw_cpu.max(0.0)
                 } else {
                     0.0
                 };
 
+                let snapshot = {
+                    let mut history = stats_metrics.lock().await;
+                    history.record_resource(cpu_usage, memory)
+                };
                 let _ = app_stats.emit(
                     "server-stats",
                     serde_json::json!({
                         "serverId": sid_stats,
                         "cpu": cpu_usage,
-                        "memory": process.memory(),
+                        "memory": memory,
+                        "generation": generation,
+                        "sequence": snapshot.sequence,
+                        "elapsedMs": snapshot.elapsed_ms,
                     }),
                 );
+                let _ = app_stats.emit("server-metrics-updated", snapshot);
             } else {
                 break;
             }
@@ -406,7 +486,7 @@ pub async fn start_server(
     tokio::spawn(async move {
         let status = child.wait().await;
         // 管理マップから削除
-        {
+        let should_remove = {
             let mut servers = servers_ref.lock().await;
             let should_remove = servers
                 .get(&sid_exit)
@@ -415,8 +495,9 @@ pub async fn start_server(
             if should_remove {
                 servers.remove(&sid_exit);
             }
-        }
-        {
+            should_remove
+        };
+        if should_remove {
             let mut last_map = limiter_ref.lock().await;
             last_map.remove(&sid_exit);
         }
@@ -430,13 +511,16 @@ pub async fn start_server(
             }
             Err(_) => "crashed",
         };
-        let _ = app_exit.emit(
-            "server-status-change",
-            ServerStatusPayload {
-                server_id: sid_exit,
-                status: exit_status.to_string(),
-            },
-        );
+        if should_remove {
+            let _ = app_exit.emit(
+                "server-status-change",
+                ServerStatusPayload {
+                    server_id: sid_exit,
+                    generation: generation_exit,
+                    status: exit_status.to_string(),
+                },
+            );
+        }
     });
 
     Ok(())
@@ -551,4 +635,23 @@ pub async fn get_server_pid(
         .get(&validated_server_id)
         .map(|s| s.pid)
         .ok_or_else(|| "Server not found or not running".into())
+}
+
+/// Return the current in-memory metric window for a running server.
+#[tauri::command]
+pub async fn get_server_metric_history(
+    state: State<'_, ServerManager>,
+    server_id: String,
+) -> Result<Option<MetricHistorySnapshot>, String> {
+    let validated_server_id = validate_server_id(&server_id)?;
+    let servers = state.servers.lock().await;
+    let Some(server) = servers.get(&validated_server_id) else {
+        return Ok(None);
+    };
+    let snapshot = server.metrics.lock().await.snapshot();
+    if snapshot.generation == server.generation {
+        Ok(Some(snapshot))
+    } else {
+        Ok(None)
+    }
 }

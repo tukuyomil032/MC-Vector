@@ -32,6 +32,7 @@ import { useServerCreateAction } from '@/renderer/hooks/use-server-create-action
 import { runExclusiveServerStart, useServerEulaGate } from '@/renderer/hooks/use-server-eula-gate';
 import { useServerProcessActions } from '@/renderer/hooks/use-server-process-actions';
 import { useServerRuntimeListeners } from '@/renderer/hooks/use-server-runtime-listeners';
+import { useServerMetricHistorySync } from '@/renderer/hooks/use-server-metric-history-sync';
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
 import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
@@ -157,6 +158,7 @@ function MainApp() {
   useUpdateChannelSync({ setUpdateChannel });
 
   const appendServerLog = useConsoleStore((state) => state.appendServerLog);
+  useServerMetricHistorySync({ servers });
   const removeServerLogs = useConsoleStore((state) => state.removeServerLogs);
   const { pendingEula, ensureServerEula, acceptPendingEula, cancelPendingEula } =
     useServerEulaGate();
@@ -236,14 +238,28 @@ function MainApp() {
               prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'starting' } : srv)),
             );
             try {
-              await startServerApi(s.id, s.javaPath || 'java', s.memory, jarFile, s.jvmArgs);
+              await startServerApi(
+                s.id,
+                s.javaPath || 'java',
+                s.memory,
+                jarFile,
+                s.jvmArgs,
+                s.software,
+              );
             } catch (error) {
               if (!isEulaRequiredError(error)) {
                 throw error;
               }
               result = await ensureServerEula(s, 'interactive');
               if (result === 'accepted') {
-                await startServerApi(s.id, s.javaPath || 'java', s.memory, jarFile, s.jvmArgs);
+                await startServerApi(
+                  s.id,
+                  s.javaPath || 'java',
+                  s.memory,
+                  jarFile,
+                  s.jvmArgs,
+                  s.software,
+                );
               }
             }
           }

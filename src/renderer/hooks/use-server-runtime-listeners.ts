@@ -191,8 +191,11 @@ export function useServerRuntimeListeners({
         const serverId = data.serverId.trim();
         if (data.status === 'stopped' || data.status === 'error') {
           propsRef.current.setNgrokData((prev) => ({ ...prev, [serverId]: null }));
-        } else if (isNonEmptyString(data.url)) {
-          propsRef.current.setNgrokData((prev) => ({ ...prev, [serverId]: data.url.trim() }));
+        } else {
+          const url = data.url;
+          if (isNonEmptyString(url)) {
+            propsRef.current.setNgrokData((prev) => ({ ...prev, [serverId]: url.trim() }));
+          }
         }
       });
       unlisteners.push(disposeNgrokStatus);

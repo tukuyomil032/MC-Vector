@@ -203,7 +203,14 @@ export function useServerAutomation({
 
         try {
           onReadyToStart();
-          await startServerApi(server.id, javaPath, server.memory, jarFile, server.jvmArgs);
+          await startServerApi(
+            server.id,
+            javaPath,
+            server.memory,
+            jarFile,
+            server.jvmArgs,
+            server.software,
+          );
         } catch (error) {
           if (!isEulaRequiredError(error)) {
             throw error;
@@ -214,7 +221,14 @@ export function useServerAutomation({
             return retryGateResult;
           }
           onReadyToStart();
-          await startServerApi(server.id, javaPath, server.memory, jarFile, server.jvmArgs);
+          await startServerApi(
+            server.id,
+            javaPath,
+            server.memory,
+            jarFile,
+            server.jvmArgs,
+            server.software,
+          );
         }
 
         return 'accepted';

@@ -101,8 +101,9 @@
   }
 
   .dashboard-view__chart-body {
-    min-height: 220px;
-    flex: 1 1 0%;
+    height: 220px;
+    min-width: 0;
+    flex: 0 0 220px;
   }
 
   .dashboard-view__chart-empty {
@@ -176,7 +177,8 @@
     }
 
     .dashboard-view__chart-body {
-      min-height: 200px;
+      height: 200px;
+      flex-basis: 200px;
     }
   }
 }

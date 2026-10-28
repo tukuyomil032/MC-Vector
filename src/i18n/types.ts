@@ -234,6 +234,10 @@ export interface TranslationDictionary {
       memoryLast60s: string;
       tpsLast60s: string;
       tpsNoData: string;
+      metricsNoData: string;
+      elapsedSeconds: string;
+      elapsedTime: string;
+      heldSince: string;
     };
     healthCheck: {
       title: string;
