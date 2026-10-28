@@ -1,4 +1,6 @@
 mod commands;
+pub mod metric_history;
+pub mod server_stdout;
 mod state;
 
 use tauri::Manager;
@@ -67,6 +69,7 @@ pub fn run() {
             commands::server::send_command,
             commands::server::is_server_running,
             commands::server::get_server_pid,
+            commands::server::get_server_metric_history,
             commands::eula::get_server_eula_status,
             commands::eula::accept_server_eula,
             // プロセス統計

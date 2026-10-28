@@ -7,6 +7,7 @@ const CORE_COMMANDS = [
   'get_server_eula_status',
   'accept_server_eula',
   'get_server_stats',
+  'get_server_metric_history',
   'download_server_jar',
   'download_plugin_artifact',
   'download_java',

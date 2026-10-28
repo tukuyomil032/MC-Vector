@@ -130,7 +130,7 @@ Three Mutex-protected state objects are available to all commands via Tauri's ma
 
 | State            | Purpose                                                    |
 | ---------------- | ---------------------------------------------------------- |
-| `ServerManager`  | Running server processes and command channels              |
+| `ServerManager`  | Running process sessions, command channels, and 60-second metric histories |
 | `CommandLimiter` | Per-server command rate limiting (100 ms minimum interval) |
 | `NgrokManager`   | Active Ngrok process handle                                |
 
@@ -138,22 +138,25 @@ Three Mutex-protected state objects are available to all commands via Tauri's ma
 
 The backend emits Tauri events that the frontend listens to:
 
-| Event                  | Payload                  | Emitted by                      |
-| ---------------------- | ------------------------ | ------------------------------- |
-| `server-log`           | `{ line, stream }`       | server.rs stdout/stderr         |
-| `server-status-change` | `{ status }`             | server.rs on spawn/exit         |
-| `server-stats`         | `{ cpu, memory }`        | process_stats.rs (2 s interval) |
-| `ngrok-status-change`  | `{ status, url }`        | ngrok.rs                        |
-| `download-progress`    | `{ downloaded, total }`  | download.rs                     |
-| `backup-progress`      | `{ serverId, progress }` | backup.rs                       |
+| Event                    | Payload                                                                                                   | Emitted by                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `server-log`             | `{ serverId, generation, line, stream }`                                                                  | server.rs stdout/stderr            |
+| `server-status-change`   | `{ serverId, generation, status }`                                                                        | server.rs on spawn/exit            |
+| `server-stats`           | `{ serverId, cpu, memory, generation, sequence, elapsedMs }`                                              | server.rs, every 2 seconds         |
+| `server-metrics-updated` | `{ serverId, generation, sequence, elapsedMs, resource, tps }`                                            | server.rs on each metric update    |
+| `ngrok-status-change`    | `{ status, url }`                                                                                         | ngrok.rs                           |
+| `download-progress`      | `{ downloaded, total }`                                                                                   | download.rs                        |
+| `backup-progress`        | `{ serverId, progress }`                                                                                   | backup.rs                          |
 
 ### Process Management
 
-1. `start_server` validates the server ID, Java path, memory args, and JAR path before spawning.
+1. `start_server` validates the server ID, Java path, memory args, and JAR path before spawning, then creates an in-memory metric session for that process generation.
 2. Commands are sent through a bounded `mpsc` channel — never written directly to stdin from multiple callers.
 3. stdout/stderr are buffered (4,096 lines) and forwarded to the frontend in batches (50 ms flush interval, max 200 lines/tick).
-4. `CommandLimiter` enforces a minimum 100 ms interval between commands per server.
-5. Process handles and limiters are cleaned up on process exit.
+4. CPU and memory samples are kept for 60 seconds; Paper and LeafMC receive a `tps` query every 5 seconds, and matching stdout lines update the TPS history before log buffering.
+5. `get_server_metric_history` returns the current session snapshot, while `server-metrics-updated` broadcasts the same shape with a monotonic generation and sequence.
+6. `CommandLimiter` enforces a minimum 100 ms interval between commands per server.
+7. Process sessions and limiters are cleaned up on process exit; metric history remains in memory only.
 
 ## Key Data Flows
 

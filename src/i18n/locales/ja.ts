@@ -215,6 +215,10 @@ export const ja: TranslationDictionary = {
       memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
       tpsLast60s: 'TPS - 直近60秒',
       tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
+      metricsNoData: '初回の計測を待っています。',
+      elapsedSeconds: '{seconds}秒',
+      elapsedTime: '起動からの経過時間（秒）',
+      heldSince: '{{time}}の実測値を保持中',
     },
     healthCheck: {
       title: 'サーバーヘルス（SLP Ping）',
