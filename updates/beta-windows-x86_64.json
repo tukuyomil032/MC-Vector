@@ -1,7 +1,7 @@
 {
-  "version": "2.0.64-beta.1",
-  "notes": "## v2.0.64-beta.1\n\n### Bug Fixes\n- unblock cargo-audit CI failure on main (#230)\n",
-  "pub_date": "2026-10-26T04:56:50Z",
-  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64-beta.1/MC-Vector_2.0.64-beta.1_windows-x86_64-setup.exe",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjFXSEd0bndsUi94RlphcTdacWdLSllHdXRwZHFBNDdaQ2djekxTRG4wMHpPMUVkTzNWWm04MlBNRFpSc3ZqcVAzS0lJajdIelo1VTdIRi9ONFZxYVFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTkwNTUyCWZpbGU6TUMtVmVjdG9yXzIuMC42NC1iZXRhLjFfeDY0LXNldHVwLmV4ZQp2eFV3TGpha0h5aWZlaXAxMmplNlhzaE9UUWp5QnMxMFF6VmF3R2ROSGpVcUdWMndMUkZ4YmpDaHI0YWxZc1JTWExjeVc0YlFIQXlDRzVKVEx4dFVDUT09Cg=="
+  "version": "2.0.64-beta.2",
+  "notes": "## v2.0.64-beta.2\n\n### Features\n- retain dashboard metrics while servers run (#242)\n\n### Bug Fixes\n- unify updater checks and show release notes (#239)\n- bootstrap missing stable updater feeds (#236)\n- prepend generated release changelog entries (#235)\n",
+  "pub_date": "2026-10-28T07:25:16Z",
+  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64-beta.2/MC-Vector_2.0.64-beta.2_windows-x86_64-setup.exe",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjVsK21PMTR2clV5OXBVY0FuaGdoekx5YjE4QU5uMXZSL3Y4VkgrYzJUdHo2bzFud1lRK2VmSVdWTXlOdVBVVlRSWVB1bU04RWRDN3VZc0treWFhVndBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTcyMDYzCWZpbGU6TUMtVmVjdG9yXzIuMC42NC1iZXRhLjJfeDY0LXNldHVwLmV4ZQpEMk1xRW1wZWdEK3BMVzE2NkpYWGM4OUREc1hyNnRXY0xZRlVpTmowREJyQnF1Y3grOEVxU21FSDVqRTNNR29GalYvOU50WjZZeCtNSUxIeURLWnFCQT09Cg=="
 }
