@@ -163,6 +163,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
               {['idle', 'not-available', 'error'].includes(updateState.status) && (
                 <Button
                   variant="secondary"
+                  data-testid="update-check-button"
                   onClick={handleCheck}
                   disabled={updateState.status === 'checking'}
                 >
@@ -172,23 +173,35 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
                 </Button>
               )}
               {updateState.status === 'available' && (
-                <Button variant="secondary" onClick={handleDownload}>
+                <Button
+                  variant="secondary"
+                  data-testid="update-download-button"
+                  onClick={handleDownload}
+                >
                   {t('settings.update.download')}
                 </Button>
               )}
               {updateState.status === 'downloaded' && (
-                <Button variant="primary" onClick={handleInstall}>
+                <Button
+                  variant="primary"
+                  data-testid="update-restart-button"
+                  onClick={handleInstall}
+                >
                   {t('settings.update.restart')}
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="settings-window__status-body">
+          <div className="settings-window__status-body" data-testid="update-status">
             {updateState.status === 'idle' && <div>{t('settings.update.idle')}</div>}
             {updateState.status === 'checking' && <div>{t('settings.update.checkingStatus')}</div>}
             {updateState.status === 'available' && (
-              <div className="text-accent font-semibold">
+              <div
+                className="text-accent font-semibold"
+                data-testid="update-status-version"
+                data-version={updateState.version || 'unknown'}
+              >
                 {t('settings.update.available', { version: updateState.version || 'unknown' })}
               </div>
             )}
@@ -222,6 +235,7 @@ const SettingsWindow = ({ onClose }: { onClose?: () => void }) => {
             </label>
             <NativeSelect
               id="update-channel-select"
+              data-testid="update-channel-select"
               value={updateChannel}
               disabled={updateState.status === 'downloading'}
               aria-describedby="update-channel-description"
