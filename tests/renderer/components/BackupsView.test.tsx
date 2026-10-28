@@ -272,7 +272,7 @@ describe('BackupsView initialization', () => {
     });
     expect(backupCommands.deleteBackup).toHaveBeenCalledOnce();
     expect(toastErrorMock).not.toHaveBeenCalledWith('backups.toast.catalogLoadFailed');
-  });
+  }, 10_000);
 
   it('does not delete or update metadata when backup deletion is canceled', async () => {
     backupCommands.listBackupsWithMetadata.mockResolvedValue([

@@ -99,7 +99,10 @@ function MainApp() {
     updatePrompt,
     updateProgress,
     updateError,
+    updateCheckStatus,
+    updateCheckError,
     updateReady,
+    handleCheckForUpdates,
     handleUpdateNow,
     handleInstallUpdate,
     handleDismissUpdate,
@@ -418,6 +421,13 @@ function MainApp() {
           ngrokData={ngrokData}
           onBuildProxyNetwork={handleBuildProxyNetwork}
           onUpdateServer={handleUpdateServer}
+          updaterSettings={{
+            onCheckForUpdates: handleCheckForUpdates,
+            updateCheckStatus,
+            updateCheckError,
+            updatePrompt,
+            updateProgress,
+          }}
           t={t}
         />
       </main>

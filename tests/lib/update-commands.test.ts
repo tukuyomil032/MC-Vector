@@ -84,6 +84,51 @@ describe('checkForUpdates', () => {
     expect(checkMock).toHaveBeenCalledWith({ target: 'stable-darwin-aarch64' });
   });
 
+  it('does not start a plugin check when the channel changes during settings loading', async () => {
+    let resolveSettings!: (settings: { updateChannel: string }) => void;
+    getAppSettingsMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSettings = resolve;
+        }),
+    );
+
+    const { checkForUpdates, clearPendingUpdate } = await import('@/lib/update-commands');
+    const checkPromise = checkForUpdates();
+    clearPendingUpdate();
+    resolveSettings({ updateChannel: 'beta' });
+
+    await expect(checkPromise).resolves.toEqual({ available: false });
+    expect(checkMock).not.toHaveBeenCalled();
+  });
+
+  it('closes an update returned after the channel generation changed during plugin check', async () => {
+    let resolvePluginCheck!: (update: ReturnType<typeof makeUpdate>) => void;
+    const staleUpdate = makeUpdate({ version: '2.0.64-old' });
+    checkMock
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolvePluginCheck = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(null);
+
+    const { checkForUpdates, clearPendingUpdate, downloadAndInstallUpdate } =
+      await import('@/lib/update-commands');
+    const checkPromise = checkForUpdates();
+    await vi.waitFor(() => expect(checkMock).toHaveBeenCalledTimes(1));
+
+    clearPendingUpdate();
+    resolvePluginCheck(staleUpdate);
+
+    await expect(checkPromise).resolves.toEqual({ available: false });
+    await expect(downloadAndInstallUpdate()).rejects.toThrow('No update available');
+    expect(staleUpdate.close).toHaveBeenCalledTimes(1);
+    expect(staleUpdate.download).not.toHaveBeenCalled();
+    expect(checkMock).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps beta selected when the beta feed returns a stable-version response', async () => {
     getAppSettingsMock.mockResolvedValue({ updateChannel: 'beta' });
     checkMock.mockResolvedValue(makeUpdate({ version: '2.0.64' }));

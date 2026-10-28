@@ -26,6 +26,10 @@ test.describe('release notes update preview', () => {
     const notes = page.locator('.release-notes');
 
     await expect(dialog.getByRole('heading', { name: 'Update available! v2.4.0' })).toBeVisible();
+    expect(
+      await dialog.evaluate((element) => element.closest('.app-shell[data-theme="dark"]')),
+    ).toBe(null);
+    await expect(dialog).toHaveAttribute('data-theme', 'dark');
     await expect(notes.getByRole('heading', { name: 'Version 2.4.0' })).toBeVisible();
     for (const section of ['Breaking Changes', 'Features', 'Bug Fixes', 'Performance']) {
       await expect(notes.getByRole('heading', { name: section, exact: true })).toBeVisible();
@@ -39,6 +43,26 @@ test.describe('release notes update preview', () => {
       'Kept literal <em>HTML-like</em> release note text escaped in the preview.',
     );
     await expect(notes.locator('em')).toHaveCount(0);
+
+    const notesAppearance = await notes.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { backgroundColor: styles.backgroundColor, color: styles.color };
+    });
+    expect(notesAppearance).toEqual({
+      backgroundColor: 'rgb(39, 39, 42)',
+      color: 'rgb(244, 244, 245)',
+    });
+
+    const downloadAppearance = await page
+      .getByTestId('update-modal-download-button')
+      .evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return { backgroundColor: styles.backgroundColor, color: styles.color };
+      });
+    expect(downloadAppearance).toEqual({
+      backgroundColor: 'rgb(88, 101, 242)',
+      color: 'rgb(255, 255, 255)',
+    });
 
     await page.screenshot({ path: testInfo.outputPath('release-notes-normal.png') });
   });

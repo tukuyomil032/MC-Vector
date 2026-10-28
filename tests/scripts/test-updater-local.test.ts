@@ -323,6 +323,11 @@ describe('local updater harness configuration', () => {
       version: '0.0.2-beta.2',
       url: 'http://127.0.0.1:43210/assets/beta-0.0.2-beta.2.app.tar.gz',
       signature: 'disposable-signature',
+      notes: [
+        '## v0.0.2-beta.2',
+        '### Bug Fixes',
+        '- Local updater harness candidate 0.0.2-beta.2',
+      ].join('\n'),
     });
     expect(() =>
       createTargetManifest({
@@ -335,5 +340,25 @@ describe('local updater harness configuration', () => {
     expect(() => assertLoopbackHttpUrl('http://192.168.0.5:43210/updates/stable.json')).toThrow(
       /loopback/,
     );
+  });
+
+  it('uses recognized CHANGELOG sections in Stable and Beta test feed notes', () => {
+    const stableManifest = createTargetManifest({
+      version: '0.0.2',
+      signature: 'stable-signature',
+      assetPath: '/assets/stable-0.0.2.app.tar.gz',
+      baseUrl: 'http://127.0.0.1:43210/',
+    });
+    const betaManifest = createTargetManifest({
+      version: '0.0.2-beta.2',
+      signature: 'beta-signature',
+      assetPath: '/assets/beta-0.0.2-beta.2.app.tar.gz',
+      baseUrl: 'http://127.0.0.1:43210/',
+    });
+
+    expect(stableManifest.notes).toContain('### Features');
+    expect(betaManifest.notes).toContain('### Bug Fixes');
+    expect(stableManifest.notes).toContain('## v0.0.2');
+    expect(betaManifest.notes).toContain('## v0.0.2-beta.2');
   });
 });

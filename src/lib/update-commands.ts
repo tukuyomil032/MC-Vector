@@ -106,12 +106,23 @@ export async function checkForUpdates(): Promise<{
   body?: string;
   error?: string;
 }> {
+  const generation = updateGeneration;
   try {
     const channel = await getSavedUpdateChannel();
     const target = await getCurrentUpdateTarget(channel);
-    const generation = updateGeneration;
+    if (generation !== updateGeneration) {
+      return { available: false };
+    }
+
     const update = await check({ target });
     if (generation !== updateGeneration) {
+      if (update) {
+        try {
+          await update.close();
+        } catch (error) {
+          logError('Failed to close stale update candidate', error);
+        }
+      }
       return { available: false };
     }
     if (update) {

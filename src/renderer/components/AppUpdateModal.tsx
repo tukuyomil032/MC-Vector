@@ -47,6 +47,7 @@ export default function AppUpdateModal({
         <Dialog.Overlay className="app-update-overlay" />
         <Dialog.Content
           aria-describedby={undefined}
+          data-theme="dark"
           className={cn(
             'app-update-modal',
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[10001]',
@@ -94,12 +95,17 @@ export default function AppUpdateModal({
               {t('common.cancel')}
             </Button>
             {updatePrompt && !updateReady && (
-              <Button variant="primary" onClick={onUpdateNow} disabled={isDownloading}>
+              <Button
+                variant="accent"
+                data-testid="update-modal-download-button"
+                onClick={onUpdateNow}
+                disabled={isDownloading}
+              >
                 {t('settings.update.download')}
               </Button>
             )}
             {updatePrompt && updateReady && (
-              <Button variant="primary" onClick={onInstall}>
+              <Button variant="accent" onClick={onInstall}>
                 {t('settings.update.restart')}
               </Button>
             )}

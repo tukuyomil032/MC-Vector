@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Suspense } from 'react';
 import type { Translate } from '../../i18n';
+import type { AppUpdaterSettings } from '../hooks/use-app-updater';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import AppContentRouter from './AppContentRouter';
 import type { ProxyNetworkConfig } from './ProxySetupView';
@@ -15,6 +16,7 @@ interface AppMainContentProps {
   ngrokData: Record<string, string | null>;
   onBuildProxyNetwork: (config: ProxyNetworkConfig) => Promise<void>;
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
+  updaterSettings: AppUpdaterSettings;
   t: Translate;
 }
 
@@ -27,6 +29,7 @@ export default function AppMainContent({
   ngrokData,
   onBuildProxyNetwork,
   onUpdateServer,
+  updaterSettings,
   t,
 }: AppMainContentProps) {
   const prefersReducedMotion = useReducedMotion();
@@ -66,6 +69,7 @@ export default function AppMainContent({
                 ngrokData={ngrokData}
                 onBuildProxyNetwork={onBuildProxyNetwork}
                 onUpdateServer={onUpdateServer}
+                updaterSettings={updaterSettings}
                 t={t}
               />
             </Suspense>
