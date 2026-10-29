@@ -31,12 +31,32 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, 
 
 ### macOS
 ```bash
-brew tap tukuyomil032/tap
-brew install --cask mc-vector
-
-#　Remove quarantine flag to allow the app to run.
-xattr -cr /Applications/MC-Vector.app
+brew tap tukuyomil032/mc-vector https://github.com/tukuyomil032/MC-Vector
+brew install --cask tukuyomil032/mc-vector/mc-vector
 ```
+
+If you want the app in your user Applications folder, use this install command instead. This can allow the in-app updater to write the app bundle:
+
+```bash
+brew install --cask --appdir="$HOME/Applications" tukuyomil032/mc-vector/mc-vector
+```
+
+To update the Cask-managed app through Homebrew:
+
+```bash
+brew upgrade --cask --greedy-auto-updates tukuyomil032/mc-vector/mc-vector
+```
+
+The app's Settings page can switch between the Stable and Beta update channels. The Homebrew Cask itself tracks Stable releases.
+
+If MC-Vector is already installed from the previous `tukuyomil032/tap` Cask, migrate only that app to this tap:
+
+```bash
+brew uninstall --cask tukuyomil032/tap/mc-vector
+brew install --cask tukuyomil032/mc-vector/mc-vector
+```
+
+Keep `tukuyomil032/tap` tapped if you use other apps from that repository.
 
 ### Windows
 ```bash
@@ -47,8 +67,8 @@ scoop install mc-vector
 
 ### macOS
 ```bash
-brew uninstall mc-vector
-brew untap tukuyomil032/mcvector
+brew uninstall --cask tukuyomil032/mc-vector/mc-vector
+brew untap tukuyomil032/mc-vector
 ```
 ### Windows
 ```bash

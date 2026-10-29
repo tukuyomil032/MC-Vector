@@ -806,6 +806,13 @@ export interface TranslationDictionary {
     updatePermissionDeniedStep2: string;
     updatePermissionDeniedStep3: string;
     updatePermissionDeniedStep4: string;
+    updateAppTranslocatedTitle: string;
+    updateAppTranslocatedCurrent: string;
+    updateAppTranslocatedSteps: string;
+    updateAppTranslocatedStep1: string;
+    updateAppTranslocatedStep2: string;
+    updateAppTranslocatedStep3: string;
+    updateAppTranslocatedStep4: string;
     updateCannotApply: string;
   };
 
