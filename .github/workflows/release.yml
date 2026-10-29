@@ -615,3 +615,45 @@ jobs:
           publish_dir: ./gh-pages-deploy
           publish_branch: gh-pages
           keep_files: true
+
+      - name: Update stable Homebrew Cask
+        if: needs.check-version.outputs.prerelease != 'true'
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          ARM_DMG="release-assets/MC-Vector_${VERSION}_aarch64.dmg"
+          INTEL_DMG="release-assets/MC-Vector_${VERSION}_x64.dmg"
+          for asset in "$ARM_DMG" "$INTEL_DMG"; do
+            if [ ! -s "$asset" ]; then
+              echo "Missing stable Homebrew Cask artifact: $asset" >&2
+              exit 1
+            fi
+            asset_name=$(basename "$asset")
+            asset_url="https://github.com/tukuyomil032/MC-Vector/releases/download/v${VERSION}/${asset_name}"
+            curl -fsIL "$asset_url" >/dev/null
+          done
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git switch --force-create "cask-sync-${GITHUB_RUN_ID}" origin/main
+            node scripts/update-homebrew-cask.mjs "$VERSION" "$ARM_DMG" "$INTEL_DMG"
+            git add Casks/mc-vector.rb
+
+            if git diff --cached --quiet; then
+              echo "The stable Homebrew Cask is already current."
+              exit 0
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: update Homebrew Cask to ${VERSION}"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Cask commit push failed on attempt ${attempt}; retrying from current main." >&2
+          done
+
+          echo "Unable to push the stable Homebrew Cask update after 3 attempts." >&2
+          exit 1
