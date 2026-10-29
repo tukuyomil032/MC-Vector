@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +7,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const CASK_PATH = path.join(REPO_ROOT, 'Casks', 'mc-vector.rb');
 
 function normalizeSha256(value, label) {
-  const digest = value.toLowerCase();
+  const digest = typeof value === 'string' ? value.toLowerCase() : '';
   if (!/^[a-f0-9]{64}$/.test(digest)) {
     throw new Error(`${label} must be a 64-character SHA-256 digest.`);
   }
@@ -53,16 +52,11 @@ export function updateCaskSource(source, versionArg, armSha256Arg, intelSha256Ar
   };
 }
 
-async function sha256File(filePath) {
-  const bytes = await readFile(filePath);
-  return createHash('sha256').update(bytes).digest('hex');
-}
-
 async function main() {
-  const [versionArg, armDmgPath, intelDmgPath] = process.argv.slice(2);
-  if (!versionArg || !armDmgPath || !intelDmgPath) {
+  const [versionArg, armSha256, intelSha256] = process.argv.slice(2);
+  if (!versionArg || !armSha256 || !intelSha256) {
     throw new Error(
-      'Usage: node scripts/update-homebrew-cask.mjs <stable-version> <arm64-dmg> <intel-dmg>',
+      'Usage: node scripts/update-homebrew-cask.mjs <stable-version> <arm64-sha256> <intel-sha256>',
     );
   }
 
@@ -72,11 +66,7 @@ async function main() {
     return;
   }
 
-  const [armSha256, intelSha256, source] = await Promise.all([
-    sha256File(path.resolve(armDmgPath)),
-    sha256File(path.resolve(intelDmgPath)),
-    readFile(CASK_PATH, 'utf8'),
-  ]);
+  const source = await readFile(CASK_PATH, 'utf8');
   const result = updateCaskSource(source, version, armSha256, intelSha256);
 
   if (result.reason === 'older_version') {

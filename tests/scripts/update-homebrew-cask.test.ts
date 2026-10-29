@@ -42,9 +42,15 @@ describe('Homebrew Cask release sync', () => {
     );
   });
 
-  it('rejects malformed checksums rather than writing an invalid Cask', () => {
-    expect(() => updateCaskSource(source, '2.0.64', 'not-a-hash', 'd'.repeat(64))).toThrow(
-      '64-character SHA-256 digest',
-    );
-  });
+  it.each([
+    ['arm', 'not-a-hash', 'd'.repeat(64)],
+    ['intel', 'c'.repeat(64), 'not-a-hash'],
+  ])(
+    'rejects malformed %s checksum rather than writing an invalid Cask',
+    (architecture, arm, intel) => {
+      expect(() => updateCaskSource(source, '2.0.64', arm, intel)).toThrow(
+        `${architecture} SHA-256 must be a 64-character SHA-256 digest.`,
+      );
+    },
+  );
 });

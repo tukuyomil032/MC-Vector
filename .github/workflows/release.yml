@@ -635,10 +635,13 @@ jobs:
             curl -fsIL "$asset_url" >/dev/null
           done
 
+          ARM_SHA256=$(sha256sum "$ARM_DMG" | awk '{print $1}')
+          INTEL_SHA256=$(sha256sum "$INTEL_DMG" | awk '{print $1}')
+
           for attempt in 1 2 3; do
             git fetch origin main
             git switch --force-create "cask-sync-${GITHUB_RUN_ID}" origin/main
-            node scripts/update-homebrew-cask.mjs "$VERSION" "$ARM_DMG" "$INTEL_DMG"
+            node scripts/update-homebrew-cask.mjs "$VERSION" "$ARM_SHA256" "$INTEL_SHA256"
             git add Casks/mc-vector.rb
 
             if git diff --cached --quiet; then
