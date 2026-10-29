@@ -100,6 +100,11 @@ function createPermissionErrorMessage(location: string): string {
   return `${t('errors.updatePermissionDeniedTitle')}\n\n${t('errors.updatePermissionDeniedCurrent', { location })}\n\n${t('errors.updatePermissionDeniedSteps')}\n${t('errors.updatePermissionDeniedStep1')}\n${t('errors.updatePermissionDeniedStep2')}\n${t('errors.updatePermissionDeniedStep3')}\n${t('errors.updatePermissionDeniedStep4')}\n\nThe app does not have the necessary permissions to update.\n\nCurrent location: ${location}\n\nTo apply the update:\n1. Quit this app\n2. Move the app to the Applications folder in Finder\n3. Check the folder permissions\n4. Try updating again`;
 }
 
+function createAppTranslocatedErrorMessage(location: string): string {
+  const t = getTranslation();
+  return `${t('errors.updateAppTranslocatedTitle')}\n\n${t('errors.updateAppTranslocatedCurrent', { location })}\n\n${t('errors.updateAppTranslocatedSteps')}\n${t('errors.updateAppTranslocatedStep1')}\n${t('errors.updateAppTranslocatedStep2')}\n${t('errors.updateAppTranslocatedStep3')}\n${t('errors.updateAppTranslocatedStep4')}`;
+}
+
 export async function checkForUpdates(): Promise<{
   available: boolean;
   version?: string;
@@ -177,6 +182,9 @@ export async function downloadAndInstallUpdate(
   if (!updateCheck.can_update) {
     const t = getTranslation();
     const location = await getAppLocation();
+    if (updateCheck.reason === 'app_translocated') {
+      throw new Error(createAppTranslocatedErrorMessage(location));
+    }
     // Only show read-only specific message for read-only filesystem errors
     if (updateCheck.reason === 'read_only') {
       throw new Error(createReadOnlyErrorMessage(location));

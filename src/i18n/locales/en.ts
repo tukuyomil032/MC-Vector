@@ -810,6 +810,15 @@ export const en: TranslationDictionary = {
     updatePermissionDeniedStep2: '2. Move the app to the Applications folder in Finder',
     updatePermissionDeniedStep3: '3. Check the folder permissions',
     updatePermissionDeniedStep4: '4. Try updating again',
+    updateAppTranslocatedTitle:
+      'MC-Vector was launched from a macOS App Translocation location, which is read-only.',
+    updateAppTranslocatedCurrent: 'Current location: {location}',
+    updateAppTranslocatedSteps: 'To apply the update:',
+    updateAppTranslocatedStep1: '1. Quit MC-Vector',
+    updateAppTranslocatedStep2:
+      '2. Use the copy in Applications if it is already installed; otherwise copy MC-Vector.app there in Finder',
+    updateAppTranslocatedStep3: '3. If you opened it from a DMG, eject that disk image',
+    updateAppTranslocatedStep4: '4. Launch MC-Vector from Applications, then try updating again',
     updateCannotApply:
       'Cannot apply update. Please move the app to the Applications folder and try again.',
   },

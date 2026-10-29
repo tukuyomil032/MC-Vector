@@ -258,6 +258,24 @@ describe('downloadAndInstallUpdate', () => {
     );
   });
 
+  it('explains App Translocation and blocks the update download', async () => {
+    const update = makeUpdate();
+    checkMock.mockResolvedValue(update);
+    tauriInvokeMock
+      .mockResolvedValueOnce({ can_update: false, reason: 'app_translocated' }) // can_update_app
+      .mockResolvedValueOnce(
+        '/private/var/folders/ab/cdef/T/AppTranslocation/ABC123/d/MC-Vector.app',
+      ); // get_app_location
+
+    const { downloadAndInstallUpdate } = await import('@/lib/update-commands');
+    await expect(downloadAndInstallUpdate()).rejects.toThrow(
+      /errors\.updateAppTranslocatedTitle[\s\S]*errors\.updateAppTranslocatedStep4/,
+    );
+
+    expect(update.download).not.toHaveBeenCalled();
+    expect(update.install).not.toHaveBeenCalled();
+  });
+
   it('throws generic error for other can_update=false reasons', async () => {
     const update = makeUpdate();
     checkMock.mockResolvedValue(update);

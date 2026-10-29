@@ -1,11 +1,19 @@
 use std::env;
 #[cfg(target_os = "macos")]
 use std::fs;
+#[cfg(target_os = "macos")]
+use std::path::Path;
 
 #[derive(serde::Serialize)]
 pub struct UpdateCheckResult {
     can_update: bool,
     reason: Option<String>,
+}
+
+#[cfg(target_os = "macos")]
+fn is_app_translocated(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str() == std::ffi::OsStr::new("AppTranslocation"))
 }
 
 #[tauri::command]
@@ -16,6 +24,13 @@ pub async fn can_update_app() -> Result<UpdateCheckResult, String> {
             // Get the current executable path
             let exe_path =
                 env::current_exe().map_err(|e| format!("Failed to get executable path: {}", e))?;
+
+            if is_app_translocated(&exe_path) {
+                return Ok(UpdateCheckResult {
+                    can_update: false,
+                    reason: Some("app_translocated".to_string()),
+                });
+            }
 
             // Get the app bundle path (should be .app/Contents/MacOS/executable)
             let app_bundle_path = exe_path
@@ -69,6 +84,25 @@ pub async fn can_update_app() -> Result<UpdateCheckResult, String> {
             can_update: true,
             reason: None,
         })
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::is_app_translocated;
+    use std::path::Path;
+
+    #[test]
+    fn classifies_app_translocation_path_component() {
+        assert!(is_app_translocated(Path::new(
+            "/private/var/folders/ab/cdef/T/AppTranslocation/ABC123/d/MC-Vector.app/Contents/MacOS/MC-Vector"
+        )));
+        assert!(!is_app_translocated(Path::new(
+            "/Applications/MC-Vector.app/Contents/MacOS/MC-Vector"
+        )));
+        assert!(!is_app_translocated(Path::new(
+            "/tmp/AppTranslocation-copy/MC-Vector.app/Contents/MacOS/MC-Vector"
+        )));
     }
 }
 

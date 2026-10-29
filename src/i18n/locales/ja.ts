@@ -806,6 +806,16 @@ export const ja: TranslationDictionary = {
       '2. Finderでアプリを「アプリケーション」フォルダに移動してください',
     updatePermissionDeniedStep3: '3. フォルダの権限を確認してください',
     updatePermissionDeniedStep4: '4. もう一度アップデートを試してください',
+    updateAppTranslocatedTitle:
+      'MC-VectorはmacOSの隔離された一時領域（App Translocation）から起動されています。',
+    updateAppTranslocatedCurrent: '現在の場所: {location}',
+    updateAppTranslocatedSteps: 'アップデートを適用するには：',
+    updateAppTranslocatedStep1: '1. MC-Vectorを終了してください',
+    updateAppTranslocatedStep2:
+      '2. 「アプリケーション」へコピー済みならそのアプリを使い、まだならFinderでMC-Vector.appをコピーしてください',
+    updateAppTranslocatedStep3: '3. DMGから開いた場合は、そのDMGを取り出してください',
+    updateAppTranslocatedStep4:
+      '4. 「アプリケーション」からMC-Vectorを起動し、もう一度アップデートを試してください',
     updateCannotApply:
       'アップデートを適用できません。アプリを「アプリケーション」フォルダに移動してから再度お試しください。',
   },
