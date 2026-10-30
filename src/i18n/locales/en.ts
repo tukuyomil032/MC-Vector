@@ -148,7 +148,8 @@ export const en: TranslationDictionary = {
     toast: {
       loadError: 'Failed to load server list',
       downloadStarting: 'Starting download...',
-      downloadComplete: 'Download complete: {status}',
+      downloadComplete: 'Download complete',
+      downloadingServer: 'Downloading {software} {version}',
       autoBackupCreated: 'Auto backup created for {name}',
       autoBackupFailed: 'Auto backup failed for {name}',
       autoRestartLimitReached: 'Auto restart limit reached for {name}',
@@ -163,7 +164,7 @@ export const en: TranslationDictionary = {
       settingsSaved: 'Settings saved',
       saveFailed: 'Failed to save settings',
       pathEmpty: 'Server path is empty',
-      created: 'Server created',
+      created: 'Server "{name}" created',
       jarDownloadFailed: 'Failed to download JAR',
       jarUrlFailed: 'Failed to get download URL. Please place the JAR manually.',
       createFailed: 'Failed to create server',

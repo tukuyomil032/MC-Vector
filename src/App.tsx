@@ -72,11 +72,6 @@ function MainApp() {
   const [showImportServerModal, setShowImportServerModal] = useState(false);
   const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
 
-  const [downloadStatus, setDownloadStatus] = useState<{
-    id: string;
-    progress: number;
-    msg: string;
-  } | null>(null);
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
   const showToast = useCallback(
     (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
@@ -211,7 +206,6 @@ function MainApp() {
     appendServerLog,
     showToast,
     t,
-    setDownloadStatus,
     setNgrokData,
     handleServerStatusChange,
   });
@@ -377,8 +371,6 @@ function MainApp() {
     setServers,
     setSelectedServerId,
     setShowAddServerModal,
-    setDownloadStatus,
-    showToast,
     t,
   });
   const { handleBuildProxyNetwork } = useProxyNetworkAction({
@@ -508,7 +500,6 @@ function MainApp() {
       />
 
       <AppOverlayLayer
-        downloadStatus={downloadStatus}
         showAddServerModal={showAddServerModal}
         onCloseAddServerModal={() => setShowAddServerModal(false)}
         onAddServer={handleAddServer}

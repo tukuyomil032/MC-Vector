@@ -168,6 +168,7 @@ export interface TranslationDictionary {
       loadError: string;
       downloadStarting: string;
       downloadComplete: string;
+      downloadingServer: string;
       autoBackupCreated: string;
       autoBackupFailed: string;
       autoRestartLimitReached: string;

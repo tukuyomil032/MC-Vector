@@ -8,19 +8,16 @@ import {
 } from '../../lib/server-creation-commands';
 import type { UnlistenFn } from '../../lib/tauri-api';
 import type { MinecraftServer } from '../shared/server declaration';
-import type { ToastKind } from '../shared/toast';
+import { notify } from '../shared/notify';
 
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
-type SetDownloadStatus = (status: { id: string; progress: number; msg: string } | null) => void;
 
 interface UseServerCreateActionOptions {
   setServers: SetServers;
   setSelectedServerId: (serverId: string) => void;
   setShowAddServerModal: (open: boolean) => void;
-  setDownloadStatus: SetDownloadStatus;
-  showToast: (message: string, type?: ToastKind) => void;
   t: Translate;
 }
 
@@ -90,8 +87,6 @@ export function useServerCreateAction({
   setServers,
   setSelectedServerId,
   setShowAddServerModal,
-  setDownloadStatus,
-  showToast,
   t,
 }: UseServerCreateActionOptions) {
   const isCreating = useRef(false);
@@ -104,46 +99,54 @@ export function useServerCreateAction({
       isCreating.current = true;
       const operationId = crypto.randomUUID();
       const request = toCreateRequest(serverData, operationId);
+      // One toast per creation: progress updates it in place, and the final result replaces it.
+      const progressKey = `server-create-${operationId}`;
+      const progressTitle = t('server.toast.downloadingServer', {
+        software: request.software,
+        version: request.version,
+      });
+      let finished = false;
       let unlisten: UnlistenFn | null = null;
 
       try {
         try {
           unlisten = await onServerCreationProgress((event) => {
-            if (event.operationId !== operationId) {
+            if (finished || event.operationId !== operationId) {
               return;
             }
-            setDownloadStatus({
-              id: operationId,
-              progress: event.progress,
-              msg: event.status,
-            });
+            notify.progress(progressKey, { title: progressTitle, progress: event.progress });
           });
         } catch (error) {
           logError('Failed to subscribe to server creation progress', error);
         }
 
         const result = await createServerProfile(request);
+        finished = true;
         setServers((previous) => [...previous, result.server]);
         setSelectedServerId(result.server.id);
         setShowAddServerModal(false);
-        showToast(t('server.toast.created'), 'success');
+        notify.done(progressKey, {
+          type: 'success',
+          title: t('server.toast.created', { name: result.server.name }),
+        });
         if (!result.jarInstalled) {
-          showToast(t('server.toast.jarUrlFailed'), 'info');
+          notify.info(t('server.toast.jarUrlFailed'));
         }
       } catch (error) {
+        finished = true;
         logError('Server creation failed', error, {
           software: request.software,
           version: request.version,
           imported: Boolean(request.importToken),
         });
-        showToast(t('server.toast.createFailed'), 'error');
+        notify.done(progressKey, { type: 'error', title: t('server.toast.createFailed') });
       } finally {
+        finished = true;
         unlisten?.();
-        setDownloadStatus(null);
         isCreating.current = false;
       }
     },
-    [setDownloadStatus, setSelectedServerId, setServers, setShowAddServerModal, showToast, t],
+    [setSelectedServerId, setServers, setShowAddServerModal, t],
   );
 
   return { handleAddServer };

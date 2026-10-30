@@ -146,7 +146,8 @@ export const ja: TranslationDictionary = {
     toast: {
       loadError: 'サーバーリスト読み込みエラー',
       downloadStarting: 'ダウンロード開始...',
-      downloadComplete: 'ダウンロード完了: {status}',
+      downloadComplete: 'ダウンロードが完了しました',
+      downloadingServer: '{software} {version} をダウンロード中',
       autoBackupCreated: '{name} の自動バックアップを作成しました',
       autoBackupFailed: '{name} の自動バックアップに失敗しました',
       autoRestartLimitReached: '{name} の自動再起動は上限に達しました',
@@ -160,7 +161,7 @@ export const ja: TranslationDictionary = {
       settingsSaved: '設定を保存しました',
       saveFailed: '設定の保存に失敗しました',
       pathEmpty: 'サーバーパスが空です',
-      created: 'サーバーを作成しました',
+      created: 'サーバー「{name}」を作成しました',
       jarDownloadFailed: 'JARのダウンロードに失敗しました',
       jarUrlFailed: 'ダウンロードURLの取得に失敗しました。手動でJARを配置してください。',
       createFailed: 'サーバー作成に失敗しました',

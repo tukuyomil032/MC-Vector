@@ -78,12 +78,6 @@
     box-shadow: 0 0 0 2px var(--mv-surface-border-strong);
   }
 
-  .download-toast {
-    --tw-border-opacity: 1;
-    border-color: rgb(39 39 42 / var(--tw-border-opacity, 1));
-    background-color: #18181b;
-  }
-
   .app-update-overlay {
     position: fixed;
     inset: 0px;
