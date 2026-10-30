@@ -109,6 +109,12 @@ vi.mock('@/i18n', () => ({
       if (key === 'backups.deleteTitle') {
         return 'Delete Backup';
       }
+      if (key === 'backups.confirmRestore') {
+        return `Restore backup "${params?.name}"?`;
+      }
+      if (key === 'backups.restoreTitle') {
+        return 'Restore Backup';
+      }
       return key;
     },
   }),
@@ -314,6 +320,33 @@ describe('BackupsView initialization', () => {
     expect(backupCommands.deleteBackup).not.toHaveBeenCalled();
     expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
+  });
+
+  it('asks before restoring a backup and leaves the world alone when canceled', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'backup.zip', date: new Date(), size: 1 },
+    ]);
+    confirmMock.mockResolvedValue(false);
+
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
+
+    const restoreButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'backups.actions.restore' });
+      expect(button).not.toBeDisabled();
+      return button;
+    });
+    fireEvent.click(restoreButton);
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Restore Backup',
+        description: 'Restore backup "backup.zip"?',
+      }),
+    );
+    expect(backupCommands.restoreBackup).not.toHaveBeenCalled();
+    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.restored');
   });
 
   it('blocks delete while the catalog is loading and allows it once ready', async () => {

@@ -400,6 +400,8 @@ export interface TranslationDictionary {
     parent: string;
     confirmDelete: string;
     deleteTitle: string;
+    confirmRestore: string;
+    restoreTitle: string;
     confirmStopForBackup: string;
     stopForBackupTitle: string;
     mode: {

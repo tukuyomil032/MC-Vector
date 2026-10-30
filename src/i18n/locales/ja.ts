@@ -376,6 +376,9 @@ export const ja: TranslationDictionary = {
     parent: '親',
     confirmDelete: 'バックアップ「{name}」を削除しますか？',
     deleteTitle: 'バックアップ削除',
+    confirmRestore:
+      'バックアップ「{name}」を復元しますか？復元すると現在のワールドが置き換わります。',
+    restoreTitle: 'バックアップの復元',
     confirmStopForBackup:
       'サーバー「{name}」は起動中です。停止が完全に完了してからバックアップを作成し、完了後に再起動しますか？',
     stopForBackupTitle: 'サーバーを停止してバックアップ',

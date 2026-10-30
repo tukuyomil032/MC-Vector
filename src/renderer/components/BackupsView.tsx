@@ -1100,6 +1100,17 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
+    const confirmed = await confirm({
+      title: t('backups.restoreTitle'),
+      description: t('backups.confirmRestore', { name: backupName }),
+      confirmLabel: t('backups.actions.restore'),
+    });
+    if (!confirmed) {
+      return;
+    }
+    if (!isCurrentInitialization(operationToken)) {
+      return;
+    }
     setProcessing(true);
     try {
       await restoreBackup(server.id, backupName);

@@ -380,6 +380,9 @@ export const en: TranslationDictionary = {
     parent: 'Parent',
     confirmDelete: 'Delete backup "{name}"?',
     deleteTitle: 'Delete Backup',
+    confirmRestore:
+      'Restore backup "{name}"? Restoring replaces the current world with this backup.',
+    restoreTitle: 'Restore Backup',
     confirmStopForBackup:
       'Server "{name}" is running. Stop it fully before creating the backup, then restart it when the backup is finished?',
     stopForBackupTitle: 'Stop Server for Backup',
