@@ -533,6 +533,7 @@ mod tests {
         validate_ip_address, validate_player_name, PlayerEntry, PlayerListAction,
         PlayerListMutation, PlayerListType,
     };
+    use crate::test_support::test_temp_dir;
     use std::path::PathBuf;
     use uuid::Uuid;
 
@@ -540,7 +541,7 @@ mod tests {
 
     impl TestDirectory {
         fn new() -> Self {
-            let path = std::env::temp_dir().join(format!("mc-vector-players-{}", Uuid::new_v4()));
+            let path = test_temp_dir("mc-vector-players-tests").join(Uuid::new_v4().to_string());
             std::fs::create_dir_all(&path).unwrap();
             Self(path)
         }
