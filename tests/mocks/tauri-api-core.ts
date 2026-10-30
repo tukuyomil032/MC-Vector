@@ -548,6 +548,13 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       };
     }
 
+    case 'get_allow_unverified_plugin_downloads':
+      return state.config.allowUnverifiedPluginDownloads === true;
+
+    case 'set_allow_unverified_plugin_downloads':
+      state.config.allowUnverifiedPluginDownloads = payload.enabled === true;
+      return null;
+
     case 'execute_plugin_install': {
       const request = asRecord(payload.request);
       const token = String(request.token ?? '');
