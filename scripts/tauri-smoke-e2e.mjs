@@ -1038,7 +1038,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`[real-tauri-e2e] ${describeError(error)}`);
   console.error(
     `[real-tauri-e2e] failed (error ${errorFingerprint(error)}); inspect retained diagnostics for details`,
   );
