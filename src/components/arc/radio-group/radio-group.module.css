@@ -1,0 +1,145 @@
+.group {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+.group legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+/* One highlight travels between the rows: above their borders and fills, below their text, so it never crosses a label. */
+.options {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+}
+.highlight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--control-on);
+  border-radius: var(--radius-control);
+  background: color-mix(in oklab, var(--control-on) 5%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+/* Rows answer a press with color only; the mark is what moves. */
+/* The mark sits centered on the left edge of the row, whether or not the option has a description. */
+.option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+@media (hover: hover) and (pointer: fine) {
+  .option:hover {
+    background: var(--surface-muted);
+  }
+}
+.option:active {
+  background: var(--surface-muted);
+}
+/* Until the highlight is placed (server paint or no script), the checked row carries the same look itself. */
+.options:not([data-ready]) .option:has(input:checked) {
+  border-color: var(--control-on);
+  background: color-mix(in oklab, var(--control-on) 5%, transparent);
+}
+.option input {
+  position: absolute;
+  opacity: 0;
+}
+/* Rows are not stacking contexts, so their mark and copy rise above the highlight while their border and fill stay below it. */
+.option > span {
+  position: relative;
+  z-index: 2;
+}
+.mark {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-spring) var(--ease-spring);
+}
+/* 7px keeps the dot on whole pixels inside the 15px interior of the mark. */
+.mark::after,
+.dot {
+  grid-area: 1 / 1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--foreground);
+}
+/* A faint dot previews the choice while the pointer is down, then the real dot springs in on release. */
+.mark::after {
+  content: '';
+  opacity: 0;
+  transition: opacity var(--duration-instant) var(--ease-standard);
+}
+.option:active:not(:has(input:checked)) .mark::after {
+  opacity: 0.22;
+}
+/* The mark alone answers a press: a quick dip, then a spring back. */
+.option:active .mark {
+  transform: scale(0.88);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    transform 100ms var(--ease-standard);
+}
+.option:has(input:checked) .mark {
+  border-color: var(--control-on);
+  background: var(--control-on);
+}
+.option:has(input:checked) .dot {
+  background: var(--control-glyph);
+}
+.option strong,
+.option small {
+  display: block;
+}
+.option strong {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: color var(--duration-standard) var(--ease-standard);
+}
+.option:has(input:checked) strong {
+  color: var(--foreground);
+}
+.option small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+@media (prefers-reduced-motion: reduce) {
+  .option,
+  .mark,
+  .mark::after,
+  .option strong {
+    transition: none;
+  }
+  .option:active .mark {
+    transform: none;
+  }
+}

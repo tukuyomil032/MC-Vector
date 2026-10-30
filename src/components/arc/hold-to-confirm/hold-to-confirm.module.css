@@ -1,0 +1,120 @@
+.button {
+  --hold-ink: var(--foreground);
+  --hold-fill: var(--accent);
+  --hold-on-fill: var(--accent-foreground);
+  --hold-border: var(--border-strong);
+  position: relative;
+  display: inline-flex;
+  min-height: var(--control-height-md);
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--hold-border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--hold-ink);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-body);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+.button[data-tone='danger'] {
+  --hold-ink: var(--danger);
+  --hold-fill: var(--danger);
+  --hold-on-fill: var(--background);
+  --hold-border: color-mix(in oklab, var(--danger) 32%, var(--border));
+}
+.button[data-tone='neutral'] {
+  --hold-ink: var(--foreground);
+  --hold-fill: var(--foreground);
+  --hold-on-fill: var(--background);
+  --hold-border: var(--border-strong);
+}
+@media (hover: hover) and (pointer: fine) {
+  .button:not(:disabled):not([aria-disabled='true']):hover {
+    background: color-mix(in oklab, var(--hold-fill) 6%, var(--surface));
+  }
+}
+.button[aria-disabled='true'] {
+  cursor: default;
+}
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.face {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+/* Covers the border too, and keeps its own rounded corners; the clip only ever cuts a straight leading edge. */
+.fill {
+  position: absolute;
+  inset: -1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  background: var(--hold-fill);
+  color: var(--hold-on-fill);
+  pointer-events: none;
+}
+.iconSlot {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  place-items: center;
+}
+.iconPhase {
+  display: grid;
+  grid-area: 1 / 1;
+  place-items: center;
+}
+.iconPhase svg {
+  width: 18px;
+  height: 18px;
+}
+/* Clips the outgoing label while the frame narrows, with room for the rise and the soft blur. */
+.labelFrame {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  clip-path: inset(-0.6em -3px);
+}
+.label {
+  display: block;
+  white-space: nowrap;
+}
+.measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}
