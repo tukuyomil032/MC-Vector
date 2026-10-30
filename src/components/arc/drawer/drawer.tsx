@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import type { ComponentPropsWithoutRef, ReactNode, RefObject } from 'react';
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode, RefObject } from 'react';
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
 import type { PanInfo, Transition } from 'motion/react';
 import { X } from 'lucide-react';
@@ -78,6 +78,8 @@ export interface DrawerContentProps extends ComponentPropsWithoutRef<
   container?: HTMLElement | null;
   /** Accessible name of the close button. Pass a translated string. */
   closeLabel?: string;
+  /** Overrides the panel size along its axis, for example `min(300px, 85vw)`. Defaults to the drawer's own size. */
+  width?: string;
 }
 
 const fade: Transition = { duration: motionTokens.duration.instant };
@@ -141,6 +143,7 @@ export function DrawerContent({
   className,
   onInteractOutside,
   closeLabel = 'Close drawer',
+  width,
   ...props
 }: DrawerContentProps) {
   const drawer = useContext(DrawerContext);
@@ -152,6 +155,8 @@ export function DrawerContent({
   const sign = side === 'right' || side === 'bottom' ? 1 : -1;
   const offscreen = { [axis]: `${sign * 100}%` };
   const classes = [styles.content, className].filter(Boolean).join(' ');
+  // Set inline so it beats the responsive --drawer-size defaults in drawer.module.css.
+  const sizeStyle = width ? ({ '--drawer-size': width } as CSSProperties) : undefined;
   const draggable = drawer !== null && !reduced;
 
   const panelSize = () =>
@@ -222,6 +227,7 @@ export function DrawerContent({
           data-side={side}
           data-contained={container ? '' : undefined}
           className={`${classes} ${styles.keyframes}`}
+          style={sizeStyle}
         >
           {inner}
         </DialogPrimitive.Content>
@@ -269,7 +275,7 @@ export function DrawerContent({
               className={classes}
               data-side={side}
               data-contained={container ? '' : undefined}
-              style={{ [axis]: offset }}
+              style={{ [axis]: offset, ...sizeStyle }}
               variants={{
                 exit: (flung: boolean) =>
                   reduced

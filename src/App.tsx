@@ -484,25 +484,21 @@ function MainApp() {
 
       {isDrawerLayout && (
         <Drawer open={isSidebarDrawerOpen} onOpenChange={setIsSidebarDrawerOpen}>
-          <DrawerContent title={t('nav.menuTitle')} side="left" closeLabel={t('common.close')}>
+          <DrawerContent
+            title={t('nav.menuTitle')}
+            side="left"
+            closeLabel={t('common.close')}
+            width="min(300px, 85vw)"
+          >
             <div
               className="app-sidebar app-sidebar--open flex h-full min-h-0 flex-col"
               data-testid="app-sidebar-drawer"
             >
-              <AppSidebarHeader
-                isSidebarOpen
-                onOpenSettings={() => {
-                  setIsSidebarDrawerOpen(false);
-                  handleOpenSettingsWindow();
-                }}
-                openSettingsLabel={t('nav.openSettings')}
-                collapseLabel={t('nav.collapseSidebar')}
-                expandLabel={t('nav.expandSidebar')}
-              />
               <AppSidebarNavigation
                 isSidebarOpen
                 currentView={currentView}
                 setCurrentView={drawerNavigate}
+                showAppSettings
                 t={t}
               />
               <AppServerSidebar {...drawerServerPanelProps} />

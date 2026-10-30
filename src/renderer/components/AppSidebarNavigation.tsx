@@ -5,6 +5,7 @@ import {
   Network,
   Puzzle,
   Settings,
+  Settings2,
   SlidersHorizontal,
   Terminal,
   Users,
@@ -19,6 +20,8 @@ interface AppSidebarNavigationProps {
   isSidebarOpen: boolean;
   currentView: AppView;
   setCurrentView: (view: AppView) => void;
+  /** Adds an app settings entry at the end. The drawer uses it, because its header (which opens settings on desktop) is not shown there. */
+  showAppSettings?: boolean;
   t: Translate;
 }
 
@@ -50,6 +53,7 @@ export default function AppSidebarNavigation({
   isSidebarOpen,
   currentView,
   setCurrentView,
+  showAppSettings = false,
   t,
 }: AppSidebarNavigationProps) {
   return (
@@ -72,6 +76,19 @@ export default function AppSidebarNavigation({
           />
         </div>
       ))}
+      {showAppSettings && (
+        <div>
+          <hr className={styles.divider} />
+          <AppNavItem
+            label={isSidebarOpen ? t('nav.settings') : ''}
+            tooltip={t('nav.settings')}
+            view="app-settings"
+            current={currentView}
+            set={setCurrentView}
+            icon={<Settings2 size={16} strokeWidth={1.75} aria-hidden={true} />}
+          />
+        </div>
+      )}
     </div>
   );
 }
