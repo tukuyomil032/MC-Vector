@@ -8,4 +8,5 @@ pub mod ngrok;
 pub mod perf;
 pub mod process_stats;
 pub mod server;
+pub mod server_registry;
 pub mod updater_utils;
