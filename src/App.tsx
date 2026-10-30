@@ -1,5 +1,4 @@
 import { useTranslation } from '@/i18n';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { isEulaRequiredError } from '@/lib/eula-commands';
@@ -12,6 +11,7 @@ import {
   updateServer as updateServerApi,
 } from '@/lib/server-commands';
 import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
+import { useAppFeedback } from '@/renderer/components/AppFeedbackProvider';
 import AppMainContent from '@/renderer/components/AppMainContent';
 import AppMainHeader from '@/renderer/components/AppMainHeader';
 import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
@@ -60,6 +60,7 @@ function App() {
 
 function MainApp() {
   const { t } = useTranslation();
+  const { confirm } = useAppFeedback();
   const servers = useServerStore((state) => state.servers);
   const setServers = useServerStore((state) => state.setServers);
   const selectedServerId = useServerStore((state) => state.selectedServerId);
@@ -280,9 +281,9 @@ function MainApp() {
         const backupName = buildAutoBackupName(s, new Date());
         let outcome = await createBackup(s.id, backupName, undefined, false);
         if (outcome.status === 'confirmation_required') {
-          const confirmed = await ask(t('backups.confirmStopForBackup', { name: s.name }), {
+          const confirmed = await confirm({
             title: t('backups.stopForBackupTitle'),
-            kind: 'warning',
+            description: t('backups.confirmStopForBackup', { name: s.name }),
           });
           if (!confirmed) {
             await new Promise((r) => setTimeout(r, 1000));

@@ -1,6 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import {
@@ -17,6 +16,7 @@ import {
 import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles } from '../../lib/file-commands';
 import { notify } from '../shared/notify';
+import { useAppFeedback } from './AppFeedbackProvider';
 import { tauriListen } from '../../lib/tauri-api';
 import {
   getManualBackupOperationId,
@@ -197,6 +197,7 @@ export async function persistBackupCatalogBestEffort(
 
 export default function BackupsView({ server }: Props) {
   const { t } = useTranslation();
+  const { confirm } = useAppFeedback();
   const activeManualOperation = useBackupOperationStore(
     (state) => state.activeManualOperations[server.id],
   );
@@ -931,10 +932,10 @@ export default function BackupsView({ server }: Props) {
         false,
       );
       if (backupOutcome.status === 'confirmation_required') {
-        const confirmed = await ask(
-          t('backups.confirmStopForBackup', { name: capturedServer.name }),
-          { title: t('backups.stopForBackupTitle'), kind: 'warning' },
-        );
+        const confirmed = await confirm({
+          title: t('backups.stopForBackupTitle'),
+          description: t('backups.confirmStopForBackup', { name: capturedServer.name }),
+        });
         if (!confirmed) {
           return;
         }
@@ -1135,9 +1136,11 @@ export default function BackupsView({ server }: Props) {
     }
 
     try {
-      const confirmed = await ask(t('backups.confirmDelete', { name: backupName }), {
+      const confirmed = await confirm({
         title: t('backups.deleteTitle'),
-        kind: 'warning',
+        description: t('backups.confirmDelete', { name: backupName }),
+        confirmLabel: t('common.delete'),
+        tone: 'danger',
       });
       if (!confirmed) {
         return;
@@ -1285,22 +1288,15 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
-    const confirmed = await ask(t('backups.world.confirmDelete', { name: worldName }), {
+    // One danger confirm that names the world. The warning about backups goes in the body.
+    const confirmed = await confirm({
       title: t('backups.world.deleteTitle'),
-      kind: 'warning',
+      description: t('backups.world.confirmDelete', { name: worldName }),
+      body: t('backups.world.finalConfirm'),
+      confirmLabel: t('backups.world.deleteButton'),
+      tone: 'danger',
     });
     if (!confirmed) {
-      return;
-    }
-
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-    const finalConfirm = await ask(t('backups.world.finalConfirm'), {
-      title: t('backups.world.finalConfirmTitle'),
-      kind: 'warning',
-    });
-    if (!finalConfirm) {
       return;
     }
 

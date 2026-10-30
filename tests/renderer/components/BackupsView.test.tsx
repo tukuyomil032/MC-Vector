@@ -6,7 +6,7 @@ import { StrictMode, useLayoutEffect, useRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
-  askMock,
+  confirmMock,
   backupCommands,
   fileCommands,
   logErrorMock,
@@ -45,7 +45,7 @@ const {
   const registeredTauriHandlers: Array<{ event: string; handler: unknown }> = [];
 
   return {
-    askMock: vi.fn(),
+    confirmMock: vi.fn(),
     backupCommands: {
       applyBackupRetention: vi.fn(),
       createBackup: vi.fn(),
@@ -85,7 +85,9 @@ vi.mock('@tanstack/react-virtual', () => ({
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: webviewWindowMock }));
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({ ask: askMock }));
+vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
+  useAppFeedback: () => ({ confirm: confirmMock }),
+}));
 
 vi.mock('@/renderer/shared/notify', () => ({
   notify: {
@@ -183,7 +185,7 @@ beforeEach(() => {
   registeredTauriHandlers.length = 0;
   selectorWindowInstances.length = 0;
   onceRegistrationResults.length = 0;
-  askMock.mockResolvedValue(false);
+  confirmMock.mockResolvedValue(false);
   backupCommands.createBackup.mockResolvedValue({
     status: 'created',
     backupName: 'backup-name.zip',
@@ -261,7 +263,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce([{ name: 'backup.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockResolvedValue(undefined);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
@@ -274,11 +276,14 @@ describe('BackupsView initialization', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.deleted'));
-    expect(askMock).toHaveBeenCalledOnce();
-    expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
-      title: 'Delete Backup',
-      kind: 'warning',
-    });
+    expect(confirmMock).toHaveBeenCalledOnce();
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Delete Backup',
+        description: 'Delete backup "backup.zip"?',
+        tone: 'danger',
+      }),
+    );
     expect(backupCommands.deleteBackup).toHaveBeenCalledOnce();
     expect(toastErrorMock).not.toHaveBeenCalledWith('backups.toast.catalogLoadFailed');
   }, 10_000);
@@ -298,11 +303,14 @@ describe('BackupsView initialization', () => {
     });
     fireEvent.click(deleteButton);
 
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
-    expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
-      title: 'Delete Backup',
-      kind: 'warning',
-    });
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Delete Backup',
+        description: 'Delete backup "backup.zip"?',
+        tone: 'danger',
+      }),
+    );
     expect(backupCommands.deleteBackup).not.toHaveBeenCalled();
     expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
@@ -315,7 +323,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValue([]);
     backupCommands.readBackupCatalog.mockReturnValue(catalog.promise);
     backupCommands.deleteBackup.mockResolvedValue(undefined);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     renderStrictMode();
 
@@ -922,7 +930,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockReturnValue(deletion.promise);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
@@ -961,12 +969,12 @@ describe('BackupsView initialization', () => {
     backupCommands.listBackupsWithMetadata.mockResolvedValue([
       { name: 'old-a.zip', date: new Date(), size: 1 },
     ]);
-    askMock.mockReturnValue(confirmation.promise);
+    confirmMock.mockReturnValue(confirmation.promise);
 
     const view = renderKeyedStrictMode('server-a', server);
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
 
     view.rerender(
       <StrictMode>
@@ -1002,7 +1010,7 @@ describe('BackupsView initialization', () => {
       return Promise.resolve([]);
     });
     fileCommands.deleteItem.mockReturnValue(deletion.promise);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByText('🌍 world')).toBeInTheDocument());
@@ -1037,7 +1045,7 @@ describe('BackupsView initialization', () => {
 describe('BackupsView lifecycle', () => {
   it('asks before stopping a running server and retries creation only after consent', async () => {
     fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
     backupCommands.createBackup
       .mockResolvedValueOnce({ status: 'confirmation_required' })
       .mockResolvedValueOnce({
@@ -1057,7 +1065,7 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
     expect(backupCommands.createBackup).toHaveBeenNthCalledWith(
       1,
       server.id,
@@ -1065,10 +1073,12 @@ describe('BackupsView lifecycle', () => {
       5,
       false,
     );
-    expect(askMock).toHaveBeenCalledWith('backups.confirmStopForBackup', {
-      title: 'backups.stopForBackupTitle',
-      kind: 'warning',
-    });
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'backups.stopForBackupTitle',
+        description: 'backups.confirmStopForBackup',
+      }),
+    );
     await waitFor(() => expect(backupCommands.createBackup).toHaveBeenCalledTimes(2));
     expect(backupCommands.createBackup).toHaveBeenNthCalledWith(
       2,
@@ -1082,14 +1092,14 @@ describe('BackupsView lifecycle', () => {
   it('does not retry or show success when stopping a running server is declined', async () => {
     fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({ status: 'confirmation_required' });
-    askMock.mockResolvedValue(false);
+    confirmMock.mockResolvedValue(false);
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
     expect(backupCommands.createBackup).toHaveBeenCalledOnce();
     expect(toastSuccessMock).not.toHaveBeenCalled();
     expect(toastErrorMock).not.toHaveBeenCalled();
@@ -1113,7 +1123,7 @@ describe('BackupsView lifecycle', () => {
     expect(toastWarningMock).toHaveBeenCalledWith('backups.toast.registryUpdateFailed');
     expect(toastWarningMock).toHaveBeenCalledWith('backups.toast.serverRestartFailed');
     expect(backupCommands.applyBackupRetention).not.toHaveBeenCalled();
-    expect(askMock).not.toHaveBeenCalled();
+    expect(confirmMock).not.toHaveBeenCalled();
   });
 
   it('reports stop failure without treating the attempt as a created backup', async () => {
@@ -1375,7 +1385,7 @@ describe('BackupsView lifecycle', () => {
       .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockReturnValue(deletion.promise);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     const view = renderKeyedStrictMode('server-a', server);
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());

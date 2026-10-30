@@ -64,7 +64,6 @@ test.describe('files and backups', () => {
       ).__MC_VECTOR_E2E__;
       runtime?.state.runningServerIds.push('server-1');
     });
-    await app.confirmDialogs();
     await app.openView('backups');
 
     const backups = page.locator('[data-testid="backups-view"]');
@@ -74,6 +73,7 @@ test.describe('files and backups', () => {
     await expect(backups.getByText('Selected: 1', { exact: true })).toBeVisible();
     await backups.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
     await backups.locator('[data-testid="backups-create-submit"]').click();
+    await app.acceptConfirm();
 
     await expect(backups.locator('[data-testid="backup-row-e2e-running-backup.zip"]')).toBeVisible({
       timeout: 15_000,
