@@ -2,6 +2,8 @@ mod commands;
 pub mod metric_history;
 pub mod server_stdout;
 mod state;
+#[cfg(test)]
+mod test_support;
 
 use tauri::Manager;
 
