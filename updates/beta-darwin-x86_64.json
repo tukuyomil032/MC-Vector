@@ -1,7 +1,7 @@
 {
-  "version": "2.0.64-beta.2",
-  "notes": "## v2.0.64-beta.2\n\n### Features\n- retain dashboard metrics while servers run (#242)\n\n### Bug Fixes\n- unify updater checks and show release notes (#239)\n- bootstrap missing stable updater feeds (#236)\n- prepend generated release changelog entries (#235)\n",
-  "pub_date": "2026-10-28T07:25:16Z",
-  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64-beta.2/MC-Vector_2.0.64-beta.2_darwin-x86_64.app.tar.gz",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjA4N2p0N2xtU3Bsa1FRTHBGZ2RlSFFNelNHelRmSEtVczZ6ek9BU3p4aHdDeXJBbHZFRVBKMHllK0ZiYmlia0pQbUVFaEY5Z0xNcFFLZkZKRHV5MndzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTcyMTY1CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKNUxWUGs3VEFoSUNrQVdlUjJuWVhWYWVMdW9MNHdtazVHNW5Dc0tiZDJyY09oMEoyMzhXTEJVK3lZVmMxZXhjclgvbGl2LzQvV0k1YmkwOWJYWG5PQUE9PQo="
+  "version": "2.0.64",
+  "notes": "## v2.0.64\n\n### Features\n- retain dashboard metrics while servers run (#242)\n\n### Bug Fixes\n- drop removed files from prepare-release add-paths (#252)\n- clarify macOS updater restrictions and add Homebrew Cask (#244)\n- unify updater checks and show release notes (#239)\n- bootstrap missing stable updater feeds (#236)\n- prepend generated release changelog entries (#235)\n- unblock cargo-audit CI failure on main (#230)\n",
+  "pub_date": "2026-10-30T11:10:01Z",
+  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64/MC-Vector_2.0.64_darwin-x86_64.app.tar.gz",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRi9NRHlZN2t2dU8zWm5FNWxvanRBemJZaTBIYWpaNXpDQlJteE5TMjl3dGdzdjcvQXVDVWZra3B3VFQvaVc2YythK044bGxpZkI3RkduZm11Z2FXK2d3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzU4MTY3CWZpbGU6TUMtVmVjdG9yLmFwcC50YXIuZ3oKVUhRbzE4bjB5dllTemFJcUFlNXZ0Uk5tWUlvenBVL1VLczFlRExhVTdnaDAreUJiTzFJZ3FKbTR3QTBjTFo4R0l2eGVMWGNqVVZwenk2R2F0M0dUQWc9PQo="
 }

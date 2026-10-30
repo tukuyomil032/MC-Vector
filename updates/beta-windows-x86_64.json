@@ -1,7 +1,7 @@
 {
-  "version": "2.0.64-beta.2",
-  "notes": "## v2.0.64-beta.2\n\n### Features\n- retain dashboard metrics while servers run (#242)\n\n### Bug Fixes\n- unify updater checks and show release notes (#239)\n- bootstrap missing stable updater feeds (#236)\n- prepend generated release changelog entries (#235)\n",
-  "pub_date": "2026-10-28T07:25:16Z",
-  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64-beta.2/MC-Vector_2.0.64-beta.2_windows-x86_64-setup.exe",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRjVsK21PMTR2clV5OXBVY0FuaGdoekx5YjE4QU5uMXZSL3Y4VkgrYzJUdHo2bzFud1lRK2VmSVdWTXlOdVBVVlRSWVB1bU04RWRDN3VZc0treWFhVndBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTcyMDYzCWZpbGU6TUMtVmVjdG9yXzIuMC42NC1iZXRhLjJfeDY0LXNldHVwLmV4ZQpEMk1xRW1wZWdEK3BMVzE2NkpYWGM4OUREc1hyNnRXY0xZRlVpTmowREJyQnF1Y3grOEVxU21FSDVqRTNNR29GalYvOU50WjZZeCtNSUxIeURLWnFCQT09Cg=="
+  "version": "2.0.64",
+  "notes": "## v2.0.64\n\n### Features\n- retain dashboard metrics while servers run (#242)\n\n### Bug Fixes\n- drop removed files from prepare-release add-paths (#252)\n- clarify macOS updater restrictions and add Homebrew Cask (#244)\n- unify updater checks and show release notes (#239)\n- bootstrap missing stable updater feeds (#236)\n- prepend generated release changelog entries (#235)\n- unblock cargo-audit CI failure on main (#230)\n",
+  "pub_date": "2026-10-30T11:10:01Z",
+  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64/MC-Vector_2.0.64_windows-x86_64-setup.exe",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRnp3b3E4TG5QTGd2anVKVE82TlVUOVZvaTBoQkFDMkxCYytkd3JUa2I5ZElUZTJKRmQvMEJ0MW1JTDRobm9qSldXSjFPZlIvbGJaUGFTbUxsTWpTSXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzU4NTAxCWZpbGU6TUMtVmVjdG9yXzIuMC42NF94NjQtc2V0dXAuZXhlCjUrd3FwTHlxZDVWUEwxZTRqMGFnS3VXN1RKU1V1ZGhLazlCRHN5VCtsYUcwck93Nkt2SjNSZTRtV25jelU5WUZrblJTUUszMmlWdklFUXVtYXRqaUJ3PT0K"
 }

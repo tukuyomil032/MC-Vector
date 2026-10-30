@@ -1,7 +1,7 @@
 {
-  "version": "2.0.63",
-  "notes": "MC-Vector v2.0.63",
-  "pub_date": "2026-09-16T04:35:04Z",
-  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.63/MC-Vector_2.0.63_windows-x86_64-setup.exe",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRitHclR3UzltWC9RcFFvVWlIRjFvcFQweUFNQmZFUFp0b0tHQlkrbkxIUUp3TUh1YmhMcHFkN3hzSUNYUWJxZndTRGRyS3lEMU5SL29UZ0hJU3dIL1FBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NTMzMjkwCWZpbGU6TUMtVmVjdG9yXzIuMC42M194NjQtc2V0dXAuZXhlClJlSnJTaVZtUXBqZHV4dXVpZm5oNytmZDVveVRyRUxORjlpYzhJalpGRHB3eHlSdDdDbVdDN1BYSXFpajFlUnBlcS9IVEE0Tm8zTDRkNDdremlENURRPT0K"
+  "version": "2.0.64",
+  "notes": "## v2.0.64\n\n### Features\n- retain dashboard metrics while servers run (#242)\n\n### Bug Fixes\n- drop removed files from prepare-release add-paths (#252)\n- clarify macOS updater restrictions and add Homebrew Cask (#244)\n- unify updater checks and show release notes (#239)\n- bootstrap missing stable updater feeds (#236)\n- prepend generated release changelog entries (#235)\n- unblock cargo-audit CI failure on main (#230)\n",
+  "pub_date": "2026-10-30T11:10:01Z",
+  "url": "https://github.com/tukuyomil032/MC-Vector/releases/download/v2.0.64/MC-Vector_2.0.64_windows-x86_64-setup.exe",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSdnVGTTl4K3JBRnp3b3E4TG5QTGd2anVKVE82TlVUOVZvaTBoQkFDMkxCYytkd3JUa2I5ZElUZTJKRmQvMEJ0MW1JTDRobm9qSldXSjFPZlIvbGJaUGFTbUxsTWpTSXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzU4NTAxCWZpbGU6TUMtVmVjdG9yXzIuMC42NF94NjQtc2V0dXAuZXhlCjUrd3FwTHlxZDVWUEwxZTRqMGFnS3VXN1RKU1V1ZGhLazlCRHN5VCtsYUcwck93Nkt2SjNSZTRtV25jelU5WUZrblJTUUszMmlWdklFUXVtYXRqaUJ3PT0K"
 }
