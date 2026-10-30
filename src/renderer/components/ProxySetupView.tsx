@@ -1,7 +1,7 @@
-import { ask } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import { useAppFeedback } from './AppFeedbackProvider';
 import { Button } from './ui/Button';
 import { Input, NativeSelect } from './ui/Field';
 
@@ -23,6 +23,7 @@ export default function ProxySetupView({
   onOpenHelp,
 }: ProxySetupViewProps) {
   const { t } = useTranslation();
+  const { confirm } = useAppFeedback();
   const [proxySoftware, setProxySoftware] = useState('Velocity');
   const [proxyPort, setProxyPort] = useState(25577);
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
@@ -46,13 +47,17 @@ export default function ProxySetupView({
     if (isBuilding) {
       return;
     }
-    if (selectedBackendIds.length < 2) {
-      const confirmed = await ask(t('proxySetup.confirmFewServers'), {
-        title: t('proxySetup.dialogTitle'),
-        kind: 'warning',
-      });
-      if (!confirmed) return;
-    }
+    // One confirm covers the whole build. Fewer than two backends adds its warning above the rewrite notice.
+    const fewBackends = selectedBackendIds.length < 2;
+    const confirmed = await confirm({
+      title: t('proxySetup.dialogTitle'),
+      description: fewBackends
+        ? t('proxySetup.confirmFewServers')
+        : t('proxy.confirmRewriteProperties'),
+      body: fewBackends ? t('proxy.confirmRewriteProperties') : undefined,
+      confirmLabel: t('proxySetup.buildNetwork'),
+    });
+    if (!confirmed) return;
     setIsBuilding(true);
     try {
       await onBuildNetwork({

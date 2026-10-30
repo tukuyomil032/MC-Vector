@@ -1,4 +1,3 @@
-import { ask } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
@@ -19,14 +18,6 @@ interface UseProxyNetworkActionOptions {
 export function useProxyNetworkAction({ setServers, showToast, t }: UseProxyNetworkActionOptions) {
   const handleBuildProxyNetwork = useCallback(
     async (config: ProxyNetworkConfig) => {
-      const confirmed = await ask(t('proxy.confirmRewriteProperties'), {
-        title: t('proxy.configTitle'),
-        kind: 'info',
-      });
-      if (!confirmed) {
-        return;
-      }
-
       try {
         const backendPorts = await configureProxyNetwork(config);
 

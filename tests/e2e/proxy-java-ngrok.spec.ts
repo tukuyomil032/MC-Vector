@@ -10,8 +10,8 @@ test.describe('proxy, Java, and Ngrok flows', () => {
     await expect(proxy.locator('#proxy-setup-software')).toHaveValue('Velocity');
     await proxy.locator('#proxy-backend-server-1').check();
 
-    await app.confirmDialogs();
     await proxy.getByRole('button', { name: /Build Network/i }).click();
+    await app.acceptConfirm();
     await expect(page.getByText(/Updated settings for 1 server/i)).toBeVisible({
       timeout: 15_000,
     });
