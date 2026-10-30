@@ -34,9 +34,22 @@ test.describe('console and user management', () => {
     await list.locator('[data-testid="users-add-whitelist"]').click();
 
     await expect(list.getByText('E2EPlayer', { exact: true })).toBeVisible();
-    await expect.poll(async () => (await app.ipcCalls('write_managed_text_file')).length).toBe(1);
+    await expect.poll(async () => (await app.ipcCalls('mutate_player_list')).length).toBe(1);
+    expect((await app.ipcCalls('mutate_player_list'))[0].args).toMatchObject({
+      serverId: 'server-1',
+      mutation: { listType: 'whitelist', action: 'add', value: 'E2EPlayer' },
+    });
+    expect(
+      (await app.runtimeState())?.files['/mock/app-data/servers/server-1/whitelist.json']?.content,
+    ).toContain('E2EPlayer');
     await list.getByRole('button', { name: 'Remove', exact: true }).click();
     await expect(list.getByText('E2EPlayer', { exact: true })).toHaveCount(0);
-    await expect.poll(async () => (await app.ipcCalls('write_managed_text_file')).length).toBe(2);
+    await expect.poll(async () => (await app.ipcCalls('mutate_player_list')).length).toBe(2);
+    expect(
+      JSON.parse(
+        (await app.runtimeState())?.files['/mock/app-data/servers/server-1/whitelist.json']
+          ?.content ?? '[]',
+      ),
+    ).toEqual([]);
   });
 });

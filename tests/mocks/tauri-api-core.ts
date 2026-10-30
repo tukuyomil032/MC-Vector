@@ -37,16 +37,6 @@ function emitProgress(serverId: string, status: string): void {
   void emit('download-progress', { serverId, progress: 100, status });
 }
 
-function pluginDestinationPath(request: Record<string, unknown>): string {
-  const serverId = typeof request.serverId === 'string' ? request.serverId : '';
-  const relativePath = typeof request.relativePath === 'string' ? request.relativePath : '';
-  const isManagedPluginPath = /^(?:plugins|mods)\/[^/\\]+\.jar$/i.test(relativePath);
-  if (!serverId || !isManagedPluginPath) {
-    throw errorWithCode('destination-rejected');
-  }
-  return resolveRuntimePath({ root: 'servers', serverId, relativePath });
-}
-
 function serverEulaPath(serverId: string): string {
   return resolveRuntimePath({ root: 'servers', serverId, relativePath: 'eula.txt' });
 }
@@ -100,11 +90,271 @@ function acceptServerEula(serverId: string): void {
   setRuntimeFile(path, accepted);
 }
 
+const playerListFiles = {
+  whitelist: { key: 'whitelist', file: 'whitelist.json' },
+  ops: { key: 'ops', file: 'ops.json' },
+  'banned-players': { key: 'bannedPlayers', file: 'banned-players.json' },
+  'banned-ips': { key: 'bannedIps', file: 'banned-ips.json' },
+} as const;
+
+type PlayerListType = keyof typeof playerListFiles;
+
+function playerListPath(serverId: string, listType: PlayerListType): string {
+  return resolveRuntimePath({
+    root: 'servers',
+    serverId,
+    relativePath: playerListFiles[listType].file,
+  });
+}
+
+function readPlayerList(serverId: string, listType: PlayerListType): Record<string, unknown>[] {
+  const entries: unknown = JSON.parse(readRuntimeFile(playerListPath(serverId, listType)));
+  if (!Array.isArray(entries)) throw new Error('Player list JSON must be an array');
+  return entries.map((entry) => asRecord(entry));
+}
+
+function readPlayerLists(serverId: string): Record<string, Record<string, unknown>[]> {
+  return Object.fromEntries(
+    Object.keys(playerListFiles).map((listType) => {
+      const type = listType as PlayerListType;
+      return [playerListFiles[type].key, readPlayerList(serverId, type)];
+    }),
+  );
+}
+
+function parsePropertyValue(value: string): string | number | boolean {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^-?\d+$/.test(value)) {
+    const integer = Number(value);
+    if (Number.isSafeInteger(integer)) return integer;
+  }
+  if (value.trim() !== '') {
+    const decimal = Number(value);
+    if (Number.isFinite(decimal)) return decimal;
+  }
+  return value;
+}
+
+function readServerProperties(serverId: string): Record<string, string | number | boolean> {
+  const path = resolveRuntimePath({
+    root: 'servers',
+    serverId,
+    relativePath: 'server.properties',
+  });
+  const properties: Record<string, string | number | boolean> = {};
+  for (const [index, line] of readRuntimeFile(path).split(/\r?\n/).entries()) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) continue;
+    const delimiter = line.indexOf('=');
+    if (delimiter < 0) throw new Error(`Malformed server.properties entry on line ${index + 1}`);
+    const key = line.slice(0, delimiter).trim();
+    if (!key) throw new Error(`Empty server.properties key on line ${index + 1}`);
+    properties[key] = parsePropertyValue(line.slice(delimiter + 1).trim());
+  }
+  return properties;
+}
+
+function serializePropertyValue(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  throw new Error('Invalid server.properties value');
+}
+
+function patchServerProperties(serverId: string, updates: Record<string, unknown>): number | null {
+  const path = resolveRuntimePath({
+    root: 'servers',
+    serverId,
+    relativePath: 'server.properties',
+  });
+  const original = readRuntimeFile(path);
+  const newline = original.includes('\r\n') ? '\r\n' : '\n';
+  const found = new Set<string>();
+  let updated = original
+    .split(/(?<=\n)/)
+    .map((line) => {
+      const body = line.replace(/\r?\n$/, '');
+      const ending = line.slice(body.length);
+      const trimmed = body.trim();
+      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) return line;
+      const delimiter = body.indexOf('=');
+      if (delimiter < 0) {
+        throw new Error(
+          'Cannot update malformed server.properties entry without overwriting the file',
+        );
+      }
+      const key = body.slice(0, delimiter).trim();
+      if (!key) {
+        throw new Error(
+          'Cannot update server.properties with an empty key without overwriting the file',
+        );
+      }
+      if (!Object.hasOwn(updates, key)) return line;
+      found.add(key);
+      const originalValue = body.slice(delimiter + 1);
+      const leading = originalValue.length - originalValue.trimStart().length;
+      const trailing = originalValue.length - originalValue.trimEnd().length;
+      const trailingStart = originalValue.length - trailing;
+      return `${body.slice(0, delimiter + 1)}${originalValue.slice(0, Math.min(leading, trailingStart))}${serializePropertyValue(updates[key])}${originalValue.slice(trailingStart)}${ending}`;
+    })
+    .join('');
+
+  const missingKeys = Object.keys(updates)
+    .filter((key) => !found.has(key))
+    .sort();
+  for (const key of missingKeys) {
+    if (updated && !updated.endsWith('\n')) updated += newline;
+    updated += `${key}=${serializePropertyValue(updates[key])}${newline}`;
+  }
+  setRuntimeFile(path, updated);
+  const rawPort = updates['server-port'];
+  if (rawPort === undefined) return null;
+  const port = typeof rawPort === 'number' ? rawPort : Number(rawPort);
+  const server = getE2eState().servers.find((entry) => entry.id === serverId);
+  if (server) server.port = port;
+  return port;
+}
+
 async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
   const state = getE2eState();
   const payload = asRecord(args);
 
   switch (cmd) {
+    case 'get_servers':
+      return structuredClone(
+        state.servers.map((server) => ({
+          ...server,
+          status: state.runningServerIds.includes(server.id) ? 'online' : 'offline',
+        })),
+      );
+
+    case 'create_server_profile': {
+      const request = asRecord(payload.request);
+      const serverId = crypto.randomUUID();
+      const serverPath = resolveRuntimePath({
+        root: 'servers',
+        serverId,
+        relativePath: '',
+      });
+      ensureRuntimeDirectory(serverPath);
+      const server = {
+        id: serverId,
+        name: String(request.name ?? 'New Server'),
+        profileName: request.profileName,
+        groupName: request.groupName,
+        version: String(request.version ?? ''),
+        software: String(request.software ?? 'Vanilla'),
+        port: Number(request.port ?? 25565),
+        memory: Number(request.memoryGb ?? 4) * 1024,
+        path: serverPath,
+        status: 'offline',
+        javaPath: request.javaPath,
+        autoRestartOnCrash: request.autoRestartOnCrash ?? false,
+        maxAutoRestarts: request.maxAutoRestarts ?? 3,
+        autoRestartDelaySec: request.autoRestartDelaySec ?? 5,
+        autoBackupEnabled: request.autoBackupEnabled ?? false,
+        autoBackupIntervalMin: request.autoBackupIntervalMin ?? 60,
+        autoBackupScheduleType: request.autoBackupScheduleType ?? 'interval',
+        autoBackupTime: request.autoBackupTime ?? '03:00',
+        autoBackupWeekday: request.autoBackupWeekday ?? 0,
+        autoBackupRetainCount: request.autoBackupRetainCount,
+        autoBackupRetainDays: request.autoBackupRetainDays,
+        backupRestartAfterSafeBackup: request.backupRestartAfterSafeBackup,
+        jvmArgs: request.jvmArgs,
+        notifyOnCrash: request.notifyOnCrash,
+        notifyOnStart: request.notifyOnStart,
+        notifyOnHighCpu: request.notifyOnHighCpu,
+        notifyHighCpuThreshold: request.notifyHighCpuThreshold,
+        createdDate: new Date().toISOString(),
+      } as (typeof state.servers)[number];
+      state.servers = [...state.servers, structuredClone(server)];
+      const jarInstalled =
+        Boolean(request.importToken) ||
+        ['Paper', 'LeafMC', 'Vanilla', 'Fabric'].includes(server.software);
+      return { server, jarInstalled };
+    }
+
+    case 'update_server': {
+      const server = payload.server as (typeof state.servers)[number];
+      const index = state.servers.findIndex((entry) => entry.id === server.id);
+      if (index < 0) return false;
+      state.servers = state.servers.map((entry, entryIndex) =>
+        entryIndex === index ? structuredClone(server) : entry,
+      );
+      return true;
+    }
+
+    case 'clone_server_profile': {
+      const sourceServerId = String(payload.sourceServerId ?? '');
+      if (state.runningServerIds.includes(sourceServerId)) {
+        throw new Error('Cannot clone a running server');
+      }
+      const source = state.servers.find((server) => server.id === sourceServerId);
+      if (!source) throw new Error('Server is not registered');
+      const destinationServerId = crypto.randomUUID();
+      const sourceRoot = resolveRuntimePath({
+        root: 'servers',
+        serverId: sourceServerId,
+        relativePath: '',
+      });
+      const destinationRoot = resolveRuntimePath({
+        root: 'servers',
+        serverId: destinationServerId,
+        relativePath: '',
+      });
+      const sourceEntries = Object.entries(state.files).filter(
+        ([path]) => path === sourceRoot || path.startsWith(`${sourceRoot}/`),
+      );
+      if (state.files[destinationRoot])
+        throw new Error('Destination server directory already exists');
+      for (const [path, node] of sourceEntries) {
+        const destinationPath = `${destinationRoot}${path.slice(sourceRoot.length)}`;
+        if (node.kind === 'directory') ensureRuntimeDirectory(destinationPath);
+        else setRuntimeFile(destinationPath, node.content ?? '');
+      }
+      const cloned = {
+        ...structuredClone(source),
+        id: destinationServerId,
+        name: String(payload.name ?? ''),
+        path: destinationRoot,
+        status: 'offline' as const,
+        createdDate: new Date().toISOString(),
+        unavailableReason: undefined,
+      };
+      state.servers = [...state.servers, cloned];
+      return cloned;
+    }
+
+    case 'delete_managed_server': {
+      const serverId = String(payload.serverId ?? '');
+      if (state.runningServerIds.includes(serverId)) {
+        throw new Error('Cannot delete a running server');
+      }
+      const existingCount = state.servers.length;
+      state.servers = state.servers.filter((server) => server.id !== serverId);
+      if (state.servers.length === existingCount) return false;
+      removeRuntimePath(resolveRuntimePath({ root: 'servers', serverId, relativePath: '' }));
+      return true;
+    }
+
+    case 'get_server_templates':
+      return structuredClone(state.serverTemplates);
+
+    case 'save_server_template': {
+      const template = payload.template as Record<string, unknown>;
+      const index = state.serverTemplates.findIndex((entry) => entry.id === template.id);
+      if (index < 0) state.serverTemplates.push(structuredClone(template));
+      else state.serverTemplates[index] = structuredClone(template);
+      return template;
+    }
+
+    case 'delete_server_template':
+      state.serverTemplates = state.serverTemplates.filter(
+        (template) => template.id !== payload.templateId,
+      );
+      return null;
+
     case 'resolve_managed_path':
       return requestPath(payload.request);
 
@@ -122,6 +372,55 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       setRuntimeFile(requestPath(payload.request), String(payload.content ?? ''));
       return null;
 
+    case 'get_player_lists':
+      return readPlayerLists(String(payload.serverId ?? ''));
+
+    case 'mutate_player_list': {
+      const serverId = String(payload.serverId ?? '');
+      const mutation = asRecord(payload.mutation);
+      const listType = String(mutation.listType ?? '') as PlayerListType;
+      const action = String(mutation.action ?? '');
+      const value = String(mutation.value ?? '').trim();
+      if (!Object.hasOwn(playerListFiles, listType)) throw new Error('Invalid player list type');
+      if (action !== 'add' && action !== 'remove') throw new Error('Invalid player list action');
+      if (!value) throw new Error('Player list value cannot be empty');
+
+      const entries = readPlayerList(serverId, listType);
+      const isIpList = listType === 'banned-ips';
+      const field = isIpList ? 'ip' : 'name';
+      const matches = (entry: Record<string, unknown>) =>
+        String(entry[field] ?? '').toLocaleLowerCase() === value.toLocaleLowerCase();
+      const changed = action === 'add' ? !entries.some(matches) : entries.some(matches);
+      if (changed) {
+        const nextEntries =
+          action === 'add'
+            ? [...entries, isIpList ? { ip: value } : { name: value }]
+            : entries.filter((entry) => !matches(entry));
+        setRuntimeFile(playerListPath(serverId, listType), JSON.stringify(nextEntries, null, 2));
+      }
+      return { lists: readPlayerLists(serverId), changed, canonicalTarget: value };
+    }
+
+    case 'get_server_properties':
+      return readServerProperties(String(payload.serverId ?? ''));
+
+    case 'save_server_properties': {
+      const updates = asRecord(payload.updates);
+      return patchServerProperties(String(payload.serverId ?? ''), updates);
+    }
+
+    case 'configure_proxy_network': {
+      const request = asRecord(payload.request);
+      const backendServerIds = Array.isArray(request.backendServerIds)
+        ? request.backendServerIds.map(String)
+        : [];
+      return backendServerIds.map((serverId, index) => {
+        const port = 25_566 + index;
+        patchServerProperties(serverId, { 'online-mode': false, 'server-port': port });
+        return { serverId, port };
+      });
+    }
+
     case 'get_server_eula_status':
       return getServerEulaStatus(String(payload.serverId ?? ''));
 
@@ -136,41 +435,6 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'move_managed_path':
       moveRuntimePath(requestPath(payload.from), requestPath(payload.to));
       return null;
-
-    case 'delete_managed_server_dir':
-      removeRuntimePath(
-        resolveRuntimePath({
-          root: 'servers',
-          serverId: String(payload.serverId),
-          relativePath: '',
-        }),
-      );
-      return null;
-
-    case 'clone_managed_server': {
-      const sourceId = String(payload.sourceServerId ?? '');
-      const destinationId = String(payload.destinationServerId ?? '');
-      const sourceRoot = resolveRuntimePath({
-        root: 'servers',
-        serverId: sourceId,
-        relativePath: '',
-      });
-      const destinationRoot = resolveRuntimePath({
-        root: 'servers',
-        serverId: destinationId,
-        relativePath: '',
-      });
-      const sourceEntries = Object.entries(state.files).filter(
-        ([path]) => path === sourceRoot || path.startsWith(`${sourceRoot}/`),
-      );
-      ensureRuntimeDirectory(destinationRoot);
-      for (const [path, node] of sourceEntries) {
-        const destinationPath = `${destinationRoot}${path.slice(sourceRoot.length)}`;
-        if (node.kind === 'directory') ensureRuntimeDirectory(destinationPath);
-        else setRuntimeFile(destinationPath, node.content ?? '');
-      }
-      return null;
-    }
 
     case 'import_managed_files': {
       const serverId = String(payload.serverId ?? 'server-1');
@@ -190,44 +454,215 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       ensureRuntimeDirectory(requestPath(payload.destination));
       return null;
 
-    case 'migrate_managed_server_directory': {
-      const serverId = String(payload.serverId ?? '');
-      ensureRuntimeDirectory(resolveRuntimePath({ root: 'servers', serverId, relativePath: '' }));
-      return resolveRuntimePath({ root: 'servers', serverId, relativePath: '' });
-    }
-
-    case 'download_server_jar': {
+    case 'prepare_server_jar_install': {
       const request = asRecord(payload.request);
       const serverId = String(request.serverId ?? '');
-      const relativePath = String(request.relativePath ?? 'server.jar');
+      const version = String(request.version ?? '');
+      const mode = String(request.mode ?? 'create');
+      const server = state.servers.find((entry) => entry.id === serverId);
+      if (mode === 'upgrade' && !server) throw new Error('Server profile no longer exists');
+      return {
+        planId: `${serverId}:${mode}:${version}`,
+        latestVersion: version,
+        verified: true,
+      };
+    }
+
+    case 'execute_server_jar_install': {
+      const [serverId, _mode, version] = String(payload.planId ?? '').split(':');
+      if (!serverId || !version) throw new Error('Invalid server jar plan');
       setRuntimeFile(
-        resolveRuntimePath({ root: 'servers', serverId, relativePath }),
+        resolveRuntimePath({ root: 'servers', serverId, relativePath: 'server.jar' }),
         'e2e-server-jar',
       );
       emitProgress(serverId, 'server.jar');
-      return null;
+      return { serverId, version };
     }
 
-    case 'download_plugin_artifact': {
+    case 'prepare_plugin_install': {
       const request = asRecord(payload.request);
-      const destination = pluginDestinationPath(request);
+      const project = asRecord(request.project);
+      const serverId = String(request.serverId ?? '');
+      const server = state.servers.find((entry) => entry.id === serverId);
+      if (!server) throw new Error('Server profile no longer exists');
+      const provider = String(project.provider ?? '');
+      const projectId = String(project.projectId ?? '');
+      const resourceId = Number(project.resourceId);
+      const directory = ['Fabric', 'Forge', 'NeoForge'].includes(server.software ?? '')
+        ? 'mods'
+        : 'plugins';
+      const fileName =
+        provider === 'spiget'
+          ? 'veinminer-1.jar'
+          : provider === 'hangar'
+            ? 'WirelessRedstone-2.0.jar'
+            : 'VeinMiner-1.21.4.jar';
+      const directoryPath = resolveRuntimePath({
+        root: 'servers',
+        serverId,
+        relativePath: directory,
+      });
+      const artifactPath = `${directoryPath}/${fileName}`;
+      const installedFileName = state.files[artifactPath] ? fileName : null;
+      const replaceFileName =
+        typeof request.replaceFileName === 'string' ? request.replaceFileName : null;
+      if (replaceFileName && !state.files[`${directoryPath}/${replaceFileName}`]) {
+        throw new Error('Replacement plugin no longer exists');
+      }
+      const token = `mock-plugin-plan-${state.pluginDownloadAttempts + 1}-${Date.now()}`;
+      const artifactId = `${provider}:${projectId || resourceId}:version-1`;
+      const requiresUnverifiedDownloads = getE2eScenario() === 'hashless-plugin';
+      state.pluginInstallPlans[token] = {
+        serverId,
+        fileName: replaceFileName?.endsWith('.disabled') ? `${fileName}.disabled` : fileName,
+        artifactId,
+        dependencyIds: [],
+      };
+      return {
+        token,
+        expiresInSeconds: 300,
+        serverId,
+        serverVersion: server.version,
+        serverSoftware: server.software,
+        targetDirectory: directory,
+        artifacts: [
+          {
+            id: artifactId,
+            project: project,
+            title: provider === 'hangar' ? 'WirelessRedstone' : 'VeinMiner',
+            version: provider === 'hangar' ? '2.0' : '1.21.4',
+            fileName,
+            installedFileName,
+            dependency: false,
+            verified: !requiresUnverifiedDownloads,
+            compatibility: 'compatible',
+            supportedVersions: [server.version],
+          },
+        ],
+        missingDependencyIds: [],
+        externalUrl: null,
+        requiresUnverifiedDownloads,
+      };
+    }
+
+    case 'execute_plugin_install': {
+      const request = asRecord(payload.request);
+      const token = String(request.token ?? '');
+      const plan = state.pluginInstallPlans[token];
+      if (!plan) throw new Error('Install plan is unknown or already used');
+      delete state.pluginInstallPlans[token];
+      const confirmed = Array.isArray(request.confirmedDependencyIds)
+        ? request.confirmedDependencyIds.map(String).sort()
+        : [];
+      if (JSON.stringify(confirmed) !== JSON.stringify([...plan.dependencyIds].sort())) {
+        throw new Error('Confirmation must match the exact planned missing dependency set');
+      }
       state.pluginDownloadAttempts += 1;
-      const checksum = request.checksum;
       const scenario = getE2eScenario();
-      if (!checksum && state.config.allowUnverifiedPluginDownloads !== true) {
+      if (scenario === 'hashless-plugin' && state.config.allowUnverifiedPluginDownloads !== true) {
         throw errorWithCode('unverified-artifact-blocked');
       }
       if (scenario === 'checksum-mismatch') throw errorWithCode('checksum-mismatch');
       if (scenario === 'network-retry' && state.pluginDownloadAttempts === 1) {
         throw errorWithCode('network');
       }
+      const relativePath = `${
+        ['Fabric', 'Forge', 'NeoForge'].includes(
+          state.servers.find((entry) => entry.id === plan.serverId)?.software ?? '',
+        )
+          ? 'mods'
+          : 'plugins'
+      }/${plan.fileName}`;
+      const destination = resolveRuntimePath({
+        root: 'servers',
+        serverId: plan.serverId,
+        relativePath,
+      });
       setRuntimeFile(destination, 'e2e-plugin-jar');
-      emitProgress(String(request.serverId), 'plugin');
+      void emit(`download-progress-${token}`, {
+        downloaded: 100,
+        total: 100,
+        artifactId: plan.artifactId,
+      });
+      return { serverId: plan.serverId, installedFileNames: [plan.fileName] };
+    }
+
+    case 'download_plugin_artifact': {
+      const request = asRecord(payload.request);
+      const serverId = String(request.serverId ?? '');
+      const relativePath = String(request.relativePath ?? '');
+      const eventId = String(request.eventId ?? '');
+      const scenario = getE2eScenario();
+      state.pluginDownloadAttempts += 1;
+
+      if (
+        scenario === 'hashless-plugin' &&
+        request.checksum == null &&
+        state.config.allowUnverifiedPluginDownloads !== true
+      ) {
+        throw errorWithCode('unverified-artifact-blocked');
+      }
+      if (scenario === 'checksum-mismatch') throw errorWithCode('checksum-mismatch');
+      if (scenario === 'network-retry' && state.pluginDownloadAttempts === 1) {
+        throw errorWithCode('network');
+      }
+
+      const path = resolveRuntimePath({ root: 'servers', serverId, relativePath });
+      setRuntimeFile(path, 'e2e-plugin-jar');
+      void emit(`download-progress-${eventId}`, { downloaded: 100, total: 100 });
+      return null;
+    }
+
+    case 'toggle_installed_plugin': {
+      const request = asRecord(payload.request);
+      const serverId = String(request.serverId ?? '');
+      const fileName = String(request.fileName ?? '');
+      const server = state.servers.find((entry) => entry.id === serverId);
+      if (!server) throw new Error('Server profile no longer exists');
+      const directory = ['Fabric', 'Forge', 'NeoForge'].includes(server.software ?? '')
+        ? 'mods'
+        : 'plugins';
+      const current = resolveRuntimePath({
+        root: 'servers',
+        serverId,
+        relativePath: `${directory}/${fileName}`,
+      });
+      const nextFile = fileName.toLowerCase().endsWith('.disabled')
+        ? fileName.slice(0, -9)
+        : `${fileName}.disabled`;
+      const next = resolveRuntimePath({
+        root: 'servers',
+        serverId,
+        relativePath: `${directory}/${nextFile}`,
+      });
+      moveRuntimePath(current, next);
+      return nextFile;
+    }
+
+    case 'uninstall_installed_plugin': {
+      const request = asRecord(payload.request);
+      const serverId = String(request.serverId ?? '');
+      const fileName = String(request.fileName ?? '');
+      const server = state.servers.find((entry) => entry.id === serverId);
+      if (!server) throw new Error('Server profile no longer exists');
+      const directory = ['Fabric', 'Forge', 'NeoForge'].includes(server.software ?? '')
+        ? 'mods'
+        : 'plugins';
+      const target = resolveRuntimePath({
+        root: 'servers',
+        serverId,
+        relativePath: `${directory}/${fileName}`,
+      });
+      if (!state.files[target]) throw new Error('Installed plugin does not exist');
+      removeRuntimePath(target);
       return null;
     }
 
     case 'start_server': {
       const serverId = String(payload.serverId ?? '');
+      if (!state.servers.some((server) => server.id === serverId)) {
+        throw new Error('Server is not registered');
+      }
       if (!getServerEulaStatus(serverId).accepted) {
         throw errorWithCode('eula-required');
       }
@@ -242,6 +677,22 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       state.runningServerIds = state.runningServerIds.filter((id) => id !== serverId);
       emitStatus(serverId, 'stopping');
       emitStatus(serverId, 'offline');
+      return null;
+    }
+
+    case 'restart_server': {
+      const serverId = String(payload.serverId ?? '');
+      if (!state.servers.some((server) => server.id === serverId)) {
+        throw new Error('Server is not registered');
+      }
+      if (!getServerEulaStatus(serverId).accepted) {
+        throw errorWithCode('eula-required');
+      }
+      if (!state.runningServerIds.includes(serverId)) {
+        throw new Error('Server not found or not running');
+      }
+      emitStatus(serverId, 'offline');
+      emitStatus(serverId, 'online');
       return null;
     }
 
@@ -271,6 +722,15 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'create_managed_backup': {
       const serverId = String(payload.serverId ?? '');
       const backupName = String(payload.backupName ?? 'backup.zip');
+      const wasRunning = state.runningServerIds.includes(serverId);
+      if (wasRunning && payload.stopRunningServer !== true) {
+        return { status: 'confirmation_required' };
+      }
+      if (wasRunning) {
+        state.runningServerIds = state.runningServerIds.filter((id) => id !== serverId);
+        emitStatus(serverId, 'stopping');
+        emitStatus(serverId, 'offline');
+      }
       const backupPath = resolveRuntimePath({
         root: 'backups',
         serverId,
@@ -279,7 +739,17 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       setRuntimeFile(backupPath, 'e2e-backup');
       state.backups[serverId] = [...(state.backups[serverId] ?? []), backupName];
       void emit('backup-progress', { serverId, progress: 100 });
-      return null;
+      if (wasRunning) {
+        state.runningServerIds = [...new Set([...state.runningServerIds, serverId])];
+        emitStatus(serverId, 'starting');
+        emitStatus(serverId, 'online');
+      }
+      return {
+        status: 'created',
+        backupName,
+        catalogError: null,
+        restart: wasRunning ? { status: 'restarted' } : { status: 'not_needed' },
+      };
     }
 
     case 'list_managed_backups': {
@@ -370,7 +840,6 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       return '/mock/app';
 
     case 'pick_server_import':
-    case 'complete_server_import':
     case 'cancel_server_import':
       return null;
 

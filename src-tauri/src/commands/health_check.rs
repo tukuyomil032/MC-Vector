@@ -95,7 +95,7 @@ fn is_allowed_local_target(ip: IpAddr) -> bool {
         }
         IpAddr::V6(ip) => {
             (ip.is_loopback() || (ip.segments()[0] & 0xFE00) == 0xFC00)
-                && !ip.is_unicast_link_local()
+                && (ip.segments()[0] & 0xFFC0) != 0xFE80
                 && !ip.is_unspecified()
                 && !ip.is_multicast()
         }
@@ -217,7 +217,7 @@ mod tests {
         for ip in ["127.0.0.1", "10.0.0.1", "192.168.1.1", "::1", "fc00::1"] {
             assert!(is_allowed_local_target(ip.parse().unwrap()), "{ip}");
         }
-        for ip in ["169.254.1.1", "224.0.0.1", "0.0.0.0", "8.8.8.8"] {
+        for ip in ["169.254.1.1", "fe80::1", "224.0.0.1", "0.0.0.0", "8.8.8.8"] {
             assert!(!is_allowed_local_target(ip.parse().unwrap()), "{ip}");
         }
     }

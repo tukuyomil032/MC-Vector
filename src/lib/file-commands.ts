@@ -167,28 +167,6 @@ export async function createFolder(dirPath: string, name: string): Promise<void>
   await tauriInvoke('create_managed_directory', { request });
 }
 
-export async function createManagedServerDirectory(serverId: string): Promise<string> {
-  const dataDir = normalizePath(await appDataDir());
-  const request: ManagedPathRequest = {
-    root: 'servers',
-    serverId,
-    relativePath: '',
-  };
-  await tauriInvoke('create_managed_directory', { request });
-  return `${dataDir}/servers/${serverId}`;
-}
-
-export async function deleteManagedServerDirectory(serverId: string): Promise<void> {
-  await tauriInvoke('delete_managed_server_dir', { serverId });
-}
-
-export async function cloneManagedServer(
-  sourceServerId: string,
-  destinationServerId: string,
-): Promise<void> {
-  await tauriInvoke('clone_managed_server', { sourceServerId, destinationServerId });
-}
-
 export async function deleteItem(path: string): Promise<void> {
   const safePath = await assertAllowedPath(path);
   await tauriInvoke('delete_managed_path', { request: safePath });

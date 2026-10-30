@@ -15,7 +15,18 @@ test.describe('proxy, Java, and Ngrok flows', () => {
     await expect(page.getByText(/Updated settings for 1 server/i)).toBeVisible({
       timeout: 15_000,
     });
-    await expect.poll(async () => (await app.ipcCalls('write_managed_text_file')).length).toBe(1);
+    await expect.poll(async () => (await app.ipcCalls('configure_proxy_network')).length).toBe(1);
+    expect((await app.ipcCalls('configure_proxy_network'))[0].args).toMatchObject({
+      request: {
+        proxySoftware: 'Velocity',
+        proxyPort: 25577,
+        backendServerIds: ['server-1'],
+      },
+    });
+    expect(
+      (await app.runtimeState())?.files['/mock/app-data/servers/server-1/server.properties']
+        ?.content,
+    ).toContain('server-port=25566');
 
     await proxy.locator('[data-testid="proxy-view-help-button"]').click();
     await expect(page.locator('[data-testid="proxy-help-view"]')).toBeVisible();

@@ -317,6 +317,52 @@ fn http_client(allowed_hosts: Option<&[&str]>) -> Result<Client, String> {
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
 }
 
+pub(crate) async fn send_request_with_timeout(
+    request: reqwest::RequestBuilder,
+    timeout: Duration,
+    context: &str,
+) -> Result<reqwest::Response, String> {
+    match tokio::time::timeout(timeout, request.send()).await {
+        Ok(Ok(response)) => Ok(response),
+        Ok(Err(error)) => Err(format!("{context}: {error}")),
+        Err(_) => Err(format!("{context}: response headers timed out")),
+    }
+}
+
+/// Read a small metadata response without trusting Content-Length. Streaming
+/// bodies are stopped as soon as their actual size exceeds the configured cap.
+pub(crate) async fn read_limited_response_body(
+    response: reqwest::Response,
+    max_bytes: u64,
+    context: &str,
+) -> Result<Vec<u8>, String> {
+    if response
+        .content_length()
+        .is_some_and(|length| length > max_bytes)
+    {
+        return Err(format!("{context} exceeds the size limit"));
+    }
+
+    let initial_capacity = response
+        .content_length()
+        .and_then(|length| usize::try_from(length.min(max_bytes)).ok())
+        .unwrap_or_default();
+    let mut body = Vec::with_capacity(initial_capacity);
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = tokio::time::timeout(INACTIVITY_TIMEOUT, stream.next())
+        .await
+        .map_err(|_| format!("{context} stalled while waiting for data"))?
+        .transpose()
+        .map_err(|error| format!("Failed to read {context}: {error}"))?
+    {
+        if (body.len() as u64).saturating_add(chunk.len() as u64) > max_bytes {
+            return Err(format!("{context} exceeds the size limit"));
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
+}
+
 fn temporary_path(destination: &Path, attempt: usize) -> PathBuf {
     let name = destination
         .file_name()

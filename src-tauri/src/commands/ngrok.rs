@@ -6,11 +6,13 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_store::StoreExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, watch, Mutex};
 use uuid::Uuid;
 
-use super::download::download_verified_artifact;
-use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+use super::download::{
+    download_verified_artifact, read_limited_response_body, send_request_with_timeout,
+};
+use crate::state::operation_manager::{GlobalOperation, OperationKind, ServerOperationManager};
 use crate::state::secret_store::{
     OsSecretStore, SecretStore, NGROK_TOKEN_KEY, PRODUCTION_APP_IDENTIFIER,
 };
@@ -24,6 +26,8 @@ const MAX_NGROK_COMPRESSION_RATIO: u64 = 100;
 const COPY_BUFFER_SIZE: usize = 64 * 1024;
 const MAX_NGROK_METADATA_BYTES: u64 = 4 * 1024 * 1024;
 const NGROK_ARCHIVE_INDEX_URL: &str = "https://dl.equinox.io/ngrok/ngrok-v3/stable/archive";
+const NGROK_RESPONSE_HEADERS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+const NGROK_METADATA_REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(90);
 
 struct DownloadTempGuard {
     path: PathBuf,
@@ -71,10 +75,125 @@ impl Drop for DirectoryTempGuard {
     }
 }
 const NGROK_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(20);
+const NGROK_KILL_REAP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
-#[derive(Default)]
+#[derive(Clone, Copy, Debug)]
+enum NgrokProcessControl {
+    Kill,
+}
+
+#[derive(Clone)]
+struct NgrokProcessHandle {
+    generation: u64,
+    control_tx: mpsc::Sender<NgrokProcessControl>,
+    exit_rx: watch::Receiver<bool>,
+}
+
+#[derive(Clone, Default)]
 pub struct NgrokManager {
-    pub process: Arc<Mutex<Option<tokio::process::Child>>>,
+    process: Arc<Mutex<Option<NgrokProcessHandle>>>,
+    lifecycle_lock: Arc<Mutex<()>>,
+    next_generation: Arc<std::sync::atomic::AtomicU64>,
+    shutting_down: Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl NgrokManager {
+    async fn stop_current(&self, required: bool) -> Result<(), String> {
+        let Some(process) = self.process.lock().await.clone() else {
+            return if required {
+                Err("ngrok is not running".into())
+            } else {
+                Ok(())
+            };
+        };
+
+        // Repeated shutdown calls may arrive while the child owner is retrying
+        // an OS-level wait. A queued kill is enough; never wait on a full
+        // bounded control channel here.
+        let _ = process.control_tx.try_send(NgrokProcessControl::Kill);
+        tokio::time::timeout(
+            NGROK_KILL_REAP_TIMEOUT + std::time::Duration::from_secs(1),
+            wait_for_ngrok_exit(process.exit_rx),
+        )
+        .await
+        .map_err(|_| "Timed out while stopping ngrok".to_string())??;
+        Ok(())
+    }
+
+    /// Stop and reap the managed ngrok process before the Tauri runtime exits.
+    pub async fn shutdown(&self) -> Result<(), String> {
+        let _lifecycle_guard = self.lifecycle_lock.lock().await;
+        self.shutting_down
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+        self.stop_current(false).await
+    }
+}
+
+async fn wait_for_ngrok_exit(mut exit_rx: watch::Receiver<bool>) -> Result<(), String> {
+    loop {
+        if *exit_rx.borrow() {
+            return Ok(());
+        }
+        exit_rx
+            .changed()
+            .await
+            .map_err(|_| "ngrok process monitor stopped without an exit signal".to_string())?;
+    }
+}
+
+async fn remove_ngrok_generation(
+    process_ref: &Arc<Mutex<Option<NgrokProcessHandle>>>,
+    generation: u64,
+) -> bool {
+    let mut process = process_ref.lock().await;
+    if process
+        .as_ref()
+        .is_some_and(|current| current.generation == generation)
+    {
+        process.take();
+        true
+    } else {
+        false
+    }
+}
+
+async fn supervise_ngrok_child(
+    mut child: tokio::process::Child,
+    mut control_rx: mpsc::Receiver<NgrokProcessControl>,
+) -> std::process::ExitStatus {
+    tokio::select! {
+        status = child.wait() => match status {
+            Ok(status) => status,
+            Err(error) => {
+                log::error!(target: "process", "Failed to wait for ngrok process; terminating and retrying reap: {error}");
+                kill_and_reap_ngrok_child(&mut child).await
+            }
+        },
+        control = control_rx.recv() => match control {
+            Some(NgrokProcessControl::Kill) => {
+                kill_and_reap_ngrok_child(&mut child).await
+            }
+            None => kill_and_reap_ngrok_child(&mut child).await,
+        }
+    }
+}
+
+async fn kill_and_reap_ngrok_child(child: &mut tokio::process::Child) -> std::process::ExitStatus {
+    loop {
+        if let Err(error) = child.start_kill() {
+            log::warn!(target: "process", "Failed to force-kill ngrok process; will retry: {error}");
+        }
+        match tokio::time::timeout(NGROK_KILL_REAP_TIMEOUT, child.wait()).await {
+            Ok(Ok(status)) => return status,
+            Ok(Err(error)) => {
+                log::error!(target: "process", "Failed to reap killed ngrok process; will retry: {error}");
+            }
+            Err(_) => {
+                log::error!(target: "process", "Timed out while reaping killed ngrok process; retrying");
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -298,27 +417,26 @@ fn parse_ngrok_archive_index(body: &str, platform: &str) -> Result<(String, Stri
 
 async fn resolve_ngrok_artifact(client: &reqwest::Client) -> Result<(String, String), String> {
     let platform = ngrok_platform().ok_or_else(|| "Unsupported platform".to_string())?;
-    let response = client
-        .get(NGROK_ARCHIVE_INDEX_URL)
-        .send()
-        .await
-        .map_err(|error| format!("Failed to resolve ngrok artifact metadata: {error}"))?;
+    let response = send_request_with_timeout(
+        client.get(NGROK_ARCHIVE_INDEX_URL),
+        NGROK_RESPONSE_HEADERS_TIMEOUT,
+        "Failed to resolve ngrok artifact metadata",
+    )
+    .await?;
     if !response.status().is_success() {
         return Err(format!(
             "ngrok metadata request failed with HTTP {}",
             response.status()
         ));
     }
-    if response.content_length().unwrap_or(0) > MAX_NGROK_METADATA_BYTES {
-        return Err("ngrok artifact metadata exceeds the size limit".to_string());
-    }
-    let body = response
-        .text()
-        .await
-        .map_err(|error| format!("Failed to read ngrok artifact metadata: {error}"))?;
-    if body.len() as u64 > MAX_NGROK_METADATA_BYTES {
-        return Err("ngrok artifact metadata exceeds the size limit".to_string());
-    }
+    let body = read_limited_response_body(
+        response,
+        MAX_NGROK_METADATA_BYTES,
+        "ngrok artifact metadata",
+    )
+    .await?;
+    let body = String::from_utf8(body)
+        .map_err(|error| format!("ngrok artifact metadata is not valid UTF-8: {error}"))?;
     let (url, checksum) = parse_ngrok_archive_index(&body, platform)?;
     validate_ngrok_download_url(&url)?;
     Ok((url, checksum))
@@ -355,6 +473,13 @@ pub async fn start_ngrok(
     port: u16,
     server_id: String,
 ) -> Result<(), String> {
+    let _lifecycle_guard = state.lifecycle_lock.lock().await;
+    if state
+        .shutting_down
+        .load(std::sync::atomic::Ordering::SeqCst)
+    {
+        return Err("ngrok manager is shutting down".into());
+    }
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -377,19 +502,15 @@ pub async fn start_ngrok(
         return Err("ngrok auth token is required".to_string());
     }
 
-    // 既存プロセスがあれば停止
-    {
-        let mut proc = state.process.lock().await;
-        if let Some(mut child) = proc.take() {
-            let _ = child.kill().await;
-            let _ = child.wait().await;
-        }
-    }
+    // Replacing an existing tunnel is serialized and waits for the old child
+    // to exit and be reaped before the replacement is spawned.
+    state.stop_current(false).await?;
 
     let port_value = port.to_string();
     let mut child = Command::new(&validated_ngrok_path)
         .args([&validated_protocol, &port_value, "--log", "stdout"])
         .env("NGROK_AUTHTOKEN", &normalized_token)
+        .kill_on_drop(true)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
@@ -399,11 +520,27 @@ pub async fn start_ngrok(
         .stdout
         .take()
         .ok_or_else(|| "Failed to capture ngrok stdout".to_string())?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Failed to capture ngrok stderr".to_string())?;
 
-    // プロセスを管理マップに保存
+    let generation = state
+        .next_generation
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        .saturating_add(1);
+    let (control_tx, control_rx) = mpsc::channel(2);
+    let (exit_tx, exit_rx) = watch::channel(false);
+
+    // Store control/exit handles before starting monitors so fast child exit
+    // cannot race process registration.
     {
         let mut proc = state.process.lock().await;
-        *proc = Some(child);
+        *proc = Some(NgrokProcessHandle {
+            generation,
+            control_tx,
+            exit_rx,
+        });
     }
 
     let _ = app.emit(
@@ -420,12 +557,20 @@ pub async fn start_ngrok(
     let sid = server_id.clone();
     let process_ref = state.process.clone();
     let token_for_redaction = normalized_token.clone();
+    let stdout_generation = generation;
 
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
 
         while let Ok(Some(line)) = lines.next_line().await {
+            let current_process = process_ref.lock().await;
+            if !current_process
+                .as_ref()
+                .is_some_and(|process| process.generation == stdout_generation)
+            {
+                continue;
+            }
             let safe_line = redact_secret(&line, &token_for_redaction);
             // ngrok ログを転送
             let _ = app_clone.emit(
@@ -458,21 +603,34 @@ pub async fn start_ngrok(
                     },
                 );
             }
+            drop(current_process);
         }
+    });
 
-        // プロセスが終了した場合
-        {
-            let mut proc = process_ref.lock().await;
-            *proc = None;
+    // Drain stderr to prevent a full pipe from blocking the process. Ngrok's
+    // user-facing log stream remains stdout, preserving current UI behavior.
+    tokio::spawn(async move {
+        let mut reader = BufReader::new(stderr).lines();
+        while let Ok(Some(_)) = reader.next_line().await {}
+    });
+
+    let process_ref = state.process.clone();
+    let app_exit = app.clone();
+    let exit_server_id = server_id;
+    tokio::spawn(async move {
+        let _status = supervise_ngrok_child(child, control_rx).await;
+        let was_current = remove_ngrok_generation(&process_ref, generation).await;
+        let _ = exit_tx.send(true);
+        if was_current {
+            let _ = app_exit.emit(
+                "ngrok-status-change",
+                NgrokStatusPayload {
+                    status: "stopped".to_string(),
+                    url: None,
+                    server_id: Some(exit_server_id),
+                },
+            );
         }
-        let _ = app_clone.emit(
-            "ngrok-status-change",
-            NgrokStatusPayload {
-                status: "stopped".to_string(),
-                url: None,
-                server_id: Some(sid),
-            },
-        );
     });
 
     Ok(())
@@ -562,20 +720,8 @@ pub fn clear_ngrok_token(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn stop_ngrok(state: State<'_, NgrokManager>) -> Result<(), String> {
-    let mut proc = state.process.lock().await;
-    if let Some(mut child) = proc.take() {
-        child
-            .kill()
-            .await
-            .map_err(|e| format!("Failed to kill ngrok: {}", e))?;
-        child
-            .wait()
-            .await
-            .map_err(|e| format!("Failed to wait ngrok process: {}", e))?;
-        Ok(())
-    } else {
-        Err("ngrok is not running".into())
-    }
+    let _lifecycle_guard = state.lifecycle_lock.lock().await;
+    state.stop_current(true).await
 }
 
 fn replace_ngrok_binary_preserving_existing(
@@ -638,7 +784,10 @@ pub async fn download_ngrok(
     operations: State<'_, ServerOperationManager>,
 ) -> Result<String, String> {
     let _operation = operations
-        .acquire("ngrok-runtime", OperationKind::ArtifactInstall)
+        .acquire_global(
+            GlobalOperation::NgrokRuntime,
+            OperationKind::ArtifactInstall,
+        )
         .await?;
     let app_data_dir = app
         .path()
@@ -658,6 +807,7 @@ pub async fn download_ngrok(
         .map_err(|error| format!("Failed to resolve managed ngrok root: {error}"))?;
     let client = reqwest::Client::builder()
         .connect_timeout(NGROK_CONNECT_TIMEOUT)
+        .timeout(NGROK_METADATA_REQUEST_TIMEOUT)
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| format!("Failed to create ngrok download client: {e}"))?;
@@ -839,7 +989,15 @@ fn validate_ngrok_download_url(url: &str) -> Result<reqwest::Url, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_ngrok_url, parse_ngrok_archive_index, MAX_NGROK_ARCHIVE_BYTES};
+    use super::{
+        extract_ngrok_url, parse_ngrok_archive_index, remove_ngrok_generation,
+        supervise_ngrok_child, NgrokManager, NgrokProcessControl, NgrokProcessHandle,
+        MAX_NGROK_ARCHIVE_BYTES,
+    };
+    use std::sync::Arc;
+    use tokio::process::Command;
+    use tokio::sync::{mpsc, watch};
+    use tokio::time::{timeout, Duration};
 
     #[test]
     fn extract_ngrok_url_accepts_tcp_url() {
@@ -904,6 +1062,94 @@ mod tests {
                 "a".repeat(64)
             )
         );
+    }
+
+    #[tokio::test]
+    async fn ngrok_lifecycle_lock_serializes_start_and_stop_work() {
+        let manager = Arc::new(NgrokManager::default());
+        let first = manager.lifecycle_lock.lock().await;
+        let second_manager = manager.clone();
+        let second =
+            tokio::spawn(async move { second_manager.lifecycle_lock.clone().lock_owned().await });
+
+        tokio::task::yield_now().await;
+        assert!(
+            !second.is_finished(),
+            "a second lifecycle operation must wait for the first"
+        );
+        drop(first);
+        let second_guard = timeout(Duration::from_secs(1), second)
+            .await
+            .expect("the waiting lifecycle operation should acquire the lock")
+            .expect("the waiting task should not panic");
+        drop(second_guard);
+    }
+
+    #[tokio::test]
+    async fn stale_ngrok_monitor_cannot_clear_a_newer_process_generation() {
+        let manager = NgrokManager::default();
+        let (control_tx, _control_rx) = mpsc::channel::<NgrokProcessControl>(1);
+        let (_exit_tx, exit_rx) = watch::channel(false);
+        *manager.process.lock().await = Some(NgrokProcessHandle {
+            generation: 2,
+            control_tx,
+            exit_rx,
+        });
+
+        assert!(!remove_ngrok_generation(&manager.process, 1).await);
+        assert_eq!(
+            manager
+                .process
+                .lock()
+                .await
+                .as_ref()
+                .map(|process| process.generation),
+            Some(2)
+        );
+        assert!(remove_ngrok_generation(&manager.process, 2).await);
+        assert!(manager.process.lock().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn shutdown_kills_and_reaps_the_managed_ngrok_child() {
+        #[cfg(unix)]
+        let child = Command::new("sh")
+            .args(["-c", "exec sleep 60"])
+            .kill_on_drop(true)
+            .spawn()
+            .expect("long-running test ngrok child should start");
+        #[cfg(windows)]
+        let child = Command::new("powershell.exe")
+            .args(["-NoProfile", "-Command", "Start-Sleep -Seconds 60"])
+            .kill_on_drop(true)
+            .spawn()
+            .expect("long-running test ngrok child should start");
+
+        let manager = Arc::new(NgrokManager::default());
+        let (control_tx, control_rx) = mpsc::channel(2);
+        let (exit_tx, exit_rx) = watch::channel(false);
+        *manager.process.lock().await = Some(NgrokProcessHandle {
+            generation: 1,
+            control_tx,
+            exit_rx,
+        });
+
+        let process_ref = manager.process.clone();
+        let supervisor = tokio::spawn(async move {
+            let _ = supervise_ngrok_child(child, control_rx).await;
+            let _ = exit_tx.send(true);
+            remove_ngrok_generation(&process_ref, 1).await;
+        });
+
+        timeout(Duration::from_secs(3), manager.shutdown())
+            .await
+            .expect("ngrok shutdown should complete within its reap bound")
+            .expect("ngrok shutdown should report success");
+        timeout(Duration::from_secs(3), supervisor)
+            .await
+            .expect("ngrok process supervisor should finish")
+            .expect("ngrok supervisor should not panic");
+        assert!(manager.process.lock().await.is_none());
     }
 
     #[test]

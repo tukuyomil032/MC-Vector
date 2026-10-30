@@ -1,14 +1,18 @@
 use reqwest::{redirect, Client, Url};
-use serde::Deserialize;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 
-use super::download::download_verified_artifact;
-use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+use super::download::{
+    download_verified_artifact, read_limited_response_body, send_request_with_timeout,
+};
+use super::server::ServerManager;
+use crate::state::operation_manager::{GlobalOperation, OperationKind, ServerOperationManager};
 
 const MAX_JAVA_ARCHIVE_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_JAVA_ARCHIVE_ENTRIES: usize = 100_000;
@@ -18,6 +22,132 @@ const MAX_JAVA_ENTRY_DEPTH: usize = 32;
 const MAX_JAVA_COMPRESSION_RATIO: u64 = 100;
 const COPY_BUFFER_SIZE: usize = 64 * 1024;
 const MAX_JAVA_METADATA_BYTES: u64 = 4 * 1024 * 1024;
+const JAVA_RESPONSE_HEADERS_TIMEOUT: Duration = Duration::from_secs(30);
+const JAVA_METADATA_REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
+const JAVA_REGISTRY_STORE: &str = "config.json";
+const JAVA_REGISTRY_KEY: &str = "javaVersions";
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JavaVersion {
+    pub version: u16,
+    pub path: String,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_custom: Option<bool>,
+}
+
+fn validate_java_versions(versions: &[JavaVersion]) -> Result<(), String> {
+    let mut seen = HashSet::with_capacity(versions.len());
+    for version in versions {
+        if !(1..=99).contains(&version.version) {
+            return Err(format!(
+                "Java registry contains unsupported major version {}",
+                version.version
+            ));
+        }
+        if version.path.trim().is_empty() || version.path.len() > 32_768 {
+            return Err("Java registry contains an invalid installation path".to_string());
+        }
+        if version.name.trim().is_empty() || version.name.len() > 256 {
+            return Err("Java registry contains an invalid display name".to_string());
+        }
+        if !seen.insert(version.version) {
+            return Err(format!(
+                "Java registry contains duplicate major version {}",
+                version.version
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn decode_java_versions(value: Option<serde_json::Value>) -> Result<Vec<JavaVersion>, String> {
+    let value = match value {
+        None | Some(serde_json::Value::Null) => return Ok(Vec::new()),
+        Some(value) => value,
+    };
+    let versions: Vec<JavaVersion> = serde_json::from_value(value).map_err(|error| {
+        format!("Java registry data is invalid; it was left untouched: {error}")
+    })?;
+    validate_java_versions(&versions)?;
+    Ok(versions)
+}
+
+fn read_java_versions_sync(app: &AppHandle) -> Result<Vec<JavaVersion>, String> {
+    let store = app
+        .store(JAVA_REGISTRY_STORE)
+        .map_err(|error| format!("Failed to open Java registry store: {error}"))?;
+    decode_java_versions(store.get(JAVA_REGISTRY_KEY))
+}
+
+fn write_java_versions_sync(app: &AppHandle, versions: &[JavaVersion]) -> Result<(), String> {
+    validate_java_versions(versions)?;
+    let value = serde_json::to_value(versions)
+        .map_err(|error| format!("Failed to serialize Java registry: {error}"))?;
+    let store = app
+        .store(JAVA_REGISTRY_STORE)
+        .map_err(|error| format!("Failed to open Java registry store: {error}"))?;
+    let previous = store.get(JAVA_REGISTRY_KEY);
+    store.set(JAVA_REGISTRY_KEY, value);
+    if let Err(error) = store.save() {
+        match previous {
+            Some(value) => store.set(JAVA_REGISTRY_KEY, value),
+            None => {
+                store.delete(JAVA_REGISTRY_KEY);
+            }
+        }
+        return match store.save() {
+            Ok(()) => Err(format!("Failed to save Java registry; previous registry restored: {error}")),
+            Err(restore_error) => Err(format!(
+                "Failed to save Java registry ({error}) and failed to persist its previous value ({restore_error})"
+            )),
+        };
+    }
+    Ok(())
+}
+
+async fn read_java_versions(app: AppHandle) -> Result<Vec<JavaVersion>, String> {
+    tokio::task::spawn_blocking(move || read_java_versions_sync(&app))
+        .await
+        .map_err(|error| format!("Java registry read task failed: {error}"))?
+}
+
+async fn write_java_versions(app: AppHandle, versions: Vec<JavaVersion>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || write_java_versions_sync(&app, &versions))
+        .await
+        .map_err(|error| format!("Java registry write task failed: {error}"))?
+}
+
+async fn reject_mutation_of_running_runtime(
+    servers: &ServerManager,
+    install_dir: &Path,
+) -> Result<(), String> {
+    let runtime_path = match tokio::fs::canonicalize(install_dir).await {
+        Ok(path) => path,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => install_dir.to_path_buf(),
+        Err(error) => {
+            return Err(format!(
+                "Failed to resolve Java installation before mutation: {error}"
+            ));
+        }
+    };
+    if servers.is_java_runtime_in_use(&runtime_path).await {
+        return Err("Cannot modify a Java runtime used by a running server".to_string());
+    }
+    Ok(())
+}
+
+fn upsert_java_version(versions: &mut Vec<JavaVersion>, entry: JavaVersion) {
+    if let Some(existing) = versions
+        .iter_mut()
+        .find(|version| version.version == entry.version)
+    {
+        *existing = entry;
+    } else {
+        versions.push(entry);
+    }
+}
 
 struct DownloadTempGuard {
     path: PathBuf,
@@ -136,6 +266,7 @@ fn validate_java_download_url(url: &str) -> Result<Url, String> {
 fn java_client() -> Result<Client, String> {
     Client::builder()
         .connect_timeout(JAVA_CONNECT_TIMEOUT)
+        .timeout(JAVA_METADATA_REQUEST_TIMEOUT)
         .redirect(redirect::Policy::custom(|attempt| {
             if validate_java_download_url(attempt.url().as_str()).is_ok() {
                 attempt.follow()
@@ -173,27 +304,21 @@ async fn resolve_adoptium_package(
     let metadata_url = format!(
         "https://api.adoptium.net/v3/assets/latest/{major_version}/hotspot?architecture={arch}&image_type=jdk&jvm_impl=hotspot&os={os}&project=jdk&release_type=ga"
     );
-    let response = client
-        .get(&metadata_url)
-        .send()
-        .await
-        .map_err(|error| format!("Failed to resolve Java artifact metadata: {error}"))?;
+    let response = send_request_with_timeout(
+        client.get(&metadata_url),
+        JAVA_RESPONSE_HEADERS_TIMEOUT,
+        "Failed to resolve Java artifact metadata",
+    )
+    .await?;
     if !response.status().is_success() {
         return Err(format!(
             "Java metadata request failed with HTTP {}",
             response.status()
         ));
     }
-    if response.content_length().unwrap_or(0) > MAX_JAVA_METADATA_BYTES {
-        return Err("Java artifact metadata exceeds the size limit".to_string());
-    }
-    let body = response
-        .bytes()
-        .await
-        .map_err(|error| format!("Failed to read Java artifact metadata: {error}"))?;
-    if body.len() as u64 > MAX_JAVA_METADATA_BYTES {
-        return Err("Java artifact metadata exceeds the size limit".to_string());
-    }
+    let body =
+        read_limited_response_body(response, MAX_JAVA_METADATA_BYTES, "Java artifact metadata")
+            .await?;
     let assets: Vec<AdoptiumAsset> = serde_json::from_slice(&body)
         .map_err(|error| format!("Invalid Java artifact metadata: {error}"))?;
     let package = assets
@@ -243,11 +368,11 @@ fn validate_managed_java_install_dir(
     Ok(candidate.to_path_buf())
 }
 
-fn replace_java_install_preserving_existing(
+fn install_java_with_rollback(
     staging: &Path,
     destination: &Path,
     managed_root: &Path,
-) -> Result<(), String> {
+) -> Result<Option<PathBuf>, String> {
     let staging = staging
         .canonicalize()
         .map_err(|error| format!("Failed to resolve staged Java installation: {error}"))?;
@@ -271,10 +396,7 @@ fn replace_java_install_preserving_existing(
             std::fs::rename(destination, &rollback)
                 .map_err(|error| format!("Failed to stage existing Java installation: {error}"))?;
             match std::fs::rename(&staging, destination) {
-                Ok(()) => {
-                    let _ = std::fs::remove_dir_all(rollback);
-                    Ok(())
-                }
+                Ok(()) => Ok(Some(rollback)),
                 Err(error) => {
                     let recovery = std::fs::rename(&rollback, destination);
                     if recovery.is_ok() {
@@ -291,11 +413,84 @@ fn replace_java_install_preserving_existing(
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             std::fs::rename(staging, destination)
+                .map(|()| None)
                 .map_err(|error| format!("Failed to install Java: {error}"))
         }
         Err(error) => Err(format!(
             "Failed to inspect existing Java installation: {error}"
         )),
+    }
+}
+
+fn rollback_java_install(
+    destination: &Path,
+    previous_install: Option<&Path>,
+) -> Result<(), String> {
+    match std::fs::symlink_metadata(destination) {
+        Ok(metadata) => {
+            if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+                return Err(
+                    "Refusing to remove an unexpected Java installation during rollback".into(),
+                );
+            }
+            std::fs::remove_dir_all(destination).map_err(|error| {
+                format!("Failed to remove the unregistered Java installation: {error}")
+            })?;
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(format!(
+                "Failed to inspect Java installation during rollback: {error}"
+            ))
+        }
+    }
+    if let Some(previous_install) = previous_install {
+        restore_java_install_backup(previous_install, destination)?;
+    }
+    Ok(())
+}
+
+fn restore_java_install_backup(backup: &Path, destination: &Path) -> Result<(), String> {
+    match std::fs::symlink_metadata(destination) {
+        Ok(_) => return Err("Java installation path is occupied during rollback".into()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(format!(
+                "Failed to inspect Java rollback destination: {error}"
+            ))
+        }
+    }
+    let metadata = std::fs::symlink_metadata(backup)
+        .map_err(|error| format!("Failed to inspect Java installation backup: {error}"))?;
+    if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+        return Err("Java installation backup is not a real directory".into());
+    }
+    std::fs::rename(backup, destination)
+        .map_err(|error| format!("Failed to restore the previous Java installation: {error}"))
+}
+
+fn backup_java_install_for_removal(install_dir: &Path) -> Result<PathBuf, String> {
+    let metadata = std::fs::symlink_metadata(install_dir)
+        .map_err(|error| format!("Failed to inspect Java installation: {error}"))?;
+    if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+        return Err("Existing Java installation is not a real directory".to_string());
+    }
+    let name = install_dir
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "Java installation directory name is invalid".to_string())?;
+    let backup = install_dir.with_file_name(format!(".{name}.delete-{}", Uuid::new_v4()));
+    std::fs::rename(install_dir, &backup)
+        .map_err(|error| format!("Failed to stage Java installation for deletion: {error}"))?;
+    Ok(backup)
+}
+
+fn cleanup_java_backup(path: &Path) {
+    if let Err(error) = std::fs::remove_dir_all(path) {
+        log::warn!(
+            "Failed to remove Java installation backup {:?}: {error}",
+            path
+        );
     }
 }
 
@@ -402,17 +597,81 @@ pub fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub async fn download_java(
+pub async fn get_java_versions(app: AppHandle) -> Result<Vec<JavaVersion>, String> {
+    read_java_versions(app).await
+}
+
+#[tauri::command]
+pub async fn delete_java(
     app: AppHandle,
     operations: State<'_, ServerOperationManager>,
+    servers: State<'_, ServerManager>,
     major_version: u16,
-) -> Result<String, String> {
+) -> Result<(), String> {
     let _operation = operations
-        .acquire("java-runtime", OperationKind::ArtifactInstall)
+        .acquire_global(GlobalOperation::JavaRuntime, OperationKind::ArtifactInstall)
         .await?;
     if !(1..=99).contains(&major_version) {
         return Err("Unsupported Java major version".to_string());
     }
+
+    let mut versions = read_java_versions(app.clone()).await?;
+    let Some(index) = versions
+        .iter()
+        .position(|version| version.version == major_version)
+    else {
+        return Ok(());
+    };
+
+    let is_custom = versions[index].is_custom == Some(true);
+    let deletion = if !is_custom {
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|_| "Failed to resolve app data directory".to_string())?;
+        let install_dir = app_data_dir
+            .join("java")
+            .join(format!("jdk-{major_version}"));
+        validate_managed_java_install_dir(&app_data_dir, &install_dir)?;
+        reject_mutation_of_running_runtime(servers.inner(), &install_dir).await?;
+        let backup = backup_java_install_for_removal(&install_dir)?;
+        Some((install_dir, backup))
+    } else {
+        None
+    };
+
+    versions.remove(index);
+    if let Err(error) = write_java_versions(app, versions).await {
+        if let Some((install_dir, backup)) = deletion.as_ref() {
+            return match restore_java_install_backup(backup, install_dir) {
+                Ok(()) => Err(error),
+                Err(rollback_error) => Err(format!(
+                    "{error}; failed to restore Java installation: {rollback_error}"
+                )),
+            };
+        }
+        return Err(error);
+    }
+    if let Some((_, backup)) = deletion.as_ref() {
+        cleanup_java_backup(backup);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn download_java(
+    app: AppHandle,
+    operations: State<'_, ServerOperationManager>,
+    servers: State<'_, ServerManager>,
+    major_version: u16,
+) -> Result<String, String> {
+    let _operation = operations
+        .acquire_global(GlobalOperation::JavaRuntime, OperationKind::ArtifactInstall)
+        .await?;
+    if !(1..=99).contains(&major_version) {
+        return Err("Unsupported Java major version".to_string());
+    }
+    let mut java_versions = read_java_versions(app.clone()).await?;
     let os = match std::env::consts::OS {
         "macos" => "mac",
         "windows" => "windows",
@@ -433,6 +692,7 @@ pub async fn download_java(
         .join("java")
         .join(format!("jdk-{major_version}"));
     let install_path = validate_managed_java_install_dir(&app_data_dir, &install_dir)?;
+    reject_mutation_of_running_runtime(servers.inner(), &install_path).await?;
     let java_root = app_data_dir.join("java");
     tokio::fs::create_dir_all(&java_root)
         .await
@@ -501,17 +761,182 @@ pub async fn download_java(
         .await
         .map_err(|error| format!("Failed to remove verified Java archive: {error}"))?;
     archive_guard.disarm();
-    replace_java_install_preserving_existing(&staging_dir, &install_path, &managed_root)?;
+    let previous_install = install_java_with_rollback(&staging_dir, &install_path, &managed_root)?;
     staging_guard.disarm();
-    Ok(install_path
+    let java_home = install_path
         .join(relative_java_home)
         .to_string_lossy()
-        .to_string())
+        .to_string();
+    upsert_java_version(
+        &mut java_versions,
+        JavaVersion {
+            version: major_version,
+            path: java_home.clone(),
+            name: format!("Java {major_version}"),
+            is_custom: None,
+        },
+    );
+    if let Err(error) = write_java_versions(app, java_versions).await {
+        return match rollback_java_install(&install_path, previous_install.as_deref()) {
+            Ok(()) => Err(error),
+            Err(rollback_error) => Err(format!(
+                "{error}; failed to restore the previous Java installation: {rollback_error}"
+            )),
+        };
+    }
+    if let Some(previous_install) = previous_install.as_deref() {
+        cleanup_java_backup(previous_install);
+    }
+    Ok(java_home)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn entry(version: u16, path: &str, is_custom: Option<bool>) -> JavaVersion {
+        JavaVersion {
+            version,
+            path: path.to_string(),
+            name: format!("Java {version}"),
+            is_custom,
+        }
+    }
+
+    #[test]
+    fn missing_java_registry_defaults_to_empty_without_writing_a_value() {
+        assert_eq!(
+            decode_java_versions(None).unwrap(),
+            Vec::<JavaVersion>::new()
+        );
+        assert_eq!(
+            decode_java_versions(Some(serde_json::Value::Null)).unwrap(),
+            Vec::<JavaVersion>::new()
+        );
+    }
+
+    #[test]
+    fn legacy_java_registry_shape_and_custom_entries_are_preserved() {
+        let value = serde_json::json!([
+            { "version": 21, "path": "/managed/jdk-21", "name": "Java 21" },
+            { "version": 17, "path": "/custom/java", "name": "Custom 17", "isCustom": true }
+        ]);
+        let versions = decode_java_versions(Some(value)).unwrap();
+        assert_eq!(versions[0], entry(21, "/managed/jdk-21", None));
+        assert_eq!(
+            versions[1],
+            JavaVersion {
+                version: 17,
+                path: "/custom/java".into(),
+                name: "Custom 17".into(),
+                is_custom: Some(true),
+            }
+        );
+        assert_eq!(
+            serde_json::to_value(&versions).unwrap(),
+            serde_json::json!([
+                { "version": 21, "path": "/managed/jdk-21", "name": "Java 21" },
+                { "version": 17, "path": "/custom/java", "name": "Custom 17", "isCustom": true }
+            ])
+        );
+    }
+
+    #[test]
+    fn malformed_or_ambiguous_java_registry_data_is_rejected_without_normalizing_it() {
+        assert!(decode_java_versions(Some(serde_json::json!({ "version": 21 }))).is_err());
+        assert!(decode_java_versions(Some(serde_json::json!([
+            { "version": 21, "path": "/one", "name": "One" },
+            { "version": 21, "path": "/two", "name": "Two" }
+        ])))
+        .is_err());
+        assert!(decode_java_versions(Some(serde_json::json!([
+            { "version": 0, "path": "/invalid", "name": "Invalid" }
+        ])))
+        .is_err());
+    }
+
+    #[test]
+    fn download_upsert_replaces_same_major_without_dropping_other_entries() {
+        let mut versions = vec![
+            entry(8, "/java-8", None),
+            entry(21, "/custom-java-21", Some(true)),
+        ];
+        upsert_java_version(&mut versions, entry(21, "/managed-java-21", None));
+        upsert_java_version(&mut versions, entry(17, "/managed-java-17", None));
+
+        assert_eq!(versions.len(), 3);
+        assert_eq!(versions[0], entry(8, "/java-8", None));
+        assert_eq!(versions[1], entry(21, "/managed-java-21", None));
+        assert_eq!(versions[2], entry(17, "/managed-java-17", None));
+    }
+
+    #[test]
+    fn staged_java_install_can_rollback_to_the_previous_directory() {
+        let root = std::fs::canonicalize("target").expect("cargo should provide target");
+        let install_root = root.join("mc-vector-java-transaction").join(format!(
+            "{}-{}",
+            std::process::id(),
+            Uuid::new_v4()
+        ));
+        let managed_root = install_root.join("java");
+        let install_dir = managed_root.join("jdk-21");
+        let staging_dir = managed_root.join(".jdk-21.staging");
+        std::fs::create_dir_all(&install_dir).expect("existing installation should be created");
+        std::fs::create_dir_all(&staging_dir).expect("staging installation should be created");
+        std::fs::write(install_dir.join("release"), "old").expect("old install should be seeded");
+        std::fs::write(staging_dir.join("release"), "new").expect("new install should be seeded");
+
+        let backup = install_java_with_rollback(&staging_dir, &install_dir, &managed_root)
+            .expect("staged install should replace current install");
+        assert_eq!(
+            std::fs::read_to_string(install_dir.join("release")).unwrap(),
+            "new"
+        );
+        assert_eq!(
+            std::fs::read_to_string(backup.as_ref().unwrap().join("release")).unwrap(),
+            "old"
+        );
+
+        rollback_java_install(&install_dir, backup.as_deref())
+            .expect("failed registry save should restore prior installation");
+        assert_eq!(
+            std::fs::read_to_string(install_dir.join("release")).unwrap(),
+            "old"
+        );
+        assert!(!backup.unwrap().exists());
+        std::fs::remove_dir_all(install_root).expect("transaction fixture should be cleaned");
+    }
+
+    #[test]
+    fn java_delete_backup_can_be_restored_before_registry_commit() {
+        let root = std::fs::canonicalize("target").expect("cargo should provide target");
+        let install_root = root.join("mc-vector-java-delete-transaction").join(format!(
+            "{}-{}",
+            std::process::id(),
+            Uuid::new_v4()
+        ));
+        let install_dir = install_root.join("java").join("jdk-17");
+        std::fs::create_dir_all(&install_dir).expect("existing installation should be created");
+        std::fs::write(install_dir.join("release"), "old").expect("old install should be seeded");
+
+        let backup = backup_java_install_for_removal(&install_dir)
+            .expect("deletion should first move the installation to backup");
+        assert!(!install_dir.exists());
+        assert_eq!(
+            std::fs::read_to_string(backup.join("release")).unwrap(),
+            "old"
+        );
+
+        restore_java_install_backup(&backup, &install_dir)
+            .expect("failed registry save should restore the installation");
+        assert_eq!(
+            std::fs::read_to_string(install_dir.join("release")).unwrap(),
+            "old"
+        );
+        assert!(!backup.exists());
+        std::fs::remove_dir_all(install_root).expect("transaction fixture should be cleaned");
+    }
+
     #[test]
     fn java_download_url_is_strict() {
         assert!(validate_java_download_url("https://api.adoptium.net/v3/binary/latest/21").is_ok());
@@ -561,6 +986,34 @@ mod tests {
             Path::new("temurin-e2e/file"),
             false,
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn archive_execute_bits_are_restored_without_special_permissions() {
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+        assert_eq!(safe_java_file_mode(0o7600, 0o7777), 0o711);
+
+        let directory = crate::test_support::test_temp_dir("mc-vector-java-permission-tests");
+        std::fs::create_dir_all(&directory).expect("permission fixture directory should exist");
+        let path = directory.join(format!(
+            "mc-vector-java-permissions-{}-{}",
+            std::process::id(),
+            Uuid::new_v4()
+        ));
+        std::fs::write(&path, "java binary").expect("permission fixture should be written");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o7600))
+            .expect("base permissions should be set");
+
+        restore_java_execute_bits(&path, 0o7777).expect("safe execute bits should be restored");
+
+        let mode = std::fs::metadata(&path).unwrap().mode() & 0o7777;
+        assert_eq!(
+            mode, 0o711,
+            "setuid, setgid, and sticky bits must be removed"
+        );
+        std::fs::remove_file(path).expect("permission fixture should be removed");
     }
 }
 
@@ -697,6 +1150,28 @@ fn copy_java_entry<R: Read, W: Write>(
     Ok(copied)
 }
 
+#[cfg(unix)]
+fn restore_java_execute_bits(path: &Path, archive_mode: u32) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let metadata = std::fs::metadata(path)
+        .map_err(|error| format!("Failed to inspect extracted Java file: {error}"))?;
+    let mut permissions = metadata.permissions();
+    permissions.set_mode(safe_java_file_mode(permissions.mode(), archive_mode));
+    std::fs::set_permissions(path, permissions)
+        .map_err(|error| format!("Failed to restore Java executable permissions: {error}"))
+}
+
+#[cfg(unix)]
+fn safe_java_file_mode(existing_mode: u32, archive_mode: u32) -> u32 {
+    (existing_mode & 0o777) | (archive_mode & 0o111)
+}
+
+#[cfg(not(unix))]
+fn restore_java_execute_bits(_path: &Path, _archive_mode: u32) -> Result<(), String> {
+    Ok(())
+}
+
 fn extract_tar_gz(archive_path: &str, dest_dir: &str) -> Result<String, String> {
     use flate2::read::GzDecoder;
     use tar::Archive;
@@ -742,6 +1217,10 @@ fn extract_tar_gz(archive_path: &str, dest_dir: &str) -> Result<String, String> 
         if !entry_type.is_file() {
             return Err("Java archive contains an unsupported entry type".to_string());
         }
+        let archive_mode = entry
+            .header()
+            .mode()
+            .map_err(|error| format!("Failed to read Java archive file permissions: {error}"))?;
         let parent = ensure_java_directory(destination, relative.parent())?;
         let output = parent.join(
             relative
@@ -757,6 +1236,7 @@ fn extract_tar_gz(archive_path: &str, dest_dir: &str) -> Result<String, String> 
             .map_err(|error| format!("Failed to create Java file: {error}"))?;
         let expected_size = entry.size();
         copy_java_entry(&mut entry, &mut output_file, expected_size, &mut total)?;
+        restore_java_execute_bits(&output, archive_mode)?;
     }
     if archive_ratio_exceeded(total, compressed_size) {
         return Err("Java archive compression ratio exceeds the limit".to_string());
@@ -817,6 +1297,7 @@ fn extract_zip_archive(archive_path: &str, dest_dir: &str) -> Result<String, Str
             ensure_java_directory(destination, Some(&relative))?;
             continue;
         }
+        let archive_mode = entry.unix_mode().unwrap_or(0);
         let parent = ensure_java_directory(destination, relative.parent())?;
         let output = parent.join(
             relative
@@ -837,6 +1318,7 @@ fn extract_zip_archive(archive_path: &str, dest_dir: &str) -> Result<String, Str
             expected_size,
             &mut actual_total,
         )?;
+        restore_java_execute_bits(&output, archive_mode)?;
     }
 
     find_java_home(dest_dir)

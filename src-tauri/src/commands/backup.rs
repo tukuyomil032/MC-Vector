@@ -2142,10 +2142,7 @@ pub async fn compress_managed_items(
         .collect::<Result<Vec<_>, _>>()?;
     scopes.push(managed_operation_scope(&destination)?);
     let _operation_guards = operations
-        .acquire_many(
-            scopes.iter().map(String::as_str),
-            OperationKind::FileMutation,
-        )
+        .acquire_scopes(scopes.iter().cloned(), OperationKind::FileMutation)
         .await?;
     let app_data_dir = app
         .path()
@@ -2169,8 +2166,8 @@ pub async fn extract_managed_item(
     let archive_scope = managed_operation_scope(&archive)?;
     let destination_scope = managed_operation_scope(&destination)?;
     let _operation_guards = operations
-        .acquire_many(
-            [archive_scope.as_str(), destination_scope.as_str()],
+        .acquire_scopes(
+            [archive_scope, destination_scope],
             OperationKind::FileMutation,
         )
         .await?;

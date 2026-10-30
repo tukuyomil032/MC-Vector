@@ -1,11 +1,7 @@
-import { appDataDir } from '@tauri-apps/api/path';
-import { load } from '@tauri-apps/plugin-store';
 import type { MinecraftServer } from '../renderer/shared/server declaration';
 import type { MetricHistorySnapshot } from '../renderer/shared/server-metrics';
+import { deleteManagedServer } from './server-lifecycle-commands';
 import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
-
-const STORE_NAME = 'servers.json';
-const SERVER_TEMPLATES_KEY = 'serverTemplates';
 
 export interface ServerTemplate {
   id: string;
@@ -30,135 +26,42 @@ export interface ServerTemplate {
 // --- サーバー CRUD ---
 
 export async function getServers(): Promise<MinecraftServer[]> {
-  const store = await load(STORE_NAME);
-  const servers = (await store.get<MinecraftServer[]>('servers')) ?? [];
-  if (servers.length === 0) {
-    return servers;
-  }
-
-  const dataDir = (await appDataDir()).replace(/\\/g, '/').replace(/\/$/, '');
-  const legacyPrefix = `${dataDir}/servers/`;
-  let changed = false;
-  for (const server of servers) {
-    const normalizedPath = server.path.replace(/\\/g, '/').replace(/\/$/, '');
-    if (!normalizedPath.startsWith(legacyPrefix)) {
-      continue;
-    }
-    const legacyDirectoryName = normalizedPath.slice(legacyPrefix.length);
-    if (
-      !legacyDirectoryName ||
-      legacyDirectoryName.includes('/') ||
-      legacyDirectoryName === server.id
-    ) {
-      continue;
-    }
-    try {
-      server.path = await tauriInvoke<string>('migrate_managed_server_directory', {
-        legacyDirectoryName,
-        serverId: server.id,
-      });
-      server.unavailableReason = undefined;
-      changed = true;
-    } catch (error) {
-      server.unavailableReason = `Server directory migration failed: ${String(error)}`;
-    }
-  }
-  if (changed) {
-    await store.set('servers', servers);
-    await store.save();
-  }
-  return servers;
-}
-
-export async function addServer(server: MinecraftServer): Promise<MinecraftServer> {
-  const store = await load(STORE_NAME);
-  const servers = (await store.get<MinecraftServer[]>('servers')) ?? [];
-  servers.push(server);
-  await store.set('servers', servers);
-  await store.save();
-  return server;
+  return tauriInvoke<MinecraftServer[]>('get_servers');
 }
 
 export async function updateServer(updated: MinecraftServer): Promise<void> {
-  const store = await load(STORE_NAME);
-  const servers = (await store.get<MinecraftServer[]>('servers')) ?? [];
-  const idx = servers.findIndex((s) => s.id === updated.id);
-  if (idx !== -1) {
-    servers[idx] = updated;
-    await store.set('servers', servers);
-    await store.save();
-  }
+  await tauriInvoke('update_server', { server: updated });
 }
 
-export async function deleteServer(id: string): Promise<boolean> {
-  const store = await load(STORE_NAME);
-  const servers = (await store.get<MinecraftServer[]>('servers')) ?? [];
-  const target = servers.find((s) => s.id === id);
-  if (!target) {
-    return false;
-  }
-
-  if (await isServerRunning(id)) {
-    throw new Error('Cannot delete a running server');
-  }
-
-  await tauriInvoke('delete_managed_server_dir', { serverId: id });
-
-  const filtered = servers.filter((s) => s.id !== id);
-  await store.set('servers', filtered);
-  await store.save();
-  return true;
+export function deleteServer(id: string): Promise<boolean> {
+  return deleteManagedServer(id);
 }
 
 export async function getServerTemplates(): Promise<ServerTemplate[]> {
-  const store = await load(STORE_NAME);
-  return (await store.get<ServerTemplate[]>(SERVER_TEMPLATES_KEY)) ?? [];
+  return tauriInvoke<ServerTemplate[]>('get_server_templates');
 }
 
 export async function saveServerTemplate(template: ServerTemplate): Promise<ServerTemplate> {
-  const store = await load(STORE_NAME);
-  const templates = (await store.get<ServerTemplate[]>(SERVER_TEMPLATES_KEY)) ?? [];
-  const index = templates.findIndex((entry) => entry.id === template.id);
-  if (index >= 0) {
-    templates[index] = template;
-  } else {
-    templates.push(template);
-  }
-  await store.set(SERVER_TEMPLATES_KEY, templates);
-  await store.save();
+  await tauriInvoke('save_server_template', { template });
   return template;
 }
 
 export async function deleteServerTemplate(templateId: string): Promise<void> {
-  const store = await load(STORE_NAME);
-  const templates = (await store.get<ServerTemplate[]>(SERVER_TEMPLATES_KEY)) ?? [];
-  const filtered = templates.filter((template) => template.id !== templateId);
-  await store.set(SERVER_TEMPLATES_KEY, filtered);
-  await store.save();
+  await tauriInvoke('delete_server_template', { templateId });
 }
 
 // --- サーバー操作 (Rust コマンド経由) ---
 
-export async function startServer(
-  serverId: string,
-  javaPath: string,
-  memory: number,
-  jarFile: string,
-  jvmExtraArgs?: string,
-  software?: string,
-): Promise<void> {
-  return tauriInvoke('start_server', {
-    serverId,
-    javaPath,
-    memory,
-    jarFile,
-    jvmExtraArgs: jvmExtraArgs ?? null,
-    software: software ?? 'Unknown',
-  });
+export async function startServer(serverId: string, ..._legacyArguments: unknown[]): Promise<void> {
+  return tauriInvoke('start_server', { serverId });
 }
 
 export async function stopServer(serverId: string): Promise<void> {
   return tauriInvoke('stop_server', { serverId });
+}
+
+export async function restartServer(serverId: string): Promise<void> {
+  return tauriInvoke('restart_server', { serverId });
 }
 
 export async function sendCommand(serverId: string, command: string): Promise<void> {
@@ -173,6 +76,31 @@ export async function getServerPid(serverId: string): Promise<number> {
   return tauriInvoke('get_server_pid', { serverId });
 }
 
+export interface PreparedServerJarInstall {
+  planId: string;
+  latestVersion: string;
+  verified: boolean;
+}
+
+export interface ServerJarInstallResult {
+  serverId: string;
+  version: string;
+}
+
+export async function prepareServerJarInstall(
+  serverId: string,
+  software: string,
+  version: string,
+): Promise<PreparedServerJarInstall | null> {
+  return tauriInvoke<PreparedServerJarInstall | null>('prepare_server_jar_install', {
+    request: { serverId, software, version },
+  });
+}
+
+export async function executeServerJarInstall(planId: string): Promise<ServerJarInstallResult> {
+  return tauriInvoke<ServerJarInstallResult>('execute_server_jar_install', { planId });
+}
+
 export async function downloadServerJar(
   url: string,
   serverId: string,
@@ -183,18 +111,9 @@ export async function downloadServerJar(
   if (!/^[0-9a-f]{64}$/i.test(checksum)) {
     throw new Error('Verified server JAR installation requires a valid SHA-256 checksum');
   }
-  const request: {
-    url: string;
-    serverId: string;
-    relativePath: string;
-    checksum: { algorithm: 'sha256'; value: string };
-  } = {
-    url,
-    serverId,
-    relativePath,
-    checksum: { algorithm: 'sha256', value: checksum },
-  };
-  return tauriInvoke('download_server_jar', { request });
+  return tauriInvoke('download_server_jar', {
+    request: { url, serverId, relativePath, checksum: { algorithm: 'sha256', value: checksum } },
+  });
 }
 
 export async function getServerStats(serverId: string): Promise<{ cpu: number; memory: number }> {
@@ -221,9 +140,9 @@ export function onServerMetricsUpdated(
   return tauriListen('server-metrics-updated', callback);
 }
 
-export function onServerStatusChange(
-  callback: (data: { serverId: string; generation?: number; status: string }) => void,
-): Promise<UnlistenFn> {
+export function onServerStatusChange(callback: {
+  (data: { serverId: string; generation?: number; status: string; expected?: boolean }): void;
+}): Promise<UnlistenFn> {
   return tauriListen('server-status-change', callback);
 }
 

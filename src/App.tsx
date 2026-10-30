@@ -233,33 +233,18 @@ function MainApp() {
         const gateResult = await runExclusiveServerStart(s.id, async () => {
           let result = await ensureServerEula(s, 'interactive');
           if (result === 'accepted') {
-            const jarFile = s.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
             setServers((prev) =>
               prev.map((srv) => (srv.id === s.id ? { ...srv, status: 'starting' } : srv)),
             );
             try {
-              await startServerApi(
-                s.id,
-                s.javaPath || 'java',
-                s.memory,
-                jarFile,
-                s.jvmArgs,
-                s.software,
-              );
+              await startServerApi(s.id);
             } catch (error) {
               if (!isEulaRequiredError(error)) {
                 throw error;
               }
               result = await ensureServerEula(s, 'interactive');
               if (result === 'accepted') {
-                await startServerApi(
-                  s.id,
-                  s.javaPath || 'java',
-                  s.memory,
-                  jarFile,
-                  s.jvmArgs,
-                  s.software,
-                );
+                await startServerApi(s.id);
               }
             }
           }
@@ -437,6 +422,16 @@ function MainApp() {
           ngrokData={ngrokData}
           onBuildProxyNetwork={handleBuildProxyNetwork}
           onUpdateServer={handleUpdateServer}
+          onServerVersionChanged={(serverId, version) => {
+            setServers((prev) =>
+              prev.map((server) => (server.id === serverId ? { ...server, version } : server)),
+            );
+          }}
+          onServerPortChanged={(serverId, port) => {
+            setServers((prev) =>
+              prev.map((server) => (server.id === serverId ? { ...server, port } : server)),
+            );
+          }}
           updaterSettings={{
             onCheckForUpdates: handleCheckForUpdates,
             updateCheckStatus,

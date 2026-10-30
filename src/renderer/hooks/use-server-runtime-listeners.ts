@@ -20,6 +20,7 @@ type SetNgrokData = (
 interface ServerStatusChangeData {
   serverId: string;
   status: MinecraftServer['status'];
+  expected?: boolean;
 }
 
 interface UseServerRuntimeListenersOptions {
@@ -177,7 +178,11 @@ export function useServerRuntimeListeners({
           return;
         }
         const serverId = data.serverId.trim();
-        propsRef.current.handleServerStatusChange({ serverId, status: data.status });
+        propsRef.current.handleServerStatusChange({
+          serverId,
+          status: data.status,
+          expected: data.expected === true,
+        });
       });
       unlisteners.push(disposeServerStatus);
 

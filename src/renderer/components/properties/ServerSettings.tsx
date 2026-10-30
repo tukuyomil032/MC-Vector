@@ -24,10 +24,16 @@ import { Select } from '../ui/Select';
 interface ServerSettingsProps {
   server: MinecraftServer;
   onSave: (updatedServer: MinecraftServer) => Promise<void>;
+  onServerVersionChanged: (serverId: string, version: string) => void;
   onOpenNgrokGuide: () => void;
 }
 
-const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenNgrokGuide }) => {
+const ServerSettings: React.FC<ServerSettingsProps> = ({
+  server,
+  onSave,
+  onServerVersionChanged,
+  onOpenNgrokGuide,
+}) => {
   const { t } = useTranslation();
 
   const WEEKDAY_OPTIONS: Array<{ value: number; label: string }> = [
@@ -824,8 +830,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, onSave, onOpenN
         <VersionUpgradeWizard
           server={server}
           onClose={() => setShowVersionWizard(false)}
-          onServerUpdate={async (updated) => {
-            await onSave(updated);
+          onServerVersionChanged={(updatedVersion) => {
+            setVersion(updatedVersion);
+            onServerVersionChanged(server.id, updatedVersion);
             setShowVersionWizard(false);
           }}
         />

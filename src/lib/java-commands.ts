@@ -1,9 +1,6 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { load } from '@tauri-apps/plugin-store';
 import { logError } from './error-utils';
 import { type UnlistenFn, tauriInvoke, tauriListen } from './tauri-api';
-
-const STORE_NAME = 'config.json';
 
 export interface JavaVersion {
   version: number;
@@ -13,14 +10,7 @@ export interface JavaVersion {
 }
 
 export async function getJavaVersions(): Promise<JavaVersion[]> {
-  const store = await load(STORE_NAME);
-  return (await store.get<JavaVersion[]>('javaVersions')) ?? [];
-}
-
-export async function saveJavaVersions(versions: JavaVersion[]): Promise<void> {
-  const store = await load(STORE_NAME);
-  await store.set('javaVersions', versions);
-  await store.save();
+  return tauriInvoke<JavaVersion[]>('get_java_versions');
 }
 
 /**
@@ -29,23 +19,9 @@ export async function saveJavaVersions(versions: JavaVersion[]): Promise<void> {
  */
 export async function downloadJava(majorVersion: number): Promise<boolean> {
   try {
-    const javaHome = await tauriInvoke<string>('download_java', {
+    await tauriInvoke<string>('download_java', {
       majorVersion,
     });
-    // Register in store
-    const versions = await getJavaVersions();
-    const existing = versions.findIndex((v) => v.version === majorVersion);
-    const entry: JavaVersion = {
-      version: majorVersion,
-      path: javaHome,
-      name: `Java ${majorVersion}`,
-    };
-    if (existing >= 0) {
-      versions[existing] = entry;
-    } else {
-      versions.push(entry);
-    }
-    await saveJavaVersions(versions);
     return true;
   } catch (e) {
     logError('downloadJava failed', e, { majorVersion });
@@ -57,22 +33,7 @@ export async function downloadJava(majorVersion: number): Promise<boolean> {
  * Delete an installed Java version by major version number.
  */
 export async function deleteJava(majorVersion: number): Promise<void> {
-  const versions = await getJavaVersions();
-  const target = versions.find((v) => v.version === majorVersion);
-  if (!target) {
-    return;
-  }
-
-  if (target.isCustom) {
-    await saveJavaVersions(versions.filter((v) => v.version !== majorVersion));
-    return;
-  }
-
-  await tauriInvoke('delete_managed_path', {
-    request: { root: 'java', relativePath: `jdk-${majorVersion}` },
-  });
-
-  await saveJavaVersions(versions.filter((v) => v.version !== majorVersion));
+  await tauriInvoke<void>('delete_java', { majorVersion });
 }
 
 export async function selectJavaBinary(): Promise<string | null> {

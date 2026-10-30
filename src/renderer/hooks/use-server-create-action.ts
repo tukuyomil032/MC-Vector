@@ -1,16 +1,15 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Translate } from '../../i18n';
-import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import {
-  createManagedServerDirectory,
-  deleteManagedServerDirectory,
-} from '../../lib/file-commands';
-import { addServer as addServerApi, downloadServerJar } from '../../lib/server-commands';
-import { completeServerImport } from '../../lib/server-import-commands';
-import { resolveRequestedJarUrl } from '../../lib/version-commands';
+  createServerProfile,
+  onServerCreationProgress,
+  type NewServerProfileRequest,
+} from '../../lib/server-creation-commands';
+import type { UnlistenFn } from '../../lib/tauri-api';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
+
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
@@ -25,6 +24,68 @@ interface UseServerCreateActionOptions {
   t: Translate;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function toCreateRequest(serverData: unknown, operationId: string): NewServerProfileRequest {
+  const source = isRecord(serverData) ? serverData : {};
+  const rawScheduleType = source.autoBackupScheduleType;
+
+  return {
+    operationId,
+    name: readString(source.name) ?? 'New Server',
+    profileName: readString(source.profileName),
+    groupName: readString(source.groupName),
+    version: readString(source.version) ?? '',
+    software: readString(source.software) ?? 'Vanilla',
+    port: readNumber(source.port, 25565),
+    memoryGb: readNumber(source.memory, 4),
+    javaPath: readString(source.javaPath),
+    autoRestartOnCrash:
+      typeof source.autoRestartOnCrash === 'boolean' ? source.autoRestartOnCrash : undefined,
+    maxAutoRestarts:
+      typeof source.maxAutoRestarts === 'number' ? source.maxAutoRestarts : undefined,
+    autoRestartDelaySec:
+      typeof source.autoRestartDelaySec === 'number' ? source.autoRestartDelaySec : undefined,
+    autoBackupEnabled:
+      typeof source.autoBackupEnabled === 'boolean' ? source.autoBackupEnabled : undefined,
+    autoBackupIntervalMin:
+      typeof source.autoBackupIntervalMin === 'number' ? source.autoBackupIntervalMin : undefined,
+    autoBackupScheduleType:
+      rawScheduleType === 'daily' || rawScheduleType === 'weekly' || rawScheduleType === 'interval'
+        ? rawScheduleType
+        : undefined,
+    autoBackupTime: readString(source.autoBackupTime),
+    autoBackupWeekday:
+      typeof source.autoBackupWeekday === 'number' ? source.autoBackupWeekday : undefined,
+    autoBackupRetainCount:
+      typeof source.autoBackupRetainCount === 'number' ? source.autoBackupRetainCount : undefined,
+    autoBackupRetainDays:
+      typeof source.autoBackupRetainDays === 'number' ? source.autoBackupRetainDays : undefined,
+    backupRestartAfterSafeBackup:
+      typeof source.backupRestartAfterSafeBackup === 'boolean'
+        ? source.backupRestartAfterSafeBackup
+        : undefined,
+    jvmArgs: readString(source.jvmArgs),
+    notifyOnCrash: typeof source.notifyOnCrash === 'boolean' ? source.notifyOnCrash : undefined,
+    notifyOnStart: typeof source.notifyOnStart === 'boolean' ? source.notifyOnStart : undefined,
+    notifyOnHighCpu:
+      typeof source.notifyOnHighCpu === 'boolean' ? source.notifyOnHighCpu : undefined,
+    notifyHighCpuThreshold:
+      typeof source.notifyHighCpuThreshold === 'number' ? source.notifyHighCpuThreshold : undefined,
+    importToken: readString(source.importToken),
+  };
+}
+
 export function useServerCreateAction({
   setServers,
   setSelectedServerId,
@@ -33,118 +94,53 @@ export function useServerCreateAction({
   showToast,
   t,
 }: UseServerCreateActionOptions) {
+  const isCreating = useRef(false);
+
   const handleAddServer = useCallback(
     async (serverData: unknown) => {
-      const id = crypto.randomUUID();
-      let createdDirectory = false;
-      let createdServerPath = '';
+      if (isCreating.current) {
+        return;
+      }
+      isCreating.current = true;
+      const operationId = crypto.randomUUID();
+      const request = toCreateRequest(serverData, operationId);
+      let unlisten: UnlistenFn | null = null;
+
       try {
-        const source = serverData as Record<string, unknown>;
-        const importToken = typeof source.importToken === 'string' ? source.importToken : null;
-        const serverPath = `${await getServerRoot()}/${id}`;
-        await createManagedServerDirectory(id);
-        createdServerPath = serverPath;
-        createdDirectory = true;
-
-        const newServer: MinecraftServer = {
-          id,
-          name: (source.name as string) || 'New Server',
-          profileName:
-            typeof source.profileName === 'string' ? source.profileName || undefined : undefined,
-          groupName:
-            typeof source.groupName === 'string' ? source.groupName || undefined : undefined,
-          version: (source.version as string) || '',
-          software: (source.software as string) || 'Vanilla',
-          port: (source.port as number) || 25565,
-          memory: ((source.memory as number) || 4) * 1024,
-          path: serverPath,
-          status: 'offline',
-          javaPath: (source.javaPath as string) || undefined,
-          autoRestartOnCrash:
-            typeof source.autoRestartOnCrash === 'boolean' ? source.autoRestartOnCrash : false,
-          maxAutoRestarts: typeof source.maxAutoRestarts === 'number' ? source.maxAutoRestarts : 3,
-          autoRestartDelaySec:
-            typeof source.autoRestartDelaySec === 'number' ? source.autoRestartDelaySec : 5,
-          autoBackupEnabled:
-            typeof source.autoBackupEnabled === 'boolean' ? source.autoBackupEnabled : false,
-          autoBackupIntervalMin:
-            typeof source.autoBackupIntervalMin === 'number' ? source.autoBackupIntervalMin : 60,
-          autoBackupScheduleType:
-            source.autoBackupScheduleType === 'daily' || source.autoBackupScheduleType === 'weekly'
-              ? source.autoBackupScheduleType
-              : 'interval',
-          autoBackupTime:
-            typeof source.autoBackupTime === 'string' ? source.autoBackupTime : '03:00',
-          autoBackupWeekday:
-            typeof source.autoBackupWeekday === 'number' ? Math.floor(source.autoBackupWeekday) : 0,
-          createdDate: new Date().toISOString(),
-        };
-        const software = (source.software as string) || 'Vanilla';
-        const version = (source.version as string) || '';
-        let resolution: Awaited<ReturnType<typeof resolveRequestedJarUrl>> = null;
-
-        if (importToken) {
-          await completeServerImport(importToken, newServer.id);
-        } else {
-          const autoDownloadSoftware = new Set(['Paper', 'LeafMC', 'Vanilla', 'Fabric']);
-          resolution = await resolveRequestedJarUrl(software, version);
-
-          if (resolution) {
-            if (!resolution.sha256) {
-              throw new Error('Official server JAR checksum is unavailable; installation blocked');
+        try {
+          unlisten = await onServerCreationProgress((event) => {
+            if (event.operationId !== operationId) {
+              return;
             }
             setDownloadStatus({
-              id: newServer.id,
-              progress: 0,
-              msg: t('server.toast.downloadStarting'),
+              id: operationId,
+              progress: event.progress,
+              msg: event.status,
             });
-            try {
-              await downloadServerJar(
-                resolution.downloadUrl,
-                newServer.id,
-                'server.jar',
-                resolution.sha256,
-              );
-            } catch (error) {
-              logError('Server jar download failed', error, {
-                serverId: newServer.id,
-                serverPath,
-                downloadUrl: resolution.downloadUrl,
-              });
-              setDownloadStatus(null);
-              throw error;
-            }
-          } else if (autoDownloadSoftware.has(software)) {
-            throw new Error(`No official stable JAR is available for ${software} ${version}`);
-          }
+          });
+        } catch (error) {
+          logError('Failed to subscribe to server creation progress', error);
         }
 
-        await addServerApi(newServer);
-        setServers((prev) => [...prev, newServer]);
-        setSelectedServerId(newServer.id);
+        const result = await createServerProfile(request);
+        setServers((previous) => [...previous, result.server]);
+        setSelectedServerId(result.server.id);
         setShowAddServerModal(false);
         showToast(t('server.toast.created'), 'success');
-        setDownloadStatus(null);
-        if (!resolution) {
+        if (!result.jarInstalled) {
           showToast(t('server.toast.jarUrlFailed'), 'info');
         }
       } catch (error) {
-        if (createdDirectory && createdServerPath) {
-          try {
-            await deleteManagedServerDirectory(id);
-          } catch (cleanupError) {
-            logError('Failed to roll back server directory', cleanupError, {
-              serverPath: createdServerPath,
-            });
-          }
-        }
         logError('Server creation failed', error, {
-          serverDataType: typeof serverData,
-          software: (serverData as Record<string, unknown>).software,
-          version: (serverData as Record<string, unknown>).version,
+          software: request.software,
+          version: request.version,
+          imported: Boolean(request.importToken),
         });
         showToast(t('server.toast.createFailed'), 'error');
+      } finally {
+        unlisten?.();
         setDownloadStatus(null);
+        isCreating.current = false;
       }
     },
     [setDownloadStatus, setSelectedServerId, setServers, setShowAddServerModal, showToast, t],
