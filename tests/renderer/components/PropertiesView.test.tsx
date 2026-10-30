@@ -21,7 +21,9 @@ vi.mock('@/lib/properties-commands', () => ({
   saveServerProperties: saveServerPropertiesMock,
 }));
 vi.mock('@/lib/error-utils', () => ({ logError: logErrorMock }));
-vi.mock('sonner', () => ({ toast: toastMock }));
+vi.mock('@/renderer/shared/notify', () => ({
+  notify: { error: toastMock.error, success: toastMock.success, info: vi.fn(), warning: vi.fn() },
+}));
 vi.mock('@/renderer/components/properties/AdvancedSettingsWindow', () => ({
   default: () => null,
 }));

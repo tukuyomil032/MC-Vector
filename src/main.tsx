@@ -8,7 +8,6 @@ import { restoreStateCurrent } from '@tauri-apps/plugin-window-state';
 import * as monaco from 'monaco-editor';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import 'sonner/dist/styles.css';
 import App from './App';
 import { useI18nStore } from './i18n';
 import { AppFeedbackProvider } from './renderer/components/AppFeedbackProvider';

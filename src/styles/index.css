@@ -5,7 +5,6 @@
 @import './components/surface-primitives.css';
 @import './components/animations.css';
 @import './components/modal-primitives.css';
-@import './components/toast.css';
 @import './components/command-palette.css';
 
 @import './layout/app-layout.css';

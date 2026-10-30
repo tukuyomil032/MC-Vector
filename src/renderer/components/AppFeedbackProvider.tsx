@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Toaster } from 'sonner';
 import { Button } from '@/components/arc/button/button';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { Input } from '@/components/arc/input/input';
@@ -392,7 +391,6 @@ export function AppFeedbackProvider({ children }: { children: ReactNode }) {
       <NotifyBridge />
       <AppFeedbackContext.Provider value={value}>
         {children}
-        <Toaster position="bottom-right" richColors />
         <ToastStack label={t('common.notifications')} />
         <Dialog
           open={open}
