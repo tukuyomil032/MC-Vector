@@ -100,6 +100,14 @@ export const ja: TranslationDictionary = {
 
   server: {
     title: 'サーバー',
+    status: {
+      online: '稼働中',
+      offline: '停止中',
+      starting: '起動中',
+      stopping: '停止処理中',
+      restarting: '再起動中',
+      crashed: 'クラッシュ',
+    },
     create: {
       title: 'サーバーを作成',
       name: 'サーバー名',
@@ -113,6 +121,7 @@ export const ja: TranslationDictionary = {
     },
     list: {
       empty: 'サーバーがありません。最初のサーバーを作成しましょう！',
+      emptyTitle: 'サーバーがまだありません',
       running: '稼働中',
       stopped: '停止中',
       selectOrCreate: 'サーバーを選択するか、作成してください',
@@ -724,6 +733,10 @@ export const ja: TranslationDictionary = {
     bulkBackupSelected: '一括バックアップ',
     bulkClearSelection: '解除',
     bulkSelectedCount: '{count}件選択中',
+    collapseSidebar: 'サイドバーを閉じる',
+    expandSidebar: 'サイドバーを開く',
+    serverMenu: '{name} の操作',
+    selectServer: '{name} を選択',
   },
 
   proxy: {

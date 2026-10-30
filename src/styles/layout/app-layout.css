@@ -29,55 +29,6 @@
     background: var(--mv-shell-content-bg, var(--mv-surface-card-bg));
   }
 
-  .app-sidebar__divider {
-    margin-top: 0.625rem;
-    margin-bottom: 0.625rem;
-    margin-left: auto;
-    margin-right: auto;
-    width: 90%;
-    border-width: 0px;
-    border-top-width: 1px;
-    border-color: var(--mv-shell-border, var(--mv-surface-border));
-  }
-
-  .app-sidebar__server-item:hover {
-    --tw-translate-x: 0.125rem;
-    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate))
-      skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x))
-      scaleY(var(--tw-scale-y));
-    background-color: rgb(255 255 255 / 0.05);
-  }
-
-  .app-sidebar__server-item.is-active {
-    background-color: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.18);
-  }
-
-  .app-nav-item.is-active {
-    background-color: rgba(255, 255, 255, 0.07);
-    color: #ffffff;
-  }
-
-  .app-nav-item.is-idle:hover {
-    --tw-translate-x: 0.25rem;
-    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate))
-      skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x))
-      scaleY(var(--tw-scale-y));
-    color: var(--mv-surface-text-primary);
-    background-color: rgb(255 255 255 / 0.08);
-  }
-
-  .app-shell.theme-light .app-nav-item.is-idle:hover,
-  .app-shell[data-theme='light'] .app-nav-item.is-idle:hover {
-    background-color: rgb(15 23 42 / 0.06);
-  }
-
-  .app-nav-item:focus-visible {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 2px var(--mv-surface-border-strong);
-  }
-
   .app-update-overlay {
     position: fixed;
     inset: 0px;

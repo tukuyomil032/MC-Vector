@@ -408,6 +408,8 @@ function MainApp() {
           onOpenSettings={handleOpenSettingsWindow}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           openSettingsLabel={t('nav.openSettings')}
+          collapseLabel={t('nav.collapseSidebar')}
+          expandLabel={t('nav.expandSidebar')}
         />
 
         <AppSidebarNavigation
@@ -417,30 +419,20 @@ function MainApp() {
           t={t}
         />
 
-        <AppServerSidebar
-          isSidebarOpen={isSidebarOpen}
-          groupedServers={groupedServers}
-          selectedServerId={selectedServerId}
-          onSelectServer={setSelectedServerId}
-          onAddServer={() => setShowAddServerChoiceModal(true)}
-          onDuplicateServer={handleDuplicateServer}
-          onSaveServerTemplate={handleSaveServerTemplate}
-          onDeleteServer={handleDeleteServer}
-          serversLabel={t('nav.servers')}
-          addServerLabel={t('nav.addServer')}
-          bulkSelectLabel={t('nav.bulkSelect')}
-          bulkStartLabel={t('nav.bulkStartSelected')}
-          bulkStopLabel={t('nav.bulkStopSelected')}
-          bulkBackupLabel={t('nav.bulkBackupSelected')}
-          bulkClearLabel={t('nav.bulkClearSelection')}
-          bulkSelectedCountLabel={(count) => t('nav.bulkSelectedCount', { count })}
-          duplicateLabel={t('server.actions.clone')}
-          saveTemplateLabel={t('server.actions.saveTemplate')}
-          deleteLabel={t('common.delete')}
-          onBulkStart={handleBulkStart}
-          onBulkStop={handleBulkStop}
-          onBulkBackup={handleBulkBackup}
-        />
+        {isSidebarOpen && (
+          <AppServerSidebar
+            groupedServers={groupedServers}
+            selectedServerId={selectedServerId}
+            onSelectServer={setSelectedServerId}
+            onAddServer={() => setShowAddServerChoiceModal(true)}
+            onDuplicateServer={handleDuplicateServer}
+            onSaveServerTemplate={handleSaveServerTemplate}
+            onDeleteServer={handleDeleteServer}
+            onBulkStart={handleBulkStart}
+            onBulkStop={handleBulkStop}
+            onBulkBackup={handleBulkBackup}
+          />
+        )}
       </aside>
 
       <main

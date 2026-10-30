@@ -101,6 +101,14 @@ export const en: TranslationDictionary = {
 
   server: {
     title: 'Servers',
+    status: {
+      online: 'Running',
+      offline: 'Stopped',
+      starting: 'Starting',
+      stopping: 'Stopping',
+      restarting: 'Restarting',
+      crashed: 'Crashed',
+    },
     create: {
       title: 'Create Server',
       name: 'Server Name',
@@ -114,6 +122,7 @@ export const en: TranslationDictionary = {
     },
     list: {
       empty: 'No servers yet. Create your first server!',
+      emptyTitle: 'No servers yet',
       running: 'Running',
       stopped: 'Stopped',
       selectOrCreate: 'Select a server or create one.',
@@ -728,6 +737,10 @@ export const en: TranslationDictionary = {
     bulkBackupSelected: 'Backup',
     bulkClearSelection: 'Clear',
     bulkSelectedCount: '{count} selected',
+    collapseSidebar: 'Collapse sidebar',
+    expandSidebar: 'Expand sidebar',
+    serverMenu: '{name} actions',
+    selectServer: 'Select {name}',
   },
 
   proxy: {

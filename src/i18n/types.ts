@@ -121,6 +121,14 @@ export interface TranslationDictionary {
   /** Server management translations */
   server: {
     title: string;
+    status: {
+      online: string;
+      offline: string;
+      starting: string;
+      stopping: string;
+      restarting: string;
+      crashed: string;
+    };
     create: {
       title: string;
       name: string;
@@ -134,6 +142,7 @@ export interface TranslationDictionary {
     };
     list: {
       empty: string;
+      emptyTitle: string;
       running: string;
       stopped: string;
       selectOrCreate: string;
@@ -728,6 +737,10 @@ export interface TranslationDictionary {
     bulkBackupSelected: string;
     bulkClearSelection: string;
     bulkSelectedCount: string;
+    collapseSidebar: string;
+    expandSidebar: string;
+    serverMenu: string;
+    selectServer: string;
   };
 
   /** Proxy configuration translations */

@@ -1,0 +1,380 @@
+/* Sidebar chrome. Every color comes from an Arc token, so light and dark stay in step with the rest of the app. */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  height: 3.5rem;
+  padding: 0 var(--space-3);
+}
+
+.headerCollapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+.brand {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border-radius: var(--radius-control);
+}
+
+.iconButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.iconButton:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.brand:focus-visible,
+.iconButton:focus-visible,
+.navItem:focus-visible,
+.serverItem:focus-visible,
+.bulkToggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.nav {
+  flex-shrink: 0;
+  gap: 2px;
+  padding: var(--space-2);
+  margin: 0 var(--space-2);
+}
+
+/* In the 60px rail the panel shrinks to fit the icon column. */
+.navRail {
+  margin: 0 var(--space-1);
+  padding: var(--space-1);
+}
+
+.navItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: 100%;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.navItem:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.navItemIcon {
+  flex-shrink: 0;
+}
+
+.navItemLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The active row is a muted pill with a thin accent bar on its leading edge. */
+.navItem[aria-current='page'] {
+  background: var(--surface-muted);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.navItem[aria-current='page']::before,
+.serverItem[aria-current='true']::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 1rem;
+  margin-top: -0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+.navItemCollapsed {
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.divider {
+  height: 1px;
+  margin: var(--space-2) var(--space-2);
+  border: 0;
+  background: var(--border);
+}
+
+.serversPanel {
+  flex: 1 1 auto;
+  margin: var(--space-2) var(--space-2) var(--space-3);
+  padding: var(--space-2);
+  overflow: hidden;
+}
+
+.serversTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.serverList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-1) 0;
+}
+
+.groupTitle {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.serverRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.serverMenuTarget {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.serverItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 1px 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.serverItem:hover {
+  background: var(--surface-muted);
+}
+
+.serverItem[aria-current='true'] {
+  background: var(--surface-muted);
+}
+
+.serverText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.serverName,
+.serverMeta,
+.serverWarning {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.serverName {
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.serverMeta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.serverWarning {
+  color: var(--warning);
+  font-size: 0.75rem;
+}
+
+.checkboxCell {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding-left: var(--space-1);
+}
+
+.bulkBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.bulkCount {
+  padding: 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.bulkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.addRow {
+  flex-shrink: 0;
+  margin-top: var(--space-2);
+}
+
+.addRow > * {
+  width: 100%;
+}
+
+.emptyState {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Status dot: six states, one token each. Motion is dropped under reduced motion. */
+.dot {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+}
+
+.dot[data-status='online'] {
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 20%, transparent);
+}
+
+.dot[data-status='offline'] {
+  background: var(--text-muted);
+}
+
+.dot[data-status='starting'] {
+  background: var(--warning);
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+.dot[data-status='stopping'] {
+  background: var(--warning);
+}
+
+.dot[data-status='restarting'] {
+  width: 0.625rem;
+  height: 0.625rem;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-top-color: transparent;
+  animation: dot-spin 0.9s linear infinite;
+}
+
+.dot[data-status='crashed'] {
+  background: var(--danger);
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes dot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none !important;
+  }
+
+  .navItem,
+  .serverItem,
+  .iconButton {
+    transition: none;
+  }
+}

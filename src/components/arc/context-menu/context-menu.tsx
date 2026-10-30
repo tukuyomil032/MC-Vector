@@ -16,12 +16,20 @@ export interface ContextMenuItem {
   disabled?: boolean;
   destructive?: boolean;
   checked?: boolean;
+  /** Test hook placed on the menu item. */
+  testId?: string;
 }
 
 export interface ContextMenuProps {
   children: ReactNode;
   items: ContextMenuItem[];
   label?: string;
+  /**
+   * `click` (default) also opens the menu on a primary click of the target. `context` opens it only on
+   * right-click and the menu key, for rows whose primary click already does something else, such as selecting.
+   */
+  trigger?: 'click' | 'context';
+  className?: string;
 }
 
 type Highlight = { index: number; top: number; height: number; danger: boolean; glide: boolean };
@@ -41,7 +49,14 @@ function clampTo(x: number, y: number, width: number, height: number) {
   };
 }
 
-export function ContextMenu({ children, items, label = 'Context menu' }: ContextMenuProps) {
+export function ContextMenu({
+  children,
+  items,
+  label = 'Context menu',
+  trigger = 'click',
+  className,
+}: ContextMenuProps) {
+  const contextOnly = trigger === 'context';
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   // The portal mounts on first open (client only) and stays so the menu can animate out.
@@ -112,6 +127,17 @@ export function ContextMenu({ children, items, label = 'Context menu' }: Context
     setOpen(true);
   }
 
+  // The wrapper is not focusable in context-only mode, so focus returns to the first control inside it.
+  function focusTarget() {
+    const target = targetRef.current;
+    if (!target) return;
+    if (contextOnly) {
+      target.querySelector<HTMLElement>('button, [href], input, [tabindex]')?.focus();
+    } else {
+      target.focus();
+    }
+  }
+
   function onTargetKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
       event.preventDefault();
@@ -153,7 +179,7 @@ export function ContextMenu({ children, items, label = 'Context menu' }: Context
     if (event.key === 'Escape') {
       event.preventDefault();
       setOpen(false);
-      targetRef.current?.focus();
+      focusTarget();
     }
   }
 
@@ -188,20 +214,20 @@ export function ContextMenu({ children, items, label = 'Context menu' }: Context
     <>
       <div
         ref={targetRef}
-        className={styles.target}
-        tabIndex={0}
+        className={[styles.target, className].filter(Boolean).join(' ')}
+        tabIndex={contextOnly ? undefined : 0}
         onPointerDown={(event) => {
           pressedWhileOpen.current = open && event.button === 0;
         }}
-        onClick={onTargetClick}
+        onClick={contextOnly ? undefined : onTargetClick}
         onContextMenu={(event) => {
           event.preventDefault();
           showMenu(event.clientX, event.clientY);
         }}
         onKeyDown={onTargetKeyDown}
-        aria-label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
+        aria-label={contextOnly ? undefined : label}
+        aria-haspopup={contextOnly ? undefined : 'menu'}
+        aria-expanded={contextOnly ? undefined : open}
       >
         {children}
       </div>
@@ -283,6 +309,7 @@ export function ContextMenu({ children, items, label = 'Context menu' }: Context
                       role="menuitem"
                       tabIndex={-1}
                       data-index={index}
+                      data-testid={item.testId}
                       data-tone={item.destructive ? 'danger' : undefined}
                       style={{ '--i': index } as CSSProperties}
                       disabled={item.disabled}
@@ -304,7 +331,7 @@ export function ContextMenu({ children, items, label = 'Context menu' }: Context
                         live.current = false;
                         item.onSelect?.();
                         setOpen(false);
-                        targetRef.current?.focus();
+                        focusTarget();
                       }}
                     >
                       <span className={styles.icon} aria-hidden="true">

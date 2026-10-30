@@ -1,11 +1,13 @@
-import { iconMenu } from '../../assets/icons';
-import SvgMaskIcon from './SvgMaskIcon';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import styles from './AppSidebar.module.css';
 
 interface AppSidebarHeaderProps {
   isSidebarOpen: boolean;
   onOpenSettings: () => void;
   onToggleSidebar: () => void;
   openSettingsLabel: string;
+  collapseLabel: string;
+  expandLabel: string;
 }
 
 export default function AppSidebarHeader({
@@ -13,15 +15,21 @@ export default function AppSidebarHeader({
   onOpenSettings,
   onToggleSidebar,
   openSettingsLabel,
+  collapseLabel,
+  expandLabel,
 }: AppSidebarHeaderProps) {
+  const toggleLabel = isSidebarOpen ? collapseLabel : expandLabel;
+
   return (
     <div
-      className={`app-sidebar__header flex items-center border-b bg-transparent p-5 ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}
+      className={['app-sidebar__header', styles.header, isSidebarOpen ? '' : styles.headerCollapsed]
+        .filter(Boolean)
+        .join(' ')}
     >
       {isSidebarOpen && (
         <button
           type="button"
-          className="app-sidebar__brand cursor-pointer rounded-sm border-none bg-transparent p-0 text-left text-xl font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] focus:outline-none"
+          className={styles.brand}
           data-testid="sidebar-brand-button"
           onClick={onOpenSettings}
           aria-label={openSettingsLabel}
@@ -35,10 +43,15 @@ export default function AppSidebarHeader({
         type="button"
         data-testid="sidebar-toggle-button"
         onClick={onToggleSidebar}
-        className="app-sidebar__menu-button rounded-md border-none bg-transparent p-1 text-text-secondary transition-colors hover:bg-white/5 hover:text-text-primary focus:outline-none"
-        aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        className={styles.iconButton}
+        aria-label={toggleLabel}
+        title={toggleLabel}
       >
-        <SvgMaskIcon src={iconMenu} className="app-sidebar__menu-icon block h-5 w-5 opacity-85" />
+        {isSidebarOpen ? (
+          <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden={true} />
+        ) : (
+          <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden={true} />
+        )}
       </button>
     </div>
   );

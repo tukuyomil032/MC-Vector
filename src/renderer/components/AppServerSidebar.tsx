@@ -1,7 +1,12 @@
-import { cn } from '@/lib/ui';
-import * as ContextMenu from '@radix-ui/react-context-menu';
+import { Copy, LayoutTemplate, Plus, Server, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { MinecraftServer } from '../shared/server declaration';
+import { Button } from '@/components/arc/button/button';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { ContextMenu, type ContextMenuItem } from '@/components/arc/context-menu/context-menu';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { type TranslationKey, useTranslation } from '@/i18n';
+import type { MinecraftServer, ServerStatus } from '../shared/server declaration';
+import styles from './AppSidebar.module.css';
 
 export interface AppServerGroup {
   groupName: string;
@@ -9,7 +14,6 @@ export interface AppServerGroup {
 }
 
 interface AppServerSidebarProps {
-  isSidebarOpen: boolean;
   groupedServers: AppServerGroup[];
   selectedServerId: string;
   onSelectServer: (serverId: string) => void;
@@ -17,42 +21,21 @@ interface AppServerSidebarProps {
   onDuplicateServer: (serverId: string) => Promise<void>;
   onSaveServerTemplate: (serverId: string) => Promise<void>;
   onDeleteServer: (serverId: string) => Promise<void>;
-  serversLabel: string;
-  addServerLabel: string;
-  bulkSelectLabel: string;
-  bulkStartLabel: string;
-  bulkStopLabel: string;
-  bulkBackupLabel: string;
-  bulkClearLabel: string;
-  bulkSelectedCountLabel: (count: number) => string;
-  duplicateLabel: string;
-  saveTemplateLabel: string;
-  deleteLabel: string;
   onBulkStart: (servers: MinecraftServer[]) => Promise<void>;
   onBulkStop: (serverIds: string[]) => Promise<void>;
   onBulkBackup: (servers: MinecraftServer[]) => Promise<void>;
 }
 
-const contextMenuContentClass =
-  'z-50 min-w-[9rem] overflow-hidden rounded-md border border-zinc-700 bg-[#1e1e20] py-1 shadow-xl animate-in fade-in-0 zoom-in-95';
-
-const contextMenuItemClass =
-  'relative flex cursor-default select-none items-center gap-2 rounded px-3 py-1.5 text-sm text-zinc-200 outline-none transition-colors data-[highlighted]:bg-white/10';
-
-const contextMenuDangerItemClass =
-  'relative flex cursor-default select-none items-center gap-2 rounded px-3 py-1.5 text-sm text-red-400 outline-none transition-colors data-[highlighted]:bg-red-500/20';
-
-const statusIndicatorClasses: Record<MinecraftServer['status'], string> = {
-  online: 'bg-success shadow-lg shadow-success',
-  offline: 'bg-bg-tertiary',
-  starting: 'bg-warning animate-pulse',
-  stopping: 'bg-danger',
-  restarting: 'bg-info animate-spin',
-  crashed: 'bg-rose-500 animate-pulse',
+const STATUS_KEYS: Record<ServerStatus, TranslationKey> = {
+  online: 'server.status.online',
+  offline: 'server.status.offline',
+  starting: 'server.status.starting',
+  stopping: 'server.status.stopping',
+  restarting: 'server.status.restarting',
+  crashed: 'server.status.crashed',
 };
 
 export default function AppServerSidebar({
-  isSidebarOpen,
   groupedServers,
   selectedServerId,
   onSelectServer,
@@ -60,30 +43,17 @@ export default function AppServerSidebar({
   onDuplicateServer,
   onSaveServerTemplate,
   onDeleteServer,
-  serversLabel,
-  addServerLabel,
-  bulkSelectLabel,
-  bulkStartLabel,
-  bulkStopLabel,
-  bulkBackupLabel,
-  bulkClearLabel,
-  bulkSelectedCountLabel,
-  duplicateLabel,
-  saveTemplateLabel,
-  deleteLabel,
   onBulkStart,
   onBulkStop,
   onBulkBackup,
 }: AppServerSidebarProps) {
+  const { t } = useTranslation();
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkRunning, setIsBulkRunning] = useState(false);
 
-  if (!isSidebarOpen) {
-    return null;
-  }
-
   const allServers = groupedServers.flatMap((g) => g.servers);
+  const hasServers = allServers.length > 0;
 
   const toggleBulkMode = () => {
     setIsBulkMode((prev) => !prev);
@@ -113,156 +83,195 @@ export default function AppServerSidebar({
     }
   };
 
+  const contextItemsFor = (server: MinecraftServer): ContextMenuItem[] => [
+    {
+      id: 'duplicate',
+      label: t('server.actions.clone'),
+      icon: <Copy size={15} strokeWidth={1.75} />,
+      onSelect: () => void onDuplicateServer(server.id),
+    },
+    {
+      id: 'template',
+      label: t('server.actions.saveTemplate'),
+      icon: <LayoutTemplate size={15} strokeWidth={1.75} />,
+      onSelect: () => void onSaveServerTemplate(server.id),
+    },
+    {
+      id: 'delete',
+      label: t('common.delete'),
+      icon: <Trash2 size={15} strokeWidth={1.75} />,
+      destructive: true,
+      testId: `delete-server-${server.id}`,
+      onSelect: () => void onDeleteServer(server.id),
+    },
+  ];
+
   return (
     <div
-      className="app-sidebar__servers mt-2.5 flex max-h-[40%] flex-col rounded-xl border p-2.5 app-shell__surface app-shell__surface--sidebar-panel surface-card rounded-2xl"
+      className={`app-sidebar__servers ${styles.panel} ${styles.serversPanel}`}
       data-testid="server-list"
     >
-      <div className="app-sidebar__servers-title flex items-center justify-between px-2.5 py-1 text-xs font-bold tracking-wider text-text-secondary">
-        <span>{serversLabel}</span>
-        <button
-          type="button"
-          className={`text-xs px-1.5 py-0.5 rounded transition-colors ${isBulkMode ? 'bg-accent text-black' : 'text-zinc-400 hover:text-text-primary'}`}
-          onClick={toggleBulkMode}
-          title={bulkSelectLabel}
-        >
-          {bulkSelectLabel}
-        </button>
+      <div className={`app-sidebar__servers-title ${styles.serversTitle}`}>
+        <span>{t('server.title')}</span>
+        {hasServers && (
+          <Button
+            type="button"
+            variant={isBulkMode ? 'secondary' : 'ghost'}
+            size="sm"
+            aria-pressed={isBulkMode}
+            onClick={toggleBulkMode}
+          >
+            {t('nav.bulkSelect')}
+          </Button>
+        )}
       </div>
-      <div className="app-sidebar__server-list flex-1 shrink-0 overflow-y-auto p-2.5">
-        {groupedServers.map((group) => (
-          <div key={group.groupName} className="mb-2.5">
-            <div className="app-sidebar__group-title px-2 py-1 text-[0.68rem] uppercase tracking-[0.12em] text-text-muted">
-              {group.groupName}
-            </div>
 
-            {group.servers.map((server) => (
-              <div key={server.id} className="flex items-center gap-1">
-                {isBulkMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(server.id)}
-                    onChange={() => toggleSelect(server.id)}
-                    className="flex-shrink-0 accent-[#5865F2]"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                )}
-                <ContextMenu.Root>
-                  <ContextMenu.Trigger asChild>
-                    <button
-                      type="button"
-                      className={`app-sidebar__server-item mb-1.5 flex flex-1 items-center gap-3 rounded-md border border-transparent px-3 py-2.5 transition-all hover:translate-x-0.5 hover:bg-white/5 ${server.id === selectedServerId ? 'is-active' : ''}`}
-                      data-testid={`server-card-${server.id}`}
-                      title={server.unavailableReason}
-                      onClick={() => {
-                        if (isBulkMode) {
-                          toggleSelect(server.id);
-                        } else {
-                          onSelectServer(server.id);
-                        }
-                      }}
-                    >
-                      <span
-                        className={cn(
-                          'h-2 w-2 shrink-0 rounded-full bg-bg-tertiary',
-                          statusIndicatorClasses[server.status],
-                        )}
-                      />
-                      <span className="flex flex-col">
-                        <span className="font-semibold text-sm text-text-primary">
-                          {server.name}
-                        </span>
-                        {server.unavailableReason && (
-                          <span className="text-[0.72rem] text-amber-300">
-                            {server.unavailableReason}
-                          </span>
-                        )}
-                        {server.profileName && (
-                          <span className="text-[0.72rem] text-zinc-400">{server.profileName}</span>
-                        )}
-                      </span>
-                    </button>
-                  </ContextMenu.Trigger>
-                  <ContextMenu.Portal>
-                    <ContextMenu.Content className={contextMenuContentClass}>
-                      <ContextMenu.Item
-                        className={contextMenuItemClass}
-                        onSelect={() => void onDuplicateServer(server.id)}
-                      >
-                        📄 {duplicateLabel}
-                      </ContextMenu.Item>
-                      <ContextMenu.Item
-                        className={contextMenuItemClass}
-                        onSelect={() => void onSaveServerTemplate(server.id)}
-                      >
-                        🧩 {saveTemplateLabel}
-                      </ContextMenu.Item>
-                      <ContextMenu.Separator className="my-1 h-px bg-zinc-700" />
-                      <ContextMenu.Item
-                        className={cn(contextMenuDangerItemClass)}
-                        data-testid={`delete-server-${server.id}`}
-                        onSelect={() => void onDeleteServer(server.id)}
-                      >
-                        🗑️ {deleteLabel}
-                      </ContextMenu.Item>
-                    </ContextMenu.Content>
-                  </ContextMenu.Portal>
-                </ContextMenu.Root>
+      {hasServers ? (
+        <div className={`app-sidebar__server-list ${styles.serverList}`}>
+          {groupedServers.map((group) => (
+            <div key={group.groupName}>
+              <div className={`app-sidebar__group-title ${styles.groupTitle}`}>
+                {group.groupName}
               </div>
-            ))}
-          </div>
-        ))}
-      </div>
+
+              {group.servers.map((server) => {
+                const isSelected = server.id === selectedServerId;
+                const statusLabel = t(STATUS_KEYS[server.status]);
+                return (
+                  <div key={server.id} className={styles.serverRow}>
+                    {isBulkMode && (
+                      <div className={styles.checkboxCell}>
+                        <Checkbox
+                          checked={selectedIds.has(server.id)}
+                          onCheckedChange={() => toggleSelect(server.id)}
+                          aria-label={t('nav.selectServer', { name: server.name })}
+                        />
+                      </div>
+                    )}
+                    <ContextMenu
+                      trigger="context"
+                      label={t('nav.serverMenu', { name: server.name })}
+                      items={contextItemsFor(server)}
+                      className={styles.serverMenuTarget}
+                    >
+                      <button
+                        type="button"
+                        className={`app-sidebar__server-item ${isSelected ? 'is-active' : ''} ${styles.serverItem}`}
+                        data-testid={`server-card-${server.id}`}
+                        aria-current={isSelected ? 'true' : undefined}
+                        title={server.unavailableReason}
+                        onClick={() => {
+                          if (isBulkMode) {
+                            toggleSelect(server.id);
+                          } else {
+                            onSelectServer(server.id);
+                          }
+                        }}
+                      >
+                        <span
+                          className={styles.dot}
+                          data-status={server.status}
+                          aria-hidden="true"
+                        />
+                        <span className={styles.serverText}>
+                          <span className={styles.serverName}>{server.name}</span>
+                          {server.unavailableReason && (
+                            <span className={styles.serverWarning}>{server.unavailableReason}</span>
+                          )}
+                          {server.profileName && (
+                            <span className={styles.serverMeta}>{server.profileName}</span>
+                          )}
+                        </span>
+                        <span className="sr-only">{statusLabel}</span>
+                      </button>
+                    </ContextMenu>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          className={styles.emptyState}
+          icon={<Server size={20} strokeWidth={1.75} aria-hidden={true} />}
+          title={t('server.list.emptyTitle')}
+          description={t('server.list.empty')}
+          action={
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              data-testid="create-server-button"
+              onClick={onAddServer}
+            >
+              <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
+              {t('nav.addServer')}
+            </Button>
+          }
+        />
+      )}
 
       {isBulkMode && selectedIds.size > 0 && (
-        <div className="flex flex-col gap-1 py-2 border-t border-zinc-700">
-          <span className="text-xs text-zinc-400 px-1">
-            {bulkSelectedCountLabel(selectedIds.size)}
+        <div className={styles.bulkBar}>
+          <span className={styles.bulkCount}>
+            {t('nav.bulkSelectedCount', { count: selectedIds.size })}
           </span>
-          <div className="flex gap-1 flex-wrap">
-            <button
+          <div className={styles.bulkActions}>
+            <Button
               type="button"
-              className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
+              size="sm"
+              variant="secondary"
               disabled={isBulkRunning}
               data-testid="bulk-start-button"
               onClick={() => runBulk(() => onBulkStart(selectedServers))}
             >
-              {bulkStartLabel}
-            </button>
-            <button
+              {t('nav.bulkStartSelected')}
+            </Button>
+            <Button
               type="button"
-              className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
+              size="sm"
+              variant="secondary"
               disabled={isBulkRunning}
               onClick={() => runBulk(() => onBulkStop(selectedServers.map((s) => s.id)))}
             >
-              {bulkStopLabel}
-            </button>
-            <button
+              {t('nav.bulkStopSelected')}
+            </Button>
+            <Button
               type="button"
-              className="app-sidebar__add-server-btn mt-1.5 flex-1 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
+              size="sm"
+              variant="secondary"
               disabled={isBulkRunning}
               onClick={() => runBulk(() => onBulkBackup(selectedServers))}
             >
-              {bulkBackupLabel}
-            </button>
-            <button
+              {t('nav.bulkBackupSelected')}
+            </Button>
+            <Button
               type="button"
-              className="app-sidebar__add-server-btn mt-1.5 rounded-md border border-dashed border-border-color py-2.5 text-xs text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
+              size="sm"
+              variant="ghost"
               onClick={() => setSelectedIds(new Set())}
             >
-              {bulkClearLabel}
-            </button>
+              {t('nav.bulkClearSelection')}
+            </Button>
           </div>
         </div>
       )}
 
-      <button
-        className="app-sidebar__add-server-btn mt-1.5 w-full rounded-md border border-dashed border-border-color py-2.5 text-sm text-text-secondary transition-all hover:border-solid hover:border-text-primary hover:bg-white/5 hover:text-text-primary"
-        data-testid="create-server-button"
-        onClick={onAddServer}
-      >
-        + {addServerLabel}
-      </button>
+      {hasServers && (
+        <div className={styles.addRow}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="create-server-button"
+            onClick={onAddServer}
+          >
+            <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
+            {t('nav.addServer')}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
