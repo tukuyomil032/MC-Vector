@@ -737,6 +737,8 @@ export const ja: TranslationDictionary = {
     expandSidebar: 'サイドバーを開く',
     serverMenu: '{name} の操作',
     selectServer: '{name} を選択',
+    openMenu: 'メニューを開く',
+    menuTitle: 'ナビゲーション',
   },
 
   proxy: {

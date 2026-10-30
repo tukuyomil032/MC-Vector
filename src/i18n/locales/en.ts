@@ -741,6 +741,8 @@ export const en: TranslationDictionary = {
     expandSidebar: 'Expand sidebar',
     serverMenu: '{name} actions',
     selectServer: 'Select {name}',
+    openMenu: 'Open menu',
+    menuTitle: 'Navigation',
   },
 
   proxy: {

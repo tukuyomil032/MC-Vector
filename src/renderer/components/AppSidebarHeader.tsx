@@ -4,7 +4,8 @@ import styles from './AppSidebar.module.css';
 interface AppSidebarHeaderProps {
   isSidebarOpen: boolean;
   onOpenSettings: () => void;
-  onToggleSidebar: () => void;
+  /** Omitted where the rail is forced (windows narrower than 1024px), so no toggle is shown. */
+  onToggleSidebar?: () => void;
   openSettingsLabel: string;
   collapseLabel: string;
   expandLabel: string;
@@ -39,20 +40,22 @@ export default function AppSidebarHeader({
         </button>
       )}
 
-      <button
-        type="button"
-        data-testid="sidebar-toggle-button"
-        onClick={onToggleSidebar}
-        className={styles.iconButton}
-        aria-label={toggleLabel}
-        title={toggleLabel}
-      >
-        {isSidebarOpen ? (
-          <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden={true} />
-        ) : (
-          <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden={true} />
-        )}
-      </button>
+      {onToggleSidebar && (
+        <button
+          type="button"
+          data-testid="sidebar-toggle-button"
+          onClick={onToggleSidebar}
+          className={styles.iconButton}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+        >
+          {isSidebarOpen ? (
+            <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden={true} />
+          ) : (
+            <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden={true} />
+          )}
+        </button>
+      )}
     </div>
   );
 }

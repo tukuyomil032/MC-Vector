@@ -741,6 +741,8 @@ export interface TranslationDictionary {
     expandSidebar: string;
     serverMenu: string;
     selectServer: string;
+    openMenu: string;
+    menuTitle: string;
   };
 
   /** Proxy configuration translations */

@@ -1,3 +1,4 @@
+import { Drawer, DrawerContent } from '@/components/arc/drawer/drawer';
 import { useTranslation } from '@/i18n';
 import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
@@ -25,6 +26,7 @@ import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
 import { useLiquidGlassSync } from '@/renderer/hooks/use-liquid-glass-sync';
+import { useMediaQuery } from '@/renderer/hooks/use-media-query';
 import { useUpdateChannelSync } from '@/renderer/hooks/use-update-channel-sync';
 import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action';
 import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
@@ -37,7 +39,7 @@ import { useServerMetricHistorySync } from '@/renderer/hooks/use-server-metric-h
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
 import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
-import type { MinecraftServer } from '@/renderer/shared/server declaration';
+import type { AppView, MinecraftServer } from '@/renderer/shared/server declaration';
 import { canStartServer } from '@/renderer/shared/server-status';
 import { getHeaderTitle } from '@/renderer/shared/view-labels';
 import { useConsoleStore } from '@/store/consoleStore';
@@ -45,6 +47,11 @@ import { useServerStore } from '@/store/serverStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+/** Below 1024px the sidebar is forced to the 60px icon rail; the user's expand choice is kept for wider windows. */
+const RAIL_BELOW_QUERY = '(max-width: 1023px)';
+/** Below 768px the sidebar leaves the layout and opens as a drawer from the header menu button. */
+const DRAWER_BELOW_QUERY = '(max-width: 767px)';
 
 function isBackupSelectorWindow(): boolean {
   const params = new URLSearchParams(window.location.search);
@@ -388,8 +395,39 @@ function MainApp() {
 
   const headerTitle = getHeaderTitle(currentView, activeServer?.name, t);
 
+  const isRailForced = useMediaQuery(RAIL_BELOW_QUERY);
+  const isDrawerLayout = useMediaQuery(DRAWER_BELOW_QUERY);
+  const isSidebarExpanded = !isRailForced && isSidebarOpen;
+  const [isSidebarDrawerOpen, setIsSidebarDrawerOpen] = useState(false);
+
   const handleOpenSettingsWindow = () => {
     setCurrentView('app-settings');
+  };
+
+  const serverPanelProps = {
+    groupedServers,
+    selectedServerId,
+    onSelectServer: setSelectedServerId,
+    onAddServer: () => setShowAddServerChoiceModal(true),
+    onDuplicateServer: handleDuplicateServer,
+    onSaveServerTemplate: handleSaveServerTemplate,
+    onDeleteServer: handleDeleteServer,
+    onBulkStart: handleBulkStart,
+    onBulkStop: handleBulkStop,
+    onBulkBackup: handleBulkBackup,
+  };
+
+  // In the drawer every choice also closes it, so the content underneath is visible again.
+  const drawerNavigate = (view: AppView) => {
+    setCurrentView(view);
+    setIsSidebarDrawerOpen(false);
+  };
+  const drawerServerPanelProps = {
+    ...serverPanelProps,
+    onSelectServer: (serverId: string) => {
+      setSelectedServerId(serverId);
+      setIsSidebarDrawerOpen(false);
+    },
   };
 
   return (
@@ -399,41 +437,59 @@ function MainApp() {
       data-testid="app-root"
       style={appShellStyle}
     >
-      <aside
-        className={`app-sidebar z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'app-sidebar--open w-[260px]' : 'app-sidebar--collapsed w-[60px]'}`}
-        data-testid="app-sidebar"
-      >
-        <AppSidebarHeader
-          isSidebarOpen={isSidebarOpen}
-          onOpenSettings={handleOpenSettingsWindow}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          openSettingsLabel={t('nav.openSettings')}
-          collapseLabel={t('nav.collapseSidebar')}
-          expandLabel={t('nav.expandSidebar')}
-        />
-
-        <AppSidebarNavigation
-          isSidebarOpen={isSidebarOpen}
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          t={t}
-        />
-
-        {isSidebarOpen && (
-          <AppServerSidebar
-            groupedServers={groupedServers}
-            selectedServerId={selectedServerId}
-            onSelectServer={setSelectedServerId}
-            onAddServer={() => setShowAddServerChoiceModal(true)}
-            onDuplicateServer={handleDuplicateServer}
-            onSaveServerTemplate={handleSaveServerTemplate}
-            onDeleteServer={handleDeleteServer}
-            onBulkStart={handleBulkStart}
-            onBulkStop={handleBulkStop}
-            onBulkBackup={handleBulkBackup}
+      {!isDrawerLayout && (
+        <aside
+          className={`app-sidebar z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarExpanded ? 'app-sidebar--open w-[260px]' : 'app-sidebar--collapsed w-[60px]'}`}
+          data-testid="app-sidebar"
+        >
+          <AppSidebarHeader
+            isSidebarOpen={isSidebarExpanded}
+            onOpenSettings={handleOpenSettingsWindow}
+            onToggleSidebar={isRailForced ? undefined : () => setIsSidebarOpen(!isSidebarOpen)}
+            openSettingsLabel={t('nav.openSettings')}
+            collapseLabel={t('nav.collapseSidebar')}
+            expandLabel={t('nav.expandSidebar')}
           />
-        )}
-      </aside>
+
+          <AppSidebarNavigation
+            isSidebarOpen={isSidebarExpanded}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            t={t}
+          />
+
+          {isSidebarExpanded && <AppServerSidebar {...serverPanelProps} />}
+        </aside>
+      )}
+
+      {isDrawerLayout && (
+        <Drawer open={isSidebarDrawerOpen} onOpenChange={setIsSidebarDrawerOpen}>
+          <DrawerContent title={t('nav.menuTitle')} side="left" closeLabel={t('common.close')}>
+            <div
+              className="app-sidebar app-sidebar--open flex h-full min-h-0 flex-col"
+              data-testid="app-sidebar-drawer"
+            >
+              <AppSidebarHeader
+                isSidebarOpen
+                onOpenSettings={() => {
+                  setIsSidebarDrawerOpen(false);
+                  handleOpenSettingsWindow();
+                }}
+                openSettingsLabel={t('nav.openSettings')}
+                collapseLabel={t('nav.collapseSidebar')}
+                expandLabel={t('nav.expandSidebar')}
+              />
+              <AppSidebarNavigation
+                isSidebarOpen
+                currentView={currentView}
+                setCurrentView={drawerNavigate}
+                t={t}
+              />
+              <AppServerSidebar {...drawerServerPanelProps} />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
 
       <main
         className="relative flex min-w-0 flex-1 flex-col overflow-hidden app-shell__surface app-shell__surface--main"
@@ -446,6 +502,7 @@ function MainApp() {
           onStart={handleStart}
           onRestart={handleRestart}
           onStop={handleStop}
+          onOpenMenu={isDrawerLayout ? () => setIsSidebarDrawerOpen(true) : undefined}
           t={t}
         />
         <AppMainContent

@@ -1,4 +1,4 @@
-import { Play, RotateCw, Square } from 'lucide-react';
+import { Menu, Play, RotateCw, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button, type ButtonVariant } from '@/components/arc/button/button';
 import { Tooltip } from '@/components/arc/tooltip/tooltip';
@@ -16,6 +16,8 @@ interface AppMainHeaderProps {
   onStart: () => void;
   onRestart: () => void;
   onStop: () => void;
+  /** Shown only in the narrow layout, where the sidebar lives in a drawer behind this button. */
+  onOpenMenu?: () => void;
   t: Translate;
 }
 
@@ -85,6 +87,7 @@ export default function AppMainHeader({
   onStart,
   onRestart,
   onStop,
+  onOpenMenu,
   t,
 }: AppMainHeaderProps) {
   const compact = useMediaQuery(COMPACT_QUERY);
@@ -100,6 +103,20 @@ export default function AppMainHeader({
       className={[styles.header, compact ? styles.headerCompact : ''].filter(Boolean).join(' ')}
       data-testid="app-main-header"
     >
+      {onOpenMenu && (
+        <Tooltip content={t('nav.openMenu')} side="bottom">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="sidebar-drawer-button"
+            aria-label={t('nav.openMenu')}
+            onClick={onOpenMenu}
+          >
+            <Menu size={16} strokeWidth={1.75} aria-hidden={true} />
+          </Button>
+        </Tooltip>
+      )}
       <div className={styles.titleGroup}>
         <h2 className={`app-main__title ${styles.title}`}>{headerTitle}</h2>
         {showSubtitle && (

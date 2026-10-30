@@ -76,6 +76,8 @@ export interface DrawerContentProps extends ComponentPropsWithoutRef<
   side?: 'left' | 'right' | 'top' | 'bottom';
   /** Renders the drawer inside this element instead of the page body, anchored to its edges. The element needs position: relative and overflow: hidden. */
   container?: HTMLElement | null;
+  /** Accessible name of the close button. Pass a translated string. */
+  closeLabel?: string;
 }
 
 const fade: Transition = { duration: motionTokens.duration.instant };
@@ -138,6 +140,7 @@ export function DrawerContent({
   container,
   className,
   onInteractOutside,
+  closeLabel = 'Close drawer',
   ...props
 }: DrawerContentProps) {
   const drawer = useContext(DrawerContext);
@@ -197,7 +200,7 @@ export function DrawerContent({
             </DialogPrimitive.Description>
           ) : null}
         </div>
-        <DialogPrimitive.Close className={styles.close} aria-label="Close drawer">
+        <DialogPrimitive.Close className={styles.close} aria-label={closeLabel}>
           <X size={16} strokeWidth={1.75} aria-hidden="true" />
         </DialogPrimitive.Close>
       </motion.div>

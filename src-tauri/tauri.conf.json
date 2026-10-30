@@ -14,6 +14,8 @@
         "title": "MC-Vector",
         "width": 1200,
         "height": 800,
+        "minWidth": 720,
+        "minHeight": 520,
         "theme": "Dark",
         "titleBarStyle": "Transparent",
         "backgroundColor": "#0f0f11",
