@@ -1,6 +1,5 @@
 import { AppFeedbackProvider, useAppFeedback } from '@/renderer/components/AppFeedbackProvider';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { toast } from 'sonner';
 import { describe, expect, it, vi } from 'vitest';
 
 function FeedbackTrigger() {
@@ -29,8 +28,7 @@ function FeedbackTrigger() {
 }
 
 describe('AppFeedbackProvider', () => {
-  it('routes success notifications to toast without moving focus', () => {
-    const successToast = vi.spyOn(toast, 'success').mockReturnValue('toast-id');
+  it('routes success notifications to the toast stack without moving focus', async () => {
     render(
       <AppFeedbackProvider>
         <FeedbackTrigger />
@@ -41,9 +39,8 @@ describe('AppFeedbackProvider', () => {
     trigger.focus();
     fireEvent.click(trigger);
 
-    expect(successToast).toHaveBeenCalledWith('Saved successfully');
+    expect(await screen.findByText('Saved successfully')).toBeInTheDocument();
     expect(document.activeElement).toBe(trigger);
-    successToast.mockRestore();
   });
 
   it('renders an accessible blocking dialog with one cancel and one primary action', async () => {

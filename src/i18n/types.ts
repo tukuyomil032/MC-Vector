@@ -46,6 +46,8 @@ export interface TranslationDictionary {
     refresh: string;
     copy: string;
     paste: string;
+    /** Accessible name of the notification region */
+    notifications: string;
   };
 
   /** Settings page translations */

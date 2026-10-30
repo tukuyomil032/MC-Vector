@@ -8,10 +8,11 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Toaster, toast } from 'sonner';
+import { Toaster } from 'sonner';
 import { Button } from '@/components/arc/button/button';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { Input } from '@/components/arc/input/input';
+import { ToastStack, ToastStackProvider } from '@/components/arc/toast-stack/toast-stack';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import type {
@@ -19,6 +20,8 @@ import type {
   FeedbackDialogRequest,
   FeedbackNotificationKind,
 } from '../shared/feedback';
+import { notify as notifyToast } from '../shared/notify';
+import { NotifyBridge } from './NotifyBridge';
 
 export interface FeedbackDialogOptions extends FeedbackDialogRequest {
   /** Extra content under the description, such as a list. */
@@ -358,13 +361,13 @@ export function AppFeedbackProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback((message: string, kind: FeedbackNotificationKind = 'info') => {
     if (kind === 'success') {
-      toast.success(message);
+      notifyToast.success(message);
     } else if (kind === 'error') {
-      toast.error(message);
+      notifyToast.error(message);
     } else if (kind === 'warning') {
-      toast.warning(message);
+      notifyToast.warning(message);
     } else {
-      toast(message);
+      notifyToast.info(message);
     }
   }, []);
 
@@ -385,26 +388,30 @@ export function AppFeedbackProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AppFeedbackContext.Provider value={value}>
-      {children}
-      <Toaster position="bottom-right" richColors />
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          const current = activeRef.current;
-          if (!next && current) settle(current.id, { accepted: false });
-        }}
-      >
-        {active ? (
-          <ActiveDialogContent
-            key={active.id}
-            dialog={active}
-            closeLabel={t('common.close')}
-            onSettle={(outcome) => settle(active.id, outcome)}
-          />
-        ) : null}
-      </Dialog>
-    </AppFeedbackContext.Provider>
+    <ToastStackProvider>
+      <NotifyBridge />
+      <AppFeedbackContext.Provider value={value}>
+        {children}
+        <Toaster position="bottom-right" richColors />
+        <ToastStack label={t('common.notifications')} />
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            const current = activeRef.current;
+            if (!next && current) settle(current.id, { accepted: false });
+          }}
+        >
+          {active ? (
+            <ActiveDialogContent
+              key={active.id}
+              dialog={active}
+              closeLabel={t('common.close')}
+              onSettle={(outcome) => settle(active.id, outcome)}
+            />
+          ) : null}
+        </Dialog>
+      </AppFeedbackContext.Provider>
+    </ToastStackProvider>
   );
 }
 

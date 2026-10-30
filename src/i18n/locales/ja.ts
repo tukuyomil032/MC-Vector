@@ -26,6 +26,7 @@ export const ja: TranslationDictionary = {
     refresh: '更新',
     copy: 'コピー',
     paste: '貼り付け',
+    notifications: '通知',
   },
 
   settings: {

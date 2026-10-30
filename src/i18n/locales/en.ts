@@ -26,6 +26,7 @@ export const en: TranslationDictionary = {
     refresh: 'Refresh',
     copy: 'Copy',
     paste: 'Paste',
+    notifications: 'Notifications',
   },
 
   settings: {
