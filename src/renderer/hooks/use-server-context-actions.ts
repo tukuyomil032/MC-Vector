@@ -1,15 +1,9 @@
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
-import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
-import { cloneManagedServer } from '../../lib/file-commands';
-import {
-  type ServerTemplate,
-  addServer as addServerApi,
-  deleteServer as deleteServerApi,
-  saveServerTemplate,
-} from '../../lib/server-commands';
+import { cloneServerProfile, deleteManagedServer } from '../../lib/server-lifecycle-commands';
+import { type ServerTemplate, saveServerTemplate } from '../../lib/server-commands';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
 type SetServers = (
@@ -81,7 +75,7 @@ export function useServerContextActions({
       }
 
       try {
-        const success = await deleteServerApi(serverId);
+        const success = await deleteManagedServer(serverId);
         if (success) {
           const nextServers = servers.filter((server) => server.id !== serverId);
           setServers(nextServers);
@@ -123,20 +117,10 @@ export function useServerContextActions({
       }
 
       try {
-        const duplicatedId = crypto.randomUUID();
-        await cloneManagedServer(target.id, duplicatedId);
-        const candidatePath = `${await getServerRoot()}/${duplicatedId}`;
-
-        const duplicatedServer: MinecraftServer = {
-          ...target,
-          id: duplicatedId,
-          name: t('server.create.cloneDefaultName', { name: target.name }),
-          path: candidatePath,
-          status: 'offline',
-          createdDate: new Date().toISOString(),
-        };
-
-        await addServerApi(duplicatedServer);
+        const duplicatedServer = await cloneServerProfile(
+          target.id,
+          t('server.create.cloneDefaultName', { name: target.name }),
+        );
         setServers((prev) => [...prev, duplicatedServer]);
         setSelectedServerId(duplicatedServer.id);
         showToast(t('server.toast.cloned'), 'success');

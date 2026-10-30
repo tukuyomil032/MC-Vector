@@ -9,7 +9,7 @@ use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 const MIGRATION_ID: &str = "server-registry-v1";
 const DATABASE_FILE: &str = "server-registry.sqlite3";
@@ -540,13 +540,78 @@ fn find_legacy_list<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a Value> {
 
 #[tauri::command]
 pub async fn get_servers(
+    app: AppHandle,
     registry: State<'_, ServerRegistry>,
     server_manager: State<'_, super::server::ServerManager>,
+    operations: State<'_, ServerOperationManager>,
 ) -> Result<Vec<MinecraftServer>, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
     let registry = registry.inner().clone();
-    let mut servers = tauri::async_runtime::spawn_blocking(move || registry.get_servers())
+    let registry_for_load = registry.clone();
+    let mut servers = tauri::async_runtime::spawn_blocking(move || registry_for_load.get_servers())
         .await
         .map_err(|error| error.to_string())??;
+
+    for server in &mut servers {
+        let Some(legacy_directory_name) =
+            legacy_server_directory_name(&server.path, &app_data_dir, &server.id)
+        else {
+            continue;
+        };
+
+        let migration_result = async {
+            let _operation_guards = operations
+                .acquire_many(
+                    [legacy_directory_name.as_str(), server.id.as_str()],
+                    OperationKind::FileMutation,
+                )
+                .await?;
+            if server_manager.is_server_running(&server.id).await {
+                return Err("Cannot migrate a running server directory".to_string());
+            }
+
+            let app_data_dir = app_data_dir.clone();
+            let registry = registry.clone();
+            let profile = server.clone();
+            let server_id = profile.id.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                super::file_utils::migrate_managed_server_directory_with(
+                    &app_data_dir,
+                    legacy_directory_name,
+                    server_id,
+                    &registry,
+                    |new_path| {
+                        let mut updated_profile = profile;
+                        updated_profile.path = new_path.to_string();
+                        updated_profile.unavailable_reason = None;
+                        if registry.update_server(&updated_profile)? {
+                            Ok(())
+                        } else {
+                            Err("Server profile disappeared during directory migration".into())
+                        }
+                    },
+                )
+            })
+            .await
+            .map_err(|error| format!("Server directory migration task failed: {error}"))?
+        }
+        .await;
+
+        match migration_result {
+            Ok(path) => {
+                server.path = path;
+                server.unavailable_reason = None;
+            }
+            Err(error) => {
+                server.unavailable_reason =
+                    Some(format!("Server directory migration failed: {error}"));
+            }
+        }
+    }
+
     let running_server_ids = current_running_server_ids(server_manager.inner()).await;
     apply_runtime_statuses(&mut servers, &running_server_ids);
     Ok(servers)

@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
 import { logError } from '../../../lib/error-utils';
-import { readFileContent, saveFileContent } from '../../../lib/file-commands';
+import {
+  getServerProperties,
+  saveServerProperties,
+  type PropertyValue,
+} from '../../../lib/properties-commands';
 import { serverPropertiesList } from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
 import { Button } from '../ui/Button';
@@ -12,13 +16,16 @@ import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 
 interface Props {
   server: MinecraftServer;
+  onServerPortChanged?: (serverId: string, port: number) => void;
 }
 
-type PropertyValue = string | number | boolean;
 type ServerProperties = Record<string, PropertyValue>;
 
-export default function PropertiesView({ server }: Props) {
+export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const { t } = useTranslation();
+  const currentServerIdRef = useRef(server.id);
+  const serverViewGenerationRef = useRef(0);
+  const propertiesLoadGenerationRef = useRef(0);
   const [props, setProps] = useState<ServerProperties>({
     'server-port': server.port || 25565,
     'max-players': 20,
@@ -35,41 +42,34 @@ export default function PropertiesView({ server }: Props) {
   const [loading, setLoading] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const sep = server.path.includes('\\') ? '\\' : '/';
-  const propFilePath = `${server.path}${sep}server.properties`;
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     if (type === 'success') toast.success(msg);
     else if (type === 'error') toast.error(msg);
     else toast(msg);
   };
 
+  useLayoutEffect(() => {
+    currentServerIdRef.current = server.id;
+    const generation = ++serverViewGenerationRef.current;
+    return () => {
+      if (serverViewGenerationRef.current === generation) {
+        serverViewGenerationRef.current += 1;
+      }
+      if (currentServerIdRef.current === server.id) {
+        currentServerIdRef.current = '';
+      }
+    };
+  }, [server.id]);
+
   useEffect(() => {
+    const serverId = server.id;
+    const generation = ++propertiesLoadGenerationRef.current;
+    const isCurrentLoad = () => propertiesLoadGenerationRef.current === generation;
     const loadProperties = async () => {
       setLoading(true);
       try {
-        const content = await readFileContent(propFilePath);
-        const lines = content.split('\n');
-        const newProps: ServerProperties = {};
-
-        lines.forEach((line) => {
-          const trimmed = line.trim();
-          if (trimmed && !trimmed.startsWith('#')) {
-            const [key, ...vals] = trimmed.split('=');
-            if (key) {
-              const value = vals.join('=');
-              const cleaned = value.trim();
-              if (cleaned === 'true') {
-                newProps[key.trim()] = true;
-              } else if (cleaned === 'false') {
-                newProps[key.trim()] = false;
-              } else if (!Number.isNaN(Number(cleaned)) && cleaned !== '') {
-                newProps[key.trim()] = Number(cleaned);
-              } else {
-                newProps[key.trim()] = cleaned;
-              }
-            }
-          }
-        });
+        const newProps = await getServerProperties(serverId);
+        if (!isCurrentLoad()) return;
 
         setProps((prev) => ({
           ...prev,
@@ -78,17 +78,23 @@ export default function PropertiesView({ server }: Props) {
         }));
         setHasChanges(false);
       } catch (e) {
-        logError('Failed to load server properties', e, {
-          propertyFilePath: propFilePath,
-        });
+        if (!isCurrentLoad()) return;
+        logError('Failed to load server properties', e, { serverId });
         showToast(t('properties.loadFailed'), 'error');
       } finally {
-        setLoading(false);
+        if (isCurrentLoad()) {
+          setLoading(false);
+        }
       }
     };
 
-    loadProperties();
-  }, [propFilePath, server.port, t]);
+    void loadProperties();
+    return () => {
+      if (propertiesLoadGenerationRef.current === generation) {
+        propertiesLoadGenerationRef.current += 1;
+      }
+    };
+  }, [server.id, server.port, t]);
 
   const matchesSearch = useMemo(() => {
     if (!searchQuery.trim()) return (_key: string) => true;
@@ -110,19 +116,21 @@ export default function PropertiesView({ server }: Props) {
   };
 
   const handleSave = async () => {
-    let content = '#Minecraft server properties\n#Edited by MC-Vector\n';
-    Object.entries(props).forEach(([key, value]) => {
-      content += `${key}=${value}\n`;
-    });
-
+    const serverId = server.id;
+    const viewGeneration = serverViewGenerationRef.current;
+    const isCurrentServerView = () =>
+      currentServerIdRef.current === serverId && serverViewGenerationRef.current === viewGeneration;
     try {
-      await saveFileContent(propFilePath, content);
+      const savedPort = await saveServerProperties(serverId, props);
+      if (savedPort !== null) {
+        onServerPortChanged?.(serverId, savedPort);
+      }
+      if (!isCurrentServerView()) return;
       setHasChanges(false);
       showToast(t('properties.saveSuccess'), 'success');
     } catch (e) {
-      logError('Failed to save server properties', e, {
-        propertyFilePath: propFilePath,
-      });
+      if (!isCurrentServerView()) return;
+      logError('Failed to save server properties', e, { serverId });
       showToast(t('properties.saveFailed'), 'error');
     }
   };
@@ -132,29 +140,31 @@ export default function PropertiesView({ server }: Props) {
   };
 
   const handleAdvancedSave = async (data: Record<string, unknown>) => {
-    let content = '#Minecraft server properties\n#Edited by MC-Vector\n';
-    Object.entries(data).forEach(([key, value]) => {
-      content += `${key}=${value}\n`;
-    });
+    const serverId = server.id;
+    const viewGeneration = serverViewGenerationRef.current;
+    const isCurrentServerView = () =>
+      currentServerIdRef.current === serverId && serverViewGenerationRef.current === viewGeneration;
     try {
-      await saveFileContent(propFilePath, content);
-      // Sync local props state with advanced changes
-      const newProps: ServerProperties = {};
+      const safeData: ServerProperties = {};
       Object.entries(data).forEach(([key, value]) => {
-        if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
-          newProps[key] = value;
-        } else {
-          newProps[key] = String(value);
-        }
+        safeData[key] =
+          typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string'
+            ? value
+            : String(value);
       });
-      setProps((prev) => ({ ...prev, ...newProps }));
+      const savedPort = await saveServerProperties(serverId, safeData);
+      if (savedPort !== null) {
+        onServerPortChanged?.(serverId, savedPort);
+      }
+      if (!isCurrentServerView()) return;
+      // Sync local props state with advanced changes
+      setProps((prev) => ({ ...prev, ...safeData }));
       setShowAdvanced(false);
       setHasChanges(false);
       showToast(t('properties.advancedSaveSuccess'), 'success');
     } catch (e) {
-      logError('Failed to save advanced server properties', e, {
-        propertyFilePath: propFilePath,
-      });
+      if (!isCurrentServerView()) return;
+      logError('Failed to save advanced server properties', e, { serverId });
       showToast(t('properties.saveFailed'), 'error');
     }
   };

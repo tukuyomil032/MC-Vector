@@ -28,6 +28,7 @@ export type E2eFileNode = {
 
 export type E2eState = {
   servers: MinecraftServer[];
+  serverTemplates: Record<string, unknown>[];
   files: Record<string, E2eFileNode>;
   config: Record<string, unknown>;
   javaVersions: unknown[];
@@ -35,6 +36,15 @@ export type E2eState = {
   runningServerIds: string[];
   selectedBackupPaths: string[];
   pluginDownloadAttempts: number;
+  pluginInstallPlans: Record<
+    string,
+    {
+      serverId: string;
+      fileName: string;
+      artifactId: string;
+      dependencyIds: string[];
+    }
+  >;
   ngrokStatus: 'offline' | 'online';
 };
 
@@ -116,6 +126,7 @@ export function createE2eState(scenario: E2eScenario): E2eState {
 
   return {
     servers: seededServerScenario ? [server] : [],
+    serverTemplates: [],
     files,
     config: {},
     javaVersions: [],
@@ -123,6 +134,7 @@ export function createE2eState(scenario: E2eScenario): E2eState {
     runningServerIds: [],
     selectedBackupPaths: scenario === 'backup-flow' ? ['server.properties'] : [],
     pluginDownloadAttempts: 0,
+    pluginInstallPlans: {},
     ngrokStatus: 'offline',
   };
 }

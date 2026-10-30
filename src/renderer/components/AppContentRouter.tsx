@@ -26,6 +26,7 @@ interface AppContentRouterProps {
   ngrokData: Record<string, string | null>;
   onBuildProxyNetwork: (config: ProxyNetworkConfig) => Promise<void>;
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
+  onServerPortChanged: (serverId: string, port: number) => void;
   updaterSettings: AppUpdaterSettings;
   t: Translate;
 }
@@ -38,6 +39,7 @@ export default function AppContentRouter({
   ngrokData,
   onBuildProxyNetwork,
   onUpdateServer,
+  onServerPortChanged,
   updaterSettings,
   t,
 }: AppContentRouterProps) {
@@ -81,7 +83,13 @@ export default function AppContentRouter({
         ngrokUrl={ngrokData[activeServer.id] || null}
       />
     ),
-    properties: () => <PropertiesView key={contentKey} server={activeServer} />,
+    properties: () => (
+      <PropertiesView
+        key={contentKey}
+        server={activeServer}
+        onServerPortChanged={onServerPortChanged}
+      />
+    ),
     files: () => <FilesView key={contentKey} server={activeServer} />,
     plugins: () => <PluginBrowser key={contentKey} server={activeServer} />,
     backups: () => <BackupsView key={contentKey} server={activeServer} />,

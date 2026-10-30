@@ -16,6 +16,7 @@ interface AppMainContentProps {
   ngrokData: Record<string, string | null>;
   onBuildProxyNetwork: (config: ProxyNetworkConfig) => Promise<void>;
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
+  onServerPortChanged: (serverId: string, port: number) => void;
   updaterSettings: AppUpdaterSettings;
   t: Translate;
 }
@@ -29,6 +30,7 @@ export default function AppMainContent({
   ngrokData,
   onBuildProxyNetwork,
   onUpdateServer,
+  onServerPortChanged,
   updaterSettings,
   t,
 }: AppMainContentProps) {
@@ -69,6 +71,7 @@ export default function AppMainContent({
                 ngrokData={ngrokData}
                 onBuildProxyNetwork={onBuildProxyNetwork}
                 onUpdateServer={onUpdateServer}
+                onServerPortChanged={onServerPortChanged}
                 updaterSettings={updaterSettings}
                 t={t}
               />

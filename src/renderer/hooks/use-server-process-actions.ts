@@ -4,6 +4,7 @@ import { logError } from '../../lib/error-utils';
 import { isEulaRequiredError } from '../../lib/eula-commands';
 import {
   isServerRunning,
+  restartServer as restartServerApi,
   startServer as startServerApi,
   stopServer as stopServerApi,
 } from '../../lib/server-commands';
@@ -45,21 +46,13 @@ export function useServerProcessActions({
 }: UseServerProcessActionsOptions) {
   const startInFlightRef = useRef<string | null>(null);
 
-  const startServerProcess = useCallback(async (server: MinecraftServer) => {
-    const javaPath = server.javaPath || 'java';
-    const jarFile = server.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-    await startServerApi(
-      server.id,
-      javaPath,
-      server.memory,
-      jarFile,
-      server.jvmArgs,
-      server.software,
-    );
-  }, []);
-
-  const startServerProcessWithEula = useCallback(
-    async (server: MinecraftServer, onReadyToStart: () => void): Promise<EulaGateResult> => {
+  const runServerActionWithEula = useCallback(
+    async (
+      server: MinecraftServer,
+      action: (serverId: string) => Promise<void>,
+      onReady: () => void,
+      retryAction: (serverId: string) => Promise<void> = action,
+    ): Promise<EulaGateResult> => {
       return runExclusiveServerStart(server.id, async () => {
         const gateResult = await ensureServerEula(server, 'interactive');
         if (gateResult !== 'accepted') {
@@ -67,8 +60,8 @@ export function useServerProcessActions({
         }
 
         try {
-          onReadyToStart();
-          await startServerProcess(server);
+          onReady();
+          await action(server.id);
         } catch (error) {
           if (!isEulaRequiredError(error)) {
             throw error;
@@ -78,14 +71,14 @@ export function useServerProcessActions({
           if (retryGateResult !== 'accepted') {
             return retryGateResult;
           }
-          onReadyToStart();
-          await startServerProcess(server);
+          onReady();
+          await retryAction(server.id);
         }
 
         return 'accepted';
       });
     },
-    [ensureServerEula, startServerProcess],
+    [ensureServerEula],
   );
 
   const resolveStatusAfterStopPhaseFailure = useCallback(
@@ -122,7 +115,7 @@ export function useServerProcessActions({
     resetAutoRestartState(serverId);
 
     try {
-      const gateResult = await startServerProcessWithEula(activeServer, () => {
+      const gateResult = await runServerActionWithEula(activeServer, startServerApi, () => {
         setServers((prev) =>
           prev.map((server) =>
             server.id === serverId ? { ...server, status: 'starting' } : server,
@@ -154,7 +147,7 @@ export function useServerProcessActions({
     resetAutoRestartState,
     setServers,
     showToast,
-    startServerProcessWithEula,
+    runServerActionWithEula,
     t,
   ]);
 
@@ -204,43 +197,39 @@ export function useServerProcessActions({
       return;
     }
     startInFlightRef.current = serverId;
-    markExpectedOffline(serverId);
-    clearAutoRestartTimer(serverId);
-    setServers((prev) =>
-      prev.map((server) => (server.id === serverId ? { ...server, status: 'restarting' } : server)),
-    );
+    let restartRequested = false;
 
     try {
-      await stopServerApi(serverId);
-
-      const maxWait = 30;
-      for (let index = 0; index < maxWait; index += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const running = await isServerRunning(serverId);
-        if (!running) {
-          break;
-        }
-      }
-
-      const running = await isServerRunning(serverId);
-      if (running) {
-        throw new Error('Timed out waiting for server shutdown');
-      }
-
-      const gateResult = await startServerProcessWithEula(activeServer, () => {
+      const gateResult = await runServerActionWithEula(
+        activeServer,
+        restartServerApi,
+        () => {
+          if (!restartRequested) {
+            restartRequested = true;
+            markExpectedOffline(serverId);
+            clearAutoRestartTimer(serverId);
+          }
+          setServers((prev) =>
+            prev.map((server) =>
+              server.id === serverId ? { ...server, status: 'restarting' } : server,
+            ),
+          );
+        },
+        async (id) => {
+          if (await isServerRunning(id)) {
+            await restartServerApi(id);
+          } else {
+            await startServerApi(id);
+          }
+        },
+      );
+      if (gateResult !== 'accepted' && restartRequested) {
+        const fallbackStatus = await resolveStatusAfterStopPhaseFailure(serverId);
         setServers((prev) =>
           prev.map((server) =>
-            server.id === serverId ? { ...server, status: 'starting' } : server,
+            server.id === serverId ? { ...server, status: fallbackStatus } : server,
           ),
         );
-      });
-      if (gateResult !== 'accepted') {
-        setServers((prev) =>
-          prev.map((server) =>
-            server.id === serverId ? { ...server, status: 'offline' } : server,
-          ),
-        );
-        return;
       }
     } catch (error) {
       logError('Restart server failed', error, { serverId });
@@ -263,7 +252,7 @@ export function useServerProcessActions({
     resolveStatusAfterStopPhaseFailure,
     setServers,
     showToast,
-    startServerProcessWithEula,
+    runServerActionWithEula,
     t,
   ]);
 

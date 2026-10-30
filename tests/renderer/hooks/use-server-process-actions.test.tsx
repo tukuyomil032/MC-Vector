@@ -5,18 +5,25 @@ import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { isServerRunningMock, startServerMock, stopServerMock, isEulaRequiredErrorMock } =
-  vi.hoisted(() => ({
-    isServerRunningMock: vi.fn(),
-    startServerMock: vi.fn(),
-    stopServerMock: vi.fn(),
-    isEulaRequiredErrorMock: vi.fn(),
-  }));
+const {
+  isServerRunningMock,
+  startServerMock,
+  stopServerMock,
+  restartServerMock,
+  isEulaRequiredErrorMock,
+} = vi.hoisted(() => ({
+  isServerRunningMock: vi.fn(),
+  startServerMock: vi.fn(),
+  stopServerMock: vi.fn(),
+  restartServerMock: vi.fn(),
+  isEulaRequiredErrorMock: vi.fn(),
+}));
 
 vi.mock('@/lib/server-commands', () => ({
   isServerRunning: isServerRunningMock,
   startServer: startServerMock,
   stopServer: stopServerMock,
+  restartServer: restartServerMock,
 }));
 
 vi.mock('@/lib/eula-commands', () => ({
@@ -52,9 +59,14 @@ function ProcessActionsHarness({ gateResult = 'accepted' }: { gateResult?: EulaG
   });
 
   return (
-    <button type="button" onClick={() => void actions.handleStart()}>
-      Start server
-    </button>
+    <>
+      <button type="button" onClick={() => void actions.handleStart()}>
+        Start server
+      </button>
+      <button type="button" onClick={() => void actions.handleRestart()}>
+        Restart server
+      </button>
+    </>
   );
 }
 
@@ -63,11 +75,13 @@ describe('use-server-process-actions EULA integration', () => {
     isServerRunningMock.mockReset();
     startServerMock.mockReset();
     stopServerMock.mockReset();
+    restartServerMock.mockReset();
     isEulaRequiredErrorMock.mockReset();
     showToastMock.mockReset();
     isServerRunningMock.mockResolvedValue(false);
     startServerMock.mockResolvedValue(undefined);
     stopServerMock.mockResolvedValue(undefined);
+    restartServerMock.mockResolvedValue(undefined);
     isEulaRequiredErrorMock.mockReturnValue(false);
   });
 
@@ -85,6 +99,53 @@ describe('use-server-process-actions EULA integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start server' }));
 
     await waitFor(() => expect(startServerMock).not.toHaveBeenCalled());
+  });
+
+  it('invokes one Rust restart after the EULA gate accepts', async () => {
+    render(<ProcessActionsHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Restart server' }));
+
+    await waitFor(() => expect(restartServerMock).toHaveBeenCalledWith('server-1'));
+    expect(stopServerMock).not.toHaveBeenCalled();
+    expect(startServerMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the server running when restart EULA consent is cancelled', async () => {
+    const ensureServerEula = vi.fn().mockResolvedValue('cancelled');
+    function CancelHarness() {
+      const actions = useServerProcessActions({
+        activeServer: server,
+        selectedServerId: server.id,
+        setServers: () => undefined,
+        showToast: vi.fn(),
+        t: translate,
+        clearExpectedOffline: vi.fn(),
+        resetAutoRestartState: vi.fn(),
+        markExpectedOffline: vi.fn(),
+        clearAutoRestartTimer: vi.fn(),
+        ensureServerEula,
+      });
+      return <button onClick={() => void actions.handleRestart()}>Restart server</button>;
+    }
+
+    render(<CancelHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Restart server' }));
+    await waitFor(() => expect(ensureServerEula).toHaveBeenCalled());
+    expect(restartServerMock).not.toHaveBeenCalled();
+    expect(stopServerMock).not.toHaveBeenCalled();
+  });
+
+  it('starts the stopped server after renewed EULA consent during a restart', async () => {
+    restartServerMock.mockRejectedValueOnce(new Error('eula-required'));
+    isEulaRequiredErrorMock.mockReturnValue(true);
+    isServerRunningMock.mockResolvedValue(false);
+    render(<ProcessActionsHarness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restart server' }));
+
+    await waitFor(() => expect(startServerMock).toHaveBeenCalledWith('server-1'));
+    expect(restartServerMock).toHaveBeenCalledTimes(1);
+    expect(stopServerMock).not.toHaveBeenCalled();
   });
 
   it('rechecks the EULA defense error without showing a generic start failure', async () => {

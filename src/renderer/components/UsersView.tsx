@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
-import { readJsonFile, writeJsonFile } from '../../lib/file-commands';
+import {
+  getPlayerLists,
+  mutatePlayerList,
+  type PlayerEntry,
+  type PlayerListType,
+} from '../../lib/player-commands';
 import { sendCommand } from '../../lib/server-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import { Button } from './ui/Button';
@@ -11,23 +16,8 @@ interface Props {
   server: MinecraftServer;
 }
 
-interface PlayerEntry {
-  uuid?: string;
-  name: string;
-  level?: number;
-  created?: string;
-  source?: string;
-  expires?: string;
-  reason?: string;
-  ip?: string;
-  bypassesPlayerLimit?: boolean;
-}
-
-type ListType = 'whitelist' | 'ops' | 'banned-players' | 'banned-ips';
-
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
-  const sep = server.path.includes('\\') ? '\\' : '/';
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     if (type === 'success') {
       toast.success(msg);
@@ -42,198 +32,108 @@ export default function UsersView({ server }: Props) {
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
   const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
+  const loadRequestId = useRef(0);
+  const currentServerId = useRef(server.id);
 
-  const resolvePlayerIdentity = async (name: string): Promise<{ name: string; uuid?: string }> => {
-    try {
-      const res = await fetch(
-        `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`,
-      );
-      if (!res.ok) {
-        return { name };
-      }
-      const data = await res.json();
-      if (data?.id) {
-        return { name: data.name || name, uuid: data.id };
-      }
-    } catch {
-      // Ignore UUID fetch errors
+  const applyLists = useCallback((lists: Awaited<ReturnType<typeof getPlayerLists>>) => {
+    setWhitelist(lists.whitelist);
+    setOps(lists.ops);
+    setBannedPlayers(lists.bannedPlayers);
+    setBannedIps(lists.bannedIps);
+  }, []);
+
+  const loadAllLists = useCallback(async () => {
+    const requestedServerId = server.id;
+    const requestId = ++loadRequestId.current;
+    const lists = await getPlayerLists(requestedServerId);
+    if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
+      applyLists(lists);
     }
-    return { name };
-  };
+  }, [applyLists, server.id]);
+
+  useEffect(() => {
+    currentServerId.current = server.id;
+    void loadAllLists().catch((error: unknown) => {
+      toast.error(error instanceof Error ? error.message : String(error));
+    });
+    return () => {
+      loadRequestId.current += 1;
+    };
+  }, [loadAllLists, server.id]);
 
   const maybeApplyLiveCommand = async (
-    type: ListType,
+    type: PlayerListType,
     action: 'add' | 'remove',
-    nameOrIp: string,
-    rawInput: string,
+    canonicalTarget: string,
   ) => {
     if (server.status !== 'online') {
       return;
     }
     const command = (() => {
       if (type === 'whitelist') {
-        return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${nameOrIp}`;
+        return `${action === 'add' ? 'whitelist add' : 'whitelist remove'} ${canonicalTarget}`;
       }
       if (type === 'ops') {
-        return `${action === 'add' ? 'op' : 'deop'} ${nameOrIp}`;
+        return `${action === 'add' ? 'op' : 'deop'} ${canonicalTarget}`;
       }
       if (type === 'banned-players') {
-        return `${action === 'add' ? 'ban' : 'pardon'} ${nameOrIp}`;
+        return `${action === 'add' ? 'ban' : 'pardon'} ${canonicalTarget}`;
       }
-      if (type === 'banned-ips') {
-        return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${rawInput}`;
-      }
-      return '';
+      return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${canonicalTarget}`;
     })();
-    if (!command) {
-      return;
-    }
     await sendCommand(server.id, command);
-    setTimeout(() => loadAllLists(), 500);
+    setTimeout(() => {
+      void loadAllLists().catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : String(error));
+      });
+    }, 500);
   };
 
-  const loadAllLists = useCallback(async () => {
-    const [whitelistData, opsData, bannedPlayersData, bannedIpsData] = await Promise.all([
-      readJsonFile(`${server.path}${sep}whitelist.json`) as Promise<PlayerEntry[] | null>,
-      readJsonFile(`${server.path}${sep}ops.json`) as Promise<PlayerEntry[] | null>,
-      readJsonFile(`${server.path}${sep}banned-players.json`) as Promise<PlayerEntry[] | null>,
-      readJsonFile(`${server.path}${sep}banned-ips.json`) as Promise<PlayerEntry[] | null>,
-    ]);
-
-    setWhitelist(whitelistData || []);
-    setOps(opsData || []);
-    setBannedPlayers(bannedPlayersData || []);
-    setBannedIps(bannedIpsData || []);
-  }, [sep, server.path]);
-
-  useEffect(() => {
-    void loadAllLists();
-  }, [loadAllLists]);
-
-  const handleAdd = async (type: ListType, nameOrIp: string) => {
-    if (!nameOrIp) {
-      return;
+  const handleAdd = async (type: PlayerListType, value: string): Promise<boolean> => {
+    if (!value.trim()) {
+      return false;
     }
-    const identity = await resolvePlayerIdentity(nameOrIp);
-    const filePath = `${server.path}${sep}${getFileName(type)}`;
-    let currentList: PlayerEntry[] = [];
-    let newItem: PlayerEntry = { name: identity.name, uuid: identity.uuid };
-
-    switch (type) {
-      case 'whitelist':
-        currentList = [...whitelist];
-        break;
-      case 'ops':
-        currentList = [...ops];
-        newItem = { ...newItem, level: 4, bypassesPlayerLimit: false };
-        break;
-      case 'banned-players':
-        currentList = [...bannedPlayers];
-        newItem = {
-          ...newItem,
-          created: new Date().toISOString(),
-          source: 'Console',
-          reason: 'Banned by Admin',
-        };
-        break;
-      case 'banned-ips':
-        currentList = [...bannedIps];
-        newItem = {
-          ip: nameOrIp,
-          name: 'unknown',
-          created: new Date().toISOString(),
-          source: 'Console',
-          reason: 'IP Banned',
-        };
-        break;
-    }
-
-    if (
-      currentList.some((p) =>
-        type === 'banned-ips' ? p.ip === nameOrIp : p.name.toLowerCase() === nameOrIp.toLowerCase(),
-      )
-    ) {
-      showToast(t('users.toast.alreadyExists'), 'info');
-      return;
-    }
-
-    const newData = [...currentList, newItem];
-    await writeJsonFile(filePath, newData);
-    await maybeApplyLiveCommand(type, 'add', identity.name, nameOrIp);
-    showToast(t('users.toast.listUpdated'), 'success');
-
-    switch (type) {
-      case 'whitelist':
-        setWhitelist(newData);
-        break;
-      case 'ops':
-        setOps(newData);
-        break;
-      case 'banned-players':
-        setBannedPlayers(newData);
-        break;
-      case 'banned-ips':
-        setBannedIps(newData);
-        break;
+    try {
+      const result = await mutatePlayerList(server.id, type, 'add', value.trim());
+      if (currentServerId.current === server.id) {
+        applyLists(result.lists);
+      }
+      if (!result.changed) {
+        showToast(t('users.toast.alreadyExists'), 'info');
+        return true;
+      }
+      try {
+        await maybeApplyLiveCommand(type, 'add', result.canonicalTarget);
+        showToast(t('users.toast.listUpdated'), 'success');
+      } catch (error) {
+        toast.error(
+          `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
     }
   };
 
-  const handleRemove = async (type: ListType, identifier: string) => {
-    const filePath = `${server.path}${sep}${getFileName(type)}`;
-    let currentList: PlayerEntry[] = [];
-
-    switch (type) {
-      case 'whitelist':
-        currentList = whitelist;
-        break;
-      case 'ops':
-        currentList = ops;
-        break;
-      case 'banned-players':
-        currentList = bannedPlayers;
-        break;
-      case 'banned-ips':
-        currentList = bannedIps;
-        break;
+  const handleRemove = async (type: PlayerListType, identifier: string): Promise<void> => {
+    try {
+      const result = await mutatePlayerList(server.id, type, 'remove', identifier);
+      if (currentServerId.current === server.id) {
+        applyLists(result.lists);
+      }
+      try {
+        await maybeApplyLiveCommand(type, 'remove', result.canonicalTarget);
+        showToast(t('users.toast.removed'), 'success');
+      } catch (error) {
+        toast.error(
+          `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     }
-
-    const newData = currentList.filter((p) =>
-      type === 'banned-ips' ? p.ip !== identifier : p.name !== identifier,
-    );
-    await writeJsonFile(filePath, newData);
-    await maybeApplyLiveCommand(type, 'remove', identifier, identifier);
-    showToast(t('users.toast.removed'), 'success');
-
-    switch (type) {
-      case 'whitelist':
-        setWhitelist(newData);
-        break;
-      case 'ops':
-        setOps(newData);
-        break;
-      case 'banned-players':
-        setBannedPlayers(newData);
-        break;
-      case 'banned-ips':
-        setBannedIps(newData);
-        break;
-    }
-  };
-
-  const getFileName = (type: ListType) => {
-    if (type === 'whitelist') {
-      return 'whitelist.json';
-    }
-    if (type === 'ops') {
-      return 'ops.json';
-    }
-    if (type === 'banned-players') {
-      return 'banned-players.json';
-    }
-    if (type === 'banned-ips') {
-      return 'banned-ips.json';
-    }
-    return '';
   };
 
   return (
@@ -314,9 +214,9 @@ function UserListCard({
 }: {
   title: string;
   data: PlayerEntry[];
-  type: ListType;
-  onAdd: (val: string) => void;
-  onRemove: (val: string) => void;
+  type: PlayerListType;
+  onAdd: (val: string) => Promise<boolean>;
+  onRemove: (val: string) => Promise<void>;
   entriesLabel: string;
   emptyLabel: string;
   removeLabel: string;
@@ -327,12 +227,13 @@ function UserListCard({
   const [input, setInput] = useState('');
   const { t } = useTranslation();
 
-  const handleAddClick = () => {
+  const handleAddClick = async () => {
     if (!input) {
       return;
     }
-    onAdd(input);
-    setInput('');
+    if (await onAdd(input)) {
+      setInput('');
+    }
   };
 
   return (

@@ -64,6 +64,6 @@ test.describe('server management', () => {
     await page.locator('[data-testid="delete-server-server-1"]').click();
 
     await expect(serverCard).toHaveCount(0);
-    await expect.poll(async () => (await app.ipcCalls('delete_managed_server_dir')).length).toBe(1);
+    await expect.poll(async () => (await app.ipcCalls('delete_managed_server')).length).toBe(1);
   });
 });

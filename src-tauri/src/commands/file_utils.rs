@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use uuid::Uuid;
 
-use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+use super::recovery_journal::{DirectoryMigrationStage, RecoveryOperation, RecoveryRecord};
+use super::server_registry::ServerRegistry;
+use crate::state::operation_manager::{
+    GlobalOperation, OperationKind, OperationScope, ServerOperationManager,
+};
 
 #[derive(serde::Serialize)]
 pub struct FileEntryInfo {
@@ -28,9 +32,9 @@ pub struct ImportedManagedFile {
     pub size: u64,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct ServerImportManager {
-    pending: Mutex<HashMap<String, PathBuf>>,
+    pending: Arc<Mutex<HashMap<String, PathBuf>>>,
 }
 
 #[derive(serde::Serialize)]
@@ -42,15 +46,6 @@ pub struct ServerImportAnalysis {
     pub detected_software: String,
     pub eula_accepted: bool,
     pub has_server_jar: bool,
-}
-
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompletedServerImport {
-    pub server_id: String,
-    pub relative_path: String,
-    pub file_count: u64,
-    pub byte_size: u64,
 }
 
 /// The only storage roots this command module may access.
@@ -77,7 +72,7 @@ pub struct ManagedPathRequest {
     pub relative_path: String,
 }
 
-fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
+pub(crate) fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
         return true;
     }
@@ -365,16 +360,19 @@ impl ImportBudget {
     }
 }
 
-pub(crate) fn managed_operation_scope(request: &ManagedPathRequest) -> Result<String, String> {
+pub(crate) fn managed_operation_scope(
+    request: &ManagedPathRequest,
+) -> Result<OperationScope, String> {
     match request.root {
         ManagedRoot::Servers | ManagedRoot::Backups => validate_server_id(
             request
                 .server_id
                 .as_deref()
                 .ok_or_else(|| "This managed path requires a server ID".to_string())?,
-        ),
-        ManagedRoot::Java => Ok("managed-root-java".to_string()),
-        ManagedRoot::Ngrok => Ok("managed-root-ngrok".to_string()),
+        )
+        .map(OperationScope::Server),
+        ManagedRoot::Java => Ok(OperationScope::Global(GlobalOperation::JavaRuntime)),
+        ManagedRoot::Ngrok => Ok(OperationScope::Global(GlobalOperation::NgrokRuntime)),
     }
 }
 
@@ -386,7 +384,10 @@ fn managed_text_temp_path(destination: &Path) -> PathBuf {
     destination.with_file_name(format!(".{name}.write-{}", Uuid::new_v4()))
 }
 
-fn atomic_write_managed_text_file(destination: &Path, content: &str) -> Result<(), String> {
+pub(crate) fn atomic_write_managed_text_file(
+    destination: &Path,
+    content: &str,
+) -> Result<(), String> {
     if content.len() as u64 > MAX_IMPORT_TEXT_BYTES * 16 {
         return Err("Managed text file exceeds the write size limit".to_string());
     }
@@ -701,20 +702,16 @@ pub async fn pick_server_import(
     Ok(Some(analysis))
 }
 
-/// Copies the selected server folder's contents into an already-created
-/// managed server directory. Tokens are one-shot and source paths remain Rust-only.
-#[tauri::command]
-pub async fn complete_server_import(
-    app: AppHandle,
-    state: State<'_, ServerImportManager>,
-    operations: State<'_, ServerOperationManager>,
-    token: String,
-    server_id: String,
-) -> Result<CompletedServerImport, String> {
+/// Consume an import token and stage its contents into an already-created
+/// managed server directory. This stays Rust-only so creation can commit the
+/// file copy and SQLite profile as one application operation.
+pub(crate) fn complete_server_import_for_creation(
+    app_data_dir: &Path,
+    state: &ServerImportManager,
+    token: &str,
+    server_id: &str,
+) -> Result<(), String> {
     let server_id = validate_server_id(&server_id)?;
-    let _operation_guards = operations
-        .acquire_many([server_id.as_str()], OperationKind::FileMutation)
-        .await?;
     let source = state
         .pending
         .lock()
@@ -722,13 +719,12 @@ pub async fn complete_server_import(
         .remove(token.trim())
         .ok_or_else(|| "Server import session is missing or expired".to_string())?;
 
-    let app_data_dir = app_data_dir(&app)?;
     let destination_request = ManagedPathRequest {
         root: ManagedRoot::Servers,
         server_id: Some(server_id.clone()),
         relative_path: String::new(),
     };
-    let destination = resolve_managed_request(&app_data_dir, &destination_request, false)?;
+    let destination = resolve_managed_request(app_data_dir, &destination_request, false)?;
     let managed_root = std::fs::canonicalize(app_data_dir.join("servers"))
         .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
     let destination_metadata = std::fs::symlink_metadata(&destination)
@@ -793,12 +789,7 @@ pub async fn complete_server_import(
         }
     }
 
-    Ok(CompletedServerImport {
-        server_id,
-        relative_path: String::new(),
-        file_count: budget.file_count,
-        byte_size: budget.byte_size,
-    })
+    Ok(())
 }
 
 #[tauri::command]
@@ -833,7 +824,7 @@ pub async fn write_managed_text_file(
 ) -> Result<(), String> {
     let operation_scope = managed_operation_scope(&request)?;
     let _operation_guards = operations
-        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .acquire_scopes([operation_scope], OperationKind::FileMutation)
         .await?;
     let app_data_dir = app_data_dir(&app)?;
     let resolved = resolve_managed_request(&app_data_dir, &request, true)?;
@@ -1162,7 +1153,7 @@ pub async fn import_managed_files(
 ) -> Result<Vec<ImportedManagedFile>, String> {
     let operation_scope = managed_operation_scope(&request)?;
     let _operation_guards = operations
-        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .acquire_scopes([operation_scope], OperationKind::FileMutation)
         .await?;
     let app_data_dir = app_data_dir(&app)?;
     let destination = resolve_managed_request(&app_data_dir, &request, true)?;
@@ -1337,7 +1328,7 @@ pub async fn create_managed_directory(
 ) -> Result<(), String> {
     let operation_scope = managed_operation_scope(&request)?;
     let _operation_guards = operations
-        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .acquire_scopes([operation_scope], OperationKind::FileMutation)
         .await?;
     let app_data_dir = app_data_dir(&app)?;
     let target = resolve_managed_request(&app_data_dir, &request, true)?;
@@ -1355,7 +1346,7 @@ pub async fn delete_managed_path(
 ) -> Result<(), String> {
     let operation_scope = managed_operation_scope(&request)?;
     let _operation_guards = operations
-        .acquire_many([operation_scope.as_str()], OperationKind::FileMutation)
+        .acquire_scopes([operation_scope], OperationKind::FileMutation)
         .await?;
     let app_data_dir = app_data_dir(&app)?;
     let target = resolve_managed_request(&app_data_dir, &request, false)?;
@@ -1386,10 +1377,7 @@ pub async fn move_managed_path(
     let from_scope = managed_operation_scope(&from)?;
     let to_scope = managed_operation_scope(&to)?;
     let _operation_guards = operations
-        .acquire_many(
-            [from_scope.as_str(), to_scope.as_str()],
-            OperationKind::FileMutation,
-        )
+        .acquire_scopes([from_scope, to_scope], OperationKind::FileMutation)
         .await?;
     let app_data_dir = app_data_dir(&app)?;
     let source = resolve_managed_request(&app_data_dir, &from, false)?;
@@ -1427,44 +1415,6 @@ pub async fn read_managed_text_file(
     tokio::fs::read_to_string(&resolved)
         .await
         .map_err(|error| format!("Failed to read file: {error}"))
-}
-
-#[tauri::command]
-pub async fn delete_managed_server_dir(
-    app: AppHandle,
-    operations: State<'_, ServerOperationManager>,
-    server_id: String,
-) -> Result<(), String> {
-    let server_id = validate_server_id(&server_id)?;
-    let _operation_guards = operations
-        .acquire_many([server_id.as_str()], OperationKind::FileMutation)
-        .await?;
-    let app_data_dir = app_data_dir(&app)?;
-    let request = ManagedPathRequest {
-        root: ManagedRoot::Servers,
-        server_id: Some(server_id),
-        relative_path: String::new(),
-    };
-    let target = resolve_managed_request(&app_data_dir, &request, false)?;
-    let servers_root = std::fs::canonicalize(app_data_dir.join("servers"))
-        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
-
-    if target == servers_root || target.parent() != Some(servers_root.as_path()) {
-        return Err("Server folder is outside the managed servers root".to_string());
-    }
-
-    let metadata = std::fs::symlink_metadata(&target)
-        .map_err(|error| format!("Failed to inspect server folder: {error}"))?;
-    if is_link_or_reparse_point(&metadata) {
-        return Err("Refusing to delete a symbolic link or reparse point".to_string());
-    }
-    if !metadata.is_dir() {
-        return Err("Server path is not a directory".to_string());
-    }
-
-    tokio::fs::remove_dir_all(&target)
-        .await
-        .map_err(|error| format!("Failed to delete managed server folder: {error}"))
 }
 
 fn resolve_managed_copy_path(
@@ -1531,7 +1481,11 @@ fn resolve_managed_copy_path(
     Ok(current)
 }
 
-fn copy_managed_tree(source: &Path, destination: &Path, managed_root: &Path) -> Result<(), String> {
+pub(crate) fn copy_managed_tree(
+    source: &Path,
+    destination: &Path,
+    managed_root: &Path,
+) -> Result<(), String> {
     let source = resolve_managed_copy_path(source, managed_root, false)?;
     let destination = resolve_managed_copy_path(destination, managed_root, true)?;
     copy_managed_tree_resolved(source, destination, managed_root)
@@ -1570,71 +1524,45 @@ fn copy_managed_tree_resolved(
     Ok(())
 }
 
-#[tauri::command]
-pub async fn clone_managed_server(
-    app: AppHandle,
-    operations: State<'_, ServerOperationManager>,
-    source_server_id: String,
-    destination_server_id: String,
-) -> Result<(), String> {
-    let source_server_id = validate_server_id(&source_server_id)?;
-    let destination_server_id = validate_server_id(&destination_server_id)?;
-    let _operation_guards = operations
-        .acquire_many(
-            [source_server_id.as_str(), destination_server_id.as_str()],
-            OperationKind::FileMutation,
-        )
-        .await?;
-    let app_data_dir = app_data_dir(&app)?;
-    let source_request = ManagedPathRequest {
-        root: ManagedRoot::Servers,
-        server_id: Some(source_server_id),
-        relative_path: String::new(),
-    };
-    let destination_request = ManagedPathRequest {
-        root: ManagedRoot::Servers,
-        server_id: Some(destination_server_id),
-        relative_path: String::new(),
-    };
-    let source = resolve_managed_request(&app_data_dir, &source_request, false)?;
-    let destination = resolve_managed_request(&app_data_dir, &destination_request, true)?;
-    let managed_root = std::fs::canonicalize(app_data_dir.join("servers"))
-        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
-    let source_metadata = std::fs::symlink_metadata(&source)
-        .map_err(|error| format!("Failed to inspect source server: {error}"))?;
-    if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
-        return Err("Source server directory is not safe".to_string());
-    }
-    if std::fs::symlink_metadata(&destination).is_ok() {
-        return Err("Destination server directory already exists".to_string());
-    }
-    let parent = destination
-        .parent()
-        .ok_or_else(|| "Destination server has no parent".to_string())?;
-    std::fs::create_dir_all(parent)
-        .map_err(|error| format!("Failed to create managed server root: {error}"))?;
-    copy_managed_tree(&source, &destination, &managed_root)
-}
-
-/// Safely migrates a legacy `servers/<name>` directory to `servers/<id>`.
-/// The legacy name is a single directory component; no external path can be
-/// supplied and a failed migration never falls back to that external path.
-#[tauri::command]
-pub async fn migrate_managed_server_directory(
-    app: AppHandle,
-    operations: State<'_, ServerOperationManager>,
+/// Safely migrates a legacy `servers/<name>` directory to `servers/<id>` and
+/// commits the new profile path. The caller must hold both server operation
+/// locks. If the registry update fails, the directory is moved back.
+pub(crate) fn migrate_managed_server_directory_with<F>(
+    app_data_dir: &Path,
     legacy_directory_name: String,
     server_id: String,
-) -> Result<String, String> {
+    registry: &ServerRegistry,
+    update_profile_path: F,
+) -> Result<String, String>
+where
+    F: FnOnce(&str) -> Result<(), String>,
+{
+    migrate_managed_server_directory_with_fault(
+        app_data_dir,
+        legacy_directory_name,
+        server_id,
+        registry,
+        update_profile_path,
+        false,
+        |_| Ok(()),
+    )
+}
+
+fn migrate_managed_server_directory_with_fault<F, H>(
+    app_data_dir: &Path,
+    legacy_directory_name: String,
+    server_id: String,
+    registry: &ServerRegistry,
+    update_profile_path: F,
+    force_copy_fallback: bool,
+    mut after_persist: H,
+) -> Result<String, String>
+where
+    F: FnOnce(&str) -> Result<(), String>,
+    H: FnMut(DirectoryMigrationStage) -> Result<(), String>,
+{
     let legacy_directory_name = validate_server_id(&legacy_directory_name)?;
     let server_id = validate_server_id(&server_id)?;
-    let _operation_guards = operations
-        .acquire_many(
-            [legacy_directory_name.as_str(), server_id.as_str()],
-            OperationKind::FileMutation,
-        )
-        .await?;
-    let app_data_dir = app_data_dir(&app)?;
     let source_request = ManagedPathRequest {
         root: ManagedRoot::Servers,
         server_id: Some(legacy_directory_name.clone()),
@@ -1645,7 +1573,7 @@ pub async fn migrate_managed_server_directory(
         server_id: Some(server_id.clone()),
         relative_path: String::new(),
     };
-    let destination = resolve_managed_request(&app_data_dir, &destination_request, true)?;
+    let destination = resolve_managed_request(app_data_dir, &destination_request, true)?;
     let destination_root = std::fs::canonicalize(app_data_dir.join("servers"))
         .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
     if destination.parent() != Some(destination_root.as_path()) {
@@ -1657,17 +1585,25 @@ pub async fn migrate_managed_server_directory(
         if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
             return Err("Managed server directory is not a real directory".to_string());
         }
-        return Ok(destination.to_string_lossy().to_string());
+        let destination = destination.to_string_lossy().to_string();
+        update_profile_path(&destination)?;
+        return Ok(destination);
     }
 
-    if let Ok(metadata) = std::fs::symlink_metadata(&destination) {
-        if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
-            return Err("Migration destination is not a safe directory".to_string());
+    match std::fs::symlink_metadata(&destination) {
+        Ok(metadata) => {
+            if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
+                return Err("Migration destination is not a safe directory".to_string());
+            }
+            return Err("Migration destination already exists".to_string());
         }
-        return Err("Migration destination already exists".to_string());
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(format!("Failed to inspect migration destination: {error}"));
+        }
     }
 
-    let source = match resolve_managed_request(&app_data_dir, &source_request, false) {
+    let source = match resolve_managed_request(app_data_dir, &source_request, false) {
         Ok(path) => path,
         Err(error) => {
             return Err(format!(
@@ -1681,18 +1617,83 @@ pub async fn migrate_managed_server_directory(
         return Err("Legacy server directory is not a safe directory".to_string());
     }
 
-    if let Err(rename_error) = std::fs::rename(&source, &destination) {
-        if let Err(copy_error) = copy_managed_tree(&source, &destination, &destination_root) {
-            let _ = std::fs::remove_dir_all(&destination);
-            return Err(format!(
-                "Failed to migrate legacy server directory: {copy_error}; rename error: {rename_error}"
-            ));
+    let record_id = Uuid::new_v4().to_string();
+    let mut record = RecoveryRecord {
+        id: record_id.clone(),
+        operation: RecoveryOperation::ServerDirectoryMigration {
+            server_id: server_id.clone(),
+            legacy_directory_name: legacy_directory_name.clone(),
+            stage: DirectoryMigrationStage::Prepared,
+        },
+    };
+    registry.save_recovery_record(&record)?;
+    after_persist(DirectoryMigrationStage::Prepared)?;
+
+    let rename_result = if force_copy_fallback {
+        Err(std::io::Error::other(
+            "simulated cross-device rename failure",
+        ))
+    } else {
+        std::fs::rename(&source, &destination)
+    };
+    match rename_result {
+        Ok(()) => {}
+        Err(rename_error) => {
+            if let Err(copy_error) = copy_managed_tree(&source, &destination, &destination_root) {
+                let _ = std::fs::remove_dir_all(&destination);
+                return Err(format!(
+                    "Failed to migrate legacy server directory: {copy_error}; rename error: {rename_error}"
+                ));
+            }
+            record.operation = RecoveryOperation::ServerDirectoryMigration {
+                server_id: server_id.clone(),
+                legacy_directory_name: legacy_directory_name.clone(),
+                stage: DirectoryMigrationStage::DirectoryCopied,
+            };
+            registry.save_recovery_record(&record)?;
+            after_persist(DirectoryMigrationStage::DirectoryCopied)?;
+            if let Err(error) = std::fs::remove_dir_all(&source) {
+                return Err(format!(
+                    "Failed to remove the legacy directory after copying it: {error}"
+                ));
+            }
         }
-        std::fs::remove_dir_all(&source)
-            .map_err(|error| format!("Failed to remove migrated legacy directory: {error}"))?;
     }
 
-    Ok(destination.to_string_lossy().to_string())
+    record.operation = RecoveryOperation::ServerDirectoryMigration {
+        server_id: server_id.clone(),
+        legacy_directory_name: legacy_directory_name.clone(),
+        stage: DirectoryMigrationStage::DirectoryMoved,
+    };
+    registry.save_recovery_record(&record)?;
+    after_persist(DirectoryMigrationStage::DirectoryMoved)?;
+
+    let destination_string = destination.to_string_lossy().to_string();
+    if let Err(error) = update_profile_path(&destination_string) {
+        // Both paths are below the same managed root, so rename restores the
+        // original directory atomically after either the rename or copy path.
+        let rollback = std::fs::rename(&destination, &source);
+        return match rollback {
+            Ok(()) => {
+                let _ = registry.delete_recovery_record(&record_id);
+                Err(error)
+            }
+            Err(rollback_error) => Err(format!(
+                "{error}; failed to restore the legacy server directory: {rollback_error}"
+            )),
+        };
+    }
+
+    record.operation = RecoveryOperation::ServerDirectoryMigration {
+        server_id,
+        legacy_directory_name,
+        stage: DirectoryMigrationStage::RegistryUpdated,
+    };
+    registry.save_recovery_record(&record)?;
+    after_persist(DirectoryMigrationStage::RegistryUpdated)?;
+    registry.delete_recovery_record(&record_id)?;
+
+    Ok(destination_string)
 }
 
 /// Returns metadata for a managed directory only. The caller supplies a root,
@@ -1764,8 +1765,11 @@ fn directory_metadata_error(error: &std::io::Error) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::recovery_journal::{self, DirectoryMigrationStage};
+    use super::super::server_registry::ServerRegistry;
     use super::{
         atomic_write_managed_text_file, directory_metadata_error, list_directory_entries,
+        migrate_managed_server_directory_with, migrate_managed_server_directory_with_fault,
         move_managed_entry, resolve_managed_request, validated_relative_path, ImportBudget,
         ManagedPathRequest, ManagedRoot, MAX_IMPORT_FILES, MAX_IMPORT_SINGLE_FILE_BYTES,
         MAX_IMPORT_TOTAL_BYTES,
@@ -1806,6 +1810,36 @@ mod tests {
         }
     }
 
+    fn registry_with_legacy_server(
+        app_data_dir: &Path,
+        server_id: &str,
+        legacy_directory_name: &str,
+    ) -> ServerRegistry {
+        let canonical_app_data = app_data_dir
+            .canonicalize()
+            .expect("app data directory should resolve");
+        std::fs::write(
+            app_data_dir.join("servers.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "servers": [{
+                    "id": server_id,
+                    "name": "Legacy server",
+                    "version": "1.21",
+                    "software": "Paper",
+                    "port": 25565,
+                    "memory": 2048,
+                    "path": canonical_app_data
+                        .join("servers")
+                        .join(legacy_directory_name)
+                        .to_string_lossy()
+                }]
+            }))
+            .unwrap(),
+        )
+        .expect("legacy server registry should be written");
+        ServerRegistry::open(app_data_dir).expect("server registry should open")
+    }
+
     #[test]
     fn resolves_server_relative_path_below_server_id() {
         let app_data = TestDirectory::new();
@@ -1823,6 +1857,158 @@ mod tests {
             resolved,
             canonical_app_data.join("servers/alpha/world/level.dat")
         );
+    }
+
+    #[test]
+    fn migration_rolls_back_directory_when_registry_path_update_fails() {
+        let app_data = TestDirectory::new();
+        let legacy_dir = app_data.path().join("servers/legacy-name");
+        std::fs::create_dir_all(&legacy_dir).expect("legacy server directory should exist");
+        std::fs::write(legacy_dir.join("server.properties"), "motd=legacy")
+            .expect("legacy server file should be written");
+        let registry = registry_with_legacy_server(app_data.path(), "server-id", "legacy-name");
+
+        let error = migrate_managed_server_directory_with(
+            app_data.path(),
+            "legacy-name".to_string(),
+            "server-id".to_string(),
+            &registry,
+            |_| Err("database is unavailable".to_string()),
+        )
+        .expect_err("registry failure should reject migration");
+
+        assert_eq!(error, "database is unavailable");
+        assert_eq!(
+            std::fs::read_to_string(legacy_dir.join("server.properties")).unwrap(),
+            "motd=legacy"
+        );
+        assert!(!app_data.path().join("servers/server-id").exists());
+    }
+
+    #[test]
+    fn migration_keeps_new_directory_when_registry_path_update_succeeds() {
+        let app_data = TestDirectory::new();
+        let legacy_dir = app_data.path().join("servers/legacy-name");
+        std::fs::create_dir_all(&legacy_dir).expect("legacy server directory should exist");
+        std::fs::write(legacy_dir.join("server.properties"), "motd=legacy")
+            .expect("legacy server file should be written");
+        let registry = registry_with_legacy_server(app_data.path(), "server-id", "legacy-name");
+        let mut committed_path = None;
+
+        let migrated_path = migrate_managed_server_directory_with(
+            app_data.path(),
+            "legacy-name".to_string(),
+            "server-id".to_string(),
+            &registry,
+            |new_path| {
+                committed_path = Some(new_path.to_string());
+                let mut profile = registry.get_servers()?.remove(0);
+                profile.path = new_path.to_string();
+                if registry.update_server(&profile)? {
+                    Ok(())
+                } else {
+                    Err("Server profile disappeared during directory migration".into())
+                }
+            },
+        )
+        .expect("migration should succeed when registry update succeeds");
+
+        assert_eq!(committed_path.as_deref(), Some(migrated_path.as_str()));
+        assert!(!legacy_dir.exists());
+        assert_eq!(
+            std::fs::read_to_string(app_data.path().join("servers/server-id/server.properties"))
+                .unwrap(),
+            "motd=legacy"
+        );
+    }
+
+    #[test]
+    fn directory_migration_recovers_each_persisted_stage_after_simulated_crash() {
+        for interrupted_stage in [
+            DirectoryMigrationStage::Prepared,
+            DirectoryMigrationStage::DirectoryCopied,
+            DirectoryMigrationStage::DirectoryMoved,
+            DirectoryMigrationStage::RegistryUpdated,
+        ] {
+            let app_data = TestDirectory::new();
+            std::fs::create_dir_all(app_data.path().join("servers/legacy-name"))
+                .expect("legacy server directory should exist");
+            std::fs::write(
+                app_data
+                    .path()
+                    .join("servers/legacy-name/server.properties"),
+                "motd=legacy",
+            )
+            .expect("legacy server file should be written");
+            let registry = registry_with_legacy_server(app_data.path(), "server-id", "legacy-name");
+
+            let error = migrate_managed_server_directory_with_fault(
+                app_data.path(),
+                "legacy-name".to_string(),
+                "server-id".to_string(),
+                &registry,
+                |new_path| {
+                    let mut profile = registry.get_servers()?.remove(0);
+                    profile.path = new_path.to_string();
+                    if registry.update_server(&profile)? {
+                        Ok(())
+                    } else {
+                        Err("Server profile disappeared during directory migration".into())
+                    }
+                },
+                interrupted_stage == DirectoryMigrationStage::DirectoryCopied,
+                |persisted_stage| {
+                    if persisted_stage == interrupted_stage {
+                        Err(format!("simulated crash after {persisted_stage:?}"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            )
+            .expect_err("fault injection should interrupt migration");
+            assert!(error.contains("simulated crash"));
+            assert_eq!(registry.recovery_records().unwrap().len(), 1);
+
+            assert!(recovery_journal::recover_startup(app_data.path(), &registry).is_empty());
+            assert!(registry.recovery_records().unwrap().is_empty());
+            let profile = registry.get_servers().unwrap().remove(0);
+            let canonical_app_data = app_data.path().canonicalize().unwrap();
+            match interrupted_stage {
+                DirectoryMigrationStage::RegistryUpdated
+                | DirectoryMigrationStage::DirectoryCopied => {
+                    assert_eq!(
+                        profile.path,
+                        canonical_app_data
+                            .join("servers/server-id")
+                            .to_string_lossy()
+                            .to_string()
+                    );
+                    if interrupted_stage == DirectoryMigrationStage::RegistryUpdated {
+                        assert!(!app_data.path().join("servers/legacy-name").exists());
+                    } else {
+                        assert!(app_data.path().join("servers/legacy-name").exists());
+                    }
+                    assert!(app_data
+                        .path()
+                        .join("servers/server-id/server.properties")
+                        .exists());
+                }
+                DirectoryMigrationStage::Prepared | DirectoryMigrationStage::DirectoryMoved => {
+                    assert_eq!(
+                        profile.path,
+                        canonical_app_data
+                            .join("servers/legacy-name")
+                            .to_string_lossy()
+                            .to_string()
+                    );
+                    assert!(app_data
+                        .path()
+                        .join("servers/legacy-name/server.properties")
+                        .exists());
+                    assert!(!app_data.path().join("servers/server-id").exists());
+                }
+            }
+        }
     }
 
     #[test]

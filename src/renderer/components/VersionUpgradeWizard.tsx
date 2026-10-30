@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { createBackup, onBackupProgress } from '../../lib/backup-commands';
-import { downloadServerJar, onDownloadProgress, updateServer } from '../../lib/server-commands';
+import {
+  executeServerJarInstall,
+  onDownloadProgress,
+  prepareServerJarInstall,
+} from '../../lib/server-commands';
 import type { UnlistenFn } from '../../lib/tauri-api';
-import { resolveLatestJarUrl } from '../../lib/version-commands';
 import type { MinecraftServer } from '../shared/server declaration';
 import { Button } from './ui/Button';
 
@@ -13,16 +16,18 @@ type WizardStep = 'check' | 'backup' | 'download' | 'done';
 interface Props {
   server: MinecraftServer;
   onClose: () => void;
-  onServerUpdate: (updated: MinecraftServer) => Promise<void>;
+  onServerVersionChanged: (version: string) => void;
 }
 
-export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }: Props) {
+export default function VersionUpgradeWizard({ server, onClose, onServerVersionChanged }: Props) {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     if (type === 'success') {
       toast.success(msg);
     } else if (type === 'error') {
       toast.error(msg);
+    } else if (type === 'warning') {
+      toast.warning(msg);
     } else {
       toast(msg);
     }
@@ -30,8 +35,8 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
 
   const [step, setStep] = useState<WizardStep>('check');
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState('');
-  const [downloadSha256, setDownloadSha256] = useState<string | undefined>();
+  const [preparedPlanId, setPreparedPlanId] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [dlProgress, setDlProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
@@ -40,7 +45,11 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
   // Step 1: fetch latest version on mount
   useEffect(() => {
     let cancelled = false;
-    resolveLatestJarUrl(server.software ?? '', server.version)
+    setPreparedPlanId(null);
+    setLatestVersion(null);
+    setUnsupported(false);
+    setVerified(false);
+    prepareServerJarInstall(server.id, server.software ?? '', server.version)
       .then((result) => {
         if (cancelled) {
           return;
@@ -49,8 +58,8 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
           setUnsupported(true);
         } else {
           setLatestVersion(result.latestVersion);
-          setDownloadUrl(result.downloadUrl);
-          setDownloadSha256(result.sha256);
+          setPreparedPlanId(result.planId);
+          setVerified(result.verified);
         }
       })
       .catch(() => {
@@ -59,7 +68,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
     return () => {
       cancelled = true;
     };
-  }, [server.software, server.version]);
+  }, [server.id, server.software, server.version]);
 
   const isOffline = server.status === 'offline';
   const isLatest = latestVersion !== null && latestVersion === server.version;
@@ -88,7 +97,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
 
   // Step 3: download
   const handleDownload = async () => {
-    if (!downloadUrl || !latestVersion || !downloadSha256) {
+    if (!preparedPlanId || !latestVersion || !verified) {
       return;
     }
     setProcessing(true);
@@ -100,10 +109,8 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
           setDlProgress(Math.round(progress));
         }
       });
-      await downloadServerJar(downloadUrl, server.id, 'server.jar', downloadSha256);
-      const updated: MinecraftServer = { ...server, version: latestVersion };
-      await updateServer(updated);
-      await onServerUpdate(updated);
+      const installed = await executeServerJarInstall(preparedPlanId);
+      onServerVersionChanged(installed.version);
       setStep('done');
     } catch {
       showToast(t('serverSettings.versionUpgrade.downloadFailed'), 'error');
@@ -216,7 +223,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerUpdate }
                 onClick={() => {
                   void handleDownload();
                 }}
-                disabled={processing || !downloadUrl || !downloadSha256}
+                disabled={processing || !preparedPlanId || !verified}
               >
                 {t('serverSettings.versionUpgrade.runDownload')}
               </Button>

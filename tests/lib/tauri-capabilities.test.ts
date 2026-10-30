@@ -1,8 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { ALLOWED_TAURI_COMMANDS } from '@/lib/tauri-command-allowlist';
 import { describe, expect, it } from 'vitest';
 
 describe('Tauri HTTP capability scopes', () => {
+  it('exposes the managed delete and serialized restart commands only', () => {
+    const handler = readFileSync(resolve(process.cwd(), 'src-tauri/src/lib.rs'), 'utf8');
+    expect(handler).not.toContain('commands::server_registry::delete_server,');
+    expect(handler).toContain('commands::server_lifecycle::delete_managed_server,');
+    expect(handler).toContain('commands::server::restart_server,');
+    expect(ALLOWED_TAURI_COMMANDS.has('delete_server')).toBe(false);
+    expect(ALLOWED_TAURI_COMMANDS.has('restart_server')).toBe(true);
+  });
   it('allows the official JAR metadata APIs', () => {
     const capability = JSON.parse(
       readFileSync(

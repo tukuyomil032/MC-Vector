@@ -1,22 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const getMock = vi.fn();
-const setMock = vi.fn();
-const saveMock = vi.fn();
-const appDataDirMock = vi.fn();
 const tauriInvokeMock = vi.fn();
-
-vi.mock('@tauri-apps/api/path', () => ({
-  appDataDir: appDataDirMock,
-}));
-
-vi.mock('@tauri-apps/plugin-store', () => ({
-  load: vi.fn().mockResolvedValue({
-    get: getMock,
-    set: setMock,
-    save: saveMock,
-  }),
-}));
 
 vi.mock('@/lib/tauri-api', () => ({
   tauriInvoke: tauriInvokeMock,
@@ -35,15 +19,16 @@ const SERVER_BASE = {
 describe('server-commands', () => {
   beforeEach(() => {
     vi.resetModules();
-    getMock.mockReset();
-    setMock.mockReset();
-    saveMock.mockReset();
-    appDataDirMock.mockReset();
     tauriInvokeMock.mockReset();
-    appDataDirMock.mockResolvedValue('/app-data');
     tauriInvokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'get_servers') {
+        return [];
+      }
       if (cmd === 'is_server_running') {
         return false;
+      }
+      if (cmd === 'delete_managed_server') {
+        return true;
       }
       return undefined;
     });
@@ -51,154 +36,74 @@ describe('server-commands', () => {
 
   describe('getServers', () => {
     it('returns empty array when store is empty', async () => {
-      getMock.mockResolvedValueOnce(null);
+      tauriInvokeMock.mockResolvedValueOnce([]);
       const { getServers } = await import('@/lib/server-commands');
       const result = await getServers();
       expect(result).toEqual([]);
+      expect(tauriInvokeMock).toHaveBeenCalledWith('get_servers');
     });
 
-    it('returns server array from store', async () => {
+    it('returns server array from Rust registry', async () => {
       const servers = [{ id: 's1', name: 'Test', ...SERVER_BASE }];
-      getMock.mockResolvedValueOnce(servers);
+      tauriInvokeMock.mockResolvedValueOnce(servers);
       const { getServers } = await import('@/lib/server-commands');
       const result = await getServers();
       expect(result).toEqual(servers);
     });
-  });
 
-  describe('addServer', () => {
-    it('appends server to existing list and saves', async () => {
-      const existing = [{ id: 's1', name: 'Existing', ...SERVER_BASE }];
-      const newServer = { id: 's2', name: 'New', ...SERVER_BASE, port: 25566 };
-      getMock.mockResolvedValueOnce(existing);
-      const { addServer } = await import('@/lib/server-commands');
-      await addServer(newServer);
-      // existing is mutated by push, so assert with explicit array
-      expect(setMock).toHaveBeenCalledWith('servers', [
-        { id: 's1', name: 'Existing', ...SERVER_BASE },
-        newServer,
-      ]);
-      expect(saveMock).toHaveBeenCalled();
-    });
+    it('returns the Rust-owned path and performs no renderer-side migration writes', async () => {
+      const legacy = {
+        id: 's1',
+        name: 'Test',
+        ...SERVER_BASE,
+        path: '/app-data/servers/legacy-name',
+      };
+      tauriInvokeMock.mockResolvedValueOnce([legacy]);
 
-    it('returns the added server', async () => {
-      getMock.mockResolvedValueOnce(null);
-      const server = { id: 's1', name: 'Test', ...SERVER_BASE };
-      const { addServer } = await import('@/lib/server-commands');
-      const result = await addServer(server);
-      expect(result).toBe(server);
+      const { getServers } = await import('@/lib/server-commands');
+      const result = await getServers();
+
+      expect(result[0].path).toBe('/app-data/servers/legacy-name');
+      expect(tauriInvokeMock).toHaveBeenCalledTimes(1);
+      expect(tauriInvokeMock).toHaveBeenCalledWith('get_servers');
     });
   });
 
   describe('updateServer', () => {
-    it('replaces matching server by id and saves', async () => {
-      const servers = [{ id: 's1', name: 'Old Name', ...SERVER_BASE }];
-      getMock.mockResolvedValueOnce(servers);
-      const updated = { ...servers[0], name: 'New Name' };
+    it('sends updated server data to the Rust registry command', async () => {
+      const updated = { id: 's1', name: 'New Name', ...SERVER_BASE };
       const { updateServer } = await import('@/lib/server-commands');
       await updateServer(updated);
-      expect(setMock).toHaveBeenCalledWith('servers', [updated]);
-      expect(saveMock).toHaveBeenCalled();
-    });
-
-    it('does not save when id is not found', async () => {
-      getMock.mockResolvedValueOnce([]);
-      const { updateServer } = await import('@/lib/server-commands');
-      await updateServer({ id: 'nonexistent', name: 'X', ...SERVER_BASE });
-      expect(setMock).not.toHaveBeenCalled();
-      expect(saveMock).not.toHaveBeenCalled();
+      expect(tauriInvokeMock).toHaveBeenCalledWith('update_server', { server: updated });
     });
   });
 
   describe('deleteServer', () => {
-    it('removes a managed server from store after deleting its managed folder', async () => {
-      const servers = [
-        { id: 's1', name: 'A', ...SERVER_BASE },
-        { id: 's2', name: 'B', ...SERVER_BASE, port: 25566 },
-      ];
-      getMock.mockResolvedValueOnce(servers);
+    it('delegates deletion to the atomic Rust lifecycle command', async () => {
       const { deleteServer } = await import('@/lib/server-commands');
       const result = await deleteServer('s1');
-      expect(tauriInvokeMock).toHaveBeenCalledWith('is_server_running', { serverId: 's1' });
-      expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_server_dir', { serverId: 's1' });
-      expect(setMock).toHaveBeenCalledWith('servers', [servers[1]]);
-      expect(saveMock).toHaveBeenCalled();
       expect(result).toBe(true);
+      expect(tauriInvokeMock).toHaveBeenCalledTimes(1);
+      expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_server', { serverId: 's1' });
     });
 
-    it('deletes managed server folder before removing the store entry', async () => {
-      const servers = [
-        { id: 's1', name: 'A', ...SERVER_BASE, path: '/app-data/servers/s1' },
-        { id: 's2', name: 'B', ...SERVER_BASE, path: '/app-data/servers/s2' },
-      ];
-      getMock.mockResolvedValueOnce(servers);
-      const { deleteServer } = await import('@/lib/server-commands');
-
-      await expect(deleteServer('s1')).resolves.toBe(true);
-
-      expect(tauriInvokeMock).toHaveBeenNthCalledWith(1, 'is_server_running', { serverId: 's1' });
-      expect(tauriInvokeMock).toHaveBeenNthCalledWith(2, 'delete_managed_server_dir', {
-        serverId: 's1',
-      });
-      expect(setMock).toHaveBeenCalledWith('servers', [servers[1]]);
-      expect(saveMock).toHaveBeenCalled();
-    });
-
-    it('does not update store when managed folder deletion fails', async () => {
-      const servers = [{ id: 's1', name: 'A', ...SERVER_BASE, path: '/app-data/servers/s1' }];
-      getMock.mockResolvedValueOnce(servers);
-      tauriInvokeMock.mockImplementation(async (cmd: string) => {
-        if (cmd === 'is_server_running') {
-          return false;
-        }
-        if (cmd === 'delete_managed_server_dir') {
-          throw new Error('permission denied');
-        }
-        return undefined;
-      });
-      const { deleteServer } = await import('@/lib/server-commands');
-
-      await expect(deleteServer('s1')).rejects.toThrow('permission denied');
-
-      expect(setMock).not.toHaveBeenCalled();
-      expect(saveMock).not.toHaveBeenCalled();
-    });
-
-    it('rejects running servers before folder deletion or store updates', async () => {
-      const servers = [{ id: 's1', name: 'A', ...SERVER_BASE, path: '/app-data/servers/s1' }];
-      getMock.mockResolvedValueOnce(servers);
-      tauriInvokeMock.mockResolvedValueOnce(true);
+    it('propagates a refusal to delete a running server from Rust', async () => {
+      tauriInvokeMock.mockRejectedValueOnce(new Error('Cannot delete a running server'));
       const { deleteServer } = await import('@/lib/server-commands');
 
       await expect(deleteServer('s1')).rejects.toThrow('Cannot delete a running server');
-
-      expect(tauriInvokeMock).toHaveBeenCalledWith('is_server_running', { serverId: 's1' });
-      expect(tauriInvokeMock).not.toHaveBeenCalledWith(
-        'delete_managed_server_dir',
-        expect.anything(),
-      );
-      expect(setMock).not.toHaveBeenCalled();
-      expect(saveMock).not.toHaveBeenCalled();
-    });
-
-    it('returns false without saving when server is not found', async () => {
-      getMock.mockResolvedValueOnce([]);
-      const { deleteServer } = await import('@/lib/server-commands');
-
-      await expect(deleteServer('missing')).resolves.toBe(false);
-
-      expect(tauriInvokeMock).not.toHaveBeenCalled();
-      expect(setMock).not.toHaveBeenCalled();
-      expect(saveMock).not.toHaveBeenCalled();
+      expect(tauriInvokeMock).toHaveBeenCalledTimes(1);
+      expect(tauriInvokeMock).toHaveBeenCalledWith('delete_managed_server', { serverId: 's1' });
     });
   });
 
   describe('getServerTemplates', () => {
     it('returns empty array when store is empty', async () => {
-      getMock.mockResolvedValueOnce(null);
+      tauriInvokeMock.mockResolvedValueOnce([]);
       const { getServerTemplates } = await import('@/lib/server-commands');
       const result = await getServerTemplates();
       expect(result).toEqual([]);
+      expect(tauriInvokeMock).toHaveBeenCalledWith('get_server_templates');
     });
 
     it('returns templates from store', async () => {
@@ -212,7 +117,7 @@ describe('server-commands', () => {
           memory: 2048,
         },
       ];
-      getMock.mockResolvedValueOnce(templates);
+      tauriInvokeMock.mockResolvedValueOnce(templates);
       const { getServerTemplates } = await import('@/lib/server-commands');
       const result = await getServerTemplates();
       expect(result).toEqual(templates);
@@ -220,8 +125,7 @@ describe('server-commands', () => {
   });
 
   describe('saveServerTemplate', () => {
-    it('appends new template and saves', async () => {
-      getMock.mockResolvedValueOnce([]);
+    it('saves new template through the Rust registry command', async () => {
       const template = {
         id: 't1',
         name: 'My Template',
@@ -232,69 +136,55 @@ describe('server-commands', () => {
       };
       const { saveServerTemplate } = await import('@/lib/server-commands');
       const result = await saveServerTemplate(template);
-      expect(setMock).toHaveBeenCalledWith('serverTemplates', [template]);
-      expect(saveMock).toHaveBeenCalled();
+      expect(tauriInvokeMock).toHaveBeenCalledWith('save_server_template', { template });
       expect(result).toEqual(template);
     });
 
-    it('updates existing template by id', async () => {
-      const existing = [
-        { id: 't1', name: 'Old', version: '1.21', software: 'paper', port: 25565, memory: 2048 },
-      ];
-      getMock.mockResolvedValueOnce(existing);
-      const updated = { ...existing[0], name: 'Updated' };
+    it('saves updated template through the Rust registry command', async () => {
+      const updated = {
+        id: 't1',
+        name: 'Updated',
+        version: '1.21',
+        software: 'paper',
+        port: 25565,
+        memory: 2048,
+      };
       const { saveServerTemplate } = await import('@/lib/server-commands');
       await saveServerTemplate(updated);
-      expect(setMock).toHaveBeenCalledWith('serverTemplates', [updated]);
+      expect(tauriInvokeMock).toHaveBeenCalledWith('save_server_template', { template: updated });
     });
   });
 
   describe('deleteServerTemplate', () => {
-    it('removes template by id and saves', async () => {
-      const templates = [
-        { id: 't1', name: 'A', version: '1.21', software: 'paper', port: 25565, memory: 2048 },
-        { id: 't2', name: 'B', version: '1.21', software: 'paper', port: 25566, memory: 2048 },
-      ];
-      getMock.mockResolvedValueOnce(templates);
+    it('deletes a template through the Rust registry command', async () => {
       const { deleteServerTemplate } = await import('@/lib/server-commands');
       await deleteServerTemplate('t1');
-      expect(setMock).toHaveBeenCalledWith('serverTemplates', [templates[1]]);
-      expect(saveMock).toHaveBeenCalled();
+      expect(tauriInvokeMock).toHaveBeenCalledWith('delete_server_template', { templateId: 't1' });
     });
   });
 
   describe('startServer', () => {
-    it('invokes start_server with correct args (no jvmExtraArgs)', async () => {
+    it('passes only the server ID to the Rust-owned start command', async () => {
       tauriInvokeMock.mockResolvedValueOnce(undefined);
 
       const { startServer } = await import('@/lib/server-commands');
 
-      await startServer('server-1', 'C:\\Java\\bin\\java.exe', 4096, 'server.jar');
+      await startServer('server-1');
 
       expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
         serverId: 'server-1',
-        javaPath: 'C:\\Java\\bin\\java.exe',
-        memory: 4096,
-        jarFile: 'server.jar',
-        jvmExtraArgs: null,
-        software: 'Unknown',
       });
     });
 
-    it('passes jvmExtraArgs when provided', async () => {
+    it('invokes the Rust-owned restart with only the server ID', async () => {
       tauriInvokeMock.mockResolvedValueOnce(undefined);
 
-      const { startServer } = await import('@/lib/server-commands');
+      const { restartServer } = await import('@/lib/server-commands');
 
-      await startServer('server-1', '/usr/bin/java', 2048, 'server.jar', '-XX:+UseG1GC', 'Paper');
+      await restartServer('server-1');
 
-      expect(tauriInvokeMock).toHaveBeenCalledWith('start_server', {
+      expect(tauriInvokeMock).toHaveBeenCalledWith('restart_server', {
         serverId: 'server-1',
-        javaPath: '/usr/bin/java',
-        memory: 2048,
-        jarFile: 'server.jar',
-        jvmExtraArgs: '-XX:+UseG1GC',
-        software: 'Paper',
       });
     });
   });
