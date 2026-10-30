@@ -83,7 +83,13 @@ export default function AppContentRouter({
         title={hasServers ? t('server.title') : t('server.list.emptyTitle')}
         description={hasServers ? t('server.list.selectOrCreate') : t('server.list.empty')}
         action={
-          <Button type="button" variant="primary" size="sm" onClick={onAddServer}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            data-testid={hasServers ? undefined : 'create-server-button'}
+            onClick={onAddServer}
+          >
             <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
             {t('nav.addServer')}
           </Button>
