@@ -1,5 +1,6 @@
 import type { Translate } from '../../i18n';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
+import { canStartServer } from '../shared/server-status';
 import { getViewLabel } from '../shared/view-labels';
 import { Button } from './ui/Button';
 
@@ -22,7 +23,7 @@ export default function AppMainHeader({
   onStop,
   t,
 }: AppMainHeaderProps) {
-  const canStart = activeServerStatus === 'offline' || activeServerStatus === 'crashed';
+  const canStart = canStartServer(activeServerStatus);
   const isOnline = activeServerStatus === 'online';
 
   return (

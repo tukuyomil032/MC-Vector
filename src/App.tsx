@@ -38,6 +38,7 @@ import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
 import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
+import { canStartServer } from '@/renderer/shared/server-status';
 import { getHeaderTitle } from '@/renderer/shared/view-labels';
 import { useConsoleStore } from '@/store/consoleStore';
 import { useServerStore } from '@/store/serverStore';
@@ -132,7 +133,7 @@ function MainApp() {
         }
         if (srv.status === 'online') {
           void stop();
-        } else if (srv.status === 'offline') {
+        } else if (canStartServer(srv.status)) {
           void start();
         }
       },
@@ -227,7 +228,7 @@ function MainApp() {
   serverActionsRef.current = { handleStart, handleStop, handleRestart, activeServer };
 
   const handleBulkStart = async (servers: MinecraftServer[]) => {
-    for (const s of servers.filter((srv) => srv.status === 'offline')) {
+    for (const s of servers.filter((srv) => canStartServer(srv.status))) {
       try {
         const gateResult = await runExclusiveServerStart(s.id, async () => {
           let result = await ensureServerEula(s, 'interactive');

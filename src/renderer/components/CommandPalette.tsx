@@ -1,5 +1,6 @@
 import { useTranslation } from '@/i18n';
 import type { AppView, MinecraftServer } from '@/renderer/shared/server declaration';
+import { canStartServer } from '@/renderer/shared/server-status';
 import { Command } from 'cmdk';
 import { useEffect, useRef, useState } from 'react';
 
@@ -48,7 +49,7 @@ export function CommandPalette({
   };
 
   const isOnline = activeServer?.status === 'online';
-  const isOffline = activeServer?.status === 'offline';
+  const canStart = canStartServer(activeServer?.status);
 
   if (!open) {
     return null;
@@ -149,7 +150,7 @@ export function CommandPalette({
                 </span>
               }
             >
-              {isOffline && (
+              {canStart && (
                 <Command.Item className="cmd-palette__item" onSelect={() => runAndClose(onStart)}>
                   <span className="cmd-palette__item-icon">▶</span>
                   <span className="cmd-palette__item-label">{t('server.actions.start')}</span>
