@@ -15,6 +15,8 @@ const DashboardView = lazy(() => import('./DashboardView'));
 const FilesView = lazy(() => import('./FilesView'));
 const PluginBrowser = lazy(() => import('./PluginBrowser'));
 const SettingsWindow = lazy(() => import('./SettingsWindow'));
+// Dev-only: the conditional keeps the UI Lab chunk out of production builds.
+const UiLabView = import.meta.env.DEV ? lazy(() => import('./UiLabView')) : null;
 
 type SetCurrentView = (view: AppView) => void;
 
@@ -60,6 +62,7 @@ export default function AppContentRouter({
         onOpenHelp={() => setCurrentView('proxy-help')}
       />
     ),
+    ...(UiLabView ? { 'ui-lab': () => <UiLabView /> } : {}),
   };
 
   const staticRenderer = staticViewRenderers[currentView];

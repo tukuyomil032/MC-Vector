@@ -130,6 +130,15 @@ export function CommandPalette({
               <span className="cmd-palette__item-icon">⚙️</span>
               <span className="cmd-palette__item-label">{t('nav.generalSettings')}</span>
             </Command.Item>
+            {import.meta.env.DEV && (
+              <Command.Item
+                className="cmd-palette__item"
+                onSelect={() => runAndClose(() => setCurrentView('ui-lab'))}
+              >
+                <span className="cmd-palette__item-icon">🧪</span>
+                <span className="cmd-palette__item-label">{t('nav.uiLab')}</span>
+              </Command.Item>
+            )}
           </Command.Group>
 
           {activeServer && (

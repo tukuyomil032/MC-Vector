@@ -709,6 +709,7 @@ export interface TranslationDictionary {
     properties: string;
     generalSettings: string;
     proxyNetwork: string;
+    uiLab: string;
     addServer: string;
     importServer: string;
     openSettings: string;

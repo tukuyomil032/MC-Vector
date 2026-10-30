@@ -50,4 +50,5 @@ export type AppView =
   | 'proxy'
   | 'proxy-help'
   | 'ngrok-guide'
-  | 'users';
+  | 'users'
+  | 'ui-lab';

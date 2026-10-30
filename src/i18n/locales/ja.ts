@@ -705,6 +705,7 @@ export const ja: TranslationDictionary = {
     properties: 'プロパティ',
     generalSettings: '全般設定',
     proxyNetwork: 'プロキシネットワーク',
+    uiLab: 'UIラボ',
     addServer: 'サーバーを追加',
     importServer: 'インポート',
     openSettings: '設定ウィンドウを開く',

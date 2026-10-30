@@ -709,6 +709,7 @@ export const en: TranslationDictionary = {
     properties: 'Properties',
     generalSettings: 'General Settings',
     proxyNetwork: 'Proxy Network',
+    uiLab: 'UI Lab',
     addServer: 'Add Server',
     importServer: 'Import',
     openSettings: 'Open settings window',

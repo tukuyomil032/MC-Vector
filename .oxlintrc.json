@@ -25,6 +25,16 @@
     "jsx-a11y/prefer-tag-over-role": "off",
     "jsx-a11y/click-events-have-key-events": "off"
   },
+  "overrides": [
+    {
+      "files": ["src/components/arc/**"],
+      "rules": {
+        "typescript/no-non-null-assertion": "off",
+        "react/no-array-index-key": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off"
+      }
+    }
+  ],
   "env": {
     "builtin": true
   }

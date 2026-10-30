@@ -27,6 +27,8 @@ export function getViewLabel(view: AppView, t: Translate): string {
       return t('proxyHelp.title');
     case 'ngrok-guide':
       return t('ngrokGuide.title');
+    case 'ui-lab':
+      return t('nav.uiLab');
     default:
       return view;
   }
