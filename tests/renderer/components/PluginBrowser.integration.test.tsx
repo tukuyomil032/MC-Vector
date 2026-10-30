@@ -43,10 +43,6 @@ vi.mock('@tanstack/react-query', () => ({
   useQueries: queryState.useQueries,
 }));
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-  ask: vi.fn().mockResolvedValue(false),
-}));
-
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openUrl: vi.fn().mockResolvedValue(undefined),
 }));
@@ -377,8 +373,6 @@ describe('PluginBrowser feedback integration', () => {
 
   it('routes installed-file toggle and uninstall through Rust commands', async () => {
     fileCommands.listFiles.mockResolvedValue([{ name: 'plugin.jar', isDirectory: false }]);
-    const askModule = await import('@tauri-apps/plugin-dialog');
-    vi.mocked(askModule.ask).mockResolvedValue(true);
     render(
       <AppFeedbackProvider>
         <PluginBrowser server={server} />
@@ -395,6 +389,7 @@ describe('PluginBrowser feedback integration', () => {
     );
     expect(await screen.findByText('plugin disabled')).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Uninstall' }));
+    fireEvent.click(await screen.findByTestId('feedback-confirm-confirm'));
     await waitFor(() =>
       expect(installerCommands.uninstallInstalledPlugin).toHaveBeenCalledWith(
         'server-1',

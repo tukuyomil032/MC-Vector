@@ -222,8 +222,8 @@ test.describe('plugin install and feedback flows', () => {
     await page.getByRole('button', { name: 'Enable' }).click();
     await expect.poll(() => app.runtimeFiles()).toContain(enabledPath);
     await expect.poll(() => app.runtimeFiles()).not.toContain(disabledPath);
-    await app.confirmDialogs();
     await page.getByRole('button', { name: 'Uninstall' }).click();
+    await app.acceptConfirm();
     await expect.poll(() => app.runtimeFiles()).not.toContain(enabledPath);
     expect(await app.ipcCalls('uninstall_installed_plugin')).toHaveLength(1);
     await expectNoRendererOwnedArtifactData(app);

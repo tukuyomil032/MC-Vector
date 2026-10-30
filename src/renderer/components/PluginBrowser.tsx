@@ -1,5 +1,4 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
@@ -435,7 +434,7 @@ export default function PluginBrowser({ server }: Props) {
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
-  const { openDialog } = useAppFeedback();
+  const { confirm, openDialog } = useAppFeedback();
   const setCurrentView = useUiStore((state) => state.setCurrentView);
   const folderName = isModServer ? 'mods' : 'plugins';
   const tSafe = (
@@ -1551,15 +1550,14 @@ export default function PluginBrowser({ server }: Props) {
   const handleUninstallInstalled = async (entry: InstalledPluginEntry) => {
     setBusyInstalledFile(entry.normalizedFileName);
     try {
-      const confirmed = await ask(
-        t('plugins.browser.confirmUninstall', {
+      const confirmed = await confirm({
+        title: t('plugins.browser.uninstallTitle'),
+        description: t('plugins.browser.confirmUninstall', {
           name: entry.displayName || entry.fileName,
         }),
-        {
-          title: t('plugins.browser.uninstallTitle'),
-          kind: 'warning',
-        },
-      );
+        confirmLabel: t('plugins.browser.uninstall'),
+        tone: 'danger',
+      });
 
       if (!confirmed) {
         setBusyInstalledFile(null);

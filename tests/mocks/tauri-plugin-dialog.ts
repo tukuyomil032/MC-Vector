@@ -17,11 +17,6 @@ export async function save(options?: unknown): Promise<string | null> {
   return '/mock/external/e2e-export.txt';
 }
 
-export async function ask(message: string, options?: unknown): Promise<boolean> {
-  recordE2eCall('dialog', 'ask', { message, options });
-  return (window as E2eWindow).__dialogConfirm === true;
-}
-
 export async function confirm(message: string, options?: unknown): Promise<boolean> {
   recordE2eCall('dialog', 'confirm', { message, options });
   return (window as E2eWindow).__dialogConfirm === true;

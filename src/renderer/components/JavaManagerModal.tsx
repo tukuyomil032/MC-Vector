@@ -1,6 +1,5 @@
 import { cn } from '@/lib/ui';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
@@ -14,6 +13,7 @@ import {
   selectJavaBinary,
 } from '../../lib/java-commands';
 import { notify } from '../shared/notify';
+import { useAppFeedback } from './AppFeedbackProvider';
 import { Button } from './ui/Button';
 
 interface Props {
@@ -28,6 +28,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const availableVersions = [8, 17, 21];
   const { t } = useTranslation();
+  const { confirm } = useAppFeedback();
 
   useEffect(() => {
     loadInstalled();
@@ -78,9 +79,11 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
   };
 
   const handleDelete = async (ver: number) => {
-    const confirmed = await ask(t('javaManager.confirm.uninstall', { version: ver }), {
+    const confirmed = await confirm({
       title: t('javaManager.confirm.deleteTitle'),
-      kind: 'warning',
+      description: t('javaManager.confirm.uninstall', { version: ver }),
+      confirmLabel: t('common.delete'),
+      tone: 'danger',
     });
     if (!confirmed) {
       return;
