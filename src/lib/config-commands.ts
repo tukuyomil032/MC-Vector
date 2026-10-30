@@ -2,15 +2,26 @@ import { appDataDir } from '@tauri-apps/api/path';
 import { load } from '@tauri-apps/plugin-store';
 import { normalizeUpdateChannel } from '../store/settingsStore';
 import type { UpdateChannel } from '../store/settingsStore';
+import { tauriInvoke } from './tauri-api';
 
 const STORE_NAME = 'config.json';
 
 export async function getConfig<T>(key: string): Promise<T | null> {
+  if (key === 'allowUnverifiedPluginDownloads') {
+    return (await tauriInvoke<boolean>('get_allow_unverified_plugin_downloads')) as T;
+  }
   const store = await load(STORE_NAME);
   return (await store.get<T>(key)) ?? null;
 }
 
 export async function setConfig<T>(key: string, value: T): Promise<void> {
+  if (key === 'allowUnverifiedPluginDownloads') {
+    if (typeof value !== 'boolean') {
+      throw new Error('Plugin download policy must be a boolean');
+    }
+    await tauriInvoke('set_allow_unverified_plugin_downloads', { enabled: value });
+    return;
+  }
   const store = await load(STORE_NAME);
   await store.set(key, value);
   await store.save();
@@ -57,7 +68,9 @@ export async function getAppSettings(): Promise<AppSettings> {
   const theme = await store.get<string>('theme');
   const locale = await store.get<string>('locale');
   const liquidGlassEnabled = await store.get<boolean>('liquidGlassEnabled');
-  const allowUnverifiedPluginDownloads = await store.get<boolean>('allowUnverifiedPluginDownloads');
+  const allowUnverifiedPluginDownloads = await tauriInvoke<boolean>(
+    'get_allow_unverified_plugin_downloads',
+  );
   const updateChannel = await store.get<unknown>('updateChannel');
   return {
     theme: theme ?? undefined,
@@ -74,8 +87,18 @@ export async function getAppSettings(): Promise<AppSettings> {
  * @param settings - Partial AppSettings to save
  */
 export async function saveAppSettings(settings: Partial<AppSettings>): Promise<void> {
+  const { allowUnverifiedPluginDownloads, ...rendererSettings } = settings;
+  if (allowUnverifiedPluginDownloads !== undefined) {
+    await tauriInvoke('set_allow_unverified_plugin_downloads', {
+      enabled: allowUnverifiedPluginDownloads,
+    });
+  }
+  if (Object.values(rendererSettings).every((value) => value === undefined)) {
+    return;
+  }
+
   const store = await load(STORE_NAME);
-  for (const [key, value] of Object.entries(settings)) {
+  for (const [key, value] of Object.entries(rendererSettings)) {
     if (value !== undefined) {
       await store.set(key, value);
     }

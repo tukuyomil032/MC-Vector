@@ -1,5 +1,7 @@
 mod commands;
 pub mod metric_history;
+mod plugin_catalog;
+mod plugin_installer;
 pub mod server_stdout;
 mod state;
 #[cfg(test)]
@@ -17,7 +19,6 @@ pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -66,6 +67,14 @@ pub fn run() {
                             failure.error
                         ));
                     }
+                    let plugin_failures =
+                        plugin_installer::recover_startup(&app_data_dir_for_registry, &registry);
+                    if let Some(failure) = plugin_failures
+                        .iter()
+                        .find(|failure| failure.server_id.is_none())
+                    {
+                        return Err(failure.error.clone());
+                    }
                     Ok::<_, String>(registry)
                 })?;
             let registry_result = registry_worker
@@ -110,6 +119,7 @@ pub fn run() {
             }
             Ok(())
         })
+        .manage(plugin_installer::PluginInstaller::default())
         .manage(commands::server::ServerManager::default())
         .manage(commands::server::CommandLimiter::default())
         .manage(state::operation_manager::ServerOperationManager::default())
@@ -146,8 +156,26 @@ pub fn run() {
             // ダウンロード
             commands::server_jar::prepare_server_jar_install,
             commands::server_jar::execute_server_jar_install,
-            commands::download::download_server_jar,
-            commands::download::download_plugin_artifact,
+            commands::download::get_allow_unverified_plugin_downloads,
+            commands::download::set_allow_unverified_plugin_downloads,
+            commands::plugin_installer::prepare_plugin_install,
+            commands::plugin_installer::execute_plugin_install,
+            commands::plugin_installer::toggle_installed_plugin,
+            commands::plugin_installer::uninstall_installed_plugin,
+            commands::plugin_catalog::search_plugin_modrinth,
+            commands::plugin_catalog::get_plugin_modrinth_versions,
+            commands::plugin_catalog::get_plugin_modrinth_compatible_version,
+            commands::plugin_catalog::get_plugin_modrinth_version,
+            commands::plugin_catalog::get_plugin_modrinth_identity,
+            commands::plugin_catalog::get_plugin_modrinth_body,
+            commands::plugin_catalog::get_plugin_modrinth_artifact,
+            commands::plugin_catalog::search_plugin_hangar,
+            commands::plugin_catalog::get_plugin_hangar_versions,
+            commands::plugin_catalog::resolve_plugin_hangar_download,
+            commands::plugin_catalog::check_plugin_hangar_compatibility,
+            commands::plugin_catalog::get_plugin_hangar_body,
+            commands::plugin_catalog::search_plugin_spiget,
+            commands::plugin_catalog::get_plugin_spiget_body,
             // バックアップ
             commands::backup::create_managed_backup,
             commands::backup::restore_managed_backup,

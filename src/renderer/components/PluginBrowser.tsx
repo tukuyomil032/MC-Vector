@@ -24,28 +24,30 @@ import remarkGfm from 'remark-gfm';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
-import { deleteItem, listFiles, moveItem } from '../../lib/file-commands';
+import { listFiles } from '../../lib/file-commands';
 import {
   type HangarProject,
   type ModrinthProject,
-  type ModrinthProjectIdentity,
-  type PluginInstallTarget,
+  type PluginCompatibility,
   type SpigetResource,
   checkHangarCompatibility,
   getCompatibleModrinthVersion,
   getHangarProjectBody,
   getModrinthProjectBody,
-  getModrinthProjectIdentity,
-  getModrinthVersionById,
   getSpigotResourceBody,
-  installHangarProject,
-  installModrinthProject,
-  installSpigotProject,
   resolveHangarDownload,
   searchHangar,
   searchModrinth,
   searchSpigot,
 } from '../../lib/plugin-commands';
+import {
+  executePluginInstall,
+  onPluginInstallProgress,
+  preparePluginInstall,
+  toggleInstalledPlugin,
+  uninstallInstalledPlugin,
+  type PluginProjectRef,
+} from '../../lib/plugin-installer-commands';
 import {
   type PluginInstallFailureCode,
   classifyPluginInstallFailure,
@@ -58,7 +60,6 @@ import {
 } from '../shared/plugin-install-policy';
 import { useAppFeedback } from './AppFeedbackProvider';
 import InlineError from './InlineError';
-import { createPluginInstallTarget } from './plugin-install-target';
 import { NativeSelect } from './ui/Field';
 
 interface Props {
@@ -78,6 +79,8 @@ interface ProjectItem {
   platform: 'Modrinth' | 'Hangar' | 'Spigot';
   slug?: string;
   source_obj: Record<string, unknown>;
+  compatibility?: PluginCompatibility;
+  supportedVersions?: string[];
 }
 
 interface PlatformOption {
@@ -92,7 +95,7 @@ interface PlatformOption {
 const LIMIT = 25;
 const ASYNC_CHECK_CONCURRENCY = 4;
 
-type CompatibilityStatus = 'checking' | 'compatible' | 'incompatible' | 'unknown';
+type CompatibilityStatus = 'checking' | PluginCompatibility;
 type UpdateStatus = 'checking' | 'update-available' | 'up-to-date' | 'unknown';
 type SortMode = 'relevance' | 'downloads' | 'name' | 'compatibility';
 type BrowserSection = 'browse' | 'installed';
@@ -100,19 +103,6 @@ type BrowserSection = 'browse' | 'installed';
 type CompatibilityDetail = {
   supportedVersions: string[];
 };
-
-interface DependencyIdentity {
-  projectId: string;
-  slug: string;
-  title: string;
-}
-
-interface RequiredDependencyPlan {
-  projectId: string;
-  versionId: string | null;
-  fileName: string | null;
-  identity: DependencyIdentity;
-}
 
 type DetailTab = 'info' | 'readme';
 
@@ -127,18 +117,6 @@ interface InstalledPluginEntry {
   minecraftVersions: string[];
   sourceItem: ProjectItem | null;
   actionItem: ProjectItem;
-}
-
-type InstalledFileResolution =
-  | 'exact'
-  | 'case-insensitive'
-  | 'counterpart-exact'
-  | 'counterpart-case-insensitive'
-  | 'normalized-unique';
-
-interface InstalledFileMatch {
-  fileName: string;
-  resolution: InstalledFileResolution;
 }
 
 const MINECRAFT_VERSION_REGEX = /\b1\.\d+(?:\.\d+)?\b/g;
@@ -160,55 +138,6 @@ function toSlug(value: string): string {
     .replace(/-{2,}/g, '-')
     .replace(/^-+|-+$/g, '');
   return normalized || 'plugin';
-}
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
-
-function isPathMissingError(error: unknown): boolean {
-  const message = toErrorMessage(error).toLowerCase();
-  return (
-    message.includes('not found') ||
-    message.includes('no such file') ||
-    message.includes('does not exist')
-  );
-}
-
-function isAlreadyExistsError(error: unknown): boolean {
-  const message = toErrorMessage(error).toLowerCase();
-  return (
-    message.includes('already exists') ||
-    message.includes('file exists') ||
-    message.includes('os error 17') ||
-    message.includes('cannot create a file when that file already exists')
-  );
-}
-
-function normalizeServerVersion(version: string): string {
-  const trimmed = version.trim();
-  const parts = trimmed.split('.');
-  return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : trimmed;
-}
-
-function isCompatibleVersion(availableVersions: string[], serverVersion: string): boolean {
-  if (!serverVersion.trim()) {
-    return true;
-  }
-  if (availableVersions.length === 0) {
-    return false;
-  }
-
-  const normalizedServer = serverVersion.trim();
-  const normalizedMajorMinor = normalizeServerVersion(normalizedServer);
-
-  return availableVersions.some((candidate) => {
-    const value = candidate.trim();
-    return value === normalizedServer || normalizeServerVersion(value) === normalizedMajorMinor;
-  });
 }
 
 function extractVersionHints(text: string): string[] {
@@ -244,21 +173,6 @@ function normalizeInstalledPluginFileName(fileName: string): string {
   return fileName.toLowerCase().replace(/\.disabled$/i, '');
 }
 
-function togglePluginFileName(fileName: string): string {
-  return isDisabledPluginFile(fileName)
-    ? fileName.replace(/\.disabled$/i, '')
-    : `${fileName}.disabled`;
-}
-
-function toListedPluginFileName(value: string): string {
-  const normalized = value.replace(/\\/g, '/').trim();
-  if (!normalized) {
-    return '';
-  }
-  const segments = normalized.split('/').filter(Boolean);
-  return segments.length > 0 ? segments[segments.length - 1] : normalized;
-}
-
 function collectPluginFileNames(entries: Array<{ name: string; isDirectory: boolean }>): string[] {
   return entries
     .filter((entry) => {
@@ -268,73 +182,8 @@ function collectPluginFileNames(entries: Array<{ name: string; isDirectory: bool
       const lower = entry.name.toLowerCase();
       return lower.endsWith('.jar') || lower.endsWith('.jar.disabled');
     })
-    .map((entry) => toListedPluginFileName(entry.name))
-    .filter((name): name is string => Boolean(name))
+    .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right));
-}
-
-function resolveInstalledFileMatch(
-  files: string[],
-  requestedFile: string,
-  options?: { allowCounterpart?: boolean },
-): InstalledFileMatch | null {
-  const requested = toListedPluginFileName(requestedFile);
-  if (!requested) {
-    return null;
-  }
-
-  const findCaseInsensitiveMatches = (targetName: string): string[] => {
-    const normalizedTarget = targetName.toLowerCase();
-    return files.filter((candidate) => candidate.toLowerCase() === normalizedTarget);
-  };
-
-  if (files.includes(requested)) {
-    return { fileName: requested, resolution: 'exact' };
-  }
-
-  const caseInsensitiveMatches = findCaseInsensitiveMatches(requested);
-  if (caseInsensitiveMatches.length === 1) {
-    return { fileName: caseInsensitiveMatches[0], resolution: 'case-insensitive' };
-  }
-  if (caseInsensitiveMatches.length > 1) {
-    throw new Error(
-      `Ambiguous case-insensitive installed file matches: ${caseInsensitiveMatches.join(', ')}`,
-    );
-  }
-
-  const allowCounterpart = options?.allowCounterpart ?? true;
-  if (allowCounterpart) {
-    const counterpartFile = togglePluginFileName(requested);
-    if (files.includes(counterpartFile)) {
-      return { fileName: counterpartFile, resolution: 'counterpart-exact' };
-    }
-
-    const caseInsensitiveCounterpartMatches = findCaseInsensitiveMatches(counterpartFile);
-    if (caseInsensitiveCounterpartMatches.length === 1) {
-      return {
-        fileName: caseInsensitiveCounterpartMatches[0],
-        resolution: 'counterpart-case-insensitive',
-      };
-    }
-    if (caseInsensitiveCounterpartMatches.length > 1) {
-      throw new Error(
-        `Ambiguous case-insensitive counterpart matches: ${caseInsensitiveCounterpartMatches.join(', ')}`,
-      );
-    }
-  }
-
-  const normalizedMatches = files.filter(
-    (candidate) =>
-      normalizeInstalledPluginFileName(candidate) === normalizeInstalledPluginFileName(requested),
-  );
-  if (normalizedMatches.length === 1) {
-    return { fileName: normalizedMatches[0], resolution: 'normalized-unique' };
-  }
-  if (normalizedMatches.length > 1) {
-    throw new Error(`Ambiguous normalized installed file matches: ${normalizedMatches.join(', ')}`);
-  }
-
-  return null;
 }
 
 function stripInstalledPluginFile(fileName: string): string {
@@ -420,6 +269,8 @@ function mapModrinthProject(hit: ModrinthProject): ProjectItem | null {
     downloads: hit.downloads || undefined,
     slug: hit.slug || hit.project_id || '',
     platform: 'Modrinth',
+    compatibility: hit.compatibility,
+    supportedVersions: hit.supportedVersions,
     source_obj: {
       ...hit,
     },
@@ -453,6 +304,8 @@ function mapSpigotResource(resource: SpigetResource): ProjectItem {
     downloads: resource.downloads,
     slug: toSlug(resource.name),
     platform: 'Spigot',
+    compatibility: resource.compatibility,
+    supportedVersions: resource.supportedVersions,
     source_obj: {
       ...resource,
     },
@@ -552,6 +405,9 @@ export default function PluginBrowser({ server }: Props) {
   const [installFailureByItemId, setInstallFailureByItemId] = useState<
     Record<string, PluginInstallFailureCode>
   >({});
+  const [installProgressByItemId, setInstallProgressByItemId] = useState<Record<string, number>>(
+    {},
+  );
   const [detailItem, setDetailItem] = useState<ProjectItem | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('info');
   const [detailReadme, setDetailReadme] = useState<string | null>(null);
@@ -570,7 +426,6 @@ export default function PluginBrowser({ server }: Props) {
     {},
   );
   const [latestFileByItemId, setLatestFileByItemId] = useState<Record<string, string>>({});
-  const dependencyIdentityCacheRef = useRef<Record<string, DependencyIdentity>>({});
   const detailReadmeCacheRef = useRef<Record<string, string | null>>({});
   const installedMetadataLookupStateRef = useRef<Record<string, 'resolved' | 'miss'>>({});
   const detailRequestIdRef = useRef(0);
@@ -701,8 +556,15 @@ export default function PluginBrowser({ server }: Props) {
       const offset = page * LIMIT;
       if (platform === 'Modrinth') {
         const searchType = isModServer ? 'mod' : 'plugin';
-        const facets = `[["project_type:${searchType}"],["versions:${server.version}"]]`;
-        const result = await searchModrinth(committedQuery, facets, offset, LIMIT, signal);
+        const facets = `[["project_type:${searchType}"]]`;
+        const result = await searchModrinth(
+          committedQuery,
+          facets,
+          offset,
+          LIMIT,
+          signal,
+          server.version,
+        );
         const items = result.hits
           .map(mapModrinthProject)
           .filter((item): item is ProjectItem => item !== null);
@@ -717,7 +579,7 @@ export default function PluginBrowser({ server }: Props) {
         const items = data.result.map(mapHangarProject);
         return { items, hasNextPage: items.length === LIMIT, totalPages: null as number | null };
       }
-      const resources = await searchSpigot(committedQuery, page + 1, LIMIT, signal);
+      const resources = await searchSpigot(committedQuery, page + 1, LIMIT, signal, server.version);
       const items = resources.map(mapSpigotResource);
       return { items, hasNextPage: items.length === LIMIT, totalPages: null as number | null };
     },
@@ -727,12 +589,14 @@ export default function PluginBrowser({ server }: Props) {
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 1_000),
     refetchOnWindowFocus: false,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[4] === server.id && previousQuery.queryKey[5] === server.path
+      previousQuery?.queryKey[4] === server.id &&
+      previousQuery.queryKey[5] === server.path &&
+      previousQuery.queryKey[6] === server.version
         ? previous
         : undefined,
   });
 
-  const searchIdentity = `${server.id}\u0000${server.path}\u0000${platform}`;
+  const searchIdentity = `${server.id}\u0000${server.path}\u0000${server.version}\u0000${platform}`;
   const lastSuccessfulSearchRef = useRef<{
     identity: string;
     data: NonNullable<typeof searchQuery.data>;
@@ -773,22 +637,15 @@ export default function PluginBrowser({ server }: Props) {
     })),
   });
 
-  // Compatibility calculation intentionally uses render-local helpers and query results.
+  // Provider results own eligibility; React only presents the returned status.
   const { compatibilityByItemId, compatibilityDetailByItemId } = useMemo(() => {
     const byId: Record<string, CompatibilityStatus> = {};
     const detailById: Record<string, CompatibilityDetail> = {};
 
     for (const item of results) {
-      if (item.platform === 'Modrinth') {
-        byId[item.id] = 'compatible';
-        detailById[item.id] = { supportedVersions: [server.version] };
-      } else if (item.platform === 'Spigot') {
-        byId[item.id] = inferSpigotCompatibility(item);
-        detailById[item.id] = {
-          supportedVersions: extractVersionHints(
-            `${item.description} ${typeof item.source_obj.tag === 'string' ? item.source_obj.tag : ''}`,
-          ),
-        };
+      if (item.platform === 'Modrinth' || item.platform === 'Spigot') {
+        byId[item.id] = item.compatibility ?? 'unknown';
+        detailById[item.id] = { supportedVersions: item.supportedVersions ?? [] };
       }
     }
 
@@ -802,12 +659,7 @@ export default function PluginBrowser({ server }: Props) {
         detailById[item.id] = { supportedVersions: [] };
       } else {
         const compat = q.data;
-        byId[item.id] =
-          compat.supportedVersions.length === 0
-            ? 'unknown'
-            : compat.compatible
-              ? 'compatible'
-              : 'incompatible';
+        byId[item.id] = compat.compatibility;
         detailById[item.id] = { supportedVersions: compat.supportedVersions };
       }
     });
@@ -938,41 +790,6 @@ export default function PluginBrowser({ server }: Props) {
       .replace(/\.jar$/g, '')
       .replace(/\.[^.]+$/, '')
       .replace(/[^a-z0-9]/g, '');
-
-  const isCandidateInstalled = (candidate: string): boolean => {
-    const normalizedCandidate = normalize(candidate);
-    const plainCandidate = String(candidate ?? '')
-      .trim()
-      .toLowerCase();
-    if (!normalizedCandidate) {
-      return false;
-    }
-
-    return installedFiles.some((file) => {
-      const normalizedFile = normalize(file);
-      if (normalizedFile === normalizedCandidate) {
-        return true;
-      }
-
-      if (!plainCandidate) {
-        return false;
-      }
-
-      const fileBase = file
-        .toLowerCase()
-        .replace(/\.disabled$/i, '')
-        .replace(/\.[^.]+$/, '');
-      if (fileBase === plainCandidate) {
-        return true;
-      }
-
-      if (!fileBase.startsWith(plainCandidate)) {
-        return false;
-      }
-
-      return isLikelyVersionSuffix(fileBase.slice(plainCandidate.length));
-    });
-  };
 
   const getItemCandidates = (item: ProjectItem) => {
     const normalizedCandidates = [
@@ -1429,41 +1246,9 @@ export default function PluginBrowser({ server }: Props) {
     knownItemsByInstalledFile,
   ]);
 
-  const resolveDependencyIdentity = async (projectId: string): Promise<DependencyIdentity> => {
-    const cached = dependencyIdentityCacheRef.current[projectId];
-    if (cached) {
-      return cached;
-    }
-
-    let identity: ModrinthProjectIdentity | null = null;
-    try {
-      identity = await getModrinthProjectIdentity(projectId);
-    } catch (error) {
-      logError('Failed to resolve Modrinth dependency identity', error, { projectId });
-    }
-
-    const resolved: DependencyIdentity = {
-      projectId,
-      slug: identity?.slug || projectId,
-      title: identity?.title || identity?.slug || projectId,
-    };
-
-    dependencyIdentityCacheRef.current[projectId] = resolved;
-    return resolved;
-  };
-
-  function inferSpigotCompatibility(item: ProjectItem): CompatibilityStatus {
-    const tag = typeof item.source_obj.tag === 'string' ? item.source_obj.tag : '';
-    const hints = extractVersionHints(`${item.description} ${tag}`);
-    if (hints.length === 0) {
-      return 'unknown';
-    }
-
-    return isCompatibleVersion(hints, server.version) ? 'compatible' : 'incompatible';
-  }
-
-  const openIncompatiblePluginDialog = (item: ProjectItem) => {
-    const supportedVersions = compatibilityDetailByItemId[item.id]?.supportedVersions ?? [];
+  const openIncompatiblePluginDialog = (item: ProjectItem, previewVersions?: string[]) => {
+    const supportedVersions =
+      previewVersions ?? compatibilityDetailByItemId[item.id]?.supportedVersions ?? [];
     void openDialog({
       severity: 'warning',
       title: t('plugins.browser.incompatibleInstallTitle'),
@@ -1554,340 +1339,128 @@ export default function PluginBrowser({ server }: Props) {
       return;
     }
 
-    const pluginDir = `${server.path}/${folderName}`;
-    const preserveDisabledState = Boolean(installedFile && isDisabledPluginFile(installedFile));
-    let installedTarget: PluginInstallTarget | null = null;
-    let existingDeleted = false;
-
-    const removePreviousInstalledFileIfNeeded = async (newFileName: string): Promise<boolean> => {
-      if (!installedFile || existingDeleted) {
-        return true;
-      }
-
-      const requestedInstalledFile = toListedPluginFileName(installedFile);
-      if (!requestedInstalledFile) {
-        existingDeleted = true;
-        return true;
-      }
-
-      // The typed plugin command owns the final destination and has already
-      // completed successfully here. Keep the existing file when the target
-      // is the same path so overwrite/update can be handled by Rust.
-      if (requestedInstalledFile.toLowerCase() === newFileName.toLowerCase()) {
-        existingDeleted = true;
-        return true;
-      }
-
-      const directTargetPath = `${pluginDir}/${requestedInstalledFile}`;
-      try {
-        await deleteItem(directTargetPath);
-        existingDeleted = true;
-        return true;
-      } catch (error) {
-        if (!isPathMissingError(error)) {
-          console.error('Direct delete of installed file failed before fallback resolution', {
-            requestedInstalledFile,
-            pluginDir,
-            error: toErrorMessage(error),
-          });
-        }
-      }
-
-      try {
-        const entries = await listFiles(pluginDir);
-        const files = collectPluginFileNames(entries);
-        const resolvedInstalled = resolveInstalledFileMatch(files, installedFile);
-        if (!resolvedInstalled) {
-          existingDeleted = true;
-          return true;
-        }
-
-        const targetPath = `${pluginDir}/${resolvedInstalled.fileName}`;
-        await deleteItem(targetPath);
-        existingDeleted = true;
-        return true;
-      } catch (error) {
-        console.error('Failed to delete previous installed file after download', {
-          requestedInstalledFile: installedFile,
-          pluginDir,
-          error: toErrorMessage(error),
-        });
-        handleInstallFailure(item, new Error('Plugin destination could not be cleaned up'));
-        return false;
-      }
-    };
-
     setInstallFailureByItemId((previous) => {
       const next = { ...previous };
       delete next[item.id];
       return next;
     });
     setInstallingId(item.id);
+    setInstallProgressByItemId((previous) => ({ ...previous, [item.id]: 0 }));
     try {
+      let project: PluginProjectRef;
       if (item.platform === 'Modrinth') {
-        const loader = server.software.toLowerCase();
-        const resolvedVersion = await getCompatibleModrinthVersion({
-          projectId: item.id,
-          loader,
-          minecraftVersion: server.version,
-        });
-
-        if (!resolvedVersion) {
-          void openDialog({
-            severity: 'warning',
-            title: t('plugins.browser.noCompatibleVersion'),
-            description: t('plugins.browser.compatibilityUnknown', { version: server.version }),
-          });
-          return;
-        }
-
-        const requiredDependencies = Array.from(
-          new Map(
-            resolvedVersion.dependencies
-              .filter(
-                (dependency) =>
-                  dependency.dependencyType.toLowerCase() === 'required' &&
-                  typeof dependency.projectId === 'string',
-              )
-              .map((dependency) => {
-                const dependencyProjectId = dependency.projectId as string;
-                return [
-                  `${dependencyProjectId}:${dependency.versionId ?? ''}`,
-                  dependency,
-                ] as const;
-              }),
-          ).values(),
-        );
-
-        if (requiredDependencies.length > 0) {
-          const requiredProjects = await Promise.all(
-            requiredDependencies.map((dependency) =>
-              resolveDependencyIdentity(dependency.projectId as string),
-            ),
-          );
-          const projectIdentityById = Object.fromEntries(
-            requiredProjects.map((dependency) => [dependency.projectId, dependency]),
-          );
-
-          const missingDependencies: RequiredDependencyPlan[] = requiredDependencies
-            .map((dependency) => {
-              const dependencyProjectId = dependency.projectId as string;
-              const identity = projectIdentityById[dependencyProjectId] ?? {
-                projectId: dependencyProjectId,
-                slug: dependencyProjectId,
-                title: dependencyProjectId,
-              };
-              return {
-                projectId: dependencyProjectId,
-                versionId: dependency.versionId,
-                fileName: dependency.fileName,
-                identity,
-              };
-            })
-            .filter(
-              (dependency) =>
-                !isCandidateInstalled(dependency.identity.slug) &&
-                !isCandidateInstalled(dependency.identity.title) &&
-                !isCandidateInstalled(dependency.projectId),
-            );
-
-          if (missingDependencies.length > 0) {
-            const previewTitles = missingDependencies
-              .slice(0, 3)
-              .map((dependency) => dependency.identity.title);
-            const preview = previewTitles.join(', ');
-            const suffix = missingDependencies.length > 3 ? ', ...' : '';
-            const remainingCount = Math.max(missingDependencies.length - previewTitles.length, 0);
-            const previewList = previewTitles.map((title) => `- ${title}`).join('\n');
-            const remainingLine =
-              remainingCount > 0 ? `\n- ... ${remainingCount} more dependencies` : '';
-            const dependencyPrompt = tSafe(
-              'plugins.browser.dependencyMissing',
-              `${missingDependencies.length} missing dependencies found.\n\nDependencies:\n${previewList}${remainingLine}\n\nInstall them first?`,
-              {
-                count: missingDependencies.length,
-                preview,
-                suffix,
-                previewList,
-                remainingCount,
-                remainingLine,
-              },
-            );
-
-            const shouldInstallDependencies = await ask(dependencyPrompt, {
-              title: tSafe('plugins.browser.dependencyCheck', 'Dependency Check'),
-              kind: 'warning',
-            });
-
-            if (shouldInstallDependencies) {
-              let installedDependencyCount = 0;
-              for (const dependency of missingDependencies) {
-                try {
-                  let dependencyVersion = null;
-
-                  if (dependency.versionId) {
-                    dependencyVersion = await getModrinthVersionById(dependency.versionId);
-                  }
-
-                  if (!dependencyVersion) {
-                    dependencyVersion = await getCompatibleModrinthVersion({
-                      projectId: dependency.projectId,
-                      loader,
-                      minecraftVersion: server.version,
-                    });
-                  }
-
-                  if (!dependencyVersion) {
-                    void openDialog({
-                      severity: 'warning',
-                      title: t('plugins.browser.noCompatibleVersion'),
-                      description: tSafe(
-                        'plugins.browser.dependencyVersionNotFound',
-                        `No compatible version found for dependency ${dependency.identity.title}`,
-                        { title: dependency.identity.title },
-                      ),
-                    });
-                    continue;
-                  }
-
-                  const dependencyFileName = dependency.fileName || dependencyVersion.fileName;
-                  await installModrinthProject(
-                    dependencyVersion.id,
-                    dependencyFileName,
-                    createPluginInstallTarget(server.id, folderName, dependencyVersion.fileName),
-                  );
-                  installedDependencyCount += 1;
-                } catch (error) {
-                  logError('Failed to install dependency plugin', error, {
-                    dependencyTitle: dependency.identity.title,
-                    dependencyProjectId: dependency.identity.projectId,
-                  });
-                  void openDialog({
-                    severity: 'error',
-                    title: t('plugins.browser.installError'),
-                    description: tSafe(
-                      'plugins.browser.dependencyInstallFailed',
-                      `Failed to install dependency ${dependency.identity.title}`,
-                      { title: dependency.identity.title },
-                    ),
-                  });
-                }
-              }
-
-              if (installedDependencyCount > 0) {
-                showToast(
-                  tSafe(
-                    'plugins.browser.dependencyInstallSuccess',
-                    `Installed ${installedDependencyCount} dependencies`,
-                    {
-                      count: installedDependencyCount,
-                    },
-                  ),
-                  'success',
-                );
-                await refreshInstalled();
-              }
-
-              // Check if all required dependencies were installed
-              if (installedDependencyCount < missingDependencies.length) {
-                void openDialog({
-                  severity: 'warning',
-                  title: t('plugins.browser.installError'),
-                  description: tSafe(
-                    'plugins.browser.dependencyInstallIncomplete',
-                    'Not all required dependencies were installed. Main plugin installation aborted.',
-                  ),
-                });
-                return;
-              }
-            } else {
-              // User declined to install dependencies
-              void openDialog({
-                severity: 'warning',
-                title: t('plugins.browser.installError'),
-                description: tSafe(
-                  'plugins.browser.dependencyCheckOnly',
-                  'Required dependencies not installed. Main plugin installation aborted.',
-                ),
-              });
-              return;
-            }
-          }
-        }
-
-        const target = createPluginInstallTarget(server.id, folderName, resolvedVersion.fileName);
-        installedTarget = target;
-        await installModrinthProject(resolvedVersion.id, resolvedVersion.fileName, target);
-
-        if (!(await removePreviousInstalledFileIfNeeded(target.fileName))) {
-          return;
-        }
+        project = { provider: 'modrinth', projectId: item.id };
       } else if (item.platform === 'Hangar') {
-        const owner = item.author;
-        const slug = item.slug || item.title;
-        const resolved = await resolveHangarDownload({
-          owner,
-          slug,
-          software: server.software || 'Paper',
-          minecraftVersion: server.version || '',
-        });
-
-        if (!resolved) {
-          void openDialog({
-            severity: 'warning',
-            title: t('plugins.browser.noCompatibleVersion'),
-            description: t('plugins.browser.compatibilityUnknown', { version: server.version }),
-          });
-          return;
-        }
-
-        if (!resolved.downloadUrl) {
-          const externalUrl = resolved.externalUrl || `https://hangar.papermc.io/${owner}/${slug}`;
-          await openExternal(externalUrl);
-          return;
-        }
-
-        const target = createPluginInstallTarget(server.id, folderName, resolved.fileName);
-        installedTarget = target;
-        await installHangarProject(resolved.downloadUrl, target, resolved.checksum);
-
-        if (!(await removePreviousInstalledFileIfNeeded(target.fileName))) {
-          return;
-        }
+        project = {
+          provider: 'hangar',
+          owner: item.author,
+          slug: item.slug || item.title,
+        };
       } else if (item.platform === 'Spigot') {
         const resourceId = Number(item.id);
-        if (!Number.isFinite(resourceId)) {
+        if (!Number.isSafeInteger(resourceId) || resourceId <= 0) {
           handleInstallFailure(item, new Error('Invalid plugin source URL'));
           return;
         }
-
-        const shouldOpenBrowser =
-          item.source_obj.external === true || item.source_obj.premium === true;
-        if (shouldOpenBrowser) {
-          await openExternal(`https://www.spigotmc.org/resources/${resourceId}/`);
-          return;
-        }
-
-        const versionId =
-          typeof item.source_obj.latestVersionId === 'number'
-            ? item.source_obj.latestVersionId
-            : undefined;
-        const target = createPluginInstallTarget(
-          server.id,
-          folderName,
-          `${toSlug(item.title)}-${resourceId}.jar`,
-        );
-        installedTarget = target;
-        await installSpigotProject(resourceId, target, versionId);
-
-        if (!(await removePreviousInstalledFileIfNeeded(target.fileName))) {
-          return;
-        }
+        project = { provider: 'spiget', resourceId };
+      } else {
+        throw new Error('Unsupported plugin provider');
       }
 
-      if (preserveDisabledState && installedTarget) {
-        const installedPath = `${pluginDir}/${installedTarget.fileName}`;
-        await moveItem(installedPath, `${installedPath}.disabled`);
+      const preview = await preparePluginInstall(server.id, project, installedFile);
+      if (preview.externalUrl) {
+        await openExternal(preview.externalUrl);
+        return;
+      }
+      if (!preview.token || preview.artifacts.length === 0) {
+        throw new Error('Plugin installation preview is incomplete');
+      }
+
+      const incompatibleArtifact = preview.artifacts.find(
+        (artifact) => artifact.compatibility === 'incompatible',
+      );
+      if (incompatibleArtifact) {
+        openIncompatiblePluginDialog(item, incompatibleArtifact.supportedVersions);
+        return;
+      }
+
+      const confirmedDependencies = new Set(preview.missingDependencyIds);
+      const installArtifacts = preview.artifacts.filter(
+        (artifact) => !artifact.dependency || confirmedDependencies.has(artifact.id),
+      );
+      const unverifiedWarning = preview.requiresUnverifiedDownloads
+        ? tSafe(
+            'plugins.browser.installPlanUnverifiedWarning',
+            'At least one artifact has no provider checksum. The current Rust policy setting must allow this download.',
+          )
+        : '';
+      const unknownCompatibilityWarning = installArtifacts.some(
+        (artifact) => artifact.compatibility === 'unknown',
+      )
+        ? tSafe(
+            'plugins.browser.installPlanUnknownCompatibility',
+            'Compatibility is unknown for at least one artifact.',
+          )
+        : '';
+      const dependencyNote = preview.missingDependencyIds.length
+        ? tSafe(
+            'plugins.browser.installPlanDependencies',
+            '\nRequired dependencies will also be installed: {{names}}',
+            {
+              names: installArtifacts
+                .filter((artifact) => artifact.dependency)
+                .map((artifact) => artifact.title)
+                .join(', '),
+            },
+          )
+        : '';
+      const artifactList = installArtifacts
+        .map((artifact) => `• ${artifact.title} (${artifact.version}) → ${artifact.fileName}`)
+        .join('\n');
+      const prompt = tSafe(
+        'plugins.browser.installPlanConfirmDescription',
+        'Install these files into {{directory}}?\n{{artifacts}}\n{{dependencyNote}}\n{{warnings}}',
+        {
+          count: installArtifacts.length,
+          directory: preview.targetDirectory,
+          artifacts: artifactList,
+          dependencyNote,
+          warnings: [unknownCompatibilityWarning, unverifiedWarning].filter(Boolean).join('\n'),
+        },
+      );
+      let accepted = false;
+      await openDialog({
+        severity: preview.requiresUnverifiedDownloads ? 'warning' : 'info',
+        title: tSafe('plugins.browser.installPlanConfirmTitle', 'Confirm plugin installation'),
+        description: prompt,
+        primaryAction: {
+          label: tSafe('plugins.browser.installPlanConfirmButton', 'Install'),
+          onSelect: () => {
+            accepted = true;
+          },
+        },
+        secondaryAction: { label: t('common.cancel') },
+      });
+      if (!accepted) {
+        return;
+      }
+
+      const stopListening = await onPluginInstallProgress(
+        preview.token,
+        ({ downloaded, total }) => {
+          if (total <= 0) {
+            return;
+          }
+          setInstallProgressByItemId((previous) => ({
+            ...previous,
+            [item.id]: Math.min(100, Math.floor((downloaded / total) * 100)),
+          }));
+        },
+      );
+      try {
+        await executePluginInstall(preview.token, preview.missingDependencyIds);
+      } finally {
+        stopListening();
       }
 
       const successLabel =
@@ -1907,6 +1480,11 @@ export default function PluginBrowser({ server }: Props) {
     } finally {
       await refreshInstalled();
       setInstallingId(null);
+      setInstallProgressByItemId((previous) => {
+        const next = { ...previous };
+        delete next[item.id];
+        return next;
+      });
     }
   };
 
@@ -1948,145 +1526,19 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   const handleToggleInstalled = async (item: ProjectItem, installedFile: string) => {
-    const pluginDir = `${server.path}/${folderName}`;
-    let stage:
-      | 'direct-rename'
-      | 'direct-conflict'
-      | 'direct-overwrite-target'
-      | 'direct-retry-rename'
-      | 'list-files'
-      | 'resolve-source'
-      | 'resolve-target'
-      | 'overwrite-target'
-      | 'rename'
-      | 'retry-rename' = 'list-files';
-    let availableFiles: string[] = [];
-    let sourceResolution:
-      | 'exact'
-      | 'case-insensitive'
-      | 'counterpart-exact'
-      | 'counterpart-case-insensitive'
-      | 'normalized-unique'
-      | null = null;
-    let resolvedInstalledFile: string | null = null;
-    let nextFile: string | null = null;
-    let overwrittenTargetFile: string | null = null;
-    const notifyToggleSuccess = (sourceFileName: string) => {
+    setInstallingId(item.id);
+    try {
+      const nextFile = await toggleInstalledPlugin(server.id, installedFile);
       showToast(
-        isDisabledPluginFile(sourceFileName)
+        !isDisabledPluginFile(nextFile)
           ? t('plugins.browser.pluginEnabled', { title: item.title })
           : t('plugins.browser.pluginDisabled', { title: item.title }),
         'success',
       );
-    };
-
-    setInstallingId(item.id);
-    try {
-      const requestedInstalledFile = toListedPluginFileName(installedFile);
-      if (!requestedInstalledFile) {
-        throw new Error(`Installed file is empty for toggle: ${installedFile}`);
-      }
-
-      resolvedInstalledFile = requestedInstalledFile;
-      sourceResolution = 'exact';
-      nextFile = togglePluginFileName(requestedInstalledFile);
-      const directSourcePath = `${pluginDir}/${requestedInstalledFile}`;
-      const directTargetPath = `${pluginDir}/${nextFile}`;
-
-      stage = 'direct-rename';
-      try {
-        await moveItem(directSourcePath, directTargetPath);
-        notifyToggleSuccess(requestedInstalledFile);
-        return;
-      } catch (directError) {
-        if (isAlreadyExistsError(directError)) {
-          stage = 'direct-conflict';
-          throw new Error(
-            `Cannot toggle plugin: target file already exists: ${nextFile}. Please manually resolve the conflict.`,
-          );
-        }
-
-        if (!isPathMissingError(directError)) {
-          throw directError;
-        }
-      }
-
-      const entries = await listFiles(pluginDir);
-      const files = collectPluginFileNames(entries);
-      availableFiles = files;
-
-      stage = 'resolve-source';
-
-      const resolvedMatch = resolveInstalledFileMatch(files, installedFile);
-      if (!resolvedMatch) {
-        throw new Error(`Installed file not found for toggle: ${installedFile}`);
-      }
-      resolvedInstalledFile = resolvedMatch.fileName;
-      sourceResolution = resolvedMatch.resolution;
-
-      const resolvedNextFile = togglePluginFileName(resolvedInstalledFile);
-      if (!resolvedNextFile) {
-        throw new Error(`Failed to resolve next file for toggle: ${resolvedInstalledFile}`);
-      }
-      nextFile = resolvedNextFile;
-      const sourcePath = `${pluginDir}/${resolvedInstalledFile}`;
-      const targetPath = `${pluginDir}/${resolvedNextFile}`;
-
-      stage = 'resolve-target';
-
-      const targetMatches = files.filter(
-        (candidate) =>
-          candidate !== resolvedInstalledFile &&
-          candidate.toLowerCase() === resolvedNextFile.toLowerCase(),
-      );
-      if (targetMatches.length > 1) {
-        throw new Error(
-          `Ambiguous target matches while preparing overwrite policy: ${targetMatches.join(', ')}`,
-        );
-      }
-
-      const existingTargetFile = targetMatches[0] ?? null;
-      if (existingTargetFile) {
-        stage = 'overwrite-target';
-        await deleteItem(`${pluginDir}/${existingTargetFile}`);
-        overwrittenTargetFile = existingTargetFile;
-      }
-
-      stage = 'rename';
-      try {
-        await moveItem(sourcePath, targetPath);
-      } catch (error) {
-        if (!isAlreadyExistsError(error)) {
-          throw error;
-        }
-
-        stage = 'retry-rename';
-        try {
-          await deleteItem(targetPath);
-          overwrittenTargetFile = overwrittenTargetFile ?? nextFile;
-        } catch (deleteError) {
-          if (!isPathMissingError(deleteError)) {
-            throw deleteError;
-          }
-        }
-        await moveItem(sourcePath, targetPath);
-      }
-
-      notifyToggleSuccess(resolvedInstalledFile);
     } catch (error) {
-      console.error('Failed to toggle plugin state', {
-        stage,
+      logError('Failed to toggle plugin state', error, {
         itemId: item.id,
-        itemTitle: item.title,
-        requestedInstalledFile: installedFile,
-        resolvedInstalledFile,
-        sourceResolution,
-        nextFile,
-        overwrittenTargetFile,
-        folderName,
-        pluginDir,
-        availableFiles,
-        error: toErrorMessage(error),
+        fileName: installedFile,
       });
       void openDialog({
         severity: 'error',
@@ -2100,7 +1552,6 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   const handleUninstallInstalled = async (entry: InstalledPluginEntry) => {
-    const pluginDir = `${server.path}/${folderName}`;
     setBusyInstalledFile(entry.normalizedFileName);
     try {
       const confirmed = await ask(
@@ -2118,38 +1569,11 @@ export default function PluginBrowser({ server }: Props) {
         return;
       }
 
-      const requestedInstalledFile = toListedPluginFileName(entry.fileName);
-      if (!requestedInstalledFile) {
-        throw new Error(`Installed file is empty for uninstall: ${entry.fileName}`);
-      }
-
-      const directTargetPath = `${pluginDir}/${requestedInstalledFile}`;
-      try {
-        await deleteItem(directTargetPath);
-        showToast(t('plugins.browser.uninstallSuccess', { title: entry.displayName }), 'success');
-        return;
-      } catch (error) {
-        if (!isPathMissingError(error)) {
-          throw error;
-        }
-      }
-
-      const entries = await listFiles(pluginDir);
-      const files = collectPluginFileNames(entries);
-      const resolved = resolveInstalledFileMatch(files, entry.fileName);
-      if (!resolved) {
-        throw new Error(`Installed file not found for uninstall: ${entry.fileName}`);
-      }
-
-      const targetPath = `${pluginDir}/${resolved.fileName}`;
-      await deleteItem(targetPath);
+      await uninstallInstalledPlugin(server.id, entry.fileName);
       showToast(t('plugins.browser.uninstallSuccess', { title: entry.displayName }), 'success');
     } catch (error) {
-      console.error('Failed to uninstall installed plugin', {
-        requestedInstalledFile: entry.fileName,
-        normalizedInstalledFile: entry.normalizedFileName,
-        pluginDir,
-        error: toErrorMessage(error),
+      logError('Failed to uninstall installed plugin', error, {
+        fileName: entry.fileName,
       });
       void openDialog({
         severity: 'error',
@@ -2196,13 +1620,23 @@ export default function PluginBrowser({ server }: Props) {
     }
   };
 
+  const installingLabel = (itemId: string): string => {
+    const progress = installProgressByItemId[itemId];
+    return progress === undefined
+      ? t('plugins.browser.installing')
+      : tSafe('plugins.browser.installingProgress', '{{progress}}% — {{label}}', {
+          progress,
+          label: t('plugins.browser.installing'),
+        });
+  };
+
   const actionLabel = (
     item: ProjectItem,
     installedState: 'none' | 'enabled' | 'disabled',
     updateStatus: UpdateStatus | null,
   ) => {
     if (installingId === item.id) {
-      return t('plugins.browser.installing');
+      return installingLabel(item.id);
     }
     const requiresBrowser =
       item.platform === 'Spigot' &&
@@ -2936,7 +2370,7 @@ export default function PluginBrowser({ server }: Props) {
                           disabled={isProcessing || !canReinstall}
                         >
                           {installingId === entry.actionItem.id
-                            ? t('plugins.browser.installing')
+                            ? installingLabel(entry.actionItem.id)
                             : t('plugins.browser.reinstall')}
                         </button>
                         <button

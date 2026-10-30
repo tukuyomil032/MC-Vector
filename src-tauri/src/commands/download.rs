@@ -4,30 +4,18 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
-use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
-use crate::state::operation_manager::{OperationKind, ServerOperationManager};
-
 const USER_AGENT: &str = "MC-Vector/2.0.64-beta.2 (https://github.com/tukuyomil032/MC-Vector)";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+const RESPONSE_HEADERS_TIMEOUT: Duration = Duration::from_secs(30);
 const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_ATTEMPTS: usize = 2;
-const MAX_EVENT_ID_LENGTH: usize = 128;
-const MAX_SERVER_ID_LENGTH: usize = 128;
+const MAX_REDIRECTS: usize = 5;
 const MAX_PLUGIN_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
-const MAX_SERVER_JAR_BYTES: u64 = 512 * 1024 * 1024;
-const SERVER_JAR_HOSTS: &[&str] = &[
-    "api.leafmc.one",
-    "api.papermc.io",
-    "fill-data.papermc.io",
-    "fill.papermc.io",
-    "meta.fabricmc.net",
-    "piston-data.mojang.com",
-];
 
 fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -42,24 +30,7 @@ fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     false
 }
 
-#[derive(serde::Serialize, Clone)]
-struct DownloadProgress {
-    downloaded: u64,
-    total: u64,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PluginArtifactRequest {
-    pub url: String,
-    pub server_id: String,
-    pub relative_path: String,
-    pub provider: String,
-    pub checksum: Option<ExpectedChecksum>,
-    pub event_id: String,
-}
-
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExpectedChecksum {
     pub algorithm: String,
     pub value: String,
@@ -235,7 +206,7 @@ fn validated_checksum(checksum: &ExpectedChecksum) -> Result<(ChecksumAlgorithm,
     Ok((algorithm, value))
 }
 
-fn required_sha256(checksum: Option<ExpectedChecksum>) -> Result<String, String> {
+pub(crate) fn required_sha256(checksum: Option<ExpectedChecksum>) -> Result<String, String> {
     let checksum = checksum
         .ok_or_else(|| "Verified artifact installation requires a SHA-256 checksum".to_string())?;
     if !checksum.algorithm.trim().eq_ignore_ascii_case("sha256") {
@@ -293,6 +264,17 @@ fn validate_https_url(url: &str, allowed_hosts: Option<&[&str]>) -> Result<Url, 
     Ok(parsed)
 }
 
+fn validate_download_redirect(
+    url: &Url,
+    allowed_hosts: Option<&[&str]>,
+    previous_count: usize,
+) -> Result<(), String> {
+    if previous_count >= MAX_REDIRECTS {
+        return Err("Download exceeded the redirect limit".into());
+    }
+    validate_https_url(url.as_str(), allowed_hosts).map(|_| ())
+}
+
 fn http_client(allowed_hosts: Option<&[&str]>) -> Result<Client, String> {
     let hosts = allowed_hosts.map(|items| {
         items
@@ -306,10 +288,13 @@ fn http_client(allowed_hosts: Option<&[&str]>) -> Result<Client, String> {
             let allowed = hosts
                 .as_ref()
                 .map(|items| items.iter().map(String::as_str).collect::<Vec<_>>());
-            if validate_https_url(attempt.url().as_str(), allowed.as_deref()).is_ok() {
-                attempt.follow()
-            } else {
-                attempt.error("Download redirect rejected by provider source policy")
+            match validate_download_redirect(
+                attempt.url(),
+                allowed.as_deref(),
+                attempt.previous().len(),
+            ) {
+                Ok(()) => attempt.follow(),
+                Err(error) => attempt.error(error),
             }
         }))
         .user_agent(USER_AGENT)
@@ -317,6 +302,9 @@ fn http_client(allowed_hosts: Option<&[&str]>) -> Result<Client, String> {
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
 }
 
+/// Bound the wait for response headers without imposing a short total duration
+/// on large artifact bodies. Body streams are bounded separately by the
+/// inactivity and byte limits below.
 pub(crate) async fn send_request_with_timeout(
     request: reqwest::RequestBuilder,
     timeout: Duration,
@@ -375,19 +363,6 @@ fn temporary_path(destination: &Path, attempt: usize) -> PathBuf {
     ))
 }
 
-fn managed_servers_root(app_data_dir: &Path) -> Result<PathBuf, String> {
-    // This root is fixed by the command contract. It is never derived from
-    // renderer-provided path data.
-    let root = app_data_dir.join("servers");
-    let metadata = std::fs::symlink_metadata(&root)
-        .map_err(|error| format!("Failed to inspect managed server root: {error}"))?;
-    if is_link_or_reparse_point(&metadata) || !metadata.is_dir() {
-        return Err("Managed server root must be a real directory".to_string());
-    }
-    std::fs::canonicalize(&root)
-        .map_err(|error| format!("Failed to resolve managed server root: {error}"))
-}
-
 async fn replace_destination(
     temp: &Path,
     destination: &Path,
@@ -412,9 +387,11 @@ async fn replace_destination(
     let destination_parent = destination
         .parent()
         .ok_or_else(|| "Download destination has no parent".to_string())?;
-    let canonical_temp_parent = std::fs::canonicalize(temp_parent)
+    let canonical_temp_parent = tokio::fs::canonicalize(temp_parent)
+        .await
         .map_err(|error| format!("Failed to resolve temporary download directory: {error}"))?;
-    let canonical_destination_parent = std::fs::canonicalize(destination_parent)
+    let canonical_destination_parent = tokio::fs::canonicalize(destination_parent)
+        .await
         .map_err(|error| format!("Failed to resolve download directory: {error}"))?;
     if !canonical_temp_parent.starts_with(managed_root)
         || !canonical_destination_parent.starts_with(managed_root)
@@ -499,16 +476,18 @@ where
     let parent = destination
         .parent()
         .ok_or_else(|| "Temporary download path has no parent".to_string())?;
-    let canonical_parent = std::fs::canonicalize(parent)
+    let canonical_parent = tokio::fs::canonicalize(parent)
+        .await
         .map_err(|error| format!("Failed to resolve temporary download directory: {error}"))?;
     if !canonical_parent.starts_with(managed_root) {
         return Err("Temporary download directory must remain inside managed storage".to_string());
     }
-    let response = client
-        .get(url.clone())
-        .send()
-        .await
-        .map_err(|error| format!("HTTP request failed: {error}"))?;
+    let response = send_request_with_timeout(
+        client.get(url.clone()),
+        RESPONSE_HEADERS_TIMEOUT,
+        "HTTP request failed",
+    )
+    .await?;
     if !response.status().is_success() {
         return Err(format!("HTTP error: {}", response.status()));
     }
@@ -611,7 +590,8 @@ where
     let parent = destination
         .parent()
         .ok_or_else(|| "Download destination has no parent".to_string())?;
-    let canonical_parent = std::fs::canonicalize(parent)
+    let canonical_parent = tokio::fs::canonicalize(parent)
+        .await
         .map_err(|error| format!("Failed to resolve download directory: {error}"))?;
     if !canonical_parent.starts_with(managed_root) {
         return Err("Download directory must remain inside managed storage".to_string());
@@ -681,7 +661,7 @@ where
         Uuid::new_v4()
     ));
 
-    download_with_retry(
+    let downloaded = download_with_retry(
         url,
         staging.clone(),
         managed_root,
@@ -691,11 +671,11 @@ where
         allowed_hosts,
         report,
     )
-    .await
-    .map_err(|error| {
-        let _ = std::fs::remove_file(&staging);
-        error
-    })?;
+    .await;
+    if let Err(error) = downloaded {
+        let _ = tokio::fs::remove_file(&staging).await;
+        return Err(error);
+    }
 
     let size = tokio::fs::metadata(&staging)
         .await
@@ -708,158 +688,20 @@ where
     })
 }
 
-fn validate_event_id(event_id: &str) -> Result<String, String> {
-    let value = event_id.trim();
-    if value.is_empty()
-        || value.len() > MAX_EVENT_ID_LENGTH
-        || !value
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
-    {
-        Err("Invalid download event ID".to_string())
-    } else {
-        Ok(value.to_string())
-    }
-}
-fn validate_server_id(server_id: &str) -> Result<String, String> {
-    let value = server_id.trim();
-    if value.is_empty()
-        || value.len() > MAX_SERVER_ID_LENGTH
-        || value.chars().any(char::is_control)
-        || matches!(value, "." | "..")
-        || value.contains(['/', '\\', ':'])
-    {
-        Err("Invalid server ID".to_string())
-    } else {
-        Ok(value.to_string())
-    }
-}
-fn validate_plugin_relative_path(relative_path: &str) -> Result<(String, String), String> {
-    let path = Path::new(relative_path.trim());
-    let components = path.components().collect::<Vec<_>>();
-    if path.is_absolute()
-        || components.len() != 2
-        || !components
-            .iter()
-            .all(|component| matches!(component, Component::Normal(_)))
-    {
-        return Err("Plugin path must be plugins/<file>.jar or mods/<file>.jar".to_string());
-    }
-    let directory = components[0]
-        .as_os_str()
-        .to_str()
-        .ok_or_else(|| "Plugin path is not valid UTF-8".to_string())?;
-    let file = components[1]
-        .as_os_str()
-        .to_str()
-        .ok_or_else(|| "Plugin filename is not valid UTF-8".to_string())?;
-    if !matches!(directory, "plugins" | "mods")
-        || file.len() > 128
-        || file.contains('\0')
-        || !file.to_ascii_lowercase().ends_with(".jar")
-    {
-        return Err("Plugin path must target a .jar file under plugins or mods".to_string());
-    }
-    Ok((directory.to_string(), file.to_string()))
-}
-async fn managed_plugin_destination(
-    app: &AppHandle,
-    server_id: &str,
-    relative_path: &str,
-) -> Result<PathBuf, String> {
-    let server_id = validate_server_id(server_id)?;
-    let _ = validate_plugin_relative_path(relative_path)?;
-    let app_data = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to resolve app data directory".to_string())?;
-    let request = ManagedPathRequest {
-        root: ManagedRoot::Servers,
-        server_id: Some(server_id),
-        relative_path: relative_path.trim().to_string(),
-    };
-    let destination = resolve_managed_request(&app_data, &request, true)?;
-    if tokio::fs::symlink_metadata(&destination)
-        .await
-        .ok()
-        .is_some_and(|metadata| metadata.file_type().is_symlink())
-    {
-        return Err("Plugin destination must not be a symlink".to_string());
-    }
-    Ok(destination)
-}
 fn provider_hosts(provider: &str) -> Result<&'static [&'static str], String> {
     match provider.trim().to_ascii_lowercase().as_str() {
         "modrinth" => Ok(&["cdn.modrinth.com"]),
         "hangar" => Ok(&["hangar.papermc.io", "hangarcdn.papermc.io", "dl.hangar.io"]),
-        "spiget" => Ok(&["api.spiget.org"]),
+        "spiget" => Ok(&["api.spiget.org", "cdn.spiget.org"]),
         _ => Err("Unsupported plugin download provider".to_string()),
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PluginDownloadCommandError {
-    code: &'static str,
-    message: String,
-}
-
-fn plugin_download_error(code: &'static str, message: impl Into<String>) -> String {
-    let error = PluginDownloadCommandError {
-        code,
-        message: message.into(),
-    };
-    serde_json::to_string(&error).unwrap_or_else(|_| {
-        format!("{{\"code\":\"{code}\",\"message\":\"plugin download failed\"}}")
-    })
-}
-
-fn classify_plugin_download_error(error: &str) -> &'static str {
-    if error.contains("checksum mismatch") {
-        return "checksum-mismatch";
-    }
-    if (error.contains("Invalid ") && error.to_ascii_lowercase().contains("checksum"))
-        || error.contains("Unsupported checksum algorithm")
-    {
-        return "checksum-invalid";
-    }
-    if error.contains("Download exceeds") || error.contains("Download size overflow") {
-        return "size-limit-exceeded";
-    }
-    if error.contains("Download URL")
-        || error.contains("Download redirect rejected")
-        || error.contains("Unsupported plugin download provider")
-    {
-        return "source-rejected";
-    }
-    if error.contains("Plugin path")
-        || error.contains("Plugin filename")
-        || error.contains("Plugin destination")
-        || error.contains("managed plugin")
-        || error.contains("managed root")
-        || error.contains("Temporary download path")
-        || error.contains("atomically move downloaded file")
-        || error.contains("replace existing destination")
-    {
-        return "destination-rejected";
-    }
-    if error.contains("HTTP")
-        || error.contains("Download stalled")
-        || error.contains("Download stream")
-        || error.contains("download failed")
-        || error.contains("HTTP client")
-        || error.contains("connection")
-    {
-        return "network";
-    }
-    "unknown"
 }
 
 fn hashless_plugin_download_is_allowed(config_value: Option<&serde_json::Value>) -> bool {
     matches!(config_value, Some(serde_json::Value::Bool(true)))
 }
 
-fn allows_unverified_plugin_downloads(app: &AppHandle) -> bool {
+pub(crate) fn allows_unverified_plugin_downloads(app: &AppHandle) -> bool {
     let value = app
         .store("config.json")
         .ok()
@@ -868,191 +710,57 @@ fn allows_unverified_plugin_downloads(app: &AppHandle) -> bool {
 }
 
 #[tauri::command]
-pub async fn download_plugin_artifact(
-    app: AppHandle,
-    request: PluginArtifactRequest,
-) -> Result<(), String> {
-    let hosts = provider_hosts(&request.provider)
-        .map_err(|error| plugin_download_error("source-rejected", error))?;
-    let url = validate_https_url(&request.url, Some(hosts))
-        .map_err(|error| plugin_download_error("source-rejected", error))?;
-    let destination = managed_plugin_destination(&app, &request.server_id, &request.relative_path)
-        .await
-        .map_err(|error| plugin_download_error("destination-rejected", error))?;
-    let event_id = validate_event_id(&request.event_id)
-        .map_err(|error| plugin_download_error("unknown", error))?;
-    let app_data = app.path().app_data_dir().map_err(|_| {
-        plugin_download_error(
-            "destination-rejected",
-            "Failed to resolve app data directory",
-        )
-    })?;
-    let managed_root = managed_servers_root(&app_data)
-        .map_err(|error| plugin_download_error("destination-rejected", error))?;
-    if !destination.is_absolute()
-        || !destination.starts_with(&managed_root)
-        || destination
-            .components()
-            .any(|component| matches!(component, Component::ParentDir))
-    {
-        return Err("Plugin destination must remain inside managed storage".to_string());
-    }
-    let parent = destination
-        .parent()
-        .ok_or_else(|| "Plugin destination has no parent".to_string())?;
-    let canonical_parent = std::fs::canonicalize(parent)
-        .map_err(|error| format!("Failed to resolve plugin directory: {error}"))?;
-    if !canonical_parent.starts_with(&managed_root) {
-        return Err("Plugin directory must remain inside managed storage".to_string());
-    }
-    tokio::fs::create_dir_all(parent)
-        .await
-        .map_err(|error| format!("Failed to create managed plugin directory: {error}"))?;
-
-    if request.checksum.is_none() && !allows_unverified_plugin_downloads(&app) {
-        return Err(plugin_download_error(
-            "unverified-artifact-blocked",
-            "Plugin download rejected: checksum is required. Set allowUnverifiedPluginDownloads to true in config.json only when you explicitly accept an unverified artifact.",
-        ));
-    }
-    let event = format!("download-progress-{event_id}");
-    download_with_retry(
-        url,
-        destination,
-        &managed_root,
-        request.checksum,
-        None,
-        MAX_PLUGIN_DOWNLOAD_BYTES,
-        Some(hosts),
-        |downloaded, total| {
-            app.emit(&event, DownloadProgress { downloaded, total })
-                .map_err(|error| format!("Failed to emit download progress: {error}"))
-        },
-    )
-    .await
-    .map_err(|error| plugin_download_error(classify_plugin_download_error(&error), error))
-}
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ServerJarDownloadRequest {
-    pub server_id: String,
-    pub relative_path: String,
-    pub url: String,
-    pub checksum: Option<ExpectedChecksum>,
-    pub expected_size: Option<u64>,
+pub fn get_allow_unverified_plugin_downloads(app: AppHandle) -> bool {
+    allows_unverified_plugin_downloads(&app)
 }
 
 #[tauri::command]
-pub async fn download_server_jar(
-    app: AppHandle,
-    operations: State<'_, ServerOperationManager>,
-    request: ServerJarDownloadRequest,
-) -> Result<(), String> {
-    let url = validate_https_url(&request.url, Some(SERVER_JAR_HOSTS))?;
-    let server_id = validate_server_id(&request.server_id)?;
-    let _operation = operations
-        .acquire(&server_id, OperationKind::ArtifactInstall)
-        .await?;
-    let jar_path = Path::new(request.relative_path.trim());
-    let components = jar_path.components().collect::<Vec<_>>();
-    if jar_path.is_absolute()
-        || components.len() != 1
-        || !components
-            .iter()
-            .all(|component| matches!(component, Component::Normal(_)))
-        || !jar_path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .is_some_and(|name| name.to_ascii_lowercase().ends_with(".jar"))
-    {
-        return Err("Server JAR destination must be a single .jar filename".to_string());
-    }
-    let app_data = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to resolve app data directory".to_string())?;
-    let managed_request = ManagedPathRequest {
-        root: ManagedRoot::Servers,
-        server_id: Some(server_id.clone()),
-        relative_path: request.relative_path.trim().to_string(),
-    };
-    let destination = resolve_managed_request(&app_data, &managed_request, true)?;
-    let managed_root = managed_servers_root(&app_data)?;
-    if !destination.is_absolute()
-        || !destination.starts_with(&managed_root)
-        || destination
-            .components()
-            .any(|component| matches!(component, Component::ParentDir))
-    {
-        return Err("Server JAR destination must remain inside managed storage".to_string());
-    }
-    let parent = destination
-        .parent()
-        .ok_or_else(|| "Server JAR destination has no parent".to_string())?;
-    let canonical_parent = std::fs::canonicalize(parent)
-        .map_err(|error| format!("Failed to resolve server JAR directory: {error}"))?;
-    if !canonical_parent.starts_with(&managed_root) {
-        return Err("Server JAR directory must remain inside managed storage".to_string());
-    }
-    tokio::fs::create_dir_all(parent)
-        .await
-        .map_err(|error| format!("Failed to create directory: {error}"))?;
-    let normalized_checksum = required_sha256(request.checksum)?;
-    let progress_app = app.clone();
-    let progress_server_id = server_id.clone();
-    let staging = destination.with_file_name(format!(
-        ".{}.verified-{}",
-        destination
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("server.jar"),
-        Uuid::new_v4()
-    ));
-    let verified = download_verified_artifact(
-        url.as_str(),
-        &staging,
-        &managed_root,
-        &normalized_checksum,
-        request.expected_size,
-        MAX_SERVER_JAR_BYTES,
-        Some(SERVER_JAR_HOSTS),
-        move |downloaded, total| {
-            let progress = if total > 0 {
-                ((downloaded as f64 / total as f64) * 100.0) as u32
-            } else {
-                0
-            };
-            progress_app
-                .emit(
-                    "download-progress",
-                    serde_json::json!({
-                        "serverId": progress_server_id,
-                        "progress": progress,
-                        "status": format!("Downloading... {progress}%")
-                    }),
-                )
-                .map_err(|error| format!("Failed to emit download progress: {error}"))
-        },
+pub fn set_allow_unverified_plugin_downloads(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let store = app
+        .store("config.json")
+        .map_err(|error| format!("Failed to open application settings: {error}"))?;
+    store.set(
+        "allowUnverifiedPluginDownloads",
+        serde_json::Value::Bool(enabled),
+    );
+    store
+        .save()
+        .map_err(|error| format!("Failed to save plugin download policy: {error}"))
+}
+
+/// Internal transport for Rust-owned install plans. Destinations must be private
+/// staging files; the transaction service owns all publication and rollback.
+pub(crate) async fn stage_plugin_artifact<F>(
+    provider: &str,
+    url: &str,
+    destination: PathBuf,
+    managed_root: &Path,
+    checksum: Option<ExpectedChecksum>,
+    report: F,
+) -> Result<(), String>
+where
+    F: FnMut(u64, u64) -> Result<(), String>,
+{
+    let hosts = provider_hosts(provider)?;
+    let url = validate_https_url(url, Some(hosts))?;
+    download_with_retry(
+        url,
+        destination,
+        managed_root,
+        checksum,
+        None,
+        MAX_PLUGIN_DOWNLOAD_BYTES,
+        Some(hosts),
+        report,
     )
-    .await?;
-    replace_destination(&verified.path, &destination, &managed_root).await?;
-    app.emit(
-        "download-progress",
-        serde_json::json!({
-            "serverId": server_id,
-            "progress": 100,
-            "status": "Download complete"
-        }),
-    )
-    .map_err(|error| format!("Failed to emit download progress: {error}"))?;
-    Ok(())
+    .await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::{Read, Write};
-    use std::net::{TcpListener, TcpStream};
+    use std::net::TcpListener;
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::mpsc;
@@ -1115,11 +823,25 @@ mod tests {
 
     impl TestHttpServer {
         fn new(body: &[u8], include_content_length: bool, requests: usize) -> Self {
+            let content_length = if include_content_length {
+                format!("Content-Length: {}\r\n", body.len())
+            } else {
+                String::new()
+            };
+            let mut response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n{content_length}Connection: close\r\n\r\n"
+            )
+            .into_bytes();
+            response.extend_from_slice(body);
+            Self::with_response(&response, requests)
+        }
+
+        fn with_response(response: &[u8], requests: usize) -> Self {
             let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener should bind");
             let address = listener
                 .local_addr()
                 .expect("loopback listener should have an address");
-            let body = body.to_vec();
+            let response = response.to_vec();
             let (ready_sender, ready_receiver) = mpsc::channel();
             let thread = thread::spawn(move || {
                 ready_sender
@@ -1129,7 +851,10 @@ mod tests {
                     let (mut stream, _) = listener.accept().expect("test request should connect");
                     let mut request = [0_u8; 4096];
                     let _ = stream.read(&mut request);
-                    write_response(&mut stream, &body, include_content_length);
+                    stream
+                        .write_all(&response)
+                        .expect("test response should be written");
+                    stream.flush().expect("test response should be flushed");
                 }
             });
             ready_receiver
@@ -1149,24 +874,6 @@ mod tests {
                 thread.join().expect("test server should stop cleanly");
             }
         }
-    }
-
-    fn write_response(stream: &mut TcpStream, body: &[u8], include_content_length: bool) {
-        let content_length = if include_content_length {
-            format!("Content-Length: {}\r\n", body.len())
-        } else {
-            String::new()
-        };
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/java-archive\r\n{content_length}Connection: close\r\n\r\n"
-        );
-        stream
-            .write_all(response.as_bytes())
-            .expect("test response headers should be written");
-        stream
-            .write_all(body)
-            .expect("test response body should be written");
-        stream.flush().expect("test response should be flushed");
     }
 
     fn test_checksum(algorithm: &str, body: &[u8]) -> ExpectedChecksum {
@@ -1222,6 +929,55 @@ mod tests {
         .await
     }
 
+    #[tokio::test]
+    async fn response_header_timeout_stops_a_stalled_server() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener should bind");
+        let address = listener
+            .local_addr()
+            .expect("loopback listener should have an address");
+        let server_thread = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("test request should connect");
+            let mut request = [0_u8; 4096];
+            let _ = stream.read(&mut request);
+            thread::sleep(Duration::from_millis(250));
+        });
+
+        let url = Url::parse(&format!("http://{address}/metadata")).unwrap();
+        let error = send_request_with_timeout(
+            Client::new().get(url),
+            Duration::from_millis(50),
+            "test metadata request",
+        )
+        .await
+        .expect_err("request without response headers should time out");
+
+        assert!(error.contains("response headers timed out"), "{error}");
+        server_thread
+            .join()
+            .expect("test server should stop cleanly");
+    }
+
+    #[tokio::test]
+    async fn bounded_metadata_reader_rejects_oversized_chunked_and_unknown_length_bodies() {
+        let responses = [
+            b"HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n012345".as_slice(),
+            b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n6\r\n012345\r\n0\r\n\r\n".as_slice(),
+        ];
+
+        for response_bytes in responses {
+            let server = TestHttpServer::with_response(response_bytes, 1);
+            let response = Client::new()
+                .get(server.url.clone())
+                .send()
+                .await
+                .expect("metadata response should arrive");
+            let error = read_limited_response_body(response, 5, "test metadata")
+                .await
+                .expect_err("metadata body over cap should be rejected");
+            assert!(error.contains("exceeds the size limit"), "{error}");
+        }
+    }
+
     #[test]
     fn verifies_all_supported_checksum_algorithms() {
         for (algorithm, input, expected) in [("sha1", "abc", "a9993e364706816aba3e25717850c26c9cd0d89d"), ("sha256", "abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"), ("sha512", "abc", "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f")] { let (parsed, _) = validated_checksum(&ExpectedChecksum { algorithm: algorithm.to_string(), value: expected.to_string() }).unwrap(); let mut hasher = ChecksumHasher::new(parsed); hasher.update(input.as_bytes()); assert_eq!(hasher.finalize(), expected); }
@@ -1252,44 +1008,6 @@ mod tests {
         .is_err());
     }
     #[test]
-    fn plugin_paths_and_events_are_tightly_scoped() {
-        assert_eq!(
-            validate_plugin_relative_path("plugins/example.jar").unwrap(),
-            ("plugins".to_string(), "example.jar".to_string())
-        );
-        assert_eq!(
-            validate_plugin_relative_path("mods/Example.JAR").unwrap(),
-            ("mods".to_string(), "Example.JAR".to_string())
-        );
-        assert!(validate_plugin_relative_path("../plugins/example.jar").is_err());
-        assert!(validate_plugin_relative_path("/tmp/example.jar").is_err());
-        assert!(validate_plugin_relative_path("plugins/nested/example.jar").is_err());
-        assert!(validate_plugin_relative_path("plugins/example.txt").is_err());
-        assert!(validate_plugin_relative_path("plugins/example.jar.tmp").is_err());
-        assert!(validate_plugin_relative_path("plugins/example.jar.tmp-123").is_err());
-        assert!(validate_plugin_relative_path("plugins/").is_err());
-        assert!(validate_event_id("plugin-version_1.2").is_ok());
-        assert!(validate_event_id("plugin/event").is_err());
-    }
-
-    #[test]
-    fn deserializes_the_camel_case_plugin_download_contract() {
-        let request: PluginArtifactRequest = serde_json::from_value(serde_json::json!({
-            "serverId": "server-1",
-            "relativePath": "plugins/example.jar",
-            "provider": "modrinth",
-            "url": "https://cdn.modrinth.com/example.jar",
-            "checksum": { "algorithm": "sha256", "value": "0".repeat(64) },
-            "eventId": "plugin-example"
-        }))
-        .expect("camelCase plugin request should deserialize");
-
-        assert_eq!(request.server_id, "server-1");
-        assert_eq!(request.relative_path, "plugins/example.jar");
-        assert_eq!(request.event_id, "plugin-example");
-        assert_eq!(request.checksum.unwrap().algorithm, "sha256");
-    }
-    #[test]
     fn provider_allowlists_are_exact() {
         assert_eq!(provider_hosts("modrinth").unwrap(), ["cdn.modrinth.com"]);
         assert!(provider_hosts("hangar")
@@ -1310,49 +1028,6 @@ mod tests {
         assert!(hashless_plugin_download_is_allowed(Some(
             &serde_json::json!(true)
         )));
-    }
-
-    #[test]
-    fn plugin_command_errors_keep_stable_codes_and_private_details_out_of_ui_classification() {
-        let encoded = plugin_download_error(
-            "checksum-mismatch",
-            "SHA256 checksum mismatch: expected private, got actual",
-        );
-        let payload: serde_json::Value =
-            serde_json::from_str(&encoded).expect("plugin error should be JSON encoded");
-        assert_eq!(payload["code"], "checksum-mismatch");
-        assert_eq!(
-            payload["message"],
-            "SHA256 checksum mismatch: expected private, got actual"
-        );
-    }
-
-    #[test]
-    fn plugin_download_failures_are_classified_by_security_boundary() {
-        assert_eq!(
-            classify_plugin_download_error("Invalid SHA256 checksum"),
-            "checksum-invalid"
-        );
-        assert_eq!(
-            classify_plugin_download_error("Download URL host is not approved"),
-            "source-rejected"
-        );
-        assert_eq!(
-            classify_plugin_download_error("Download redirect rejected by provider source policy"),
-            "source-rejected"
-        );
-        assert_eq!(
-            classify_plugin_download_error("Plugin destination must not be a symlink"),
-            "destination-rejected"
-        );
-        assert_eq!(
-            classify_plugin_download_error("Download exceeds the 512-byte limit"),
-            "size-limit-exceeded"
-        );
-        assert_eq!(
-            classify_plugin_download_error("HTTP request failed: connection reset"),
-            "network"
-        );
     }
 
     #[tokio::test]
@@ -1543,5 +1218,57 @@ mod tests {
             validate_https_url("https://127.0.0.1/plugin.jar", Some(&["cdn.modrinth.com"]))
                 .is_err()
         );
+    }
+    #[test]
+    fn excessive_redirects_are_rejected_even_for_an_approved_provider_host() {
+        let url = Url::parse("https://cdn.modrinth.com/repeating.jar").unwrap();
+        for previous_count in 0..MAX_REDIRECTS {
+            assert!(
+                validate_download_redirect(&url, Some(&["cdn.modrinth.com"]), previous_count)
+                    .is_ok()
+            );
+        }
+        assert!(
+            validate_download_redirect(&url, Some(&["cdn.modrinth.com"]), MAX_REDIRECTS)
+                .unwrap_err()
+                .contains("redirect limit")
+        );
+        assert!(validate_download_redirect(&url, Some(&["cdn.modrinth.com"]), usize::MAX).is_err());
+        assert!(validate_download_redirect(
+            &Url::parse("https://evil.test/a.jar").unwrap(),
+            Some(&["cdn.modrinth.com"]),
+            1
+        )
+        .is_err());
+    }
+    #[test]
+    fn spiget_download_redirects_allow_only_its_api_and_official_cdn() {
+        let hosts = provider_hosts("spiget").unwrap();
+        for url in [
+            "https://api.spiget.org/v2/resources/123/download",
+            "https://cdn.spiget.org/file/123.jar",
+        ] {
+            assert!(
+                validate_download_redirect(&Url::parse(url).unwrap(), Some(hosts), 1).is_ok(),
+                "{url}"
+            );
+        }
+        for url in [
+            "https://external.example/plugin.jar",
+            "https://cdn.spiget.org.evil.test/plugin.jar",
+            "https://sub.cdn.spiget.org/plugin.jar",
+            "http://cdn.spiget.org/plugin.jar",
+        ] {
+            assert!(
+                validate_download_redirect(&Url::parse(url).unwrap(), Some(hosts), 1).is_err(),
+                "{url}"
+            );
+        }
+        assert!(validate_download_redirect(
+            &Url::parse("https://cdn.spiget.org/plugin.jar").unwrap(),
+            Some(provider_hosts("modrinth").unwrap()),
+            1
+        )
+        .is_err());
     }
 }

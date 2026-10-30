@@ -27,7 +27,6 @@ const playwrightAliases = isPlaywright
       '@tauri-apps/plugin-os': mockPath('tauri-plugin-os.ts'),
       '@tauri-apps/plugin-dialog': mockPath('tauri-plugin-dialog.ts'),
       '@tauri-apps/plugin-fs': mockPath('tauri-plugin-fs.ts'),
-      '@tauri-apps/plugin-http': mockPath('tauri-plugin-http.ts'),
       '@tauri-apps/plugin-opener': mockPath('tauri-plugin-opener.ts'),
       '@tauri-apps/plugin-clipboard-manager': mockPath('tauri-plugin-clipboard.ts'),
       '@tauri-apps/plugin-process': mockPath('tauri-plugin-process.ts'),

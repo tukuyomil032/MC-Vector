@@ -363,7 +363,7 @@ async function createFixture(environment, identifier, testRoot) {
   return { appDataDir, serverPath, server, commandLog, importSource };
 }
 
-async function buildDebugBinary(identifier, configPath, environment) {
+async function buildDebugBinary(identifier, configPath) {
   if (process.env.MC_VECTOR_TAURI_E2E_SKIP_BUILD !== '1') {
     const bun = isWindows ? 'bun.exe' : 'bun';
     const buildEnvironment = {
@@ -371,8 +371,6 @@ async function buildDebugBinary(identifier, configPath, environment) {
       MC_VECTOR_E2E: '1',
       VITE_MC_VECTOR_E2E: '1',
       VITE_MC_VECTOR_E2E_BUILD: 'debug',
-      VITE_MC_VECTOR_E2E_PLUGIN_URL: environment.VITE_MC_VECTOR_E2E_PLUGIN_URL,
-      VITE_MC_VECTOR_E2E_PLUGIN_SHA256: environment.VITE_MC_VECTOR_E2E_PLUGIN_SHA256,
     };
     await runProcess(
       bun,
@@ -607,6 +605,8 @@ async function exerciseVerifiedArtifact(driver, fixture, artifact) {
   await visibleElement(driver, '[data-testid="plugin-browser"]');
   await visibleElement(driver, '[data-testid="plugin-result-e2e-verified-plugin"]');
   await click(driver, '[data-testid="plugin-install-e2e-verified-plugin"]');
+  await visibleElement(driver, '[data-testid="feedback-dialog"]');
+  await click(driver, '[data-testid="feedback-dialog-primary-action"]');
 
   const destination = path.join(fixture.serverPath, 'plugins', 'e2e-verified-plugin.jar');
   await waitFor(
@@ -615,25 +615,52 @@ async function exerciseVerifiedArtifact(driver, fixture, artifact) {
   );
   assert.equal(readFileSync(destination, 'utf8'), pluginFixtureContent);
 
-  const request = {
-    url: artifact.url,
-    serverId,
-    relativePath: 'plugins/e2e-verified-plugin.jar',
-    provider: 'modrinth',
-    checksum: { algorithm: 'sha256', value: artifact.checksum },
-    eventId: 'real-e2e-verified-artifact',
-  };
+  await assert.rejects(
+    () =>
+      invoke(driver, 'execute_plugin_install', {
+        request: {
+          token: 'renderer-cannot-invent-a-valid-plan',
+          confirmedDependencyIds: [],
+        },
+      }),
+    /unknown or already used/i,
+  );
 
   await assert.rejects(
     () =>
-      invoke(driver, 'download_plugin_artifact', {
+      invoke(driver, 'prepare_plugin_install', {
         request: {
-          ...request,
+          serverId,
+          project: { provider: 'modrinth', projectId: 'e2e-verified-plugin' },
+          url: artifact.url,
           checksum: { algorithm: 'sha256', value: '0'.repeat(64) },
-          eventId: 'real-e2e-checksum-mismatch',
+          relativePath: 'plugins/e2e-verified-plugin.jar',
         },
       }),
-    /checksum-mismatch|checksum mismatch/,
+    /unknown field/i,
+  );
+  await assert.rejects(
+    () => invoke(driver, 'download_plugin_artifact'),
+    /not found|unregistered|unknown command/i,
+  );
+
+  const mismatchPlan = await invoke(driver, 'prepare_plugin_install', {
+    request: {
+      serverId,
+      project: { provider: 'modrinth', projectId: 'e2e-verified-plugin-mismatch' },
+      replaceFileName: 'e2e-verified-plugin.jar',
+    },
+  });
+  assert.ok(mismatchPlan.token, 'Rust did not issue the debug fixture install plan');
+  await assert.rejects(
+    () =>
+      invoke(driver, 'execute_plugin_install', {
+        request: {
+          token: mismatchPlan.token,
+          confirmedDependencyIds: mismatchPlan.missingDependencyIds,
+        },
+      }),
+    /checksum mismatch/i,
   );
   assert.equal(
     readFileSync(destination, 'utf8'),
@@ -785,10 +812,11 @@ async function main() {
       MC_VECTOR_E2E_JAVA_ARCHIVE_URL: artifactFixture.javaUrl,
       MC_VECTOR_E2E_JAVA_SHA256: artifactFixture.javaChecksum,
       MC_VECTOR_E2E_JAVA_SIZE: String(artifactFixture.javaSize),
-      VITE_MC_VECTOR_E2E_PLUGIN_URL: artifactFixture.url,
-      VITE_MC_VECTOR_E2E_PLUGIN_SHA256: artifactFixture.checksum,
+      MC_VECTOR_E2E_PLUGIN_URL: artifactFixture.url,
+      MC_VECTOR_E2E_PLUGIN_SHA256: artifactFixture.checksum,
+      MC_VECTOR_E2E_PLUGIN_BAD_SHA256: '0'.repeat(64),
     });
-    const binary = await buildDebugBinary(identifier, configPath, environment);
+    const binary = await buildDebugBinary(identifier, configPath);
     logStep(`debug binary ready (${binary})`);
 
     normalDriver = await startWebDriver(environment, await reservePort());

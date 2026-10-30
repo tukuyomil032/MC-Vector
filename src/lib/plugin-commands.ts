@@ -1,8 +1,4 @@
-import { searchHangarProjects } from './adapters/plugin/hangar-adapter';
-import { fetchJson } from './adapters/plugin/http-client';
-import { searchModrinthProjects } from './adapters/plugin/modrinth-adapter';
-import { searchSpigotResources } from './adapters/plugin/spigot-adapter';
-import { asString, isRecord } from './guards/json-guards';
+import { invokePluginMetadata } from './plugin-metadata-ipc';
 import { tauriInvoke } from './tauri-api';
 
 // Fixture metadata is exposed only by the explicit debug E2E build. A release
@@ -10,11 +6,11 @@ import { tauriInvoke } from './tauri-api';
 const isRealTauriE2E =
   import.meta.env.VITE_MC_VECTOR_E2E === '1' &&
   import.meta.env.VITE_MC_VECTOR_E2E_BUILD === 'debug';
-const e2ePluginUrl = import.meta.env.VITE_MC_VECTOR_E2E_PLUGIN_URL;
-const e2ePluginSha256 = import.meta.env.VITE_MC_VECTOR_E2E_PLUGIN_SHA256;
 const E2E_PLUGIN_PROJECT_ID = 'e2e-verified-plugin';
 const E2E_PLUGIN_VERSION_ID = 'e2e-verified-plugin-version';
 const E2E_PLUGIN_FILE_NAME = 'e2e-verified-plugin.jar';
+
+export type PluginCompatibility = 'compatible' | 'incompatible' | 'unknown';
 
 export interface ModrinthProject {
   slug: string;
@@ -25,6 +21,8 @@ export interface ModrinthProject {
   icon_url: string;
   downloads: number;
   project_type: string;
+  compatibility: PluginCompatibility;
+  supportedVersions: string[];
 }
 
 export interface ModrinthDependency {
@@ -75,6 +73,7 @@ export interface HangarResolvedDownload {
   externalUrl: string | null;
   checksum?: PluginChecksum;
   compatible: boolean;
+  compatibility: PluginCompatibility;
   supportedVersions: string[];
 }
 
@@ -89,357 +88,13 @@ export interface SpigetResource {
   authorName?: string;
   fileType?: string;
   latestVersionId?: number;
+  supportedVersions: string[];
+  compatibility: PluginCompatibility;
 }
 
 export interface PluginChecksum {
   algorithm: 'sha1' | 'sha256' | 'sha512';
   value: string;
-}
-
-export interface PluginInstallTarget {
-  serverId: string;
-  relativeDir: 'plugins' | 'mods';
-  fileName: string;
-}
-
-// This is a renderer-side convenience check only. Rust remains the final
-// security boundary for managed plugin destinations.
-function validatePluginInstallTarget(target: PluginInstallTarget): void {
-  const fileName = target.fileName.trim();
-  if (
-    !target.serverId.trim() ||
-    !['plugins', 'mods'].includes(target.relativeDir) ||
-    !fileName ||
-    fileName.length > 128 ||
-    fileName.includes('/') ||
-    fileName.includes('\\') ||
-    fileName === '.' ||
-    fileName === '..' ||
-    !fileName.toLowerCase().endsWith('.jar')
-  ) {
-    throw new Error('Invalid managed plugin destination');
-  }
-}
-
-export interface PluginArtifactRequest {
-  serverId: string;
-  relativePath: string;
-  provider: 'modrinth' | 'hangar' | 'spiget';
-  url: string;
-  checksum?: PluginChecksum;
-  eventId: string;
-}
-
-interface ModrinthProjectDocument {
-  body: string;
-}
-
-interface HangarProjectDocument {
-  description: string;
-  mainPageContent: string | null;
-}
-
-interface SpigotResourceDocument {
-  description: string | null;
-}
-
-interface HangarVersionResponse {
-  result: unknown[];
-  pagination: unknown;
-}
-
-function parseModrinthDependency(value: unknown): ModrinthDependency | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const dependencyType = asString(value.dependency_type);
-  if (!dependencyType) {
-    return null;
-  }
-
-  const projectId = asString(value.project_id);
-  const versionId = asString(value.version_id);
-  const fileName = asString(value.file_name);
-
-  return {
-    dependencyType,
-    projectId: projectId || null,
-    versionId: versionId || null,
-    fileName: fileName || null,
-  };
-}
-
-function parseModrinthVersion(version: unknown): ModrinthVersion | null {
-  if (!isRecord(version)) {
-    return null;
-  }
-
-  const id = asString(version.id);
-  if (!id) {
-    return null;
-  }
-
-  const filesRaw = Array.isArray(version.files) ? version.files : [];
-  let fileName = '';
-  for (const fileEntry of filesRaw) {
-    if (!isRecord(fileEntry)) {
-      continue;
-    }
-
-    const filename = asString(fileEntry.filename);
-    if (filename) {
-      fileName = filename;
-      break;
-    }
-  }
-
-  if (!fileName) {
-    return null;
-  }
-
-  const gameVersions = Array.isArray(version.game_versions)
-    ? version.game_versions
-        .filter((entry): entry is string => typeof entry === 'string')
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
-    : [];
-
-  const dependencies = Array.isArray(version.dependencies)
-    ? version.dependencies
-        .map(parseModrinthDependency)
-        .filter((entry): entry is ModrinthDependency => entry !== null)
-    : [];
-
-  return {
-    id,
-    fileName,
-    gameVersions,
-    dependencies,
-  };
-}
-
-function parsePluginChecksum(value: unknown): PluginChecksum | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const checksumKeys = {
-    sha512: ['sha512', 'sha512Hash', 'sha512_hash'],
-    sha256: ['sha256', 'sha256Hash', 'sha256_hash'],
-    sha1: ['sha1', 'sha1Hash', 'sha1_hash'],
-  } as const;
-
-  let malformedChecksum: PluginChecksum | undefined;
-  for (const algorithm of ['sha512', 'sha256', 'sha1'] as const) {
-    const checksumKey = checksumKeys[algorithm].find((key) => Object.hasOwn(value, key));
-    if (!checksumKey) {
-      continue;
-    }
-
-    const rawHash = value[checksumKey];
-    const hash = asString(rawHash).trim().toLowerCase();
-    const expectedLength = algorithm === 'sha512' ? 128 : algorithm === 'sha256' ? 64 : 40;
-    if (hash.length === expectedLength && /^[0-9a-f]+$/.test(hash)) {
-      return { algorithm, value: hash };
-    }
-
-    malformedChecksum ??= {
-      algorithm,
-      value: typeof rawHash === 'string' ? hash : '',
-    };
-  }
-
-  // Keep malformed provider metadata visible to the Rust boundary. It will
-  // reject the checksum regardless of the hashless-download compatibility
-  // setting instead of treating malformed metadata as an absent hash.
-  return malformedChecksum;
-}
-
-function parseModrinthProjectIdentity(project: unknown): ModrinthProjectIdentity | null {
-  if (!isRecord(project)) {
-    return null;
-  }
-
-  const id = asString(project.id);
-  const slug = asString(project.slug);
-  const title = asString(project.title);
-
-  if (!id || !slug || !title) {
-    return null;
-  }
-
-  return {
-    id,
-    slug,
-    title,
-  };
-}
-
-function parseModrinthProjectDocument(project: unknown): ModrinthProjectDocument | null {
-  if (!isRecord(project)) {
-    return null;
-  }
-
-  return {
-    body: asString(project.body),
-  };
-}
-
-function parseHangarProjectDocument(project: unknown): HangarProjectDocument | null {
-  if (!isRecord(project)) {
-    return null;
-  }
-
-  const mainPageContent = asString(project.mainPageContent);
-
-  return {
-    description: asString(project.description),
-    mainPageContent: mainPageContent || null,
-  };
-}
-
-function decodeBase64Utf8(value: string): string {
-  try {
-    const normalized = value.trim();
-    if (!normalized) {
-      return '';
-    }
-
-    const binary = atob(normalized);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return new TextDecoder().decode(bytes);
-  } catch {
-    return value;
-  }
-}
-
-function parseSpigotResourceDocument(resource: unknown): SpigotResourceDocument | null {
-  if (!isRecord(resource)) {
-    return null;
-  }
-
-  const descriptionRaw = asString(resource.description);
-  if (!descriptionRaw) {
-    return {
-      description: null,
-    };
-  }
-
-  return {
-    description: decodeBase64Utf8(descriptionRaw),
-  };
-}
-
-function parseHangarVersion(version: unknown): HangarVersion | null {
-  if (!isRecord(version)) {
-    return null;
-  }
-
-  const name = asString(version.name);
-  if (!name) {
-    return null;
-  }
-
-  const downloadsRaw = isRecord(version.downloads) ? version.downloads : null;
-  if (!downloadsRaw) {
-    return null;
-  }
-
-  const downloads: Record<string, HangarDownloadInfo> = {};
-  for (const [platform, payload] of Object.entries(downloadsRaw)) {
-    if (!isRecord(payload)) {
-      continue;
-    }
-    const downloadUrl = asString(payload.downloadUrl);
-    const externalUrl = asString(payload.externalUrl);
-    if (!downloadUrl && !externalUrl) {
-      continue;
-    }
-
-    const fileInfoRaw = isRecord(payload.fileInfo) ? payload.fileInfo : null;
-    downloads[platform.toUpperCase()] = {
-      downloadUrl: downloadUrl || null,
-      externalUrl: externalUrl || null,
-      fileName: fileInfoRaw ? asString(fileInfoRaw.name) || null : null,
-      checksum: fileInfoRaw ? parsePluginChecksum(fileInfoRaw) : undefined,
-    };
-  }
-
-  const depsRaw = isRecord(version.platformDependencies) ? version.platformDependencies : null;
-  const platformDependencies: Record<string, string[]> = {};
-  if (depsRaw) {
-    for (const [platform, values] of Object.entries(depsRaw)) {
-      if (!Array.isArray(values)) {
-        continue;
-      }
-      platformDependencies[platform.toUpperCase()] = values
-        .filter((value): value is string => typeof value === 'string')
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0);
-    }
-  }
-
-  if (Object.keys(downloads).length === 0) {
-    return null;
-  }
-
-  return {
-    name,
-    downloads,
-    platformDependencies,
-  };
-}
-
-function sanitizeFileName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function isMatchingMinecraftVersion(
-  availableVersions: string[],
-  minecraftVersion: string,
-): boolean {
-  if (availableVersions.length === 0 || !minecraftVersion) {
-    return true;
-  }
-
-  const normalized = minecraftVersion.trim();
-  const versionParts = normalized.split('.');
-  const majorMinor =
-    versionParts.length >= 2 ? `${versionParts[0]}.${versionParts[1]}` : normalized;
-
-  return availableVersions.some((candidate) => {
-    const target = candidate.trim();
-    return target === normalized || target === majorMinor;
-  });
-}
-
-function pickHangarDependencies(version: HangarVersion, platform: string): string[] {
-  const preferred = version.platformDependencies[platform];
-  if (preferred && preferred.length > 0) {
-    return preferred;
-  }
-  const fallback = Object.values(version.platformDependencies).find((values) => values.length > 0);
-  return fallback ?? [];
-}
-
-function pickHangarDownload(version: HangarVersion, platform: string): HangarDownloadInfo | null {
-  const preferred = version.downloads[platform];
-  if (preferred) {
-    return preferred;
-  }
-  return Object.values(version.downloads)[0] ?? null;
-}
-
-function resolveHangarPlatform(software: string): string {
-  const normalized = software.toLowerCase();
-  if (normalized.includes('velocity')) return 'VELOCITY';
-  if (normalized.includes('waterfall') || normalized.includes('bungeecord')) return 'WATERFALL';
-  return 'PAPER';
 }
 
 export async function searchModrinth(
@@ -448,6 +103,7 @@ export async function searchModrinth(
   offset = 0,
   limit = 20,
   signal?: AbortSignal,
+  minecraftVersion?: string,
 ): Promise<{ hits: ModrinthProject[]; total_hits: number }> {
   if (isRealTauriE2E) {
     return {
@@ -461,28 +117,29 @@ export async function searchModrinth(
           icon_url: '',
           downloads: 1,
           project_type: 'plugin',
+          compatibility: 'compatible',
+          supportedVersions: minecraftVersion ? [minecraftVersion] : [],
         },
       ],
       total_hits: 1,
     };
   }
 
-  const result = await searchModrinthProjects({
-    query,
-    facets,
-    offset,
-    limit,
+  return invokePluginMetadata(
+    'search_plugin_modrinth',
+    {
+      query,
+      facets,
+      offset,
+      limit,
+      ...(minecraftVersion === undefined ? {} : { minecraftVersion }),
+    },
     signal,
-  });
-
-  return {
-    hits: result.hits.map((hit) => ({ ...hit })),
-    total_hits: result.total_hits,
-  };
+  );
 }
 
 export async function getModrinthVersions(projectId: string): Promise<unknown[]> {
-  return fetchJson<unknown[]>(`https://api.modrinth.com/v2/project/${projectId}/version`);
+  return tauriInvoke('get_plugin_modrinth_versions', { projectId });
 }
 
 export async function getCompatibleModrinthVersion(params: {
@@ -498,47 +155,21 @@ export async function getCompatibleModrinthVersion(params: {
       dependencies: [],
     };
   }
-
-  const url = new URL(`https://api.modrinth.com/v2/project/${params.projectId}/version`);
-  if (params.loader.trim()) {
-    url.searchParams.set('loaders', JSON.stringify([params.loader.trim()]));
-  }
-  if (params.minecraftVersion.trim()) {
-    url.searchParams.set('game_versions', JSON.stringify([params.minecraftVersion.trim()]));
-  }
-
-  const payload = await fetchJson<unknown[]>(url.toString());
-  if (!Array.isArray(payload)) {
-    return null;
-  }
-
-  const versions = payload
-    .map(parseModrinthVersion)
-    .filter((version): version is ModrinthVersion => version !== null);
-
-  return versions[0] ?? null;
+  return tauriInvoke('get_plugin_modrinth_compatible_version', params);
 }
 
 export async function getModrinthVersionById(versionId: string): Promise<ModrinthVersion | null> {
-  const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/version/${versionId}`);
-  return parseModrinthVersion(payload);
+  return tauriInvoke('get_plugin_modrinth_version', { versionId });
 }
 
 export async function getModrinthProjectIdentity(
   projectId: string,
 ): Promise<ModrinthProjectIdentity | null> {
-  const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/project/${projectId}`);
-  return parseModrinthProjectIdentity(payload);
+  return tauriInvoke('get_plugin_modrinth_identity', { projectId });
 }
 
 export async function getModrinthProjectBody(projectId: string): Promise<string | null> {
-  const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/project/${projectId}`);
-  const parsed = parseModrinthProjectDocument(payload);
-  if (!parsed) {
-    return null;
-  }
-
-  return parsed.body.trim() ? parsed.body : null;
+  return tauriInvoke('get_plugin_modrinth_body', { projectId });
 }
 
 export async function searchHangar(
@@ -546,30 +177,7 @@ export async function searchHangar(
   offset = 0,
   signal?: AbortSignal,
 ): Promise<{ result: HangarProject[]; pagination: unknown }> {
-  const payload = await searchHangarProjects({
-    query,
-    offset,
-    limit: 25,
-    signal,
-  });
-  const result: HangarProject[] = payload.result.map((project) => ({
-    name: project.name,
-    namespace: {
-      owner: project.namespace.owner,
-      slug: project.namespace.slug,
-    },
-    stats: {
-      downloads: project.stats.downloads,
-      stars: project.stats.stars,
-    },
-    description: project.description,
-    avatarUrl: project.avatarUrl,
-  }));
-
-  return {
-    result,
-    pagination: payload.pagination,
-  };
+  return invokePluginMetadata('search_plugin_hangar', { query, offset, limit: 25 }, signal);
 }
 
 export async function getHangarVersions(
@@ -577,33 +185,7 @@ export async function getHangarVersions(
   slug: string,
   platform?: string,
 ): Promise<HangarVersion[]> {
-  const encodedOwner = encodeURIComponent(owner);
-  const encodedSlug = encodeURIComponent(slug);
-  const endpoint = `https://hangar.papermc.io/api/v1/projects/${encodedOwner}/${encodedSlug}/versions`;
-
-  const fetchVersions = async (targetPlatform?: string) => {
-    const url = new URL(endpoint);
-    url.searchParams.set('limit', '30');
-    if (targetPlatform) {
-      url.searchParams.set('platform', targetPlatform);
-    }
-
-    const payload = await fetchJson<HangarVersionResponse>(url.toString());
-    if (!Array.isArray(payload.result)) {
-      return [];
-    }
-
-    return payload.result
-      .map(parseHangarVersion)
-      .filter((version): version is HangarVersion => version !== null);
-  };
-
-  const primary = await fetchVersions(platform);
-  if (primary.length > 0 || !platform) {
-    return primary;
-  }
-
-  return fetchVersions();
+  return tauriInvoke('get_plugin_hangar_versions', { owner, slug, platform });
 }
 
 export async function resolveHangarDownload(params: {
@@ -612,43 +194,7 @@ export async function resolveHangarDownload(params: {
   software: string;
   minecraftVersion: string;
 }): Promise<HangarResolvedDownload | null> {
-  const platform = resolveHangarPlatform(params.software);
-  const versions = await getHangarVersions(params.owner, params.slug, platform);
-  if (versions.length === 0) {
-    return null;
-  }
-
-  const supportedVersions = Array.from(
-    new Set(versions.flatMap((version) => pickHangarDependencies(version, platform))),
-  );
-
-  const compatibleVersion = versions.find((version) => {
-    const dependencies = pickHangarDependencies(version, platform);
-    return isMatchingMinecraftVersion(dependencies, params.minecraftVersion);
-  });
-
-  const selected = compatibleVersion ?? versions[0];
-  const selectedDownload = pickHangarDownload(selected, platform);
-  if (!selectedDownload) {
-    return null;
-  }
-
-  if (!selectedDownload.downloadUrl && !selectedDownload.externalUrl) {
-    return null;
-  }
-
-  const fileNameBase = `${params.slug}-${selected.name}`;
-  const fileName = selectedDownload.fileName || `${sanitizeFileName(fileNameBase)}.jar`;
-
-  return {
-    versionName: selected.name,
-    fileName,
-    downloadUrl: selectedDownload.downloadUrl,
-    externalUrl: selectedDownload.externalUrl,
-    checksum: selectedDownload.checksum,
-    compatible: Boolean(compatibleVersion),
-    supportedVersions,
-  };
+  return tauriInvoke('resolve_plugin_hangar_download', params);
 }
 
 export async function checkHangarCompatibility(params: {
@@ -656,45 +202,16 @@ export async function checkHangarCompatibility(params: {
   slug: string;
   software: string;
   minecraftVersion: string;
-}): Promise<{ compatible: boolean; supportedVersions: string[] }> {
-  const platform = resolveHangarPlatform(params.software);
-  const versions = await getHangarVersions(params.owner, params.slug, platform);
-  if (versions.length === 0) {
-    return { compatible: false, supportedVersions: [] };
-  }
-
-  const supportedVersions = Array.from(
-    new Set(versions.flatMap((version) => pickHangarDependencies(version, platform))),
-  );
-
-  const compatible = versions.some((version) => {
-    const dependencies = pickHangarDependencies(version, platform);
-    return isMatchingMinecraftVersion(dependencies, params.minecraftVersion);
-  });
-
-  return {
-    compatible,
-    supportedVersions,
-  };
+}): Promise<{
+  compatible: boolean;
+  compatibility: PluginCompatibility;
+  supportedVersions: string[];
+}> {
+  return tauriInvoke('check_plugin_hangar_compatibility', params);
 }
 
 export async function getHangarProjectBody(owner: string, slug: string): Promise<string | null> {
-  const encodedOwner = encodeURIComponent(owner);
-  const encodedSlug = encodeURIComponent(slug);
-  const payload = await fetchJson<unknown>(
-    `https://hangar.papermc.io/api/v1/projects/${encodedOwner}/${encodedSlug}`,
-  );
-
-  const parsed = parseHangarProjectDocument(payload);
-  if (!parsed) {
-    return null;
-  }
-
-  if (parsed.mainPageContent?.trim()) {
-    return parsed.mainPageContent;
-  }
-
-  return parsed.description.trim() ? parsed.description : null;
+  return tauriInvoke('get_plugin_hangar_body', { owner, slug });
 }
 
 export async function searchSpigot(
@@ -702,148 +219,20 @@ export async function searchSpigot(
   page = 1,
   size = 25,
   signal?: AbortSignal,
+  minecraftVersion?: string,
 ): Promise<SpigetResource[]> {
-  const resources = await searchSpigotResources({
-    query,
-    page,
-    size,
+  return invokePluginMetadata(
+    'search_plugin_spiget',
+    {
+      query,
+      page: Math.max(1, page),
+      size,
+      ...(minecraftVersion === undefined ? {} : { minecraftVersion }),
+    },
     signal,
-  });
-
-  return resources.map((resource) => ({ ...resource }));
+  );
 }
 
 export async function getSpigotResourceBody(resourceId: number): Promise<string | null> {
-  const payload = await fetchJson<unknown>(`https://api.spiget.org/v2/resources/${resourceId}`);
-  const parsed = parseSpigotResourceDocument(payload);
-  if (!parsed) {
-    return null;
-  }
-
-  return parsed.description?.trim() ? parsed.description : null;
-}
-
-export async function downloadPlugin(request: PluginArtifactRequest): Promise<void> {
-  return tauriInvoke('download_plugin_artifact', { request });
-}
-
-export async function installModrinthProject(
-  versionId: string,
-  providerFileName: string,
-  target: PluginInstallTarget,
-): Promise<void> {
-  validatePluginInstallTarget(target);
-
-  if (isRealTauriE2E && versionId === E2E_PLUGIN_VERSION_ID) {
-    if (!e2ePluginUrl || !e2ePluginSha256) {
-      throw new Error('Real Tauri E2E plugin fixture is not configured');
-    }
-    await downloadPlugin({
-      serverId: target.serverId,
-      relativePath: `${target.relativeDir}/${target.fileName}`,
-      provider: 'modrinth',
-      url: e2ePluginUrl,
-      checksum: { algorithm: 'sha256', value: e2ePluginSha256 },
-      eventId: `plugin-${versionId}`,
-    });
-    return;
-  }
-
-  const payload = await fetchJson<unknown>(`https://api.modrinth.com/v2/version/${versionId}`);
-  if (!isRecord(payload) || !Array.isArray(payload.files)) {
-    throw new Error('Failed to parse Modrinth version payload');
-  }
-
-  // Select the appropriate file entry
-  let chosenEntry: unknown = null;
-  if (providerFileName?.trim()) {
-    // If fileName is provided, find the matching file entry
-    const trimmedFileName = providerFileName.trim();
-    chosenEntry = payload.files.find((entry) => {
-      if (!isRecord(entry)) {
-        return false;
-      }
-      return asString(entry.filename) === trimmedFileName;
-    });
-  }
-
-  if (!chosenEntry) {
-    // Otherwise, prefer primary file or fall back to first downloadable file
-    chosenEntry = payload.files.find((entry) => {
-      if (!isRecord(entry)) {
-        return false;
-      }
-      return entry.primary && Boolean(asString(entry.url));
-    });
-  }
-
-  if (!chosenEntry) {
-    // Final fallback: first downloadable file
-    chosenEntry = payload.files.find((entry) => {
-      if (!isRecord(entry)) {
-        return false;
-      }
-      return Boolean(asString(entry.url));
-    });
-  }
-
-  if (!chosenEntry || !isRecord(chosenEntry)) {
-    throw new Error('No downloadable files in Modrinth version');
-  }
-
-  const url = asString(chosenEntry.url);
-  if (!url) {
-    throw new Error('No download URL in Modrinth version file');
-  }
-
-  if (!target.fileName.trim()) {
-    throw new Error('No filename available for Modrinth install');
-  }
-
-  await downloadPlugin({
-    serverId: target.serverId,
-    relativePath: `${target.relativeDir}/${target.fileName}`,
-    provider: 'modrinth',
-    url,
-    checksum: parsePluginChecksum(chosenEntry.hashes),
-    eventId: `plugin-${versionId}`,
-  });
-}
-
-export async function installHangarProject(
-  downloadUrl: string,
-  target: PluginInstallTarget,
-  checksum?: PluginChecksum,
-): Promise<void> {
-  validatePluginInstallTarget(target);
-
-  await downloadPlugin({
-    serverId: target.serverId,
-    relativePath: `${target.relativeDir}/${target.fileName}`,
-    provider: 'hangar',
-    url: downloadUrl,
-    checksum,
-    eventId: 'plugin-hangar',
-  });
-}
-
-export async function installSpigotProject(
-  resourceId: number,
-  target: PluginInstallTarget,
-  versionId?: number,
-): Promise<void> {
-  validatePluginInstallTarget(target);
-
-  const url = new URL(`https://api.spiget.org/v2/resources/${resourceId}/download`);
-  if (typeof versionId === 'number' && Number.isFinite(versionId) && versionId > 0) {
-    url.searchParams.set('version', String(versionId));
-  }
-
-  await downloadPlugin({
-    serverId: target.serverId,
-    relativePath: `${target.relativeDir}/${target.fileName}`,
-    provider: 'spiget',
-    url: url.toString(),
-    eventId: `plugin-spigot-${resourceId}`,
-  });
+  return tauriInvoke('get_plugin_spiget_body', { resourceId });
 }

@@ -7,6 +7,8 @@ pub mod java;
 pub mod ngrok;
 pub mod perf;
 pub mod players;
+pub mod plugin_catalog;
+pub mod plugin_installer;
 pub mod process_stats;
 pub mod properties;
 pub mod recovery_journal;

@@ -101,21 +101,6 @@ export async function executeServerJarInstall(planId: string): Promise<ServerJar
   return tauriInvoke<ServerJarInstallResult>('execute_server_jar_install', { planId });
 }
 
-export async function downloadServerJar(
-  url: string,
-  serverId: string,
-  relativePath: string,
-  sha256: string,
-): Promise<void> {
-  const checksum = sha256.trim();
-  if (!/^[0-9a-f]{64}$/i.test(checksum)) {
-    throw new Error('Verified server JAR installation requires a valid SHA-256 checksum');
-  }
-  return tauriInvoke('download_server_jar', {
-    request: { url, serverId, relativePath, checksum: { algorithm: 'sha256', value: checksum } },
-  });
-}
-
 export async function getServerStats(serverId: string): Promise<{ cpu: number; memory: number }> {
   return tauriInvoke('get_server_stats', { serverId });
 }

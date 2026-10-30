@@ -58,6 +58,7 @@ function FeedbackActionButton({
   return (
     <Button
       type="button"
+      data-testid={`feedback-dialog-${variant}-action`}
       variant={variant === 'primary' ? 'modalPrimary' : 'modalSecondary'}
       disabled={disabled}
       onClick={onSelect}

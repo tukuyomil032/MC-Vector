@@ -1,5 +1,5 @@
-import { fetchJson } from './http-client';
-import type { PluginSourceAdapter } from './source-adapter';
+import type { PluginCompatibility } from '../../plugin-commands';
+import { invokePluginMetadata } from '../../plugin-metadata-ipc';
 
 export interface ModrinthProjectSearchHit {
   slug: string;
@@ -10,6 +10,8 @@ export interface ModrinthProjectSearchHit {
   icon_url: string;
   downloads: number;
   project_type: string;
+  compatibility: PluginCompatibility;
+  supportedVersions: string[];
 }
 
 export interface ModrinthSearchParams {
@@ -18,6 +20,7 @@ export interface ModrinthSearchParams {
   offset: number;
   limit: number;
   signal?: AbortSignal;
+  minecraftVersion?: string;
 }
 
 export interface ModrinthSearchResult {
@@ -25,22 +28,19 @@ export interface ModrinthSearchResult {
   total_hits: number;
 }
 
-const modrinthSearchAdapter: PluginSourceAdapter<ModrinthSearchParams, ModrinthSearchResult> = {
-  async search(params) {
-    const url = new URL('https://api.modrinth.com/v2/search');
-    url.searchParams.set('query', params.query);
-    url.searchParams.set('offset', String(params.offset));
-    url.searchParams.set('limit', String(params.limit));
-    if (params.facets) {
-      url.searchParams.set('facets', params.facets);
-    }
-
-    return fetchJson<ModrinthSearchResult>(url.toString(), { signal: params.signal });
-  },
-};
-
 export async function searchModrinthProjects(
   params: ModrinthSearchParams,
 ): Promise<ModrinthSearchResult> {
-  return modrinthSearchAdapter.search(params);
+  const { query, facets, offset, limit, signal, minecraftVersion } = params;
+  return invokePluginMetadata(
+    'search_plugin_modrinth',
+    {
+      query,
+      facets,
+      offset,
+      limit,
+      ...(minecraftVersion === undefined ? {} : { minecraftVersion }),
+    },
+    signal,
+  );
 }
