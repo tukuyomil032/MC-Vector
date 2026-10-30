@@ -627,6 +627,7 @@ mod tests {
         FileReplacement, MAX_PROPERTIES_BYTES,
     };
     use crate::commands::server_registry::{JsonNumber, MinecraftServer, ServerRegistry};
+    use crate::test_support::test_temp_dir;
     use serde_json::Value;
     use std::collections::HashMap;
     use std::fs;
@@ -637,8 +638,7 @@ mod tests {
 
     impl TempDirectory {
         fn new() -> Self {
-            let path =
-                std::env::temp_dir().join(format!("mc-vector-properties-{}", Uuid::new_v4()));
+            let path = test_temp_dir("mc-vector-properties-tests").join(Uuid::new_v4().to_string());
             fs::create_dir_all(&path).expect("create test directory");
             Self(path)
         }
