@@ -90,7 +90,12 @@ export default defineConfig({
           if (id.includes('xterm') || id.includes('xterm-addon-')) {
             return 'vendor-terminal';
           }
-          if (id.includes('framer-motion')) {
+          if (
+            id.includes('node_modules/motion/') ||
+            id.includes('framer-motion') ||
+            id.includes('motion-dom') ||
+            id.includes('motion-utils')
+          ) {
             return 'vendor-motion';
           }
           if (

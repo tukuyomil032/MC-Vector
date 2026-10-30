@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Suspense } from 'react';
 import type { Translate } from '../../i18n';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
