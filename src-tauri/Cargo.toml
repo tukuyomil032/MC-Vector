@@ -23,7 +23,7 @@ tauri-build = { version = "2.5.4", features = [] }
 serde_json = { version = "1", features = ["arbitrary_precision", "preserve_order"] }
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", features = ["clock"] }
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
 log = "0.4"
 tauri = { version = "2.11.1", features = [] }
 tauri-plugin-log = "2"
@@ -41,15 +41,15 @@ tauri-plugin-global-shortcut = "2"
 
 # カスタムコマンド用
 tokio = { version = "1", features = ["full"] }
-sysinfo = "0.33"
+sysinfo = "0.39"
 zip = "9"
 tar = "0.4"
 flate2 = "1"
-reqwest = { version = "0.12", features = ["stream"] }
+reqwest = { version = "0.13", features = ["stream"] }
 futures-util = "0.3"
-base64 = "0.22"
+base64 = "0.23"
 regex = "1"
-sha2 = "0.10"
+sha2 = "0.11"
 uuid = { version = "1", features = ["v4"] }
 keyring = { version = "3.6.3", default-features = false, features = ["apple-native", "windows-native", "linux-native-sync-persistent"] }
 
@@ -59,7 +59,7 @@ tauri-plugin-updater = "2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Limit glib to Linux targets to avoid needing glib dev packages on macOS/Windows runners
-glib = "0.20"
+glib = "0.22"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-plugin-webdriver-automation = "0.1.3"
