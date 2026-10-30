@@ -1,7 +1,13 @@
 import { expect, test } from 'vitest';
-import { searchHangarProjects } from '../../src/lib/adapters/plugin/hangar-adapter';
-import { searchModrinthProjects } from '../../src/lib/adapters/plugin/modrinth-adapter';
-import { searchSpigotResources } from '../../src/lib/adapters/plugin/spigot-adapter';
+
+async function providerJson(url: string): Promise<unknown> {
+  const response = await fetch(url, {
+    headers: { Accept: 'application/json', 'User-Agent': 'MC-Vector live canary' },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`Provider metadata returned HTTP ${response.status}`);
+  return response.json();
+}
 
 async function fetchAdoptiumMetadata(): Promise<unknown> {
   const response = await fetch('https://api.adoptium.net/v3/info/available_releases', {
@@ -13,18 +19,18 @@ async function fetchAdoptiumMetadata(): Promise<unknown> {
   return response.json();
 }
 
-test('production provider adapters expose read-only search results', async (context) => {
+test('upstream provider APIs expose expected read-only search shapes', async (context) => {
   try {
     const [modrinth, hangar, spiget, adoptium] = await Promise.all([
-      searchModrinthProjects({ query: 'luckperms', facets: '', offset: 0, limit: 1 }),
-      searchHangarProjects({ query: 'luckperms', offset: 0, limit: 1 }),
-      searchSpigotResources({ query: 'luckperms', page: 1, size: 1 }),
+      providerJson('https://api.modrinth.com/v2/search?query=luckperms&limit=1'),
+      providerJson('https://hangar.papermc.io/api/v1/projects?query=luckperms&limit=1'),
+      providerJson('https://api.spiget.org/v2/search/resources/luckperms?page=1&size=1'),
       fetchAdoptiumMetadata(),
     ]);
 
-    expect(Array.isArray(modrinth.hits)).toBe(true);
-    expect(typeof modrinth.total_hits).toBe('number');
-    expect(Array.isArray(hangar.result)).toBe(true);
+    expect(Array.isArray((modrinth as { hits?: unknown }).hits)).toBe(true);
+    expect(typeof (modrinth as { total_hits?: unknown }).total_hits).toBe('number');
+    expect(Array.isArray((hangar as { result?: unknown }).result)).toBe(true);
     expect(Array.isArray(spiget)).toBe(true);
     expect(adoptium).toBeTypeOf('object');
   } catch (error) {

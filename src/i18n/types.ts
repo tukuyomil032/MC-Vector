@@ -615,6 +615,13 @@ export interface TranslationDictionary {
       dependencyInstallIncomplete: string;
       dependencyInstallSuccess: string;
       dependencyCheckOnly: string;
+      installPlanConfirmTitle: string;
+      installPlanConfirmDescription: string;
+      installPlanConfirmButton: string;
+      installPlanDependencies: string;
+      installPlanUnverifiedWarning: string;
+      installPlanUnknownCompatibility: string;
+      installingProgress: string;
       incompatibilityWarning: string;
       incompatibleInstallTitle: string;
       incompatibleInstallDescription: string;

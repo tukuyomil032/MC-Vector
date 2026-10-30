@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ALLOWED_TAURI_COMMANDS } from '@/lib/tauri-command-allowlist';
 import { describe, expect, it } from 'vitest';
 
-describe('Tauri HTTP capability scopes', () => {
+describe('Tauri network capability scopes', () => {
   it('exposes the managed delete and serialized restart commands only', () => {
     const handler = readFileSync(resolve(process.cwd(), 'src-tauri/src/lib.rs'), 'utf8');
     expect(handler).not.toContain('commands::server_registry::delete_server,');
@@ -12,24 +12,29 @@ describe('Tauri HTTP capability scopes', () => {
     expect(ALLOWED_TAURI_COMMANDS.has('delete_server')).toBe(false);
     expect(ALLOWED_TAURI_COMMANDS.has('restart_server')).toBe(true);
   });
-  it('allows the official JAR metadata APIs', () => {
-    const capability = JSON.parse(
-      readFileSync(
-        resolve(process.cwd(), 'src-tauri/capabilities/main-artifact-install.json'),
-        'utf8',
-      ),
-    ) as { permissions: unknown[] };
-    const httpPermission = capability.permissions.find(
-      (permission): permission is { identifier: string; allow: Array<{ url: string }> } =>
-        typeof permission === 'object' &&
-        permission !== null &&
-        'identifier' in permission &&
-        permission.identifier === 'http:default',
-    );
 
-    expect(httpPermission?.allow.map((entry) => entry.url)).toEqual(
-      expect.arrayContaining(['https://fill.papermc.io/**', 'https://api.leafmc.one/**']),
-    );
+  it('keeps HTTP plugin permissions out of renderer capabilities', () => {
+    const capabilityDirectory = resolve(process.cwd(), 'src-tauri/capabilities');
+    const capabilities = readdirSync(capabilityDirectory)
+      .filter((file) => file.endsWith('.json'))
+      .map(
+        (file) =>
+          JSON.parse(readFileSync(resolve(capabilityDirectory, file), 'utf8')) as {
+            permissions: unknown[];
+          },
+      );
+
+    expect(
+      capabilities.some((capability) =>
+        capability.permissions.some(
+          (permission) =>
+            typeof permission === 'object' &&
+            permission !== null &&
+            'identifier' in permission &&
+            permission.identifier === 'http:default',
+        ),
+      ),
+    ).toBe(false);
   });
 
   it('keeps backup selector permissions free of process, store, updater, and HTTP access', () => {
@@ -57,9 +62,7 @@ describe('Tauri HTTP capability scopes', () => {
     expect(directives.find((directive) => directive.startsWith('img-src '))).not.toMatch(
       /\shttps:(?:\s|$)/,
     );
-    expect(directives.find((directive) => directive.startsWith('connect-src '))).not.toMatch(
-      /\shttps:(?:\s|$)/,
-    );
-    expect(config.app.security.csp).toContain('https://api.modrinth.com');
+    const connect = directives.find((directive) => directive.startsWith('connect-src '));
+    expect(connect).toBe("connect-src 'self'");
   });
 });

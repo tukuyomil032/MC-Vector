@@ -600,6 +600,15 @@ export const ja: TranslationDictionary = {
       dependencyInstallSuccess: '依存プラグインを {{count}} 件インストールしました',
       dependencyCheckOnly:
         '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
+      installPlanConfirmTitle: 'プラグインのインストール確認',
+      installPlanConfirmDescription:
+        '{{directory}} フォルダに次の {{count}} 件をインストールしますか？\n{{artifacts}}{{dependencyNote}}\n{{warnings}}',
+      installPlanConfirmButton: 'インストール',
+      installPlanDependencies: '\n必須の依存プラグインもインストールします: {{names}}',
+      installPlanUnverifiedWarning:
+        'プロバイダーのチェックサムがない成果物が含まれています。Rust側のポリシー設定で許可されている必要があります。',
+      installPlanUnknownCompatibility: '互換性が確認できていない成果物が含まれています。',
+      installingProgress: '{{progress}}% — {{label}}',
       incompatibilityWarning: 'このプラグインは現在のサーバーバージョンと非互換の可能性があります',
       incompatibleInstallTitle: 'プラグインのインストールを中止しました',
       incompatibleInstallDescription:

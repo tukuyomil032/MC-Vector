@@ -11,56 +11,75 @@ async function openPluginBrowser(page: Page, app: AppFixture, scenario: E2eScena
   });
 }
 
+async function confirmInstallPlan(page: Page) {
+  const dialog = page.locator('[data-testid="feedback-dialog"]');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('feedback-dialog-primary-action')).toBeVisible();
+  await dialog.getByTestId('feedback-dialog-primary-action').click();
+}
+
+async function expectNoRendererOwnedArtifactData(app: AppFixture) {
+  await app.expectNoIpcCall('download_plugin_artifact');
+  const prepareCalls = await app.ipcCalls('prepare_plugin_install');
+  for (const call of prepareCalls) {
+    const serialized = JSON.stringify(call.args);
+    expect(serialized).not.toMatch(/"(?:url|checksum|relativePath|eventId)"\s*:/i);
+  }
+}
+
 test.describe('plugin install and feedback flows', () => {
-  test('installs a Modrinth plugin to the final plugins jar path', async ({ page, app }) => {
+  test('previews and installs a Modrinth artifact through a one-time Rust plan', async ({
+    page,
+    app,
+  }) => {
     await openPluginBrowser(page, app, 'paper-plugin-success');
     const result = page.locator('[data-testid="plugin-result-veinminer-project"]');
     await expect(result).toBeVisible();
     await app.clearCalls();
 
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
-    await expect.poll(async () => (await app.ipcCalls('download_plugin_artifact')).length).toBe(1);
+    const preview = page.locator('[data-testid="feedback-dialog"]');
+    await expect(preview).toContainText('VeinMiner');
+    await expect(preview).toContainText('VeinMiner-1.21.4.jar');
+    await confirmInstallPlan(page);
     await expect
       .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
-    await page.getByRole('tab', { name: /Installed \(1\)/ }).click();
-    await expect(page.getByText('VeinMiner-1.21.4.jar', { exact: true })).toBeVisible();
 
-    const calls = await app.ipcCalls('download_plugin_artifact');
-    expect(calls).toHaveLength(1);
-    const request = (calls[0].args as { request: Record<string, unknown> }).request;
-    expect(request).toMatchObject({
-      serverId: 'server-1',
-      relativePath: 'plugins/VeinMiner-1.21.4.jar',
-      provider: 'modrinth',
-      url: 'https://cdn.modrinth.example/veinminer.jar',
-      eventId: 'plugin-version-1',
+    const prepare = await app.ipcCalls('prepare_plugin_install');
+    expect(prepare).toHaveLength(1);
+    expect(prepare[0].args).toMatchObject({
+      request: {
+        serverId: 'server-1',
+        project: { provider: 'modrinth', projectId: 'veinminer-project' },
+        replaceFileName: null,
+      },
     });
-    expect(request).toHaveProperty('checksum');
-    expect(JSON.stringify(request)).not.toContain('allowUnverifiedPluginDownloads');
-    await expect
-      .poll(() => app.runtimeFiles())
-      .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
-    expect((await app.runtimeFiles()).some((path) => path.includes('.tmp-'))).toBe(false);
+    const execute = await app.ipcCalls('execute_plugin_install');
+    expect(execute).toHaveLength(1);
+    expect(execute[0].args).toMatchObject({
+      request: { token: expect.any(String), confirmedDependencyIds: [] },
+    });
+    await expectNoRendererOwnedArtifactData(app);
     await app.expectNoIpcCall('move_managed_path');
+    await app.expectNoIpcCall('delete_managed_path');
   });
 
-  test('uses mods for a Fabric install', async ({ page, app }) => {
+  test('uses the Rust-selected mods directory for a Fabric install', async ({ page, app }) => {
     await openPluginBrowser(page, app, 'fabric-mod-success');
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
+    await confirmInstallPlan(page);
     await expect
       .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/mods/VeinMiner-1.21.4.jar');
-    await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
-    await page.getByRole('tab', { name: /Installed \(1\)/ }).click();
-    await expect(page.getByText('VeinMiner-1.21.4.jar', { exact: true })).toBeVisible();
-    expect((await app.ipcCalls('download_plugin_artifact'))[0].args).toMatchObject({
-      request: { relativePath: 'mods/VeinMiner-1.21.4.jar' },
+    expect((await app.ipcCalls('prepare_plugin_install'))[0].args).toMatchObject({
+      request: { serverId: 'server-1', project: { projectId: 'veinminer-project' } },
     });
+    await expectNoRendererOwnedArtifactData(app);
   });
 
-  test('blocks an incompatible Hangar plugin before any install side effect', async ({
+  test('blocks an incompatible Hangar plugin before asking Rust to prepare an install', async ({
     page,
     app,
   }) => {
@@ -83,15 +102,9 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toContainText('Paper 1.21.10');
     await expect(dialog).toContainText('1.20.1');
     await expect(dialog).toContainText('cannot be installed');
-    await expect(dialog.getByRole('button', { name: /continue|proceed/i })).toHaveCount(0);
-    await expect
-      .poll(() =>
-        page.evaluate(() =>
-          Boolean(document.activeElement?.closest('[data-testid="feedback-dialog"]')),
-        ),
-      )
-      .toBe(true);
-    await app.expectNoIpcCall('download_plugin_artifact');
+    await expect(dialog.getByTestId('feedback-dialog-primary-action')).toHaveCount(0);
+    await app.expectNoIpcCall('prepare_plugin_install');
+    await app.expectNoIpcCall('execute_plugin_install');
     await app.expectNoIpcCall('move_managed_path');
     await app.expectNoIpcCall('delete_managed_path');
 
@@ -99,7 +112,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toHaveCount(0);
   });
 
-  test('classifies hashless Spiget rejection as a security dialog and allows it after settings change', async ({
+  test('requires the Rust unverified-download policy before installing a hashless Spiget plugin', async ({
     page,
     app,
   }) => {
@@ -110,17 +123,18 @@ test.describe('plugin install and feedback flows', () => {
     await app.clearCalls();
 
     await result.locator('[data-testid="plugin-install-1"]').click();
-    const dialog = page.locator('[data-testid="feedback-dialog"]');
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('Unverified plugin download blocked');
-    await expect(dialog).toContainText('provider did not supply a checksum');
-    await expect(dialog).not.toContainText('https://');
-    await expect(dialog).not.toContainText('/mock/');
+    const preview = page.locator('[data-testid="feedback-dialog"]');
+    await expect(preview).toContainText('no provider checksum');
+    await confirmInstallPlan(page);
+    const blocked = page.locator('[data-testid="feedback-dialog"]');
+    await expect(blocked).toContainText('Unverified plugin download blocked');
+    await expect(blocked).toContainText('provider did not supply a checksum');
+    await expect(blocked).not.toContainText('https://');
+    await expect(blocked).not.toContainText('/mock/');
     await expect(page.getByText('Install error', { exact: true })).toHaveCount(0);
-    await expect(dialog.getByRole('button', { name: 'Open General Settings' })).toBeVisible();
-    await expect(dialog.getByLabel('Close')).toBeVisible();
+    await expect(blocked.getByRole('button', { name: 'Open General Settings' })).toBeVisible();
 
-    await dialog.getByRole('button', { name: 'Open General Settings' }).click();
+    await blocked.getByRole('button', { name: 'Open General Settings' }).click();
     await expect(page.locator('[data-testid="app-settings-view"]')).toBeVisible();
     const checkbox = page.locator('#allow-unverified-plugin-downloads');
     await expect(checkbox).not.toBeChecked();
@@ -129,30 +143,29 @@ test.describe('plugin install and feedback flows', () => {
     await expect
       .poll(async () => (await app.runtimeState())?.config.allowUnverifiedPluginDownloads)
       .toBe(true);
-    await expect(app.ipcCalls('download_plugin_artifact')).resolves.toHaveLength(1);
 
     await app.openView('plugins');
     await page.locator('[data-testid="plugin-provider-spigot"]').click();
     const retryResult = page.locator('[data-testid="plugin-result-1"]');
     await expect(retryResult).toBeVisible();
     await retryResult.locator('[data-testid="plugin-install-1"]').click();
+    await confirmInstallPlan(page);
     await expect
       .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/veinminer-1.jar');
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible();
-    expect((await app.ipcCalls('download_plugin_artifact')).at(-1)?.args).toMatchObject({
-      request: { provider: 'spiget', relativePath: 'plugins/veinminer-1.jar' },
+    expect((await app.ipcCalls('prepare_plugin_install'))[0].args).toMatchObject({
+      request: { project: { provider: 'spiget', resourceId: 1 } },
     });
+    expect(await app.ipcCalls('execute_plugin_install')).toHaveLength(2);
+    await expectNoRendererOwnedArtifactData(app);
   });
 
-  test('checksum-mismatch opens a verification modal and does not install', async ({
-    page,
-    app,
-  }) => {
+  test('checksum mismatch leaves an existing plugin file untouched', async ({ page, app }) => {
     await openPluginBrowser(page, app, 'checksum-mismatch');
     await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
+    await confirmInstallPlan(page);
     const dialog = page.locator('[data-testid="feedback-dialog"]');
-    await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Plugin integrity check failed');
     await expect(dialog).toContainText('not placed in the server folder');
     expect(
@@ -160,10 +173,14 @@ test.describe('plugin install and feedback flows', () => {
     ).toBe(false);
   });
 
-  test('shows a retryable inline error for a transient network failure', async ({ page, app }) => {
+  test('shows a retryable error and prepares a fresh plan after a network failure', async ({
+    page,
+    app,
+  }) => {
     await openPluginBrowser(page, app, 'network-retry');
     const result = page.locator('[data-testid="plugin-result-veinminer-project"]');
     await result.locator('[data-testid="plugin-install-veinminer-project"]').click();
+    await confirmInstallPlan(page);
     const error = result.locator('[data-testid="plugin-install-error-veinminer-project"]');
     await expect(error).toBeVisible({ timeout: 15_000 });
     await expect(error).toHaveAttribute('role', 'alert');
@@ -172,6 +189,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(result.getByText('Installed', { exact: true })).toHaveCount(0);
 
     await error.getByRole('button', { name: /retry/i }).click();
+    await confirmInstallPlan(page);
     await expect
       .poll(() => app.runtimeFiles())
       .toContain('/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar');
@@ -181,6 +199,35 @@ test.describe('plugin install and feedback flows', () => {
     await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible({
       timeout: 15_000,
     });
-    expect((await app.ipcCalls('download_plugin_artifact')).length).toBe(2);
+    expect(await app.ipcCalls('prepare_plugin_install')).toHaveLength(2);
+    expect(await app.ipcCalls('execute_plugin_install')).toHaveLength(2);
+  });
+
+  test('toggles and uninstalls installed files only through Rust commands', async ({
+    page,
+    app,
+  }) => {
+    await openPluginBrowser(page, app, 'paper-plugin-success');
+    await page.locator('[data-testid="plugin-install-veinminer-project"]').click();
+    await confirmInstallPlan(page);
+    const enabledPath = '/mock/app-data/servers/server-1/plugins/VeinMiner-1.21.4.jar';
+    const disabledPath = `${enabledPath}.disabled`;
+    await expect.poll(() => app.runtimeFiles()).toContain(enabledPath);
+    await page.getByRole('tab', { name: /Installed/ }).click();
+    await page.getByRole('button', { name: 'Disable' }).click();
+    await expect.poll(() => app.runtimeFiles()).toContain(disabledPath);
+    await expect.poll(() => app.runtimeFiles()).not.toContain(enabledPath);
+    expect(await app.ipcCalls('toggle_installed_plugin')).toHaveLength(1);
+
+    await page.getByRole('button', { name: 'Enable' }).click();
+    await expect.poll(() => app.runtimeFiles()).toContain(enabledPath);
+    await expect.poll(() => app.runtimeFiles()).not.toContain(disabledPath);
+    await app.confirmDialogs();
+    await page.getByRole('button', { name: 'Uninstall' }).click();
+    await expect.poll(() => app.runtimeFiles()).not.toContain(enabledPath);
+    expect(await app.ipcCalls('uninstall_installed_plugin')).toHaveLength(1);
+    await expectNoRendererOwnedArtifactData(app);
+    await app.expectNoIpcCall('move_managed_path');
+    await app.expectNoIpcCall('delete_managed_path');
   });
 });

@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -9,10 +8,6 @@ export default defineConfig({
     testTimeout: 20_000,
   },
   resolve: {
-    alias: {
-      '@tauri-apps/plugin-http': fileURLToPath(
-        new URL('./tests/live/tauri-plugin-http.live.ts', import.meta.url),
-      ),
-    },
+    alias: {},
   },
 });

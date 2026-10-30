@@ -603,6 +603,15 @@ export const en: TranslationDictionary = {
       dependencyInstallSuccess: 'Installed {{count}} dependencies',
       dependencyCheckOnly:
         'Only ran dependency check. Please install dependencies first if needed.',
+      installPlanConfirmTitle: 'Confirm plugin installation',
+      installPlanConfirmDescription:
+        'Install these {{count}} artifact(s) into {{directory}}?\n{{artifacts}}{{dependencyNote}}\n{{warnings}}',
+      installPlanConfirmButton: 'Install',
+      installPlanDependencies: '\nRequired dependencies will also be installed: {{names}}',
+      installPlanUnverifiedWarning:
+        'At least one artifact has no provider checksum. The Rust policy setting must allow this download.',
+      installPlanUnknownCompatibility: 'Compatibility is unknown for at least one artifact.',
+      installingProgress: '{{progress}}% — {{label}}',
       incompatibilityWarning: 'This plugin may be incompatible with the current server version',
       incompatibleInstallTitle: 'Plugin installation blocked',
       incompatibleInstallDescription:

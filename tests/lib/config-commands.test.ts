@@ -5,6 +5,7 @@ const setMock = vi.fn();
 const saveMock = vi.fn();
 const entriesMock = vi.fn();
 const onKeyChangeMock = vi.fn();
+const tauriInvokeMock = vi.fn();
 
 vi.mock('@tauri-apps/plugin-store', () => ({
   load: vi.fn().mockResolvedValue({
@@ -20,6 +21,8 @@ vi.mock('@tauri-apps/api/path', () => ({
   appDataDir: vi.fn().mockResolvedValue('/home/user/.local/share/mc-vector'),
 }));
 
+vi.mock('@/lib/tauri-api', () => ({ tauriInvoke: tauriInvokeMock }));
+
 describe('config-commands', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -28,6 +31,7 @@ describe('config-commands', () => {
     saveMock.mockReset();
     entriesMock.mockReset();
     onKeyChangeMock.mockReset();
+    tauriInvokeMock.mockReset().mockResolvedValue(false);
   });
 
   describe('getConfig', () => {
@@ -89,12 +93,13 @@ describe('config-commands', () => {
   });
 
   describe('getAppSettings', () => {
-    it('returns application settings from store', async () => {
+    it('returns renderer settings from store and the plugin policy from Rust', async () => {
       getMock
         .mockResolvedValueOnce('dark')
         .mockResolvedValueOnce('ja')
         .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(true);
+        .mockResolvedValueOnce('nightly');
+      tauriInvokeMock.mockResolvedValueOnce(true);
       const { getAppSettings } = await import('@/lib/config-commands');
       const result = await getAppSettings();
       expect(result).toEqual({
@@ -104,15 +109,11 @@ describe('config-commands', () => {
         allowUnverifiedPluginDownloads: true,
         updateChannel: 'stable',
       });
+      expect(tauriInvokeMock).toHaveBeenCalledWith('get_allow_unverified_plugin_downloads');
     });
 
     it('defaults allowUnverifiedPluginDownloads to false when it is not set', async () => {
-      getMock
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
+      getMock.mockResolvedValueOnce(null);
       const { getAppSettings } = await import('@/lib/config-commands');
       const result = await getAppSettings();
       expect(result.theme).toBeUndefined();
@@ -122,13 +123,13 @@ describe('config-commands', () => {
       expect(result.updateChannel).toBe('stable');
     });
 
-    it('defaults allowUnverifiedPluginDownloads to false for non-boolean stored values', async () => {
+    it('uses Rust policy result and ignores stale renderer-store values', async () => {
       getMock
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce('true')
         .mockResolvedValueOnce('beta');
+      tauriInvokeMock.mockResolvedValueOnce(false);
       const { getAppSettings } = await import('@/lib/config-commands');
       const result = await getAppSettings();
       expect(result.allowUnverifiedPluginDownloads).toBe(false);
@@ -137,7 +138,6 @@ describe('config-commands', () => {
 
     it('normalizes an invalid saved update channel to stable', async () => {
       getMock
-        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
@@ -151,7 +151,7 @@ describe('config-commands', () => {
   });
 
   describe('saveAppSettings', () => {
-    it('saves each non-undefined setting and calls save', async () => {
+    it('saves UI settings to Store and the plugin policy through Rust IPC', async () => {
       const { saveAppSettings } = await import('@/lib/config-commands');
       await saveAppSettings({
         theme: 'dark',
@@ -163,9 +163,11 @@ describe('config-commands', () => {
       expect(setMock).toHaveBeenCalledWith('theme', 'dark');
       expect(setMock).toHaveBeenCalledWith('locale', 'ja');
       expect(setMock).toHaveBeenCalledWith('liquidGlassEnabled', true);
-      expect(setMock).toHaveBeenCalledWith('allowUnverifiedPluginDownloads', true);
       expect(setMock).toHaveBeenCalledWith('updateChannel', 'beta');
       expect(saveMock).toHaveBeenCalled();
+      expect(tauriInvokeMock).toHaveBeenCalledWith('set_allow_unverified_plugin_downloads', {
+        enabled: true,
+      });
     });
 
     it('skips undefined values', async () => {

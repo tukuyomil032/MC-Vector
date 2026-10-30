@@ -11,6 +11,7 @@ import {
   setRuntimeFile,
 } from '../e2e/support/e2e-runtime';
 import { emit } from './tauri-api-event';
+import { pluginCatalogFixture } from './plugin-catalog';
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
@@ -219,6 +220,8 @@ function patchServerProperties(serverId: string, updates: Record<string, unknown
 async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
   const state = getE2eState();
   const payload = asRecord(args);
+  const metadata = pluginCatalogFixture(cmd);
+  if (metadata !== undefined) return metadata;
 
   switch (cmd) {
     case 'get_servers':
