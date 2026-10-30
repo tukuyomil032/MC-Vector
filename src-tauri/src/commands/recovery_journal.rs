@@ -220,6 +220,7 @@ fn safe_directory_exists(path: &Path) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use super::safe_directory_exists;
+    use crate::test_support::test_temp_dir;
     use std::fs;
     use std::path::PathBuf;
     use uuid::Uuid;
@@ -229,7 +230,7 @@ mod tests {
     impl TestDirectory {
         fn new() -> Self {
             let path =
-                std::env::temp_dir().join(format!("mc-vector-recovery-journal-{}", Uuid::new_v4()));
+                test_temp_dir("mc-vector-recovery-journal-tests").join(Uuid::new_v4().to_string());
             fs::create_dir_all(&path).expect("temporary recovery directory should be created");
             Self(path)
         }
