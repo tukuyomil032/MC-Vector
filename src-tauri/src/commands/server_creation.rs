@@ -397,6 +397,7 @@ mod tests {
         build_profile, create_server_directory, normalize_backup_time, remove_server_directory,
         validate_operation_id, NewServerProfileRequest,
     };
+    use crate::test_support::test_temp_dir;
     use std::fs;
     use std::path::PathBuf;
     use uuid::Uuid;
@@ -405,8 +406,7 @@ mod tests {
 
     impl TempDirectory {
         fn new() -> Self {
-            let path =
-                std::env::temp_dir().join(format!("mc-vector-create-test-{}", Uuid::new_v4()));
+            let path = test_temp_dir("mc-vector-create-tests").join(Uuid::new_v4().to_string());
             fs::create_dir_all(&path).expect("create temp directory");
             Self(path)
         }
