@@ -282,7 +282,7 @@ fn read_player_file(path: &Path) -> Result<Vec<PlayerEntry>, String> {
     if metadata.len() > MAX_PLAYER_LIST_BYTES {
         return Err("Player list exceeds the 4 MiB size limit".into());
     }
-    let mut content = Vec::with_capacity(metadata.len() as usize);
+    let mut content = Vec::new();
     File::open(path)
         .and_then(|file| {
             file.take(MAX_PLAYER_LIST_BYTES + 1)
