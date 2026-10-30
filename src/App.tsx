@@ -155,6 +155,10 @@ function MainApp() {
   }, []);
 
   useAppThemeSync({ setAppTheme });
+  useEffect(() => {
+    // Expose the theme on <html> so portaled overlays (Radix, toasts) inherit Arc tokens.
+    document.documentElement.setAttribute('data-theme', resolveAppTheme(appTheme));
+  }, [appTheme]);
   useLiquidGlassSync({ setLiquidGlassEnabled, setAllowUnverifiedPluginDownloads });
   useUpdateChannelSync({ setUpdateChannel });
 
