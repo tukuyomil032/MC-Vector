@@ -591,13 +591,15 @@ async function exerciseFilesAndSettings(driver, fixture) {
     'Persisted Real E2E Server',
   );
   await click(driver, '[data-testid="server-settings-save-button"]');
-  await waitFor(
-    () =>
-      readFileSync(path.join(fixture.appDataDir, 'servers.json'), 'utf8').includes(
-        'Persisted Real E2E Server',
-      ),
-    'Server settings were not persisted to real app storage',
-  );
+  await waitFor(async () => {
+    const servers = await invoke(driver, 'get_servers');
+    return servers.some(
+      (server) => server.id === fixture.server.id && server.name === 'Persisted Real E2E Server',
+    );
+  }, 'Server settings were not persisted to the Rust registry');
+  const legacyRegistry = readFileSync(path.join(fixture.appDataDir, 'servers.json'), 'utf8');
+  assert.ok(legacyRegistry.includes('Real E2E Server'));
+  assert.ok(!legacyRegistry.includes('Persisted Real E2E Server'));
 }
 
 async function exerciseVerifiedArtifact(driver, fixture, artifact) {
