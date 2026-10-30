@@ -1047,9 +1047,9 @@ export const ja: TranslationDictionary = {
       invalid: 'メモリは1GB以上を指定してください。',
     },
     choice: {
-      title: 'サーバーを追加',
+      title: 'どの方法でサーバーを追加しますか？',
       newServer: '新規作成',
-      newServerHint: '新しいサーバーをセットアップする',
+      newServerHint: 'バージョンを選んで空のサーバーをセットアップする',
       importServer: '既存フォルダからインポート',
       importServerHint: '既に存在するサーバーフォルダを登録する',
     },

@@ -29,6 +29,7 @@ test.describe('server management', () => {
     await app.gotoApp();
     await page.locator('[data-testid="create-server-button"]').click();
     await page.locator('[data-testid="choice-import-server-button"]').click();
+    await page.locator('[data-testid="choice-next-button"]').click();
 
     const modal = page.locator('[data-testid="import-server-modal"]');
     await expect(modal).toBeVisible();
@@ -44,6 +45,7 @@ test.describe('server management', () => {
     await page.locator('[data-testid="create-server-button"]').click();
     await expect(page.locator('[data-testid="add-server-choice-modal"]')).toBeVisible();
     await page.locator('[data-testid="choice-new-server-button"]').click();
+    await page.locator('[data-testid="choice-next-button"]').click();
 
     const modal = page.locator('[data-testid="add-server-modal"]');
     await expect(modal).toBeVisible();

@@ -71,6 +71,7 @@ export function createAppFixture(page: Page): AppFixture {
       await ensureSidebarOpen();
       await page.locator('[data-testid="create-server-button"]').click();
       await page.locator('[data-testid="choice-new-server-button"]').click();
+      await page.locator('[data-testid="choice-next-button"]').click();
       const modal = page.locator('[data-testid="add-server-modal"]');
       await expect(modal).toBeVisible();
       const serverName = options.serverId ?? `e2e-${Date.now()}`;

@@ -1050,11 +1050,11 @@ export const en: TranslationDictionary = {
       invalid: 'Memory must be at least 1 GB.',
     },
     choice: {
-      title: 'Add Server',
-      newServer: 'New Server',
-      newServerHint: 'Set up a new server',
-      importServer: 'Import from Existing Folder',
-      importServerHint: 'Register an existing server folder',
+      title: 'How do you want to add a server?',
+      newServer: 'Create new',
+      newServerHint: 'Pick a version and set up an empty server',
+      importServer: 'Import from an existing folder',
+      importServerHint: 'Register a server folder that already exists',
     },
   },
 

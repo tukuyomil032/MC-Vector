@@ -1,7 +1,11 @@
-import { cn } from '@/lib/ui';
-import * as Dialog from '@radix-ui/react-dialog';
+import { FolderInput, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/arc/button/button';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
+import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
 import { useTranslation } from '../../i18n';
-import { Button } from './ui/Button';
+
+type AddServerChoice = 'new' | 'import';
 
 interface AddServerChoiceModalProps {
   open: boolean;
@@ -17,64 +21,77 @@ export default function AddServerChoiceModal({
   onImportServer,
 }: AddServerChoiceModalProps) {
   const { t } = useTranslation();
+  const [choice, setChoice] = useState<AddServerChoice | null>(null);
+
+  const options: RadioCardOption[] = [
+    {
+      value: 'new',
+      label: t('addServer.choice.newServer'),
+      description: t('addServer.choice.newServerHint'),
+      icon: <Plus size={16} strokeWidth={1.75} aria-hidden="true" />,
+      testId: 'choice-new-server-button',
+    },
+    {
+      value: 'import',
+      label: t('addServer.choice.importServer'),
+      description: t('addServer.choice.importServerHint'),
+      icon: <FolderInput size={16} strokeWidth={1.75} aria-hidden="true" />,
+      testId: 'choice-import-server-button',
+    },
+  ];
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) return;
+    setChoice(null);
+    onClose();
+  };
+
+  const proceed = () => {
+    if (choice === null) return;
+    if (choice === 'new') onNewServer();
+    else onImportServer();
+    setChoice(null);
+    onClose();
+  };
+
+  const footer = (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        data-testid="choice-cancel-button"
+        onClick={onClose}
+      >
+        {t('common.cancel')}
+      </Button>
+      <Button
+        type="button"
+        variant="primary"
+        data-testid="choice-next-button"
+        disabled={choice === null}
+        onClick={proceed}
+      >
+        {t('common.next')}
+      </Button>
+    </>
+  );
 
   return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) onClose();
-      }}
-    >
-      <Dialog.Portal>
-        <Dialog.Overlay className="mc-modal-overlay" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          data-testid="add-server-choice-modal"
-          className={cn(
-            'mc-modal-panel',
-            'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
-          )}
-        >
-          <Dialog.Title className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-            {t('addServer.choice.title')}
-          </Dialog.Title>
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              data-testid="choice-new-server-button"
-              className="flex flex-col items-start gap-1 p-4 rounded-lg border border-zinc-700 bg-transparent text-left hover:bg-zinc-800 transition-colors"
-              onClick={() => {
-                onNewServer();
-                onClose();
-              }}
-            >
-              <span className="text-white font-semibold">{t('addServer.choice.newServer')}</span>
-              <span className="text-zinc-400 text-sm">{t('addServer.choice.newServerHint')}</span>
-            </button>
-            <button
-              type="button"
-              data-testid="choice-import-server-button"
-              className="flex flex-col items-start gap-1 p-4 rounded-lg border border-zinc-700 bg-transparent text-left hover:bg-zinc-800 transition-colors"
-              onClick={() => {
-                onImportServer();
-                onClose();
-              }}
-            >
-              <span className="text-white font-semibold">{t('addServer.choice.importServer')}</span>
-              <span className="text-zinc-400 text-sm">
-                {t('addServer.choice.importServerHint')}
-              </span>
-            </button>
-          </div>
-          <div className="flex justify-end gap-2.5 mt-2.5">
-            <Dialog.Close asChild>
-              <Button type="button" variant="modalSecondary">
-                {t('common.cancel')}
-              </Button>
-            </Dialog.Close>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        aria-describedby={undefined}
+        data-testid="add-server-choice-modal"
+        title={t('addServer.choice.title')}
+        footer={footer}
+      >
+        <RadioCards
+          aria-label={t('addServer.choice.title')}
+          layout="list"
+          options={options}
+          value={choice}
+          onValueChange={(value) => setChoice(value as AddServerChoice)}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }

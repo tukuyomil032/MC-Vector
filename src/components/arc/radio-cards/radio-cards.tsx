@@ -33,6 +33,8 @@ export interface RadioCardOption {
   disabled?: boolean;
   /** Short reason shown in place of the description when the option is disabled. */
   disabledReason?: ReactNode;
+  /** Sets data-testid on the card, for tests that need a stable handle on one option. */
+  testId?: string;
 }
 
 /**
@@ -234,6 +236,7 @@ export const RadioCards = forwardRef<HTMLDivElement, RadioCardsProps>(function R
             key={option.value}
             role="radio"
             data-card={index}
+            data-testid={option.testId}
             className={styles.card}
             aria-checked={checked}
             aria-disabled={off || undefined}
