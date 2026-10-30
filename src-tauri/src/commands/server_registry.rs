@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use super::recovery_record::RecoveryRecord;
 use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use serde::de::DeserializeOwned;
@@ -177,6 +178,44 @@ impl ServerRegistry {
 
     pub fn get_servers(&self) -> Result<Vec<MinecraftServer>, String> {
         self.read_records("SELECT payload FROM server_registry_entries ORDER BY position")
+    }
+
+    pub(crate) fn save_recovery_record(&self, record: &RecoveryRecord) -> Result<(), String> {
+        let payload = serde_json::to_string(record).map_err(|error| error.to_string())?;
+        self.lock_connection()?
+            .execute(
+                "INSERT INTO recovery_journal(record_id, payload) VALUES (?1, ?2)
+                 ON CONFLICT(record_id) DO UPDATE SET payload = excluded.payload",
+                params![record.id, payload],
+            )
+            .map_err(|error| format!("Could not persist recovery journal: {error}"))?;
+        Ok(())
+    }
+
+    pub(crate) fn recovery_records(&self) -> Result<Vec<RecoveryRecord>, String> {
+        let connection = self.lock_connection()?;
+        let mut statement = connection
+            .prepare("SELECT payload FROM recovery_journal ORDER BY record_id")
+            .map_err(|error| format!("Could not read recovery journal: {error}"))?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|error| format!("Could not read recovery journal: {error}"))?;
+        rows.map(|row| {
+            let payload = row.map_err(|error| error.to_string())?;
+            serde_json::from_str(&payload)
+                .map_err(|error| format!("Recovery journal contains an invalid record: {error}"))
+        })
+        .collect()
+    }
+
+    pub(crate) fn delete_recovery_record(&self, record_id: &str) -> Result<(), String> {
+        self.lock_connection()?
+            .execute(
+                "DELETE FROM recovery_journal WHERE record_id = ?1",
+                [record_id],
+            )
+            .map_err(|error| format!("Could not clear recovered journal: {error}"))?;
+        Ok(())
     }
 
     pub fn add_server(&self, server: &MinecraftServer) -> Result<(), String> {
@@ -513,6 +552,23 @@ pub async fn get_servers(
     Ok(servers)
 }
 
+fn legacy_server_directory_name(
+    server_path: &str,
+    app_data_dir: &Path,
+    server_id: &str,
+) -> Option<String> {
+    let servers_root = app_data_dir.join("servers");
+    let path = PathBuf::from(server_path);
+    if path.parent() != Some(servers_root.as_path()) {
+        return None;
+    }
+    let directory_name = path.file_name()?.to_str()?;
+    if directory_name.is_empty() || directory_name == server_id {
+        return None;
+    }
+    Some(directory_name.to_owned())
+}
+
 #[tauri::command]
 pub async fn update_server(
     registry: State<'_, ServerRegistry>,
@@ -566,8 +622,8 @@ pub async fn delete_server_template(
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_runtime_statuses, JsonNumber, MinecraftServer, ServerRegistry, ServerTemplate,
-        DATABASE_FILE, MIGRATION_ID,
+        apply_runtime_statuses, legacy_server_directory_name, JsonNumber, MinecraftServer,
+        ServerRegistry, ServerTemplate, DATABASE_FILE, MIGRATION_ID,
     };
     use rusqlite::Connection;
     use serde_json::Value;
@@ -651,6 +707,34 @@ mod tests {
             auto_backup_time: Some("03:00".to_string()),
             auto_backup_weekday: Some(JsonNumber::from(0)),
             extra: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn legacy_directory_detection_only_accepts_direct_managed_children() {
+        let app_data = TempDirectory::new();
+        let root = app_data.path();
+        assert_eq!(
+            legacy_server_directory_name(
+                root.join("servers/legacy-name").to_str().unwrap(),
+                root,
+                "server-id"
+            )
+            .as_deref(),
+            Some("legacy-name")
+        );
+        for path in [
+            root.join("servers/server-id"),
+            root.join("outside/legacy-name"),
+            root.join("servers/nested/legacy-name"),
+            root.join("servers/../outside"),
+        ] {
+            assert_eq!(
+                legacy_server_directory_name(path.to_str().unwrap(), root, "server-id"),
+                None,
+                "unexpected legacy migration candidate: {}",
+                path.display()
+            );
         }
     }
 
