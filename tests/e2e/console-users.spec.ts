@@ -43,6 +43,7 @@ test.describe('console and user management', () => {
       (await app.runtimeState())?.files['/mock/app-data/servers/server-1/whitelist.json']?.content,
     ).toContain('E2EPlayer');
     await list.getByRole('button', { name: 'Remove', exact: true }).click();
+    await app.acceptConfirm();
     await expect(list.getByText('E2EPlayer', { exact: true })).toHaveCount(0);
     await expect.poll(async () => (await app.ipcCalls('mutate_player_list')).length).toBe(2);
     expect(
