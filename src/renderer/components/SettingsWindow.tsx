@@ -86,7 +86,7 @@ const SettingsWindow = ({
       >
         <div className="settings-window__header">
           {onClose && (
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" data-testid="settings-back-button" onClick={onClose}>
               {t('settings.backButton')}
             </Button>
           )}

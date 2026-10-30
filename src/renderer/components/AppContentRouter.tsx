@@ -1,6 +1,7 @@
 import { type JSX, lazy } from 'react';
 import type { Translate } from '../../i18n';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
+import { useUiStore } from '../../store/uiStore';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import BackupsView from './BackupsView';
 import ConsoleView from './ConsoleView';
@@ -48,11 +49,10 @@ export default function AppContentRouter({
   t,
 }: AppContentRouterProps) {
   type ViewRenderer = () => JSX.Element;
+  const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
   const staticViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
-    'app-settings': () => (
-      <SettingsWindow onClose={() => setCurrentView('dashboard')} {...updaterSettings} />
-    ),
+    'app-settings': () => <SettingsWindow onClose={returnToPreviousView} {...updaterSettings} />,
     'proxy-help': () => <ProxyHelpView />,
     'ngrok-guide': () => <NgrokGuideView />,
     proxy: () => (
