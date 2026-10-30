@@ -743,6 +743,7 @@ export const en: TranslationDictionary = {
     selectServer: 'Select {name}',
     openMenu: 'Open menu',
     menuTitle: 'Navigation',
+    serverSwitcher: 'Switch server',
   },
 
   proxy: {

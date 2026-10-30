@@ -743,6 +743,7 @@ export interface TranslationDictionary {
     selectServer: string;
     openMenu: string;
     menuTitle: string;
+    serverSwitcher: string;
   };
 
   /** Proxy configuration translations */

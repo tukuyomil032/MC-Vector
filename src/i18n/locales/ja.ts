@@ -739,6 +739,7 @@ export const ja: TranslationDictionary = {
     selectServer: '{name} を選択',
     openMenu: 'メニューを開く',
     menuTitle: 'ナビゲーション',
+    serverSwitcher: 'サーバーを切り替え',
   },
 
   proxy: {

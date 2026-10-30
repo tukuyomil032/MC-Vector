@@ -19,6 +19,7 @@ import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
+import AppSidebarRailActions from '@/renderer/components/AppSidebarRailActions';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
 import { notify } from '@/renderer/shared/notify';
@@ -459,6 +460,16 @@ function MainApp() {
           />
 
           {isSidebarExpanded && <AppServerSidebar {...serverPanelProps} />}
+
+          {!isSidebarExpanded && (
+            <AppSidebarRailActions
+              servers={groupedServers.flatMap((group) => group.servers)}
+              selectedServerId={selectedServerId}
+              onSelectServer={setSelectedServerId}
+              onAddServer={() => setShowAddServerChoiceModal(true)}
+              onOpenSettings={handleOpenSettingsWindow}
+            />
+          )}
         </aside>
       )}
 
