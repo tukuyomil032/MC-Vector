@@ -151,8 +151,7 @@ export const ja: TranslationDictionary = {
       autoRestartLimitReached: '{name} の自動再起動は上限に達しました',
       autoRestartScheduled: '{name} を {seconds} 秒後に自動再起動します（試行 {attempt}/{max}）',
       autoRestartTriggered: '{name} の自動再起動を実行します（試行 {attempt}/{max}）',
-      autoRestartEulaRequired:
-        '{name} は Minecraft EULA が未承認のため自動再起動を停止しました。EULA に同意してから手動で起動してください。',
+      autoRestartEulaRequired: '{name} の自動再起動は Minecraft EULA の承認待ちです。',
       noServerSelected: 'サーバーが選択されていません',
       startFailed: 'サーバーの起動に失敗しました',
       stopFailed: 'サーバーの停止に失敗しました',
@@ -373,6 +372,9 @@ export const ja: TranslationDictionary = {
     parent: '親',
     confirmDelete: 'バックアップ「{name}」を削除しますか？',
     deleteTitle: 'バックアップ削除',
+    confirmStopForBackup:
+      'サーバー「{name}」は起動中です。停止が完全に完了してからバックアップを作成し、完了後に再起動しますか？',
+    stopForBackupTitle: 'サーバーを停止してバックアップ',
     mode: {
       full: 'フル',
       differential: '差分',
@@ -419,6 +421,12 @@ export const ja: TranslationDictionary = {
       noDiffSkipped: '前回バックアップから差分がないためスキップしました',
       diffCreated: '差分バックアップを作成しました ({count} 件)',
       created: 'バックアップを作成しました！',
+      serverStopFailed: 'サーバーを停止できなかったため、バックアップは作成されませんでした',
+      stoppedCreateFailed: 'サーバーを停止しましたが、バックアップの作成に失敗しました',
+      backupNotCreatedRestartFailed:
+        'バックアップは作成されず、サーバーも再起動できませんでした（{name}）',
+      serverRestartFailed: 'バックアップは作成しましたが、サーバーを再起動できませんでした',
+      registryUpdateFailed: 'バックアップは作成しましたが、バックアップ台帳の更新に失敗しました',
       createMetadataSaveFailed: 'バックアップは作成しましたが、メタデータの保存に失敗しました',
       createFailed: 'バックアップの作成に失敗しました',
       invalidNameEmpty: 'バックアップ名を入力してください',

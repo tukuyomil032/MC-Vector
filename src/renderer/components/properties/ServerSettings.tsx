@@ -830,9 +830,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
         <VersionUpgradeWizard
           server={server}
           onClose={() => setShowVersionWizard(false)}
-          onServerVersionChanged={(updatedVersion) => {
-            setVersion(updatedVersion);
-            onServerVersionChanged(server.id, updatedVersion);
+          onServerVersionChanged={(version) => {
+            setVersion(version);
+            onServerVersionChanged(server.id, version);
             setShowVersionWizard(false);
           }}
         />

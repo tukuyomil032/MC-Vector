@@ -1,25 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Translate } from '../../i18n';
-import { applyBackupRetention, createAutomaticBackup } from '../../lib/backup-commands';
-import { isEulaRequiredError } from '../../lib/eula-commands';
+import {
+  cancelAutoRestart,
+  onServerAutomationEvent,
+  resumeAutoRestartAfterEula,
+  type ServerAutomationEvent,
+} from '../../lib/server-automation-commands';
 import { sendServerNotification } from '../../lib/notification-commands';
-import {
-  isServerRunning,
-  startServer as startServerApi,
-  stopServer as stopServerApi,
-} from '../../lib/server-commands';
-import {
-  type AutoBackupScheduleType,
-  buildAutoBackupName,
-  resolveAutoBackupScheduleType,
-} from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
-import {
-  type EulaGateMode,
-  type EulaGateResult,
-  runExclusiveServerStart,
-} from './use-server-eula-gate';
+import { type EulaGateMode, type EulaGateResult } from './use-server-eula-gate';
+
 type SetServers = (
   nextServers: MinecraftServer[] | ((prevServers: MinecraftServer[]) => MinecraftServer[]),
 ) => void;
@@ -35,139 +26,61 @@ interface UseServerAutomationOptions {
 interface ServerStatusChangeData {
   serverId: string;
   status: MinecraftServer['status'];
+  expected?: boolean;
 }
 
-interface AutoRestartScheduleEntry {
-  dueAt: number;
-  attempt: number;
-  maxAutoRestarts: number;
-}
-
-interface AutoBackupScheduleEntry {
-  signature: string;
-  scheduleType: AutoBackupScheduleType;
-  intervalMinutes: number;
-  nextRunAt: number;
-}
-
-interface AutoBackupTimeParts {
-  hour: number;
-  minute: number;
-}
-
-const AUTO_BACKUP_RETRY_DELAY_MS = 60_000;
-const SAFE_BACKUP_STOP_TIMEOUT_MS = 30 * 1000;
-const SAFE_BACKUP_POLL_INTERVAL_MS = 100;
-
-function resolveAutoBackupTimeParts(server: MinecraftServer): AutoBackupTimeParts {
-  const raw = typeof server.autoBackupTime === 'string' ? server.autoBackupTime.trim() : '';
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(raw);
-  if (!match) {
-    return { hour: 3, minute: 0 };
+function automationToast(
+  event: ServerAutomationEvent,
+  t: Translate,
+): { message: string; type: ToastKind } | null {
+  switch (event.kind) {
+    case 'auto_restart_scheduled':
+      return {
+        message: t('server.toast.autoRestartScheduled', {
+          name: event.serverName,
+          seconds: event.seconds ?? 0,
+          attempt: event.attempt ?? 1,
+          max: event.max ?? 1,
+        }),
+        type: 'info',
+      };
+    case 'auto_restart_limit_reached':
+      return {
+        message: t('server.toast.autoRestartLimitReached', { name: event.serverName }),
+        type: 'error',
+      };
+    case 'auto_restart_failed':
+      return {
+        message: t('server.toast.autoRestartTriggered', {
+          name: event.serverName,
+          attempt: event.attempt ?? 1,
+          max: event.max ?? 1,
+        }),
+        type: 'error',
+      };
+    case 'auto_restart_eula_required':
+      return {
+        message: t('server.toast.autoRestartEulaRequired', { name: event.serverName }),
+        type: 'error',
+      };
+    case 'auto_backup_created':
+      return {
+        message: t('server.toast.autoBackupCreated', { name: event.serverName }),
+        type: 'success',
+      };
+    case 'auto_backup_failed':
+      return {
+        message: t('server.toast.autoBackupFailed', { name: event.serverName }),
+        type: 'error',
+      };
+    case 'auto_backup_retention_delete_failed':
+      return {
+        message: t('backups.toast.retentionDeleteFailed', { count: event.count ?? 0 }),
+        type: 'warning',
+      };
+    case 'auto_backup_retention_list_failed':
+      return { message: t('backups.toast.retentionListFailed'), type: 'warning' };
   }
-  return {
-    hour: Number(match[1]),
-    minute: Number(match[2]),
-  };
-}
-
-function resolveAutoBackupWeekday(server: MinecraftServer): number {
-  const raw =
-    typeof server.autoBackupWeekday === 'number' && Number.isFinite(server.autoBackupWeekday)
-      ? Math.floor(server.autoBackupWeekday)
-      : 0;
-  return Math.min(6, Math.max(0, raw));
-}
-
-function computeNextTimeBasedAutoBackupRunAt(
-  server: MinecraftServer,
-  from: Date,
-  options: { allowCurrentMinute: boolean },
-): number {
-  const scheduleType = resolveAutoBackupScheduleType(server);
-  const { hour, minute } = resolveAutoBackupTimeParts(server);
-  const weekday = resolveAutoBackupWeekday(server);
-
-  const currentMinuteMatches =
-    from.getHours() === hour &&
-    from.getMinutes() === minute &&
-    (scheduleType === 'daily' || from.getDay() === weekday);
-  if (options.allowCurrentMinute && currentMinuteMatches) {
-    return from.getTime();
-  }
-
-  const nextRun = new Date(from);
-  nextRun.setSeconds(0, 0);
-
-  if (scheduleType === 'weekly') {
-    const dayOffset = (weekday - from.getDay() + 7) % 7;
-    nextRun.setDate(from.getDate() + dayOffset);
-    nextRun.setHours(hour, minute, 0, 0);
-    if (nextRun.getTime() <= from.getTime()) {
-      nextRun.setDate(nextRun.getDate() + 7);
-    }
-    return nextRun.getTime();
-  }
-
-  nextRun.setHours(hour, minute, 0, 0);
-  if (nextRun.getTime() <= from.getTime()) {
-    nextRun.setDate(nextRun.getDate() + 1);
-  }
-  return nextRun.getTime();
-}
-
-function resolveAutoBackupIntervalMinutes(server: MinecraftServer): number {
-  return Math.min(1440, Math.max(1, Math.floor(server.autoBackupIntervalMin ?? 60)));
-}
-
-async function waitForServerStopped(serverId: string): Promise<void> {
-  const deadline = Date.now() + SAFE_BACKUP_STOP_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    if (!(await isServerRunning(serverId))) {
-      return;
-    }
-    await new Promise((resolve) => window.setTimeout(resolve, SAFE_BACKUP_POLL_INTERVAL_MS));
-  }
-  throw new Error('Timed out waiting for the server to stop before backup');
-}
-
-function buildAutoBackupScheduleSignature(server: MinecraftServer): string {
-  const scheduleType = resolveAutoBackupScheduleType(server);
-  if (scheduleType === 'interval') {
-    return `${scheduleType}:${resolveAutoBackupIntervalMinutes(server)}`;
-  }
-  const { hour, minute } = resolveAutoBackupTimeParts(server);
-  if (scheduleType === 'weekly') {
-    return `${scheduleType}:${resolveAutoBackupWeekday(server)}:${hour}:${minute}`;
-  }
-  return `${scheduleType}:${hour}:${minute}`;
-}
-
-function createAutoBackupScheduleEntry(
-  server: MinecraftServer,
-  now: Date,
-): AutoBackupScheduleEntry {
-  const scheduleType = resolveAutoBackupScheduleType(server);
-  const intervalMinutes = resolveAutoBackupIntervalMinutes(server);
-  return {
-    signature: buildAutoBackupScheduleSignature(server),
-    scheduleType,
-    intervalMinutes,
-    nextRunAt:
-      scheduleType === 'interval'
-        ? now.getTime() + intervalMinutes * 60 * 1000
-        : computeNextTimeBasedAutoBackupRunAt(server, now, { allowCurrentMinute: true }),
-  };
-}
-
-function computeNextAutoBackupRunAt(server: MinecraftServer, nowMs: number): number {
-  const scheduleType = resolveAutoBackupScheduleType(server);
-  if (scheduleType === 'interval') {
-    return nowMs + resolveAutoBackupIntervalMinutes(server) * 60 * 1000;
-  }
-  return computeNextTimeBasedAutoBackupRunAt(server, new Date(nowMs + 60_000), {
-    allowCurrentMinute: false,
-  });
 }
 
 export function useServerAutomation({
@@ -177,118 +90,25 @@ export function useServerAutomation({
   t,
   ensureServerEula,
 }: UseServerAutomationOptions) {
-  const serversRef = useRef<MinecraftServer[]>([]);
+  const serversRef = useRef<MinecraftServer[]>(servers);
   const expectedOfflineEventsRef = useRef<Record<string, number>>({});
-  const autoRestartAttemptsRef = useRef<Record<string, number>>({});
-  const autoRestartScheduleRef = useRef<Record<string, AutoRestartScheduleEntry>>({});
-  const autoRestartInProgressRef = useRef<Record<string, boolean>>({});
-  const autoRestartProcessingRef = useRef<Record<string, boolean>>({});
-  const autoBackupScheduleRef = useRef<Record<string, AutoBackupScheduleEntry>>({});
-  const autoBackupRunningRef = useRef<Record<string, boolean>>({});
-  const automationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const automationTickInFlightRef = useRef(false);
-  const automationTickRerunRequestedRef = useRef(false);
-  const runAutomationTickRef = useRef<() => Promise<void>>(async () => {});
+  const handlerRef = useRef<(event: ServerAutomationEvent) => Promise<void>>(async () => {});
 
-  const startServerForAutomation = useCallback(
-    async (server: MinecraftServer, onReadyToStart: () => void): Promise<EulaGateResult> => {
-      return runExclusiveServerStart(server.id, async () => {
-        const gateResult = await ensureServerEula(server, 'background');
-        if (gateResult !== 'accepted') {
-          return gateResult;
-        }
+  useEffect(() => {
+    serversRef.current = servers;
+  }, [servers]);
 
-        const javaPath = server.javaPath || 'java';
-        const jarFile = server.software === 'Forge' ? 'forge-server.jar' : 'server.jar';
-
-        try {
-          onReadyToStart();
-          await startServerApi(
-            server.id,
-            javaPath,
-            server.memory,
-            jarFile,
-            server.jvmArgs,
-            server.software,
-          );
-        } catch (error) {
-          if (!isEulaRequiredError(error)) {
-            throw error;
-          }
-
-          const retryGateResult = await ensureServerEula(server, 'background');
-          if (retryGateResult !== 'accepted') {
-            return retryGateResult;
-          }
-          onReadyToStart();
-          await startServerApi(
-            server.id,
-            javaPath,
-            server.memory,
-            jarFile,
-            server.jvmArgs,
-            server.software,
-          );
-        }
-
-        return 'accepted';
-      });
-    },
-    [ensureServerEula],
-  );
-
-  const clearAutomationTimer = useCallback(() => {
-    if (automationTimerRef.current) {
-      window.clearTimeout(automationTimerRef.current);
-      automationTimerRef.current = null;
-    }
+  const clearAutoRestartTimer = useCallback((serverId: string) => {
+    void cancelAutoRestart(serverId).catch((error) => {
+      console.error('Failed to cancel the Rust-managed auto restart:', error);
+    });
   }, []);
 
-  const scheduleAutomationTick = useCallback(() => {
-    if (automationTickInFlightRef.current) {
-      automationTickRerunRequestedRef.current = true;
-      return;
-    }
-
-    clearAutomationTimer();
-
-    let nextDue = Number.POSITIVE_INFINITY;
-    for (const restartEntry of Object.values(autoRestartScheduleRef.current)) {
-      nextDue = Math.min(nextDue, restartEntry.dueAt);
-    }
-    for (const backupEntry of Object.values(autoBackupScheduleRef.current)) {
-      nextDue = Math.min(nextDue, backupEntry.nextRunAt);
-    }
-
-    if (!Number.isFinite(nextDue)) {
-      return;
-    }
-
-    const delayMs = Math.max(0, nextDue - Date.now());
-    automationTimerRef.current = window.setTimeout(() => {
-      void runAutomationTickRef.current();
-    }, delayMs);
-  }, [clearAutomationTimer]);
-
-  const clearAutoRestartTimer = useCallback(
-    (serverId: string) => {
-      if (autoRestartScheduleRef.current[serverId]) {
-        delete autoRestartScheduleRef.current[serverId];
-        scheduleAutomationTick();
-      }
-    },
-    [scheduleAutomationTick],
-  );
-
-  const resetAutoRestartState = useCallback(
-    (serverId: string) => {
-      clearAutoRestartTimer(serverId);
-      delete autoRestartAttemptsRef.current[serverId];
-      delete autoRestartInProgressRef.current[serverId];
-      delete autoRestartProcessingRef.current[serverId];
-    },
-    [clearAutoRestartTimer],
-  );
+  const resetAutoRestartState = useCallback((serverId: string) => {
+    void cancelAutoRestart(serverId, true).catch((error) => {
+      console.error('Failed to reset the Rust-managed auto restart:', error);
+    });
+  }, []);
 
   const markExpectedOffline = useCallback((serverId: string) => {
     expectedOfflineEventsRef.current[serverId] =
@@ -312,343 +132,117 @@ export function useServerAutomation({
     delete expectedOfflineEventsRef.current[serverId];
   }, []);
 
-  const clearAutoBackupSchedule = useCallback(
-    (serverId: string) => {
-      if (autoBackupScheduleRef.current[serverId]) {
-        delete autoBackupScheduleRef.current[serverId];
-        scheduleAutomationTick();
-      }
-      delete autoBackupRunningRef.current[serverId];
-    },
-    [scheduleAutomationTick],
-  );
-
-  const runAutoBackup = useCallback(
-    async (serverId: string): Promise<boolean> => {
-      if (autoBackupRunningRef.current[serverId]) {
-        return false;
+  const handleAutomationEvent = useCallback(
+    async (event: ServerAutomationEvent) => {
+      const targetServer = serversRef.current.find((server) => server.id === event.serverId);
+      if (!targetServer) {
+        return;
       }
 
-      const targetServer = serversRef.current.find((server) => server.id === serverId);
-      if (!targetServer?.autoBackupEnabled || targetServer.status !== 'online') {
-        return false;
+      if (event.kind === 'auto_restart_scheduled') {
+        setServers((current) =>
+          current.map((server) =>
+            server.id === event.serverId ? { ...server, status: 'restarting' } : server,
+          ),
+        );
+      }
+      if (event.kind === 'auto_restart_failed' || event.kind === 'auto_restart_eula_required') {
+        setServers((current) =>
+          current.map((server) =>
+            server.id === event.serverId ? { ...server, status: 'offline' } : server,
+          ),
+        );
       }
 
-      autoBackupRunningRef.current[serverId] = true;
-      let runningBeforeBackup = false;
-      let stoppedForBackup = false;
+      const toast = automationToast(event, t);
+      if (toast) {
+        showToast(toast.message, toast.type);
+      }
+      if (event.kind === 'auto_backup_created' && event.catalogError) {
+        showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+      }
+
+      if (event.kind !== 'auto_restart_eula_required') {
+        return;
+      }
+
       try {
-        runningBeforeBackup = await isServerRunning(targetServer.id);
-        if (runningBeforeBackup) {
-          setServers((prev) =>
-            prev.map((server) =>
-              server.id === serverId ? { ...server, status: 'stopping' } : server,
+        const result = await ensureServerEula(targetServer, 'interactive');
+        if (result !== 'accepted') {
+          setServers((current) =>
+            current.map((server) =>
+              server.id === event.serverId ? { ...server, status: 'offline' } : server,
             ),
           );
-          await stopServerApi(targetServer.id);
-          await waitForServerStopped(targetServer.id);
-          stoppedForBackup = true;
-          setServers((prev) =>
-            prev.map((server) =>
-              server.id === serverId ? { ...server, status: 'offline' } : server,
-            ),
-          );
+          return;
         }
-
-        await createAutomaticBackup(targetServer.id, buildAutoBackupName(targetServer));
-        showToast(t('server.toast.autoBackupCreated', { name: targetServer.name }), 'success');
-
-        try {
-          const retention = await applyBackupRetention(
-            targetServer.id,
-            targetServer.autoBackupRetainCount ?? 0,
-            targetServer.autoBackupRetainDays ?? 0,
-          );
-          if (retention.failedDeleteCount > 0) {
-            showToast(
-              t('backups.toast.retentionDeleteFailed', {
-                count: retention.failedDeleteCount,
-              }),
-              'warning',
-            );
-          }
-          if (retention.listingFailed) {
-            showToast(t('backups.toast.retentionListFailed'), 'warning');
-          }
-        } catch (error) {
-          console.error('Auto backup retention failed:', error);
-          showToast(t('backups.toast.retentionListFailed'), 'warning');
-        }
-        return true;
+        await resumeAutoRestartAfterEula(event.serverId);
       } catch (error) {
-        console.error('Auto backup failed:', error);
-        showToast(t('server.toast.autoBackupFailed', { name: targetServer.name }), 'error');
-        return false;
-      } finally {
-        if (stoppedForBackup && targetServer.backupRestartAfterSafeBackup !== false) {
-          try {
-            const restartResult = await startServerForAutomation(targetServer, () => {
-              setServers((prev) =>
-                prev.map((server) =>
-                  server.id === serverId ? { ...server, status: 'starting' } : server,
-                ),
-              );
-            });
-            if (restartResult !== 'accepted') {
-              setServers((prev) =>
-                prev.map((server) =>
-                  server.id === serverId ? { ...server, status: 'offline' } : server,
-                ),
-              );
-            }
-          } catch (error) {
-            console.error('Failed to restart server after safe backup:', error);
-            setServers((prev) =>
-              prev.map((server) =>
-                server.id === serverId ? { ...server, status: 'offline' } : server,
-              ),
-            );
-            showToast(t('server.toast.autoRestartTriggered', { name: targetServer.name }), 'error');
-          }
-        } else if (runningBeforeBackup && !stoppedForBackup) {
-          // If graceful stop failed, do not create a live snapshot and leave
-          // the process running for the retry path.
-          setServers((prev) =>
-            prev.map((server) =>
-              server.id === serverId ? { ...server, status: 'online' } : server,
-            ),
-          );
-        }
-        autoBackupRunningRef.current[serverId] = false;
+        console.error('Failed to resume the Rust-managed restart after EULA acceptance:', error);
+        setServers((current) =>
+          current.map((server) =>
+            server.id === event.serverId ? { ...server, status: 'offline' } : server,
+          ),
+        );
+        showToast(
+          t('server.toast.autoRestartTriggered', {
+            name: event.serverName,
+            attempt: event.attempt ?? 1,
+            max: event.max ?? 1,
+          }),
+          'error',
+        );
       }
     },
-    [setServers, showToast, startServerForAutomation, t],
+    [ensureServerEula, setServers, showToast, t],
   );
 
-  const runAutomationTick = useCallback(async () => {
-    if (automationTickInFlightRef.current) {
-      automationTickRerunRequestedRef.current = true;
-      return;
-    }
-
-    automationTickInFlightRef.current = true;
-    automationTickRerunRequestedRef.current = false;
-    clearAutomationTimer();
-    const nowMs = Date.now();
-    let shouldRunImmediately = false;
-
-    try {
-      for (const [serverId, restartEntry] of Object.entries(autoRestartScheduleRef.current)) {
-        if (restartEntry.dueAt > nowMs || autoRestartProcessingRef.current[serverId]) {
-          continue;
-        }
-
-        autoRestartProcessingRef.current[serverId] = true;
-        delete autoRestartScheduleRef.current[serverId];
-
-        const latestServer = serversRef.current.find((server) => server.id === serverId);
-        if (!latestServer?.autoRestartOnCrash) {
-          resetAutoRestartState(serverId);
-          continue;
-        }
-
-        try {
-          const running = await isServerRunning(serverId);
-          if (running) {
-            resetAutoRestartState(serverId);
-            continue;
-          }
-
-          const gateResult = await startServerForAutomation(latestServer, () => {
-            setServers((prev) =>
-              prev.map((server) =>
-                server.id === serverId ? { ...server, status: 'starting' } : server,
-              ),
-            );
-          });
-          if (gateResult !== 'accepted') {
-            delete autoRestartInProgressRef.current[serverId];
-            setServers((prev) =>
-              prev.map((server) =>
-                server.id === serverId ? { ...server, status: 'offline' } : server,
-              ),
-            );
-            showToast(
-              t('server.toast.autoRestartEulaRequired', { name: latestServer.name }),
-              'error',
-            );
-          }
-        } catch (error) {
-          console.error('Auto restart failed:', error);
-          delete autoRestartInProgressRef.current[serverId];
-          setServers((prev) =>
-            prev.map((server) =>
-              server.id === serverId ? { ...server, status: 'offline' } : server,
-            ),
-          );
-          showToast(
-            t('server.toast.autoRestartTriggered', {
-              name: latestServer.name,
-              attempt: restartEntry.attempt,
-              max: restartEntry.maxAutoRestarts,
-            }),
-            'error',
-          );
-        } finally {
-          delete autoRestartProcessingRef.current[serverId];
-        }
-      }
-
-      for (const [serverId, backupEntry] of Object.entries(autoBackupScheduleRef.current)) {
-        if (backupEntry.nextRunAt > nowMs) {
-          continue;
-        }
-
-        const latestServer = serversRef.current.find((server) => server.id === serverId);
-        if (!latestServer?.autoBackupEnabled) {
-          clearAutoBackupSchedule(serverId);
-          continue;
-        }
-
-        const backupCompleted = await runAutoBackup(serverId);
-
-        const refreshedServer = serversRef.current.find((server) => server.id === serverId);
-        if (!refreshedServer?.autoBackupEnabled) {
-          clearAutoBackupSchedule(serverId);
-          continue;
-        }
-
-        if (!backupCompleted) {
-          autoBackupScheduleRef.current[serverId] = {
-            signature: buildAutoBackupScheduleSignature(refreshedServer),
-            scheduleType: resolveAutoBackupScheduleType(refreshedServer),
-            intervalMinutes: resolveAutoBackupIntervalMinutes(refreshedServer),
-            nextRunAt: Date.now() + AUTO_BACKUP_RETRY_DELAY_MS,
-          };
-          continue;
-        }
-
-        const nextRunNowMs = Date.now();
-        autoBackupScheduleRef.current[serverId] = {
-          signature: buildAutoBackupScheduleSignature(refreshedServer),
-          scheduleType: resolveAutoBackupScheduleType(refreshedServer),
-          intervalMinutes: resolveAutoBackupIntervalMinutes(refreshedServer),
-          nextRunAt: computeNextAutoBackupRunAt(refreshedServer, nextRunNowMs),
-        };
-      }
-    } finally {
-      automationTickInFlightRef.current = false;
-      if (automationTickRerunRequestedRef.current) {
-        automationTickRerunRequestedRef.current = false;
-        shouldRunImmediately = true;
-      }
-    }
-    if (shouldRunImmediately) {
-      void runAutomationTickRef.current();
-      return;
-    }
-    scheduleAutomationTick();
-  }, [
-    clearAutoBackupSchedule,
-    clearAutomationTimer,
-    resetAutoRestartState,
-    runAutoBackup,
-    scheduleAutomationTick,
-    setServers,
-    showToast,
-    startServerForAutomation,
-    t,
-  ]);
-
-  runAutomationTickRef.current = runAutomationTick;
+  handlerRef.current = handleAutomationEvent;
 
   useEffect(() => {
-    serversRef.current = servers;
+    let cancelled = false;
+    let unlisten: (() => void) | null = null;
+    void onServerAutomationEvent((event) => {
+      if (!cancelled) {
+        void handlerRef.current(event);
+      }
+    })
+      .then((dispose) => {
+        if (cancelled) {
+          dispose();
+        } else {
+          unlisten = dispose;
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to subscribe to Rust automation events:', error);
+      });
 
-    const activeServerIds = new Set(servers.map((server) => server.id));
-    for (const serverId of Object.keys(autoRestartScheduleRef.current)) {
-      if (!activeServerIds.has(serverId)) {
-        delete autoRestartScheduleRef.current[serverId];
-      }
-    }
-    for (const serverId of Object.keys(autoRestartAttemptsRef.current)) {
-      if (!activeServerIds.has(serverId)) {
-        delete autoRestartAttemptsRef.current[serverId];
-      }
-    }
-    for (const serverId of Object.keys(autoRestartInProgressRef.current)) {
-      if (!activeServerIds.has(serverId)) {
-        delete autoRestartInProgressRef.current[serverId];
-      }
-    }
-    for (const serverId of Object.keys(autoRestartProcessingRef.current)) {
-      if (!activeServerIds.has(serverId)) {
-        delete autoRestartProcessingRef.current[serverId];
-      }
-    }
-    for (const serverId of Object.keys(expectedOfflineEventsRef.current)) {
-      if (!activeServerIds.has(serverId)) {
-        delete expectedOfflineEventsRef.current[serverId];
-      }
-    }
-
-    for (const serverId of Object.keys(autoBackupScheduleRef.current)) {
-      if (!activeServerIds.has(serverId)) {
-        delete autoBackupScheduleRef.current[serverId];
-        delete autoBackupRunningRef.current[serverId];
-      }
-    }
-
-    const now = new Date();
-    for (const server of servers) {
-      if (!server.autoBackupEnabled) {
-        delete autoBackupScheduleRef.current[server.id];
-        delete autoBackupRunningRef.current[server.id];
-        continue;
-      }
-
-      const signature = buildAutoBackupScheduleSignature(server);
-      const existing = autoBackupScheduleRef.current[server.id];
-      if (existing && existing.signature === signature) {
-        continue;
-      }
-
-      autoBackupScheduleRef.current[server.id] = createAutoBackupScheduleEntry(server, now);
-    }
-    scheduleAutomationTick();
-  }, [scheduleAutomationTick, servers]);
-
-  useEffect(() => {
     return () => {
-      clearAutomationTimer();
-      autoRestartScheduleRef.current = {};
-      autoRestartInProgressRef.current = {};
-      autoRestartProcessingRef.current = {};
-      autoBackupScheduleRef.current = {};
-      autoBackupRunningRef.current = {};
-      automationTickInFlightRef.current = false;
-      automationTickRerunRequestedRef.current = false;
+      cancelled = true;
+      unlisten?.();
     };
-  }, [clearAutomationTimer]);
+  }, []);
 
   const handleServerStatusChange = useCallback(
-    ({ serverId, status }: ServerStatusChangeData) => {
+    ({ serverId, status, expected }: ServerStatusChangeData) => {
       const previousStatus = serversRef.current.find((server) => server.id === serverId)?.status;
-      setServers((prev) =>
-        prev.map((server) => (server.id === serverId ? { ...server, status } : server)),
+      setServers((current) =>
+        current.map((server) => (server.id === serverId ? { ...server, status } : server)),
       );
 
+      const currentServer = serversRef.current.find((server) => server.id === serverId);
       if (status === 'online') {
-        const onlineServer = serversRef.current.find((s) => s.id === serverId);
-        if (onlineServer?.notifyOnStart) {
-          void sendServerNotification(onlineServer.name, t('server.notification.started'));
+        if (currentServer?.notifyOnStart) {
+          void sendServerNotification(currentServer.name, t('server.notification.started'));
         }
         clearExpectedOffline(serverId);
         resetAutoRestartState(serverId);
         return;
       }
 
-      if (status === 'offline' && consumeExpectedOffline(serverId)) {
+      const expectedLocally = status === 'offline' && consumeExpectedOffline(serverId);
+      if (status === 'offline' && (expected || expectedLocally)) {
         resetAutoRestartState(serverId);
         return;
       }
@@ -658,92 +252,14 @@ export function useServerAutomation({
         return;
       }
 
-      if (
-        (status === 'offline' || status === 'crashed') &&
-        (previousStatus === 'restarting' ||
-          Boolean(autoRestartInProgressRef.current[serverId]) ||
-          Boolean(autoRestartProcessingRef.current[serverId]) ||
-          Boolean(autoRestartScheduleRef.current[serverId]))
-      ) {
-        return;
+      if (status === 'crashed' && currentServer?.notifyOnCrash !== false) {
+        void sendServerNotification(
+          currentServer?.name ?? serverId,
+          t('server.notification.crashed'),
+        );
       }
-
-      if (status !== 'crashed' && status !== 'offline') {
-        return;
-      }
-
-      if (status === 'crashed') {
-        const crashedServer = serversRef.current.find((s) => s.id === serverId);
-        if (crashedServer?.notifyOnCrash !== false) {
-          void sendServerNotification(
-            crashedServer?.name ?? serverId,
-            t('server.notification.crashed'),
-          );
-        }
-      }
-
-      const targetServer = serversRef.current.find((server) => server.id === serverId);
-      if (!targetServer?.autoRestartOnCrash) {
-        resetAutoRestartState(serverId);
-        return;
-      }
-
-      const maxAutoRestarts = Math.min(
-        20,
-        Math.max(0, Math.floor(targetServer.maxAutoRestarts ?? 3)),
-      );
-      const restartDelaySec = Math.min(
-        300,
-        Math.max(1, Math.floor(targetServer.autoRestartDelaySec ?? 5)),
-      );
-
-      if (maxAutoRestarts <= 0) {
-        return;
-      }
-
-      const currentAttempt = autoRestartAttemptsRef.current[serverId] ?? 0;
-      if (currentAttempt >= maxAutoRestarts) {
-        showToast(t('server.toast.autoRestartLimitReached', { name: targetServer.name }), 'error');
-        return;
-      }
-
-      const nextAttempt = currentAttempt + 1;
-      autoRestartAttemptsRef.current[serverId] = nextAttempt;
-      autoRestartInProgressRef.current[serverId] = true;
-
-      clearAutoRestartTimer(serverId);
-      setServers((prev) =>
-        prev.map((server) =>
-          server.id === serverId ? { ...server, status: 'restarting' } : server,
-        ),
-      );
-      showToast(
-        t('server.toast.autoRestartScheduled', {
-          name: targetServer.name,
-          seconds: restartDelaySec,
-          attempt: nextAttempt,
-          max: maxAutoRestarts,
-        }),
-        'info',
-      );
-
-      autoRestartScheduleRef.current[serverId] = {
-        dueAt: Date.now() + restartDelaySec * 1000,
-        attempt: nextAttempt,
-        maxAutoRestarts,
-      };
-      scheduleAutomationTick();
     },
-    [
-      clearAutoRestartTimer,
-      clearExpectedOffline,
-      consumeExpectedOffline,
-      resetAutoRestartState,
-      setServers,
-      scheduleAutomationTick,
-      showToast,
-      t,
-    ],
+    [clearExpectedOffline, consumeExpectedOffline, resetAutoRestartState, setServers, t],
   );
 
   return {

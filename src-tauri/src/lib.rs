@@ -98,6 +98,24 @@ pub fn run() {
                 }
             };
             app.manage(server_registry);
+            commands::automation::start_service(
+                app.handle().clone(),
+                app.state::<commands::automation::AutomationManager>()
+                    .inner()
+                    .clone(),
+                app.state::<commands::server_registry::ServerRegistry>()
+                    .inner()
+                    .clone(),
+                app.state::<commands::server::ServerManager>()
+                    .inner()
+                    .clone(),
+                app.state::<commands::server::CommandLimiter>()
+                    .inner()
+                    .clone(),
+                app.state::<state::operation_manager::ServerOperationManager>()
+                    .inner()
+                    .clone(),
+            );
 
             // Only register the updater in release builds. Debug builds (including E2E
             // CI tests) skip it so the update-check error dialog cannot block the UI.
@@ -126,6 +144,7 @@ pub fn run() {
         .manage(commands::ngrok::NgrokManager::default())
         .manage(commands::file_utils::ServerImportManager::default())
         .manage(commands::server_jar::ServerJarInstaller::default())
+        .manage(commands::automation::AutomationManager::default())
         .manage(commands::health_check::ProbeLimiter::default())
         .invoke_handler(tauri::generate_handler![
             // サーバー操作
@@ -149,6 +168,8 @@ pub fn run() {
             commands::server_lifecycle::clone_server_profile,
             commands::server_lifecycle::delete_managed_server,
             commands::server_creation::create_server_profile,
+            commands::automation::cancel_auto_restart,
+            commands::automation::resume_auto_restart_after_eula,
             commands::eula::get_server_eula_status,
             commands::eula::accept_server_eula,
             // プロセス統計
@@ -231,11 +252,16 @@ pub fn run() {
                     .state::<commands::server::ServerManager>()
                     .inner()
                     .clone();
+                let automation = app_handle
+                    .state::<commands::automation::AutomationManager>()
+                    .inner()
+                    .clone();
                 let ngrok = app_handle
                     .state::<commands::ngrok::NgrokManager>()
                     .inner()
                     .clone();
                 tauri::async_runtime::block_on(async move {
+                    automation.shutdown().await;
                     loop {
                         let (servers_result, ngrok_result) =
                             tokio::join!(servers.shutdown_all(), ngrok.shutdown());
@@ -272,6 +298,10 @@ pub fn run() {
                     .state::<commands::server::ServerManager>()
                     .inner()
                     .clone();
+                let automation = app_handle
+                    .state::<commands::automation::AutomationManager>()
+                    .inner()
+                    .clone();
                 let ngrok = app_handle
                     .state::<commands::ngrok::NgrokManager>()
                     .inner()
@@ -279,20 +309,24 @@ pub fn run() {
                 let cleanup_phase = exit_cleanup_phase_for_run.clone();
 
                 tauri::async_runtime::spawn(async move {
-                    let (servers_result, ngrok_result) = loop {
-                        let (servers_result, ngrok_result) =
-                            tokio::join!(servers.shutdown_all(), ngrok.shutdown());
-                        if servers_result.is_ok() && ngrok_result.is_ok() {
-                            break (servers_result, ngrok_result);
-                        }
-                        if let Err(error) = servers_result {
-                            eprintln!("Failed to stop Minecraft servers before exit; retrying: {error}");
-                        }
-                        if let Err(error) = ngrok_result {
-                            eprintln!("Failed to stop ngrok before exit; retrying: {error}");
-                        }
-                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                    };
+                    let (servers_result, ngrok_result) =
+                        {
+                            automation.shutdown().await;
+                            loop {
+                                let (servers_result, ngrok_result) =
+                                    tokio::join!(servers.shutdown_all(), ngrok.shutdown());
+                                if servers_result.is_ok() && ngrok_result.is_ok() {
+                                    break (servers_result, ngrok_result);
+                                }
+                                if let Err(error) = servers_result {
+                                    eprintln!("Failed to stop Minecraft servers before exit; retrying: {error}");
+                                }
+                                if let Err(error) = ngrok_result {
+                                    eprintln!("Failed to stop ngrok before exit; retrying: {error}");
+                                }
+                                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                            }
+                        };
                     if let Err(error) = servers_result {
                         eprintln!("Failed to stop Minecraft servers before exit: {error}");
                     }

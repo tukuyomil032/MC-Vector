@@ -65,7 +65,7 @@ src/
 │   ├── server-commands.ts
 │   ├── file-commands.ts
 │   ├── plugin-commands.ts
-│   ├── adapters/plugin/     # Modrinth / Hangar / Spigot
+│   ├── adapters/plugin/     # Legacy search signatures delegating to IPC
 │   └── guards/              # Runtime type guards
 └── store/                   # Zustand state stores
     ├── serverStore.ts
@@ -83,11 +83,15 @@ src/
 | `useSettingsStore` | Theme, language, update preferences                      |
 | `useConsoleStore`  | Console log buffer (2,000 lines/server), command history |
 
-**Persistent storage** uses Tauri Store plugin (not localStorage):
+**Persistent storage** is split by ownership:
 
-- `servers.json` — server definitions
+- `server-registry.sqlite3` — Rust-owned server definitions and templates. On first launch, Rust imports existing records from `servers.json` and legacy template JSON when present; those JSON files remain read-only recovery sources.
 - `config.json` — Ngrok token, app config
 - `console-history` — per-server command history
+- Other preferences continue to use the Tauri Store plugin (not localStorage).
+
+Server status is runtime state: SQLite stores the server profile without its status field, and
+`get_servers` derives `online` or `offline` from the Rust `ServerManager` map.
 
 ### IPC Wrapper Pattern
 
@@ -103,7 +107,7 @@ import { invoke } from '@tauri-apps/api/core';
 await invoke('start_server', { serverId });
 ```
 
-External API responses (Modrinth, Hangar, Mojang) are validated with runtime type guards in `src/lib/guards/` before use.
+Plugin provider responses and installation decisions are fetched and parsed in Rust. The renderer receives UI DTOs through `plugin-commands.ts` and owns search presentation, filtering, translation, confirmation, and display formatting. Mojang and server-version integrations retain their current adapters.
 
 ## Backend
 
@@ -111,28 +115,63 @@ External API responses (Modrinth, Hangar, Mojang) are validated with runtime typ
 
 ```
 src-tauri/src/commands/
-├── server.rs         # Server lifecycle (start, stop, send_command)
-├── file_utils.rs     # File read/write/list (path-traversal-safe)
-├── download.rs       # HTTP file downloads with progress events
-├── backup.rs         # ZIP backup / restore / compress / extract
-├── java.rs           # Java JDK download and extraction
-├── ngrok.rs          # Ngrok process management
-├── health_check.rs   # Minecraft Server List Ping (SLP)
-├── process_stats.rs  # CPU + memory telemetry (sysinfo)
-├── security.rs       # Security gateway (auth, rate limit, audit)
-├── perf.rs           # ANSI log parsing (Rust-side for performance)
-└── updater_utils.rs  # App self-update helpers
+├── server.rs          # Minecraft process supervision and runtime events
+├── server_registry.rs # SQLite server profiles/templates and JSON migration
+├── server_creation.rs # Validated, transactional server creation/import
+├── server_lifecycle.rs# Clone/delete with registry and filesystem rollback
+├── server_jar.rs      # Server JAR metadata, verified upgrade plans/downloads
+├── plugin_catalog.rs  # Provider metadata command adapters
+├── plugin_installer.rs# Preview/execute and plugin state command adapters
+├── automation.rs      # Rust-owned restart and backup schedules
+├── players.rs         # Whitelist, ops, ban list reads and mutations
+├── properties.rs      # server.properties and proxy configuration
+├── file_utils.rs      # Managed filesystem operations and safe imports
+├── download.rs        # Bounded, verified artifact streaming and replacement
+├── backup.rs          # ZIP backup / restore / compress / extract
+├── java.rs            # Java JDK registry, download, extraction, and deletion
+├── ngrok.rs           # Ngrok process, token, and download management
+├── health_check.rs    # Minecraft Server List Ping (SLP)
+├── process_stats.rs   # CPU + memory telemetry (sysinfo)
+├── perf.rs            # ANSI log parsing (Rust-side for performance)
+└── updater_utils.rs   # App self-update helpers
 ```
+
+`commands/` contains the IPC boundary and feature services. Shared SQLite access,
+operation locks, and OS-backed secret storage live under `src-tauri/src/state/`.
+Blocking SQLite and filesystem work is dispatched with `spawn_blocking`; process,
+network, and schedule work uses Tokio.
+
+### Plugin Catalog Feature
+
+`src-tauri/src/plugin_catalog/` owns Modrinth, Hangar, and Spiget metadata integrations. Provider
+modules construct endpoints from fixed HTTPS API hosts and validated identifiers, parse provider
+payloads, select compatible versions, and resolve artifact URLs and checksums. Search and detail
+commands accept provider IDs, terms, and compatibility filters; renderer-supplied URLs and hashes
+are not trusted. Metadata and download requests use bounded response streaming, timeouts, and
+HTTPS host allowlists. React keeps search presentation, filters, translations, user confirmation,
+and the installed-list display.
+
+`src-tauri/src/plugin_installer/` owns the install transaction. A preview request resolves the
+selected plugin and its dependencies in Rust and returns display data plus a short-lived, one-use
+plan token. After the user confirms, execution downloads to managed staging paths, checks available
+hashes (or consults the Rust-owned unverified-download policy), commits the full dependency set,
+and records enough transaction state to roll back or recover interrupted file mutations. Enable,
+disable, and uninstall operations also run in Rust. React passes the opaque plan token to execute;
+it cannot change the planned URL, checksum, dependency graph, or target path after confirmation.
+The explicit debug E2E build supplies deterministic local provider fixtures.
 
 ### Shared State (AppState)
 
-Three Mutex-protected state objects are available to all commands via Tauri's managed state:
+Tauri-managed service state is shared across commands:
 
-| State            | Purpose                                                    |
-| ---------------- | ---------------------------------------------------------- |
-| `ServerManager`  | Running process sessions, command channels, and 60-second metric histories |
-| `CommandLimiter` | Per-server command rate limiting (100 ms minimum interval) |
-| `NgrokManager`   | Active Ngrok process handle                                |
+| State                  | Purpose                                                               |
+| ---------------------- | --------------------------------------------------------------------- |
+| `ServerRegistry`       | SQLite profiles/templates and legacy JSON migration                  |
+| `ServerManager`        | Running child sessions, serialized commands, runtime status, metrics |
+| `ServerOperationManager` | Per-server locks for conflicting file/process operations             |
+| `PluginInstaller`      | Short-lived plans and recoverable plugin transactions                 |
+| `AutomationManager`    | Restart policy and automatic backup schedule state                    |
+| `NgrokManager`         | Active tunnel process and shutdown control                             |
 
 ### Event Bus
 
@@ -141,7 +180,7 @@ The backend emits Tauri events that the frontend listens to:
 | Event                    | Payload                                                                                                   | Emitted by                         |
 | ------------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | `server-log`             | `{ serverId, generation, line, stream }`                                                                  | server.rs stdout/stderr            |
-| `server-status-change`   | `{ serverId, generation, status }`                                                                        | server.rs on spawn/exit            |
+| `server-status-change`   | `{ serverId, generation, status, expected }`                                                               | server.rs on spawn/exit            |
 | `server-stats`           | `{ serverId, cpu, memory, generation, sequence, elapsedMs }`                                              | server.rs, every 2 seconds         |
 | `server-metrics-updated` | `{ serverId, generation, sequence, elapsedMs, resource, tps }`                                            | server.rs on each metric update    |
 | `ngrok-status-change`    | `{ status, url }`                                                                                         | ngrok.rs                           |
@@ -150,13 +189,14 @@ The backend emits Tauri events that the frontend listens to:
 
 ### Process Management
 
-1. `start_server` validates the server ID, Java path, memory args, and JAR path before spawning, then creates an in-memory metric session for that process generation.
+1. `start_server` serializes operations per server, validates the server ID, Java runtime, memory args, and JAR path before spawning, then creates an in-memory metric session for that process generation.
 2. Commands are sent through a bounded `mpsc` channel — never written directly to stdin from multiple callers.
 3. stdout/stderr are buffered (4,096 lines) and forwarded to the frontend in batches (50 ms flush interval, max 200 lines/tick).
 4. CPU and memory samples are kept for 60 seconds; Paper and LeafMC receive a `tps` query every 5 seconds, and matching stdout lines update the TPS history before log buffering.
 5. `get_server_metric_history` returns the current session snapshot, while `server-metrics-updated` broadcasts the same shape with a monotonic generation and sequence.
-6. `CommandLimiter` enforces a minimum 100 ms interval between commands per server.
-7. Process sessions and limiters are cleaned up on process exit; metric history remains in memory only.
+6. Command input is rate-limited per server; process start/stop/restart and conflicting file operations share per-server operation locks.
+7. Process sessions are removed only after the child is confirmed exited and reaped; metric history remains in memory only.
+8. Rust publishes typed status transitions to its internal automation channel and emits the existing Tauri event for the UI. Renderer events cannot trigger automatic restart work.
 
 ## Key Data Flows
 
@@ -178,17 +218,21 @@ User clicks "Start"
 ```
 User clicks "Install"
 → PluginBrowser
-→ downloadFile() (src/lib/plugin-commands.ts)
-→ invoke('download_file')
-→ Rust: HTTP GET to CDN → stream bytes to plugins/ folder
-→ Emit 'download-progress' events → progress bar updates
+→ Rust resolves provider metadata, compatibility, versions, and dependencies
+→ Show install preview and ask the user to confirm
+→ Rust issues a short-lived, one-use plan token
+→ invoke('execute_plugin_install', { token })
+→ Rust downloads and verifies artifacts in staging, then commits or rolls back the dependency transaction
+→ Emit progress and completion state → UI updates
 ```
 
 ## Security Model
 
 - **IPC allowlist** — only explicitly registered commands are callable from the frontend.
-- **Path safety** — `resolve_managed_path` in `file_utils.rs` blocks `../` and absolute path escapes; all file operations are scoped to the app data directory.
-- **Input validation** — `security_gateway` centralizes role checks, rate limiting, command sanitization, and audit logging.
+- **Path safety** — managed path resolvers reject traversal and links/reparse points; file mutations stay under application-managed roots and use staging/rollback where supported.
+- **Input validation** — Rust commands validate IDs and request data, enforce per-server operation locks, and apply provider host, redirect, timeout, checksum, and size limits.
+- **Credential handling** — the Ngrok token is stored through the OS credential store and redacted from process output; renderer-facing settings expose token status rather than the token value.
+- **Persistence** — SQLite migration is transactional and keeps the legacy JSON source available for recovery. Server status is derived from active Rust process sessions rather than trusted from persisted or renderer-provided state.
 - **No inline scripts** — CSP enforces `script-src 'self'`.
 - **TLS everywhere** — all external HTTP requests use reqwest with certificate validation enabled.
 

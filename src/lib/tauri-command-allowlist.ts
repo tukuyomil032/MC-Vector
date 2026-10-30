@@ -17,6 +17,8 @@ const CORE_COMMANDS = [
   'clone_server_profile',
   'delete_managed_server',
   'create_server_profile',
+  'cancel_auto_restart',
+  'resume_auto_restart_after_eula',
   'get_server_properties',
   'save_server_properties',
   'configure_proxy_network',

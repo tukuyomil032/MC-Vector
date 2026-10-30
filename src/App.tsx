@@ -1,4 +1,5 @@
 import { useTranslation } from '@/i18n';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { isEulaRequiredError } from '@/lib/eula-commands';
@@ -279,29 +280,75 @@ function MainApp() {
   const handleBulkBackup = async (servers: MinecraftServer[]) => {
     for (const s of servers) {
       try {
-        await createBackup(s.id, buildAutoBackupName(s, new Date()));
-        showToast(t('server.toast.bulkBackupCreated', { name: s.name }), 'success');
+        const backupName = buildAutoBackupName(s, new Date());
+        let outcome = await createBackup(s.id, backupName, undefined, false);
+        if (outcome.status === 'confirmation_required') {
+          const confirmed = await ask(t('backups.confirmStopForBackup', { name: s.name }), {
+            title: t('backups.stopForBackupTitle'),
+            kind: 'warning',
+          });
+          if (!confirmed) {
+            await new Promise((r) => setTimeout(r, 1000));
+            continue;
+          }
+          outcome = await createBackup(s.id, backupName, undefined, true);
+        }
+        if (outcome.status === 'confirmation_required') {
+          showToast(t('backups.toast.serverStopFailed'), 'error');
+        } else if (outcome.status === 'failed') {
+          logError('Bulk backup operation failed', outcome.error, {
+            serverId: s.id,
+            serverPath: s.path,
+            stage: outcome.stage,
+            restartError: outcome.restartError,
+          });
+          if (outcome.restartError) {
+            showToast(t('backups.toast.backupNotCreatedRestartFailed', { name: s.name }), 'error');
+          } else {
+            showToast(t('server.toast.bulkBackupFailed', { name: s.name }), 'error');
+          }
+        } else {
+          showToast(t('server.toast.bulkBackupCreated', { name: s.name }), 'success');
+          if (outcome.catalogError) {
+            logError('Failed to update managed backup catalog', outcome.catalogError, {
+              serverId: s.id,
+              serverPath: s.path,
+              backupName: outcome.backupName,
+            });
+            showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+          }
+          if (outcome.restart.status === 'failed') {
+            logError('Backup created but server restart failed', outcome.restart.error, {
+              serverId: s.id,
+              serverPath: s.path,
+              backupName: outcome.backupName,
+            });
+            showToast(t('backups.toast.serverRestartFailed'), 'warning');
+          }
 
-        try {
-          const retention = await applyBackupRetention(
-            s.id,
-            s.autoBackupRetainCount ?? 0,
-            s.autoBackupRetainDays ?? 0,
-          );
-          if (retention.failedDeleteCount > 0) {
-            showToast(
-              t('backups.toast.retentionDeleteFailed', {
-                count: retention.failedDeleteCount,
-              }),
-              'warning',
-            );
+          if (!outcome.catalogError) {
+            try {
+              const retention = await applyBackupRetention(
+                s.id,
+                s.autoBackupRetainCount ?? 0,
+                s.autoBackupRetainDays ?? 0,
+              );
+              if (retention.failedDeleteCount > 0) {
+                showToast(
+                  t('backups.toast.retentionDeleteFailed', {
+                    count: retention.failedDeleteCount,
+                  }),
+                  'warning',
+                );
+              }
+              if (retention.listingFailed) {
+                showToast(t('backups.toast.retentionListFailed'), 'warning');
+              }
+            } catch (error) {
+              logError('Bulk backup retention failed', error, { serverId: s.id });
+              showToast(t('backups.toast.retentionListFailed'), 'warning');
+            }
           }
-          if (retention.listingFailed) {
-            showToast(t('backups.toast.retentionListFailed'), 'warning');
-          }
-        } catch (error) {
-          logError('Bulk backup retention failed', error, { serverId: s.id });
-          showToast(t('backups.toast.retentionListFailed'), 'warning');
         }
       } catch (error) {
         logError('Bulk backup failed', error, { serverId: s.id });
@@ -332,7 +379,6 @@ function MainApp() {
     t,
   });
   const { handleBuildProxyNetwork } = useProxyNetworkAction({
-    servers,
     setServers,
     showToast,
     t,

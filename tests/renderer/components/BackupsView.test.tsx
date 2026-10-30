@@ -16,6 +16,7 @@ const {
   tauriListenMock,
   toastErrorMock,
   toastSuccessMock,
+  toastWarningMock,
   webviewWindowMock,
 } = vi.hoisted(() => {
   const selectorWindowInstances: Array<{
@@ -68,6 +69,7 @@ const {
     tauriListenMock: vi.fn(),
     toastErrorMock: vi.fn(),
     toastSuccessMock: vi.fn(),
+    toastWarningMock: vi.fn(),
     webviewWindowMock: MockWebviewWindow,
   };
 });
@@ -89,7 +91,7 @@ vi.mock('sonner', () => ({
   toast: {
     error: toastErrorMock,
     success: toastSuccessMock,
-    warning: vi.fn(),
+    warning: toastWarningMock,
   },
 }));
 
@@ -181,6 +183,12 @@ beforeEach(() => {
   selectorWindowInstances.length = 0;
   onceRegistrationResults.length = 0;
   askMock.mockResolvedValue(false);
+  backupCommands.createBackup.mockResolvedValue({
+    status: 'created',
+    backupName: 'backup-name.zip',
+    catalogError: null,
+    restart: { status: 'not_needed' },
+  });
   backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   backupCommands.readBackupCatalog.mockResolvedValue({});
   backupCommands.normalizeBackupSources.mockImplementation((paths: readonly string[]) =>
@@ -1026,10 +1034,149 @@ describe('BackupsView initialization', () => {
 });
 
 describe('BackupsView lifecycle', () => {
+  it('asks before stopping a running server and retries creation only after consent', async () => {
+    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
+    askMock.mockResolvedValue(true);
+    backupCommands.createBackup
+      .mockResolvedValueOnce({ status: 'confirmation_required' })
+      .mockResolvedValueOnce({
+        status: 'created',
+        backupName: 'backup-name.zip',
+        catalogError: null,
+        restart: { status: 'restarted' },
+      });
+    backupCommands.applyBackupRetention.mockResolvedValue({
+      deletedNames: [],
+      failedDeleteCount: 0,
+      listingFailed: false,
+    });
+
+    renderStrictMode();
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('backups-create-submit'));
+
+    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    expect(backupCommands.createBackup).toHaveBeenNthCalledWith(
+      1,
+      server.id,
+      'backup-name.zip',
+      5,
+      false,
+    );
+    expect(askMock).toHaveBeenCalledWith('backups.confirmStopForBackup', {
+      title: 'backups.stopForBackupTitle',
+      kind: 'warning',
+    });
+    await waitFor(() => expect(backupCommands.createBackup).toHaveBeenCalledTimes(2));
+    expect(backupCommands.createBackup).toHaveBeenNthCalledWith(
+      2,
+      server.id,
+      'backup-name.zip',
+      5,
+      true,
+    );
+  });
+
+  it('does not retry or show success when stopping a running server is declined', async () => {
+    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
+    backupCommands.createBackup.mockResolvedValueOnce({ status: 'confirmation_required' });
+    askMock.mockResolvedValue(false);
+
+    renderStrictMode();
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('backups-create-submit'));
+
+    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    expect(backupCommands.createBackup).toHaveBeenCalledOnce();
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps a created backup successful and warns if restart or registry update failed', async () => {
+    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
+    backupCommands.createBackup.mockResolvedValueOnce({
+      status: 'created',
+      backupName: 'backup-name.zip',
+      catalogError: 'registry write failed',
+      restart: { status: 'failed', error: 'process start failed' },
+    });
+
+    renderStrictMode();
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('backups-create-submit'));
+
+    await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.created'));
+    expect(toastWarningMock).toHaveBeenCalledWith('backups.toast.registryUpdateFailed');
+    expect(toastWarningMock).toHaveBeenCalledWith('backups.toast.serverRestartFailed');
+    expect(backupCommands.applyBackupRetention).not.toHaveBeenCalled();
+    expect(askMock).not.toHaveBeenCalled();
+  });
+
+  it('reports stop failure without treating the attempt as a created backup', async () => {
+    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
+    backupCommands.createBackup.mockResolvedValueOnce({
+      status: 'failed',
+      stage: 'stop',
+      error: 'stop timed out',
+      restartError: null,
+    });
+
+    renderStrictMode();
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('backups-create-submit'));
+
+    await waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.serverStopFailed'),
+    );
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(backupCommands.applyBackupRetention).not.toHaveBeenCalled();
+  });
+
+  it('reports both missing backup and failed restart without using the created-backup warning', async () => {
+    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
+    backupCommands.createBackup.mockResolvedValueOnce({
+      status: 'failed',
+      stage: 'backup',
+      error: 'archive write failed',
+      restartError: 'process start failed',
+    });
+
+    renderStrictMode();
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('backups-create-submit'));
+
+    await waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.backupNotCreatedRestartFailed'),
+    );
+    expect(toastErrorMock).not.toHaveBeenCalledWith('backups.toast.stoppedCreateFailed');
+    expect(toastWarningMock).not.toHaveBeenCalledWith('backups.toast.serverRestartFailed');
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(logErrorMock).toHaveBeenCalledWith(
+      'Manual backup operation failed',
+      'archive write failed',
+      expect.objectContaining({
+        serverId: server.id,
+        serverPath: server.path,
+        stage: 'backup',
+        restartError: 'process start failed',
+      }),
+    );
+  });
+
   it('continues a manual backup through create IPC after a keyed unmount', async () => {
     const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
     fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
-    const createPromise = deferred<void>();
+    const createPromise = deferred<{
+      status: 'created';
+      backupName: string;
+      catalogError: null;
+      restart: { status: 'not_needed' };
+    }>();
     backupCommands.createBackup.mockReturnValue(createPromise.promise);
     backupCommands.applyBackupRetention.mockResolvedValue({
       deletedNames: [],
@@ -1042,7 +1189,12 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
-      expect(backupCommands.createBackup).toHaveBeenCalledWith(server.id, 'backup-name.zip', 5),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(
+        server.id,
+        'backup-name.zip',
+        5,
+        false,
+      ),
     );
 
     view.rerender(
@@ -1052,13 +1204,23 @@ describe('BackupsView lifecycle', () => {
     );
 
     await act(async () => {
-      createPromise.resolve();
+      createPromise.resolve({
+        status: 'created',
+        backupName: 'backup-name.zip',
+        catalogError: null,
+        restart: { status: 'not_needed' },
+      });
       await Promise.resolve();
       await Promise.resolve();
     });
 
     await waitFor(() =>
-      expect(backupCommands.createBackup).toHaveBeenCalledWith(server.id, 'backup-name.zip', 5),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(
+        server.id,
+        'backup-name.zip',
+        5,
+        false,
+      ),
     );
     expect(backupCommands.applyBackupRetention).toHaveBeenCalledWith(server.id, 0, 0);
     await waitFor(() => expect(backupCommands.writeBackupCatalog).toHaveBeenCalledOnce());
@@ -1068,7 +1230,12 @@ describe('BackupsView lifecycle', () => {
 
   it('shows a remounted server as creating and reloads after its manual operation completes', async () => {
     fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
-    const createPromise = deferred<void>();
+    const createPromise = deferred<{
+      status: 'created';
+      backupName: string;
+      catalogError: null;
+      restart: { status: 'not_needed' };
+    }>();
     backupCommands.createBackup.mockReturnValue(createPromise.promise);
     backupCommands.applyBackupRetention.mockResolvedValue({
       deletedNames: [],
@@ -1081,7 +1248,12 @@ describe('BackupsView lifecycle', () => {
     await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
-      expect(backupCommands.createBackup).toHaveBeenCalledWith(server.id, 'backup-name.zip', 5),
+      expect(backupCommands.createBackup).toHaveBeenCalledWith(
+        server.id,
+        'backup-name.zip',
+        5,
+        false,
+      ),
     );
 
     view.rerender(
@@ -1097,7 +1269,12 @@ describe('BackupsView lifecycle', () => {
     const catalogLoadsBeforeCompletion = backupCommands.readBackupCatalog.mock.calls.length;
 
     await act(async () => {
-      createPromise.resolve();
+      createPromise.resolve({
+        status: 'created',
+        backupName: 'backup-name.zip',
+        catalogError: null,
+        restart: { status: 'not_needed' },
+      });
       await Promise.resolve();
       await Promise.resolve();
     });

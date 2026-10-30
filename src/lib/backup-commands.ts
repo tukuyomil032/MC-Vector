@@ -198,12 +198,38 @@ function backupFileRequest(serverId: string, backupName: string): ManagedPathReq
   return { root: 'backups', serverId, relativePath: normalized };
 }
 
+export type BackupRestartOutcome =
+  | { status: 'not_needed' | 'restarted' }
+  | { status: 'failed'; error: string };
+
+export type ManagedBackupOutcome =
+  | { status: 'confirmation_required' }
+  | {
+      status: 'created';
+      backupName: string;
+      catalogError: string | null;
+      restart: BackupRestartOutcome;
+    }
+  | {
+      status: 'failed';
+      stage: 'stop' | 'backup';
+      error: string;
+      restartError: string | null;
+    };
+
 export async function createBackup(
   serverId: string,
   backupName: string,
   compressionLevel?: number,
-): Promise<void> {
-  return createBackupWithOrigin(serverId, backupName, compressionLevel, 'manual');
+  stopRunningServer = false,
+): Promise<ManagedBackupOutcome> {
+  return createBackupWithOrigin(
+    serverId,
+    backupName,
+    compressionLevel,
+    'manual',
+    stopRunningServer,
+  );
 }
 
 async function createBackupWithOrigin(
@@ -211,7 +237,8 @@ async function createBackupWithOrigin(
   backupName: string,
   compressionLevel: number | undefined,
   origin: 'manual' | 'automatic',
-): Promise<void> {
+  stopRunningServer = false,
+): Promise<ManagedBackupOutcome> {
   if (getBackupNameValidationError(backupName) !== null) {
     throw new Error('Invalid backup name');
   }
@@ -220,6 +247,7 @@ async function createBackupWithOrigin(
     backupName,
     sources: null,
     compressionLevel: compressionLevel ?? 5,
+    stopRunningServer,
   };
   if (origin === 'automatic') {
     payload.origin = origin;
@@ -231,7 +259,7 @@ export async function createAutomaticBackup(
   serverId: string,
   backupName: string,
   compressionLevel?: number,
-): Promise<void> {
+): Promise<ManagedBackupOutcome> {
   return createBackupWithOrigin(serverId, backupName, compressionLevel, 'automatic');
 }
 

@@ -123,4 +123,60 @@ describe('VersionUpgradeWizard Rust-owned install flow', () => {
     ).toBeDisabled();
     expect(executeServerJarInstallMock).not.toHaveBeenCalled();
   });
+
+  it('does not advance if the server became running before the upgrade backup', async () => {
+    createBackupMock.mockResolvedValueOnce({ status: 'confirmation_required' });
+    render(
+      <VersionUpgradeWizard server={server} onClose={vi.fn()} onServerVersionChanged={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(prepareServerJarInstallMock).toHaveBeenCalledOnce());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.startUpgrade' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runBackup' }),
+    );
+
+    await waitFor(() => expect(createBackupMock).toHaveBeenCalledOnce());
+    expect(createBackupMock).toHaveBeenCalledWith(
+      server.id,
+      expect.stringMatching(/^pre-upgrade-/),
+      undefined,
+      false,
+    );
+    expect(
+      screen.queryByRole('button', { name: 'serverSettings.versionUpgrade.runDownload' }),
+    ).not.toBeInTheDocument();
+    expect(executeServerJarInstallMock).not.toHaveBeenCalled();
+  });
+
+  it('reports backup and restart failure together without claiming the backup was created', async () => {
+    createBackupMock.mockResolvedValueOnce({
+      status: 'failed',
+      stage: 'backup',
+      error: 'archive write failed',
+      restartError: 'process start failed',
+    });
+    render(
+      <VersionUpgradeWizard server={server} onClose={vi.fn()} onServerVersionChanged={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(prepareServerJarInstallMock).toHaveBeenCalledOnce());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.startUpgrade' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runBackup' }),
+    );
+
+    await waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.backupNotCreatedRestartFailed'),
+    );
+    expect(toastErrorMock).not.toHaveBeenCalledWith('serverSettings.versionUpgrade.backupFailed');
+    expect(
+      screen.queryByRole('button', { name: 'serverSettings.versionUpgrade.runDownload' }),
+    ).not.toBeInTheDocument();
+    expect(executeServerJarInstallMock).not.toHaveBeenCalled();
+  });
 });

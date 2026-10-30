@@ -8,6 +8,7 @@ import {
   prepareServerJarInstall,
 } from '../../lib/server-commands';
 import type { UnlistenFn } from '../../lib/tauri-api';
+import { logError } from '../../lib/error-utils';
 import type { MinecraftServer } from '../shared/server declaration';
 import { Button } from './ui/Button';
 
@@ -85,7 +86,51 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
         }
       });
       const backupName = `pre-upgrade-${Date.now()}`;
-      await createBackup(server.id, backupName);
+      const outcome = await createBackup(server.id, backupName, undefined, false);
+      if (outcome.status === 'confirmation_required') {
+        // Version upgrades require the server to stay offline after this step.
+        // Do not use the normal stop-and-restart backup flow here.
+        showToast(t('serverSettings.versionUpgrade.serverMustBeOffline'), 'error');
+        return;
+      }
+      if (outcome.status === 'failed') {
+        logError('Pre-upgrade backup operation failed', outcome.error, {
+          serverId: server.id,
+          serverPath: server.path,
+          stage: outcome.stage,
+          restartError: outcome.restartError,
+        });
+        if (outcome.restartError) {
+          showToast(
+            t('backups.toast.backupNotCreatedRestartFailed', { name: server.name }),
+            'error',
+          );
+        } else {
+          showToast(
+            outcome.stage === 'stop'
+              ? t('backups.toast.serverStopFailed')
+              : t('serverSettings.versionUpgrade.backupFailed'),
+            'error',
+          );
+        }
+        return;
+      }
+      if (outcome.catalogError) {
+        logError('Failed to update managed backup catalog', outcome.catalogError, {
+          serverId: server.id,
+          serverPath: server.path,
+          backupName: outcome.backupName,
+        });
+        showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+      }
+      if (outcome.restart.status === 'failed') {
+        logError('Backup created but server restart failed', outcome.restart.error, {
+          serverId: server.id,
+          serverPath: server.path,
+          backupName: outcome.backupName,
+        });
+        showToast(t('backups.toast.serverRestartFailed'), 'warning');
+      }
       setStep('download');
     } catch {
       showToast(t('serverSettings.versionUpgrade.backupFailed'), 'error');

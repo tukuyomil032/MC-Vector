@@ -935,11 +935,65 @@ export default function BackupsView({ server }: Props) {
       }
       manualOperationStarted = true;
 
-      // The Rust command owns traversal and always creates a full snapshot.
-      await createBackup(capturedServer.id, normalizedName, capturedCompressionLevel);
+      // Rust rechecks server state while holding the per-server operation lock.
+      let backupOutcome = await createBackup(
+        capturedServer.id,
+        normalizedName,
+        capturedCompressionLevel,
+        false,
+      );
+      if (backupOutcome.status === 'confirmation_required') {
+        const confirmed = await ask(
+          t('backups.confirmStopForBackup', { name: capturedServer.name }),
+          { title: t('backups.stopForBackupTitle'), kind: 'warning' },
+        );
+        if (!confirmed) {
+          return;
+        }
+        backupOutcome = await createBackup(
+          capturedServer.id,
+          normalizedName,
+          capturedCompressionLevel,
+          true,
+        );
+      }
+      if (backupOutcome.status === 'confirmation_required') {
+        showToast(t('backups.toast.serverStopFailed'), 'error');
+        return;
+      }
+      if (backupOutcome.status === 'failed') {
+        logError('Manual backup operation failed', backupOutcome.error, {
+          serverId: capturedServer.id,
+          serverPath: capturedServer.path,
+          stage: backupOutcome.stage,
+          restartError: backupOutcome.restartError,
+        });
+        if (backupOutcome.restartError) {
+          showToast(
+            t('backups.toast.backupNotCreatedRestartFailed', { name: capturedServer.name }),
+            'error',
+          );
+        } else {
+          showToast(
+            backupOutcome.stage === 'stop'
+              ? t('backups.toast.serverStopFailed')
+              : t('backups.toast.stoppedCreateFailed'),
+            'error',
+          );
+        }
+        return;
+      }
 
-      const refreshedBackups = await listBackupsWithMetadata(capturedServer.id);
-      if (isCurrentInitialization(operationToken)) {
+      let refreshedBackups: Backup[] | null = null;
+      try {
+        refreshedBackups = await listBackupsWithMetadata(capturedServer.id);
+      } catch (error) {
+        logError('Failed to refresh backup list after creating backup', error, {
+          serverPath: capturedServer.path,
+          backupName: backupOutcome.backupName,
+        });
+      }
+      if (refreshedBackups && isCurrentInitialization(operationToken)) {
         setBackups(refreshedBackups);
       }
 
@@ -975,13 +1029,15 @@ export default function BackupsView({ server }: Props) {
       };
       // Retention cleanup must operate on the catalog created for this backup,
       // then the final catalog is persisted exactly once.
-      try {
-        retentionResult = await applyRetentionPolicy(nextCatalog, capturedServer);
-        finalCatalog = retentionResult.catalog;
-      } catch (error) {
-        logError('Failed to apply backup retention policy', error, {
-          serverPath: capturedServer.path,
-        });
+      if (!backupOutcome.catalogError) {
+        try {
+          retentionResult = await applyRetentionPolicy(nextCatalog, capturedServer);
+          finalCatalog = retentionResult.catalog;
+        } catch (error) {
+          logError('Failed to apply backup retention policy', error, {
+            serverPath: capturedServer.path,
+          });
+        }
       }
 
       const saved = await persistBackupCatalogBestEffort(
@@ -997,6 +1053,25 @@ export default function BackupsView({ server }: Props) {
         setBackupCatalog(finalCatalog);
         showToast(t('backups.toast.created'), 'success');
         setShowCreateModal(false);
+        if (backupOutcome.catalogError) {
+          logError('Failed to update managed backup catalog', backupOutcome.catalogError, {
+            serverId: capturedServer.id,
+            serverPath: capturedServer.path,
+            backupName: backupOutcome.backupName,
+          });
+          showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+        }
+        if (refreshedBackups === null) {
+          showToast(t('backups.toast.loadFailed'), 'warning');
+        }
+        if (backupOutcome.restart.status === 'failed') {
+          logError('Backup created but server restart failed', backupOutcome.restart.error, {
+            serverId: capturedServer.id,
+            serverPath: capturedServer.path,
+            backupName: backupOutcome.backupName,
+          });
+          showToast(t('backups.toast.serverRestartFailed'), 'warning');
+        }
         if (retentionResult.failedDeleteCount > 0) {
           showToast(
             t('backups.toast.retentionDeleteFailed', {

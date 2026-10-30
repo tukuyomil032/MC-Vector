@@ -395,6 +395,8 @@ export interface TranslationDictionary {
     parent: string;
     confirmDelete: string;
     deleteTitle: string;
+    confirmStopForBackup: string;
+    stopForBackupTitle: string;
     mode: {
       full: string;
       differential: string;
@@ -440,6 +442,11 @@ export interface TranslationDictionary {
       noDiffSkipped: string;
       diffCreated: string;
       created: string;
+      serverStopFailed: string;
+      stoppedCreateFailed: string;
+      backupNotCreatedRestartFailed: string;
+      serverRestartFailed: string;
+      registryUpdateFailed: string;
       createMetadataSaveFailed: string;
       createFailed: string;
       invalidNameEmpty: string;

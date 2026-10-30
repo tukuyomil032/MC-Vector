@@ -28,6 +28,7 @@ const isMac = platform === 'darwin';
 const isWindows = platform === 'win32';
 const serverId = 'real-e2e-server';
 const backupName = 'real-e2e-backup.zip';
+const runningBackupName = 'real-e2e-running-backup.zip';
 const originalProperties = 'online-mode=true\nmotd=real-e2e\n';
 const originalLevel = 'original-level-data';
 const importedFixtureContent = 'imported through the real Tauri E2E fixture\n';
@@ -753,6 +754,73 @@ async function createBackupThroughUi(driver, serverPath) {
   return archivePath;
 }
 
+async function exerciseRunningServerBackup(driver, fixture) {
+  const backupDirectory = path.join(path.dirname(fixture.serverPath), '..', 'backups', serverId);
+  const archivePath = path.join(backupDirectory, runningBackupName);
+  await waitFor(
+    async () => (await invoke(driver, 'is_server_running', { serverId })) === true,
+    'Fixture server was not running before the backup confirmation check',
+  );
+
+  const stopCountBefore = existsSync(fixture.commandLog)
+    ? readFileSync(fixture.commandLog, 'utf8')
+        .split(/\r?\n/)
+        .filter((line) => line === 'stop').length
+    : 0;
+  const request = {
+    serverId,
+    backupName: runningBackupName,
+    stopRunningServer: false,
+    sources: null,
+    compressionLevel: 5,
+    origin: null,
+  };
+  const confirmation = await invoke(driver, 'create_managed_backup', request);
+  assert.deepEqual(
+    confirmation,
+    { status: 'confirmation_required' },
+    'Rust did not require consent before stopping the running fixture server',
+  );
+  assert.equal(
+    existsSync(archivePath),
+    false,
+    'Rust created an archive before the renderer consented to stop the server',
+  );
+
+  const created = await invoke(driver, 'create_managed_backup', {
+    ...request,
+    stopRunningServer: true,
+  });
+  assert.equal(created.status, 'created');
+  assert.equal(created.backupName, runningBackupName);
+  assert.equal(created.catalogError, null);
+  assert.deepEqual(created.restart, { status: 'restarted' });
+  await waitFor(
+    async () => (await invoke(driver, 'is_server_running', { serverId })) === true,
+    'Fixture server did not return to running state after the backup',
+  );
+  await waitFor(
+    () =>
+      existsSync(fixture.commandLog) &&
+      readFileSync(fixture.commandLog, 'utf8')
+        .split(/\r?\n/)
+        .filter((line) => line === 'stop').length > stopCountBefore,
+    'Running backup did not send the stop command to the fixture process',
+  );
+
+  await waitFor(
+    () => existsSync(archivePath),
+    `Running-server backup archive was not created: ${archivePath}`,
+  );
+  const manifest = JSON.parse(readZipEntry(archivePath, 'manifest.json'));
+  assert.equal(manifest.serverId, serverId);
+  assert.equal(manifest.kind, 'full');
+  assert.equal(manifest.consistency, 'quiesced');
+  assert.ok(manifest.entries.some((entry) => entry.path === 'server.properties'));
+  assert.ok(manifest.entries.some((entry) => entry.path === 'world/level.dat'));
+  logStep('running-server confirmation, quiesced archive, and restart passed through real IPC');
+}
+
 async function restoreThroughUi(driver, expectedFileContent) {
   const row = await visibleElement(driver, `[data-testid="backup-row-${backupName}"]`);
   const restoreButton = await row.findElement(By.css('button'));
@@ -872,6 +940,7 @@ async function main() {
       30_000,
     );
     logStep('running-server guard passed');
+    await exerciseRunningServerBackup(normalWebDriver, fixture);
     await restoreThroughUi(normalWebDriver, { path: propertiesPath, value: originalProperties });
     await waitForToast(normalWebDriver, 'Failed to restore backup');
     assert.equal(readFileSync(propertiesPath, 'utf8'), originalProperties);
@@ -969,6 +1038,7 @@ async function main() {
 }
 
 main().catch((error) => {
+  console.error(`[real-tauri-e2e] ${describeError(error)}`);
   console.error(
     `[real-tauri-e2e] failed (error ${errorFingerprint(error)}); inspect retained diagnostics for details`,
   );

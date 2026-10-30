@@ -154,8 +154,7 @@ export const en: TranslationDictionary = {
       autoRestartScheduled:
         'Auto restart scheduled for {name} in {seconds} seconds (attempt {attempt}/{max})',
       autoRestartTriggered: 'Auto restart triggered for {name} (attempt {attempt}/{max})',
-      autoRestartEulaRequired:
-        'Auto restart for {name} was stopped because the Minecraft EULA is not accepted. Accept it and start the server manually.',
+      autoRestartEulaRequired: 'Auto restart for {name} is waiting for Minecraft EULA acceptance.',
       noServerSelected: 'No server selected',
       startFailed: 'Failed to start server',
       stopFailed: 'Failed to stop server',
@@ -377,6 +376,9 @@ export const en: TranslationDictionary = {
     parent: 'Parent',
     confirmDelete: 'Delete backup "{name}"?',
     deleteTitle: 'Delete Backup',
+    confirmStopForBackup:
+      'Server "{name}" is running. Stop it fully before creating the backup, then restart it when the backup is finished?',
+    stopForBackupTitle: 'Stop Server for Backup',
     mode: {
       full: 'Full',
       differential: 'Differential',
@@ -423,6 +425,12 @@ export const en: TranslationDictionary = {
       noDiffSkipped: 'Skipped because there are no changes since the previous backup',
       diffCreated: 'Differential backup created ({count} item(s))',
       created: 'Backup created!',
+      serverStopFailed: 'The server could not be stopped, so no backup was created',
+      stoppedCreateFailed: 'The server stopped, but backup creation failed',
+      backupNotCreatedRestartFailed:
+        'Backup for {name} was not created, and the server could not be restarted',
+      serverRestartFailed: 'The backup was created, but the server could not be restarted',
+      registryUpdateFailed: 'The backup was created, but the backup registry could not be updated',
       createMetadataSaveFailed: 'Backup created, but its metadata could not be saved',
       createFailed: 'Failed to create backup',
       invalidNameEmpty: 'Enter a backup name',
