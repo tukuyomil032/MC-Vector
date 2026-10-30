@@ -17,13 +17,38 @@ export interface CommandItem {
   icon?: ReactNode;
   shortcut?: string;
 }
+/** Strings the palette shows around the results. Pass translated values; the defaults are English. */
+export interface CommandPaletteMessages {
+  clearSearch: string;
+  closeLabel: string;
+  resultsLabel: string;
+  noResults: (query: string) => string;
+  noResultsHint: string;
+  noResultsStatus: string;
+  resultCount: (count: number) => string;
+}
+
+export const defaultCommandPaletteMessages: CommandPaletteMessages = {
+  clearSearch: 'Clear search',
+  closeLabel: 'Close command palette',
+  resultsLabel: 'Command results',
+  noResults: (query) => `No results for “${query}”`,
+  noResultsHint: 'Try a different word or clear the search.',
+  noResultsStatus: 'No results',
+  resultCount: (count) => `${count} ${count === 1 ? 'result' : 'results'}`,
+};
+
 export interface CommandPaletteProps {
   items: CommandItem[];
   placeholder?: string;
   onSelect?: (item: CommandItem) => void;
   onClose?: () => void;
   label?: string;
-  /** Focus the search field on mount, for a palette that opens on demand. */ autoFocus?: boolean;
+  /** Moves focus to the search field when the palette mounts, for a palette that opens on demand. */
+  focusOnOpen?: boolean;
+  messages?: Partial<CommandPaletteMessages>;
+  /** Keycap text for the shortcut that opens the palette, such as "⌘ K". Omitted when not given. */
+  shortcutHint?: string;
 }
 
 const enter: Transition = {
@@ -144,8 +169,11 @@ export function CommandPalette({
   onSelect,
   onClose,
   label = 'Command palette',
-  autoFocus = false,
+  focusOnOpen = false,
+  messages: messageOverrides,
+  shortcutHint,
 }: CommandPaletteProps) {
+  const messages = { ...defaultCommandPaletteMessages, ...messageOverrides };
   const inputId = useId();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -194,8 +222,8 @@ export function CommandPalette({
   const activeId = filtered[safeActiveIndex]?.id;
 
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus({ preventScroll: true });
-  }, [autoFocus]);
+    if (focusOnOpen) inputRef.current?.focus({ preventScroll: true });
+  }, [focusOnOpen]);
 
   useEffect(() => {
     const focusShortcut = (event: KeyboardEvent) => {
@@ -330,7 +358,7 @@ export function CommandPalette({
               key="clear"
               className={styles.clearButton}
               type="button"
-              aria-label="Clear search"
+              aria-label={messages.clearSearch}
               onClick={() => {
                 setQuery('');
                 setActiveIndex(null);
@@ -369,13 +397,13 @@ export function CommandPalette({
           <button
             className={styles.closeButton}
             type="button"
-            aria-label="Close command palette"
+            aria-label={messages.closeLabel}
             onClick={onClose}
           >
             Esc
           </button>
         ) : null}
-        <kbd className={styles.commandKey}>⌘ K</kbd>
+        {shortcutHint ? <kbd className={styles.commandKey}>{shortcutHint}</kbd> : null}
       </div>
       <motion.div
         className={styles.resultsFrame}
@@ -389,7 +417,7 @@ export function CommandPalette({
           id={`${inputId}-results`}
           className={styles.results}
           role="listbox"
-          aria-label="Command results"
+          aria-label={messages.resultsLabel}
         >
           <motion.span
             className={styles.highlight}
@@ -511,8 +539,8 @@ export function CommandPalette({
                 <span>
                   <Search width={20} height={20} aria-hidden="true" />
                 </span>
-                <strong>No results for “{query.trim()}”</strong>
-                <small>Try a different word or clear the search.</small>
+                <strong>{messages.noResults(query.trim())}</strong>
+                <small>{messages.noResultsHint}</small>
               </motion.div>
             )}
           </AnimatePresence>
@@ -521,8 +549,8 @@ export function CommandPalette({
       <span className={styles.visuallyHidden} role="status" aria-live="polite">
         {query.trim()
           ? filtered.length
-            ? `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'}`
-            : 'No results'
+            ? messages.resultCount(filtered.length)
+            : messages.noResultsStatus
           : ''}
       </span>
     </motion.div>

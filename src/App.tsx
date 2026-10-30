@@ -555,7 +555,10 @@ function MainApp() {
 
       <CommandPalette
         activeServer={activeServer}
+        servers={servers}
         setCurrentView={setCurrentView}
+        onSelectServer={setSelectedServerId}
+        onAddServer={() => setShowAddServerChoiceModal(true)}
         onStart={handleStart}
         onStop={handleStop}
         onRestart={handleRestart}

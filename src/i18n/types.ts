@@ -1213,6 +1213,15 @@ export interface TranslationDictionary {
     noResults: string;
     navigate: string;
     serverActions: string;
+    label: string;
+    servers: string;
+    switchServer: string;
+    clearSearch: string;
+    close: string;
+    results: string;
+    noResultsFor: string;
+    noResultsHint: string;
+    resultCount: string;
   };
 }
 
