@@ -106,7 +106,8 @@ export const ja: TranslationDictionary = {
       version: 'Minecraftバージョン',
       type: 'サーバータイプ',
       description: '説明',
-      templateNamePrompt: 'テンプレート名を入力してください',
+      templateNamePrompt: 'テンプレートとして保存',
+      templateNameLabel: 'テンプレート名',
       templateDefaultName: '{name} テンプレート',
       cloneDefaultName: '{name} のコピー',
     },
@@ -284,6 +285,7 @@ export const ja: TranslationDictionary = {
       deleteTitle: 'ファイル削除',
       discardChanges: '未保存の変更を破棄して閉じますか？',
       discardChangesTitle: '未保存の変更',
+      discardButton: '破棄する',
     },
     contextMenu: {
       rename: '名前の変更',

@@ -128,6 +128,7 @@ export interface TranslationDictionary {
       type: string;
       description: string;
       templateNamePrompt: string;
+      templateNameLabel: string;
       templateDefaultName: string;
       cloneDefaultName: string;
     };
@@ -307,6 +308,7 @@ export interface TranslationDictionary {
       deleteTitle: string;
       discardChanges: string;
       discardChangesTitle: string;
+      discardButton: string;
     };
     contextMenu: {
       rename: string;

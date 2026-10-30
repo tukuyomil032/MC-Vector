@@ -52,16 +52,14 @@ test.describe('server management', () => {
     await expect(modal).toHaveCount(0);
   });
 
-  test('requires the explicit native confirmation before deleting a server', async ({
-    page,
-    app,
-  }) => {
+  test('requires an explicit confirmation before deleting a server', async ({ page, app }) => {
     await app.gotoApp('paper-plugin-success');
-    await app.confirmDialogs();
 
     const serverCard = page.locator('[data-testid="server-card-server-1"]');
     await serverCard.click({ button: 'right' });
     await page.locator('[data-testid="delete-server-server-1"]').click();
+    await expect(page.locator('[data-testid="feedback-dialog"]')).toContainText('server-1');
+    await app.acceptConfirm();
 
     await expect(serverCard).toHaveCount(0);
     await expect.poll(async () => (await app.ipcCalls('delete_managed_server')).length).toBe(1);

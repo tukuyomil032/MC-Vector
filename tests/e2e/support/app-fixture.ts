@@ -8,7 +8,6 @@ type E2eWindow = Window & {
     calls: E2eCall[];
     state: E2eState;
   };
-  __dialogConfirm?: boolean;
 };
 
 export interface AppFixture {
@@ -23,7 +22,7 @@ export interface AppFixture {
   setBackupSelection(paths: string[]): Promise<void>;
   runtimeFiles(): Promise<string[]>;
   runtimeState(): Promise<E2eState | undefined>;
-  confirmDialogs(): Promise<void>;
+  acceptConfirm(): Promise<void>;
   ipcCalls(name?: string): Promise<E2eCall[]>;
   clearCalls(): Promise<void>;
   expectNoIpcCall(name: string): Promise<void>;
@@ -127,10 +126,11 @@ export function createAppFixture(page: Page): AppFixture {
       return page.evaluate(() => (window as E2eWindow).__MC_VECTOR_E2E__?.state);
     },
 
-    async confirmDialogs() {
-      await page.evaluate(() => {
-        (window as E2eWindow).__dialogConfirm = true;
-      });
+    /** Confirms the in-app dialog that is open now. Call it right after the action that opens the dialog. */
+    async acceptConfirm() {
+      const confirm = page.locator('[data-testid="feedback-confirm-confirm"]');
+      await expect(confirm).toBeVisible();
+      await confirm.click();
     },
 
     async ipcCalls(name?: string) {

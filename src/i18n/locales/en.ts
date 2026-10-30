@@ -107,7 +107,8 @@ export const en: TranslationDictionary = {
       version: 'Minecraft Version',
       type: 'Server Type',
       description: 'Description',
-      templateNamePrompt: 'Enter template name',
+      templateNamePrompt: 'Save as template',
+      templateNameLabel: 'Template name',
       templateDefaultName: '{name} Template',
       cloneDefaultName: '{name} Copy',
     },
@@ -288,6 +289,7 @@ export const en: TranslationDictionary = {
       deleteTitle: 'Delete Files',
       discardChanges: 'Discard unsaved changes and close this file?',
       discardChangesTitle: 'Unsaved Changes',
+      discardButton: 'Discard',
     },
     contextMenu: {
       rename: 'Rename',
