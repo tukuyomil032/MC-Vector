@@ -2,25 +2,26 @@
   :root {
     --mv-color-scheme: dark;
 
-    --mv-surface-base: #09090b;
-    --mv-surface-muted: #f8fafc;
-    --mv-surface-elevated-start: var(--mv-panel-start, #ffffff);
-    --mv-surface-elevated-end: var(--mv-panel-end, #f4f4f5);
-    --mv-surface-alt-start: var(--mv-panel-alt-start, #f4f4f5);
-    --mv-surface-alt-end: var(--mv-panel-alt-end, #e4e4e7);
+    /* Legacy --mv-* names alias the Arc foundation tokens so existing selectors keep working. */
+    --mv-surface-base: var(--background);
+    --mv-surface-muted: var(--surface-muted);
+    --mv-surface-elevated-start: var(--mv-panel-start, var(--surface));
+    --mv-surface-elevated-end: var(--mv-panel-end, var(--surface));
+    --mv-surface-alt-start: var(--mv-panel-alt-start, var(--surface-raised));
+    --mv-surface-alt-end: var(--mv-panel-alt-end, var(--surface-raised));
 
-    --mv-surface-border: var(--mv-border-soft, rgba(148, 163, 184, 0.45));
-    --mv-surface-border-strong: var(--mv-border-strong, #d4d4d8);
+    --mv-surface-border: var(--mv-border-soft, var(--border));
+    --mv-surface-border-strong: var(--mv-border-strong, var(--border-strong));
 
-    --mv-surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-    --mv-surface-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.14);
+    --mv-surface-shadow: var(--shadow-floating);
+    --mv-surface-shadow-soft: var(--shadow-raised);
 
-    --mv-surface-card-bg: #ffffff;
-    --mv-surface-card-alt-bg: #f4f4f5;
+    --mv-surface-card-bg: var(--surface);
+    --mv-surface-card-alt-bg: var(--surface-raised);
 
-    --mv-surface-text-primary: #f4f4f5;
-    --mv-surface-text-secondary: #d4d4d8;
-    --mv-surface-text-muted: #a1a1aa;
+    --mv-surface-text-primary: var(--foreground);
+    --mv-surface-text-secondary: var(--text-secondary);
+    --mv-surface-text-muted: var(--text-muted);
     --mv-section-title-color: #334155;
     --mv-kpi-label-color: #64748b;
     --mv-kpi-value-color: #0f172a;
@@ -67,25 +68,25 @@
   .app-shell[data-theme='dark'] {
     --mv-color-scheme: dark;
 
-    --mv-surface-base: #09090b;
-    --mv-surface-muted: #18181b;
-    --mv-surface-elevated-start: var(--mv-panel-start, #18181b);
-    --mv-surface-elevated-end: var(--mv-panel-end, #18181b);
-    --mv-surface-alt-start: var(--mv-panel-alt-start, #1c1c1f);
-    --mv-surface-alt-end: var(--mv-panel-alt-end, #1c1c1f);
+    --mv-surface-base: var(--background);
+    --mv-surface-muted: var(--surface-muted);
+    --mv-surface-elevated-start: var(--mv-panel-start, var(--surface));
+    --mv-surface-elevated-end: var(--mv-panel-end, var(--surface));
+    --mv-surface-alt-start: var(--mv-panel-alt-start, var(--surface-raised));
+    --mv-surface-alt-end: var(--mv-panel-alt-end, var(--surface-raised));
 
-    --mv-surface-border: var(--mv-border-soft, #27272a);
-    --mv-surface-border-strong: var(--mv-border-strong, #3f3f46);
+    --mv-surface-border: var(--mv-border-soft, var(--border));
+    --mv-surface-border-strong: var(--mv-border-strong, var(--border-strong));
 
-    --mv-surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --mv-surface-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --mv-surface-shadow: var(--shadow-floating);
+    --mv-surface-shadow-soft: var(--shadow-raised);
 
-    --mv-surface-card-bg: #18181b;
-    --mv-surface-card-alt-bg: #1c1c1f;
+    --mv-surface-card-bg: var(--surface);
+    --mv-surface-card-alt-bg: var(--surface-raised);
 
-    --mv-surface-text-primary: #f4f4f5;
-    --mv-surface-text-secondary: #d4d4d8;
-    --mv-surface-text-muted: #a1a1aa;
+    --mv-surface-text-primary: var(--foreground);
+    --mv-surface-text-secondary: var(--text-secondary);
+    --mv-surface-text-muted: var(--text-muted);
     --mv-section-title-color: #71717a;
     --mv-kpi-label-color: #71717a;
     --mv-kpi-value-color: #fafafa;

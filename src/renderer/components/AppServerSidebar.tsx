@@ -122,7 +122,7 @@ export default function AppServerSidebar({
         <span>{serversLabel}</span>
         <button
           type="button"
-          className={`text-xs px-1.5 py-0.5 rounded transition-colors ${isBulkMode ? 'bg-accent text-white' : 'text-zinc-400 hover:text-text-primary'}`}
+          className={`text-xs px-1.5 py-0.5 rounded transition-colors ${isBulkMode ? 'bg-accent text-black' : 'text-zinc-400 hover:text-text-primary'}`}
           onClick={toggleBulkMode}
           title={bulkSelectLabel}
         >

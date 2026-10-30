@@ -1,24 +1,25 @@
 @layer components {
   :root {
-    --mv-font-display: 'Avenir Next', 'Noto Sans JP', 'Segoe UI', sans-serif;
+    /* Legacy --mv-* names alias the Arc foundation tokens (see base/design-tokens.css). */
+    --mv-font-display: var(--font-body);
     --mv-view-glow-a: transparent;
     --mv-view-glow-b: transparent;
-    --mv-panel-start: #18181b;
-    --mv-panel-end: #18181b;
-    --mv-panel-alt-start: #1c1c1f;
-    --mv-panel-alt-end: #1c1c1f;
-    --mv-accent-start: #ffffff;
-    --mv-accent-end: #ffffff;
-    --mv-success-start: #22c55e;
-    --mv-success-end: #10b981;
-    --mv-warn-start: #f59e0b;
-    --mv-warn-end: #f97316;
+    --mv-panel-start: var(--surface);
+    --mv-panel-end: var(--surface);
+    --mv-panel-alt-start: var(--surface-raised);
+    --mv-panel-alt-end: var(--surface-raised);
+    --mv-accent-start: var(--accent);
+    --mv-accent-end: var(--accent-strong);
+    --mv-success-start: var(--success);
+    --mv-success-end: var(--success);
+    --mv-warn-start: var(--warning);
+    --mv-warn-end: var(--warning);
     --mv-view-bg: transparent;
-    --mv-panel-bg: #18181b;
-    --mv-panel-bg-alt: #1c1c1f;
-    --mv-border-soft: #27272a;
-    --mv-border-strong: #3f3f46;
-    --mv-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --mv-panel-bg: var(--surface);
+    --mv-panel-bg-alt: var(--surface-raised);
+    --mv-border-soft: var(--border);
+    --mv-border-strong: var(--border-strong);
+    --mv-shadow-panel: var(--shadow-resting);
   }
 
   .app-svg-icon {
