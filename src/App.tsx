@@ -535,6 +535,7 @@ function MainApp() {
               prev.map((server) => (server.id === serverId ? { ...server, port } : server)),
             );
           }}
+          onAddServer={() => setShowAddServerChoiceModal(true)}
           updaterSettings={{
             onCheckForUpdates: handleCheckForUpdates,
             updateCheckStatus,

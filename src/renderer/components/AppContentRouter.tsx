@@ -1,10 +1,13 @@
+import { Plus, SearchX, Server } from 'lucide-react';
 import { type JSX, lazy } from 'react';
+import { Button } from '@/components/arc/button/button';
 import type { Translate } from '../../i18n';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
 import { useUiStore } from '../../store/uiStore';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import BackupsView from './BackupsView';
 import ConsoleView from './ConsoleView';
+import ContentState from './ContentState';
 import NgrokGuideView from './NgrokGuideView';
 import ProxyHelpView from './ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './ProxySetupView';
@@ -31,6 +34,7 @@ interface AppContentRouterProps {
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
   onServerVersionChanged: (serverId: string, version: string) => void;
   onServerPortChanged: (serverId: string, port: number) => void;
+  onAddServer: () => void;
   updaterSettings: AppUpdaterSettings;
   t: Translate;
 }
@@ -45,6 +49,7 @@ export default function AppContentRouter({
   onUpdateServer,
   onServerVersionChanged,
   onServerPortChanged,
+  onAddServer,
   updaterSettings,
   t,
 }: AppContentRouterProps) {
@@ -71,10 +76,19 @@ export default function AppContentRouter({
   }
 
   if (!activeServer) {
+    const hasServers = servers.length > 0;
     return (
-      <div className="p-10 text-center text-zinc-500 text-xl">
-        {t('server.list.selectOrCreate')}
-      </div>
+      <ContentState
+        icon={<Server size={20} strokeWidth={1.75} aria-hidden={true} />}
+        title={hasServers ? t('server.title') : t('server.list.emptyTitle')}
+        description={hasServers ? t('server.list.selectOrCreate') : t('server.list.empty')}
+        action={
+          <Button type="button" variant="primary" size="sm" onClick={onAddServer}>
+            <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
+            {t('nav.addServer')}
+          </Button>
+        }
+      />
     );
   }
 
@@ -115,5 +129,11 @@ export default function AppContentRouter({
     return serverRenderer();
   }
 
-  return <div>{t('errors.notFound')}</div>;
+  return (
+    <ContentState
+      icon={<SearchX size={20} strokeWidth={1.75} aria-hidden={true} />}
+      title={t('errors.notFound')}
+      description={t('errors.notFoundDescription')}
+    />
+  );
 }

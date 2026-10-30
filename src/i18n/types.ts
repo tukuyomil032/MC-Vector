@@ -46,6 +46,7 @@ export interface TranslationDictionary {
     refresh: string;
     copy: string;
     paste: string;
+    reload: string;
     /** Accessible name of the notification region */
     notifications: string;
   };
@@ -826,6 +827,8 @@ export interface TranslationDictionary {
   /** Error messages */
   errors: {
     generic: string;
+    viewFailedDescription: string;
+    notFoundDescription: string;
     network: string;
     notFound: string;
     permission: string;

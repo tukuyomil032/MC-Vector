@@ -26,6 +26,7 @@ export const en: TranslationDictionary = {
     refresh: 'Refresh',
     copy: 'Copy',
     paste: 'Paste',
+    reload: 'Reload',
     notifications: 'Notifications',
   },
 
@@ -829,6 +830,8 @@ export const en: TranslationDictionary = {
 
   errors: {
     generic: 'An error occurred',
+    viewFailedDescription: 'This screen could not be displayed. Reload it to try again.',
+    notFoundDescription: 'The screen you asked for does not exist.',
     network: 'Network error. Please check your connection.',
     notFound: 'Not found',
     permission: 'Permission denied',

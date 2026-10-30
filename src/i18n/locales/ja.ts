@@ -26,6 +26,7 @@ export const ja: TranslationDictionary = {
     refresh: '更新',
     copy: 'コピー',
     paste: '貼り付け',
+    reload: '再読み込み',
     notifications: '通知',
   },
 
@@ -823,6 +824,8 @@ export const ja: TranslationDictionary = {
 
   errors: {
     generic: 'エラーが発生しました',
+    viewFailedDescription: 'この画面を表示できませんでした。再読み込みしてもう一度お試しください。',
+    notFoundDescription: '指定された画面は存在しません。',
     network: 'ネットワークエラー。接続を確認してください。',
     notFound: '見つかりません',
     permission: '権限がありません',
