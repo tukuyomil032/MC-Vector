@@ -34,8 +34,8 @@ function emitStatus(serverId: string, status: string): void {
   void emit('server-status-change', { serverId, status });
 }
 
-function emitProgress(serverId: string, status: string): void {
-  void emit('download-progress', { serverId, progress: 100, status });
+function emitProgress(serverId: string): void {
+  void emit('download-progress', { serverId, progress: 100 });
 }
 
 function serverEulaPath(serverId: string): string {
@@ -478,7 +478,7 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
         resolveRuntimePath({ root: 'servers', serverId, relativePath: 'server.jar' }),
         'e2e-server-jar',
       );
-      emitProgress(serverId, 'server.jar');
+      emitProgress(serverId);
       return { serverId, version };
     }
 

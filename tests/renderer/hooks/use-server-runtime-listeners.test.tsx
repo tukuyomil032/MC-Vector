@@ -87,7 +87,7 @@ describe('useServerRuntimeListeners', () => {
     await waitFor(() => expect(downloadHandlers).toHaveLength(1));
 
     act(() => {
-      downloadHandlers[0]?.({ serverId: 'paper-a', progress: 42, status: 'Downloading... 42%' });
+      downloadHandlers[0]?.({ serverId: 'paper-a', progress: 42 });
     });
     expect(notifyMock.progress).toHaveBeenCalledWith('server-download-paper-a', {
       title: 'common.downloading',
@@ -95,7 +95,7 @@ describe('useServerRuntimeListeners', () => {
     });
 
     act(() => {
-      downloadHandlers[0]?.({ serverId: 'paper-a', progress: 100, status: 'Download complete' });
+      downloadHandlers[0]?.({ serverId: 'paper-a', progress: 100 });
     });
     expect(notifyMock.done).toHaveBeenCalledWith('server-download-paper-a', {
       type: 'success',

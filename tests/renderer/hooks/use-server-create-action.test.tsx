@@ -115,9 +115,7 @@ describe('use-server-create-action', () => {
 
   it('shows one progress toast per operation ID and unlistens after creation', async () => {
     const unlisten = vi.fn();
-    let receiveProgress:
-      | ((event: { operationId: string; progress: number; status: string }) => void)
-      | undefined;
+    let receiveProgress: ((event: { operationId: string; progress: number }) => void) | undefined;
     let resolveCreation:
       | ((value: { server: MinecraftServer; jarInstalled: boolean }) => void)
       | undefined;
@@ -132,8 +130,8 @@ describe('use-server-create-action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create server' }));
     await waitFor(() => expect(createServerProfileMock).toHaveBeenCalledTimes(1));
-    receiveProgress?.({ operationId: 'another-operation', progress: 80, status: 'other' });
-    receiveProgress?.({ operationId: 'correlation-id', progress: 40, status: 'ignored' });
+    receiveProgress?.({ operationId: 'another-operation', progress: 80 });
+    receiveProgress?.({ operationId: 'correlation-id', progress: 40 });
 
     await waitFor(() =>
       expect(notifyMock.progress).toHaveBeenCalledWith('server-create-correlation-id', {
@@ -146,7 +144,7 @@ describe('use-server-create-action', () => {
     resolveCreation?.({ server, jarInstalled: true });
     await waitFor(() => expect(unlisten).toHaveBeenCalledTimes(1));
     // A late event after the result must not bring the progress toast back over the success toast.
-    receiveProgress?.({ operationId: 'correlation-id', progress: 90, status: 'late' });
+    receiveProgress?.({ operationId: 'correlation-id', progress: 90 });
     expect(notifyMock.progress).toHaveBeenCalledTimes(1);
   });
 
