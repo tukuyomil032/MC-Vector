@@ -97,7 +97,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveAttribute('role', 'dialog');
     await expect(dialog.getByRole('heading')).toBeVisible();
-    await expect(dialog.getByLabel('Close')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Close' })).toBeVisible();
     await expect(dialog).toContainText('WirelessRedstone');
     await expect(dialog).toContainText('Paper 1.21.10');
     await expect(dialog).toContainText('1.20.1');

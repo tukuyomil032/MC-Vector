@@ -66,6 +66,8 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   line-height: var(--leading-body);
+  /* Callers may pass a newline-separated list as the description. */
+  white-space: pre-line;
 }
 .title,
 .description {
