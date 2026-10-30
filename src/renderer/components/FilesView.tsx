@@ -1,10 +1,10 @@
 import { DiffEditor } from '@monaco-editor/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { ArrowUp, FolderPlus, GitCompareArrows, X } from 'lucide-react';
 import type * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { notify } from '../shared/notify';
+import { useAppFeedback } from './AppFeedbackProvider';
 import {
   iconFile,
   iconFiles,
@@ -138,6 +138,7 @@ export default function FilesView({ server }: Props) {
   const filesRequestId = useRef(0);
 
   const { t } = useTranslation();
+  const { confirm } = useAppFeedback();
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -402,9 +403,11 @@ export default function FilesView({ server }: Props) {
     }
 
     if (fileContent !== originalFileContent) {
-      const discard = await ask(t('files.confirm.discardChanges'), {
+      const discard = await confirm({
         title: t('files.confirm.discardChangesTitle'),
-        kind: 'warning',
+        description: t('files.confirm.discardChanges'),
+        confirmLabel: t('files.confirm.discardButton'),
+        tone: 'danger',
       });
       if (!discard) {
         return;
@@ -415,7 +418,7 @@ export default function FilesView({ server }: Props) {
     setEditingFile(null);
     setFileContent('');
     setOriginalFileContent('');
-  }, [editingFile, fileContent, isSaving, originalFileContent, t]);
+  }, [confirm, editingFile, fileContent, isSaving, originalFileContent, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -479,9 +482,11 @@ export default function FilesView({ server }: Props) {
     if (selectedFiles.length === 0) {
       return;
     }
-    const confirmed = await ask(t('files.confirm.delete', { count: selectedFiles.length }), {
+    const confirmed = await confirm({
       title: t('files.confirm.deleteTitle'),
-      kind: 'warning',
+      description: t('files.confirm.delete', { count: selectedFiles.length }),
+      confirmLabel: t('common.delete'),
+      tone: 'danger',
     });
     if (!confirmed) {
       return;
