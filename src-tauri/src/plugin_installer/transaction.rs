@@ -279,7 +279,10 @@ impl Transaction {
                     fs::remove_file(&restore).map_err(io)?;
                 }
                 fs::copy(&backup, &restore).map_err(io)?;
-                File::open(&restore)
+                // Windows requires a write-capable handle for `sync_all`.
+                OpenOptions::new()
+                    .write(true)
+                    .open(&restore)
                     .and_then(|file| file.sync_all())
                     .map_err(io)?;
                 fs::rename(restore, destination).map_err(io)?;
