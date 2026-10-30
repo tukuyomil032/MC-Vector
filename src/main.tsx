@@ -1,3 +1,7 @@
+import '@fontsource-variable/inter';
+import './styles/fonts.css';
+import '@/components/arc/foundation.css';
+import './styles/arc-brand.css';
 import { loader } from '@monaco-editor/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { restoreStateCurrent } from '@tauri-apps/plugin-window-state';
