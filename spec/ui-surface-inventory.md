@@ -477,14 +477,14 @@
 
 ## M. 共通部品、開発用、使われていないもの
 
-- [ ] `ui/Button`（10 variant）
-- [ ] `ui/Field`
-- [ ] `ui/Select`（▼ のグリフ）
-- [ ] `ui/Switch`
-- [ ] `ui/Progress`
-- [ ] `ui/Tooltip`
+- [x] `ui/Button`（10 variant）
+- [x] `ui/Field`
+- [x] `ui/Select`（▼ のグリフ）
+- [x] `ui/Switch`
+- [x] `ui/Progress`
+- [x] `ui/Tooltip`
 - [ ] SvgMaskIcon
-- [ ] UI Lab（DEV のみ）
+- [x] UI Lab（DEV のみ）
 - [ ] 使われていないもの: 再起動待ちの状態
 - [ ] 使われていないもの: テーマのキー
 - [ ] 使われていないもの: `server.list.empty`
