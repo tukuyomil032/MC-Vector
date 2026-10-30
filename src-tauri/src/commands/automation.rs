@@ -1302,6 +1302,7 @@ mod tests {
     use crate::commands::server::{ServerManager, ServerStatus, ServerStatusEvent};
     use crate::commands::server_registry::MinecraftServer;
     use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+    use crate::test_support::test_temp_dir;
     use chrono::{Datelike, TimeZone};
     use serde_json::Number;
     use std::collections::HashMap;
@@ -1706,7 +1707,9 @@ mod tests {
             .acquire("server-1", OperationKind::BackupCreate)
             .await
             .expect("acquire backup operation");
-        let archive = std::env::temp_dir().join(format!(
+        let archive_directory = test_temp_dir("mc-vector-automation-tests");
+        std::fs::create_dir_all(&archive_directory).expect("create archive directory");
+        let archive = archive_directory.join(format!(
             "mc-vector-auto-stop-failure-{}.zip",
             uuid::Uuid::new_v4()
         ));
