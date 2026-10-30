@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Badge, type BadgeTone } from '@/components/arc/badge/badge';
 import { Button, type ButtonSize, type ButtonVariant } from '@/components/arc/button/button';
@@ -12,6 +13,7 @@ import {
   ToastStackProvider,
   useToastStack,
 } from '@/components/arc/toast-stack/toast-stack';
+import { PluginInstallList, type PluginInstallItem } from './PluginInstallList';
 
 /* Dev-only evaluation page for the Arc components. Reached from the command palette in dev builds. */
 
@@ -211,25 +213,45 @@ function BadgeSection() {
   );
 }
 
+/** A tiny monochrome square, so the lab can show an icon row next to rows that fall back to a monogram. */
+const ESSENTIALS_ICON_URL = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><rect width="28" height="28" rx="8" fill="#71717a"/></svg>',
+)}`;
+
+const PLUGIN_INSTALL_ITEMS: PluginInstallItem[] = [
+  { name: 'EssentialsX', iconUrl: ESSENTIALS_ICON_URL },
+  { name: 'Vault' },
+  { name: 'LuckPerms' },
+];
+
 function DialogDemo() {
+  const installRef = useRef<HTMLButtonElement>(null);
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="secondary">ダイアログを開く</Button>
       </DialogTrigger>
-      <DialogContent title="プラグインをインストールしますか？">
-        <ul className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
-          <li>EssentialsX</li>
-          <li>Vault</li>
-        </ul>
-        <div className="mt-4 flex justify-end gap-2">
-          <DialogClose asChild>
-            <Button variant="ghost">キャンセル</Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button variant="primary">インストール</Button>
-          </DialogClose>
-        </div>
+      <DialogContent
+        title="プラグインをインストールしますか？"
+        onOpenAutoFocus={(event) => {
+          // Install is the non-destructive choice here, so it takes focus first.
+          event.preventDefault();
+          installRef.current?.focus();
+        }}
+        footer={
+          <>
+            <DialogClose asChild>
+              <Button variant="secondary">キャンセル</Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button ref={installRef} variant="primary">
+                インストール
+              </Button>
+            </DialogClose>
+          </>
+        }
+      >
+        <PluginInstallList items={PLUGIN_INSTALL_ITEMS} />
       </DialogContent>
     </Dialog>
   );
