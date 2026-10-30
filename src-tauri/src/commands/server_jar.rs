@@ -1318,13 +1318,13 @@ pub(crate) async fn install_server_jar_for_creation(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::test_temp_dir;
 
     struct TestDirectory(PathBuf);
 
     impl TestDirectory {
         fn new() -> Self {
-            let path =
-                std::env::temp_dir().join(format!("mc-vector-server-jar-{}", Uuid::new_v4()));
+            let path = test_temp_dir("mc-vector-server-jar-tests").join(Uuid::new_v4().to_string());
             fs::create_dir_all(&path).expect("temporary jar directory should be created");
             Self(path)
         }
