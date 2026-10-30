@@ -625,6 +625,7 @@ mod tests {
         apply_runtime_statuses, legacy_server_directory_name, JsonNumber, MinecraftServer,
         ServerRegistry, ServerTemplate, DATABASE_FILE, MIGRATION_ID,
     };
+    use crate::test_support::test_temp_dir;
     use rusqlite::Connection;
     use serde_json::Value;
     use std::collections::{HashMap, HashSet};
@@ -636,7 +637,7 @@ mod tests {
 
     impl TempDirectory {
         fn new() -> Self {
-            let path = std::env::temp_dir().join(format!("mc-vector-registry-{}", Uuid::new_v4()));
+            let path = test_temp_dir("mc-vector-registry-tests").join(Uuid::new_v4().to_string());
             fs::create_dir_all(&path).expect("create temporary registry directory");
             Self(path)
         }
