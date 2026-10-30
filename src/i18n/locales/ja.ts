@@ -101,6 +101,11 @@ export const ja: TranslationDictionary = {
 
   server: {
     title: 'サーバー',
+    exit: {
+      title: 'MC-Vector を終了しますか？',
+      description: '終了すると、動いているサーバーはすべて停止します。',
+      confirm: '終了',
+    },
     status: {
       online: '稼働中',
       offline: '停止中',

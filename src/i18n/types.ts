@@ -122,6 +122,11 @@ export interface TranslationDictionary {
   /** Server management translations */
   server: {
     title: string;
+    exit: {
+      title: string;
+      description: string;
+      confirm: string;
+    };
     status: {
       online: string;
       offline: string;

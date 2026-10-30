@@ -27,6 +27,7 @@ import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
 import { useLiquidGlassSync } from '@/renderer/hooks/use-liquid-glass-sync';
+import { useExitConfirmation } from '@/renderer/hooks/use-exit-confirmation';
 import { useMediaQuery } from '@/renderer/hooks/use-media-query';
 import { useUpdateChannelSync } from '@/renderer/hooks/use-update-channel-sync';
 import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action';
@@ -393,6 +394,14 @@ function MainApp() {
   const appShellStyle = buildAppShellStyle(resolvedTheme);
 
   const groupedServers = useGroupedServers({ servers, t });
+
+  useExitConfirmation({
+    activeServerCount: servers.filter(
+      (server) => server.status !== 'offline' && server.status !== 'crashed',
+    ).length,
+    confirm,
+    t,
+  });
 
   const headerTitle = getHeaderTitle(currentView, activeServer?.name, t);
 

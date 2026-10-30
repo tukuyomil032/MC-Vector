@@ -102,6 +102,11 @@ export const en: TranslationDictionary = {
 
   server: {
     title: 'Servers',
+    exit: {
+      title: 'Quit MC-Vector?',
+      description: 'Quitting stops every server that is still running.',
+      confirm: 'Quit',
+    },
     status: {
       online: 'Running',
       offline: 'Stopped',
