@@ -198,6 +198,46 @@ pub(super) fn regular_file(path: &Path) -> Result<bool, String> {
     }
 }
 
+pub(super) const LINKED_ENTRY: &str = "Plugin path must be a regular file without symbolic links";
+
+/// Same contract as `regular_file`, but inspects a directory entry directly.
+/// `DirEntry::metadata` never follows symbolic links.
+pub(super) fn regular_entry(entry: &fs::DirEntry) -> Result<bool, String> {
+    match entry.metadata() {
+        Ok(metadata) if is_link(&metadata) || !metadata.is_file() => Err(LINKED_ENTRY.into()),
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(io(error)),
+    }
+}
+
+/// Resolve a listed directory entry to a canonical path that is proven to stay
+/// below `parent`. Links are refused before resolution so canonicalization can
+/// never redirect to another entry. Returns `None` when the entry vanished.
+pub(super) fn trusted_child(
+    parent: &Path,
+    entry: &fs::DirEntry,
+    link_error: &str,
+) -> Result<Option<PathBuf>, String> {
+    match entry.metadata() {
+        Ok(metadata) if is_link(&metadata) => return Err(link_error.into()),
+        Ok(_) => (),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(io(error)),
+    }
+    // Callers (and tests) may pass a non-canonical parent such as /var on macOS.
+    let canonical_parent = parent.canonicalize().map_err(io)?;
+    let canonical = match entry.path().canonicalize() {
+        Ok(canonical) => canonical,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(io(error)),
+    };
+    if !canonical.starts_with(&canonical_parent) {
+        return Err("Directory entry escaped its parent".into());
+    }
+    Ok(Some(canonical))
+}
+
 fn server(registry: &ServerRegistry, id: &str) -> Result<MinecraftServer, String> {
     registry
         .get_servers()?
@@ -322,10 +362,13 @@ fn file_inventory(directory: &Path) -> Result<BTreeMap<String, String>, String> 
         if basename(&name).is_err() {
             continue;
         }
-        if !regular_file(&entry.path())? {
+        let Some(path) = trusted_child(directory, &entry, LINKED_ENTRY)? else {
+            continue;
+        };
+        if !regular_file(&path)? {
             continue;
         }
-        files.insert(name, file_sha256(&entry.path())?);
+        files.insert(name, file_sha256(&path)?);
     }
     Ok(files)
 }
@@ -341,7 +384,9 @@ fn listed_file_name(directory: &Path, requested: &str) -> Result<Option<String>,
             continue;
         };
         if name.eq_ignore_ascii_case(requested) {
-            regular_file(&entry.path())?;
+            if let Some(path) = trusted_child(directory, &entry, LINKED_ENTRY)? {
+                regular_file(&path)?;
+            }
             if found.is_some() {
                 return Err("Ambiguous plugin filenames differ only by letter case".into());
             }

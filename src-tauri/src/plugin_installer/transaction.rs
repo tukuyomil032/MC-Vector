@@ -1,4 +1,7 @@
-use super::{basename, file_sha256, io, is_link, regular_file, Artifact};
+use super::{
+    basename, file_sha256, io, is_link, regular_entry, regular_file, trusted_child, Artifact,
+    LINKED_ENTRY,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::{self, File, OpenOptions};
@@ -166,7 +169,7 @@ impl Transaction {
         // disk. A symlink/unexpected directory leaves the transaction intact.
         for entry in fs::read_dir(&self.work).map_err(io)? {
             let entry = entry.map_err(io)?;
-            if !regular_file(&entry.path())? {
+            if !regular_entry(&entry)? {
                 return Err("Unsafe transaction cleanup entry".into());
             }
         }
@@ -175,7 +178,9 @@ impl Transaction {
         for entry in fs::read_dir(&self.work).map_err(io)? {
             let entry = entry.map_err(io)?;
             if entry.file_name() != JOURNAL {
-                fs::remove_file(entry.path()).map_err(io)?;
+                let path = trusted_child(&self.work, &entry, LINKED_ENTRY)?
+                    .ok_or("Unsafe transaction cleanup entry")?;
+                fs::remove_file(path).map_err(io)?;
             }
         }
         fs::remove_file(self.work.join(JOURNAL)).map_err(io)?;
@@ -314,7 +319,8 @@ pub(super) fn recover_directory(root: &Path) -> Result<(), String> {
         if transaction_identifier(&entry.file_name())?.is_none() {
             continue;
         }
-        let work = entry.path();
+        let work = trusted_child(root, &entry, "Transaction path must be a real directory")?
+            .ok_or("Transaction path must be a real directory")?;
         real_directory(&work)?;
         let path = work.join(JOURNAL);
         if !regular_file(&path)? {
@@ -331,8 +337,11 @@ pub(super) fn recover_directory(root: &Path) -> Result<(), String> {
                 return Err("Transaction journal is missing; manual recovery required".into());
             }
             for entry in entries {
-                if regular_file(&entry.path())? {
-                    fs::remove_file(entry.path()).map_err(io)?;
+                let Some(path) = trusted_child(&work, &entry, LINKED_ENTRY)? else {
+                    continue;
+                };
+                if regular_file(&path)? {
+                    fs::remove_file(path).map_err(io)?;
                 }
             }
             fs::remove_dir(work).map_err(io)?;
