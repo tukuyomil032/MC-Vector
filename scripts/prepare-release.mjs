@@ -11,13 +11,10 @@ const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
 const RELEASE_FILE_ORDER = [
   'package.json',
   'README.md',
-  'src/lib/adapters/plugin/http-client.ts',
-  'src/lib/version-commands.ts',
   'src-tauri/Cargo.toml',
   'src-tauri/Cargo.lock',
   'src-tauri/tauri.conf.json',
   'src-tauri/src/commands/download.rs',
-  'tests/lib/adapters/plugin/http-client.test.ts',
 ];
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -178,20 +175,8 @@ function updateReadmeVersion(text, currentVersion, nextVersion) {
 function updateUserAgent(relativePath, text, currentVersion, nextVersion) {
   const escapedVersion = escapeRegExp(currentVersion);
   const patterns = {
-    'src/lib/adapters/plugin/http-client.ts': new RegExp(
-      `(headers\\.set\\('User-Agent',\\s*'MC-Vector/)${escapedVersion}(?='\\))`,
-      'g',
-    ),
-    'src/lib/version-commands.ts': new RegExp(
-      `(const MC_VECTOR_USER_AGENT = 'MC-Vector/)${escapedVersion}(?= \\()`,
-      'g',
-    ),
     'src-tauri/src/commands/download.rs': new RegExp(
       `(const USER_AGENT: &str = "MC-Vector/)${escapedVersion}(?= \\()`,
-      'g',
-    ),
-    'tests/lib/adapters/plugin/http-client.test.ts': new RegExp(
-      `(toBe\\('MC-Vector/)${escapedVersion}(?='\\))`,
       'g',
     ),
   };
@@ -288,12 +273,7 @@ function computeUpdates(files, currentVersion, nextVersion) {
     updateReadmeVersion(files.get('README.md').text, currentVersion, nextVersion),
   );
 
-  for (const relativePath of [
-    'src/lib/adapters/plugin/http-client.ts',
-    'src/lib/version-commands.ts',
-    'src-tauri/src/commands/download.rs',
-    'tests/lib/adapters/plugin/http-client.test.ts',
-  ]) {
+  for (const relativePath of ['src-tauri/src/commands/download.rs']) {
     updates.set(
       relativePath,
       updateUserAgent(relativePath, files.get(relativePath).text, currentVersion, nextVersion),

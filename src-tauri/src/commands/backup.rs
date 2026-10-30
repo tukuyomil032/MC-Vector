@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
+use std::future::Future;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Component, Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
@@ -12,8 +14,12 @@ use uuid::Uuid;
 use super::file_utils::{
     managed_operation_scope, resolve_managed_request, ManagedPathRequest, ManagedRoot,
 };
-use super::server::ServerManager;
-use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+use super::server::{
+    start_registered_server_with_guard, stop_server_with_guard_recovery, validate_server_id,
+    CommandLimiter, ServerManager, StopErrorRecoveryState, StopServerError,
+};
+use super::server_registry::ServerRegistry;
+use crate::state::operation_manager::{OperationGuard, OperationKind, ServerOperationManager};
 
 const MAX_ARCHIVE_ENTRIES: u64 = 100_000;
 const MAX_ARCHIVE_COMPRESSED_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -25,6 +31,7 @@ const MAX_PATH_COMPONENT_BYTES: u64 = 255;
 const MAX_PATH_DEPTH: u64 = 32;
 const MAX_COMPRESSION_RATIO: u64 = 100;
 const COPY_BUFFER_SIZE: usize = 64 * 1024;
+pub(crate) const AUTOMATIC_BACKUP_CANCELLED_ERROR: &str = "automatic-backup-cancelled";
 
 #[derive(Clone, Copy, Debug)]
 struct ArchivePolicy {
@@ -128,6 +135,56 @@ pub struct BackupRetentionReport {
     pub records: Vec<BackupRecord>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum ManagedBackupOutcome {
+    ConfirmationRequired,
+    Created {
+        #[serde(rename = "backupName")]
+        backup_name: String,
+        #[serde(rename = "catalogError")]
+        catalog_error: Option<String>,
+        restart: BackupRestartOutcome,
+    },
+    Failed {
+        stage: BackupFailureStage,
+        error: String,
+        #[serde(rename = "restartError")]
+        restart_error: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum BackupRestartOutcome {
+    NotNeeded,
+    Restarted,
+    Failed { error: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BackupFailureStage {
+    Stop,
+    Backup,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ManagedBackupArchive {
+    pub(crate) backup_name: String,
+    pub(crate) catalog_error: Option<String>,
+}
+
+fn managed_backup_archive_from_catalog_result(
+    backup_name: String,
+    catalog_result: Result<(), String>,
+) -> ManagedBackupArchive {
+    ManagedBackupArchive {
+        backup_name,
+        catalog_error: catalog_result.err(),
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BackupCatalogFile {
@@ -172,6 +229,32 @@ fn hex_encode(bytes: impl AsRef<[u8]>) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
+}
+
+async fn wait_for_backup_cancellation(cancellation: Arc<AtomicBool>) {
+    while !cancellation.load(Ordering::SeqCst) {
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+}
+
+pub(crate) async fn acquire_backup_operation(
+    operations: &ServerOperationManager,
+    server_id: &str,
+    kind: OperationKind,
+    cancellation: Option<Arc<AtomicBool>>,
+) -> Result<OperationGuard, String> {
+    let Some(cancellation) = cancellation else {
+        return operations.acquire(server_id, kind).await;
+    };
+    if cancellation.load(Ordering::SeqCst) {
+        return Err(AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string());
+    }
+    tokio::select! {
+        result = operations.acquire(server_id, kind) => result,
+        _ = wait_for_backup_cancellation(cancellation) => {
+            Err(AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string())
+        }
+    }
 }
 
 fn timestamp_millis() -> String {
@@ -469,9 +552,23 @@ fn copy_limited<R: Read, W: Write>(
     total: &mut u64,
     total_limit: u64,
 ) -> io::Result<u64> {
+    copy_limited_with_cancellation(reader, writer, entry_limit, total, total_limit, None)
+}
+
+fn copy_limited_with_cancellation<R: Read, W: Write>(
+    reader: &mut R,
+    writer: &mut W,
+    entry_limit: u64,
+    total: &mut u64,
+    total_limit: u64,
+    cancellation: Option<&AtomicBool>,
+) -> io::Result<u64> {
     let mut buffer = [0_u8; COPY_BUFFER_SIZE];
     let mut copied = 0_u64;
     loop {
+        if is_backup_cancelled(cancellation) {
+            return Err(backup_cancelled_io_error());
+        }
         let read = reader.read(&mut buffer)?;
         if read == 0 {
             break;
@@ -499,6 +596,27 @@ fn copy_limited<R: Read, W: Write>(
         *total = next_total;
     }
     Ok(copied)
+}
+
+fn is_backup_cancelled(cancellation: Option<&AtomicBool>) -> bool {
+    cancellation.is_some_and(|token| token.load(Ordering::SeqCst))
+}
+
+fn check_backup_cancellation(cancellation: Option<&AtomicBool>) -> Result<(), String> {
+    if is_backup_cancelled(cancellation) {
+        Err(AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn backup_cancelled_io_error() -> io::Error {
+    io::Error::new(io::ErrorKind::Interrupted, AUTOMATIC_BACKUP_CANCELLED_ERROR)
+}
+
+fn is_backup_cancelled_io_error(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::Interrupted
+        && error.to_string() == AUTOMATIC_BACKUP_CANCELLED_ERROR
 }
 
 fn temp_file_for(destination: &Path) -> io::Result<(File, PathBuf)> {
@@ -593,6 +711,18 @@ fn write_zip_atomically<F>(destination: &Path, build: F) -> Result<u64, String>
 where
     F: FnOnce(&mut zip::ZipWriter<LimitedWriter<File>>, &mut ResourceTotals) -> Result<(), String>,
 {
+    write_zip_atomically_with_cancellation(destination, None, build)
+}
+
+fn write_zip_atomically_with_cancellation<F>(
+    destination: &Path,
+    cancellation: Option<&AtomicBool>,
+    build: F,
+) -> Result<u64, String>
+where
+    F: FnOnce(&mut zip::ZipWriter<LimitedWriter<File>>, &mut ResourceTotals) -> Result<(), String>,
+{
+    check_backup_cancellation(cancellation)?;
     let (file, temp_path) = temp_file_for(destination)
         .map_err(|error| format!("Failed to create temporary zip: {error}"))?;
     let mut temp_guard = TempFileGuard::new(temp_path.clone());
@@ -601,6 +731,7 @@ where
     let mut totals = ResourceTotals::default();
 
     build(&mut zip, &mut totals)?;
+    check_backup_cancellation(cancellation)?;
     let writer = zip
         .finish()
         .map_err(|error| format!("Failed to finish zip: {error}"))?;
@@ -616,6 +747,7 @@ where
     file.sync_all()
         .map_err(|error| format!("Failed to sync temporary zip: {error}"))?;
     drop(file);
+    check_backup_cancellation(cancellation)?;
     atomic_install_new(&temp_path, destination)
         .map_err(|error| format!("Failed to install zip atomically: {error}"))?;
     temp_guard.disarm();
@@ -698,6 +830,27 @@ fn append_source_entry(
     totals: &mut ResourceTotals,
     options: zip::write::SimpleFileOptions,
 ) -> Result<Option<BackupManifestEntry>, String> {
+    append_source_entry_with_cancellation(
+        zip,
+        entry,
+        containment_root,
+        archive_root,
+        totals,
+        options,
+        None,
+    )
+}
+
+fn append_source_entry_with_cancellation(
+    zip: &mut zip::ZipWriter<LimitedWriter<File>>,
+    entry: &Path,
+    containment_root: &Path,
+    archive_root: &Path,
+    totals: &mut ResourceTotals,
+    options: zip::write::SimpleFileOptions,
+    cancellation: Option<&AtomicBool>,
+) -> Result<Option<BackupManifestEntry>, String> {
+    check_backup_cancellation(cancellation)?;
     let (safe_name, metadata) =
         validate_source_entry(entry, containment_root, archive_root, totals)?;
     if metadata.is_dir() {
@@ -712,14 +865,21 @@ fn append_source_entry(
         File::open(entry).map_err(|error| format_source_file_error("open", entry, &error))?;
     let mut actual_total = totals.uncompressed_bytes.saturating_sub(metadata.len());
     let mut hashing_zip = HashingWriter::new(zip);
-    let copied = copy_limited(
+    let copied = copy_limited_with_cancellation(
         &mut file,
         &mut hashing_zip,
         ARCHIVE_POLICY.max_entry_uncompressed_bytes,
         &mut actual_total,
         ARCHIVE_POLICY.max_archive_uncompressed_bytes,
+        cancellation,
     )
-    .map_err(|error| format_source_file_error("stream", entry, &error))?;
+    .map_err(|error| {
+        if is_backup_cancelled_io_error(&error) {
+            AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string()
+        } else {
+            format_source_file_error("stream", entry, &error)
+        }
+    })?;
     let sha256 = hashing_zip.finalize();
     if copied != metadata.len() {
         return Err(format!(
@@ -749,7 +909,17 @@ fn is_backup_runtime_file(path: &Path) -> bool {
 }
 
 fn has_backup_files(entries: &[PathBuf]) -> io::Result<bool> {
+    has_backup_files_with_cancellation(entries, None)
+}
+
+fn has_backup_files_with_cancellation(
+    entries: &[PathBuf],
+    cancellation: Option<&AtomicBool>,
+) -> io::Result<bool> {
     for entry in entries {
+        if is_backup_cancelled(cancellation) {
+            return Err(backup_cancelled_io_error());
+        }
         if fs::symlink_metadata(entry)?.is_file() {
             return Ok(true);
         }
@@ -806,8 +976,18 @@ fn collect_selected_sources(
     source_canonical: &Path,
     selected: Vec<String>,
 ) -> Result<Vec<PathBuf>, String> {
+    collect_selected_sources_with_cancellation(source_path, source_canonical, selected, None)
+}
+
+fn collect_selected_sources_with_cancellation(
+    source_path: &Path,
+    source_canonical: &Path,
+    selected: Vec<String>,
+    cancellation: Option<&AtomicBool>,
+) -> Result<Vec<PathBuf>, String> {
     let mut files = Vec::new();
     for relative in normalize_selected_sources(selected)? {
+        check_backup_cancellation(cancellation)?;
         let full_path = source_path.join(&relative);
         let full_canonical = fs::canonicalize(&full_path)
             .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
@@ -828,8 +1008,15 @@ fn collect_selected_sources(
         if metadata.is_dir() {
             files.push(full_path.clone());
             files.extend(
-                collect_backup_files(&full_path)
-                    .map_err(|error| format!("Failed to collect files: {error}"))?,
+                collect_backup_files_with_cancellation(&full_path, cancellation).map_err(
+                    |error| {
+                        if is_backup_cancelled_io_error(&error) {
+                            AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string()
+                        } else {
+                            format!("Failed to collect files: {error}")
+                        }
+                    },
+                )?,
             );
         } else if metadata.is_file() {
             if !is_backup_runtime_file(&full_path) {
@@ -855,11 +1042,37 @@ pub async fn create_backup(
     compression_level: Option<i64>,
     origin: String,
 ) -> Result<String, String> {
+    create_backup_with_cancellation(
+        app,
+        server_id,
+        backup_name,
+        source_path,
+        backup_path,
+        sources,
+        compression_level,
+        origin,
+        None,
+    )
+    .await
+}
+
+async fn create_backup_with_cancellation(
+    app: AppHandle,
+    server_id: String,
+    backup_name: String,
+    source_path: PathBuf,
+    backup_path: PathBuf,
+    sources: Option<Vec<String>>,
+    compression_level: Option<i64>,
+    origin: String,
+    cancellation: Option<Arc<AtomicBool>>,
+) -> Result<String, String> {
     let sid = server_id.clone();
     let backup_name = backup_name.clone();
     let origin = origin.clone();
     let app_clone = app.clone();
     tokio::task::spawn_blocking(move || {
+        check_backup_cancellation(cancellation.as_deref())?;
         let source_metadata = fs::symlink_metadata(&source_path)
             .map_err(|error| format!("Failed to inspect source directory: {error}"))?;
         if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
@@ -878,15 +1091,44 @@ pub async fn create_backup(
         let zip_path = backup_path.join(&zip_name);
         let options = compression_options(compression_level);
 
-        let entries = if let Some(selected) = sources {
-            collect_selected_sources(&source_path, &source_canonical, selected)?
-        } else {
-            collect_backup_files(&source_path)
-                .map_err(|error| format!("Failed to collect files: {error}"))?
+        let entries = match (sources, cancellation.as_deref()) {
+            (Some(selected), Some(token)) => collect_selected_sources_with_cancellation(
+                &source_path,
+                &source_canonical,
+                selected,
+                Some(token),
+            )?,
+            (Some(selected), None) => {
+                collect_selected_sources(&source_path, &source_canonical, selected)?
+            }
+            (None, Some(token)) => {
+                collect_backup_files_with_cancellation(&source_path, Some(token)).map_err(
+                    |error| {
+                        if is_backup_cancelled_io_error(&error) {
+                            AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string()
+                        } else {
+                            format!("Failed to collect files: {error}")
+                        }
+                    },
+                )?
+            }
+            (None, None) => collect_backup_files(&source_path)
+                .map_err(|error| format!("Failed to collect files: {error}"))?,
         };
-        if !has_backup_files(&entries)
-            .map_err(|error| format!("Failed to inspect backup sources: {error}"))?
-        {
+        let has_files = match cancellation.as_deref() {
+            Some(token) => {
+                has_backup_files_with_cancellation(&entries, Some(token)).map_err(|error| {
+                    if is_backup_cancelled_io_error(&error) {
+                        AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string()
+                    } else {
+                        format!("Failed to inspect backup sources: {error}")
+                    }
+                })?
+            }
+            None => has_backup_files(&entries)
+                .map_err(|error| format!("Failed to inspect backup sources: {error}"))?,
+        };
+        if !has_files {
             return Err(
                 "No backup source files remain after excluding runtime lock files".to_string(),
             );
@@ -894,54 +1136,60 @@ pub async fn create_backup(
         let mut entries = entries;
         entries.sort();
         let total = entries.len() as f32;
-        write_zip_atomically(&zip_path, |zip, totals| {
-            let mut manifest_entries = Vec::new();
-            for (index, entry) in entries.iter().enumerate() {
-                if let Some(manifest_entry) = append_source_entry(
-                    zip,
-                    entry,
-                    &source_canonical,
-                    &source_canonical,
-                    totals,
-                    options,
-                )? {
-                    manifest_entries.push(manifest_entry);
+        write_zip_atomically_with_cancellation(
+            &zip_path,
+            cancellation.as_deref(),
+            |zip, totals| {
+                let mut manifest_entries = Vec::new();
+                for (index, entry) in entries.iter().enumerate() {
+                    check_backup_cancellation(cancellation.as_deref())?;
+                    if let Some(manifest_entry) = append_source_entry_with_cancellation(
+                        zip,
+                        entry,
+                        &source_canonical,
+                        &source_canonical,
+                        totals,
+                        options,
+                        cancellation.as_deref(),
+                    )? {
+                        manifest_entries.push(manifest_entry);
+                    }
+                    let progress = if total == 0.0 {
+                        100.0
+                    } else {
+                        ((index + 1) as f32 / total) * 100.0
+                    };
+                    let _ = app_clone.emit(
+                        "backup-progress",
+                        BackupProgress {
+                            server_id: sid.clone(),
+                            progress,
+                        },
+                    );
                 }
-                let progress = if total == 0.0 {
-                    100.0
-                } else {
-                    ((index + 1) as f32 / total) * 100.0
+                manifest_entries.sort_by(|left, right| left.path.cmp(&right.path));
+                let manifest = BackupManifest {
+                    format_version: 2,
+                    backup_id: Uuid::new_v4().to_string(),
+                    server_id: sid.clone(),
+                    kind: "full".to_string(),
+                    consistency: "quiesced".to_string(),
+                    origin: origin.clone(),
+                    created_at: timestamp_millis(),
+                    root_fingerprint: manifest_fingerprint(&manifest_entries)?,
+                    file_count: manifest_entries.len() as u64,
+                    total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
+                    entries: manifest_entries,
                 };
-                let _ = app_clone.emit(
-                    "backup-progress",
-                    BackupProgress {
-                        server_id: sid.clone(),
-                        progress,
-                    },
-                );
-            }
-            manifest_entries.sort_by(|left, right| left.path.cmp(&right.path));
-            let manifest = BackupManifest {
-                format_version: 2,
-                backup_id: Uuid::new_v4().to_string(),
-                server_id: sid.clone(),
-                kind: "full".to_string(),
-                consistency: "quiesced".to_string(),
-                origin: origin.clone(),
-                created_at: timestamp_millis(),
-                root_fingerprint: manifest_fingerprint(&manifest_entries)?,
-                file_count: manifest_entries.len() as u64,
-                total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
-                entries: manifest_entries,
-            };
-            let manifest_bytes = serde_json::to_vec(&manifest)
-                .map_err(|error| format!("Failed to serialize backup manifest: {error}"))?;
-            zip.start_file("manifest.json", options)
-                .map_err(|error| format!("Failed to add backup manifest: {error}"))?;
-            zip.write_all(&manifest_bytes)
-                .map_err(|error| format!("Failed to write backup manifest: {error}"))?;
-            Ok(())
-        })?;
+                let manifest_bytes = serde_json::to_vec(&manifest)
+                    .map_err(|error| format!("Failed to serialize backup manifest: {error}"))?;
+                zip.start_file("manifest.json", options)
+                    .map_err(|error| format!("Failed to add backup manifest: {error}"))?;
+                zip.write_all(&manifest_bytes)
+                    .map_err(|error| format!("Failed to write backup manifest: {error}"))?;
+                Ok(())
+            },
+        )?;
         Ok(zip_name.to_string_lossy().into_owned())
     })
     .await
@@ -1351,6 +1599,14 @@ fn read_backup_manifest(
 }
 
 fn hash_file(path: &Path) -> Result<String, String> {
+    hash_file_with_cancellation(path, None)
+}
+
+fn hash_file_with_cancellation(
+    path: &Path,
+    cancellation: Option<&AtomicBool>,
+) -> Result<String, String> {
+    check_backup_cancellation(cancellation)?;
     let parent = path
         .parent()
         .ok_or_else(|| "File to hash has no parent directory".to_string())?;
@@ -1389,6 +1645,7 @@ fn hash_file(path: &Path) -> Result<String, String> {
     let mut hasher = Sha256::new();
     let mut buffer = [0_u8; COPY_BUFFER_SIZE];
     loop {
+        check_backup_cancellation(cancellation)?;
         let read = file
             .read(&mut buffer)
             .map_err(|error| format!("Failed to hash file: {error}"))?;
@@ -1508,6 +1765,15 @@ fn write_backup_catalog_atomically(
 }
 
 fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupRecord>, String> {
+    scan_backup_records_with_cancellation(backup_dir, server_id, None)
+}
+
+fn scan_backup_records_with_cancellation(
+    backup_dir: &Path,
+    server_id: &str,
+    cancellation: Option<&AtomicBool>,
+) -> Result<Vec<BackupRecord>, String> {
+    check_backup_cancellation(cancellation)?;
     let canonical_backup_dir = fs::canonicalize(backup_dir)
         .map_err(|error| format!("Failed to resolve backup directory: {error}"))?;
     if !canonical_backup_dir.is_absolute() {
@@ -1517,6 +1783,7 @@ fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupR
     let entries = fs::read_dir(&canonical_backup_dir)
         .map_err(|error| format!("Failed to scan backup directory: {error}"))?;
     for entry in entries {
+        check_backup_cancellation(cancellation)?;
         let entry =
             entry.map_err(|error| format!("Failed to read backup directory entry: {error}"))?;
         let file_type = entry
@@ -1543,10 +1810,17 @@ fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupR
 
         // Invalid or incomplete archives remain on disk for repair/quarantine
         // handling, but never enter the normal restore catalog.
-        let Ok(manifest) = read_backup_manifest(&canonical_path, server_id) else {
-            continue;
+        let manifest = match read_backup_manifest(&canonical_path, server_id) {
+            Ok(manifest) => manifest,
+            Err(_) => {
+                check_backup_cancellation(cancellation)?;
+                continue;
+            }
         };
-        let archive_sha256 = archive_hash(&canonical_path)?;
+        let archive_sha256 = match cancellation {
+            Some(_) => hash_file_with_cancellation(&canonical_path, cancellation)?,
+            None => archive_hash(&canonical_path)?,
+        };
         records.push(backup_record_from_manifest(
             manifest,
             &canonical_path,
@@ -1560,11 +1834,23 @@ fn scan_backup_records(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupR
             .cmp(&left.created_at)
             .then_with(|| left.archive_path.cmp(&right.archive_path))
     });
+    check_backup_cancellation(cancellation)?;
     Ok(records)
 }
 
 fn rebuild_backup_catalog(backup_dir: &Path, server_id: &str) -> Result<Vec<BackupRecord>, String> {
     let records = scan_backup_records(backup_dir, server_id)?;
+    write_backup_catalog_atomically(backup_dir, server_id, &records)?;
+    Ok(records)
+}
+
+fn rebuild_backup_catalog_with_cancellation(
+    backup_dir: &Path,
+    server_id: &str,
+    cancellation: Option<&AtomicBool>,
+) -> Result<Vec<BackupRecord>, String> {
+    let records = scan_backup_records_with_cancellation(backup_dir, server_id, cancellation)?;
+    check_backup_cancellation(cancellation)?;
     write_backup_catalog_atomically(backup_dir, server_id, &records)?;
     Ok(records)
 }
@@ -1580,12 +1866,32 @@ fn apply_retention_to_backup_directory(
     retain_days: u32,
     now_millis: u128,
 ) -> Result<BackupRetentionReport, String> {
+    apply_retention_to_backup_directory_with_cancellation(
+        backup_dir,
+        server_id,
+        retain_count,
+        retain_days,
+        now_millis,
+        None,
+    )
+}
+
+fn apply_retention_to_backup_directory_with_cancellation(
+    backup_dir: &Path,
+    server_id: &str,
+    retain_count: u32,
+    retain_days: u32,
+    now_millis: u128,
+    cancellation: Option<&AtomicBool>,
+) -> Result<BackupRetentionReport, String> {
+    check_backup_cancellation(cancellation)?;
     let canonical_backup_dir = fs::canonicalize(backup_dir)
         .map_err(|error| format!("Failed to resolve backup directory: {error}"))?;
     if !canonical_backup_dir.is_absolute() {
         return Err("Backup directory must be absolute".to_string());
     }
-    let records = scan_backup_records(&canonical_backup_dir, server_id)?;
+    let records =
+        scan_backup_records_with_cancellation(&canonical_backup_dir, server_id, cancellation)?;
     let mut automatic = records
         .iter()
         .filter(|record| record.origin == "automatic")
@@ -1600,6 +1906,9 @@ fn apply_retention_to_backup_directory(
     let mut deleted_names = Vec::new();
     let mut failed_delete_count = 0_u32;
     for (index, record) in automatic.iter().enumerate() {
+        if is_backup_cancelled(cancellation) {
+            break;
+        }
         let over_count = retain_count > 0 && index >= retain_count as usize;
         let over_age = retain_days > 0
             && now_millis.saturating_sub(backup_created_at_millis(record)) > max_age_millis;
@@ -1628,7 +1937,36 @@ fn apply_retention_to_backup_directory(
         }
     }
 
-    let records = rebuild_backup_catalog(&canonical_backup_dir, server_id)?;
+    let deleted_names_set = deleted_names
+        .iter()
+        .cloned()
+        .collect::<std::collections::HashSet<_>>();
+    let fallback_records = records
+        .iter()
+        .filter(|record| !deleted_names_set.contains(&record.archive_path))
+        .cloned()
+        .collect::<Vec<_>>();
+    let records = if let Some(cancellation) = cancellation {
+        match rebuild_backup_catalog_with_cancellation(
+            &canonical_backup_dir,
+            server_id,
+            Some(cancellation),
+        ) {
+            Ok(records) => records,
+            Err(error) if error == AUTOMATIC_BACKUP_CANCELLED_ERROR => {
+                write_backup_catalog_atomically(
+                    &canonical_backup_dir,
+                    server_id,
+                    &fallback_records,
+                )?;
+                return Err(error);
+            }
+            Err(error) => return Err(error),
+        }
+    } else {
+        rebuild_backup_catalog(&canonical_backup_dir, server_id)?
+    };
+    check_backup_cancellation(cancellation)?;
     Ok(BackupRetentionReport {
         deleted_names,
         failed_delete_count,
@@ -1992,9 +2330,84 @@ pub async fn apply_managed_backup_retention(
     retain_count: u32,
     retain_days: u32,
 ) -> Result<BackupRetentionReport, String> {
-    let _operation_guard = operations
-        .acquire(&server_id, OperationKind::BackupDelete)
-        .await?;
+    apply_managed_backup_retention_inner(
+        app,
+        operations.inner(),
+        server_id,
+        retain_count,
+        retain_days,
+    )
+    .await
+}
+
+pub(crate) async fn apply_managed_backup_retention_inner(
+    app: AppHandle,
+    operations: &ServerOperationManager,
+    server_id: String,
+    retain_count: u32,
+    retain_days: u32,
+) -> Result<BackupRetentionReport, String> {
+    apply_managed_backup_retention_with_cancellation_inner(
+        app,
+        operations,
+        server_id,
+        retain_count,
+        retain_days,
+        None,
+    )
+    .await
+}
+
+async fn apply_managed_backup_retention_with_cancellation_inner(
+    app: AppHandle,
+    operations: &ServerOperationManager,
+    server_id: String,
+    retain_count: u32,
+    retain_days: u32,
+    cancellation: Option<Arc<AtomicBool>>,
+) -> Result<BackupRetentionReport, String> {
+    let _operation_guard = acquire_backup_operation(
+        operations,
+        &server_id,
+        OperationKind::BackupDelete,
+        cancellation.clone(),
+    )
+    .await?;
+    apply_managed_backup_retention_unlocked_inner(
+        app,
+        server_id,
+        retain_count,
+        retain_days,
+        cancellation,
+    )
+    .await
+}
+
+pub(crate) async fn apply_managed_backup_retention_cancellable_unlocked_inner(
+    app: AppHandle,
+    server_id: String,
+    retain_count: u32,
+    retain_days: u32,
+    cancellation: Arc<AtomicBool>,
+) -> Result<BackupRetentionReport, String> {
+    apply_managed_backup_retention_unlocked_inner(
+        app,
+        server_id,
+        retain_count,
+        retain_days,
+        Some(cancellation),
+    )
+    .await
+}
+
+async fn apply_managed_backup_retention_unlocked_inner(
+    app: AppHandle,
+    server_id: String,
+    retain_count: u32,
+    retain_days: u32,
+    cancellation: Option<Arc<AtomicBool>>,
+) -> Result<BackupRetentionReport, String> {
+    check_backup_cancellation(cancellation.as_deref())?;
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -2006,40 +2419,182 @@ pub async fn apply_managed_backup_retention(
     };
     let backup_dir = resolve_managed_request(&app_data_dir, &backup_request, true)?;
     tokio::task::spawn_blocking(move || {
-        apply_retention_to_backup_directory(
-            &backup_dir,
-            &server_id,
-            retain_count,
-            retain_days,
-            timestamp_millis().parse::<u128>().unwrap_or(0),
-        )
+        let now_millis = timestamp_millis().parse::<u128>().unwrap_or(0);
+        match cancellation.as_deref() {
+            Some(token) => apply_retention_to_backup_directory_with_cancellation(
+                &backup_dir,
+                &server_id,
+                retain_count,
+                retain_days,
+                now_millis,
+                Some(token),
+            ),
+            None => apply_retention_to_backup_directory(
+                &backup_dir,
+                &server_id,
+                retain_count,
+                retain_days,
+                now_millis,
+            ),
+        }
     })
     .await
     .map_err(|error| format!("Task join error: {error}"))?
+}
+
+async fn execute_managed_backup_with_guard<
+    Stop,
+    StopFuture,
+    Create,
+    CreateFuture,
+    Restart,
+    RestartFuture,
+>(
+    server_was_running: bool,
+    stop_running_server: bool,
+    operation: OperationGuard,
+    stop: Stop,
+    create: Create,
+    restart: Restart,
+) -> ManagedBackupOutcome
+where
+    Stop: FnOnce() -> StopFuture,
+    StopFuture: Future<Output = Result<(), StopServerError>>,
+    Create: FnOnce() -> CreateFuture,
+    CreateFuture: Future<Output = Result<ManagedBackupArchive, String>>,
+    Restart: FnOnce(OperationGuard) -> RestartFuture,
+    RestartFuture: Future<Output = Result<(), String>>,
+{
+    if server_was_running && !stop_running_server {
+        return ManagedBackupOutcome::ConfirmationRequired;
+    }
+
+    if server_was_running {
+        if let Err(error) = stop().await {
+            let restart_error = if error.recovery_state == StopErrorRecoveryState::Stopped {
+                restart(operation).await.err()
+            } else {
+                drop(operation);
+                None
+            };
+            return ManagedBackupOutcome::Failed {
+                stage: BackupFailureStage::Stop,
+                error: error.message,
+                restart_error,
+            };
+        }
+    }
+
+    let backup = match create().await {
+        Ok(backup) => backup,
+        Err(error) => {
+            let restart_error = if server_was_running {
+                restart(operation).await.err()
+            } else {
+                None
+            };
+            return ManagedBackupOutcome::Failed {
+                stage: BackupFailureStage::Backup,
+                error,
+                restart_error,
+            };
+        }
+    };
+
+    let restart = if server_was_running {
+        match restart(operation).await {
+            Ok(()) => BackupRestartOutcome::Restarted,
+            Err(error) => BackupRestartOutcome::Failed { error },
+        }
+    } else {
+        drop(operation);
+        BackupRestartOutcome::NotNeeded
+    };
+
+    ManagedBackupOutcome::Created {
+        backup_name: backup.backup_name,
+        catalog_error: backup.catalog_error,
+        restart,
+    }
 }
 
 #[tauri::command]
 pub async fn create_managed_backup(
     app: AppHandle,
     server_state: State<'_, ServerManager>,
+    limiter: State<'_, CommandLimiter>,
     operations: State<'_, ServerOperationManager>,
+    registry: State<'_, ServerRegistry>,
+    server_id: String,
+    backup_name: String,
+    stop_running_server: bool,
+    sources: Option<Vec<String>>,
+    compression_level: Option<i64>,
+    origin: Option<String>,
+) -> Result<ManagedBackupOutcome, String> {
+    let server_id = validate_server_id(&server_id)?;
+    let operation = operations
+        .acquire(&server_id, OperationKind::BackupCreate)
+        .await?;
+    let server_was_running = server_state.is_server_running(&server_id).await;
+    let backup_app = app.clone();
+    let restart_app = app;
+    let backup_server_id = server_id.clone();
+    let restart_server_id = server_id.clone();
+    let server_state_ref = server_state.inner();
+    let limiter_ref = limiter.inner();
+    let operations_ref = operations.inner();
+    let registry_ref = registry.inner();
+    Ok(execute_managed_backup_with_guard(
+        server_was_running,
+        stop_running_server,
+        operation,
+        || stop_server_with_guard_recovery(server_state_ref, &server_id, None),
+        || async move {
+            create_managed_backup_unlocked_inner(
+                backup_app,
+                backup_server_id,
+                backup_name,
+                sources,
+                compression_level,
+                origin,
+                None,
+            )
+            .await
+        },
+        |operation| async move {
+            start_registered_server_with_guard(
+                restart_app,
+                server_state_ref,
+                limiter_ref,
+                operations_ref,
+                registry_ref,
+                restart_server_id,
+                operation,
+            )
+            .await
+        },
+    )
+    .await)
+}
+
+/// Creates an archive for a caller that already holds the server operation guard
+/// and has stopped the server when required.
+pub(crate) async fn create_managed_backup_unlocked_inner(
+    app: AppHandle,
     server_id: String,
     backup_name: String,
     sources: Option<Vec<String>>,
     compression_level: Option<i64>,
     origin: Option<String>,
-) -> Result<String, String> {
-    let _operation_guard = operations
-        .acquire(&server_id, OperationKind::BackupCreate)
-        .await?;
+    cancellation: Option<Arc<AtomicBool>>,
+) -> Result<ManagedBackupArchive, String> {
+    check_backup_cancellation(cancellation.as_deref())?;
     if sources
         .as_ref()
         .is_some_and(|selected| !selected.is_empty())
     {
         return Err("Full managed backups do not accept selected source paths".to_string());
-    }
-    if server_state.servers.lock().await.contains_key(&server_id) {
-        return Err("Cannot create a quiesced backup while the server is running".to_string());
     }
     let origin = origin.unwrap_or_else(|| "manual".to_string());
     if !matches!(origin.as_str(), "manual" | "automatic") {
@@ -2063,23 +2618,48 @@ pub async fn create_managed_backup(
     let backup = resolve_managed_request(&app_data_dir, &backup_request, true)?;
     let catalog_backup = backup.clone();
     let catalog_server_id = server_id.clone();
-    let created_name = create_backup(
-        app,
-        server_id,
-        backup_name,
-        source,
-        backup,
-        sources,
-        compression_level,
-        origin,
-    )
-    .await?;
-    tokio::task::spawn_blocking(move || {
-        rebuild_backup_catalog(&catalog_backup, &catalog_server_id)
+    let created_name = if let Some(cancellation) = cancellation.clone() {
+        create_backup_with_cancellation(
+            app,
+            server_id,
+            backup_name,
+            source,
+            backup,
+            sources,
+            compression_level,
+            origin,
+            Some(cancellation),
+        )
+        .await?
+    } else {
+        create_backup(
+            app,
+            server_id,
+            backup_name,
+            source,
+            backup,
+            sources,
+            compression_level,
+            origin,
+        )
+        .await?
+    };
+    let catalog_result = tokio::task::spawn_blocking(move || match cancellation.as_deref() {
+        Some(token) => rebuild_backup_catalog_with_cancellation(
+            &catalog_backup,
+            &catalog_server_id,
+            Some(token),
+        ),
+        None => rebuild_backup_catalog(&catalog_backup, &catalog_server_id),
     })
     .await
-    .map_err(|error| format!("Task join error: {error}"))??;
-    Ok(created_name)
+    .map_err(|error| format!("Task join error: {error}"))
+    .and_then(|result| result)
+    .map(|_| ());
+    Ok(managed_backup_archive_from_catalog_result(
+        created_name,
+        catalog_result,
+    ))
 }
 
 #[tauri::command]
@@ -2142,7 +2722,7 @@ pub async fn compress_managed_items(
         .collect::<Result<Vec<_>, _>>()?;
     scopes.push(managed_operation_scope(&destination)?);
     let _operation_guards = operations
-        .acquire_scopes(scopes.iter().cloned(), OperationKind::FileMutation)
+        .acquire_scopes(scopes, OperationKind::FileMutation)
         .await?;
     let app_data_dir = app
         .path()
@@ -2189,6 +2769,22 @@ fn collect_backup_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     collect_files_with_policy(dir, true)
 }
 
+fn collect_backup_files_with_cancellation(
+    dir: &Path,
+    cancellation: Option<&AtomicBool>,
+) -> io::Result<Vec<PathBuf>> {
+    let root_canonical = fs::canonicalize(dir)?;
+    let mut files = Vec::new();
+    collect_files_internal(
+        &root_canonical,
+        &root_canonical,
+        &mut files,
+        true,
+        cancellation,
+    )?;
+    Ok(files)
+}
+
 fn collect_files_with_policy(
     dir: &Path,
     exclude_backup_runtime_files: bool,
@@ -2200,6 +2796,7 @@ fn collect_files_with_policy(
         &root_canonical,
         &mut files,
         exclude_backup_runtime_files,
+        None,
     )?;
     Ok(files)
 }
@@ -2209,7 +2806,11 @@ fn collect_files_internal(
     root: &Path,
     files: &mut Vec<PathBuf>,
     exclude_backup_runtime_files: bool,
+    cancellation: Option<&AtomicBool>,
 ) -> io::Result<()> {
+    if is_backup_cancelled(cancellation) {
+        return Err(backup_cancelled_io_error());
+    }
     if !canonical_dir.is_absolute() || !canonical_dir.starts_with(root) {
         return Err(limit_error("source entry escapes source directory"));
     }
@@ -2219,6 +2820,9 @@ fn collect_files_internal(
     }
 
     for entry in fs::read_dir(canonical_dir)? {
+        if is_backup_cancelled(cancellation) {
+            return Err(backup_cancelled_io_error());
+        }
         let entry = entry?;
         let file_type = entry.file_type()?;
         if file_type.is_symlink() {
@@ -2243,7 +2847,13 @@ fn collect_files_internal(
             ));
         }
         if metadata.is_dir() {
-            collect_files_internal(&entry_canonical, root, files, exclude_backup_runtime_files)?;
+            collect_files_internal(
+                &entry_canonical,
+                root,
+                files,
+                exclude_backup_runtime_files,
+                cancellation,
+            )?;
         } else if !metadata.is_file() {
             return Err(limit_error("unsupported source entry type"));
         }
@@ -2260,6 +2870,13 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("target")
             .join("mc-vector-backup-tests")
+    }
+
+    fn test_backup_archive(backup_name: &str) -> ManagedBackupArchive {
+        ManagedBackupArchive {
+            backup_name: backup_name.to_string(),
+            catalog_error: None,
+        }
     }
 
     fn archive_with_entries(
@@ -2881,6 +3498,560 @@ mod tests {
         let result = copy_limited(&mut reader, &mut output, 16, &mut total, 32);
         assert!(result.is_err());
         assert!(output.len() <= 16);
+    }
+
+    struct CancelAfterFirstRead<'a> {
+        cancellation: &'a std::sync::atomic::AtomicBool,
+        remaining: usize,
+    }
+
+    impl Read for CancelAfterFirstRead<'_> {
+        fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+            if self.remaining == 0 {
+                return Ok(0);
+            }
+            let length = buffer.len().min(self.remaining);
+            buffer[..length].fill(7);
+            self.remaining -= length;
+            self.cancellation.store(true, Ordering::SeqCst);
+            Ok(length)
+        }
+    }
+
+    #[test]
+    fn cancellable_copy_stops_between_chunks() {
+        let cancellation = std::sync::atomic::AtomicBool::new(false);
+        let mut reader = CancelAfterFirstRead {
+            cancellation: &cancellation,
+            remaining: COPY_BUFFER_SIZE * 2,
+        };
+        let mut output = Vec::new();
+        let mut total = 0_u64;
+
+        let error = copy_limited_with_cancellation(
+            &mut reader,
+            &mut output,
+            u64::MAX,
+            &mut total,
+            u64::MAX,
+            Some(&cancellation),
+        )
+        .expect_err("the copy should observe cancellation after its first chunk");
+
+        assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+        assert_eq!(error.to_string(), AUTOMATIC_BACKUP_CANCELLED_ERROR);
+        assert_eq!(output.len(), COPY_BUFFER_SIZE);
+        assert_eq!(total, COPY_BUFFER_SIZE as u64);
+    }
+
+    #[test]
+    fn cancelled_zip_removes_partial_temporary_archive() {
+        let root = test_temp_dir().join(format!("cancel-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root).expect("create temporary test directory");
+        let archive = root.join("automatic.zip");
+        let cancellation = std::sync::atomic::AtomicBool::new(false);
+
+        let result =
+            write_zip_atomically_with_cancellation(&archive, Some(&cancellation), |zip, _| {
+                zip.start_file("world.dat", zip::write::SimpleFileOptions::default())
+                    .map_err(|error| format!("start test entry: {error}"))?;
+                zip.write_all(b"partial archive")
+                    .map_err(|error| format!("write test entry: {error}"))?;
+                cancellation.store(true, Ordering::SeqCst);
+                Ok(())
+            });
+
+        assert_eq!(result, Err(AUTOMATIC_BACKUP_CANCELLED_ERROR.to_string()));
+        assert!(!archive.exists(), "cancelled archive must not be installed");
+        let leftovers = fs::read_dir(&root)
+            .expect("read test directory")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("collect temporary files");
+        assert!(leftovers.is_empty(), "partial temp archive must be removed");
+        fs::remove_dir_all(root).expect("remove temporary test directory");
+    }
+
+    #[tokio::test]
+    async fn queued_automatic_backup_operation_can_be_cancelled() {
+        let operations = ServerOperationManager::default();
+        let blocker = operations
+            .acquire("server-1", OperationKind::BackupRestore)
+            .await
+            .expect("acquire blocker operation");
+        let cancellation = Arc::new(AtomicBool::new(false));
+        let waiting_operations = operations.clone();
+        let waiting_cancellation = cancellation.clone();
+        let waiting = tokio::spawn(async move {
+            acquire_backup_operation(
+                &waiting_operations,
+                "server-1",
+                OperationKind::BackupCreate,
+                Some(waiting_cancellation),
+            )
+            .await
+        });
+
+        tokio::task::yield_now().await;
+        cancellation.store(true, Ordering::SeqCst);
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), waiting)
+            .await
+            .expect("cancellation should release the queued wait")
+            .expect("operation wait task should complete");
+        assert!(matches!(
+            result,
+            Err(error) if error == AUTOMATIC_BACKUP_CANCELLED_ERROR
+        ));
+
+        drop(blocker);
+        operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("the operation lock should remain usable after cancellation");
+    }
+
+    #[tokio::test]
+    async fn manual_backup_confirmation_does_not_create_an_archive() {
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let root = test_temp_dir().join(format!(
+            "mc-vector-confirmation-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&root).expect("create test directory");
+        let archive = root.join("backup.zip");
+
+        let outcome = execute_managed_backup_with_guard(
+            true,
+            false,
+            operation,
+            || async { Ok(()) },
+            || async {
+                fs::write(&archive, b"archive").expect("write archive marker");
+                Ok(test_backup_archive("backup.zip"))
+            },
+            |operation| async move {
+                drop(operation);
+                Ok(())
+            },
+        )
+        .await;
+
+        assert_eq!(outcome, ManagedBackupOutcome::ConfirmationRequired);
+        assert!(!archive.exists(), "confirmation must not create a file");
+        fs::remove_dir_all(root).expect("remove test directory");
+    }
+
+    #[tokio::test]
+    async fn stopped_server_backup_creates_without_restart() {
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let restart_called = Arc::new(AtomicBool::new(false));
+        let restart_called_in_closure = restart_called.clone();
+
+        let outcome = execute_managed_backup_with_guard(
+            false,
+            false,
+            operation,
+            || async { panic!("an inactive server does not need to stop") },
+            || async { Ok(test_backup_archive("backup.zip")) },
+            move |operation| async move {
+                restart_called_in_closure.store(true, Ordering::SeqCst);
+                drop(operation);
+                Ok(())
+            },
+        )
+        .await;
+
+        assert_eq!(
+            outcome,
+            ManagedBackupOutcome::Created {
+                backup_name: "backup.zip".to_string(),
+                catalog_error: None,
+                restart: BackupRestartOutcome::NotNeeded,
+            }
+        );
+        assert!(!restart_called.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn manual_stop_error_waits_for_exit_notification_before_restart_without_backup() {
+        let servers = ServerManager::default();
+        let signal_exit = servers
+            .install_test_running_server_for_stop_recovery("server-1")
+            .await;
+        let mut status_events = servers
+            .take_status_receiver()
+            .expect("test status receiver should be available");
+        let cleanup_signal = signal_exit.clone();
+        let cleanup_servers = servers.clone();
+        let (removed_tx, removed_rx) = tokio::sync::oneshot::channel();
+        let (continue_cleanup_tx, continue_cleanup_rx) = tokio::sync::oneshot::channel();
+        let cleanup = tokio::spawn(async move {
+            cleanup_signal
+                .wait_until_expected_stop_registered(&cleanup_servers)
+                .await;
+            cleanup_signal
+                .remove_from_server_map(&cleanup_servers)
+                .await;
+            let _ = removed_tx.send(());
+            let _ = continue_cleanup_rx.await;
+            cleanup_signal.finish_cleanup(&cleanup_servers).await;
+        });
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let root = test_temp_dir().join(format!(
+            "mc-vector-stop-failure-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&root).expect("create test directory");
+        let archive = root.join("backup.zip");
+        let archive_for_create = archive.clone();
+        let restart_called = Arc::new(AtomicBool::new(false));
+        let restart_called_in_closure = restart_called.clone();
+
+        let stop_servers = servers.clone();
+        let backup = tokio::spawn(async move {
+            execute_managed_backup_with_guard(
+                true,
+                true,
+                operation,
+                move || async move {
+                    stop_server_with_guard_recovery(&stop_servers, "server-1", None).await
+                },
+                || async {
+                    fs::write(&archive_for_create, b"archive").expect("write archive marker");
+                    Ok(test_backup_archive("backup.zip"))
+                },
+                move |operation| async move {
+                    restart_called_in_closure.store(true, Ordering::SeqCst);
+                    drop(operation);
+                    Ok(())
+                },
+            )
+            .await
+        });
+
+        removed_rx
+            .await
+            .expect("cleanup should remove the server map entry");
+        assert!(!servers.is_server_running("server-1").await);
+        assert!(
+            !restart_called.load(Ordering::SeqCst),
+            "map removal alone must not permit recovery restart"
+        );
+        assert!(
+            !archive.exists(),
+            "map removal alone must not create a backup"
+        );
+        let mut backup = backup;
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(50), &mut backup)
+                .await
+                .is_err(),
+            "stop recovery must wait for the exit watch after map removal"
+        );
+        continue_cleanup_tx
+            .send(())
+            .expect("release old process cleanup");
+        let outcome = backup.await.expect("backup task should finish");
+        cleanup.await.expect("exit cleanup task should finish");
+
+        assert_eq!(
+            outcome,
+            ManagedBackupOutcome::Failed {
+                stage: BackupFailureStage::Stop,
+                error: "Server not found or not running".to_string(),
+                restart_error: None,
+            }
+        );
+        assert!(restart_called.load(Ordering::SeqCst));
+        assert!(!archive.exists(), "failed stop must not create a file");
+        let old_exit = status_events
+            .recv()
+            .await
+            .expect("old server should publish its offline event");
+        assert!(
+            old_exit.expected,
+            "failed stop send must preserve expected marker"
+        );
+        fs::remove_dir_all(root).expect("remove test directory");
+    }
+
+    #[tokio::test]
+    async fn manual_stop_error_does_not_restart_without_exit_confirmation() {
+        let servers = ServerManager::default();
+        let hold_exit_sender = servers
+            .install_test_running_server_for_stop_recovery("server-1")
+            .await;
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let root = test_temp_dir().join(format!(
+            "mc-vector-stop-unconfirmed-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&root).expect("create test directory");
+        let archive = root.join("backup.zip");
+        let restart_called = Arc::new(AtomicBool::new(false));
+        let restart_called_in_closure = restart_called.clone();
+
+        let stop_servers = servers.clone();
+        let outcome = execute_managed_backup_with_guard(
+            true,
+            true,
+            operation,
+            move || async move {
+                stop_server_with_guard_recovery(&stop_servers, "server-1", None).await
+            },
+            || async {
+                fs::write(&archive, b"archive").expect("write archive marker");
+                Ok(test_backup_archive("backup.zip"))
+            },
+            move |operation| async move {
+                restart_called_in_closure.store(true, Ordering::SeqCst);
+                drop(operation);
+                Ok(())
+            },
+        )
+        .await;
+
+        assert_eq!(
+            outcome,
+            ManagedBackupOutcome::Failed {
+                stage: BackupFailureStage::Stop,
+                error: "Server not found or not running".to_string(),
+                restart_error: None,
+            }
+        );
+        assert!(!restart_called.load(Ordering::SeqCst));
+        assert!(
+            !archive.exists(),
+            "unconfirmed stop must not create an archive"
+        );
+        assert!(servers.is_server_running("server-1").await);
+        hold_exit_sender.remove_from_server_map(&servers).await;
+        hold_exit_sender.finish_cleanup(&servers).await;
+        fs::remove_dir_all(root).expect("remove test directory");
+    }
+
+    #[tokio::test]
+    async fn failed_manual_backup_attempts_to_restore_running_server() {
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let restart_called = Arc::new(AtomicBool::new(false));
+        let restart_called_in_closure = restart_called.clone();
+
+        let outcome = execute_managed_backup_with_guard(
+            true,
+            true,
+            operation,
+            || async { Ok(()) },
+            || async { Err("archive write failed".to_string()) },
+            move |operation| async move {
+                restart_called_in_closure.store(true, Ordering::SeqCst);
+                drop(operation);
+                Err("restart failed".to_string())
+            },
+        )
+        .await;
+
+        assert_eq!(
+            outcome,
+            ManagedBackupOutcome::Failed {
+                stage: BackupFailureStage::Backup,
+                error: "archive write failed".to_string(),
+                restart_error: Some("restart failed".to_string()),
+            }
+        );
+        assert!(restart_called.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn successful_manual_archive_reports_restart_failure_separately() {
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let root = test_temp_dir().join(format!(
+            "mc-vector-restart-failure-test-{}-{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&root).expect("create test directory");
+        let archive = root.join("backup.zip");
+
+        let outcome = execute_managed_backup_with_guard(
+            true,
+            true,
+            operation,
+            || async { Ok(()) },
+            || async {
+                fs::write(&archive, b"archive").expect("write archive marker");
+                Ok(test_backup_archive("backup.zip"))
+            },
+            |operation| async move {
+                drop(operation);
+                Err("Java executable is unavailable".to_string())
+            },
+        )
+        .await;
+
+        assert_eq!(
+            outcome,
+            ManagedBackupOutcome::Created {
+                backup_name: "backup.zip".to_string(),
+                catalog_error: None,
+                restart: BackupRestartOutcome::Failed {
+                    error: "Java executable is unavailable".to_string(),
+                },
+            }
+        );
+        assert!(
+            archive.exists(),
+            "the archive remains available on restart failure"
+        );
+        fs::remove_dir_all(root).expect("remove test directory");
+    }
+
+    #[tokio::test]
+    async fn manual_backup_guard_blocks_same_server_start_until_restart() {
+        let operations = ServerOperationManager::default();
+        let operation = operations
+            .acquire("server-1", OperationKind::BackupCreate)
+            .await
+            .expect("acquire backup operation");
+        let (backup_started_tx, backup_started_rx) = tokio::sync::oneshot::channel();
+        let (continue_backup_tx, continue_backup_rx) = tokio::sync::oneshot::channel();
+        let backup = tokio::spawn(async move {
+            execute_managed_backup_with_guard(
+                true,
+                true,
+                operation,
+                || async { Ok(()) },
+                || async move {
+                    let _ = backup_started_tx.send(());
+                    continue_backup_rx
+                        .await
+                        .map_err(|_| "backup test was cancelled".to_string())?;
+                    Ok(test_backup_archive("backup.zip"))
+                },
+                |operation| async move {
+                    drop(operation);
+                    Ok(())
+                },
+            )
+            .await
+        });
+
+        backup_started_rx
+            .await
+            .expect("backup should reach the guarded create stage");
+        let waiting_operations = operations.clone();
+        let mut competing_start = tokio::spawn(async move {
+            waiting_operations
+                .acquire("server-1", OperationKind::Start)
+                .await
+        });
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(50), &mut competing_start,)
+                .await
+                .is_err()
+        );
+
+        continue_backup_tx.send(()).expect("release backup stage");
+        let outcome = backup.await.expect("backup task should finish");
+        assert!(matches!(outcome, ManagedBackupOutcome::Created { .. }));
+        competing_start
+            .await
+            .expect("start contender should acquire after backup completes")
+            .expect("start lock should remain usable");
+    }
+
+    #[test]
+    fn managed_backup_outcomes_use_the_confirmed_wire_shape() {
+        assert_eq!(
+            serde_json::to_value(ManagedBackupOutcome::ConfirmationRequired)
+                .expect("serialize confirmation"),
+            serde_json::json!({"status": "confirmation_required"})
+        );
+        assert_eq!(
+            serde_json::to_value(ManagedBackupOutcome::Created {
+                backup_name: "backup.zip".to_string(),
+                catalog_error: None,
+                restart: BackupRestartOutcome::Failed {
+                    error: "restart failed".to_string(),
+                },
+            })
+            .expect("serialize created outcome"),
+            serde_json::json!({
+                "status": "created",
+                "backupName": "backup.zip",
+                "catalogError": null,
+                "restart": {"status": "failed", "error": "restart failed"}
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(ManagedBackupOutcome::Failed {
+                stage: BackupFailureStage::Backup,
+                error: "archive failed".to_string(),
+                restart_error: Some("restart failed".to_string()),
+            })
+            .expect("serialize failed outcome"),
+            serde_json::json!({
+                "status": "failed",
+                "stage": "backup",
+                "error": "archive failed",
+                "restartError": "restart failed"
+            })
+        );
+    }
+
+    #[test]
+    fn catalog_rebuild_failure_is_a_warning_after_archive_creation() {
+        let archive = managed_backup_archive_from_catalog_result(
+            "backup.zip".to_string(),
+            Err("catalog write failed".to_string()),
+        );
+
+        assert_eq!(
+            archive,
+            ManagedBackupArchive {
+                backup_name: "backup.zip".to_string(),
+                catalog_error: Some("catalog write failed".to_string()),
+            }
+        );
+        let outcome = ManagedBackupOutcome::Created {
+            backup_name: archive.backup_name,
+            catalog_error: archive.catalog_error,
+            restart: BackupRestartOutcome::NotNeeded,
+        };
+        assert_eq!(
+            serde_json::to_value(outcome).expect("serialize created outcome with warning"),
+            serde_json::json!({
+                "status": "created",
+                "backupName": "backup.zip",
+                "catalogError": "catalog write failed",
+                "restart": {"status": "not_needed"}
+            })
+        );
     }
 
     #[test]

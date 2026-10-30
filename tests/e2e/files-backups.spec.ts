@@ -55,4 +55,33 @@ test.describe('files and backups', () => {
       '/mock/app-data/servers/server-1/backups/.mc-vector-backup-meta.json',
     );
   });
+
+  test('confirms stopping a running server before creating a backup', async ({ page, app }) => {
+    await app.gotoApp('backup-flow');
+    await page.evaluate(() => {
+      const runtime = (
+        window as Window & { __MC_VECTOR_E2E__?: { state: { runningServerIds: string[] } } }
+      ).__MC_VECTOR_E2E__;
+      runtime?.state.runningServerIds.push('server-1');
+    });
+    await app.confirmDialogs();
+    await app.openView('backups');
+
+    const backups = page.locator('[data-testid="backups-view"]');
+    await app.setBackupSelection(['server.properties']);
+    await backups.locator('[data-testid="backups-create-button"]').click();
+    await backups.locator('[data-testid="backups-open-selector-button"]').click();
+    await expect(backups.getByText('Selected: 1', { exact: true })).toBeVisible();
+    await backups.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
+    await backups.locator('[data-testid="backups-create-submit"]').click();
+
+    await expect(backups.locator('[data-testid="backup-row-e2e-running-backup.zip"]')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect.poll(async () => (await app.ipcCalls('create_managed_backup')).length).toBe(2);
+    const calls = await app.ipcCalls('create_managed_backup');
+    expect(calls[0].args).toMatchObject({ stopRunningServer: false });
+    expect(calls[1].args).toMatchObject({ stopRunningServer: true });
+    expect((await app.runtimeState())?.runningServerIds).toContain('server-1');
+  });
 });

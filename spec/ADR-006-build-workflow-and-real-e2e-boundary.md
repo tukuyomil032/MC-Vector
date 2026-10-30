@@ -122,9 +122,11 @@ The provider canary is exposed as:
 bun run test:provider:live
 ```
 
-It performs read-only HTTPS, status, schema, and adapter-parse checks for Modrinth,
-Hangar, Spiget, and Adoptium metadata. It does not install or execute artifacts, write
-server directories, or use secrets.
+The Node canary performs read-only HTTPS, status, and upstream response-shape checks
+for Modrinth, Hangar, Spiget, and Adoptium metadata. Production plugin metadata parsing
+runs in Rust and is covered separately by deterministic parser fixtures and compatibility
+unit tests; the Node canary does not execute those parsers. It does not install or
+execute artifacts, write server directories, or use secrets.
 
 ## Decision: action SHA pinning only
 

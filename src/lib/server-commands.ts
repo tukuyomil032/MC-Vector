@@ -52,7 +52,7 @@ export async function deleteServerTemplate(templateId: string): Promise<void> {
 
 // --- サーバー操作 (Rust コマンド経由) ---
 
-export async function startServer(serverId: string, ..._legacyArguments: unknown[]): Promise<void> {
+export async function startServer(serverId: string): Promise<void> {
   return tauriInvoke('start_server', { serverId });
 }
 

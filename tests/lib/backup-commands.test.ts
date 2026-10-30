@@ -151,6 +151,7 @@ describe('backup-commands', () => {
       backupName: 'backup-2024',
       sources: null,
       compressionLevel: 9,
+      stopRunningServer: false,
     });
   });
 
@@ -162,6 +163,19 @@ describe('backup-commands', () => {
       backupName: 'backup-2024',
       sources: null,
       compressionLevel: 5,
+      stopRunningServer: false,
+    });
+  });
+
+  it('passes explicit consent to stop a running server for a manual backup', async () => {
+    const { createBackup } = await import('@/lib/backup-commands');
+    await createBackup('server-1', 'backup-2024', undefined, true);
+    expect(tauriInvokeMock).toHaveBeenCalledWith('create_managed_backup', {
+      serverId: 'server-1',
+      backupName: 'backup-2024',
+      sources: null,
+      compressionLevel: 5,
+      stopRunningServer: true,
     });
   });
 

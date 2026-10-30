@@ -26,6 +26,7 @@ interface AppContentRouterProps {
   ngrokData: Record<string, string | null>;
   onBuildProxyNetwork: (config: ProxyNetworkConfig) => Promise<void>;
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
+  onServerVersionChanged: (serverId: string, version: string) => void;
   onServerPortChanged: (serverId: string, port: number) => void;
   updaterSettings: AppUpdaterSettings;
   t: Translate;
@@ -39,6 +40,7 @@ export default function AppContentRouter({
   ngrokData,
   onBuildProxyNetwork,
   onUpdateServer,
+  onServerVersionChanged,
   onServerPortChanged,
   updaterSettings,
   t,
@@ -98,6 +100,7 @@ export default function AppContentRouter({
         key={contentKey}
         server={activeServer}
         onSave={onUpdateServer}
+        onServerVersionChanged={onServerVersionChanged}
         onOpenNgrokGuide={() => setCurrentView('ngrok-guide')}
       />
     ),

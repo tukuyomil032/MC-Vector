@@ -1,3 +1,4 @@
+pub mod automation;
 pub mod backup;
 pub mod download;
 pub mod eula;
