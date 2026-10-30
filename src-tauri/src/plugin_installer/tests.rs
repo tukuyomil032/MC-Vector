@@ -1,4 +1,5 @@
 use super::*;
+use crate::test_support::test_temp_dir;
 use std::time::Duration;
 
 struct Temp {
@@ -7,7 +8,7 @@ struct Temp {
 impl Temp {
     fn new() -> Self {
         let path =
-            std::env::temp_dir().join(format!("mc-vector-plugin-installer-{}", Uuid::new_v4()));
+            test_temp_dir("mc-vector-plugin-installer-tests").join(Uuid::new_v4().to_string());
         fs::create_dir_all(&path).unwrap();
         Self { path }
     }
