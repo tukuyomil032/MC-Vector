@@ -90,6 +90,132 @@ function acceptServerEula(serverId: string): void {
   setRuntimeFile(path, accepted);
 }
 
+const playerListFiles = {
+  whitelist: { key: 'whitelist', file: 'whitelist.json' },
+  ops: { key: 'ops', file: 'ops.json' },
+  'banned-players': { key: 'bannedPlayers', file: 'banned-players.json' },
+  'banned-ips': { key: 'bannedIps', file: 'banned-ips.json' },
+} as const;
+
+type PlayerListType = keyof typeof playerListFiles;
+
+function playerListPath(serverId: string, listType: PlayerListType): string {
+  return resolveRuntimePath({
+    root: 'servers',
+    serverId,
+    relativePath: playerListFiles[listType].file,
+  });
+}
+
+function readPlayerList(serverId: string, listType: PlayerListType): Record<string, unknown>[] {
+  const entries: unknown = JSON.parse(readRuntimeFile(playerListPath(serverId, listType)));
+  if (!Array.isArray(entries)) throw new Error('Player list JSON must be an array');
+  return entries.map((entry) => asRecord(entry));
+}
+
+function readPlayerLists(serverId: string): Record<string, Record<string, unknown>[]> {
+  return Object.fromEntries(
+    Object.keys(playerListFiles).map((listType) => {
+      const type = listType as PlayerListType;
+      return [playerListFiles[type].key, readPlayerList(serverId, type)];
+    }),
+  );
+}
+
+function parsePropertyValue(value: string): string | number | boolean {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^-?\d+$/.test(value)) {
+    const integer = Number(value);
+    if (Number.isSafeInteger(integer)) return integer;
+  }
+  if (value.trim() !== '') {
+    const decimal = Number(value);
+    if (Number.isFinite(decimal)) return decimal;
+  }
+  return value;
+}
+
+function readServerProperties(serverId: string): Record<string, string | number | boolean> {
+  const path = resolveRuntimePath({
+    root: 'servers',
+    serverId,
+    relativePath: 'server.properties',
+  });
+  const properties: Record<string, string | number | boolean> = {};
+  for (const [index, line] of readRuntimeFile(path).split(/\r?\n/).entries()) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) continue;
+    const delimiter = line.indexOf('=');
+    if (delimiter < 0) throw new Error(`Malformed server.properties entry on line ${index + 1}`);
+    const key = line.slice(0, delimiter).trim();
+    if (!key) throw new Error(`Empty server.properties key on line ${index + 1}`);
+    properties[key] = parsePropertyValue(line.slice(delimiter + 1).trim());
+  }
+  return properties;
+}
+
+function serializePropertyValue(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  throw new Error('Invalid server.properties value');
+}
+
+function patchServerProperties(serverId: string, updates: Record<string, unknown>): number | null {
+  const path = resolveRuntimePath({
+    root: 'servers',
+    serverId,
+    relativePath: 'server.properties',
+  });
+  const original = readRuntimeFile(path);
+  const newline = original.includes('\r\n') ? '\r\n' : '\n';
+  const found = new Set<string>();
+  let updated = original
+    .split(/(?<=\n)/)
+    .map((line) => {
+      const body = line.replace(/\r?\n$/, '');
+      const ending = line.slice(body.length);
+      const trimmed = body.trim();
+      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) return line;
+      const delimiter = body.indexOf('=');
+      if (delimiter < 0) {
+        throw new Error(
+          'Cannot update malformed server.properties entry without overwriting the file',
+        );
+      }
+      const key = body.slice(0, delimiter).trim();
+      if (!key) {
+        throw new Error(
+          'Cannot update server.properties with an empty key without overwriting the file',
+        );
+      }
+      if (!Object.hasOwn(updates, key)) return line;
+      found.add(key);
+      const originalValue = body.slice(delimiter + 1);
+      const leading = originalValue.length - originalValue.trimStart().length;
+      const trailing = originalValue.length - originalValue.trimEnd().length;
+      const trailingStart = originalValue.length - trailing;
+      return `${body.slice(0, delimiter + 1)}${originalValue.slice(0, Math.min(leading, trailingStart))}${serializePropertyValue(updates[key])}${originalValue.slice(trailingStart)}${ending}`;
+    })
+    .join('');
+
+  const missingKeys = Object.keys(updates)
+    .filter((key) => !found.has(key))
+    .sort();
+  for (const key of missingKeys) {
+    if (updated && !updated.endsWith('\n')) updated += newline;
+    updated += `${key}=${serializePropertyValue(updates[key])}${newline}`;
+  }
+  setRuntimeFile(path, updated);
+  const rawPort = updates['server-port'];
+  if (rawPort === undefined) return null;
+  const port = typeof rawPort === 'number' ? rawPort : Number(rawPort);
+  const server = getE2eState().servers.find((entry) => entry.id === serverId);
+  if (server) server.port = port;
+  return port;
+}
+
 async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
   const state = getE2eState();
   const payload = asRecord(args);
@@ -245,6 +371,55 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'write_managed_text_file':
       setRuntimeFile(requestPath(payload.request), String(payload.content ?? ''));
       return null;
+
+    case 'get_player_lists':
+      return readPlayerLists(String(payload.serverId ?? ''));
+
+    case 'mutate_player_list': {
+      const serverId = String(payload.serverId ?? '');
+      const mutation = asRecord(payload.mutation);
+      const listType = String(mutation.listType ?? '') as PlayerListType;
+      const action = String(mutation.action ?? '');
+      const value = String(mutation.value ?? '').trim();
+      if (!Object.hasOwn(playerListFiles, listType)) throw new Error('Invalid player list type');
+      if (action !== 'add' && action !== 'remove') throw new Error('Invalid player list action');
+      if (!value) throw new Error('Player list value cannot be empty');
+
+      const entries = readPlayerList(serverId, listType);
+      const isIpList = listType === 'banned-ips';
+      const field = isIpList ? 'ip' : 'name';
+      const matches = (entry: Record<string, unknown>) =>
+        String(entry[field] ?? '').toLocaleLowerCase() === value.toLocaleLowerCase();
+      const changed = action === 'add' ? !entries.some(matches) : entries.some(matches);
+      if (changed) {
+        const nextEntries =
+          action === 'add'
+            ? [...entries, isIpList ? { ip: value } : { name: value }]
+            : entries.filter((entry) => !matches(entry));
+        setRuntimeFile(playerListPath(serverId, listType), JSON.stringify(nextEntries, null, 2));
+      }
+      return { lists: readPlayerLists(serverId), changed, canonicalTarget: value };
+    }
+
+    case 'get_server_properties':
+      return readServerProperties(String(payload.serverId ?? ''));
+
+    case 'save_server_properties': {
+      const updates = asRecord(payload.updates);
+      return patchServerProperties(String(payload.serverId ?? ''), updates);
+    }
+
+    case 'configure_proxy_network': {
+      const request = asRecord(payload.request);
+      const backendServerIds = Array.isArray(request.backendServerIds)
+        ? request.backendServerIds.map(String)
+        : [];
+      return backendServerIds.map((serverId, index) => {
+        const port = 25_566 + index;
+        patchServerProperties(serverId, { 'online-mode': false, 'server-port': port });
+        return { serverId, port };
+      });
+    }
 
     case 'get_server_eula_status':
       return getServerEulaStatus(String(payload.serverId ?? ''));
@@ -410,6 +585,32 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
         artifactId: plan.artifactId,
       });
       return { serverId: plan.serverId, installedFileNames: [plan.fileName] };
+    }
+
+    case 'download_plugin_artifact': {
+      const request = asRecord(payload.request);
+      const serverId = String(request.serverId ?? '');
+      const relativePath = String(request.relativePath ?? '');
+      const eventId = String(request.eventId ?? '');
+      const scenario = getE2eScenario();
+      state.pluginDownloadAttempts += 1;
+
+      if (
+        scenario === 'hashless-plugin' &&
+        request.checksum == null &&
+        state.config.allowUnverifiedPluginDownloads !== true
+      ) {
+        throw errorWithCode('unverified-artifact-blocked');
+      }
+      if (scenario === 'checksum-mismatch') throw errorWithCode('checksum-mismatch');
+      if (scenario === 'network-retry' && state.pluginDownloadAttempts === 1) {
+        throw errorWithCode('network');
+      }
+
+      const path = resolveRuntimePath({ root: 'servers', serverId, relativePath });
+      setRuntimeFile(path, 'e2e-plugin-jar');
+      void emit(`download-progress-${eventId}`, { downloaded: 100, total: 100 });
+      return null;
     }
 
     case 'toggle_installed_plugin': {

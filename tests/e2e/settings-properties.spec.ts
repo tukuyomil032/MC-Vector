@@ -36,12 +36,23 @@ test.describe('settings and properties', () => {
 
     const properties = page.locator('[data-testid="properties-view"]');
     await expect(properties).toBeVisible();
+    await expect
+      .poll(async () => (await app.ipcCalls('get_server_properties')).length)
+      .toBeGreaterThan(0);
     const motd = properties.locator('.properties-view__motd-input');
     await motd.fill('E2E properties update');
     const save = properties.getByRole('button', { name: 'Save Changes', exact: true });
     await expect(save).toBeEnabled();
     await save.click();
     await expect(page.getByText('Properties saved', { exact: true })).toBeVisible();
-    await expect.poll(async () => (await app.ipcCalls('write_managed_text_file')).length).toBe(1);
+    await expect.poll(async () => (await app.ipcCalls('save_server_properties')).length).toBe(1);
+    expect((await app.ipcCalls('save_server_properties'))[0].args).toMatchObject({
+      serverId: 'server-1',
+      updates: { motd: 'E2E properties update' },
+    });
+    expect(
+      (await app.runtimeState())?.files['/mock/app-data/servers/server-1/server.properties']
+        ?.content,
+    ).toContain('motd=E2E properties update');
   });
 });
