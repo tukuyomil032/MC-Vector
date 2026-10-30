@@ -59,9 +59,10 @@ test.describe('release notes update preview', () => {
         const styles = getComputedStyle(element);
         return { backgroundColor: styles.backgroundColor, color: styles.color };
       });
+    // Arc primary in the dark theme: light fill, dark label.
     expect(downloadAppearance).toEqual({
-      backgroundColor: 'rgb(88, 101, 242)',
-      color: 'rgb(255, 255, 255)',
+      backgroundColor: 'oklch(0.96 0 0)',
+      color: 'oklch(0.19 0 0)',
     });
 
     await page.screenshot({ path: testInfo.outputPath('release-notes-normal.png') });

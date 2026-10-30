@@ -43,7 +43,8 @@ describe('AppUpdateModal', () => {
     expect(dialog).toHaveAttribute('data-theme', 'dark');
 
     const downloadButton = screen.getByTestId('update-modal-download-button');
-    expect(downloadButton).toHaveClass('bg-[#5865F2]', 'text-white');
+    // The legacy accent button is now the Arc primary variant (CSS module class names carry the variant).
+    expect(downloadButton.className).toMatch(/_primary_/);
     fireEvent.click(downloadButton);
 
     expect(updateNowMock).toHaveBeenCalledTimes(1);

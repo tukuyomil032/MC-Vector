@@ -1,0 +1,35 @@
+/* Hides the label that Arc renders for fields labeled outside the component. The control keeps its name through aria-label or the placeholder. */
+.bare label {
+  display: none;
+}
+
+/* Native select, matched to the Arc input so it sits next to Arc fields without a visible seam. */
+.nativeSelect {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-height-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.nativeSelect:hover:not(:disabled) {
+  border-color: var(--foreground);
+}
+
+.nativeSelect:focus-visible {
+  border-color: var(--foreground);
+}
+
+.nativeSelect:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: var(--surface-muted);
+}

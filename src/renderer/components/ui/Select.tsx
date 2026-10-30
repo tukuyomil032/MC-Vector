@@ -1,3 +1,5 @@
+import * as React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/ui';
 import * as SelectPrimitive from '@radix-ui/react-select';
 
@@ -11,7 +13,10 @@ interface SelectGroup {
   options: SelectOption[];
 }
 
-interface SelectProps {
+interface SelectProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'value' | 'defaultValue' | 'onChange'
+> {
   value: string;
   onValueChange: (value: string) => void;
   options?: SelectOption[];
@@ -21,18 +26,22 @@ interface SelectProps {
   className?: string;
 }
 
+/*
+ * Arc's Select has no option groups yet, and the grouped server-software picker needs them. So this
+ * stays on Radix and uses the Arc tokens, rather than vendoring a grouped variant.
+ */
 const triggerClass = cn(
-  'flex h-9 w-full items-center justify-between gap-2 rounded-md px-3 py-2',
-  'border border-zinc-700 bg-zinc-800/60 text-sm text-zinc-100',
-  'hover:bg-zinc-700/60 transition-colors',
-  'focus:outline-none focus:ring-2 focus:ring-[#5865F2] focus:ring-offset-1 focus:ring-offset-[#121214]',
+  'flex h-9 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 py-2',
+  'border border-[var(--border-strong)] bg-[var(--surface)] text-sm text-[var(--foreground)]',
+  'transition-colors hover:border-[var(--foreground)]',
+  'focus-visible:border-[var(--foreground)] focus-visible:outline-none',
   'disabled:cursor-not-allowed disabled:opacity-50',
-  'data-[placeholder]:text-zinc-400',
+  'data-[placeholder]:text-[var(--text-muted)]',
 );
 
 const contentClass = cn(
-  'z-50 min-w-[8rem] overflow-hidden rounded-md',
-  'border border-zinc-700 bg-zinc-900 text-sm shadow-xl',
+  'z-50 min-w-[8rem] overflow-hidden rounded-[var(--radius-control)]',
+  'border border-[var(--border)] bg-[var(--surface-raised)] text-sm text-[var(--foreground)] shadow-xl',
   'data-[state=open]:animate-in data-[state=closed]:animate-out',
   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
   'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -40,12 +49,12 @@ const contentClass = cn(
 
 const itemClass = cn(
   'relative flex cursor-default select-none items-center rounded px-2 py-1.5 text-sm',
-  'text-zinc-200 outline-none transition-colors',
-  'focus:bg-[#5865F2]/20 focus:text-zinc-100',
+  'text-[var(--foreground)] outline-none transition-colors',
+  'focus:bg-[var(--surface-muted)]',
   'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
 );
 
-const groupLabelClass = 'px-2 py-1.5 text-xs font-semibold text-zinc-500';
+const groupLabelClass = 'px-2 py-1.5 text-xs font-semibold text-[var(--text-muted)]';
 
 export function Select({
   value,
@@ -55,13 +64,14 @@ export function Select({
   placeholder,
   disabled,
   className,
+  ...triggerProps
 }: SelectProps) {
   return (
     <SelectPrimitive.Root value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectPrimitive.Trigger className={cn(triggerClass, className)}>
+      <SelectPrimitive.Trigger {...triggerProps} className={cn(triggerClass, className)}>
         <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon asChild>
-          <span className="text-zinc-400 text-xs">▼</span>
+          <ChevronDown size={14} strokeWidth={1.75} className="text-[var(--text-muted)]" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
