@@ -3,7 +3,7 @@ import UsersView from '@/renderer/components/UsersView';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { playerCommands, sendCommand, toastMock } = vi.hoisted(() => ({
+const { playerCommands, sendCommand, toastMock, confirmMock } = vi.hoisted(() => ({
   playerCommands: {
     getPlayerLists: vi.fn(),
     mutatePlayerList: vi.fn(),
@@ -13,12 +13,16 @@ const { playerCommands, sendCommand, toastMock } = vi.hoisted(() => ({
     error: vi.fn(),
     success: vi.fn(),
   },
+  confirmMock: vi.fn(),
 }));
 
 vi.mock('@/lib/player-commands', () => playerCommands);
 vi.mock('@/lib/server-commands', () => ({ sendCommand }));
 vi.mock('@/renderer/shared/notify', () => ({
   notify: { error: toastMock.error, success: toastMock.success, info: vi.fn(), warning: vi.fn() },
+}));
+vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
+  useAppFeedback: () => ({ confirm: confirmMock }),
 }));
 
 const emptyLists = { whitelist: [], ops: [], bannedPlayers: [], bannedIps: [] };
@@ -37,6 +41,52 @@ describe('UsersView', () => {
     sendCommand.mockReset().mockResolvedValue(undefined);
     toastMock.error.mockReset();
     toastMock.success.mockReset();
+    confirmMock.mockReset().mockResolvedValue(false);
+  });
+
+  it('asks before removing an entry and leaves the list alone when canceled', async () => {
+    playerCommands.getPlayerLists.mockResolvedValue({
+      ...emptyLists,
+      whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+    });
+
+    render(<UsersView server={server} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Remove "Alex" from this list?',
+        tone: 'danger',
+      }),
+    );
+    expect(playerCommands.mutatePlayerList).not.toHaveBeenCalled();
+    expect(sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('removes the entry through Rust once the confirm is accepted', async () => {
+    playerCommands.getPlayerLists.mockResolvedValue({
+      ...emptyLists,
+      whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+    });
+    confirmMock.mockResolvedValue(true);
+    playerCommands.mutatePlayerList.mockResolvedValueOnce({
+      lists: emptyLists,
+      changed: true,
+      canonicalTarget: 'Alex',
+    });
+
+    render(<UsersView server={server} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
+
+    await waitFor(() =>
+      expect(playerCommands.mutatePlayerList).toHaveBeenCalledWith(
+        'server-1',
+        'whitelist',
+        'remove',
+        'Alex',
+      ),
+    );
   });
 
   it('loads lists by server ID and routes list updates through Rust', async () => {

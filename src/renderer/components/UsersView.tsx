@@ -9,6 +9,7 @@ import {
 import { sendCommand } from '../../lib/server-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import { notify } from '../shared/notify';
+import { useAppFeedback } from './AppFeedbackProvider';
 import { Button } from './ui/Button';
 import { Input } from './ui/Field';
 
@@ -18,6 +19,7 @@ interface Props {
 
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
+  const { confirm } = useAppFeedback();
   const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
@@ -108,6 +110,15 @@ export default function UsersView({ server }: Props) {
   };
 
   const handleRemove = async (type: PlayerListType, identifier: string): Promise<void> => {
+    const confirmed = await confirm({
+      title: t('users.removeTitle'),
+      description: t('users.confirmRemove', { name: identifier }),
+      confirmLabel: t('users.actions.remove'),
+      tone: 'danger',
+    });
+    if (!confirmed) {
+      return;
+    }
     try {
       const result = await mutatePlayerList(server.id, type, 'remove', identifier);
       if (currentServerId.current === server.id) {

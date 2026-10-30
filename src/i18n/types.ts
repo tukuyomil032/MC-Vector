@@ -537,6 +537,8 @@ export interface TranslationDictionary {
       ipAddress: string;
     };
     level: string;
+    removeTitle: string;
+    confirmRemove: string;
     toast: {
       alreadyExists: string;
       listUpdated: string;

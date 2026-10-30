@@ -518,6 +518,8 @@ export const ja: TranslationDictionary = {
       ipAddress: 'IPアドレス',
     },
     level: '権限レベル: {level}',
+    removeTitle: 'リストから削除',
+    confirmRemove: '「{name}」をリストから削除しますか？',
     toast: {
       alreadyExists: '既に存在します',
       listUpdated: 'リストを更新しました',

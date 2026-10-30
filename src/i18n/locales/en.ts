@@ -522,6 +522,8 @@ export const en: TranslationDictionary = {
       ipAddress: 'IP Address',
     },
     level: 'Level: {level}',
+    removeTitle: 'Remove Entry',
+    confirmRemove: 'Remove "{name}" from this list?',
     toast: {
       alreadyExists: 'Already exists',
       listUpdated: 'List updated',
