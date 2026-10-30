@@ -1,5 +1,33 @@
 # Changelog
 
+## v2.0.64
+
+### Features
+- retain dashboard metrics while servers run (#242)
+
+### Bug Fixes
+- drop removed files from prepare-release add-paths (#252)
+- clarify macOS updater restrictions and add Homebrew Cask (#244)
+- unify updater checks and show release notes (#239)
+- bootstrap missing stable updater feeds (#236)
+- prepend generated release changelog entries (#235)
+- unblock cargo-audit CI failure on main (#230)
+
+### Maintenance
+- move automation and safe backups into Rust (#248)
+- move plugin catalog and installs into Rust (#247)
+- move server operations into Rust (#246)
+- add Rust-owned server registry (#245)
+- add local updater harness (#238)
+- ignore local specification files
+- bump the all-github-actions-dependencies group across 1 directory with 4 updates (#231)
+- consolidate CI workflows and redundant test suites
+- remove .claude
+
+### Other Changes
+- Add stable and beta update channels (#233)
+- Automate changelog releases and display update notes (#228)
+
 ## v2.0.64-beta.2
 
 ### Features
