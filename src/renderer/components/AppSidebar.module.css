@@ -304,9 +304,15 @@
   width: 100%;
 }
 
-.emptyState {
-  flex: 1 1 auto;
-  min-height: 0;
+/* With no servers the content area shows the full empty state and its add action, so this stays a single muted line. */
+.emptyHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
 }
 
 /* Rail actions sit at the bottom of the 60px rail. */

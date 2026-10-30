@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Button } from '@/components/arc/button/button';
 import { Checkbox } from '@/components/arc/checkbox/checkbox';
 import { ContextMenu, type ContextMenuItem } from '@/components/arc/context-menu/context-menu';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { type TranslationKey, useTranslation } from '@/i18n';
 import type { MinecraftServer, ServerStatus } from '../shared/server declaration';
 import styles from './AppSidebar.module.css';
@@ -192,24 +191,11 @@ export default function AppServerSidebar({
           ))}
         </div>
       ) : (
-        <EmptyState
-          className={styles.emptyState}
-          icon={<Server size={20} strokeWidth={1.75} aria-hidden={true} />}
-          title={t('server.list.emptyTitle')}
-          description={t('server.list.empty')}
-          action={
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              data-testid="create-server-button"
-              onClick={onAddServer}
-            >
-              <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
-              {t('nav.addServer')}
-            </Button>
-          }
-        />
+        // The content area carries the full empty state and the add action, so the sidebar keeps one quiet line.
+        <div className={styles.emptyHint} data-testid="sidebar-empty-hint">
+          <Server size={14} strokeWidth={1.75} aria-hidden={true} />
+          <span>{t('server.list.emptyTitle')}</span>
+        </div>
       )}
 
       {isBulkMode && selectedIds.size > 0 && (
