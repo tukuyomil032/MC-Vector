@@ -257,10 +257,40 @@ function ToastDemo() {
     }, 2000);
   };
 
+  const runProgress = () => {
+    const id = toast({
+      type: 'loading',
+      title: 'サーバーをダウンロード中',
+      progress: 0,
+      duration: Infinity,
+    });
+    let value = 0;
+    const timer = window.setInterval(() => {
+      value = Math.min(100, value + 10);
+      if (value < 100) {
+        update(id, { progress: value });
+        return;
+      }
+      window.clearInterval(timer);
+      update(id, {
+        type: 'success',
+        title: 'ダウンロードが完了しました',
+        description: 'Paper 1.21.4',
+        progress: undefined,
+        duration: 4000,
+      });
+    }, 300);
+  };
+
   return (
-    <Button variant="secondary" onClick={run}>
-      ローディング → 成功のトースト
-    </Button>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button variant="secondary" onClick={run}>
+        ローディング → 成功のトースト
+      </Button>
+      <Button variant="secondary" onClick={runProgress}>
+        進捗 → 成功のトースト
+      </Button>
+    </div>
   );
 }
 

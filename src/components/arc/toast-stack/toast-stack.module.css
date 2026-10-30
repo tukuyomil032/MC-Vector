@@ -150,6 +150,36 @@
   color: var(--text-secondary);
 }
 
+/* One row: a 4px bar that fills from the left, and the percentage at its right end. */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  overflow: hidden;
+}
+.track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+}
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transform-origin: 0 50%;
+}
+.percent {
+  flex: none;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Clips only while its width folds, so the focus ring stays whole at rest. */
 .actionSlot {
   display: flex;

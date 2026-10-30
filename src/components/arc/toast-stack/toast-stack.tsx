@@ -49,6 +49,8 @@ export interface ToastOptions {
   action?: ToastAction;
   /** Milliseconds before the toast closes itself. Defaults by type; loading toasts wait for an update. Pass Infinity to keep it until closed. */
   duration?: number;
+  /** Completion from 0 to 100 for a task with a known total. Shows a bar and the percentage until the type becomes success or error. */
+  progress?: number;
 }
 
 export interface ToastStackApi {
@@ -92,6 +94,7 @@ type ToastRecord = {
   title: string;
   description?: string;
   action?: ToastAction;
+  progress?: number;
   duration: number;
   seq: number;
   version: number;
@@ -597,6 +600,10 @@ function ToastItem({
   };
   const Icon = toast.type === 'loading' ? null : icons[toast.type];
   const swap = reduce ? fadeOnly : textSwap;
+  // The bar and its percentage belong to work in progress only; a finished toast drops them as it changes type.
+  const showProgress =
+    toast.progress !== undefined && toast.type !== 'success' && toast.type !== 'error';
+  const percent = showProgress ? Math.round(Math.min(100, Math.max(0, toast.progress ?? 0))) : 0;
 
   return (
     <motion.li
@@ -640,6 +647,43 @@ function ToastItem({
                 </Swap>
               </AnimatePresence>
             </span>
+            <AnimatePresence initial={false}>
+              {showProgress ? (
+                <motion.div
+                  key="progress"
+                  className={styles.progress}
+                  initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  transition={
+                    reduce ? reducedFade : { height: motionTokens.spring.smooth, opacity: fade }
+                  }
+                >
+                  <div
+                    className={styles.track}
+                    role="progressbar"
+                    aria-label={toast.title}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                  >
+                    <motion.div
+                      className={styles.fill}
+                      initial={false}
+                      animate={{ scaleX: percent / 100 }}
+                      transition={
+                        reduce
+                          ? { duration: 0 }
+                          : { duration: motionTokens.duration.standard, ease: standard }
+                      }
+                    />
+                  </div>
+                  <span className={styles.percent} aria-hidden="true">
+                    {percent}%
+                  </span>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
             <AnimatePresence mode="popLayout" initial={false}>
               {toast.description ? (
                 <Swap key={toast.description} className={styles.description} {...swap}>
