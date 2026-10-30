@@ -42,7 +42,16 @@ export interface DialogContentProps extends ComponentPropsWithoutRef<
 > {
   title: string;
   description?: string;
+  /** Shows the close icon in the header. Off by default: dismiss through a footer button or Escape. */
+  showCloseButton?: boolean;
+  /** Rendered after the body inside the footer row. */
+  footer?: ReactNode;
   children: ReactNode;
+}
+
+/** A footer row for callers that build one by hand. The `footer` prop on DialogContent already wraps its content in the same row. */
+export function DialogFooter({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={[styles.footer, className].filter(Boolean).join(' ')}>{children}</div>;
 }
 
 const fade: Transition = { duration: motionTokens.duration.instant };
@@ -90,6 +99,8 @@ function SwapText({ text }: { text: string }) {
 export function DialogContent({
   title,
   description,
+  showCloseButton = false,
+  footer,
   children,
   className,
   onPointerDownOutside,
@@ -125,11 +136,14 @@ export function DialogContent({
             </DialogPrimitive.Description>
           ) : null}
         </div>
-        <DialogPrimitive.Close className={styles.close} aria-label="Close dialog">
-          <X size={16} strokeWidth={1.75} aria-hidden="true" />
-        </DialogPrimitive.Close>
+        {showCloseButton ? (
+          <DialogPrimitive.Close className={styles.close} aria-label="Close dialog">
+            <X size={16} strokeWidth={1.75} aria-hidden="true" />
+          </DialogPrimitive.Close>
+        ) : null}
       </div>
       <div className={styles.body}>{children}</div>
+      {footer ? <div className={styles.footer}>{footer}</div> : null}
     </>
   );
   // Under a bare Radix root the open state is unknown here, so CSS keyframes keyed off data-state animate the layers instead.

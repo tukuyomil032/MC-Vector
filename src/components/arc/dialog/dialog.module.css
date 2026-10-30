@@ -51,14 +51,13 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-5);
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-6) var(--space-6) 0;
 }
 .title {
   margin: 0;
   font-family: var(--font-body);
   font-size: var(--text-lg);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: var(--tracking-body);
   line-height: var(--leading-body);
 }
@@ -112,9 +111,18 @@
     transform var(--duration-instant) var(--ease-standard);
 }
 .body {
-  padding: var(--space-6);
+  padding: var(--space-4) var(--space-6) var(--space-6);
   font-size: var(--text-sm);
   line-height: var(--leading-body);
+}
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
 }
 @keyframes overlay-in {
   from {
