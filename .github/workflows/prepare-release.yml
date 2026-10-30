@@ -83,9 +83,6 @@ jobs:
             CHANGELOG.md
             README.md
             package.json
-            src/lib/adapters/plugin/http-client.ts
-            src/lib/version-commands.ts
-            tests/lib/adapters/plugin/http-client.test.ts
             src-tauri/Cargo.toml
             src-tauri/Cargo.lock
             src-tauri/tauri.conf.json
