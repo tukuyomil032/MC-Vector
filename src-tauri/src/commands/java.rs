@@ -995,7 +995,9 @@ mod tests {
 
         assert_eq!(safe_java_file_mode(0o7600, 0o7777), 0o711);
 
-        let path = std::env::temp_dir().join(format!(
+        let directory = crate::test_support::test_temp_dir("mc-vector-java-permission-tests");
+        std::fs::create_dir_all(&directory).expect("permission fixture directory should exist");
+        let path = directory.join(format!(
             "mc-vector-java-permissions-{}-{}",
             std::process::id(),
             Uuid::new_v4()
