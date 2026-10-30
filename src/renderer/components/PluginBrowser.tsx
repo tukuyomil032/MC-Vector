@@ -58,6 +58,7 @@ import {
   pluginInstallFailurePresentation,
   shouldBlockPluginInstall,
 } from '../shared/plugin-install-policy';
+import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
 import InlineError from './InlineError';
 import { NativeSelect } from './ui/Field';
@@ -434,11 +435,8 @@ export default function PluginBrowser({ server }: Props) {
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
-  const { notify, openDialog } = useAppFeedback();
+  const { openDialog } = useAppFeedback();
   const setCurrentView = useUiStore((state) => state.setCurrentView);
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    notify(msg, type);
-  };
   const folderName = isModServer ? 'mods' : 'plugins';
   const tSafe = (
     key: Parameters<typeof t>[0],
@@ -1469,7 +1467,7 @@ export default function PluginBrowser({ server }: Props) {
           : mode === 'overwrite'
             ? t('plugins.browser.overwriteSuccess', { title: item.title })
             : t('plugins.browser.updateSuccess', { title: item.title });
-      showToast(successLabel, 'success');
+      notify.success(successLabel);
     } catch (error) {
       logError('Plugin installation flow failed', error, {
         itemId: item.id,
@@ -1529,11 +1527,10 @@ export default function PluginBrowser({ server }: Props) {
     setInstallingId(item.id);
     try {
       const nextFile = await toggleInstalledPlugin(server.id, installedFile);
-      showToast(
+      notify.success(
         !isDisabledPluginFile(nextFile)
           ? t('plugins.browser.pluginEnabled', { title: item.title })
           : t('plugins.browser.pluginDisabled', { title: item.title }),
-        'success',
       );
     } catch (error) {
       logError('Failed to toggle plugin state', error, {
@@ -1570,7 +1567,7 @@ export default function PluginBrowser({ server }: Props) {
       }
 
       await uninstallInstalledPlugin(server.id, entry.fileName);
-      showToast(t('plugins.browser.uninstallSuccess', { title: entry.displayName }), 'success');
+      notify.success(t('plugins.browser.uninstallSuccess', { title: entry.displayName }));
     } catch (error) {
       logError('Failed to uninstall installed plugin', error, {
         fileName: entry.fileName,
@@ -1588,7 +1585,7 @@ export default function PluginBrowser({ server }: Props) {
 
   const handleReinstallInstalled = (entry: InstalledPluginEntry) => {
     if (!entry.sourceItem) {
-      showToast(t('plugins.browser.reinstallUnavailable'), 'info');
+      notify.info(t('plugins.browser.reinstallUnavailable'));
       return;
     }
     void performInstall(entry.sourceItem, 'overwrite', entry.fileName);
@@ -1824,7 +1821,7 @@ export default function PluginBrowser({ server }: Props) {
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
-      showToast(t('plugins.browser.pageInputError'), 'info');
+      notify.info(t('plugins.browser.pageInputError'));
       return;
     }
 

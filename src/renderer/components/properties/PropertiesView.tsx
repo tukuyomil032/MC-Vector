@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
 import { logError } from '../../../lib/error-utils';
 import {
@@ -7,6 +6,7 @@ import {
   saveServerProperties,
   type PropertyValue,
 } from '../../../lib/properties-commands';
+import { notify } from '../../shared/notify';
 import { serverPropertiesList } from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
 import { Button } from '../ui/Button';
@@ -42,12 +42,6 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const [loading, setLoading] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
-  };
-
   useLayoutEffect(() => {
     currentServerIdRef.current = server.id;
     const generation = ++serverViewGenerationRef.current;
@@ -80,7 +74,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       } catch (e) {
         if (!isCurrentLoad()) return;
         logError('Failed to load server properties', e, { serverId });
-        showToast(t('properties.loadFailed'), 'error');
+        notify.error(t('properties.loadFailed'));
       } finally {
         if (isCurrentLoad()) {
           setLoading(false);
@@ -127,11 +121,11 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       }
       if (!isCurrentServerView()) return;
       setHasChanges(false);
-      showToast(t('properties.saveSuccess'), 'success');
+      notify.success(t('properties.saveSuccess'));
     } catch (e) {
       if (!isCurrentServerView()) return;
       logError('Failed to save server properties', e, { serverId });
-      showToast(t('properties.saveFailed'), 'error');
+      notify.error(t('properties.saveFailed'));
     }
   };
 
@@ -161,11 +155,11 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       setProps((prev) => ({ ...prev, ...safeData }));
       setShowAdvanced(false);
       setHasChanges(false);
-      showToast(t('properties.advancedSaveSuccess'), 'success');
+      notify.success(t('properties.advancedSaveSuccess'));
     } catch (e) {
       if (!isCurrentServerView()) return;
       logError('Failed to save advanced server properties', e, { serverId });
-      showToast(t('properties.saveFailed'), 'error');
+      notify.error(t('properties.saveFailed'));
     }
   };
 

@@ -17,7 +17,9 @@ const { playerCommands, sendCommand, toastMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/player-commands', () => playerCommands);
 vi.mock('@/lib/server-commands', () => ({ sendCommand }));
-vi.mock('sonner', () => ({ toast: toastMock }));
+vi.mock('@/renderer/shared/notify', () => ({
+  notify: { error: toastMock.error, success: toastMock.success, info: vi.fn(), warning: vi.fn() },
+}));
 
 const emptyLists = { whitelist: [], ops: [], bannedPlayers: [], bannedIps: [] };
 const server = {

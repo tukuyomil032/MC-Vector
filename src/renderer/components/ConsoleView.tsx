@@ -1,6 +1,5 @@
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -10,6 +9,7 @@ import {
   parseAnsiLines,
 } from '../../lib/performance-commands';
 import { sendCommand } from '../../lib/server-commands';
+import { notify } from '../shared/notify';
 import { tauriInvoke, tauriListen } from '../../lib/tauri-api';
 import { useConsoleStore } from '../../store/consoleStore';
 import type { MinecraftServer } from '../components/../shared/server declaration';
@@ -276,11 +276,6 @@ const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): numbe
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
-  };
   const logs = useConsoleStore((state) => state.serverLogs[server.id] ?? EMPTY_LOGS);
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -428,7 +423,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         return prev.filter((item) => item.key !== pinKey);
       }
       if (prev.length >= MAX_PINNED_LOGS) {
-        showToast(t('console.toast.pinLimitReached', { max: MAX_PINNED_LOGS }), 'info');
+        notify.info(t('console.toast.pinLimitReached', { max: MAX_PINNED_LOGS }));
         return prev;
       }
       return [...prev, { key: pinKey, text: entry.plainLine, level: entry.level }];
@@ -616,7 +611,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
   const handleExportLogs = async () => {
     if (visibleLogs.length === 0) {
-      showToast(t('console.toast.noLogsToSave'), 'info');
+      notify.info(t('console.toast.noLogsToSave'));
       return;
     }
 
@@ -636,14 +631,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         suggestedName: defaultFileName,
       });
       if (exported) {
-        showToast(t('console.toast.logsSaved'), 'success');
+        notify.success(t('console.toast.logsSaved'));
       }
     } catch (error) {
       logError('Failed to export console logs', error, {
         serverId: server.id,
         serverName: server.name,
       });
-      showToast(t('console.toast.logsSaveFailed'), 'error');
+      notify.error(t('console.toast.logsSaveFailed'));
     }
   };
 

@@ -87,11 +87,12 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: webviewWindowMo
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ ask: askMock }));
 
-vi.mock('sonner', () => ({
-  toast: {
+vi.mock('@/renderer/shared/notify', () => ({
+  notify: {
     error: toastErrorMock,
     success: toastSuccessMock,
     warning: toastWarningMock,
+    info: vi.fn(),
   },
 }));
 

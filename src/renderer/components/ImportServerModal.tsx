@@ -1,9 +1,9 @@
 import { cn } from '@/lib/ui';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { cancelServerImport, pickServerImport } from '../../lib/server-import-commands';
+import { notify } from '../shared/notify';
 import { Button } from './ui/Button';
 import { Input } from './ui/Field';
 
@@ -19,16 +19,6 @@ export default function ImportServerModal({
   onAdd,
 }: ImportServerModalProps) {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
-
   const [folderPath, setFolderPath] = useState('');
   const [serverName, setServerName] = useState('');
   const [version, setVersion] = useState('');
@@ -58,7 +48,7 @@ export default function ImportServerModal({
       }
       if (!analysis.hasServerJar) {
         await cancelServerImport(analysis.token);
-        showToast(t('importServer.toast.noJar'), 'error');
+        notify.error(t('importServer.toast.noJar'));
         return;
       }
       setImportToken(analysis.token);
@@ -70,7 +60,7 @@ export default function ImportServerModal({
       setServerName(analysis.folderName);
       setAnalyzed(true);
     } catch {
-      showToast(t('importServer.toast.failed'), 'error');
+      notify.error(t('importServer.toast.failed'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -89,7 +79,7 @@ export default function ImportServerModal({
       memory: 4,
       importToken,
     });
-    showToast(t('importServer.toast.success'), 'success');
+    notify.success(t('importServer.toast.success'));
     onClose();
   };
 

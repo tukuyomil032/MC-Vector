@@ -2,7 +2,6 @@ import { cn } from '@/lib/ui';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { logError } from '../../lib/error-utils';
@@ -14,6 +13,7 @@ import {
   onJavaDownloadProgress,
   selectJavaBinary,
 } from '../../lib/java-commands';
+import { notify } from '../shared/notify';
 import { Button } from './ui/Button';
 
 interface Props {
@@ -27,15 +27,6 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const availableVersions = [8, 17, 21];
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -72,13 +63,13 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
       const ok = await downloadJava(ver);
       await loadInstalled();
       if (ok) {
-        showToast(t('javaManager.toast.downloadSuccess', { version: ver }), 'success');
+        notify.success(t('javaManager.toast.downloadSuccess', { version: ver }));
       } else {
-        showToast(t('javaManager.toast.downloadFailed'), 'error');
+        notify.error(t('javaManager.toast.downloadFailed'));
       }
     } catch (error) {
       logError('Java download failed', error, { version: ver });
-      showToast(t('javaManager.toast.downloadFailed'), 'error');
+      notify.error(t('javaManager.toast.downloadFailed'));
     } finally {
       setDownloading(null);
       setDownloadProgress(null);
@@ -97,10 +88,10 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
     try {
       await deleteJava(ver);
       await loadInstalled();
-      showToast(t('javaManager.toast.removed', { version: ver }), 'info');
+      notify.info(t('javaManager.toast.removed', { version: ver }));
     } catch (error) {
       console.error(error);
-      showToast(t('javaManager.toast.removeFailed', { version: ver }), 'error');
+      notify.error(t('javaManager.toast.removeFailed', { version: ver }));
     }
   };
 
@@ -188,12 +179,12 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
                 if (picked) {
                   try {
                     await copyToClipboard(picked);
-                    showToast(t('javaManager.toast.pathCopied'), 'success');
+                    notify.success(t('javaManager.toast.pathCopied'));
                   } catch {
-                    showToast(t('javaManager.toast.pathInfo', { path: picked }), 'info');
+                    notify.info(t('javaManager.toast.pathInfo', { path: picked }));
                   }
                 } else {
-                  showToast(t('javaManager.toast.selectionCancelled'), 'info');
+                  notify.info(t('javaManager.toast.selectionCancelled'));
                 }
               }}
             >

@@ -12,7 +12,6 @@ import {
   updateServer as updateServerApi,
 } from '@/lib/server-commands';
 import AddServerChoiceModal from '@/renderer/components/AddServerChoiceModal';
-import { useAppFeedback } from '@/renderer/components/AppFeedbackProvider';
 import AppMainContent from '@/renderer/components/AppMainContent';
 import AppMainHeader from '@/renderer/components/AppMainHeader';
 import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
@@ -21,6 +20,7 @@ import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
 import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
+import { notify } from '@/renderer/shared/notify';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
@@ -60,7 +60,6 @@ function App() {
 
 function MainApp() {
   const { t } = useTranslation();
-  const { notify } = useAppFeedback();
   const servers = useServerStore((state) => state.servers);
   const setServers = useServerStore((state) => state.setServers);
   const selectedServerId = useServerStore((state) => state.selectedServerId);
@@ -81,9 +80,9 @@ function MainApp() {
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
   const showToast = useCallback(
     (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-      notify(msg, type);
+      notify[type](msg);
     },
-    [notify],
+    [],
   );
 
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);

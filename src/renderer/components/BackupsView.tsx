@@ -2,7 +2,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
   applyBackupRetention,
@@ -17,6 +16,7 @@ import {
 } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles } from '../../lib/file-commands';
+import { notify } from '../shared/notify';
 import { tauriListen } from '../../lib/tauri-api';
 import {
   getManualBackupOperationId,
@@ -304,17 +304,6 @@ export default function BackupsView({ server }: Props) {
     cleanupSelectorOnceRegistrations();
     scheduleUnmountInvalidation();
   }, [cleanupSelectorOnceRegistrations, scheduleUnmountInvalidation]);
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else if (type === 'warning') {
-      toast.warning(msg);
-    } else {
-      toast(msg);
-    }
-  };
   const isManualBackupCreating = activeManualOperation?.kind === 'create';
   const isProcessing = processing || isManualBackupCreating;
   const beginCatalogOperation = () => {
@@ -416,7 +405,7 @@ export default function BackupsView({ server }: Props) {
         if (cancelled || !isCurrentInitialization(registrationToken)) {
           return;
         }
-        showToast(t('backups.toast.targetUpdated', { count: normalizedPaths.length }), 'success');
+        notify.success(t('backups.toast.targetUpdated', { count: normalizedPaths.length }));
       },
     ).then(
       (dispose) => {
@@ -521,7 +510,7 @@ export default function BackupsView({ server }: Props) {
       }
       logError('Failed to load backup catalog', error, { serverPath: server.path });
       setCatalogLoadState('error');
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
     }
   };
 
@@ -541,7 +530,7 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       logError('Failed to load backups', e, { serverPath: server.path });
-      showToast(t('backups.toast.loadFailed'), 'error');
+      notify.error(t('backups.toast.loadFailed'));
     } finally {
       if (isCurrentDataReload(expectedToken)) {
         setLoading(false);
@@ -587,7 +576,7 @@ export default function BackupsView({ server }: Props) {
         serverPath: server.path,
       });
       setSelectedPaths(new Set());
-      showToast(t('backups.toast.targetInitFailed'), 'error');
+      notify.error(t('backups.toast.targetInitFailed'));
     }
   };
 
@@ -644,7 +633,7 @@ export default function BackupsView({ server }: Props) {
       }
       logError('Failed to load world candidates', error, { serverPath: server.path });
       setWorlds([]);
-      showToast(t('backups.toast.worldLoadFailed'), 'error');
+      notify.error(t('backups.toast.worldLoadFailed'));
     }
   };
 
@@ -811,7 +800,7 @@ export default function BackupsView({ server }: Props) {
               logError('Failed to load backup selector window', error, {
                 serverPath: server.path,
               });
-              showToast(t('backups.toast.selectorOpenError'), 'error');
+              notify.error(t('backups.toast.selectorOpenError'));
             });
         }),
         'Failed to register backup selector created listener',
@@ -828,7 +817,7 @@ export default function BackupsView({ server }: Props) {
           logError('Backup selector window emitted tauri error event', error, {
             serverPath: server.path,
           });
-          showToast(t('backups.toast.selectorOpenError'), 'error');
+          notify.error(t('backups.toast.selectorOpenError'));
         }),
         'Failed to register backup selector error listener',
       );
@@ -837,7 +826,7 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       logError('Failed to open backup selector window', error, { serverPath: server.path });
-      showToast(t('backups.toast.selectorOpenError'), 'error');
+      notify.error(t('backups.toast.selectorOpenError'));
     }
   };
 
@@ -899,7 +888,7 @@ export default function BackupsView({ server }: Props) {
     }
 
     if (catalogLoadState !== 'ready') {
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
       return;
     }
 
@@ -911,11 +900,10 @@ export default function BackupsView({ server }: Props) {
     const normalizedName = normalizeBackupName(requestedName);
     const nameValidationError = getBackupNameValidationError(normalizedName);
     if (nameValidationError) {
-      showToast(
+      notify.error(
         nameValidationError === 'empty'
           ? t('backups.toast.invalidNameEmpty')
           : t('backups.toast.invalidNameCharacters'),
-        'error',
       );
       return;
     }
@@ -958,7 +946,7 @@ export default function BackupsView({ server }: Props) {
         );
       }
       if (backupOutcome.status === 'confirmation_required') {
-        showToast(t('backups.toast.serverStopFailed'), 'error');
+        notify.error(t('backups.toast.serverStopFailed'));
         return;
       }
       if (backupOutcome.status === 'failed') {
@@ -969,16 +957,14 @@ export default function BackupsView({ server }: Props) {
           restartError: backupOutcome.restartError,
         });
         if (backupOutcome.restartError) {
-          showToast(
+          notify.error(
             t('backups.toast.backupNotCreatedRestartFailed', { name: capturedServer.name }),
-            'error',
           );
         } else {
-          showToast(
+          notify.error(
             backupOutcome.stage === 'stop'
               ? t('backups.toast.serverStopFailed')
               : t('backups.toast.stoppedCreateFailed'),
-            'error',
           );
         }
         return;
@@ -1051,7 +1037,7 @@ export default function BackupsView({ server }: Props) {
 
       if (isCurrentInitialization(operationToken)) {
         setBackupCatalog(finalCatalog);
-        showToast(t('backups.toast.created'), 'success');
+        notify.success(t('backups.toast.created'));
         setShowCreateModal(false);
         if (backupOutcome.catalogError) {
           logError('Failed to update managed backup catalog', backupOutcome.catalogError, {
@@ -1059,10 +1045,10 @@ export default function BackupsView({ server }: Props) {
             serverPath: capturedServer.path,
             backupName: backupOutcome.backupName,
           });
-          showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+          notify.warning(t('backups.toast.registryUpdateFailed'));
         }
         if (refreshedBackups === null) {
-          showToast(t('backups.toast.loadFailed'), 'warning');
+          notify.warning(t('backups.toast.loadFailed'));
         }
         if (backupOutcome.restart.status === 'failed') {
           logError('Backup created but server restart failed', backupOutcome.restart.error, {
@@ -1070,25 +1056,23 @@ export default function BackupsView({ server }: Props) {
             serverPath: capturedServer.path,
             backupName: backupOutcome.backupName,
           });
-          showToast(t('backups.toast.serverRestartFailed'), 'warning');
+          notify.warning(t('backups.toast.serverRestartFailed'));
         }
         if (retentionResult.failedDeleteCount > 0) {
-          showToast(
+          notify.warning(
             t('backups.toast.retentionDeleteFailed', {
               count: retentionResult.failedDeleteCount,
             }),
-            'warning',
           );
         }
         if (retentionResult.listingFailed) {
-          showToast(t('backups.toast.retentionListFailed'), 'warning');
+          notify.warning(t('backups.toast.retentionListFailed'));
         }
         if (!saved) {
-          showToast(
+          notify.warning(
             retentionResult.deletedCount > 0
               ? t('backups.toast.retentionMetadataSaveFailed')
               : t('backups.toast.createMetadataSaveFailed'),
-            'warning',
           );
         }
       }
@@ -1098,7 +1082,7 @@ export default function BackupsView({ server }: Props) {
           serverPath: capturedServer.path,
           selectedCount: capturedSelectedPaths.length,
         });
-        showToast(t('backups.toast.createFailed'), 'error');
+        notify.error(t('backups.toast.createFailed'));
       }
     } finally {
       if (manualOperationStarted) {
@@ -1121,14 +1105,14 @@ export default function BackupsView({ server }: Props) {
       if (!isCurrentInitialization(operationToken)) {
         return;
       }
-      showToast(t('backups.toast.restored'), 'success');
+      notify.success(t('backups.toast.restored'));
     } catch (error) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to restore backup', error, {
           serverPath: server.path,
           backupName,
         });
-        showToast(t('backups.toast.restoreFailed'), 'error');
+        notify.error(t('backups.toast.restoreFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {
@@ -1143,7 +1127,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     if (catalogLoadState !== 'ready') {
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
       return;
     }
     if (!beginCatalogOperation()) {
@@ -1176,7 +1160,7 @@ export default function BackupsView({ server }: Props) {
       }
 
       if (catalogLoadState !== 'ready') {
-        showToast(t('backups.toast.deleteMetadataSaveFailed'), 'warning');
+        notify.warning(t('backups.toast.deleteMetadataSaveFailed'));
         return;
       }
 
@@ -1213,9 +1197,9 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       if (!saved) {
-        showToast(t('backups.toast.deleteMetadataSaveFailed'), 'warning');
+        notify.warning(t('backups.toast.deleteMetadataSaveFailed'));
       } else {
-        showToast(t('backups.toast.deleted'), 'success');
+        notify.success(t('backups.toast.deleted'));
       }
     } catch (e) {
       if (isCurrentInitialization(operationToken)) {
@@ -1223,7 +1207,7 @@ export default function BackupsView({ server }: Props) {
           serverPath: server.path,
           backupName,
         });
-        showToast(t('backups.toast.deleteFailed'), 'error');
+        notify.error(t('backups.toast.deleteFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {
@@ -1248,7 +1232,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     if (catalogLoadState !== 'ready') {
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
       return;
     }
 
@@ -1280,14 +1264,14 @@ export default function BackupsView({ server }: Props) {
       }
       setBackupCatalog(nextCatalog);
       setTagEditorTarget(null);
-      showToast(t('backups.toast.tagSaved'), 'success');
+      notify.success(t('backups.toast.tagSaved'));
     } catch (error) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to save backup tags', error, {
           serverPath: server.path,
           backupName: tagEditorTarget,
         });
-        showToast(t('backups.toast.tagSaveFailed'), 'error');
+        notify.error(t('backups.toast.tagSaveFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {
@@ -1329,7 +1313,7 @@ export default function BackupsView({ server }: Props) {
       if (!isCurrentInitialization(operationToken)) {
         return;
       }
-      showToast(t('backups.world.deleted', { name: worldName }), 'success');
+      notify.success(t('backups.world.deleted', { name: worldName }));
       await loadWorlds(operationToken);
     } catch (error) {
       if (isCurrentInitialization(operationToken)) {
@@ -1337,7 +1321,7 @@ export default function BackupsView({ server }: Props) {
           serverPath: server.path,
           worldName,
         });
-        showToast(t('backups.world.deleteFailed'), 'error');
+        notify.error(t('backups.world.deleteFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {

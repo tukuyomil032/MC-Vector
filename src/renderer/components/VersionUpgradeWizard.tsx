@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import { createBackup, onBackupProgress } from '../../lib/backup-commands';
 import {
@@ -9,6 +8,7 @@ import {
 } from '../../lib/server-commands';
 import type { UnlistenFn } from '../../lib/tauri-api';
 import { logError } from '../../lib/error-utils';
+import { notify } from '../shared/notify';
 import type { MinecraftServer } from '../shared/server declaration';
 import { Button } from './ui/Button';
 
@@ -22,17 +22,6 @@ interface Props {
 
 export default function VersionUpgradeWizard({ server, onClose, onServerVersionChanged }: Props) {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else if (type === 'warning') {
-      toast.warning(msg);
-    } else {
-      toast(msg);
-    }
-  };
 
   const [step, setStep] = useState<WizardStep>('check');
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
@@ -90,7 +79,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
       if (outcome.status === 'confirmation_required') {
         // Version upgrades require the server to stay offline after this step.
         // Do not use the normal stop-and-restart backup flow here.
-        showToast(t('serverSettings.versionUpgrade.serverMustBeOffline'), 'error');
+        notify.error(t('serverSettings.versionUpgrade.serverMustBeOffline'));
         return;
       }
       if (outcome.status === 'failed') {
@@ -101,16 +90,12 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
           restartError: outcome.restartError,
         });
         if (outcome.restartError) {
-          showToast(
-            t('backups.toast.backupNotCreatedRestartFailed', { name: server.name }),
-            'error',
-          );
+          notify.error(t('backups.toast.backupNotCreatedRestartFailed', { name: server.name }));
         } else {
-          showToast(
+          notify.error(
             outcome.stage === 'stop'
               ? t('backups.toast.serverStopFailed')
               : t('serverSettings.versionUpgrade.backupFailed'),
-            'error',
           );
         }
         return;
@@ -121,7 +106,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
           serverPath: server.path,
           backupName: outcome.backupName,
         });
-        showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+        notify.warning(t('backups.toast.registryUpdateFailed'));
       }
       if (outcome.restart.status === 'failed') {
         logError('Backup created but server restart failed', outcome.restart.error, {
@@ -129,11 +114,11 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
           serverPath: server.path,
           backupName: outcome.backupName,
         });
-        showToast(t('backups.toast.serverRestartFailed'), 'warning');
+        notify.warning(t('backups.toast.serverRestartFailed'));
       }
       setStep('download');
     } catch {
-      showToast(t('serverSettings.versionUpgrade.backupFailed'), 'error');
+      notify.error(t('serverSettings.versionUpgrade.backupFailed'));
     } finally {
       unlisten?.();
       setProcessing(false);
@@ -158,7 +143,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
       onServerVersionChanged(installed.version);
       setStep('done');
     } catch {
-      showToast(t('serverSettings.versionUpgrade.downloadFailed'), 'error');
+      notify.error(t('serverSettings.versionUpgrade.downloadFailed'));
     } finally {
       unlisten?.();
       setProcessing(false);

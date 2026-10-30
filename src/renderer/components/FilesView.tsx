@@ -4,7 +4,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { ArrowUp, FolderPlus, GitCompareArrows, X } from 'lucide-react';
 import type * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../shared/notify';
 import {
   iconFile,
   iconFiles,
@@ -137,15 +137,6 @@ export default function FilesView({ server }: Props) {
   const editorRequestId = useRef(0);
   const filesRequestId = useRef(0);
 
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -194,7 +185,7 @@ export default function FilesView({ server }: Props) {
         try {
           const imported = await importFilesFromPaths(payload.paths, currentPath);
           if (imported.length > 0) {
-            showToast(t('files.toast.uploadSuccess', { count: imported.length }), 'success');
+            notify.success(t('files.toast.uploadSuccess', { count: imported.length }));
             await loadFiles(currentPath);
           }
         } catch (error) {
@@ -202,7 +193,7 @@ export default function FilesView({ server }: Props) {
             currentPath,
             pathCount: payload.paths.length,
           });
-          showToast(t('files.toast.uploadFailed'), 'error');
+          notify.error(t('files.toast.uploadFailed'));
         }
       })
       .then((dispose) => {
@@ -235,7 +226,7 @@ export default function FilesView({ server }: Props) {
         return;
       }
       logError('Failed to list files', e, { path });
-      showToast(t('files.toast.loadFailed'), 'error');
+      notify.error(t('files.toast.loadFailed'));
     }
   };
 
@@ -360,7 +351,7 @@ export default function FilesView({ server }: Props) {
           currentPath,
           fileName,
         });
-        showToast(t('files.toast.readFailed'), 'error');
+        notify.error(t('files.toast.readFailed'));
       } finally {
         if (requestId === editorRequestId.current) {
           setIsEditorLoading(false);
@@ -392,14 +383,14 @@ export default function FilesView({ server }: Props) {
     try {
       await saveFileContent(editingFile.path, fileContent);
       setOriginalFileContent(fileContent);
-      showToast(t('files.toast.saved'), 'success');
+      notify.success(t('files.toast.saved'));
     } catch (err) {
       console.error('Failed to save file content', {
         currentPath,
         filePath: editingFile.path,
         error: err,
       });
-      showToast(t('files.toast.saveFailed'), 'error');
+      notify.error(t('files.toast.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -461,14 +452,14 @@ export default function FilesView({ server }: Props) {
     }
     const ext = file.name.split('.').at(-1)?.toLowerCase() ?? '';
     if (BINARY_EXTENSIONS.includes(ext)) {
-      showToast(t('files.toast.binaryNoDiff'), 'error');
+      notify.error(t('files.toast.binaryNoDiff'));
       return;
     }
     const content = await readFileContent(filePath);
     if (diffSelectStep === 'original') {
       setDiffOriginal({ path: filePath, content });
       setDiffSelectStep('modified');
-      showToast(t('files.toast.diffSelectModified'), 'info');
+      notify.info(t('files.toast.diffSelectModified'));
     } else {
       setDiffModified({ path: filePath, content });
       setDiffSelectStep(null);
@@ -500,7 +491,7 @@ export default function FilesView({ server }: Props) {
       for (const name of selectedFiles) {
         await deleteItem(`${currentPath}/${name}`);
       }
-      showToast(t('files.toast.deleted'), 'success');
+      notify.success(t('files.toast.deleted'));
       setSelectedFiles([]);
       loadFiles(currentPath);
       setContextMenu(null);
@@ -509,7 +500,7 @@ export default function FilesView({ server }: Props) {
         currentPath,
         selectedFiles,
       });
-      showToast(t('files.toast.deleteFailed'), 'error');
+      notify.error(t('files.toast.deleteFailed'));
     }
   };
 
@@ -525,7 +516,7 @@ export default function FilesView({ server }: Props) {
       } else {
         await saveFileContent(target, '');
       }
-      showToast(t('files.toast.created'), 'success');
+      notify.success(t('files.toast.created'));
       setModalType(null);
       setNewFileName('');
       loadFiles(currentPath);
@@ -534,7 +525,7 @@ export default function FilesView({ server }: Props) {
         target,
         createMode,
       });
-      showToast(t('files.toast.createFailed'), 'error');
+      notify.error(t('files.toast.createFailed'));
     }
   };
 
@@ -544,7 +535,7 @@ export default function FilesView({ server }: Props) {
 
     if (result.length > 0) {
       loadFiles(currentPath);
-      showToast(t('files.toast.imported'), 'success');
+      notify.success(t('files.toast.imported'));
     }
   };
 
@@ -574,7 +565,7 @@ export default function FilesView({ server }: Props) {
         setSelectedFiles([]);
         loadFiles(currentPath);
       }
-      showToast(t('files.toast.moved'), 'success');
+      notify.success(t('files.toast.moved'));
       setModalType(null);
     } catch (e) {
       logError('Failed to move filesystem entries', e, {
@@ -583,7 +574,7 @@ export default function FilesView({ server }: Props) {
         selectedFiles,
         modalType,
       });
-      showToast(t('files.toast.moveFailed'), 'error');
+      notify.error(t('files.toast.moveFailed'));
     }
   };
 
@@ -601,7 +592,7 @@ export default function FilesView({ server }: Props) {
     const dest = `${currentPath}/${renameFileName}`;
     try {
       await moveItem(src, dest);
-      showToast(t('files.toast.renamed'), 'success');
+      notify.success(t('files.toast.renamed'));
       setModalType(null);
       setRenameFileName('');
       loadFiles(currentPath);
@@ -610,7 +601,7 @@ export default function FilesView({ server }: Props) {
         sourcePath: src,
         targetPath: dest,
       });
-      showToast(t('files.toast.renameFailed'), 'error');
+      notify.error(t('files.toast.renameFailed'));
     }
   };
 
@@ -622,7 +613,7 @@ export default function FilesView({ server }: Props) {
     const dest = `${currentPath}/archive-${Date.now()}.zip`;
     try {
       await compressItem(targets, dest);
-      showToast(t('files.toast.compressed'), 'success');
+      notify.success(t('files.toast.compressed'));
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
@@ -631,7 +622,7 @@ export default function FilesView({ server }: Props) {
         targets,
         destination: dest,
       });
-      showToast(t('files.toast.compressFailed'), 'error');
+      notify.error(t('files.toast.compressFailed'));
     }
   };
 
@@ -645,7 +636,7 @@ export default function FilesView({ server }: Props) {
           await extractItem(`${currentPath}/${f}`, currentPath);
         }
       }
-      showToast(t('files.toast.extracted'), 'success');
+      notify.success(t('files.toast.extracted'));
       loadFiles(currentPath);
       setContextMenu(null);
     } catch (e) {
@@ -653,7 +644,7 @@ export default function FilesView({ server }: Props) {
         currentPath,
         selectedFiles,
       });
-      showToast(t('files.toast.extractFailed'), 'error');
+      notify.error(t('files.toast.extractFailed'));
     }
   };
 
@@ -681,7 +672,7 @@ export default function FilesView({ server }: Props) {
         currentPath,
         folderName,
       });
-      showToast(t('files.toast.moveFailed'), 'error');
+      notify.error(t('files.toast.moveFailed'));
     }
   };
 
@@ -738,7 +729,7 @@ export default function FilesView({ server }: Props) {
               setDiffSelectStep(null);
             } else {
               setDiffSelectStep('original');
-              showToast(t('files.toast.diffSelectOriginal'), 'info');
+              notify.info(t('files.toast.diffSelectOriginal'));
             }
           }}
           aria-label={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}

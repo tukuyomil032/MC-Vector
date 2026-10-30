@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../i18n';
 import {
   getPlayerLists,
@@ -9,6 +8,7 @@ import {
 } from '../../lib/player-commands';
 import { sendCommand } from '../../lib/server-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import { notify } from '../shared/notify';
 import { Button } from './ui/Button';
 import { Input } from './ui/Field';
 
@@ -18,16 +18,6 @@ interface Props {
 
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
-
   const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
@@ -54,7 +44,7 @@ export default function UsersView({ server }: Props) {
   useEffect(() => {
     currentServerId.current = server.id;
     void loadAllLists().catch((error: unknown) => {
-      toast.error(error instanceof Error ? error.message : String(error));
+      notify.error(error instanceof Error ? error.message : String(error));
     });
     return () => {
       loadRequestId.current += 1;
@@ -84,7 +74,7 @@ export default function UsersView({ server }: Props) {
     await sendCommand(server.id, command);
     setTimeout(() => {
       void loadAllLists().catch((error: unknown) => {
-        toast.error(error instanceof Error ? error.message : String(error));
+        notify.error(error instanceof Error ? error.message : String(error));
       });
     }, 500);
   };
@@ -99,20 +89,20 @@ export default function UsersView({ server }: Props) {
         applyLists(result.lists);
       }
       if (!result.changed) {
-        showToast(t('users.toast.alreadyExists'), 'info');
+        notify.info(t('users.toast.alreadyExists'));
         return true;
       }
       try {
         await maybeApplyLiveCommand(type, 'add', result.canonicalTarget);
-        showToast(t('users.toast.listUpdated'), 'success');
+        notify.success(t('users.toast.listUpdated'));
       } catch (error) {
-        toast.error(
+        notify.error(
           `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      notify.error(error instanceof Error ? error.message : String(error));
       return false;
     }
   };
@@ -125,14 +115,14 @@ export default function UsersView({ server }: Props) {
       }
       try {
         await maybeApplyLiveCommand(type, 'remove', result.canonicalTarget);
-        showToast(t('users.toast.removed'), 'success');
+        notify.success(t('users.toast.removed'));
       } catch (error) {
-        toast.error(
+        notify.error(
           `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      notify.error(error instanceof Error ? error.message : String(error));
     }
   };
 

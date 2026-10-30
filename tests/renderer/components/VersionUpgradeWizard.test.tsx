@@ -19,11 +19,12 @@ const {
   toastErrorMock: vi.fn(),
 }));
 
-vi.mock('sonner', () => ({
-  toast: {
+vi.mock('@/renderer/shared/notify', () => ({
+  notify: {
     error: toastErrorMock,
     success: vi.fn(),
     warning: vi.fn(),
+    info: vi.fn(),
   },
 }));
 vi.mock('@/i18n', () => ({

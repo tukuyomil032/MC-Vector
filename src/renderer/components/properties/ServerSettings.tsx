@@ -1,9 +1,9 @@
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from '../../../i18n';
 import { copyToClipboard } from '../../../lib/clipboard-commands';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
+import { notify } from '../../shared/notify';
 import {
   clearNgrokToken,
   hasNgrokToken,
@@ -92,12 +92,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
 
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [inputToken, setInputToken] = useState('');
-
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
-  };
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -272,7 +266,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
   const handleCopyUrl = () => {
     if (tunnelUrl) {
       void copyToClipboard(tunnelUrl);
-      showToast(t('serverSettings.ngrok.addressCopied'), 'success');
+      notify.success(t('serverSettings.ngrok.addressCopied'));
     }
   };
 
