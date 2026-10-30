@@ -1430,6 +1430,7 @@ mod tests {
     use crate::commands::server_registry::{MinecraftServer, ServerRegistry};
     use crate::metric_history::MetricHistory;
     use crate::state::operation_manager::{OperationKind, ServerOperationManager};
+    use crate::test_support::test_temp_dir;
     use std::sync::Arc;
     use std::time::Instant;
     use tokio::process::Command;
@@ -1477,8 +1478,8 @@ mod tests {
 
     #[test]
     fn java_home_resolves_to_the_platform_executable() {
-        let root = std::env::temp_dir().join(format!(
-            "mc-vector-java-home-{}-{}",
+        let root = test_temp_dir("mc-vector-java-home-tests").join(format!(
+            "{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -1499,8 +1500,8 @@ mod tests {
 
     #[test]
     fn java_executable_paths_remain_validated_and_path_fallback_is_preserved() {
-        let root = std::env::temp_dir().join(format!(
-            "mc-vector-java-executable-{}-{}",
+        let root = test_temp_dir("mc-vector-java-executable-tests").join(format!(
+            "{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -1530,7 +1531,7 @@ mod tests {
     #[tokio::test]
     async fn start_configuration_rejects_unregistered_server_id() {
         let directory =
-            std::env::temp_dir().join(format!("mc-vector-start-profile-{}", uuid::Uuid::new_v4()));
+            test_temp_dir("mc-vector-start-profile-tests").join(uuid::Uuid::new_v4().to_string());
         let registry = ServerRegistry::open(&directory).expect("registry should open");
         registry
             .add_server(&registered_profile())
