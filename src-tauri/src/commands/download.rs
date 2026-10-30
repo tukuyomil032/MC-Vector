@@ -9,7 +9,7 @@ use tauri_plugin_store::StoreExt;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
-const USER_AGENT: &str = "MC-Vector/2.0.64-beta.2 (https://github.com/tukuyomil032/MC-Vector)";
+const USER_AGENT: &str = "MC-Vector/2.0.64 (https://github.com/tukuyomil032/MC-Vector)";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const RESPONSE_HEADERS_TIMEOUT: Duration = Duration::from_secs(30);
 const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(60);
