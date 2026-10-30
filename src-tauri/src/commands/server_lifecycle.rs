@@ -310,6 +310,7 @@ mod tests {
         ensure_server_stopped,
     };
     use crate::commands::server_registry::{JsonNumber, MinecraftServer, ServerRegistry};
+    use crate::test_support::test_temp_dir;
     use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;
@@ -320,7 +321,7 @@ mod tests {
     impl TempDirectory {
         fn new() -> Self {
             let path =
-                std::env::temp_dir().join(format!("mc-vector-server-lifecycle-{}", Uuid::new_v4()));
+                test_temp_dir("mc-vector-server-lifecycle-tests").join(Uuid::new_v4().to_string());
             fs::create_dir_all(&path).unwrap();
             Self(path)
         }
