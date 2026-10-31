@@ -248,15 +248,6 @@ export const en: TranslationDictionary = {
     units: {
       megabytes: 'MB',
     },
-    healthCheck: {
-      title: 'Server Health (SLP Ping)',
-      pinging: 'Pinging...',
-      online: 'Responding',
-      offline: 'No Response',
-      latency: 'Latency',
-      players: 'Players',
-      version: 'Version',
-    },
   },
 
   console: {
@@ -347,10 +338,6 @@ export const en: TranslationDictionary = {
       encoding: 'UTF-8',
       lineEnding: 'LF',
       readOnly: 'Read-only',
-      settings: 'Editor settings',
-      minimap: 'Minimap',
-      wordWrap: 'Word wrap',
-      loadFailed: 'Could not load file',
       plainText: 'Plain text',
       saveShortcut: 'Save ({shortcut})',
       unsupportedTitle: 'This file cannot be edited',
@@ -517,14 +504,9 @@ export const en: TranslationDictionary = {
       title: 'World Management',
       detected: 'Detected world data',
       empty: 'No deletable worlds found',
-      deleteButton: 'Delete World',
-      confirmDelete: 'Delete world "{name}"?',
-      deleteTitle: 'Delete World',
-      finalConfirm: 'This action cannot be undone. Have you confirmed that backups exist?',
       holdToDelete: 'Hold to delete',
       holdDone: 'Deleted',
       emptyDescription: 'Worlds appear here once the server folder contains level data.',
-      finalConfirmTitle: 'Final Confirmation',
       deleted: 'Deleted world {name}',
       deleteFailed: 'Failed to delete world',
     },
@@ -564,11 +546,7 @@ export const en: TranslationDictionary = {
   },
 
   users: {
-    title: 'User Management',
-    entriesCount: 'entries',
-    empty: 'Empty',
     lists: {
-      online: 'Online Players',
       whitelist: 'Whitelist',
       operators: 'Operators (OP)',
       bannedPlayers: 'Banned Players',
@@ -577,10 +555,7 @@ export const en: TranslationDictionary = {
     actions: {
       add: 'Add',
       remove: 'Remove',
-      kick: 'Kick',
-      ban: 'Ban',
     },
-    offlineNotice: 'Server is offline',
     notOnline: 'The server is not online',
     notOnlineHint: 'Changes are saved to the list and take effect the next time the server starts.',
     count: '{count} entries',
@@ -871,7 +846,6 @@ export const en: TranslationDictionary = {
   },
 
   proxySetup: {
-    title: 'Proxy Network Setup',
     proxySoftware: 'Proxy Software',
     velocityRecommended: 'Velocity (Recommended)',
     waterfall: 'Waterfall',
@@ -1310,7 +1284,6 @@ export const en: TranslationDictionary = {
       title: 'Copy Authtoken (Authentication Token)',
       description1: 'Click "Your Authtoken" from the left menu on the dashboard.',
       description2: 'Copy the long string starting with 2A... displayed at the top of the page.',
-      example: 'Example: 2Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxx',
       securityWarning:
         'Security Warning: This token is equivalent to a password. Do not paste it in chat or on stream screens.',
     },

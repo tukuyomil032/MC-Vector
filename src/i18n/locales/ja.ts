@@ -244,15 +244,6 @@ export const ja: TranslationDictionary = {
     units: {
       megabytes: 'MB',
     },
-    healthCheck: {
-      title: 'サーバーヘルス（SLP Ping）',
-      pinging: 'Ping中...',
-      online: '応答あり',
-      offline: '応答なし',
-      latency: 'レイテンシ',
-      players: 'プレイヤー',
-      version: 'バージョン',
-    },
   },
 
   console: {
@@ -343,10 +334,6 @@ export const ja: TranslationDictionary = {
       encoding: 'UTF-8',
       lineEnding: 'LF',
       readOnly: '読み取り専用',
-      settings: 'エディター設定',
-      minimap: 'ミニマップ',
-      wordWrap: '折り返し',
-      loadFailed: 'ファイルを読み込めませんでした',
       plainText: 'プレーンテキスト',
       saveShortcut: '保存（{shortcut}）',
       unsupportedTitle: 'このファイルは編集できません',
@@ -514,14 +501,9 @@ export const ja: TranslationDictionary = {
       title: 'ワールド管理',
       detected: 'レベルデータ検出済みワールド',
       empty: '削除可能なワールドが見つかりません',
-      deleteButton: 'ワールド削除',
-      confirmDelete: 'ワールド「{name}」を削除しますか？',
-      deleteTitle: 'ワールド削除',
       holdToDelete: '長押しで削除',
       holdDone: '削除しました',
       emptyDescription: 'サーバーフォルダーにワールドのデータがあると、ここに表示されます。',
-      finalConfirm: 'この操作は取り消せません。バックアップがあることを確認しましたか？',
-      finalConfirmTitle: '最終確認',
       deleted: 'ワールド {name} を削除しました',
       deleteFailed: 'ワールド削除に失敗しました',
     },
@@ -560,11 +542,7 @@ export const ja: TranslationDictionary = {
   },
 
   users: {
-    title: 'ユーザー管理',
-    entriesCount: '件',
-    empty: '空',
     lists: {
-      online: '接続中プレイヤー',
       whitelist: 'ホワイトリスト',
       operators: 'OP一覧',
       bannedPlayers: 'BANプレイヤー',
@@ -573,10 +551,7 @@ export const ja: TranslationDictionary = {
     actions: {
       add: '追加',
       remove: '削除',
-      kick: 'キック',
-      ban: 'BAN',
     },
-    offlineNotice: 'サーバーがオフラインです',
     notOnline: 'サーバーはオンラインではありません',
     notOnlineHint: '変更はリストに保存され、次回サーバーが起動したときに反映されます。',
     count: '{count} 件',
@@ -867,7 +842,6 @@ export const ja: TranslationDictionary = {
   },
 
   proxySetup: {
-    title: 'プロキシネットワーク構築',
     proxySoftware: 'プロキシソフトウェア',
     velocityRecommended: 'Velocity (推奨)',
     waterfall: 'Waterfall',
@@ -1311,7 +1285,6 @@ export const ja: TranslationDictionary = {
       description1: 'ダッシュボードの左メニューから "Your Authtoken" をクリックします。',
       description2:
         'ページ上部に表示されている 2A... などから始まる長い文字列をコピーしてください。',
-      example: '例: 2Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxx',
       securityWarning:
         'セキュリティ注意: このトークンはパスワード同等です。チャットや配信画面へ貼り付けないでください。',
     },

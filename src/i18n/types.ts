@@ -265,15 +265,6 @@ export interface TranslationDictionary {
       seriesMemory: string;
       seriesTps: string;
     };
-    healthCheck: {
-      title: string;
-      pinging: string;
-      online: string;
-      offline: string;
-      latency: string;
-      players: string;
-      version: string;
-    };
   };
 
   /** Console view translations */
@@ -366,10 +357,6 @@ export interface TranslationDictionary {
       encoding: string;
       lineEnding: string;
       readOnly: string;
-      settings: string;
-      minimap: string;
-      wordWrap: string;
-      loadFailed: string;
       plainText: string;
       saveShortcut: string;
       unsupportedTitle: string;
@@ -530,14 +517,9 @@ export interface TranslationDictionary {
       title: string;
       detected: string;
       empty: string;
-      deleteButton: string;
-      confirmDelete: string;
-      deleteTitle: string;
-      finalConfirm: string;
       holdToDelete: string;
       holdDone: string;
       emptyDescription: string;
-      finalConfirmTitle: string;
       deleted: string;
       deleteFailed: string;
     };
@@ -577,11 +559,7 @@ export interface TranslationDictionary {
 
   /** Users view translations */
   users: {
-    title: string;
-    entriesCount: string;
-    empty: string;
     lists: {
-      online: string;
       whitelist: string;
       operators: string;
       bannedPlayers: string;
@@ -590,10 +568,7 @@ export interface TranslationDictionary {
     actions: {
       add: string;
       remove: string;
-      kick: string;
-      ban: string;
     };
-    offlineNotice: string;
     notOnline: string;
     notOnlineHint: string;
     count: string;
@@ -865,7 +840,6 @@ export interface TranslationDictionary {
 
   /** Proxy setup view translations */
   proxySetup: {
-    title: string;
     proxySoftware: string;
     velocityRecommended: string;
     waterfall: string;
@@ -1294,7 +1268,6 @@ export interface TranslationDictionary {
       title: string;
       description1: string;
       description2: string;
-      example: string;
       securityWarning: string;
     };
     step3: {

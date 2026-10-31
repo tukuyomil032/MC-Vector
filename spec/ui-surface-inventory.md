@@ -538,7 +538,7 @@
 - [x] 使われていないもの: 再起動待ちの状態（アップデートの完了後に `settings.update.readyTitle` と `downloaded` で使われているため残した）
 - [x] 使われていないもの: テーマのキー（`settings.theme` を en、ja、types から削除した）
 - [x] 使われていないもの: `server.list.empty`（サーバーが0台の空の状態で使われているため残した）
-- [ ] 使われていないもの: `plugins.browser.*` の未使用キー21個など（後片付けのフェーズで扱う）
+- [x] 使われていないもの: `plugins.browser.*` の未使用キー25個を削除した。移行で使われなくなった `users.*`、`proxySetup.title`、`ngrokGuide.step2.example`、`files.editor.*` の4個、`backups.world.*` の5個、`dashboard.healthCheck`（全7個）も削除した。上記以外の名前空間の未使用キーは今回の対象外として残す
 
 ## 見つかった不具合
 
