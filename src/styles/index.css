@@ -8,7 +8,6 @@
 
 @import './layout/app-layout.css';
 
-@import './views/console-view.css';
 @import './views/backups-view.css';
 @import './views/dashboard-view.css';
 @import './views/java-manager-modal.css';
