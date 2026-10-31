@@ -1482,7 +1482,8 @@ fn directory_size_within(root: &Path, budget: Duration) -> Result<ManagedDirecto
                     continue;
                 }
             };
-            let metadata = match entry.path().symlink_metadata() {
+            // DirEntry::metadata never follows a symbolic link, the same as symlink_metadata, and needs no path.
+            let metadata = match entry.metadata() {
                 Ok(metadata) => metadata,
                 Err(_) => {
                     complete = false;
