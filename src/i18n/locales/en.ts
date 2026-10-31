@@ -992,6 +992,8 @@ export const en: TranslationDictionary = {
       latestVersion: 'Latest Version',
       alreadyLatest: 'Already up to date',
       stepCheck: 'Check',
+      unverifiedReason:
+        'The download is disabled because this release publishes no checksum, so the file cannot be verified before it replaces the server JAR.',
       blockedWhileRunning:
         'A backup or download is running. This window stays open until it finishes, so the server files are not left half-written.',
       stepsLabel: 'Upgrade steps',

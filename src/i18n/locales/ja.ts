@@ -989,6 +989,8 @@ export const ja: TranslationDictionary = {
       latestVersion: '最新バージョン',
       alreadyLatest: '最新バージョンです',
       stepCheck: '確認',
+      unverifiedReason:
+        'この版はチェックサムが公開されていないため、サーバーの JAR を差し替える前に検証できません。そのためダウンロードは無効です。',
       blockedWhileRunning:
         'バックアップまたはダウンロードの実行中です。サーバーのファイルを書きかけで残さないよう、完了するまでこの画面は閉じられません。',
       stepsLabel: 'アップグレードの手順',

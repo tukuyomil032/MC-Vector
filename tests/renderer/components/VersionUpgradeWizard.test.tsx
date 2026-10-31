@@ -122,6 +122,7 @@ describe('VersionUpgradeWizard Rust-owned install flow', () => {
     expect(
       screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runDownload' }),
     ).toBeDisabled();
+    expect(screen.getByText('serverSettings.versionUpgrade.unverifiedReason')).toBeInTheDocument();
     expect(executeServerJarInstallMock).not.toHaveBeenCalled();
   });
 

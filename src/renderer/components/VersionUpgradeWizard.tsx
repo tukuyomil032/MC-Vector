@@ -305,6 +305,13 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
         {step === 'download' && (
           <div className={styles.stack}>
             <p className={styles.text}>{t('serverSettings.versionUpgrade.downloadDescription')}</p>
+            {!verified && preparedPlanId !== null && (
+              <Alert
+                tone="warning"
+                open
+                title={t('serverSettings.versionUpgrade.unverifiedReason')}
+              />
+            )}
             {(processing || dlProgress > 0) && (
               <Progress
                 value={dlProgress}
