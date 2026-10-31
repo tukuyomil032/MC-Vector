@@ -35,9 +35,11 @@ import {
   createFolder,
   deleteItem,
   extractItem,
+  getManagedDirectorySize,
   importFilesDialog,
   importFilesFromPaths,
   listFilesWithMetadata,
+  type ManagedDirectorySize,
   moveItem,
   openInFinder,
   readFileContent,
@@ -137,9 +139,69 @@ function getUnsupportedReason(
   return null;
 }
 
+/** Folder sizes measured this session, by managed path. Only successful walks are kept, so a failed folder is measured again later. */
+const folderSizeCache = new Map<string, ManagedDirectorySize>();
+/** Folders measured at once. Each walk runs on a blocking thread, so a small number keeps the listing responsive. */
+const FOLDER_SIZE_CONCURRENCY = 2;
+
+/** A folder's measured size, or 'failed' when the walk could not run. */
+type FolderSizeResult = ManagedDirectorySize | 'failed';
+
+/** The folder-size cell: an ellipsis while the walk runs, a dash when it failed, and a plus when it stopped early. */
+function folderSizeLabel(result: FolderSizeResult | undefined, locale: string): string {
+  if (result === undefined) {
+    return '…';
+  }
+  if (result === 'failed') {
+    return '—';
+  }
+  return `${formatBytes(result.bytes, locale)}${result.complete ? '' : '+'}`;
+}
+
+/**
+ * Measures the folders of one listing in the background, a few at a time, and reports each result as it lands.
+ * A new listing stops the walks still queued for the old one, so a result never lands on the wrong listing.
+ */
+function useFolderSizes(folderKey: string): ReadonlyMap<string, FolderSizeResult> {
+  const [results, setResults] = useState<ReadonlyMap<string, FolderSizeResult>>(() => new Map());
+
+  useEffect(() => {
+    const queue = folderKey.split('\n').filter((path) => path !== '' && !folderSizeCache.has(path));
+    if (queue.length === 0) {
+      return;
+    }
+    let current = true;
+    const measureNext = async () => {
+      let path = queue.shift();
+      while (path !== undefined && current) {
+        const target = path;
+        try {
+          const size = await getManagedDirectorySize(target);
+          folderSizeCache.set(target, size);
+          if (current) setResults((prev) => new Map(prev).set(target, size));
+        } catch (error) {
+          logError('Failed to measure folder size', error, { path: target });
+          if (current) setResults((prev) => new Map(prev).set(target, 'failed'));
+        }
+        path = queue.shift();
+      }
+    };
+    for (let slot = 0; slot < Math.min(FOLDER_SIZE_CONCURRENCY, queue.length); slot += 1) {
+      void measureNext();
+    }
+    return () => {
+      current = false;
+    };
+  }, [folderKey]);
+
+  return results;
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
+  // The folder that `files` was listed from. It lags `currentPath` until the new listing arrives.
+  const [listedPath, setListedPath] = useState('');
   const [serversRootAbsPath, setServersRootAbsPath] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
@@ -166,6 +228,11 @@ export default function FilesView({ server }: Props) {
 
   const { t, locale } = useTranslation();
   const { confirm } = useAppFeedback();
+  const folderKey = files
+    .filter((file) => file.isDirectory)
+    .map((file) => joinManagedPath(listedPath, file.name))
+    .join('\n');
+  const folderSizeResults = useFolderSizes(folderKey);
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -249,6 +316,7 @@ export default function FilesView({ server }: Props) {
         return;
       }
       setFiles(entries);
+      setListedPath(path);
     } catch (e) {
       if (requestId !== filesRequestId.current) {
         return;
@@ -854,6 +922,7 @@ export default function FilesView({ server }: Props) {
         ) : (
           <div className={styles.list}>
             {files.map((file) => {
+              const filePath = joinManagedPath(listedPath, file.name);
               const selected = selectedFiles.includes(file.name);
               const rowClass = [styles.row, selected ? styles.rowSelected : '']
                 .filter(Boolean)
@@ -926,7 +995,12 @@ export default function FilesView({ server }: Props) {
                     )}
                     <span className={styles.name}>{file.name}</span>
                     <span className={styles.size}>
-                      {file.isDirectory ? '-' : formatBytes(file.size ?? 0, locale)}
+                      {file.isDirectory
+                        ? folderSizeLabel(
+                            folderSizeCache.get(filePath) ?? folderSizeResults.get(filePath),
+                            locale,
+                          )
+                        : formatBytes(file.size ?? 0, locale)}
                     </span>
                   </div>
                 </ContextMenu>

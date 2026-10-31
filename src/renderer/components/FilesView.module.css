@@ -140,7 +140,7 @@
 }
 
 .size {
-  min-width: 80px;
+  min-width: 6rem;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   text-align: right;
