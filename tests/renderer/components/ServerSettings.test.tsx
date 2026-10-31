@@ -57,17 +57,15 @@ const server = {
   status: 'offline',
 } as MinecraftServer;
 
-function renderSettings(overrides: Partial<MinecraftServer> = {}) {
-  const onSave = vi.fn().mockResolvedValue(undefined);
-  const view = render(
+function settingsElement(current: MinecraftServer, onSave = vi.fn().mockResolvedValue(undefined)) {
+  return (
     <ServerSettings
-      server={{ ...server, ...overrides }}
+      server={current}
       onSave={onSave}
       onServerVersionChanged={vi.fn()}
       onOpenNgrokGuide={vi.fn()}
-    />,
+    />
   );
-  return { ...view, onSave };
 }
 
 beforeEach(() => {
@@ -81,7 +79,7 @@ beforeEach(() => {
 
 describe('ServerSettings ngrok token', () => {
   it('keeps the stored token when the change-token dialog is cancelled', async () => {
-    renderSettings();
+    render(settingsElement(server));
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'serverSettings.ngrok.changeToken' }),
@@ -98,5 +96,37 @@ describe('ServerSettings ngrok token', () => {
     );
     expect(clearNgrokTokenMock).not.toHaveBeenCalled();
     expect(setNgrokTokenMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ServerSettings edits across server updates', () => {
+  it('keeps an unsaved name when the server status changes', () => {
+    const { rerender } = render(settingsElement(server));
+    const nameInput = screen.getByTestId('server-settings-name-input') as HTMLInputElement;
+    fireEvent.change(nameInput, { target: { value: 'Edited name' } });
+
+    rerender(settingsElement({ ...server, status: 'online' }));
+
+    expect(nameInput).toHaveValue('Edited name');
+  });
+
+  it('follows a server port change when the port field was not edited', () => {
+    const { rerender } = render(settingsElement(server));
+
+    rerender(settingsElement({ ...server, port: 25600 }));
+
+    expect(screen.getByLabelText('serverSettings.port')).toHaveValue(25600);
+  });
+
+  it('keeps an edited port when the saved server port changes underneath it', () => {
+    const { rerender } = render(settingsElement(server));
+    const portInput = screen.getByLabelText('serverSettings.port');
+    fireEvent.change(portInput, { target: { value: '25700' } });
+    // NumberField commits a typed value on blur or Enter.
+    fireEvent.blur(portInput);
+
+    rerender(settingsElement({ ...server, port: 25600 }));
+
+    expect(screen.getByLabelText('serverSettings.port')).toHaveValue(25700);
   });
 });

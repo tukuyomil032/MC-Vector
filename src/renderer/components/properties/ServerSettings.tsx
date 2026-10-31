@@ -11,7 +11,7 @@ import { Select, type SelectOption } from '@/components/arc/select/select';
 import { Switch } from '@/components/arc/switch/switch';
 import { Textarea } from '@/components/arc/textarea/textarea';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
 import {
@@ -93,6 +93,19 @@ function toForm(server: MinecraftServer): GeneralForm {
   };
 }
 
+/** Moves each field that still matches the previous server value onto the new one; edited fields are kept. */
+function rebaseForm(current: GeneralForm, previous: GeneralForm, next: GeneralForm): GeneralForm {
+  const moved = (Object.keys(next) as Array<keyof GeneralForm>).filter(
+    (key) => current[key] === previous[key] && current[key] !== next[key],
+  );
+  if (moved.length === 0) return current;
+  const result: GeneralForm = { ...current };
+  for (const key of moved) {
+    Object.assign(result, { [key]: next[key] });
+  }
+  return result;
+}
+
 /** Pairs each log line with a key that stays stable while the log grows. */
 function withStableKeys(lines: string[]) {
   const seen = new Map<string, number>();
@@ -128,9 +141,23 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  // The form is reset only when a different server is shown. For the same server (status, port or other churn),
+  // a field the user has not touched follows the new value, and a field the user edited keeps the edit.
+  const baselineRef = useRef<GeneralForm>(toForm(server));
+  const shownServerIdRef = useRef(server.id);
+
   useEffect(() => {
-    setForm(toForm(server));
-    void loadJavaList();
+    const next = toForm(server);
+    if (shownServerIdRef.current !== server.id) {
+      shownServerIdRef.current = server.id;
+      baselineRef.current = next;
+      setForm(next);
+      void loadJavaList();
+      return;
+    }
+    const previous = baselineRef.current;
+    baselineRef.current = next;
+    setForm((current) => rebaseForm(current, previous, next));
   }, [server]);
 
   useEffect(() => {
