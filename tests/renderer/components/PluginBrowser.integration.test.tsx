@@ -200,6 +200,35 @@ describe('PluginBrowser feedback integration', () => {
     expect(pluginCommands.searchSpigot).toHaveBeenCalledWith('', 1, 25, signal, '1.21.4');
   });
 
+  it("does not keep another provider's results as placeholder data while a new provider loads", async () => {
+    render(
+      <AppFeedbackProvider>
+        <PluginBrowser server={server} />
+      </AppFeedbackProvider>,
+    );
+    const options = queryState.useQuery.mock.calls.at(-1)?.[0] as {
+      placeholderData: (previous: unknown, previousQuery: unknown) => unknown;
+    };
+    const previousData = { items: [incompatibleItem], hasNextPage: false, totalPages: 1 };
+    const previousKey = (platform: string) => [
+      'plugin-search',
+      platform,
+      '',
+      0,
+      'server-1',
+      '/managed/server-1',
+      '1.21.4',
+      false,
+    ];
+
+    expect(options.placeholderData(previousData, { queryKey: previousKey('Hangar') })).toBe(
+      undefined,
+    );
+    expect(options.placeholderData(previousData, { queryKey: previousKey('Modrinth') })).toBe(
+      previousData,
+    );
+  });
+
   it('uses backend unknown Modrinth status instead of assuming search hits are compatible', async () => {
     queryState.useQuery.mockReturnValue({
       data: {

@@ -585,8 +585,10 @@ export default function PluginBrowser({ server }: Props) {
     retry: 1,
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 1_000),
     refetchOnWindowFocus: false,
+    // Only reuse the previous data for the same provider; another provider's hits must never show as this one's.
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[4] === server.id &&
+      previousQuery?.queryKey[1] === platform &&
+      previousQuery.queryKey[4] === server.id &&
       previousQuery.queryKey[5] === server.path &&
       previousQuery.queryKey[6] === server.version
         ? previous
