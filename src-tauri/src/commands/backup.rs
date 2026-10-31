@@ -5,7 +5,7 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -99,6 +99,9 @@ struct BackupManifest {
     file_count: u64,
     total_bytes: u64,
     entries: Vec<BackupManifestEntry>,
+    /// How long the archive took to build, in milliseconds. Archives written before this field existed have none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    duration_ms: Option<u64>,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -125,6 +128,9 @@ pub struct BackupRecord {
     pub archive_sha256: String,
     pub manifest_version: u32,
     pub restore_eligible: bool,
+    /// How long the archive took to build, in milliseconds. Records from before durations were kept have none.
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
 }
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -264,6 +270,11 @@ fn timestamp_millis() -> String {
         .unwrap_or_else(|_| "0".to_string())
 }
 
+/// Whole milliseconds since `started`, saturating instead of overflowing.
+fn elapsed_millis_since(started: Instant) -> u64 {
+    u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX)
+}
+
 fn archive_hash(path: &Path) -> Result<String, String> {
     hash_file(path)
 }
@@ -290,6 +301,7 @@ fn backup_record_from_manifest(
         archive_sha256,
         manifest_version: manifest.format_version,
         restore_eligible: manifest.consistency == "quiesced",
+        duration_ms: manifest.duration_ms,
     })
 }
 
@@ -1072,6 +1084,9 @@ async fn create_backup_with_cancellation(
     let origin = origin.clone();
     let app_clone = app.clone();
     tokio::task::spawn_blocking(move || {
+        // Measured up to the manifest: source collection and the archive writes. Finishing the zip and the
+        // catalog rebuild are not included.
+        let started = Instant::now();
         check_backup_cancellation(cancellation.as_deref())?;
         let source_metadata = fs::symlink_metadata(&source_path)
             .map_err(|error| format!("Failed to inspect source directory: {error}"))?;
@@ -1180,6 +1195,7 @@ async fn create_backup_with_cancellation(
                     file_count: manifest_entries.len() as u64,
                     total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
                     entries: manifest_entries,
+                    duration_ms: Some(elapsed_millis_since(started)),
                 };
                 let manifest_bytes = serde_json::to_vec(&manifest)
                     .map_err(|error| format!("Failed to serialize backup manifest: {error}"))?;
@@ -2953,6 +2969,7 @@ mod tests {
                 file_count: manifest_entries.len() as u64,
                 total_bytes: manifest_entries.iter().map(|entry| entry.size).sum(),
                 entries: manifest_entries,
+                duration_ms: None,
             };
             let manifest_bytes = serde_json::to_vec(&manifest)
                 .map_err(|error| format!("Failed to serialize test manifest: {error}"))?;
@@ -4070,5 +4087,73 @@ mod tests {
         let file = archive.by_index(0).expect("read entry");
         assert!(file.is_symlink());
         assert!(validate_zip_entry(&file, &mut totals, ARCHIVE_POLICY).is_err());
+    }
+
+    #[test]
+    fn backup_duration_flows_from_the_manifest_into_the_catalog_record() {
+        let manifest: BackupManifest = serde_json::from_value(serde_json::json!({
+            "formatVersion": 2,
+            "backupId": "backup-1",
+            "serverId": "server-1",
+            "kind": "full",
+            "consistency": "quiesced",
+            "origin": "manual",
+            "createdAt": "1700000000000",
+            "rootFingerprint": "unused",
+            "fileCount": 0,
+            "totalBytes": 0,
+            "entries": [],
+            "durationMs": 4321
+        }))
+        .expect("parse manifest with a duration");
+        assert_eq!(manifest.duration_ms, Some(4321));
+
+        let record = backup_record_from_manifest(
+            manifest,
+            Path::new("/backups/nightly.zip"),
+            "0".repeat(64),
+        )
+        .expect("build record from manifest");
+        assert_eq!(record.duration_ms, Some(4321));
+        let value = serde_json::to_value(&record).expect("serialize record");
+        assert_eq!(value["durationMs"], serde_json::json!(4321));
+    }
+
+    #[test]
+    fn backups_without_a_recorded_duration_still_load_and_stay_unset() {
+        let legacy_manifest: BackupManifest = serde_json::from_value(serde_json::json!({
+            "formatVersion": 2,
+            "backupId": "backup-1",
+            "serverId": "server-1",
+            "kind": "full",
+            "consistency": "quiesced",
+            "origin": "manual",
+            "createdAt": "1700000000000",
+            "rootFingerprint": "unused",
+            "fileCount": 0,
+            "totalBytes": 0,
+            "entries": []
+        }))
+        .expect("parse legacy manifest without a duration");
+        assert_eq!(legacy_manifest.duration_ms, None);
+        let manifest_value = serde_json::to_value(&legacy_manifest).expect("serialize manifest");
+        assert!(manifest_value.get("durationMs").is_none());
+
+        let legacy_record: BackupRecord = serde_json::from_value(serde_json::json!({
+            "backupId": "backup-1",
+            "serverId": "server-1",
+            "archivePath": "nightly.zip",
+            "kind": "full",
+            "consistency": "quiesced",
+            "origin": "manual",
+            "createdAt": "1700000000000",
+            "fileCount": 0,
+            "totalBytes": 0,
+            "archiveSha256": "0000",
+            "manifestVersion": 2,
+            "restoreEligible": true
+        }))
+        .expect("parse legacy catalog record");
+        assert_eq!(legacy_record.duration_ms, None);
     }
 }
