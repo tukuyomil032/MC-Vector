@@ -231,7 +231,6 @@ export const ja: TranslationDictionary = {
       notFoundHint: '別のレベルを選ぶと、ほかのログを表示できます。',
     },
     filter: {
-      label: 'レベル',
       ariaLabel: 'ログレベルフィルター',
       all: 'すべて',
     },
@@ -252,10 +251,8 @@ export const ja: TranslationDictionary = {
       unpin: '解除',
     },
     status: {
-      address: 'アドレス',
       clickToCopy: 'クリックしてコピー',
       copied: 'コピーしました',
-      status: '状態',
       memory: 'メモリ',
     },
     memory: {

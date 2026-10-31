@@ -256,7 +256,6 @@ export interface TranslationDictionary {
       notFoundHint: string;
     };
     filter: {
-      label: string;
       ariaLabel: string;
       all: string;
     };
@@ -277,10 +276,8 @@ export interface TranslationDictionary {
       unpin: string;
     };
     status: {
-      address: string;
       clickToCopy: string;
       copied: string;
-      status: string;
       memory: string;
     };
     memory: {

@@ -28,31 +28,40 @@
   font-family: var(--font-body);
 }
 
-.statusStrip {
+/* One toolbar: address, status, and memory on the left; search, level, and save on the right. It wraps when narrow. */
+.toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  min-height: var(--control-height-sm);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
   background: var(--surface-raised);
 }
 
-.statusCol {
+.toolbarGroup {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   min-width: 0;
-  padding-right: var(--space-4);
 }
 
-.statusColDivider {
-  border-right: 1px solid var(--border-subtle);
+.divider {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  background: var(--border);
 }
 
-.statusLabel {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
+/* The square icon buttons match the height of the small toolbar controls. */
+.toolbar .iconButton {
+  width: var(--control-height-sm);
+  min-width: var(--control-height-sm);
+  padding: 0;
 }
 
 .address {
@@ -91,24 +100,95 @@
   color: var(--success);
 }
 
+.statusItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The status dot takes its color from the token for each server state. */
+.statusDot {
+  --dot-color: var(--text-muted);
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--dot-color);
+}
+
+.statusDot[data-status='online'] {
+  --dot-color: var(--success);
+}
+
+.statusDot[data-status='crashed'] {
+  --dot-color: var(--danger);
+}
+
+.statusDot[data-status='starting'],
+.statusDot[data-status='stopping'],
+.statusDot[data-status='restarting'] {
+  --dot-color: var(--warning);
+}
+
 .statusValue {
-  color: var(--text-secondary);
+  color: var(--foreground);
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.statusValue[data-status='online'] {
-  color: var(--success);
+.memoryItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
 }
 
-.statusValue[data-status='crashed'] {
+.itemLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.memoryValue {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.searchOpen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The search field takes the small control height so it lines up with the buttons beside it. */
+.searchWrap {
+  --control-height-md: var(--control-height-sm);
+  position: relative;
+  width: 200px;
+  min-width: 0;
+}
+
+/* The field keeps its label for screen readers; the toolbar shows only the input. */
+.searchWrap label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.matchCount {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.searchError {
   color: var(--danger);
-}
-
-.statusValue[data-status='starting'],
-.statusValue[data-status='stopping'],
-.statusValue[data-status='restarting'] {
-  color: var(--warning);
+  font-size: var(--text-sm);
 }
 
 .logViewport {
@@ -279,26 +359,6 @@
   background: var(--surface-raised);
 }
 
-.commandActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.filterLabel {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-}
-
 .commandEntry {
   display: flex;
   align-items: center;
@@ -328,45 +388,4 @@
 .historyHint {
   color: var(--text-muted);
   font-size: var(--text-xs);
-}
-
-.searchStrip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  background: var(--surface-raised);
-}
-
-.searchField {
-  flex: 1 1 220px;
-  min-width: 180px;
-}
-
-.searchPlaceholder {
-  display: inline-flex;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-.matchCount {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.searchError {
-  color: var(--danger);
-  font-size: var(--text-sm);
-}
-
-.memoryValue {
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
 }

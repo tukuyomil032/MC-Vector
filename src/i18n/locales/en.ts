@@ -235,7 +235,6 @@ export const en: TranslationDictionary = {
       notFoundHint: 'Choose another level to see more lines.',
     },
     filter: {
-      label: 'Level',
       ariaLabel: 'Log level filter',
       all: 'All',
     },
@@ -256,10 +255,8 @@ export const en: TranslationDictionary = {
       unpin: 'Unpin',
     },
     status: {
-      address: 'ADDRESS',
       clickToCopy: 'Click to Copy',
       copied: 'Copied',
-      status: 'STATUS',
       memory: 'MEMORY',
     },
     memory: {
