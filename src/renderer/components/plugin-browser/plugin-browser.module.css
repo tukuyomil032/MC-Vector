@@ -147,7 +147,6 @@
 
 .cardDescription {
   display: -webkit-box;
-  min-height: 3em;
   margin: var(--space-1) 0 0;
   overflow: hidden;
   color: var(--text-secondary);
