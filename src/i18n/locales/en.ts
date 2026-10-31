@@ -408,6 +408,13 @@ export const en: TranslationDictionary = {
     title: 'Backup Management',
     createButton: '+ Create Backup',
     empty: 'No backups yet',
+    emptyDescription: 'Create a backup to keep a restore point for this server.',
+    units: {
+      b: 'B',
+      kb: 'KB',
+      mb: 'MB',
+      gb: 'GB',
+    },
     processing: 'Processing...',
     parent: 'Parent',
     confirmDelete: 'Delete backup "{name}"?',

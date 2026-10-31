@@ -1,7 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useTranslation } from '../../i18n';
+import { Badge } from '@/components/arc/badge/badge';
+import { Button } from '@/components/arc/button/button';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Skeleton } from '@/components/arc/skeleton/skeleton';
+import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import {
   applyBackupRetention,
   createBackup,
@@ -24,8 +29,8 @@ import {
 } from '../../store/backupOperationStore';
 import { buildManualBackupName } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
-import { Button } from './ui/Button';
 import { Input, NativeSelect, Textarea } from './ui/Field';
+import styles from './BackupsView.module.css';
 
 interface Props {
   server: MinecraftServer;
@@ -175,6 +180,26 @@ function sanitizeCatalog(value: unknown): BackupCatalog {
   };
 }
 
+const SIZE_UNITS = ['b', 'kb', 'mb', 'gb'] as const;
+const SIZE_UNIT_KEYS: Record<(typeof SIZE_UNITS)[number], TranslationKey> = {
+  b: 'backups.units.b',
+  kb: 'backups.units.kb',
+  mb: 'backups.units.mb',
+  gb: 'backups.units.gb',
+};
+
+function formatBackupSize(bytes: number, t: Translate, locale: string): string {
+  if (bytes <= 0) {
+    return `0 ${t(SIZE_UNIT_KEYS.b)}`;
+  }
+  const index = Math.min(SIZE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const value = bytes / 1024 ** index;
+  const formatted = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: index === 0 ? 0 : 2,
+  }).format(value);
+  return `${formatted} ${t(SIZE_UNIT_KEYS[SIZE_UNITS[index]])}`;
+}
+
 function parseTagsInput(value: string): string[] {
   return value
     .split(',')
@@ -196,7 +221,7 @@ export async function persistBackupCatalogBestEffort(
 }
 
 export default function BackupsView({ server }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { confirm } = useAppFeedback();
   const activeManualOperation = useBackupOperationStore(
     (state) => state.activeManualOperations[server.id],
@@ -1337,27 +1362,16 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) {
-      return '0 B';
-    }
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-  };
-
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString();
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(date),
+    );
   };
 
   return (
-    <div
-      className="backups-view flex h-full flex-col gap-4 p-5 max-[900px]:p-4"
-      data-testid="backups-view"
-    >
-      <div className="backups-view__header">
-        <h3>{t('backups.title')}</h3>
+    <div className={styles.page} data-testid="backups-view">
+      <header className={styles.header}>
+        <h2 className={styles.title}>{t('backups.title')}</h2>
         <Button
           variant="primary"
           data-testid="backups-create-button"
@@ -1366,90 +1380,87 @@ export default function BackupsView({ server }: Props) {
         >
           {isProcessing ? t('backups.processing') : t('backups.createButton')}
         </Button>
-      </div>
+      </header>
 
-      <div className="backups-view__list-panel" ref={listParentRef}>
-        {loading && <div className="p-5 text-center">{t('common.loading')}</div>}
+      <div className={styles.list} ref={listParentRef}>
+        {loading && <Skeleton label={t('common.loading')} lines={3} />}
 
         {!loading && backups.length === 0 && (
-          <div className="backups-view__empty">{t('backups.empty')}</div>
+          <EmptyState title={t('backups.empty')} description={t('backups.emptyDescription')} />
         )}
 
         {!loading && backups.length > 0 && (
           <div style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}>
             {backupVirtualizer.getVirtualItems().map((virtualRow) => {
               const backup = backups[virtualRow.index];
+              const meta = getBackupMeta(backup.name);
               return (
                 <div
                   key={backup.name}
                   ref={backupVirtualizer.measureElement}
                   data-index={virtualRow.index}
                   data-testid={`backup-row-${backup.name}`}
-                  className="backups-view__item-row"
+                  className={styles.row}
                   style={{ position: 'absolute', top: virtualRow.start, left: 0, width: '100%' }}
                 >
-                  <div className="text-2xl">📦</div>
+                  <span className={styles.rowIcon} aria-hidden="true">
+                    <Package size={18} />
+                  </span>
 
-                  <div className="flex-1">
-                    <div className="font-bold text-base text-text-primary">{backup.name}</div>
-                    <div className="text-sm text-text-secondary mt-1">
-                      {formatDate(backup.date)}
-                    </div>
-                    <div className="backups-view__item-meta mt-2">
-                      <span
-                        className={`backups-view__mode-badge ${
-                          getBackupMeta(backup.name).mode === 'differential' ? 'is-diff' : ''
-                        }`}
-                      >
-                        {getBackupMeta(backup.name).mode === 'differential'
+                  <div className={styles.rowMain}>
+                    <div className={styles.rowHead}>
+                      <span className={styles.rowName}>{backup.name}</span>
+                      <Badge tone="neutral" size="sm">
+                        {meta.mode === 'differential'
                           ? t('backups.mode.differential')
                           : t('backups.mode.full')}
-                      </span>
-
-                      {getBackupMeta(backup.name).parent && (
-                        <span className="backups-view__parent-label">
-                          {t('backups.parent')}: {getBackupMeta(backup.name).parent}
-                        </span>
-                      )}
-
-                      {getBackupMeta(backup.name).tags.map((tag) => (
-                        <span key={`${backup.name}-${tag}`} className="backups-view__tag-chip">
-                          {tag}
-                        </span>
-                      ))}
+                      </Badge>
                     </div>
 
-                    {getBackupMeta(backup.name).note && (
-                      <div className="backups-view__item-note mt-1.5">
-                        {getBackupMeta(backup.name).note}
+                    <div className={styles.rowMeta}>
+                      <span>{formatDate(backup.date)}</span>
+                      <span>{formatBackupSize(backup.size, t, locale)}</span>
+                      {meta.parent && (
+                        <span>
+                          {t('backups.parent')}: {meta.parent}
+                        </span>
+                      )}
+                    </div>
+
+                    {meta.tags.length > 0 && (
+                      <div className={styles.tags}>
+                        {meta.tags.map((tag) => (
+                          <Badge key={`${backup.name}-${tag}`} tone="neutral" size="sm">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
                     )}
+
+                    {meta.note && <p className={styles.rowNote}>{meta.note}</p>}
                   </div>
 
-                  <div className="text-text-secondary text-sm w-20 text-right">
-                    {formatSize(backup.size)}
-                  </div>
-
-                  <div className="flex gap-2.5">
+                  <div className={styles.rowActions}>
                     <Button
                       variant="secondary"
-                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                      size="sm"
                       onClick={() => handleRestore(backup.name)}
                       disabled={isProcessing}
                     >
                       {t('backups.actions.restore')}
                     </Button>
                     <Button
-                      variant="secondary"
-                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openTagEditor(backup.name)}
                       disabled={isProcessing}
                     >
                       {t('backups.actions.tag')}
                     </Button>
                     <Button
-                      variant="stop"
-                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                      variant="ghost"
+                      size="sm"
+                      className={styles.dangerAction}
                       onClick={() => handleDelete(backup.name)}
                       disabled={isProcessing || catalogLoadState !== 'ready'}
                     >
@@ -1477,8 +1488,8 @@ export default function BackupsView({ server }: Props) {
               <div className="backups-view__world-name">🌍 {worldName}</div>
               <Button
                 type="button"
-                variant="stop"
-                className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                variant="danger"
+                size="sm"
                 onClick={() => void handleDeleteWorld(worldName)}
                 disabled={isProcessing}
               >

@@ -404,6 +404,13 @@ export const ja: TranslationDictionary = {
     title: 'バックアップ管理',
     createButton: '+ バックアップ作成',
     empty: 'バックアップはまだありません',
+    emptyDescription: 'バックアップを作成すると、このサーバーの復元ポイントを残せます。',
+    units: {
+      b: 'B',
+      kb: 'KB',
+      mb: 'MB',
+      gb: 'GB',
+    },
     processing: '処理中...',
     parent: '親',
     confirmDelete: 'バックアップ「{name}」を削除しますか？',

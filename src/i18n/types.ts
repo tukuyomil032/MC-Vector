@@ -428,6 +428,13 @@ export interface TranslationDictionary {
     title: string;
     createButton: string;
     empty: string;
+    emptyDescription: string;
+    units: {
+      b: string;
+      kb: string;
+      mb: string;
+      gb: string;
+    };
     processing: string;
     parent: string;
     confirmDelete: string;
