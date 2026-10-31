@@ -12,6 +12,7 @@ import { RadioGroup } from '@/components/arc/radio-group/radio-group';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control';
 import { Textarea } from '@/components/arc/textarea/textarea';
+import { FieldLabel, HintIcon } from '../ui/FieldLabel';
 import { LOG_LEVELS, LabCaption, MINECRAFT_VERSIONS } from './shared';
 
 export function SegmentedControlDemo() {
@@ -210,6 +211,30 @@ export function ButtonGroupDemo() {
         }}
       />
       <LabCaption>{last}</LabCaption>
+    </div>
+  );
+}
+
+export function FieldLabelDemo() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="flex flex-col gap-2">
+        <FieldLabel
+          label="ポート"
+          required
+          hint="プレイヤーが最初に接続するポートです。1 から 65535 の間で指定します。"
+        />
+        <LabCaption>
+          ラベルの右の情報アイコンに、ホバーまたはフォーカスすると説明が出ます。
+        </LabCaption>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-[var(--foreground)]">起動時に自動で開始</span>
+          <HintIcon hint="サーバーを起動したときに、自動で開始します。" />
+        </div>
+        <LabCaption>スイッチの横などラベルだけのときは HintIcon を使います。</LabCaption>
+      </div>
     </div>
   );
 }

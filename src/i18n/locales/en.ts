@@ -20,6 +20,7 @@ export const en: TranslationDictionary = {
     copy: 'Copy',
     reload: 'Reload',
     notifications: 'Notifications',
+    moreInfo: 'More info',
   },
 
   settings: {

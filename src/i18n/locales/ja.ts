@@ -20,6 +20,7 @@ export const ja: TranslationDictionary = {
     copy: 'コピー',
     reload: '再読み込み',
     notifications: '通知',
+    moreInfo: '詳細',
   },
 
   settings: {

@@ -41,6 +41,8 @@ export interface TranslationDictionary {
     reload: string;
     /** Accessible name of the notification region */
     notifications: string;
+    /** Accessible name of the info button that shows a field hint */
+    moreInfo: string;
   };
 
   /** Settings page translations */

@@ -16,6 +16,7 @@ import {
   ChipGroupDemo,
   ComboboxDemo,
   CopyButtonDemo,
+  FieldLabelDemo,
   NumberFieldDemo,
   PasswordFieldDemo,
   RadioCardsDemo,
@@ -89,6 +90,9 @@ export default function UiLabView() {
             <DialogToastSection />
           </LabSection>
 
+          <LabSection title="Field label and hint">
+            <FieldLabelDemo />
+          </LabSection>
           <LabSection title="Segmented control">
             <SegmentedControlDemo />
           </LabSection>
