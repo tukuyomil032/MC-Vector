@@ -19,7 +19,8 @@
 .header {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  /* Bottom-aligned, so the save button lines up with the search field rather than with its label. */
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3) var(--space-5);
 }
@@ -29,7 +30,7 @@
   min-width: 0;
   flex: 1 1 auto;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-3) var(--space-5);
 }
 
