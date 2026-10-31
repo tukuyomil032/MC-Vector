@@ -119,10 +119,6 @@ export const ja: TranslationDictionary = {
     },
     eula: {
       title: 'Minecraft EULA に同意しますか？',
-      description: '{name} を起動する前に、Minecraft EULA を確認して同意してください。',
-      fileMissing: 'このサーバーには eula.txt がまだ作成されていません。',
-      fileNotAccepted: 'このサーバーの eula.txt はまだ承認されていません。',
-      explanation: 'サーバーは Minecraft EULA への同意を eula.txt に記録してから起動します。',
       openLink: '公式の Minecraft EULA を読む',
       consentLabel: 'Minecraft EULA を読み、内容に同意します。',
       acceptAndStart: '同意して起動',

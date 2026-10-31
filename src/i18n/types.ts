@@ -142,10 +142,6 @@ export interface TranslationDictionary {
     };
     eula: {
       title: string;
-      description: string;
-      fileMissing: string;
-      fileNotAccepted: string;
-      explanation: string;
       openLink: string;
       consentLabel: string;
       acceptAndStart: string;

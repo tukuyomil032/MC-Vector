@@ -4,13 +4,10 @@
   gap: var(--space-4);
 }
 
-.body p {
-  margin: 0 0 var(--space-2);
-}
-
 /* The official link is a real anchor that opens through the opener plugin, with a tap target near 44px. */
 .link {
   display: inline-flex;
+  align-self: flex-start;
   min-height: 2.75rem;
   align-items: center;
   color: var(--accent);

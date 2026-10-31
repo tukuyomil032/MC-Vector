@@ -120,11 +120,6 @@ export const en: TranslationDictionary = {
     },
     eula: {
       title: 'Accept the Minecraft EULA?',
-      description: 'Before starting {name}, review and accept the Minecraft EULA.',
-      fileMissing: 'This server does not have an eula.txt file yet.',
-      fileNotAccepted: 'This server’s eula.txt file is not accepted yet.',
-      explanation:
-        'The server will create and use eula.txt to record this server’s agreement to the Minecraft EULA.',
       openLink: 'Read the official Minecraft EULA',
       consentLabel: 'I have read the Minecraft EULA and agree to it.',
       acceptAndStart: 'Accept and start',
