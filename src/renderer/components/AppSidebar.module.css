@@ -75,15 +75,22 @@
   background: var(--surface);
 }
 
+/* The nav takes the sidebar's spare height, capped so a tall window does not stretch it. Its items are spread
+   evenly over that height. Each item sits in its own wrapper div, and those wrappers are the flex children
+   that get the spacing. The bottom margin keeps the gap above the server panel when there is no spare height. */
 .nav {
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  max-height: 34rem;
+  justify-content: space-evenly;
   gap: 2px;
   padding: var(--space-2);
-  margin: 0 var(--space-2);
+  margin: 0 var(--space-2) var(--space-2);
 }
 
-/* In the 60px rail the panel shrinks to fit the icon column. */
+/* In the 60px rail the panel stays at its content height, with the icons at the top. */
 .navRail {
+  flex: 0 0 auto;
+  justify-content: flex-start;
   margin: 0 var(--space-1);
   padding: var(--space-1);
 }
@@ -95,7 +102,7 @@
   gap: var(--space-3);
   box-sizing: border-box;
   width: 100%;
-  height: 2.25rem;
+  height: 2.5rem;
   margin: 0;
   padding: 0 var(--space-3);
   border: 0;
@@ -161,13 +168,15 @@
   background: var(--border);
 }
 
-/* The server panel takes the sidebar's spare height. Its list scrolls inside the panel, and the add row sits right under the list. */
+/* The server panel is sized to its content and pinned to the bottom of the sidebar, under the nav, which takes the
+   spare height. Its list scrolls past a cap, and the add row sits right under the list. */
 .serversPanel {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
   margin: var(--space-2) var(--space-2) var(--space-3);
+  margin-top: auto;
   padding: var(--space-2);
   overflow: hidden;
 }
@@ -187,10 +196,11 @@
   text-transform: uppercase;
 }
 
-/* Takes its content height and shrinks only when the panel runs out of room, then scrolls. */
+/* Takes its content height up to 14rem (or 40% of the viewport), then scrolls. */
 .serverList {
   flex: 0 1 auto;
   min-height: 0;
+  max-height: min(14rem, 40vh);
   overflow-y: auto;
   padding: var(--space-1) 0;
 }
