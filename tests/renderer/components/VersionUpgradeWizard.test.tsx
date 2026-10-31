@@ -179,8 +179,11 @@ describe('VersionUpgradeWizard Rust-owned install flow', () => {
 
     act(() => emitBackupProgress?.({ serverId: server.id, progress: 42 }));
 
-    expect(screen.getByText('42%')).toBeInTheDocument();
-    expect(screen.queryByText('4200%')).not.toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', {
+      name: 'serverSettings.versionUpgrade.backupProgressLabel',
+    });
+    expect(bar).toHaveAttribute('aria-valuemax', '100');
+    expect(bar).toHaveAttribute('aria-valuenow', '42');
     finishBackup?.({ status: 'created', backupName: 'pre-upgrade.zip', catalogError: null });
   });
 

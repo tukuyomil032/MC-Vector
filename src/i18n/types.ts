@@ -980,6 +980,10 @@ export interface TranslationDictionary {
       currentVersion: string;
       latestVersion: string;
       alreadyLatest: string;
+      stepCheck: string;
+      stepsLabel: string;
+      backupProgressLabel: string;
+      downloadProgressLabel: string;
       serverMustBeOffline: string;
       startUpgrade: string;
       stepBackup: string;
