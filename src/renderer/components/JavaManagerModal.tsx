@@ -189,6 +189,11 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
               );
             })}
           </div>
+          {downloading !== null && (
+            <p role="status" className={styles.status} data-testid="java-download-status">
+              {t('javaManager.downloadStatus', { version: downloading })}
+            </p>
+          )}
         </section>
 
         <section className={styles.manual}>
