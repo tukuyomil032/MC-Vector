@@ -1,105 +1,116 @@
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Card } from '@/components/arc/card/card';
+import { CodeBlock } from '@/components/arc/code-block/code-block';
+import { ArrowLeft, Check, ExternalLink } from 'lucide-react';
 import { useTranslation } from '../../i18n';
-import { Button } from './ui/Button';
+import { useUiStore } from '../../store/uiStore';
+import { openGuideLink } from '../shared/guide-links';
+import { notify } from '../shared/notify';
+import { GuideStep } from './GuideStep';
+import styles from './GuideView.module.css';
 
 export default function NgrokGuideView() {
   const { t } = useTranslation();
+  const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
-  const openLink = (url: string) => {
-    window.open(url, '_blank');
+  const openLink = async (url: string) => {
+    if (!(await openGuideLink(url))) {
+      notify.error(t('ngrokGuide.openLinkFailed'));
+    }
   };
 
+  const checklistItems = [
+    t('ngrokGuide.checklist.item1'),
+    t('ngrokGuide.checklist.item2'),
+    t('ngrokGuide.checklist.item3'),
+  ];
+
   return (
-    <div
-      className="ngrok-guide-view box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
-      data-testid="ngrok-guide-view"
-    >
-      <h1 className="ngrok-guide-view__title">🌐 {t('ngrokGuide.title')}</h1>
-
-      <div className="ngrok-guide-view__intro">
-        <p className="ngrok-guide-view__intro-text">
-          {t('ngrokGuide.introText')}
-          <br />
-          {t('ngrokGuide.introRequirements')}
-        </p>
-      </div>
-
-      <div className="ngrok-guide-view__summary-grid">
-        <div className="ngrok-guide-view__summary-card">
-          <div className="ngrok-guide-view__summary-label">
-            {t('ngrokGuide.summary.requirementsLabel')}
-          </div>
-          <div className="ngrok-guide-view__summary-value">
-            {t('ngrokGuide.summary.requirementsValue')}
-          </div>
-          <div className="ngrok-guide-view__summary-note">
-            {t('ngrokGuide.summary.requirementsNote')}
-          </div>
+    <div className={styles.root} data-testid="ngrok-guide-view">
+      <div className={styles.inner}>
+        <div className={styles.topbar}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="guide-back-button"
+            onClick={returnToPreviousView}
+          >
+            <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+            {t('common.back')}
+          </Button>
         </div>
-        <div className="ngrok-guide-view__summary-card">
-          <div className="ngrok-guide-view__summary-label">
-            {t('ngrokGuide.summary.obtainLabel')}
-          </div>
-          <div className="ngrok-guide-view__summary-value">
-            {t('ngrokGuide.summary.obtainValue')}
-          </div>
-          <div className="ngrok-guide-view__summary-note">{t('ngrokGuide.summary.obtainNote')}</div>
+
+        <p className={styles.intro}>
+          {t('ngrokGuide.introText')} {t('ngrokGuide.introRequirements')}
+        </p>
+
+        <div className={styles.summary}>
+          <Card title={t('ngrokGuide.summary.requirementsLabel')} className={styles.card}>
+            <p className={styles.value}>{t('ngrokGuide.summary.requirementsValue')}</p>
+            <p className={styles.note}>{t('ngrokGuide.summary.requirementsNote')}</p>
+          </Card>
+          <Card title={t('ngrokGuide.summary.obtainLabel')} className={styles.card}>
+            <p className={styles.value}>{t('ngrokGuide.summary.obtainValue')}</p>
+            <p className={styles.note}>{t('ngrokGuide.summary.obtainNote')}</p>
+          </Card>
+          <Card title={t('ngrokGuide.summary.shareLabel')} className={styles.card}>
+            <p className={styles.value}>tcp://host:port</p>
+            <p className={styles.note}>{t('ngrokGuide.summary.shareNote')}</p>
+          </Card>
         </div>
-        <div className="ngrok-guide-view__summary-card">
-          <div className="ngrok-guide-view__summary-label">
-            {t('ngrokGuide.summary.shareLabel')}
+
+        <Card title={t('ngrokGuide.checklist.title')} className={styles.card}>
+          <ul className={styles.checklist}>
+            {checklistItems.map((item) => (
+              <li key={item}>
+                <Check
+                  size={16}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  className={styles.checkIcon}
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <GuideStep badge={t('ngrokGuide.step1.badge')} title={t('ngrokGuide.step1.title')}>
+          <p>{t('ngrokGuide.step1.description')}</p>
+          <div className={styles.ctaRow}>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() =>
+                void openLink('https://dashboard.ngrok.com/get-started/your-authtoken')
+              }
+            >
+              {t('ngrokGuide.step1.button')}
+              <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
+            </Button>
           </div>
-          <div className="ngrok-guide-view__summary-value">tcp://host:port</div>
-          <div className="ngrok-guide-view__summary-note">{t('ngrokGuide.summary.shareNote')}</div>
-        </div>
-      </div>
+          <Alert tone="info" title={t('ngrokGuide.step1.tip')} />
+        </GuideStep>
 
-      <div className="ngrok-guide-view__checklist-panel">
-        <h2 className="ngrok-guide-view__checklist-title">{t('ngrokGuide.checklist.title')}</h2>
-        <ul className="ngrok-guide-view__checklist">
-          <li>{t('ngrokGuide.checklist.item1')}</li>
-          <li>{t('ngrokGuide.checklist.item2')}</li>
-          <li>{t('ngrokGuide.checklist.item3')}</li>
-        </ul>
-      </div>
+        <GuideStep badge={t('ngrokGuide.step2.badge')} title={t('ngrokGuide.step2.title')}>
+          <p>{t('ngrokGuide.step2.description1')}</p>
+          <p>{t('ngrokGuide.step2.description2')}</p>
+          <CodeBlock
+            code="2Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxx"
+            filename={t('ngrokGuide.summary.obtainValue')}
+            language="text"
+          />
+          <Alert tone="warning" title={t('ngrokGuide.step2.securityWarning')} />
+        </GuideStep>
 
-      <div className="ngrok-guide-view__step">
-        <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step1.badge')}</div>
-        <h3>{t('ngrokGuide.step1.title')}</h3>
-        <p>{t('ngrokGuide.step1.description')}</p>
-        <Button
-          variant="primary"
-          className="ngrok-guide-view__cta-btn"
-          onClick={() => openLink('https://dashboard.ngrok.com/get-started/your-authtoken')}
-        >
-          {t('ngrokGuide.step1.button')}
-        </Button>
-        <div className="ngrok-guide-view__tip-box">{t('ngrokGuide.step1.tip')}</div>
-      </div>
-
-      <div className="ngrok-guide-view__step">
-        <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step2.badge')}</div>
-        <h3>{t('ngrokGuide.step2.title')}</h3>
-        <p>
-          {t('ngrokGuide.step2.description1')}
-          <br />
-          {t('ngrokGuide.step2.description2')}
-        </p>
-        <div className="ngrok-guide-view__token-example">{t('ngrokGuide.step2.example')}</div>
-        <p className="ngrok-guide-view__note ngrok-guide-view__note--warning">
-          {t('ngrokGuide.step2.securityWarning')}
-        </p>
-      </div>
-
-      <div className="ngrok-guide-view__step">
-        <div className="ngrok-guide-view__step-badge">{t('ngrokGuide.step3.badge')}</div>
-        <h3>{t('ngrokGuide.step3.title')}</h3>
-        <p>
-          {t('ngrokGuide.step3.description1')}
-          <br />
-          {t('ngrokGuide.step3.description2')}
-        </p>
-        <p className="ngrok-guide-view__note">{t('ngrokGuide.step3.addressNote')}</p>
-        <div className="ngrok-guide-view__tip-box">{t('ngrokGuide.step3.tip')}</div>
+        <GuideStep badge={t('ngrokGuide.step3.badge')} title={t('ngrokGuide.step3.title')}>
+          <p>{t('ngrokGuide.step3.description1')}</p>
+          <p>{t('ngrokGuide.step3.description2')}</p>
+          <p className={styles.note}>{t('ngrokGuide.step3.addressNote')}</p>
+          <Alert tone="info" title={t('ngrokGuide.step3.tip')} />
+        </GuideStep>
       </div>
     </div>
   );

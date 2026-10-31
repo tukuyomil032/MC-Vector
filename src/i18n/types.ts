@@ -558,6 +558,22 @@ export interface TranslationDictionary {
       ban: string;
     };
     offlineNotice: string;
+    notOnline: string;
+    notOnlineHint: string;
+    count: string;
+    countOne: string;
+    validation: {
+      playerRequired: string;
+      ipRequired: string;
+    };
+    loadFailed: string;
+    retry: string;
+    emptyList: {
+      whitelist: { title: string; description: string };
+      ops: { title: string; description: string };
+      bannedPlayers: { title: string; description: string };
+      bannedIps: { title: string; description: string };
+    };
     placeholder: {
       playerName: string;
       ipAddress: string;
@@ -569,6 +585,9 @@ export interface TranslationDictionary {
       alreadyExists: string;
       listUpdated: string;
       removed: string;
+      addFailed: string;
+      removeFailed: string;
+      liveCommandFailed: string;
     };
   };
 
@@ -782,6 +801,9 @@ export interface TranslationDictionary {
     portHint: string;
     backendServers: string;
     noBackendServers: string;
+    noBackendServersHint: string;
+    selectAll: string;
+    selectedCount: string;
     backendDetail: string;
     building: string;
     buildNetwork: string;
@@ -827,6 +849,7 @@ export interface TranslationDictionary {
     step2DownloadDesc: string;
     openPaperVelocity: string;
     openVelocityDocs: string;
+    openLinkFailed: string;
     step3Badge: string;
     step3Title: string;
     step3Edit: string;
@@ -1170,6 +1193,7 @@ export interface TranslationDictionary {
     title: string;
     introText: string;
     introRequirements: string;
+    openLinkFailed: string;
     summary: {
       requirementsLabel: string;
       requirementsValue: string;

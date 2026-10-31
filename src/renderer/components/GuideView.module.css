@@ -1,0 +1,134 @@
+/* Shared layout for the proxy and ngrok guides. */
+
+.root {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.inner {
+  display: flex;
+  max-width: 46rem;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+}
+
+.intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.summary {
+  display: grid;
+  align-items: stretch;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  min-width: 0;
+}
+
+.value {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: var(--tracking-body);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
+
+.checklist {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.checkIcon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.stepBody p {
+  margin: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+}
+
+.listTitle {
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.listNote {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+  .root {
+    padding: var(--space-4);
+  }
+
+  .summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

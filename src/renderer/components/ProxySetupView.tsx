@@ -1,9 +1,14 @@
+import { Button } from '@/components/arc/button/button';
+import { Card } from '@/components/arc/card/card';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { NumberField } from '@/components/arc/number-field/number-field';
+import { Select } from '@/components/arc/select/select';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
-import type { MinecraftServer } from '../components/../shared/server declaration';
+import type { MinecraftServer } from '../shared/server declaration';
 import { useAppFeedback } from './AppFeedbackProvider';
-import { Button } from './ui/Button';
-import { Input, NativeSelect } from './ui/Field';
+import styles from './ProxySetupView.module.css';
 
 interface ProxySetupViewProps {
   servers: MinecraftServer[];
@@ -28,19 +33,28 @@ export default function ProxySetupView({
   const [proxyPort, setProxyPort] = useState(25577);
   const [selectedBackendIds, setSelectedBackendIds] = useState<string[]>([]);
   const [isBuilding, setIsBuilding] = useState(false);
-  const proxySoftwareInputId = 'proxy-setup-software';
-  const proxyPortInputId = 'proxy-setup-port';
 
   const backendCandidates = servers.filter(
     (s) =>
       !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) &&
       !s.name.toLowerCase().includes('proxy'),
   );
+  // A selection for a server that is no longer listed (deleted, or renamed into a proxy) is ignored, so it is never sent.
+  const listedSelectedIds = backendCandidates
+    .map((server) => server.id)
+    .filter((id) => selectedBackendIds.includes(id));
+  const selectedCount = listedSelectedIds.length;
+  const allSelected = backendCandidates.length > 0 && selectedCount === backendCandidates.length;
+  const selectAllState = allSelected ? true : selectedCount > 0 ? 'indeterminate' : false;
 
-  const handleCheckboxChange = (serverId: string) => {
+  const toggleBackend = (serverId: string) => {
     setSelectedBackendIds((prev) =>
       prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId],
     );
+  };
+
+  const toggleAllBackends = () => {
+    setSelectedBackendIds(allSelected ? [] : backendCandidates.map((server) => server.id));
   };
 
   const handleBuild = async () => {
@@ -48,7 +62,7 @@ export default function ProxySetupView({
       return;
     }
     // One confirm covers the whole build. Fewer than two backends adds its warning above the rewrite notice.
-    const fewBackends = selectedBackendIds.length < 2;
+    const fewBackends = listedSelectedIds.length < 2;
     const confirmed = await confirm({
       title: t('proxySetup.dialogTitle'),
       description: fewBackends
@@ -63,126 +77,106 @@ export default function ProxySetupView({
       await onBuildNetwork({
         proxySoftware,
         proxyPort,
-        backendServerIds: selectedBackendIds,
+        backendServerIds: listedSelectedIds,
       });
     } finally {
       setIsBuilding(false);
     }
   };
 
+  const softwareOptions = [
+    { value: 'Velocity', label: t('proxySetup.velocityRecommended') },
+    { value: 'Waterfall', label: t('proxySetup.waterfall') },
+    { value: 'BungeeCord', label: t('proxySetup.bungeecord') },
+  ];
+
   return (
-    <div
-      className="proxy-setup-view box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
-      data-testid="proxy-view"
-    >
-      <div className="proxy-setup-view__inner">
-        <h2 className="proxy-setup-view__title">{t('proxySetup.title')}</h2>
-
-        <div className="proxy-setup-view__panel">
-          <h3 className="proxy-setup-view__panel-title">{t('proxySetup.dialogTitle')}</h3>
-
-          <div className="proxy-setup-view__section">
-            <div className="proxy-setup-view__top-grid">
-              <div className="proxy-setup-view__field">
-                <label className="proxy-setup-view__label" htmlFor={proxySoftwareInputId}>
-                  {t('proxySetup.proxySoftware')}
-                </label>
-                <NativeSelect
-                  id={proxySoftwareInputId}
-                  value={proxySoftware}
-                  onChange={(e) => setProxySoftware(e.target.value)}
-                >
-                  <option value="Velocity">{t('proxySetup.velocityRecommended')}</option>
-                  <option value="Waterfall">{t('proxySetup.waterfall')}</option>
-                  <option value="BungeeCord">{t('proxySetup.bungeecord')}</option>
-                </NativeSelect>
-              </div>
-
-              <div className="proxy-setup-view__field">
-                <label className="proxy-setup-view__label" htmlFor={proxyPortInputId}>
-                  {t('proxySetup.proxyPort')}
-                </label>
-                <Input
-                  id={proxyPortInputId}
-                  type="number"
-                  value={proxyPort}
-                  min={1}
-                  max={65535}
-                  onChange={(event) => {
-                    const value = event.currentTarget.valueAsNumber;
-                    if (!Number.isFinite(value)) {
-                      return;
-                    }
-                    setProxyPort(Math.min(65535, Math.max(1, value)));
-                  }}
-                />
-                <div className="proxy-setup-view__hint">{t('proxySetup.portHint')}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="proxy-setup-view__section proxy-setup-view__section--large-gap">
-            <div className="proxy-setup-view__field">
-              <label className="proxy-setup-view__label">{t('proxySetup.backendServers')}</label>
-              <div className="proxy-setup-view__backend-list">
-                {backendCandidates.length === 0 && (
-                  <div className="proxy-setup-view__backend-empty">
-                    {t('proxySetup.noBackendServers')}
-                  </div>
-                )}
-
-                {backendCandidates.map((server) => {
-                  const backendCheckboxId = `proxy-backend-${server.id}`;
-                  const backendDetailId = `${backendCheckboxId}-detail`;
-                  const backendDetail = t('proxySetup.backendDetail', {
-                    software: server.software,
-                    version: server.version,
-                    port: server.port,
-                  });
-
-                  return (
-                    <div key={server.id} className="proxy-setup-view__backend-row">
-                      <input
-                        id={backendCheckboxId}
-                        type="checkbox"
-                        checked={selectedBackendIds.includes(server.id)}
-                        onChange={() => handleCheckboxChange(server.id)}
-                        className="proxy-setup-view__checkbox"
-                        aria-describedby={backendDetailId}
-                      />
-                      <label htmlFor={backendCheckboxId} className="proxy-setup-view__backend-meta">
-                        <span className="proxy-setup-view__backend-name">{server.name}</span>
-                        <span id={backendDetailId} className="proxy-setup-view__backend-detail">
-                          {backendDetail}
-                        </span>
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="proxy-setup-view__actions">
-            <Button
-              variant="start"
-              className="proxy-setup-view__build-btn"
-              onClick={handleBuild}
+    <div className={styles.root} data-testid="proxy-view">
+      <div className={styles.inner}>
+        <Card title={t('proxySetup.dialogTitle')} className={styles.card}>
+          <div className={styles.fields}>
+            <Select
+              id="proxy-setup-software"
+              label={t('proxySetup.proxySoftware')}
+              options={softwareOptions}
+              value={proxySoftware}
+              onValueChange={setProxySoftware}
               disabled={isBuilding}
-            >
-              {isBuilding ? t('proxySetup.building') : t('proxySetup.buildNetwork')}
-            </Button>
+            />
+            <NumberField
+              id="proxy-setup-port"
+              label={t('proxySetup.proxyPort')}
+              description={t('proxySetup.portHint')}
+              value={proxyPort}
+              min={1}
+              max={65535}
+              formatOptions={{ useGrouping: false }}
+              onValueChange={setProxyPort}
+              disabled={isBuilding}
+            />
+          </div>
 
+          <section className={styles.section} aria-labelledby="proxy-setup-backends">
+            <div className={styles.sectionHead}>
+              <h3 id="proxy-setup-backends" className={styles.sectionTitle}>
+                {t('proxySetup.backendServers')}
+              </h3>
+              {backendCandidates.length > 0 && (
+                <span className={styles.count}>
+                  {t('proxySetup.selectedCount', {
+                    selected: selectedCount,
+                    total: backendCandidates.length,
+                  })}
+                </span>
+              )}
+            </div>
+
+            {backendCandidates.length === 0 ? (
+              <EmptyState
+                title={t('proxySetup.noBackendServers')}
+                description={t('proxySetup.noBackendServersHint')}
+              />
+            ) : (
+              <div className={styles.backendList}>
+                <Checkbox
+                  checked={selectAllState}
+                  onCheckedChange={toggleAllBackends}
+                  disabled={isBuilding}
+                  label={t('proxySetup.selectAll')}
+                />
+                {backendCandidates.map((server) => (
+                  <Checkbox
+                    key={server.id}
+                    id={`proxy-backend-${server.id}`}
+                    checked={selectedBackendIds.includes(server.id)}
+                    onCheckedChange={() => toggleBackend(server.id)}
+                    disabled={isBuilding}
+                    label={server.name}
+                    description={t('proxySetup.backendDetail', {
+                      software: server.software,
+                      version: server.version,
+                      port: server.port,
+                    })}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className={styles.actions}>
             <Button
+              type="button"
               variant="secondary"
-              className="proxy-setup-view__help-btn"
-              onClick={onOpenHelp}
               data-testid="proxy-view-help-button"
+              onClick={onOpenHelp}
             >
               {t('proxySetup.viewHelp')}
             </Button>
+            <Button type="button" variant="primary" loading={isBuilding} onClick={handleBuild}>
+              {isBuilding ? t('proxySetup.building') : t('proxySetup.buildNetwork')}
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -544,6 +544,34 @@ export const en: TranslationDictionary = {
       ban: 'Ban',
     },
     offlineNotice: 'Server is offline',
+    notOnline: 'The server is not online',
+    notOnlineHint: 'Changes are saved to the list and take effect the next time the server starts.',
+    count: '{count} entries',
+    countOne: '1 entry',
+    validation: {
+      playerRequired: 'Enter a player name to add.',
+      ipRequired: 'Enter an IP address to add.',
+    },
+    loadFailed: 'Could not load the lists',
+    retry: 'Try again',
+    emptyList: {
+      whitelist: {
+        title: 'No whitelisted players',
+        description: 'While the whitelist is on, only players on this list can join.',
+      },
+      ops: {
+        title: 'No operators',
+        description: 'Operators can run commands in the game and manage other players.',
+      },
+      bannedPlayers: {
+        title: 'No banned players',
+        description: 'Banned players cannot join this server.',
+      },
+      bannedIps: {
+        title: 'No banned IP addresses',
+        description: 'Connections from banned addresses are refused.',
+      },
+    },
     placeholder: {
       playerName: 'Player Name',
       ipAddress: 'IP Address',
@@ -555,6 +583,9 @@ export const en: TranslationDictionary = {
       alreadyExists: 'Already exists',
       listUpdated: 'List updated',
       removed: 'Removed',
+      addFailed: 'Could not add to the list',
+      removeFailed: 'Could not remove from the list',
+      liveCommandFailed: 'Saved to the list, but the server did not apply the change',
     },
   },
 
@@ -783,6 +814,9 @@ export const en: TranslationDictionary = {
     portHint: 'The port players initially connect to (default: 25577)',
     backendServers: 'Backend Servers',
     noBackendServers: 'No available backend servers',
+    noBackendServersHint: 'Proxy servers cannot be backends. Create a server to connect first.',
+    selectAll: 'Select all',
+    selectedCount: '{selected} of {total} selected',
     backendDetail: '{software} {version} (Port: {port})',
     building: 'Building...',
     buildNetwork: 'Build Network',
@@ -831,6 +865,7 @@ export const en: TranslationDictionary = {
       'Download the JAR from the link below, rename it to server.jar, and place it in the folder above.',
     openPaperVelocity: 'Open Paper (Velocity)',
     openVelocityDocs: 'Open Velocity Docs',
+    openLinkFailed: 'Could not open the link in your browser',
     step3Badge: 'Step 3',
     step3Title: 'Edit Config & Finish',
     step3Edit: '1. Edit Configuration',
@@ -1177,6 +1212,7 @@ export const en: TranslationDictionary = {
     introText:
       'This feature allows you to invite friends from around the world to your server without complicated router settings (port forwarding).',
     introRequirements: 'A free ngrok account and authentication token are required.',
+    openLinkFailed: 'Could not open the link in your browser',
     summary: {
       requirementsLabel: 'Requirements',
       requirementsValue: 'ngrok Account',

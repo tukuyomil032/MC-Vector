@@ -12,6 +12,7 @@ const { playerCommands, sendCommand, toastMock, confirmMock } = vi.hoisted(() =>
   toastMock: {
     error: vi.fn(),
     success: vi.fn(),
+    warning: vi.fn(),
   },
   confirmMock: vi.fn(),
 }));
@@ -19,7 +20,12 @@ const { playerCommands, sendCommand, toastMock, confirmMock } = vi.hoisted(() =>
 vi.mock('@/lib/player-commands', () => playerCommands);
 vi.mock('@/lib/server-commands', () => ({ sendCommand }));
 vi.mock('@/renderer/shared/notify', () => ({
-  notify: { error: toastMock.error, success: toastMock.success, info: vi.fn(), warning: vi.fn() },
+  notify: {
+    error: toastMock.error,
+    success: toastMock.success,
+    info: vi.fn(),
+    warning: toastMock.warning,
+  },
 }));
 vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
   useAppFeedback: () => ({ confirm: confirmMock }),
@@ -41,6 +47,7 @@ describe('UsersView', () => {
     sendCommand.mockReset().mockResolvedValue(undefined);
     toastMock.error.mockReset();
     toastMock.success.mockReset();
+    toastMock.warning.mockReset();
     confirmMock.mockReset().mockResolvedValue(false);
   });
 
@@ -51,6 +58,7 @@ describe('UsersView', () => {
     });
 
     render(<UsersView server={server} />);
+    expect(await screen.findByText('1 entry')).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
@@ -131,19 +139,86 @@ describe('UsersView', () => {
     fireEvent.click(screen.getByTestId('users-add-banned-ips'));
 
     await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith('Enter a valid IPv4 or IPv6 address'),
+      expect(toastMock.error).toHaveBeenCalledWith(
+        'Could not add to the list',
+        'Enter a valid IPv4 or IPv6 address',
+      ),
     );
     expect(input).toHaveValue('999.1.1.1');
     expect(sendCommand).not.toHaveBeenCalled();
   });
 
-  it('surfaces malformed list data instead of silently rendering an empty list', async () => {
+  it('keeps the saved entry and warns with the raw error when the server rejects the command', async () => {
+    sendCommand.mockRejectedValueOnce(new Error('Server is not accepting commands'));
+    playerCommands.mutatePlayerList.mockResolvedValueOnce({
+      lists: {
+        ...emptyLists,
+        whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+      },
+      changed: true,
+      canonicalTarget: 'Alex',
+    });
+    render(<UsersView server={server} />);
+    await screen.findByTestId('users-list-whitelist');
+
+    fireEvent.change(screen.getByTestId('users-input-whitelist'), { target: { value: 'alex' } });
+    fireEvent.click(screen.getByTestId('users-add-whitelist'));
+
+    await waitFor(() =>
+      expect(toastMock.warning).toHaveBeenCalledWith(
+        'Saved to the list, but the server did not apply the change',
+        'Server is not accepting commands',
+      ),
+    );
+    expect(await screen.findByText('Alex')).toBeInTheDocument();
+    expect(toastMock.error).not.toHaveBeenCalled();
+  });
+
+  it('explains an empty add inline, then submits the typed name from the form', async () => {
+    playerCommands.mutatePlayerList.mockResolvedValueOnce({
+      lists: {
+        ...emptyLists,
+        whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+      },
+      changed: true,
+      canonicalTarget: 'Alex',
+    });
+    render(<UsersView server={server} />);
+    await screen.findByTestId('users-list-whitelist');
+
+    fireEvent.click(screen.getByTestId('users-add-whitelist'));
+    expect(await screen.findByText('Enter a player name to add.')).toBeInTheDocument();
+    expect(playerCommands.mutatePlayerList).not.toHaveBeenCalled();
+
+    const input = screen.getByTestId('users-input-whitelist');
+    fireEvent.change(input, { target: { value: 'alex' } });
+    // The message fades out with an exit animation that jsdom never finishes, so check the field state.
+    expect(input).not.toHaveAttribute('aria-invalid', 'true');
+    fireEvent.submit(input.closest('form') as HTMLFormElement);
+
+    await waitFor(() =>
+      expect(playerCommands.mutatePlayerList).toHaveBeenCalledWith(
+        'server-1',
+        'whitelist',
+        'add',
+        'alex',
+      ),
+    );
+  });
+
+  it('shows a load failure with its detail and a retry instead of empty lists', async () => {
     playerCommands.getPlayerLists.mockRejectedValueOnce(new Error('Player list JSON is malformed'));
     render(<UsersView server={server} />);
 
-    await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith('Player list JSON is malformed'),
-    );
+    expect(await screen.findByText('Could not load the lists')).toBeInTheDocument();
+    expect(screen.getByText('Player list JSON is malformed')).toBeInTheDocument();
+    expect(screen.queryByTestId('users-list-whitelist')).not.toBeInTheDocument();
+    expect(toastMock.error).not.toHaveBeenCalled();
     expect(playerCommands.mutatePlayerList).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByTestId('users-list-whitelist')).toBeInTheDocument();
+    expect(screen.queryByText('Could not load the lists')).not.toBeInTheDocument();
+    expect(playerCommands.getPlayerLists).toHaveBeenCalledTimes(2);
   });
 });

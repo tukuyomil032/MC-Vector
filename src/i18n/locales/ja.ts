@@ -540,6 +540,34 @@ export const ja: TranslationDictionary = {
       ban: 'BAN',
     },
     offlineNotice: 'サーバーがオフラインです',
+    notOnline: 'サーバーはオンラインではありません',
+    notOnlineHint: '変更はリストに保存され、次回サーバーが起動したときに反映されます。',
+    count: '{count} 件',
+    countOne: '1 件',
+    validation: {
+      playerRequired: '追加するプレイヤー名を入力してください。',
+      ipRequired: '追加するIPアドレスを入力してください。',
+    },
+    loadFailed: 'リストを読み込めませんでした',
+    retry: '再試行',
+    emptyList: {
+      whitelist: {
+        title: 'ホワイトリストのプレイヤーはいません',
+        description: 'ホワイトリストが有効な間は、このリストのプレイヤーだけが参加できます。',
+      },
+      ops: {
+        title: 'OPはいません',
+        description: 'OPはゲーム内でコマンドを実行し、他のプレイヤーを管理できます。',
+      },
+      bannedPlayers: {
+        title: 'BANされたプレイヤーはいません',
+        description: 'BANされたプレイヤーは、このサーバーに参加できません。',
+      },
+      bannedIps: {
+        title: 'BANされたIPアドレスはありません',
+        description: 'BANされたアドレスからの接続は拒否されます。',
+      },
+    },
     placeholder: {
       playerName: 'プレイヤー名',
       ipAddress: 'IPアドレス',
@@ -551,6 +579,9 @@ export const ja: TranslationDictionary = {
       alreadyExists: '既に存在します',
       listUpdated: 'リストを更新しました',
       removed: '削除しました',
+      addFailed: 'リストに追加できませんでした',
+      removeFailed: 'リストから削除できませんでした',
+      liveCommandFailed: 'リストには保存しましたが、サーバーには反映されませんでした',
     },
   },
 
@@ -778,6 +809,10 @@ export const ja: TranslationDictionary = {
     portHint: 'プレイヤーが最初に接続するポートです (デフォルト: 25577)',
     backendServers: 'バックエンドサーバー (接続先)',
     noBackendServers: '接続可能なサーバーがありません',
+    noBackendServersHint:
+      'プロキシ自体は接続先にできません。先に接続するサーバーを作成してください。',
+    selectAll: 'すべて選択',
+    selectedCount: '{total} 台中 {selected} 台を選択',
     backendDetail: '{software} {version} (ポート: {port})',
     building: '実行中...',
     buildNetwork: 'ネットワーク構築を実行',
@@ -825,6 +860,7 @@ export const ja: TranslationDictionary = {
       '以下のリンクからJarファイルをダウンロードし、ファイル名を server.jar に変更して、上記のフォルダ内に入れてください。',
     openPaperVelocity: 'Paper公式 (Velocity) を開く',
     openVelocityDocs: 'Velocity Docs を開く',
+    openLinkFailed: 'ブラウザでリンクを開けませんでした',
     step3Badge: 'ステップ 3',
     step3Title: '設定ファイルの編集と完了',
     step3Edit: '1. 設定ファイルの編集',
@@ -1174,6 +1210,7 @@ export const ja: TranslationDictionary = {
     introText:
       'この機能を使うと、難しいルーターの設定（ポート開放）をせずに、世界中の友達をあなたのサーバーに招待できます。',
     introRequirements: '利用には無料の ngrokアカウント と 認証トークン が必要です。',
+    openLinkFailed: 'ブラウザでリンクを開けませんでした',
     summary: {
       requirementsLabel: '必要なもの',
       requirementsValue: 'ngrok アカウント',
