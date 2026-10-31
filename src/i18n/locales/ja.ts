@@ -547,6 +547,8 @@ export const ja: TranslationDictionary = {
       playerRequired: '追加するプレイヤー名を入力してください。',
       ipRequired: '追加するIPアドレスを入力してください。',
     },
+    loadFailed: 'リストを読み込めませんでした',
+    retry: '再試行',
     emptyList: {
       whitelist: {
         title: 'ホワイトリストのプレイヤーはいません',

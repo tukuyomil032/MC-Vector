@@ -551,6 +551,8 @@ export const en: TranslationDictionary = {
       playerRequired: 'Enter a player name to add.',
       ipRequired: 'Enter an IP address to add.',
     },
+    loadFailed: 'Could not load the lists',
+    retry: 'Try again',
     emptyList: {
       whitelist: {
         title: 'No whitelisted players',

@@ -101,6 +101,15 @@
   margin-top: 1.625rem;
 }
 
+.alertDetail {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.retry {
+  margin-top: var(--space-2);
+}
+
 @media (max-width: 46rem) {
   .root {
     padding: var(--space-4);

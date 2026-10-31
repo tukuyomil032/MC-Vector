@@ -565,6 +565,8 @@ export interface TranslationDictionary {
       playerRequired: string;
       ipRequired: string;
     };
+    loadFailed: string;
+    retry: string;
     emptyList: {
       whitelist: { title: string; description: string };
       ops: { title: string; description: string };

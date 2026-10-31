@@ -204,13 +204,19 @@ describe('UsersView', () => {
     );
   });
 
-  it('surfaces malformed list data instead of silently rendering an empty list', async () => {
+  it('shows a load failure with its detail and a retry instead of empty lists', async () => {
     playerCommands.getPlayerLists.mockRejectedValueOnce(new Error('Player list JSON is malformed'));
     render(<UsersView server={server} />);
 
-    await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith('Player list JSON is malformed'),
-    );
+    expect(await screen.findByText('Could not load the lists')).toBeInTheDocument();
+    expect(screen.getByText('Player list JSON is malformed')).toBeInTheDocument();
+    expect(screen.queryByTestId('users-list-whitelist')).not.toBeInTheDocument();
+    expect(toastMock.error).not.toHaveBeenCalled();
     expect(playerCommands.mutatePlayerList).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByTestId('users-list-whitelist')).toBeInTheDocument();
+    expect(screen.queryByText('Could not load the lists')).not.toBeInTheDocument();
+    expect(playerCommands.getPlayerLists).toHaveBeenCalledTimes(2);
   });
 });

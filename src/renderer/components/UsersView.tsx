@@ -35,6 +35,7 @@ export default function UsersView({ server }: Props) {
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
   const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadRequestId = useRef(0);
   const currentServerId = useRef(server.id);
 
@@ -44,26 +45,36 @@ export default function UsersView({ server }: Props) {
     setBannedPlayers(lists.bannedPlayers);
     setBannedIps(lists.bannedIps);
     setLoaded(true);
+    setLoadError(null);
   }, []);
 
   const loadAllLists = useCallback(async () => {
     const requestedServerId = server.id;
     const requestId = ++loadRequestId.current;
-    const lists = await getPlayerLists(requestedServerId);
-    if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
-      applyLists(lists);
+    try {
+      const lists = await getPlayerLists(requestedServerId);
+      if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
+        applyLists(lists);
+      }
+    } catch (error) {
+      if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
+        setLoadError(errorText(error));
+      }
     }
   }, [applyLists, server.id]);
 
   useEffect(() => {
     currentServerId.current = server.id;
-    void loadAllLists().catch((error: unknown) => {
-      notify.error(error instanceof Error ? error.message : String(error));
-    });
+    void loadAllLists();
     return () => {
       loadRequestId.current += 1;
     };
   }, [loadAllLists, server.id]);
+
+  const retryLoad = () => {
+    setLoadError(null);
+    void loadAllLists();
+  };
 
   const maybeApplyLiveCommand = async (
     type: PlayerListType,
@@ -87,9 +98,7 @@ export default function UsersView({ server }: Props) {
     })();
     await sendCommand(server.id, command);
     setTimeout(() => {
-      void loadAllLists().catch((error: unknown) => {
-        notify.error(error instanceof Error ? error.message : String(error));
-      });
+      void loadAllLists();
     }, 500);
   };
 
@@ -145,6 +154,9 @@ export default function UsersView({ server }: Props) {
     }
   };
 
+  // Until the first load succeeds, a failed load shows its error instead of four empty lists.
+  const showCards = loaded || loadError === null;
+
   return (
     <div className={styles.root} data-testid="users-view">
       {server.status !== 'online' && (
@@ -152,48 +164,64 @@ export default function UsersView({ server }: Props) {
           {t('users.notOnlineHint')}
         </Alert>
       )}
-      <div className={styles.grid}>
-        <UserListCard
-          type="whitelist"
-          title={t('users.lists.whitelist')}
-          entries={whitelist}
-          loaded={loaded}
-          emptyTitle={t('users.emptyList.whitelist.title')}
-          emptyDescription={t('users.emptyList.whitelist.description')}
-          onAdd={(val) => handleAdd('whitelist', val)}
-          onRemove={(val) => handleRemove('whitelist', val)}
-        />
-        <UserListCard
-          type="ops"
-          title={t('users.lists.operators')}
-          entries={ops}
-          loaded={loaded}
-          emptyTitle={t('users.emptyList.ops.title')}
-          emptyDescription={t('users.emptyList.ops.description')}
-          onAdd={(val) => handleAdd('ops', val)}
-          onRemove={(val) => handleRemove('ops', val)}
-        />
-        <UserListCard
-          type="banned-players"
-          title={t('users.lists.bannedPlayers')}
-          entries={bannedPlayers}
-          loaded={loaded}
-          emptyTitle={t('users.emptyList.bannedPlayers.title')}
-          emptyDescription={t('users.emptyList.bannedPlayers.description')}
-          onAdd={(val) => handleAdd('banned-players', val)}
-          onRemove={(val) => handleRemove('banned-players', val)}
-        />
-        <UserListCard
-          type="banned-ips"
-          title={t('users.lists.bannedIps')}
-          entries={bannedIps}
-          loaded={loaded}
-          emptyTitle={t('users.emptyList.bannedIps.title')}
-          emptyDescription={t('users.emptyList.bannedIps.description')}
-          onAdd={(val) => handleAdd('banned-ips', val)}
-          onRemove={(val) => handleRemove('banned-ips', val)}
-        />
-      </div>
+      {loadError !== null && (
+        <Alert tone="danger" title={t('users.loadFailed')}>
+          <span className={styles.alertDetail}>{loadError}</span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className={styles.retry}
+            onClick={retryLoad}
+          >
+            {t('users.retry')}
+          </Button>
+        </Alert>
+      )}
+      {showCards && (
+        <div className={styles.grid}>
+          <UserListCard
+            type="whitelist"
+            title={t('users.lists.whitelist')}
+            entries={whitelist}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.whitelist.title')}
+            emptyDescription={t('users.emptyList.whitelist.description')}
+            onAdd={(val) => handleAdd('whitelist', val)}
+            onRemove={(val) => handleRemove('whitelist', val)}
+          />
+          <UserListCard
+            type="ops"
+            title={t('users.lists.operators')}
+            entries={ops}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.ops.title')}
+            emptyDescription={t('users.emptyList.ops.description')}
+            onAdd={(val) => handleAdd('ops', val)}
+            onRemove={(val) => handleRemove('ops', val)}
+          />
+          <UserListCard
+            type="banned-players"
+            title={t('users.lists.bannedPlayers')}
+            entries={bannedPlayers}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.bannedPlayers.title')}
+            emptyDescription={t('users.emptyList.bannedPlayers.description')}
+            onAdd={(val) => handleAdd('banned-players', val)}
+            onRemove={(val) => handleRemove('banned-players', val)}
+          />
+          <UserListCard
+            type="banned-ips"
+            title={t('users.lists.bannedIps')}
+            entries={bannedIps}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.bannedIps.title')}
+            emptyDescription={t('users.emptyList.bannedIps.description')}
+            onAdd={(val) => handleAdd('banned-ips', val)}
+            onRemove={(val) => handleRemove('banned-ips', val)}
+          />
+        </div>
+      )}
     </div>
   );
 }
