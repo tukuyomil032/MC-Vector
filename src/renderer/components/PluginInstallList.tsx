@@ -1,6 +1,8 @@
 export interface PluginInstallItem {
   name: string;
   iconUrl?: string;
+  /** Muted text on the right of the row, such as the file name that will be written. */
+  detail?: string;
 }
 
 const ROW_CLASS = 'flex h-[52px] items-center gap-3 px-3.5';
@@ -34,6 +36,11 @@ export function PluginInstallList({ items }: { items: PluginInstallItem[] }) {
           <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--foreground)]">
             {item.name}
           </span>
+          {item.detail ? (
+            <span className="max-w-[45%] shrink-0 truncate text-[12px] text-[var(--text-secondary)]">
+              {item.detail}
+            </span>
+          ) : null}
         </li>
       ))}
     </ul>

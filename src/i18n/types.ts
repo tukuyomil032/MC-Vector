@@ -610,6 +610,10 @@ export interface TranslationDictionary {
       installedFolder: string;
       installedEmptyHint: string;
       installedSource: string;
+      installPlanTarget: string;
+      browserOpenErrorDescription: string;
+      toggleErrorTitle: string;
+      uninstallErrorTitle: string;
       tabBrowse: string;
       tabInstalled: string;
       searchOn: string;

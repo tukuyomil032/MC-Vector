@@ -660,11 +660,16 @@ export const ja: TranslationDictionary = {
       dependencyInstallSuccess: '依存プラグインを {{count}} 件インストールしました',
       dependencyCheckOnly:
         '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
-      installPlanConfirmTitle: 'プラグインのインストール確認',
+      installPlanConfirmTitle: 'プラグインをインストールしますか？',
+      installPlanTarget: 'ファイルは {{directory}} に配置します。',
+      browserOpenErrorDescription:
+        'ブラウザでプラグインのページを開けませんでした。手動で開くか、もう一度お試しください。',
+      toggleErrorTitle: 'プラグインの状態を変更できませんでした',
+      uninstallErrorTitle: 'プラグインをアンインストールできませんでした',
       installPlanConfirmDescription:
         '{{directory}} フォルダに次の {{count}} 件をインストールしますか？\n{{artifacts}}{{dependencyNote}}\n{{warnings}}',
       installPlanConfirmButton: 'インストール',
-      installPlanDependencies: '\n必須の依存プラグインもインストールします: {{names}}',
+      installPlanDependencies: '必須の依存プラグインも含まれます: {{names}}',
       installPlanUnverifiedWarning:
         'プロバイダーのチェックサムがない成果物が含まれています。Rust側のポリシー設定で許可されている必要があります。',
       installPlanUnknownCompatibility: '互換性が確認できていない成果物が含まれています。',
@@ -711,10 +716,10 @@ export const ja: TranslationDictionary = {
       readmeLoading: 'READMEを取得中です...',
       noReadme: 'このプロジェクトにはREADME本文が公開されていません。',
       dupTitle: '既にインストール済みです',
-      dupDescription: '{{title}} は既に {{folder}} フォルダに存在します。どうしますか？',
+      dupDescription: '{{title}} は {{folder}} フォルダに既にあります。',
       dupExistingFile: '既存ファイル: {{file}}',
-      dupOverwriteNote: '・上書き: そのまま置き換えます。',
-      dupUpdateNote: '・アップデート: サーバーバージョンに合う最新ビルドを入れ直します。',
+      dupOverwriteNote: '上書きは既存のファイルをこのビルドに置き換えます。',
+      dupUpdateNote: 'アップデートは、このサーバーバージョンに合う最新ビルドを入れ直します。',
       dupCancel: 'キャンセル',
       dupOverwrite: '上書き',
       dupUpdate: 'アップデート',

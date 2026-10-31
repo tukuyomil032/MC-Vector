@@ -663,11 +663,16 @@ export const en: TranslationDictionary = {
       dependencyInstallSuccess: 'Installed {{count}} dependencies',
       dependencyCheckOnly:
         'Only ran dependency check. Please install dependencies first if needed.',
-      installPlanConfirmTitle: 'Confirm plugin installation',
+      installPlanConfirmTitle: 'Install this plugin?',
+      installPlanTarget: 'Files are placed in {{directory}}.',
+      browserOpenErrorDescription:
+        'The plugin page could not be opened in your browser. Open it manually or try again.',
+      toggleErrorTitle: 'Could not change plugin state',
+      uninstallErrorTitle: 'Could not uninstall plugin',
       installPlanConfirmDescription:
         'Install these {{count}} artifact(s) into {{directory}}?\n{{artifacts}}{{dependencyNote}}\n{{warnings}}',
       installPlanConfirmButton: 'Install',
-      installPlanDependencies: '\nRequired dependencies will also be installed: {{names}}',
+      installPlanDependencies: 'Required dependencies are included: {{names}}',
       installPlanUnverifiedWarning:
         'At least one artifact has no provider checksum. The Rust policy setting must allow this download.',
       installPlanUnknownCompatibility: 'Compatibility is unknown for at least one artifact.',
@@ -714,11 +719,10 @@ export const en: TranslationDictionary = {
       readmeLoading: 'Fetching README...',
       noReadme: 'No README content is available for this project.',
       dupTitle: 'Already installed',
-      dupDescription:
-        '{{title}} already exists in the {{folder}} folder. What would you like to do?',
+      dupDescription: '{{title}} is already in the {{folder}} folder.',
       dupExistingFile: 'Existing file: {{file}}',
-      dupOverwriteNote: '• Overwrite: Replace the existing file.',
-      dupUpdateNote: '• Update: Re-install the latest build matching the server version.',
+      dupOverwriteNote: 'Overwrite replaces the existing file with this build.',
+      dupUpdateNote: 'Update installs the newest build for this server version.',
       dupCancel: 'Cancel',
       dupOverwrite: 'Overwrite',
       dupUpdate: 'Update',

@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { Alert } from '@/components/arc/alert/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
 import { ExternalLink, Flame, Package, Server } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -38,6 +39,7 @@ import {
 } from '../shared/plugin-install-policy';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
+import { PluginInstallList, type PluginInstallItem } from './PluginInstallList';
 import { PluginDetailDialog } from './plugin-browser/PluginDetailDialog';
 import { PluginInstalledPanel } from './plugin-browser/PluginInstalledPanel';
 import { type PlatformOption, PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
@@ -103,9 +105,6 @@ export default function PluginBrowser({ server }: Props) {
     Record<string, ProjectItem>
   >({});
   const [busyInstalledFile, setBusyInstalledFile] = useState<string | null>(null);
-  const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
-    null,
-  );
   const [page, setPage] = useState(0);
   const [updateStatusByItemId, setUpdateStatusByItemId] = useState<Record<string, UpdateStatus>>(
     {},
@@ -122,14 +121,6 @@ export default function PluginBrowser({ server }: Props) {
   const { confirm, openDialog } = useAppFeedback();
   const setCurrentView = useUiStore((state) => state.setCurrentView);
   const folderName = isModServer ? 'mods' : 'plugins';
-  const tSafe = (
-    key: Parameters<typeof t>[0],
-    fallback: string,
-    params?: Parameters<typeof t>[1],
-  ): string => {
-    const translated = t(key, params);
-    return translated === key ? fallback : translated;
-  };
 
   const platformOptions = useMemo<PlatformOption[]>(() => {
     const options: PlatformOption[] = [
@@ -1006,7 +997,8 @@ export default function PluginBrowser({ server }: Props) {
       severity: 'error',
       title: copy.title,
       description: copy.description,
-      primaryAction: isUnverified
+      // One button only: the dialog is informational, and the settings link is its single action.
+      secondaryAction: isUnverified
         ? {
             label: t('plugins.browser.openGeneralSettings'),
             onSelect: () => setCurrentView('app-settings'),
@@ -1074,59 +1066,54 @@ export default function PluginBrowser({ server }: Props) {
         (artifact) => !artifact.dependency || confirmedDependencies.has(artifact.id),
       );
       const unverifiedWarning = preview.requiresUnverifiedDownloads
-        ? tSafe(
-            'plugins.browser.installPlanUnverifiedWarning',
-            'At least one artifact has no provider checksum. The current Rust policy setting must allow this download.',
-          )
+        ? t('plugins.browser.installPlanUnverifiedWarning')
         : '';
       const unknownCompatibilityWarning = installArtifacts.some(
         (artifact) => artifact.compatibility === 'unknown',
       )
-        ? tSafe(
-            'plugins.browser.installPlanUnknownCompatibility',
-            'Compatibility is unknown for at least one artifact.',
-          )
+        ? t('plugins.browser.installPlanUnknownCompatibility')
         : '';
-      const dependencyNote = preview.missingDependencyIds.length
-        ? tSafe(
-            'plugins.browser.installPlanDependencies',
-            '\nRequired dependencies will also be installed: {{names}}',
-            {
-              names: installArtifacts
-                .filter((artifact) => artifact.dependency)
-                .map((artifact) => artifact.title)
-                .join(', '),
-            },
-          )
-        : '';
-      const artifactList = installArtifacts
-        .map((artifact) => `• ${artifact.title} (${artifact.version}) → ${artifact.fileName}`)
-        .join('\n');
-      const prompt = tSafe(
-        'plugins.browser.installPlanConfirmDescription',
-        'Install these files into {{directory}}?\n{{artifacts}}\n{{dependencyNote}}\n{{warnings}}',
-        {
-          count: installArtifacts.length,
-          directory: preview.targetDirectory,
-          artifacts: artifactList,
-          dependencyNote,
-          warnings: [unknownCompatibilityWarning, unverifiedWarning].filter(Boolean).join('\n'),
-        },
-      );
+      const dependencyNames = installArtifacts
+        .filter((artifact) => artifact.dependency)
+        .map((artifact) => artifact.title);
+      // Only the plugin itself has the icon from the results. Dependencies have none and fall back to a monogram.
+      const installItems: PluginInstallItem[] = installArtifacts.map((artifact) => ({
+        name: artifact.title,
+        iconUrl: artifact.dependency ? undefined : item.icon_url,
+        detail: artifact.fileName,
+      }));
       // The confirm dialog is open from here on, so the card must not read as installing yet.
       setPreparingId(null);
       let accepted = false;
       await openDialog({
         severity: preview.requiresUnverifiedDownloads ? 'warning' : 'info',
-        title: tSafe('plugins.browser.installPlanConfirmTitle', 'Confirm plugin installation'),
-        description: prompt,
+        title: t('plugins.browser.installPlanConfirmTitle'),
+        description: '',
+        body: (
+          <div className={styles.confirmBody}>
+            <PluginInstallList items={installItems} />
+            <p className={styles.caption}>
+              {t('plugins.browser.installPlanTarget', { directory: preview.targetDirectory })}
+            </p>
+            {dependencyNames.length > 0 ? (
+              <p className={styles.caption}>
+                {t('plugins.browser.installPlanDependencies', {
+                  names: dependencyNames.join(', '),
+                })}
+              </p>
+            ) : null}
+            {unknownCompatibilityWarning ? (
+              <Alert tone="warning" title={unknownCompatibilityWarning} />
+            ) : null}
+            {unverifiedWarning ? <Alert tone="warning" title={unverifiedWarning} /> : null}
+          </div>
+        ),
         primaryAction: {
-          label: tSafe('plugins.browser.installPlanConfirmButton', 'Install'),
+          label: t('plugins.browser.installPlanConfirmButton'),
           onSelect: () => {
             accepted = true;
           },
         },
-        secondaryAction: { label: t('common.cancel') },
       });
       if (!accepted) {
         return;
@@ -1178,6 +1165,36 @@ export default function PluginBrowser({ server }: Props) {
     }
   };
 
+  // Cancel, Escape and a backdrop press keep the installed file. One action is offered: an update when one is
+  // known, otherwise an overwrite. The body says what the action does.
+  const openAlreadyInstalledDialog = (item: ProjectItem, installedFile: string) => {
+    const primary = updateStatusByItemId[item.id] === 'update-available' ? 'update' : 'overwrite';
+    void openDialog({
+      severity: 'info',
+      title: t('plugins.browser.dupTitle'),
+      description: t('plugins.browser.dupDescription', { title: item.title, folder: folderName }),
+      body: (
+        <div className={styles.confirmBody}>
+          <p className={styles.caption}>
+            {t('plugins.browser.dupExistingFile', { file: installedFile })}
+          </p>
+          <p className={styles.caption}>
+            {primary === 'update'
+              ? t('plugins.browser.dupUpdateNote')
+              : t('plugins.browser.dupOverwriteNote')}
+          </p>
+        </div>
+      ),
+      primaryAction: {
+        label:
+          primary === 'update' ? t('plugins.browser.dupUpdate') : t('plugins.browser.dupOverwrite'),
+        onSelect: () => {
+          void performInstall(item, primary, installedFile);
+        },
+      },
+    });
+  };
+
   const handleInstall = (item: ProjectItem) => {
     const compatibility = compatibilityByItemId[item.id] ?? 'unknown';
     if (shouldBlockPluginInstall(compatibility)) {
@@ -1192,7 +1209,7 @@ export default function PluginBrowser({ server }: Props) {
         void performInstall(item, 'update', installedMatch);
         return;
       }
-      setDupDialog({ item, installedFile: installedMatch });
+      openAlreadyInstalledDialog(item, installedMatch);
       return;
     }
 
@@ -1210,7 +1227,7 @@ export default function PluginBrowser({ server }: Props) {
       void openDialog({
         severity: 'error',
         title: t('plugins.browser.browserOpenError'),
-        description: t('plugins.browser.browserOpenError'),
+        description: t('plugins.browser.browserOpenErrorDescription'),
       });
     }
   };
@@ -1231,7 +1248,7 @@ export default function PluginBrowser({ server }: Props) {
       });
       void openDialog({
         severity: 'error',
-        title: t('plugins.browser.toggleError'),
+        title: t('plugins.browser.toggleErrorTitle'),
         description: t('plugins.browser.toggleError'),
       });
     } finally {
@@ -1265,7 +1282,7 @@ export default function PluginBrowser({ server }: Props) {
       });
       void openDialog({
         severity: 'error',
-        title: t('plugins.browser.uninstallError'),
+        title: t('plugins.browser.uninstallErrorTitle'),
         description: t('plugins.browser.uninstallError'),
       });
     } finally {
@@ -1286,7 +1303,7 @@ export default function PluginBrowser({ server }: Props) {
     const progress = installProgressByItemId[itemId];
     return progress === undefined
       ? t('plugins.browser.installing')
-      : tSafe('plugins.browser.installingProgress', '{{progress}}% — {{label}}', {
+      : t('plugins.browser.installingProgress', {
           progress,
           label: t('plugins.browser.installing'),
         });
@@ -1447,23 +1464,6 @@ export default function PluginBrowser({ server }: Props) {
     })();
   };
 
-  useEffect(() => {
-    if (!dupDialog) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setDupDialog(null);
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [dupDialog]);
-
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
@@ -1585,73 +1585,6 @@ export default function PluginBrowser({ server }: Props) {
         onOpenProject={() => void openExternal(detailProjectUrl)}
         onClose={closeDetailModal}
       />
-
-      {dupDialog && (
-        <div
-          className="plugin-browser__dup-overlay modal-backdrop"
-          onClick={() => setDupDialog(null)}
-        >
-          <div
-            className="plugin-browser__dup-panel modal-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="plugin-browser__dup-title">{t('plugins.browser.dupTitle')}</h3>
-            <p className="plugin-browser__dup-description">
-              {t('plugins.browser.dupDescription', {
-                title: dupDialog.item.title,
-                folder: folderName,
-              })}
-            </p>
-
-            <div className="plugin-browser__dup-file">
-              {t('plugins.browser.dupExistingFile', { file: dupDialog.installedFile })}
-            </div>
-
-            <div className="plugin-browser__dup-notes">
-              <div>{t('plugins.browser.dupOverwriteNote')}</div>
-              <div>{t('plugins.browser.dupUpdateNote')}</div>
-            </div>
-
-            <div className="plugin-browser__dup-actions">
-              <button
-                type="button"
-                className="plugin-browser__dup-btn plugin-browser__dup-btn--cancel"
-                onClick={() => setDupDialog(null)}
-              >
-                {t('plugins.browser.dupCancel')}
-              </button>
-
-              <button
-                type="button"
-                className="plugin-browser__dup-btn plugin-browser__dup-btn--overwrite"
-                onClick={() => {
-                  const target = dupDialog;
-                  setDupDialog(null);
-                  if (target) {
-                    void performInstall(target.item, 'overwrite', target.installedFile);
-                  }
-                }}
-              >
-                {t('plugins.browser.dupOverwrite')}
-              </button>
-
-              <button
-                type="button"
-                className="plugin-browser__dup-btn plugin-browser__dup-btn--update"
-                onClick={() => {
-                  const target = dupDialog;
-                  setDupDialog(null);
-                  if (target) {
-                    void performInstall(target.item, 'update', target.installedFile);
-                  }
-                }}
-              >
-                {t('plugins.browser.dupUpdate')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
