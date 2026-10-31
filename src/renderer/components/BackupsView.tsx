@@ -9,6 +9,7 @@ import { ChipGroup } from '@/components/arc/chip-group/chip-group';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Input } from '@/components/arc/input/input';
+import { Select } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Textarea } from '@/components/arc/textarea/textarea';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
@@ -34,7 +35,6 @@ import {
 } from '../../store/backupOperationStore';
 import { buildManualBackupName } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
-import { Input as FieldInput, NativeSelect } from './ui/Field';
 import styles from './BackupsView.module.css';
 
 interface Props {
@@ -204,6 +204,11 @@ function formatBackupSize(bytes: number, t: Translate, locale: string): string {
   }).format(value);
   return `${formatted} ${t(SIZE_UNIT_KEYS[SIZE_UNITS[index]])}`;
 }
+
+const COMPRESSION_OPTIONS = Array.from({ length: 9 }, (_, index) => ({
+  value: String(index + 1),
+  label: String(index + 1),
+}));
 
 export async function persistBackupCatalogBestEffort(
   persist: () => Promise<void>,
@@ -1392,6 +1397,35 @@ export default function BackupsView({ server }: Props) {
 
   const blockDismiss = (event: Event) => event.preventDefault();
 
+  // Name rules are checked as the user types, with the same validator the create path uses.
+  const trimmedName = customName.trim();
+  const nameValidation = trimmedName
+    ? getBackupNameValidationError(normalizeBackupName(trimmedName))
+    : null;
+  const nameError = nameValidation
+    ? t(
+        nameValidation === 'empty'
+          ? 'backups.toast.invalidNameEmpty'
+          : 'backups.toast.invalidNameCharacters',
+      )
+    : null;
+
+  const createFooter = (
+    <>
+      <Button variant="secondary" onClick={() => setShowCreateModal(false)} disabled={isProcessing}>
+        {t('common.cancel')}
+      </Button>
+      <Button
+        variant="primary"
+        data-testid="backups-create-submit"
+        onClick={() => void handleCreateBackup()}
+        disabled={isProcessing || nameError !== null}
+      >
+        {isProcessing ? t('backups.modal.creating') : t('backups.modal.create')}
+      </Button>
+    </>
+  );
+
   const tagFooter = (
     <>
       <Button variant="secondary" onClick={() => setTagEditorTarget(null)} disabled={isProcessing}>
@@ -1553,123 +1587,96 @@ export default function BackupsView({ server }: Props) {
         )}
       </div>
 
-      {showCreateModal && (
-        <div
-          className="backups-view__create-overlay modal-backdrop"
-          onClick={() => setShowCreateModal(false)}
+      <Dialog
+        open={showCreateModal}
+        onOpenChange={(next) => {
+          if (!next && !isProcessing) setShowCreateModal(false);
+        }}
+      >
+        <DialogContent
+          aria-describedby={undefined}
+          data-testid="backups-create-dialog"
+          title={t('backups.modal.createTitle')}
+          width="min(560px, calc(100vw - var(--space-8)))"
+          footer={createFooter}
+          onEscapeKeyDown={isProcessing ? blockDismiss : undefined}
+          onPointerDownOutside={isProcessing ? blockDismiss : undefined}
         >
-          <div
-            className="backups-view__create-panel modal-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="backups-view__create-header">
-              <div className="text-lg font-bold">{t('backups.modal.createTitle')}</div>
-              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
-                {t('common.close')}
-              </Button>
-            </div>
+          <div className={styles.form}>
+            <Input
+              data-testid="backup-name-input"
+              label={t('backups.modal.fileName')}
+              placeholder={defaultName()}
+              value={customName}
+              onChange={(event) => setCustomName(event.target.value)}
+              description={t('backups.modal.fileNameHelp', { default: defaultName() })}
+              error={nameError ?? undefined}
+              disabled={isProcessing}
+            />
 
-            <div className="backups-view__create-body">
-              <div className="backups-view__form-grid">
-                <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">{t('backups.modal.fileName')}</label>
-                  <FieldInput
-                    data-testid="backup-name-input"
-                    placeholder={defaultName()}
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                  />
-                  <div className="backups-view__form-help">
-                    {t('backups.modal.fileNameHelp', { default: defaultName() })}
-                  </div>
-                </div>
+            <Select
+              testId="backups-compression-select"
+              label={t('backups.modal.compressionLevel')}
+              description={t('backups.modal.compressionHelp')}
+              options={COMPRESSION_OPTIONS}
+              value={String(compressionLevel)}
+              onValueChange={(value) => setCompressionLevel(Number(value))}
+              disabled={isProcessing}
+            />
 
-                <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">
-                    {t('backups.modal.compressionLevel')}
-                  </label>
-                  <NativeSelect
-                    className="w-[120px]"
-                    value={compressionLevel}
-                    onChange={(e) => setCompressionLevel(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
-                      <option key={level} value={level}>
-                        {level}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <div className="backups-view__form-help">
-                    {t('backups.modal.compressionHelp')}
-                  </div>
-                </div>
-              </div>
-
-              <div className="backups-view__selection-header">
-                <div className="font-semibold">{t('backups.modal.selectTarget')}</div>
-                <div className="flex gap-2">
+            <section className={styles.target} aria-labelledby="backups-target-title">
+              <div className={styles.targetHead}>
+                <h3 id="backups-target-title" className={styles.sectionTitle}>
+                  {t('backups.modal.selectTarget')}
+                </h3>
+                <div className={styles.targetActions}>
                   <Button
                     variant="secondary"
-                    className="text-sm"
+                    size="sm"
                     data-testid="backups-open-selector-button"
                     onClick={() => void openSelectorWindow()}
                   >
                     {t('backups.modal.openSelector')}
                   </Button>
-                  <Button variant="secondary" className="text-sm" onClick={clearAll}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAll}
+                    disabled={selectedPaths.size === 0}
+                  >
                     {t('backups.modal.clearAll')}
                   </Button>
                 </div>
               </div>
 
-              <div className="backups-view__tree-panel">
-                {selectedPaths.size === 0 ? (
-                  <div className="backups-view__tree-loading">{t('backups.modal.noSelection')}</div>
-                ) : (
-                  <div className="backups-view__selected-summary">
-                    <div className="backups-view__selected-count">
-                      {t('backups.modal.selectedCount', { count: selectedPaths.size })}
-                    </div>
-                    <div className="backups-view__selected-list">
-                      {Array.from(selectedPaths)
-                        .sort((left, right) => left.localeCompare(right))
-                        .slice(0, 14)
-                        .map((path) => (
-                          <div key={path} className="backups-view__selected-item">
-                            {path}
-                          </div>
-                        ))}
-                      {selectedPaths.size > 14 && (
-                        <div className="backups-view__selected-item">
-                          {t('backups.modal.andMore', { count: selectedPaths.size - 14 })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="backups-view__create-actions">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowCreateModal(false)}
-                  disabled={isProcessing}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  variant="primary"
-                  data-testid="backups-create-submit"
-                  onClick={handleCreateBackup}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? t('backups.modal.creating') : t('backups.modal.create')}
-                </Button>
-              </div>
-            </div>
+              {selectedPaths.size === 0 ? (
+                <p className={styles.muted}>{t('backups.modal.noSelection')}</p>
+              ) : (
+                <div className={styles.targetSummary}>
+                  <p className={styles.targetCount}>
+                    {t('backups.modal.selectedCount', { count: selectedPaths.size })}
+                  </p>
+                  <ul className={styles.targetList}>
+                    {Array.from(selectedPaths)
+                      .sort((left, right) => left.localeCompare(right))
+                      .slice(0, 14)
+                      .map((path) => (
+                        <li key={path} className={styles.targetItem}>
+                          {path}
+                        </li>
+                      ))}
+                    {selectedPaths.size > 14 && (
+                      <li className={styles.targetItem}>
+                        {t('backups.modal.andMore', { count: selectedPaths.size - 14 })}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </section>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={tagEditorTarget !== null}
