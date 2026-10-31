@@ -1,5 +1,16 @@
+import type { TranslationKey } from '../../i18n';
+import { useTranslation } from '../../i18n';
+
+// Release notes are written in English, so the section headings are matched in English and shown translated.
 const VISIBLE_SECTIONS = ['Breaking Changes', 'Features', 'Bug Fixes', 'Performance'] as const;
 type VisibleSection = (typeof VISIBLE_SECTIONS)[number];
+
+const SECTION_KEYS: Record<VisibleSection, TranslationKey> = {
+  'Breaking Changes': 'releaseNotes.sections.breaking',
+  Features: 'releaseNotes.sections.features',
+  'Bug Fixes': 'releaseNotes.sections.fixes',
+  Performance: 'releaseNotes.sections.performance',
+};
 
 interface ParsedReleaseNotes {
   version: string;
@@ -99,21 +110,26 @@ export default function ReleaseNotes({
   label?: string;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const parsed = parseReleaseNotes(releaseNotes, version);
   if (parsed.sections.length === 0 && !parsed.plainText) return null;
 
   return (
     <div className={['release-notes-wrapper', className].filter(Boolean).join(' ')}>
       {label && <div className="release-notes__label">{label}</div>}
-      <article className="release-notes" aria-label="Release notes">
-        {parsed.version && <h3 className="release-notes__version">Version {parsed.version}</h3>}
+      <article className="release-notes" aria-label={t('releaseNotes.ariaLabel')}>
+        {parsed.version && (
+          <h3 className="release-notes__version">
+            {t('releaseNotes.version', { version: parsed.version })}
+          </h3>
+        )}
         <div className="release-notes__content">
           {parsed.sections.length === 0 ? (
             <p className="release-notes__plain-text whitespace-pre-wrap">{parsed.plainText}</p>
           ) : (
             parsed.sections.map(({ title, entries: sectionEntries }) => (
               <section className="release-notes__section" key={title}>
-                <h4 className="release-notes__section-title">{title}</h4>
+                <h4 className="release-notes__section-title">{t(SECTION_KEYS[title])}</h4>
                 <ul className="release-notes__list">
                   {(() => {
                     const occurrences = new Map<string, number>();

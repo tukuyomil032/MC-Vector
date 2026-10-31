@@ -48,6 +48,14 @@ export const en: TranslationDictionary = {
       downloaded: 'Download complete. Ready to restart and apply.',
       error: 'Error: {message}',
       releaseNotes: 'Release Notes:',
+      availableTitle: 'Version {version} is available',
+      readyTitle: 'Restart to apply the update?',
+      downloadingTitle: 'Downloading the update',
+      errorTitle: 'The update could not be applied',
+      downloadingLabel: 'Downloading',
+      downloadHint: 'Keep the app open until the download finishes.',
+      later: 'Later',
+      retry: 'Try again',
       channelLabel: 'Update channel',
       channels: {
         stable: 'Stable releases',
@@ -1230,6 +1238,17 @@ export const en: TranslationDictionary = {
     toast: {
       success: 'Server imported successfully',
       failed: 'Failed to import server',
+    },
+  },
+
+  releaseNotes: {
+    ariaLabel: 'Release notes',
+    version: 'Version {version}',
+    sections: {
+      breaking: 'Breaking changes',
+      features: 'New features',
+      fixes: 'Bug fixes',
+      performance: 'Performance',
     },
   },
 

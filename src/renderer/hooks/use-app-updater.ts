@@ -27,6 +27,7 @@ export function useAppUpdater() {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateCheckStatus, setUpdateCheckStatus] = useState<UpdateCheckStatus>('idle');
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const isUpdatingRef = useRef(false);
   const checkPromiseRef = useRef<Promise<void> | null>(null);
   const queuedCheckRef = useRef(false);
@@ -60,6 +61,7 @@ export function useAppUpdater() {
           setUpdatePrompt({ version: result.version, releaseNotes: result.body });
           setUpdateError(null);
           setUpdateCheckStatus('available');
+          setUpdateModalOpen(true);
           return;
         }
 
@@ -90,6 +92,7 @@ export function useAppUpdater() {
       setUpdateProgress(null);
       setUpdateError(null);
       setUpdateCheckError(null);
+      setUpdateModalOpen(false);
       void handleCheckForUpdates();
     };
     window.addEventListener('mc-vector:update-channel-changed', handleChannelChanged);
@@ -113,6 +116,7 @@ export function useAppUpdater() {
       logError('Update installation failed', error);
       setUpdateError(toErrorMessage(error));
       setUpdateProgress(null);
+      setUpdateModalOpen(true);
     } finally {
       isUpdatingRef.current = false;
     }
@@ -121,13 +125,11 @@ export function useAppUpdater() {
   const handleInstallUpdate = handleUpdateNow;
 
   const handleDismissUpdate = useCallback(() => {
-    setUpdatePrompt(null);
-    setUpdateProgress(null);
-    setUpdateError(null);
-    setUpdateCheckStatus('idle');
+    setUpdateModalOpen(false);
   }, []);
 
   return {
+    updateModalOpen,
     updatePrompt,
     updateProgress,
     updateError,

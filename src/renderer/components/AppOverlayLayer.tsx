@@ -18,6 +18,7 @@ interface AppOverlayLayerProps {
   updateProgress: number | null;
   updateError: string | null;
   updateReady: boolean;
+  updateModalOpen: boolean;
   onDismissUpdate: () => void;
   onUpdateNow: () => void;
   onInstallUpdate: () => void;
@@ -38,6 +39,7 @@ export default function AppOverlayLayer({
   updateProgress,
   updateError,
   updateReady,
+  updateModalOpen,
   onDismissUpdate,
   onUpdateNow,
   onInstallUpdate,
@@ -60,6 +62,7 @@ export default function AppOverlayLayer({
         onAdd={onAddServer}
       />
       <AppUpdateModal
+        open={updateModalOpen}
         updatePrompt={updatePrompt}
         updateProgress={updateProgress}
         updateError={updateError}

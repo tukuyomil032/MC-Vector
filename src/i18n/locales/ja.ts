@@ -48,6 +48,14 @@ export const ja: TranslationDictionary = {
       downloaded: 'ダウンロード完了。再起動して適用できます。',
       error: 'エラー: {message}',
       releaseNotes: 'リリースノート:',
+      availableTitle: 'バージョン {version} が利用可能です',
+      readyTitle: '再起動してアップデートを適用しますか？',
+      downloadingTitle: 'アップデートをダウンロードしています',
+      errorTitle: 'アップデートを適用できませんでした',
+      downloadingLabel: 'ダウンロード中',
+      downloadHint: 'ダウンロードが終わるまで、アプリを開いたままにしてください。',
+      later: '後で',
+      retry: '再試行',
       channelLabel: 'アップデートチャンネル',
       channels: {
         stable: '安定版（Stable）',
@@ -1229,6 +1237,17 @@ export const ja: TranslationDictionary = {
     toast: {
       success: 'サーバーをインポートしました',
       failed: 'インポートに失敗しました',
+    },
+  },
+
+  releaseNotes: {
+    ariaLabel: 'リリースノート',
+    version: 'バージョン {version}',
+    sections: {
+      breaking: '互換性のない変更',
+      features: '新機能',
+      fixes: '不具合修正',
+      performance: 'パフォーマンス',
     },
   },
 

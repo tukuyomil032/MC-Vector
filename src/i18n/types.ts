@@ -70,6 +70,14 @@ export interface TranslationDictionary {
       downloaded: string;
       error: string;
       releaseNotes: string;
+      availableTitle: string;
+      readyTitle: string;
+      downloadingTitle: string;
+      errorTitle: string;
+      downloadingLabel: string;
+      downloadHint: string;
+      later: string;
+      retry: string;
       channelLabel: string;
       channels: {
         stable: string;
@@ -1221,6 +1229,17 @@ export interface TranslationDictionary {
     toast: {
       success: string;
       failed: string;
+    };
+  };
+
+  releaseNotes: {
+    ariaLabel: string;
+    version: string;
+    sections: {
+      breaking: string;
+      features: string;
+      fixes: string;
+      performance: string;
     };
   };
 

@@ -113,6 +113,7 @@ function MainApp() {
     handleUpdateNow,
     handleInstallUpdate,
     handleDismissUpdate,
+    updateModalOpen,
   } = useAppUpdater();
 
   useViewCycleShortcut({ currentView, setCurrentView });
@@ -581,6 +582,7 @@ function MainApp() {
         updateProgress={updateProgress}
         updateError={updateError}
         updateReady={updateReady}
+        updateModalOpen={updateModalOpen}
         onDismissUpdate={handleDismissUpdate}
         onUpdateNow={handleUpdateNow}
         onInstallUpdate={handleInstallUpdate}

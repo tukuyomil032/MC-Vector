@@ -1,9 +1,10 @@
-import { cn } from '@/lib/ui';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
+import { Progress } from '@/components/arc/progress/progress';
 import type { Translate } from '../../i18n';
-import { Button } from './ui/Button';
-import { Progress } from './ui/Progress';
 import ReleaseNotes from './ReleaseNotes';
+import styles from './AppUpdateModal.module.css';
 
 interface UpdatePromptState {
   version?: string;
@@ -11,6 +12,7 @@ interface UpdatePromptState {
 }
 
 interface AppUpdateModalProps {
+  open: boolean;
   updatePrompt: UpdatePromptState | null;
   updateProgress: number | null;
   updateError: string | null;
@@ -22,6 +24,7 @@ interface AppUpdateModalProps {
 }
 
 export default function AppUpdateModal({
+  open,
   updatePrompt,
   updateProgress,
   updateError,
@@ -31,87 +34,123 @@ export default function AppUpdateModal({
   onUpdateNow,
   onInstall,
 }: AppUpdateModalProps) {
-  const isOpen = !!(updatePrompt || updateError);
-  const isDownloading = updateProgress !== null && !updateReady;
+  // Each state is one screen: ready, downloading, failed, or an update waiting to be downloaded.
+  const phase = updateReady
+    ? 'ready'
+    : updateProgress !== null
+      ? 'downloading'
+      : updateError
+        ? 'error'
+        : 'available';
+  const percent = Math.min(100, Math.round(updateProgress ?? 0));
+
+  const title =
+    phase === 'ready'
+      ? t('settings.update.readyTitle')
+      : phase === 'downloading'
+        ? t('settings.update.downloadingTitle')
+        : phase === 'error'
+          ? t('settings.update.title')
+          : t('settings.update.availableTitle', { version: updatePrompt?.version || '?' });
+
+  // Closing while a download runs is blocked here; the Close button is disabled to match.
+  const blockDismiss = (event: Event) => event.preventDefault();
+
+  const footer =
+    phase === 'ready' ? (
+      <>
+        <Button type="button" variant="secondary" onClick={onDismiss}>
+          {t('settings.update.later')}
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          data-testid="update-modal-restart"
+          onClick={onInstall}
+        >
+          {t('settings.update.restart')}
+        </Button>
+      </>
+    ) : phase === 'downloading' ? (
+      <Button type="button" variant="secondary" disabled>
+        {t('common.close')}
+      </Button>
+    ) : phase === 'error' ? (
+      <>
+        <Button type="button" variant="secondary" onClick={onDismiss}>
+          {t('common.close')}
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          data-testid="update-modal-retry"
+          onClick={onUpdateNow}
+        >
+          {t('settings.update.retry')}
+        </Button>
+      </>
+    ) : (
+      <>
+        <Button type="button" variant="secondary" onClick={onDismiss}>
+          {t('settings.update.later')}
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          data-testid="update-modal-download-button"
+          onClick={onUpdateNow}
+        >
+          {t('settings.update.download')}
+        </Button>
+      </>
+    );
 
   return (
-    <Dialog.Root
-      open={isOpen}
-      onOpenChange={(o) => {
-        if (!o) {
-          onDismiss();
-        }
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && phase !== 'downloading') onDismiss();
       }}
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="app-update-overlay" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          data-theme="dark"
-          className={cn(
-            'app-update-modal',
-            'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[10001]',
-          )}
-          // ダウンロード中はEscape/背景クリックで閉じない
-          onEscapeKeyDown={isDownloading ? (e) => e.preventDefault() : undefined}
-          onPointerDownOutside={(e) => e.preventDefault()}
-        >
-          <Dialog.Title className="app-update-modal__title mt-0 mb-2 text-xl font-semibold">
-            {updatePrompt
-              ? t('settings.update.available', { version: updatePrompt.version || '?' })
-              : t('settings.update.title')}
-          </Dialog.Title>
-
-          {updatePrompt && (
+      <DialogContent
+        aria-describedby={undefined}
+        data-testid="app-update-modal"
+        title={title}
+        width="min(520px, calc(100vw - var(--space-8)))"
+        footer={footer}
+        onEscapeKeyDown={phase === 'downloading' ? blockDismiss : undefined}
+        onPointerDownOutside={phase === 'downloading' ? blockDismiss : undefined}
+      >
+        <div className={styles.body}>
+          {phase === 'available' && updatePrompt && (
             <ReleaseNotes
               releaseNotes={updatePrompt.releaseNotes}
               version={updatePrompt.version}
               label={t('settings.update.releaseNotes')}
-              className="mb-4"
             />
           )}
 
-          {updateError && (
-            <div className="mb-4 text-sm text-red-400">
-              {t('settings.update.error', { message: updateError })}
+          {phase === 'downloading' && (
+            <div className={styles.progress}>
+              <Progress
+                value={percent}
+                max={100}
+                label={t('settings.update.downloadingLabel')}
+                showValue
+              />
+              <p className={styles.hint}>{t('settings.update.downloadHint')}</p>
             </div>
           )}
 
-          {updatePrompt && updateProgress !== null && !updateReady && (
-            <div className="mb-4">
-              <div className="app-update-modal__progress-label mb-1 text-sm text-zinc-300">
-                {t('settings.update.downloading', { progress: Math.round(updateProgress) })}
-              </div>
-              <Progress value={Math.min(100, Math.round(updateProgress))} className="mt-2" />
-            </div>
+          {phase === 'error' && (
+            <Alert tone="danger" title={t('settings.update.errorTitle')}>
+              {updateError}
+            </Alert>
           )}
 
-          {updatePrompt && updateReady && (
-            <div className="mb-4 text-sm text-green-400">{t('settings.update.downloaded')}</div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onDismiss}>
-              {t('common.cancel')}
-            </Button>
-            {updatePrompt && !updateReady && (
-              <Button
-                variant="accent"
-                data-testid="update-modal-download-button"
-                onClick={onUpdateNow}
-                disabled={isDownloading}
-              >
-                {t('settings.update.download')}
-              </Button>
-            )}
-            {updatePrompt && updateReady && (
-              <Button variant="accent" onClick={onInstall}>
-                {t('settings.update.restart')}
-              </Button>
-            )}
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          {phase === 'ready' && <Alert tone="success" title={t('settings.update.downloaded')} />}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
