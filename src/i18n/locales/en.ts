@@ -696,7 +696,6 @@ export const en: TranslationDictionary = {
       detailSupportedMC: 'Supported MC',
       detailLoader: 'Loader',
       detailDownloads: 'Downloads',
-      detailSummary: 'Summary',
       detailProjectPage: 'Project Page',
       detailInfo: 'Info',
       detailReadme: 'README',

@@ -693,7 +693,6 @@ export const ja: TranslationDictionary = {
       detailSupportedMC: '対応MC',
       detailLoader: 'ローダー',
       detailDownloads: 'ダウンロード数',
-      detailSummary: '概要',
       detailProjectPage: 'プロジェクトページ',
       detailInfo: '情報',
       detailReadme: 'README',

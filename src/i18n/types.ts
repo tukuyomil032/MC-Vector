@@ -607,6 +607,7 @@ export interface TranslationDictionary {
       retry: string;
       searchError: string;
       sortLabel: string;
+      sortHint: string;
       sortRelevance: string;
       sortDownloads: string;
       sortName: string;
@@ -689,10 +690,10 @@ export interface TranslationDictionary {
       detailSupportedMC: string;
       detailLoader: string;
       detailDownloads: string;
-      detailSummary: string;
       detailProjectPage: string;
       detailInfo: string;
       detailReadme: string;
+      detailTabs: string;
       localSource: string;
       installedFile: string;
       installedVersion: string;
