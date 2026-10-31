@@ -2,14 +2,8 @@ import { expect, test } from './support/app-fixture';
 
 test.describe('console and user management', () => {
   test('sends a console command, renders its log, and searches the log', async ({ page, app }) => {
-    await app.gotoApp('paper-plugin-success');
-    // Commands are only accepted while the server is online, so start it in the mock first.
-    await page.evaluate(() => {
-      const runtime = (
-        window as Window & { __MC_VECTOR_E2E__?: { state: { runningServerIds: string[] } } }
-      ).__MC_VECTOR_E2E__;
-      runtime?.state.runningServerIds.push('server-1');
-    });
+    // Commands are only accepted while the server is online, so the mock starts server-1 before the app loads.
+    await app.gotoApp('paper-plugin-success', { runningServerIds: ['server-1'] });
     await app.openView('console');
 
     const commandInput = page.locator('[data-testid="console-command-input"]');

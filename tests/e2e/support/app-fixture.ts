@@ -11,7 +11,7 @@ type E2eWindow = Window & {
 };
 
 export interface AppFixture {
-  gotoApp(scenario?: E2eScenario): Promise<void>;
+  gotoApp(scenario?: E2eScenario, options?: { runningServerIds?: string[] }): Promise<void>;
   createServer(options?: {
     software?: 'Paper' | 'Fabric' | 'Forge';
     version?: string;
@@ -42,8 +42,10 @@ export function createAppFixture(page: Page): AppFixture {
   };
 
   return {
-    async gotoApp(scenario = 'default') {
+    async gotoApp(scenario = 'default', options: { runningServerIds?: string[] } = {}) {
       const state = runtimeStateForScenario(scenario);
+      // Seed running servers before the first server list load, since the app reads status only at mount.
+      if (options.runningServerIds) state.runningServerIds = [...options.runningServerIds];
       await page.addInitScript(
         ({ scenario: initialScenario, state: initialState }) => {
           (window as E2eWindow).__MC_VECTOR_E2E__ = {
