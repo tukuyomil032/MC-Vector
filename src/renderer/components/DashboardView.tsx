@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Activity, Cpu, Gauge, MemoryStick, Server, type LucideIcon } from 'lucide-react';
+import { AnimatedCounter } from '@/components/arc/animated-counter/animated-counter';
 import { CopyButton } from '@/components/arc/copy-button/copy-button';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
@@ -86,12 +87,16 @@ interface StatCardProps {
   testId: string;
   icon: LucideIcon;
   label: string;
-  value: string;
+  /** Null before any sample arrives; the card then shows a dash instead of a number. */
+  value: number | null;
+  decimals: number;
+  suffix?: string;
+  locale: string;
   tone?: TpsTone;
 }
 
 /** One measure at a glance: an icon tile, its label, and the value. Nothing else sits in the card. */
-function StatCard({ testId, icon, label, value, tone }: StatCardProps) {
+function StatCard({ testId, icon, label, value, decimals, suffix, locale, tone }: StatCardProps) {
   return (
     <article className={styles.stat} data-testid={testId}>
       <div className={styles.statHead}>
@@ -101,7 +106,11 @@ function StatCard({ testId, icon, label, value, tone }: StatCardProps) {
         </p>
       </div>
       <p className={styles.statValue} data-tone={tone} data-testid={`${testId}-value`}>
-        {value}
+        {value === null ? (
+          '--'
+        ) : (
+          <AnimatedCounter value={value} decimals={decimals} suffix={suffix} locale={locale} />
+        )}
       </p>
     </article>
   );
@@ -442,19 +451,27 @@ export default function DashboardView({ server }: Props) {
           testId="dashboard-kpi-cpu"
           icon={Cpu}
           label={t('dashboard.stats.currentCpu')}
-          value={`${formatters.decimal.format(currentCpu)}%`}
+          value={currentCpu}
+          decimals={1}
+          suffix="%"
+          locale={locale}
         />
         <StatCard
           testId="dashboard-kpi-memory"
           icon={MemoryStick}
           label={t('dashboard.stats.currentMemory')}
-          value={`${formatters.whole.format(currentMem)} ${megabytesLabel}`}
+          value={currentMem}
+          decimals={0}
+          suffix={` ${megabytesLabel}`}
+          locale={locale}
         />
         <StatCard
           testId="dashboard-kpi-tps"
           icon={Gauge}
           label={t('dashboard.stats.currentTps')}
-          value={currentTps === null ? '--' : formatters.tps.format(currentTps)}
+          value={currentTps}
+          decimals={2}
+          locale={locale}
           tone={tpsTone}
         />
       </section>

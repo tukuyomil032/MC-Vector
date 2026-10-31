@@ -47,6 +47,17 @@ vi.mock('@/components/arc/line-chart/line-chart', () => ({
   ),
 }));
 
+// The animated counter watches for scroll-into-view even when it never animates on view, and jsdom has no observer.
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
+
 const server: MinecraftServer = {
   id: 'server-a',
   name: 'A',
@@ -78,6 +89,14 @@ function snapshot(count: number, elapsedMs = 72_000): MetricHistorySnapshot {
 
 function chart(testId: string) {
   return within(screen.getByTestId(testId)).getByTestId('line-chart');
+}
+
+/**
+ * The animated counter splits every digit into its own wheel, so the element's text holds all ten digits per column.
+ * The full readout lives in one visually hidden span, and that span is what a reader hears.
+ */
+function kpiReadout(valueTestId: string, text: string) {
+  return within(screen.getByTestId(valueTestId)).getByText(text);
 }
 
 describe('DashboardView metric charts', () => {
@@ -124,9 +143,9 @@ describe('DashboardView metric charts', () => {
     render(<DashboardView server={server} />);
 
     expect(screen.queryAllByTestId('line-chart-datum')).toHaveLength(0);
-    expect(screen.getByTestId('dashboard-kpi-cpu')).toHaveTextContent('0%');
-    expect(screen.getByTestId('dashboard-kpi-memory')).toHaveTextContent('0 MB');
-    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveTextContent('--');
+    expect(kpiReadout('dashboard-kpi-cpu-value', '0.0%')).toBeInTheDocument();
+    expect(kpiReadout('dashboard-kpi-memory-value', '0 MB')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveTextContent(/^--$/);
     expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveAttribute('data-tone', 'none');
   });
 
@@ -151,7 +170,7 @@ describe('DashboardView metric charts', () => {
     expect(cpuData[0]).toHaveTextContent('70s 40');
     expect(cpuData[1]).toHaveTextContent('80s · held since 70s 40');
     expect(screen.queryByText(/^10s/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveTextContent('19.50');
+    expect(kpiReadout('dashboard-kpi-tps-value', '19.50')).toBeInTheDocument();
     expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveAttribute('data-tone', 'good');
   });
 

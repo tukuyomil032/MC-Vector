@@ -188,6 +188,17 @@
   color: var(--text-muted);
 }
 
+/* The counter sets its own color, font and line box. Hand them back to the value so the tone and the 3xl size apply.
+   An element name in the selector outranks the counter's single-class rule. */
+.statValue > span {
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
 /* Takes the height left under the top rows. Stacked cards share it; from 1024px each row of charts stretches to the bottom. */
 .chartGrid {
   display: grid;
