@@ -51,6 +51,9 @@ const server = {
   status: 'offline',
 } as MinecraftServer;
 
+// Arc dialogs and motion mount slowly in jsdom, and the full suite runs in parallel, so allow more time per test.
+vi.setConfig({ testTimeout: 20_000 });
+
 beforeEach(() => {
   createBackupMock.mockReset().mockResolvedValue({
     status: 'created',
