@@ -5,11 +5,9 @@ import type { TranslationDictionary } from '../types';
 
 export const ja: TranslationDictionary = {
   common: {
-    ok: 'OK',
     cancel: 'キャンセル',
     save: '保存',
     delete: '削除',
-    edit: '編集',
     create: '作成',
     close: '閉じる',
     back: '戻る',
@@ -17,15 +15,9 @@ export const ja: TranslationDictionary = {
     loading: '読み込み中…',
     downloading: 'ダウンロード中…',
     loadingView: 'ビューを読み込み中…',
-    error: 'エラー',
-    success: '成功',
     confirm: '確認',
-    yes: 'はい',
-    no: 'いいえ',
     search: '検索',
-    refresh: '更新',
     copy: 'コピー',
-    paste: '貼り付け',
     reload: '再読み込み',
     notifications: '通知',
   },
@@ -37,16 +29,13 @@ export const ja: TranslationDictionary = {
       title: 'アップデート',
       description: '最新バージョンの確認と適用を行います',
       checkButton: 'アップデートを確認',
-      checking: '確認中…',
       download: 'ダウンロード',
       restart: '再起動して適用',
       idle: 'まだ確認していません。',
       checkingStatus: '更新を確認しています…',
       available: 'アップデートを検知しました！ v{version}',
       notAvailable: '最新の状態です。',
-      downloading: 'ダウンロード中… {progress}%',
       downloaded: 'ダウンロード完了。再起動して適用できます。',
-      error: 'エラー: {message}',
       releaseNotes: 'リリースノート:',
       availableTitle: 'バージョン {version} が利用可能です',
       readyTitle: '再起動してアップデートを適用しますか？',
@@ -91,12 +80,6 @@ export const ja: TranslationDictionary = {
       saving: 'セキュリティ設定を保存中…',
       saveError: 'この設定を保存できなかったため、変更を元に戻しました。',
     },
-    general: {
-      title: '一般',
-    },
-    advanced: {
-      title: '詳細設定',
-    },
   },
 
   server: {
@@ -115,11 +98,6 @@ export const ja: TranslationDictionary = {
       crashed: 'クラッシュ',
     },
     create: {
-      title: 'サーバーを作成',
-      name: 'サーバー名',
-      version: 'Minecraftバージョン',
-      type: 'サーバータイプ',
-      description: '説明',
       templateNamePrompt: 'テンプレートとして保存',
       templateNameLabel: 'テンプレート名',
       templateDefaultName: '{name} テンプレート',
@@ -128,8 +106,6 @@ export const ja: TranslationDictionary = {
     list: {
       empty: 'サーバーがありません。最初のサーバーを作成しましょう！',
       emptyTitle: 'サーバーがまだありません',
-      running: '稼働中',
-      stopped: '停止中',
       selectOrCreate: 'サーバーを選択するか、作成してください',
       ungrouped: '未分類',
     },
@@ -137,15 +113,8 @@ export const ja: TranslationDictionary = {
       start: '起動',
       stop: '停止',
       restart: '再起動',
-      backup: 'バックアップ',
-      delete: '削除',
-      openFolder: 'フォルダを開く',
       clone: '複製',
       saveTemplate: 'テンプレート保存',
-    },
-    console: {
-      title: 'コンソール',
-      placeholder: 'コマンドを入力…',
     },
     eula: {
       title: 'Minecraft EULA に同意しますか？',
@@ -161,7 +130,6 @@ export const ja: TranslationDictionary = {
     },
     toast: {
       loadError: 'サーバーリスト読み込みエラー',
-      downloadStarting: 'ダウンロード開始…',
       downloadComplete: 'ダウンロードが完了しました',
       downloadingServer: '{software} {version} をダウンロード中',
       autoBackupCreated: '{name} の自動バックアップを作成しました',
@@ -176,9 +144,7 @@ export const ja: TranslationDictionary = {
       restartFailed: 'サーバーの再起動に失敗しました',
       settingsSaved: '設定を保存しました',
       saveFailed: '設定の保存に失敗しました',
-      pathEmpty: 'サーバーパスが空です',
       created: 'サーバー「{name}」を作成しました',
-      jarDownloadFailed: 'JARのダウンロードに失敗しました',
       jarUrlFailed: 'ダウンロードURLの取得に失敗しました。手動でJARを配置してください。',
       createFailed: 'サーバー作成に失敗しました',
       deleted: 'サーバーを削除しました',
@@ -198,10 +164,7 @@ export const ja: TranslationDictionary = {
       highCpu: 'CPU使用率が高くなっています',
     },
     confirm: {
-      delete: '本当に「{name}」を削除しますか？',
       deleteManaged: '本当に「{name}」を削除しますか？\n管理フォルダも完全に削除されます: {path}',
-      deleteExternal:
-        '本当に「{name}」を登録解除しますか？\n外部インポートされたフォルダは削除されません: {path}',
       clone: '「{name}」を複製しますか？',
     },
   },
@@ -599,24 +562,12 @@ export const ja: TranslationDictionary = {
   },
 
   plugins: {
-    title: 'プラグイン',
-    search: {
-      placeholder: 'プラグインを検索…',
-      noResults: 'プラグインが見つかりません',
-    },
     install: {
       button: 'インストール',
-      success: 'プラグインをインストールしました',
-      error: 'プラグインのインストールに失敗しました',
     },
     installed: {
       title: 'インストール済みプラグイン',
       empty: 'プラグインがインストールされていません',
-    },
-    sources: {
-      modrinth: 'Modrinth',
-      hangar: 'Hangar',
-      spigot: 'SpigotMC',
     },
     browser: {
       viewSwitch: 'プラグイン表示切替',
@@ -802,9 +753,7 @@ export const ja: TranslationDictionary = {
   },
 
   nav: {
-    home: 'ホーム',
     servers: 'サーバー',
-    plugins: 'プラグイン',
     settings: '設定',
     dashboard: 'ダッシュボード',
     console: 'コンソール',
@@ -817,7 +766,6 @@ export const ja: TranslationDictionary = {
     proxyNetwork: 'プロキシネットワーク',
     uiLab: 'UIラボ',
     addServer: 'サーバーを追加',
-    importServer: 'インポート',
     openSettings: '設定ウィンドウを開く',
     bulkSelect: '選択',
     bulkStartSelected: '一括起動',
@@ -835,7 +783,6 @@ export const ja: TranslationDictionary = {
   },
 
   proxy: {
-    configTitle: 'プロキシ構成',
     settingsUpdated:
       '{count} 台のサーバーの設定を更新しました。プロキシサーバー ({software}) のポート {port} で接続してください。',
     configError: 'プロキシ構成中にエラーが発生しました',
@@ -921,10 +868,7 @@ export const ja: TranslationDictionary = {
     generic: 'エラーが発生しました',
     viewFailedDescription: 'この画面を表示できませんでした。再読み込みしてもう一度お試しください。',
     notFoundDescription: '指定された画面は存在しません。',
-    network: 'ネットワークエラー。接続を確認してください。',
     notFound: '見つかりません',
-    permission: '権限がありません',
-    validation: '入力が無効です',
     updateSignatureVerificationFailed: 'アップデート署名の検証に失敗しました。',
     updateSignatureVerificationDetails:
       '配信中の latest.json / .sig / updater pubkey が一致していない可能性があります。\n' +
@@ -1049,7 +993,6 @@ export const ja: TranslationDictionary = {
       ready: '開始準備完了…',
       initializing: '--- ngrok を初期化中 ---',
       initializingWithNewToken: '--- 新しいトークンで ngrok を初期化中 ---',
-      addressCopied: 'アドレスをコピーしました！',
       tokenRequired: {
         title: 'ngrok の認証トークンが必要です',
         description:

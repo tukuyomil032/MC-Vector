@@ -5,11 +5,9 @@ import type { TranslationDictionary } from '../types';
 
 export const en: TranslationDictionary = {
   common: {
-    ok: 'OK',
     cancel: 'Cancel',
     save: 'Save',
     delete: 'Delete',
-    edit: 'Edit',
     create: 'Create',
     close: 'Close',
     back: 'Back',
@@ -17,15 +15,9 @@ export const en: TranslationDictionary = {
     loading: 'Loading...',
     downloading: 'Downloading...',
     loadingView: 'Loading view...',
-    error: 'Error',
-    success: 'Success',
     confirm: 'Confirm',
-    yes: 'Yes',
-    no: 'No',
     search: 'Search',
-    refresh: 'Refresh',
     copy: 'Copy',
-    paste: 'Paste',
     reload: 'Reload',
     notifications: 'Notifications',
   },
@@ -37,16 +29,13 @@ export const en: TranslationDictionary = {
       title: 'Updates',
       description: 'Check and apply the latest version',
       checkButton: 'Check for Updates',
-      checking: 'Checking...',
       download: 'Download',
       restart: 'Restart to Apply',
       idle: 'Not checked yet.',
       checkingStatus: 'Checking for updates...',
       available: 'Update available! v{version}',
       notAvailable: 'You are up to date.',
-      downloading: 'Downloading... {progress}%',
       downloaded: 'Download complete. Ready to restart and apply.',
-      error: 'Error: {message}',
       releaseNotes: 'Release Notes:',
       availableTitle: 'Version {version} is available',
       readyTitle: 'Restart to apply the update?',
@@ -92,12 +81,6 @@ export const en: TranslationDictionary = {
       saving: 'Saving security setting...',
       saveError: 'This setting could not be saved. The change was reverted.',
     },
-    general: {
-      title: 'General',
-    },
-    advanced: {
-      title: 'Advanced',
-    },
   },
 
   server: {
@@ -116,11 +99,6 @@ export const en: TranslationDictionary = {
       crashed: 'Crashed',
     },
     create: {
-      title: 'Create Server',
-      name: 'Server Name',
-      version: 'Minecraft Version',
-      type: 'Server Type',
-      description: 'Description',
       templateNamePrompt: 'Save as template',
       templateNameLabel: 'Template name',
       templateDefaultName: '{name} Template',
@@ -129,8 +107,6 @@ export const en: TranslationDictionary = {
     list: {
       empty: 'No servers yet. Create your first server!',
       emptyTitle: 'No servers yet',
-      running: 'Running',
-      stopped: 'Stopped',
       selectOrCreate: 'Select a server or create one.',
       ungrouped: 'Ungrouped',
     },
@@ -138,15 +114,8 @@ export const en: TranslationDictionary = {
       start: 'Start',
       stop: 'Stop',
       restart: 'Restart',
-      backup: 'Backup',
-      delete: 'Delete',
-      openFolder: 'Open Folder',
       clone: 'Clone',
       saveTemplate: 'Save as Template',
-    },
-    console: {
-      title: 'Console',
-      placeholder: 'Enter command...',
     },
     eula: {
       title: 'Accept the Minecraft EULA?',
@@ -163,7 +132,6 @@ export const en: TranslationDictionary = {
     },
     toast: {
       loadError: 'Failed to load server list',
-      downloadStarting: 'Starting download...',
       downloadComplete: 'Download complete',
       downloadingServer: 'Downloading {software} {version}',
       autoBackupCreated: 'Auto backup created for {name}',
@@ -179,9 +147,7 @@ export const en: TranslationDictionary = {
       restartFailed: 'Failed to restart server',
       settingsSaved: 'Settings saved',
       saveFailed: 'Failed to save settings',
-      pathEmpty: 'Server path is empty',
       created: 'Server "{name}" created',
-      jarDownloadFailed: 'Failed to download JAR',
       jarUrlFailed: 'Failed to get download URL. Please place the JAR manually.',
       createFailed: 'Failed to create server',
       deleted: 'Server deleted',
@@ -201,11 +167,8 @@ export const en: TranslationDictionary = {
       highCpu: 'CPU usage is high',
     },
     confirm: {
-      delete: 'Are you sure you want to delete "{name}"?',
       deleteManaged:
         'Delete "{name}"?\nThe managed server folder will also be permanently deleted: {path}',
-      deleteExternal:
-        'Unregister "{name}"?\nThe externally imported folder will not be deleted: {path}',
       clone: 'Clone "{name}"?',
     },
   },
@@ -603,24 +566,12 @@ export const en: TranslationDictionary = {
   },
 
   plugins: {
-    title: 'Plugins',
-    search: {
-      placeholder: 'Search plugins...',
-      noResults: 'No plugins found',
-    },
     install: {
       button: 'Install',
-      success: 'Plugin installed successfully',
-      error: 'Failed to install plugin',
     },
     installed: {
       title: 'Installed Plugins',
       empty: 'No plugins installed',
-    },
-    sources: {
-      modrinth: 'Modrinth',
-      hangar: 'Hangar',
-      spigot: 'SpigotMC',
     },
     browser: {
       viewSwitch: 'Plugin view switch',
@@ -805,9 +756,7 @@ export const en: TranslationDictionary = {
   },
 
   nav: {
-    home: 'Home',
     servers: 'Servers',
-    plugins: 'Plugins',
     settings: 'Settings',
     dashboard: 'Dashboard',
     console: 'Console',
@@ -820,7 +769,6 @@ export const en: TranslationDictionary = {
     proxyNetwork: 'Proxy Network',
     uiLab: 'UI Lab',
     addServer: 'Add Server',
-    importServer: 'Import',
     openSettings: 'Open settings window',
     bulkSelect: 'Select',
     bulkStartSelected: 'Start',
@@ -838,7 +786,6 @@ export const en: TranslationDictionary = {
   },
 
   proxy: {
-    configTitle: 'Proxy Configuration',
     settingsUpdated:
       'Updated settings for {count} server(s). Connect via {software} proxy on port {port}.',
     configError: 'Error during proxy configuration',
@@ -925,10 +872,7 @@ export const en: TranslationDictionary = {
     generic: 'An error occurred',
     viewFailedDescription: 'This screen could not be displayed. Reload it to try again.',
     notFoundDescription: 'The screen you asked for does not exist.',
-    network: 'Network error. Please check your connection.',
     notFound: 'Not found',
-    permission: 'Permission denied',
-    validation: 'Invalid input',
     updateSignatureVerificationFailed: 'Update signature verification failed.',
     updateSignatureVerificationDetails:
       'The distributed latest.json / .sig / updater pubkey may not match.\n' +
@@ -1050,7 +994,6 @@ export const en: TranslationDictionary = {
       ready: 'Ready to start...',
       initializing: '--- Initializing ngrok ---',
       initializingWithNewToken: '--- Initializing ngrok with new token ---',
-      addressCopied: 'Address copied!',
       tokenRequired: {
         title: 'ngrok AuthToken Required',
         description:

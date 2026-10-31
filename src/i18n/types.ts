@@ -25,11 +25,9 @@ export const DEFAULT_LOCALE: LocaleCode = 'en';
 export interface TranslationDictionary {
   /** Common UI elements used across the app */
   common: {
-    ok: string;
     cancel: string;
     save: string;
     delete: string;
-    edit: string;
     create: string;
     close: string;
     back: string;
@@ -37,15 +35,9 @@ export interface TranslationDictionary {
     loading: string;
     downloading: string;
     loadingView: string;
-    error: string;
-    success: string;
     confirm: string;
-    yes: string;
-    no: string;
     search: string;
-    refresh: string;
     copy: string;
-    paste: string;
     reload: string;
     /** Accessible name of the notification region */
     notifications: string;
@@ -59,16 +51,13 @@ export interface TranslationDictionary {
       title: string;
       description: string;
       checkButton: string;
-      checking: string;
       download: string;
       restart: string;
       idle: string;
       checkingStatus: string;
       available: string;
       notAvailable: string;
-      downloading: string;
       downloaded: string;
-      error: string;
       releaseNotes: string;
       availableTitle: string;
       readyTitle: string;
@@ -112,12 +101,6 @@ export interface TranslationDictionary {
       saving: string;
       saveError: string;
     };
-    general: {
-      title: string;
-    };
-    advanced: {
-      title: string;
-    };
   };
 
   /** Server management translations */
@@ -137,11 +120,6 @@ export interface TranslationDictionary {
       crashed: string;
     };
     create: {
-      title: string;
-      name: string;
-      version: string;
-      type: string;
-      description: string;
       templateNamePrompt: string;
       templateNameLabel: string;
       templateDefaultName: string;
@@ -150,8 +128,6 @@ export interface TranslationDictionary {
     list: {
       empty: string;
       emptyTitle: string;
-      running: string;
-      stopped: string;
       selectOrCreate: string;
       ungrouped: string;
     };
@@ -159,15 +135,8 @@ export interface TranslationDictionary {
       start: string;
       stop: string;
       restart: string;
-      backup: string;
-      delete: string;
-      openFolder: string;
       clone: string;
       saveTemplate: string;
-    };
-    console: {
-      title: string;
-      placeholder: string;
     };
     eula: {
       title: string;
@@ -183,7 +152,6 @@ export interface TranslationDictionary {
     };
     toast: {
       loadError: string;
-      downloadStarting: string;
       downloadComplete: string;
       downloadingServer: string;
       autoBackupCreated: string;
@@ -198,9 +166,7 @@ export interface TranslationDictionary {
       restartFailed: string;
       settingsSaved: string;
       saveFailed: string;
-      pathEmpty: string;
       created: string;
-      jarDownloadFailed: string;
       jarUrlFailed: string;
       createFailed: string;
       deleted: string;
@@ -220,9 +186,7 @@ export interface TranslationDictionary {
       highCpu: string;
     };
     confirm: {
-      delete: string;
       deleteManaged: string;
-      deleteExternal: string;
       clone: string;
     };
   };
@@ -606,24 +570,12 @@ export interface TranslationDictionary {
 
   /** Plugin management translations */
   plugins: {
-    title: string;
-    search: {
-      placeholder: string;
-      noResults: string;
-    };
     install: {
       button: string;
-      success: string;
-      error: string;
     };
     installed: {
       title: string;
       empty: string;
-    };
-    sources: {
-      modrinth: string;
-      hangar: string;
-      spigot: string;
     };
     browser: {
       viewSwitch: string;
@@ -800,9 +752,7 @@ export interface TranslationDictionary {
   };
 
   nav: {
-    home: string;
     servers: string;
-    plugins: string;
     settings: string;
     dashboard: string;
     console: string;
@@ -815,7 +765,6 @@ export interface TranslationDictionary {
     proxyNetwork: string;
     uiLab: string;
     addServer: string;
-    importServer: string;
     openSettings: string;
     bulkSelect: string;
     bulkStartSelected: string;
@@ -834,7 +783,6 @@ export interface TranslationDictionary {
 
   /** Proxy configuration translations */
   proxy: {
-    configTitle: string;
     settingsUpdated: string;
     configError: string;
     confirmRewriteProperties: string;
@@ -917,10 +865,7 @@ export interface TranslationDictionary {
     generic: string;
     viewFailedDescription: string;
     notFoundDescription: string;
-    network: string;
     notFound: string;
-    permission: string;
-    validation: string;
     updateSignatureVerificationFailed: string;
     updateSignatureVerificationDetails: string;
     updateReadOnlyLocationTitle: string;
@@ -1036,7 +981,6 @@ export interface TranslationDictionary {
       ready: string;
       initializing: string;
       initializingWithNewToken: string;
-      addressCopied: string;
       tokenRequired: {
         title: string;
         description: string;
