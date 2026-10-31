@@ -1,9 +1,21 @@
 import { persistBackupCatalogBestEffort } from '@/renderer/components/BackupsView';
 import BackupsView from '@/renderer/components/BackupsView';
 import { useBackupOperationStore } from '@/store/backupOperationStore';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { StrictMode, useLayoutEffect, useRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// These lifecycle tests chain several async steps. Under a full parallel run the default 1s wait can expire
+// before the view settles, although each step finishes, so the wait gets more room here.
+configure({ asyncUtilTimeout: 5000 });
 
 const {
   confirmMock,
