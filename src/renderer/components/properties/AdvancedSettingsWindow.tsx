@@ -12,6 +12,7 @@ import {
   type PropertyCategory,
   type PropertyDefinition,
   serverPropertiesList,
+  serverPropertyEnglish,
 } from '../../shared/propertiesData';
 import styles from './AdvancedSettingsWindow.module.css';
 
@@ -164,14 +165,17 @@ export default function AdvancedSettingsWindow({
     if (locale === 'ja' || !JAPANESE_TEXT_PATTERN.test(prop.label)) {
       return prop.label;
     }
-    return humanizePropertyKey(prop.key);
+    return serverPropertyEnglish[prop.key]?.label ?? humanizePropertyKey(prop.key);
   };
 
   const getPropertyDescription = (prop: PropertyDefinition): string => {
     if (locale === 'ja' || !JAPANESE_TEXT_PATTERN.test(prop.description)) {
       return prop.description;
     }
-    return t('advancedSettings.propertyDescriptionFallback', { key: prop.key });
+    return (
+      serverPropertyEnglish[prop.key]?.description ??
+      t('advancedSettings.propertyDescriptionFallback', { key: prop.key })
+    );
   };
 
   /** The key sits in the description so the visible text stays a plain sentence with the real property name. */
