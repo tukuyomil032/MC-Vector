@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useId, useRef, useState } from 'react';
 import type { InputHTMLAttributes } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { motionTokens } from '../lib/motion-tokens';
+import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
 import styles from './input.module.css';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -80,7 +81,8 @@ function RollingNumber({ word }: { word: string }) {
 /** Changed words rise in and unblur while unchanged words hold still, and numbers roll. Assistive tech reads the plain copy. */
 function MotionText({ text }: { text: string }) {
   const reduced = useReducedMotion();
-  const words = text.split(' ');
+  const locale = useCopyLocale();
+  const words = copyUnits(text, locale);
   return (
     <>
       <span className={styles.srOnly}>{text}</span>
@@ -116,7 +118,7 @@ function MotionText({ text }: { text: string }) {
               }
             >
               {isNumber(word) ? <RollingNumber word={word} /> : word}
-              {index < words.length - 1 ? ' ' : null}
+              {index < words.length - 1 ? locale === 'ja' ? <wbr /> : ' ' : null}
             </motion.span>
           ))}
         </AnimatePresence>

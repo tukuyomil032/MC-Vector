@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
+import { Phrase } from '../shared/japanese-phrase';
 import { saveAppSettings } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
@@ -116,7 +117,9 @@ const SettingsWindow = ({
               <h2 id="settings-update-title" className={styles.cardTitle}>
                 {t('settings.update.title')}
               </h2>
-              <p className={styles.cardDescription}>{t('settings.update.description')}</p>
+              <p className={styles.cardDescription}>
+                <Phrase text={t('settings.update.description')} />
+              </p>
             </div>
             {updateCheckStatus !== 'checking' && (
               <Button
@@ -187,7 +190,9 @@ const SettingsWindow = ({
             <h2 id="settings-language-title" className={styles.cardTitle}>
               {t('settings.language.title')}
             </h2>
-            <p className={styles.cardDescription}>{t('settings.language.description')}</p>
+            <p className={styles.cardDescription}>
+              <Phrase text={t('settings.language.description')} />
+            </p>
           </div>
           <Select
             id="language-select"
@@ -204,7 +209,9 @@ const SettingsWindow = ({
             <h2 id="settings-security-title" className={styles.cardTitle}>
               {t('settings.security.title')}
             </h2>
-            <p className={styles.cardDescription}>{t('settings.security.description')}</p>
+            <p className={styles.cardDescription}>
+              <Phrase text={t('settings.security.description')} />
+            </p>
           </div>
           <Switch
             id="allow-unverified-plugin-downloads"
@@ -232,7 +239,9 @@ const SettingsWindow = ({
             <h2 id="settings-glass-title" className={styles.cardTitle}>
               {t('settings.liquidGlass.title')}
             </h2>
-            <p className={styles.cardDescription}>{t('settings.liquidGlass.description')}</p>
+            <p className={styles.cardDescription}>
+              <Phrase text={t('settings.liquidGlass.description')} />
+            </p>
           </div>
           <Switch
             id="liquid-glass-toggle"

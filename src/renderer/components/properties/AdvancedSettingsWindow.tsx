@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '../../../i18n';
 import { useArcMessages } from '../../shared/arc-messages';
+import { Phrase } from '../../shared/japanese-phrase';
 import {
   type PropertyCategory,
   type PropertyDefinition,
@@ -242,7 +243,9 @@ export default function AdvancedSettingsWindow({
             {getPropertyLabel(prop)}
           </span>
           <span className={styles.key}>{prop.key}</span>
-          <span className={styles.toggleDescription}>{getPropertyDescription(prop)}</span>
+          <span className={styles.toggleDescription}>
+            <Phrase text={getPropertyDescription(prop)} />
+          </span>
         </div>
         <Switch
           aria-labelledby={labelId}

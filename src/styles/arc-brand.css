@@ -24,3 +24,21 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
 }
+
+/*
+ * Japanese copy breaks only at BudouX phrase boundaries (<wbr>, see
+ * renderer/shared/japanese-phrase.tsx) and falls back to overflow-wrap when a
+ * phrase is wider than the line. Safari has no word-break: auto-phrase.
+ */
+:lang(ja) {
+  line-break: strict;
+}
+
+:lang(ja) :is(p, h1, h2, h3, h4, h5, h6, li, label, figcaption) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:is(p, h1, h2, h3, h4, h5, h6, li, figcaption, blockquote) {
+  text-wrap: pretty;
+}

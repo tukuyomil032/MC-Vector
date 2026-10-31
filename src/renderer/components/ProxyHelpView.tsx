@@ -9,6 +9,7 @@ import { useArcMessages } from '../shared/arc-messages';
 import { useUiStore } from '../../store/uiStore';
 import { openGuideLink } from '../shared/guide-links';
 import { notify } from '../shared/notify';
+import { Phrase } from '../shared/japanese-phrase';
 import { GuideStep } from './GuideStep';
 import styles from './GuideView.module.css';
 
@@ -46,21 +47,27 @@ const ProxyHelpView: FC = () => {
         </div>
 
         <p className={styles.intro}>
-          {t('proxyHelp.introLine1')} {t('proxyHelp.introLine2')}
+          <Phrase text={t('proxyHelp.introLine1')} /> <Phrase text={t('proxyHelp.introLine2')} />
         </p>
 
         <div className={styles.summary}>
           <Card title={t('proxyHelp.recommendedSoftware')} className={styles.card}>
             <p className={styles.value}>Velocity</p>
-            <p className={styles.note}>{t('proxyHelp.recommendedSoftwareNote')}</p>
+            <p className={styles.note}>
+              <Phrase text={t('proxyHelp.recommendedSoftwareNote')} />
+            </p>
           </Card>
           <Card title={t('proxyHelp.recommendedPort')} className={styles.card}>
             <p className={styles.value}>25577</p>
-            <p className={styles.note}>{t('proxyHelp.recommendedPortNote')}</p>
+            <p className={styles.note}>
+              <Phrase text={t('proxyHelp.recommendedPortNote')} />
+            </p>
           </Card>
           <Card title={t('proxyHelp.minConfig')} className={styles.card}>
             <p className={styles.value}>{t('proxyHelp.minConfigValue')}</p>
-            <p className={styles.note}>{t('proxyHelp.minConfigNote')}</p>
+            <p className={styles.note}>
+              <Phrase text={t('proxyHelp.minConfigNote')} />
+            </p>
           </Card>
         </div>
 
@@ -81,31 +88,47 @@ const ProxyHelpView: FC = () => {
         </Card>
 
         <GuideStep badge={t('proxyHelp.step1Badge')} title={t('proxyHelp.step1Title')}>
-          <p>{t('proxyHelp.step1Desc')}</p>
+          <p>
+            <Phrase text={t('proxyHelp.step1Desc')} />
+          </p>
           <ul className={styles.list}>
             <li className={styles.stack}>
               <span className={styles.listTitle}>{t('proxyHelp.step1Software')}</span>
-              <span className={styles.listNote}>{t('proxyHelp.step1SoftwareDesc')}</span>
+              <span className={styles.listNote}>
+                <Phrase text={t('proxyHelp.step1SoftwareDesc')} />
+              </span>
             </li>
             <li className={styles.stack}>
               <span className={styles.listTitle}>{t('proxyHelp.step1Port')}</span>
-              <span className={styles.listNote}>{t('proxyHelp.step1PortDesc1')}</span>
-              <span className={styles.listNote}>{t('proxyHelp.step1PortDesc2')}</span>
+              <span className={styles.listNote}>
+                <Phrase text={t('proxyHelp.step1PortDesc1')} />
+              </span>
+              <span className={styles.listNote}>
+                <Phrase text={t('proxyHelp.step1PortDesc2')} />
+              </span>
             </li>
             <li className={styles.stack}>
               <span className={styles.listTitle}>{t('proxyHelp.step1Backend')}</span>
-              <span className={styles.listNote}>{t('proxyHelp.step1BackendDesc')}</span>
+              <span className={styles.listNote}>
+                <Phrase text={t('proxyHelp.step1BackendDesc')} />
+              </span>
             </li>
           </ul>
-          <p>{t('proxyHelp.step1Action')}</p>
+          <p>
+            <Phrase text={t('proxyHelp.step1Action')} />
+          </p>
           <Alert tone="info" title={t('proxyHelp.step1Tip')} />
         </GuideStep>
 
         <GuideStep badge={t('proxyHelp.step2Badge')} title={t('proxyHelp.step2Title')}>
-          <p>{t('proxyHelp.step2Desc')}</p>
+          <p>
+            <Phrase text={t('proxyHelp.step2Desc')} />
+          </p>
           <div className={styles.stack}>
             <span className={styles.listTitle}>{t('proxyHelp.step2Navigate')}</span>
-            <span className={styles.listNote}>{t('proxyHelp.step2NavigateDesc')}</span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.step2NavigateDesc')} />
+            </span>
             <CodeBlock
               code="servers/Proxy-Server"
               filename="Proxy-Server"
@@ -115,7 +138,9 @@ const ProxyHelpView: FC = () => {
           </div>
           <div className={styles.stack}>
             <span className={styles.listTitle}>{t('proxyHelp.step2Download')}</span>
-            <span className={styles.listNote}>{t('proxyHelp.step2DownloadDesc')}</span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.step2DownloadDesc')} />
+            </span>
             <div className={styles.ctaRow}>
               <Button
                 type="button"
@@ -140,20 +165,30 @@ const ProxyHelpView: FC = () => {
         <GuideStep badge={t('proxyHelp.step3Badge')} title={t('proxyHelp.step3Title')}>
           <div className={styles.stack}>
             <span className={styles.listTitle}>{t('proxyHelp.step3Edit')}</span>
-            <span className={styles.listNote}>{t('proxyHelp.step3EditDesc1')}</span>
-            <span className={styles.listNote}>{t('proxyHelp.step3EditDesc2')}</span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.step3EditDesc1')} />
+            </span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.step3EditDesc2')} />
+            </span>
             <CodeBlock
               code="servers/Proxy-Server/velocity.toml"
               filename="velocity.toml"
               language="toml"
               messages={arc.codeBlock}
             />
-            <span className={styles.listNote}>{t('proxyHelp.autoGenerated')}</span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.autoGenerated')} />
+            </span>
           </div>
           <div className={styles.stack}>
             <span className={styles.listTitle}>{t('proxyHelp.step3Save')}</span>
-            <span className={styles.listNote}>{t('proxyHelp.step3SaveDesc1')}</span>
-            <span className={styles.listNote}>{t('proxyHelp.step3SaveDesc2')}</span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.step3SaveDesc1')} />
+            </span>
+            <span className={styles.listNote}>
+              <Phrase text={t('proxyHelp.step3SaveDesc2')} />
+            </span>
           </div>
           <Alert tone="info" title={t('proxyHelp.step3Tip')} />
         </GuideStep>

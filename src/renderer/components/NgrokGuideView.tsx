@@ -7,6 +7,7 @@ import { useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
 import { useUiStore } from '../../store/uiStore';
 import { openGuideLink } from '../shared/guide-links';
+import { Phrase } from '../shared/japanese-phrase';
 import { notify } from '../shared/notify';
 import { GuideStep } from './GuideStep';
 import styles from './GuideView.module.css';
@@ -45,21 +46,28 @@ export default function NgrokGuideView() {
         </div>
 
         <p className={styles.intro}>
-          {t('ngrokGuide.introText')} {t('ngrokGuide.introRequirements')}
+          <Phrase text={t('ngrokGuide.introText')} />{' '}
+          <Phrase text={t('ngrokGuide.introRequirements')} />
         </p>
 
         <div className={styles.summary}>
           <Card title={t('ngrokGuide.summary.requirementsLabel')} className={styles.card}>
             <p className={styles.value}>{t('ngrokGuide.summary.requirementsValue')}</p>
-            <p className={styles.note}>{t('ngrokGuide.summary.requirementsNote')}</p>
+            <p className={styles.note}>
+              <Phrase text={t('ngrokGuide.summary.requirementsNote')} />
+            </p>
           </Card>
           <Card title={t('ngrokGuide.summary.obtainLabel')} className={styles.card}>
             <p className={styles.value}>{t('ngrokGuide.summary.obtainValue')}</p>
-            <p className={styles.note}>{t('ngrokGuide.summary.obtainNote')}</p>
+            <p className={styles.note}>
+              <Phrase text={t('ngrokGuide.summary.obtainNote')} />
+            </p>
           </Card>
           <Card title={t('ngrokGuide.summary.shareLabel')} className={styles.card}>
             <p className={styles.value}>tcp://host:port</p>
-            <p className={styles.note}>{t('ngrokGuide.summary.shareNote')}</p>
+            <p className={styles.note}>
+              <Phrase text={t('ngrokGuide.summary.shareNote')} />
+            </p>
           </Card>
         </div>
 
@@ -73,14 +81,16 @@ export default function NgrokGuideView() {
                   aria-hidden="true"
                   className={styles.checkIcon}
                 />
-                {item}
+                <Phrase text={item} />
               </li>
             ))}
           </ul>
         </Card>
 
         <GuideStep badge={t('ngrokGuide.step1.badge')} title={t('ngrokGuide.step1.title')}>
-          <p>{t('ngrokGuide.step1.description')}</p>
+          <p>
+            <Phrase text={t('ngrokGuide.step1.description')} />
+          </p>
           <div className={styles.ctaRow}>
             <Button
               type="button"
@@ -97,8 +107,12 @@ export default function NgrokGuideView() {
         </GuideStep>
 
         <GuideStep badge={t('ngrokGuide.step2.badge')} title={t('ngrokGuide.step2.title')}>
-          <p>{t('ngrokGuide.step2.description1')}</p>
-          <p>{t('ngrokGuide.step2.description2')}</p>
+          <p>
+            <Phrase text={t('ngrokGuide.step2.description1')} />
+          </p>
+          <p>
+            <Phrase text={t('ngrokGuide.step2.description2')} />
+          </p>
           <CodeBlock
             code="2Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxx"
             filename={t('ngrokGuide.summary.obtainValue')}
@@ -109,9 +123,15 @@ export default function NgrokGuideView() {
         </GuideStep>
 
         <GuideStep badge={t('ngrokGuide.step3.badge')} title={t('ngrokGuide.step3.title')}>
-          <p>{t('ngrokGuide.step3.description1')}</p>
-          <p>{t('ngrokGuide.step3.description2')}</p>
-          <p className={styles.note}>{t('ngrokGuide.step3.addressNote')}</p>
+          <p>
+            <Phrase text={t('ngrokGuide.step3.description1')} />
+          </p>
+          <p>
+            <Phrase text={t('ngrokGuide.step3.description2')} />
+          </p>
+          <p className={styles.note}>
+            <Phrase text={t('ngrokGuide.step3.addressNote')} />
+          </p>
           <Alert tone="info" title={t('ngrokGuide.step3.tip')} />
         </GuideStep>
       </div>

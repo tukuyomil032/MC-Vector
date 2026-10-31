@@ -24,6 +24,7 @@ import {
   type Ref,
 } from 'react';
 import { motionTokens } from '../lib/motion-tokens';
+import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
 import styles from './number-field.module.css';
 
 /** Text shown beside the number. A function receives the value, so a unit can follow it: `n => n === 1 ? " seat" : " seats"`. */
@@ -404,7 +405,8 @@ function MotionText({ text }: { text: string }) {
   const [trail, setTrail] = useState({ text, directions: [] as number[] });
   if (trail.text !== text) setTrail({ text, directions: directionsBetween(trail.text, text) });
   const directions = trail.text === text ? trail.directions : directionsBetween(trail.text, text);
-  const words = text.split(' ');
+  const locale = useCopyLocale();
+  const words = copyUnits(text, locale);
   // Spaces live between the slots, so a word that is still opening its width never runs into the next one.
   return (
     <>
@@ -412,7 +414,7 @@ function MotionText({ text }: { text: string }) {
       <span className={styles.words} aria-hidden="true">
         {words.map((word, index) => (
           <Fragment key={index}>
-            {index > 0 && ' '}
+            {index > 0 && (locale === 'ja' ? <wbr /> : ' ')}
             <WordSlot word={word} direction={directions[index] ?? 1} />
           </Fragment>
         ))}

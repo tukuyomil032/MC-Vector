@@ -16,6 +16,7 @@ import {
 } from 'motion/react';
 import { Folder } from 'lucide-react';
 import { motionTokens } from '../lib/motion-tokens';
+import { Phrase } from '../../../renderer/shared/japanese-phrase';
 import styles from './empty-state.module.css';
 
 export interface EmptyStateProps {
@@ -170,14 +171,14 @@ export function EmptyState({
         <h3>
           <AnimatePresence mode="popLayout" initial={false}>
             <Swap key={title} className={styles.line} {...swap}>
-              {title}
+              <Phrase text={title} />
             </Swap>
           </AnimatePresence>
         </h3>
         <p>
           <AnimatePresence mode="popLayout" initial={false}>
             <Swap key={description} className={styles.line} {...swap}>
-              {description}
+              <Phrase text={description} />
             </Swap>
           </AnimatePresence>
         </p>

@@ -4,6 +4,7 @@ import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line
 import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
+import { Phrase } from '../shared/japanese-phrase';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import type { MinecraftServer, ServerStatus } from '../components/../shared/server declaration';
@@ -88,11 +89,17 @@ interface KpiTileProps {
 function KpiTile({ testId, label, value, context, tone }: KpiTileProps) {
   return (
     <article className={styles.kpi} data-testid={testId}>
-      <p className={styles.kpiLabel}>{label}</p>
+      <p className={styles.kpiLabel}>
+        <Phrase text={label} />
+      </p>
       <p className={styles.kpiValue} data-tone={tone} data-testid={`${testId}-value`}>
         {value}
       </p>
-      {context && <p className={styles.kpiContext}>{context}</p>}
+      {context && (
+        <p className={styles.kpiContext}>
+          <Phrase text={context} />
+        </p>
+      )}
     </article>
   );
 }

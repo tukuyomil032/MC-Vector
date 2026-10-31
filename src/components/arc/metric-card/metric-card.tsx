@@ -10,6 +10,7 @@ import {
   type Variants,
 } from 'motion/react';
 import { motionTokens } from '../lib/motion-tokens';
+import { Phrase } from '../../../renderer/shared/japanese-phrase';
 import { AnimatedCounter } from '../animated-counter/animated-counter';
 import styles from './metric-card.module.css';
 export interface MetricCardProps {
@@ -110,7 +111,7 @@ function Swap({
           animate="shown"
           exit="gone"
         >
-          {text}
+          <Phrase text={text} />
         </motion.span>
       </AnimatePresence>
     </motion.span>

@@ -7,6 +7,7 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/r
 import type { HTMLMotionProps, MotionProps, Transition, Variants } from 'motion/react';
 import { X } from 'lucide-react';
 import { motionTokens } from '../lib/motion-tokens';
+import { Phrase } from '../../../renderer/shared/japanese-phrase';
 import styles from './card.module.css';
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
@@ -268,7 +269,7 @@ export function Card({
             className={styles.description}
             {...shared('description', 'card', 'position')}
           >
-            {description}
+            <Phrase text={description} />
           </motion.p>
         ) : null}
         {children}

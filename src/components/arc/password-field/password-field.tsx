@@ -3,6 +3,7 @@ import { forwardRef, useEffect, useId, useRef, useState } from 'react';
 import type { InputHTMLAttributes } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { motionTokens } from '../lib/motion-tokens';
+import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
 import styles from './password-field.module.css';
 /** The toggle's names. Both have English defaults; pass the ones you translate. */
 export interface PasswordFieldMessages {
@@ -67,7 +68,8 @@ function EyeMorph({ slashed }: { slashed: boolean }) {
 /** Changed words rise in and unblur while unchanged words hold still. Assistive tech reads the plain copy. */
 function MotionText({ text }: { text: string }) {
   const reduced = useReducedMotion();
-  const words = text.split(' ');
+  const locale = useCopyLocale();
+  const words = copyUnits(text, locale);
   return (
     <>
       <span className={styles.srOnly}>{text}</span>
@@ -102,7 +104,14 @@ function MotionText({ text }: { text: string }) {
                   : { duration: motionTokens.duration.standard, ease: [...motionTokens.ease.enter] }
               }
             >
-              {index < words.length - 1 ? `${word} ` : word}
+              {index < words.length - 1 ? (
+                <>
+                  {word}
+                  {locale === 'ja' ? <wbr /> : ' '}
+                </>
+              ) : (
+                word
+              )}
             </motion.span>
           ))}
         </AnimatePresence>

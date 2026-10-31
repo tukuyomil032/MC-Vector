@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { motionTokens } from '../lib/motion-tokens';
+import { Phrase } from '../../../renderer/shared/japanese-phrase';
 import styles from './alert.module.css';
 
 export type AlertTone = 'info' | 'success' | 'warning' | 'danger';
@@ -194,7 +195,7 @@ function AlertBox({
         <strong className={styles.title}>
           <AnimatePresence mode="popLayout" initial={false}>
             <Swap key={title} className={styles.line} {...swap}>
-              {title}
+              <Phrase text={title} />
             </Swap>
           </AnimatePresence>
         </strong>
@@ -206,7 +207,7 @@ function AlertBox({
               ) : (
                 <AnimatePresence mode="popLayout" initial={false}>
                   <Swap key={text} className={styles.line} {...swap}>
-                    {text}
+                    <Phrase text={text} />
                   </Swap>
                 </AnimatePresence>
               )}

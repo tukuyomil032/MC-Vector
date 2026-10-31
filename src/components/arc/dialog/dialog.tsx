@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Transition } from 'motion/react';
 import { X } from 'lucide-react';
 import { motionTokens } from '../lib/motion-tokens';
+import { Phrase } from '../../../renderer/shared/japanese-phrase';
 import styles from './dialog.module.css';
 
 /** Mirrors the open state so the content can stay mounted while it animates out, and retarget mid-flight if it is reopened or closed early. */
@@ -92,7 +93,7 @@ function SwapText({ text }: { text: string }) {
           ease: [...motionTokens.ease.enter],
         }}
       >
-        {text}
+        <Phrase text={text} />
       </motion.span>
     </AnimatePresence>
   );
