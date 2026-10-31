@@ -1164,6 +1164,8 @@ export const en: TranslationDictionary = {
     ariaExpandDirectory: 'Expand directory',
     treeLabel: 'Backup targets',
     emptyDescription: 'The server folder has no files to choose from.',
+    loadFailed: 'The server folder could not be read.',
+    retry: 'Retry',
     windowTitle: 'Backup Target Selector - {name}',
     units: {
       b: 'B',

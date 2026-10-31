@@ -1156,6 +1156,8 @@ export interface TranslationDictionary {
     ariaExpandDirectory: string;
     treeLabel: string;
     emptyDescription: string;
+    loadFailed: string;
+    retry: string;
     windowTitle: string;
     units: {
       b: string;

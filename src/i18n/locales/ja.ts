@@ -1161,6 +1161,8 @@ export const ja: TranslationDictionary = {
     ariaExpandDirectory: 'ディレクトリを展開',
     treeLabel: 'バックアップ対象',
     emptyDescription: 'サーバーフォルダーに選択できるファイルがありません。',
+    loadFailed: 'サーバーフォルダーを読み込めませんでした。',
+    retry: '再試行',
     windowTitle: 'バックアップ対象セレクター - {name}',
     units: {
       b: 'B',

@@ -304,4 +304,27 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
     expect(screen.queryByRole('checkbox', { name: 'old.txt (old.txt)' })).not.toBeInTheDocument();
     expect(screen.queryByText('backupSelector.loading')).not.toBeInTheDocument();
   });
+
+  it('shows a read error with retry instead of the empty state', async () => {
+    listFilesWithMetadataMock.mockImplementationOnce(() => Promise.reject(new Error('denied')));
+    renderSelector();
+
+    expect(await screen.findByText('backupSelector.loadFailed')).toBeInTheDocument();
+    expect(screen.queryByText('backupSelector.empty')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'backupSelector.retry' }));
+
+    expect(
+      await screen.findByRole('checkbox', { name: 'server.properties (server.properties)' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('backupSelector.loadFailed')).not.toBeInTheDocument();
+  });
+
+  it('keeps the empty state for a readable folder with nothing in it', async () => {
+    listFilesWithMetadataMock.mockImplementation(() => Promise.resolve([]));
+    renderSelector();
+
+    expect(await screen.findByText('backupSelector.empty')).toBeInTheDocument();
+    expect(screen.queryByText('backupSelector.loadFailed')).not.toBeInTheDocument();
+  });
 });

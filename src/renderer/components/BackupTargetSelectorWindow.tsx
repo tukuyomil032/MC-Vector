@@ -4,6 +4,7 @@ import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } fro
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/arc/button/button';
 import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { Alert } from '@/components/arc/alert/alert';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
@@ -205,6 +206,7 @@ export default function BackupTargetSelectorWindow() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const treeRequestGenerationRef = useRef(0);
 
   const selectionStateMap = useMemo(() => buildSelectionStateMap(tree, selected), [selected, tree]);
@@ -219,11 +221,13 @@ export default function BackupTargetSelectorWindow() {
       }
       setTree([]);
       setExpanded(new Set());
+      setLoadError(false);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setLoadError(false);
     try {
       const walk = async (absolutePath: string, relativeRoot = ''): Promise<SelectorNode[]> => {
         const entries = await listFilesWithMetadata(absolutePath);
@@ -302,6 +306,7 @@ export default function BackupTargetSelectorWindow() {
       logError('Failed to load backup selector tree', error, { basePath });
       setTree([]);
       setExpanded(new Set());
+      setLoadError(true);
     } finally {
       if (isCurrentRequest()) {
         setLoading(false);
@@ -516,6 +521,18 @@ export default function BackupTargetSelectorWindow() {
       <div className={styles.treePanel}>
         {loading ? (
           <Skeleton label={t('backupSelector.loading')} lines={6} />
+        ) : loadError ? (
+          <div className={styles.errorState}>
+            <Alert tone="danger" title={t('backupSelector.loadFailed')} />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadTree(serverPath, selected)}
+            >
+              {t('backupSelector.retry')}
+            </Button>
+          </div>
         ) : tree.length === 0 ? (
           <EmptyState
             title={t('backupSelector.empty')}
