@@ -1074,6 +1074,8 @@ export interface TranslationDictionary {
     openAdvanced: string;
     saveChanges: string;
     loadFailed: string;
+    loadFailedDescription: string;
+    retry: string;
     saveSuccess: string;
     saveFailed: string;
     advancedSaveSuccess: string;

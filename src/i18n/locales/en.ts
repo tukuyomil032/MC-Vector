@@ -1083,6 +1083,9 @@ export const en: TranslationDictionary = {
     openAdvanced: 'Open Advanced',
     saveChanges: 'Save Changes',
     loadFailed: 'Failed to load server properties',
+    loadFailedDescription:
+      'The current file could not be read, so editing and saving are disabled to keep it safe. Retry to load it again.',
+    retry: 'Retry',
     saveSuccess: 'Properties saved',
     saveFailed: 'Failed to save properties',
     advancedSaveSuccess: 'Advanced settings saved',

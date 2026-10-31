@@ -1080,6 +1080,9 @@ export const ja: TranslationDictionary = {
     openAdvanced: '詳細設定を開く',
     saveChanges: '変更を保存',
     loadFailed: 'サーバープロパティの読み込みに失敗しました',
+    loadFailedDescription:
+      '現在のファイルを読めなかったため、誤って上書きしないように編集と保存を無効にしています。再読み込みを試してください。',
+    retry: '再試行',
     saveSuccess: 'プロパティを保存しました',
     saveFailed: 'プロパティの保存に失敗しました',
     advancedSaveSuccess: '詳細設定を保存しました',

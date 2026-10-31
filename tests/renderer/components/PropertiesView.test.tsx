@@ -165,3 +165,23 @@ describe('PropertiesView search', () => {
     expect(screen.queryByLabelText('MOTD')).not.toBeInTheDocument();
   });
 });
+
+describe('PropertiesView load failure', () => {
+  it('hides the form and blocks saving defaults after a failed read, then retries the load', async () => {
+    getServerPropertiesMock
+      .mockRejectedValueOnce(new Error('disk read failed'))
+      .mockResolvedValueOnce({ motd: 'Real value', 'server-port': 25565 });
+    render(<PropertiesView server={serverA} />);
+
+    expect(await screen.findByText('Failed to load server properties')).toBeInTheDocument();
+    expect(screen.queryByLabelText('MOTD')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled();
+    expect(saveServerPropertiesMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    await waitFor(() => expect(motdInput()).toHaveValue('Real value'));
+    expect(getServerPropertiesMock).toHaveBeenCalledTimes(2);
+    expect(saveServerPropertiesMock).not.toHaveBeenCalled();
+  });
+});

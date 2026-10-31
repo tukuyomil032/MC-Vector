@@ -1,3 +1,4 @@
+import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Input } from '@/components/arc/input/input';
@@ -46,6 +47,10 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
+  // A failed read leaves the defaults above on screen. While this is set, the form is hidden and saving is blocked,
+  // so the defaults can never overwrite the real server.properties file.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   useLayoutEffect(() => {
@@ -67,6 +72,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     const isCurrentLoad = () => propertiesLoadGenerationRef.current === generation;
     const loadProperties = async () => {
       setLoading(true);
+      setLoadError(false);
       try {
         const newProps = await getServerProperties(serverId);
         if (!isCurrentLoad()) return;
@@ -80,7 +86,8 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       } catch (e) {
         if (!isCurrentLoad()) return;
         logError('Failed to load server properties', e, { serverId });
-        notify.error(t('properties.loadFailed'));
+        setLoadError(true);
+        setHasChanges(false);
       } finally {
         if (isCurrentLoad()) {
           setLoading(false);
@@ -94,7 +101,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
         propertiesLoadGenerationRef.current += 1;
       }
     };
-  }, [server.id, server.port, t]);
+  }, [server.id, server.port, reloadToken, t]);
 
   const definitions = useMemo(() => new Map(serverPropertiesList.map((d) => [d.key, d])), []);
 
@@ -117,6 +124,8 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   };
 
   const handleSave = async () => {
+    // Defaults shown after a failed read must never be written back to the file.
+    if (loadError) return;
     const serverId = server.id;
     const viewGeneration = serverViewGenerationRef.current;
     const isCurrentServerView = () =>
@@ -195,24 +204,48 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   );
   const anyVisible = basicVisible || gameplayVisible || networkVisible;
 
-  return (
-    <div className={styles.page} data-testid="properties-view">
-      <header className={styles.header}>
-        <h2 className={styles.title}>{t('properties.title')}</h2>
-        <div className={styles.actions}>
-          <Button variant="secondary" onClick={openAdvancedWindow}>
-            {t('properties.openAdvanced')}
-          </Button>
+  const header = (
+    <header className={styles.header}>
+      <h2 className={styles.title}>{t('properties.title')}</h2>
+      <div className={styles.actions}>
+        <Button variant="secondary" onClick={openAdvancedWindow} disabled={loadError}>
+          {t('properties.openAdvanced')}
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          disabled={!hasChanges || loadError}
+          data-testid="properties-save-button"
+        >
+          {t('properties.saveChanges')}
+        </Button>
+      </div>
+    </header>
+  );
+
+  if (loadError) {
+    return (
+      <div className={styles.page} data-testid="properties-view">
+        {header}
+        <Alert tone="danger" open title={t('properties.loadFailed')}>
+          <p>{t('properties.loadFailedDescription')}</p>
+        </Alert>
+        <div>
           <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={!hasChanges}
-            data-testid="properties-save-button"
+            variant="secondary"
+            onClick={() => setReloadToken((value) => value + 1)}
+            data-testid="properties-retry-button"
           >
-            {t('properties.saveChanges')}
+            {t('properties.retry')}
           </Button>
         </div>
-      </header>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page} data-testid="properties-view">
+      {header}
 
       <div className={styles.toolbar}>
         <SearchField
