@@ -207,6 +207,7 @@ export default function BackupTargetSelectorWindow() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [applyError, setApplyError] = useState(false);
   const treeRequestGenerationRef = useRef(0);
 
   const selectionStateMap = useMemo(() => buildSelectionStateMap(tree, selected), [selected, tree]);
@@ -415,6 +416,7 @@ export default function BackupTargetSelectorWindow() {
       return;
     }
 
+    setApplyError(false);
     setSaving(true);
     try {
       await emit('backup-selector:apply', {
@@ -422,6 +424,9 @@ export default function BackupTargetSelectorWindow() {
         paths: normalizeBackupSources(Array.from(selected)),
       });
       await requestClose();
+    } catch (error) {
+      logError('Failed to emit backup selector apply', error, { serverPath });
+      setApplyError(true);
     } finally {
       setSaving(false);
     }
@@ -544,6 +549,8 @@ export default function BackupTargetSelectorWindow() {
           </div>
         )}
       </div>
+
+      {applyError && <Alert tone="danger" title={t('backupSelector.applyFailed')} />}
 
       <footer className={styles.footer}>
         <Button

@@ -1158,6 +1158,7 @@ export interface TranslationDictionary {
     emptyDescription: string;
     loadFailed: string;
     retry: string;
+    applyFailed: string;
     windowTitle: string;
     units: {
       b: string;

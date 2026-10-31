@@ -320,6 +320,18 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
     expect(screen.queryByText('backupSelector.loadFailed')).not.toBeInTheDocument();
   });
 
+  it('surfaces an apply failure and keeps the selection editable', async () => {
+    emitMock.mockRejectedValueOnce(new Error('ipc down'));
+    renderSelector(['server.properties']);
+    await waitFor(() => expect(checkbox('server.properties')).toBeChecked());
+
+    fireEvent.click(screen.getByRole('button', { name: 'backupSelector.apply' }));
+
+    expect(await screen.findByText('backupSelector.applyFailed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'backupSelector.apply' })).toBeEnabled();
+    expect(checkbox('server.properties')).toBeChecked();
+  });
+
   it('keeps the empty state for a readable folder with nothing in it', async () => {
     listFilesWithMetadataMock.mockImplementation(() => Promise.resolve([]));
     renderSelector();

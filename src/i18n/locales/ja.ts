@@ -1163,6 +1163,7 @@ export const ja: TranslationDictionary = {
     emptyDescription: 'サーバーフォルダーに選択できるファイルがありません。',
     loadFailed: 'サーバーフォルダーを読み込めませんでした。',
     retry: '再試行',
+    applyFailed: '選択を適用できませんでした。もう一度お試しください。',
     windowTitle: 'バックアップ対象セレクター - {name}',
     units: {
       b: 'B',

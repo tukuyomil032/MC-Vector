@@ -1166,6 +1166,7 @@ export const en: TranslationDictionary = {
     emptyDescription: 'The server folder has no files to choose from.',
     loadFailed: 'The server folder could not be read.',
     retry: 'Retry',
+    applyFailed: 'The selection could not be applied. Try again.',
     windowTitle: 'Backup Target Selector - {name}',
     units: {
       b: 'B',
