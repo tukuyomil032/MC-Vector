@@ -1,11 +1,8 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
-import { ExternalLink, Flame, Loader2, Package, Server, X } from 'lucide-react';
+import { ExternalLink, Flame, Package, Server } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
@@ -41,6 +38,7 @@ import {
 } from '../shared/plugin-install-policy';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
+import { PluginDetailDialog } from './plugin-browser/PluginDetailDialog';
 import { PluginInstalledPanel } from './plugin-browser/PluginInstalledPanel';
 import { type PlatformOption, PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
 import type { PluginResultCardState } from './plugin-browser/PluginResultCard';
@@ -51,7 +49,6 @@ import {
   type BrowserSection,
   type CompatibilityDetail,
   type CompatibilityStatus,
-  type DetailTab,
   type InstalledPluginEntry,
   LIMIT,
   type ProjectItem,
@@ -98,7 +95,6 @@ export default function PluginBrowser({ server }: Props) {
     {},
   );
   const [detailItem, setDetailItem] = useState<ProjectItem | null>(null);
-  const [detailTab, setDetailTab] = useState<DetailTab>('info');
   const [detailReadme, setDetailReadme] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -1286,19 +1282,6 @@ export default function PluginBrowser({ server }: Props) {
     void performInstall(entry.sourceItem, 'overwrite', entry.fileName);
   };
 
-  const compatibilityLabel = (status: CompatibilityStatus): string => {
-    switch (status) {
-      case 'compatible':
-        return t('plugins.browser.compatCompatible');
-      case 'incompatible':
-        return t('plugins.browser.compatIncompatible');
-      case 'checking':
-        return t('plugins.browser.compatChecking');
-      default:
-        return t('plugins.browser.compatUnknown');
-    }
-  };
-
   const installingLabel = (itemId: string): string => {
     const progress = installProgressByItemId[itemId];
     return progress === undefined
@@ -1416,13 +1399,11 @@ export default function PluginBrowser({ server }: Props) {
   const closeDetailModal = () => {
     detailRequestIdRef.current += 1;
     setDetailItem(null);
-    setDetailTab('info');
     setDetailError(null);
   };
 
   const openDetailModal = (item: ProjectItem) => {
     setDetailItem(item);
-    setDetailTab('info');
     setDetailError(null);
 
     const cacheKey = `${item.platform}:${item.id}`;
@@ -1467,23 +1448,6 @@ export default function PluginBrowser({ server }: Props) {
   };
 
   useEffect(() => {
-    if (!detailItem) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeDetailModal();
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [detailItem]);
-
-  useEffect(() => {
     if (!dupDialog) {
       return;
     }
@@ -1512,9 +1476,6 @@ export default function PluginBrowser({ server }: Props) {
     setPage(clamped);
   };
 
-  const detailCompatibility = detailItem
-    ? (compatibilityByItemId[detailItem.id] ?? 'unknown')
-    : 'unknown';
   const detailProjectUrl = detailItem ? projectPageUrl(detailItem) : '';
   // Card state for one result, built from the same lookups the install and update paths use.
   const resolveResultCard = (item: ProjectItem): PluginResultCardState => {
@@ -1614,138 +1575,16 @@ export default function PluginBrowser({ server }: Props) {
         </TabsContent>
       </Tabs>
 
-      {detailItem && (
-        <div
-          className="plugin-browser__detail-modal-overlay modal-backdrop"
-          onClick={closeDetailModal}
-        >
-          <div
-            className="plugin-browser__detail-modal modal-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="plugin-browser__detail-header">
-              <div className="plugin-browser__detail-title-wrap">
-                <h3 className="plugin-browser__detail-title">{detailItem.title}</h3>
-                <div className="plugin-browser__detail-subtitle">
-                  <span>{detailItem.platform}</span>
-                  <span>
-                    {t('plugins.browser.byAuthor')} {detailItem.author}
-                  </span>
-                  <span className={`plugin-browser__compat-badge is-${detailCompatibility}`}>
-                    {compatibilityLabel(detailCompatibility)}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="plugin-browser__detail-close"
-                onClick={closeDetailModal}
-                aria-label={t('plugins.browser.closeDetailsAriaLabel')}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="plugin-browser__detail-tabs">
-              <button
-                type="button"
-                className={`plugin-browser__detail-tab ${detailTab === 'info' ? 'is-active' : ''}`}
-                onClick={() => setDetailTab('info')}
-              >
-                {t('plugins.browser.detailInfo')}
-              </button>
-              <button
-                type="button"
-                className={`plugin-browser__detail-tab ${detailTab === 'readme' ? 'is-active' : ''}`}
-                onClick={() => setDetailTab('readme')}
-              >
-                {t('plugins.browser.detailReadme')}
-              </button>
-            </div>
-
-            {detailTab === 'info' ? (
-              <div className="plugin-browser__detail-info-panel">
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailProject')}
-                  </span>
-                  <span className="plugin-browser__detail-value">{detailItem.id}</span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailSlug')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {detailItem.slug || t('plugins.browser.na')}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailSupportedMC')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {supportedVersionsLabel(detailItem.id)}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailLoader')}
-                  </span>
-                  <span className="plugin-browser__detail-value">{loaderLabel(detailItem)}</span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailDownloads')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {detailItem.downloads ? detailItem.downloads.toLocaleString() : '-'}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailSummary')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {detailItem.description || t('plugins.browser.noDescription')}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-actions">
-                  <button
-                    type="button"
-                    className="plugin-browser__detail-link-btn"
-                    onClick={() => void openExternal(detailProjectUrl)}
-                  >
-                    <ExternalLink size={14} />
-                    <span>{t('plugins.browser.detailProjectPage')}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="plugin-browser__detail-readme-panel">
-                {detailLoading ? (
-                  <div className="plugin-browser__detail-readme-empty">
-                    <Loader2 size={15} className="animate-spin" />
-                    <span>{t('plugins.browser.readmeLoading')}</span>
-                  </div>
-                ) : detailError ? (
-                  <div className="plugin-browser__detail-readme-empty is-error">{detailError}</div>
-                ) : detailReadme ? (
-                  <div className="plugin-browser__detail-readme-markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                      {detailReadme}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <div className="plugin-browser__detail-readme-empty">
-                    {t('plugins.browser.noReadme')}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <PluginDetailDialog
+        key={detailItem ? `${detailItem.platform}:${detailItem.id}` : 'closed'}
+        item={detailItem}
+        compatibility={detailItem ? (compatibilityByItemId[detailItem.id] ?? 'unknown') : 'unknown'}
+        supportedVersionsLabel={detailItem ? supportedVersionsLabel(detailItem.id) : ''}
+        loaderLabel={detailItem ? loaderLabel(detailItem) : ''}
+        readme={{ loading: detailLoading, error: detailError, content: detailReadme }}
+        onOpenProject={() => void openExternal(detailProjectUrl)}
+        onClose={closeDetailModal}
+      />
 
       {dupDialog && (
         <div
