@@ -1,0 +1,254 @@
+/* Provider READMEs (Modrinth, Hangar, Spigot text) rendered close to the provider's own pages. */
+.markdown {
+  min-width: 0;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown h1 {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 1.625rem;
+}
+
+.markdown h2 {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 1.3125rem;
+}
+
+.markdown h3 {
+  font-size: var(--text-lg);
+}
+
+.markdown h4 {
+  font-size: var(--text-base);
+}
+
+.markdown p {
+  margin: 0 0 var(--space-3);
+}
+
+.markdown a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.markdown a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.plainLink {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.5em;
+}
+
+.markdown ul {
+  list-style: disc;
+}
+
+.markdown ol {
+  list-style: decimal;
+}
+
+.markdown li {
+  margin: var(--space-1) 0;
+}
+
+.markdown li::marker {
+  color: var(--text-muted);
+}
+
+.markdown li > ul,
+.markdown li > ol {
+  margin: var(--space-1) 0;
+}
+
+/* GFM task lists drop the bullet and keep the checkbox at the margin. */
+.markdown ul:has(> li > input[type='checkbox']) {
+  padding-left: 0;
+  list-style: none;
+}
+
+.markdown input[type='checkbox'] {
+  margin: 0 var(--space-2) 0 0;
+  vertical-align: middle;
+}
+
+.markdown table {
+  display: block;
+  max-width: 100%;
+  margin: 0 0 var(--space-4);
+  overflow-x: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.markdown th,
+.markdown td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown th {
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+
+.markdown code {
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+}
+
+.markdown pre {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  overflow-wrap: normal;
+}
+
+.markdown pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-xs);
+  white-space: pre;
+}
+
+.markdown kbd {
+  padding: 0 0.35em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125em;
+}
+
+.markdown hr {
+  height: 0;
+  margin: var(--space-6) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.markdown blockquote {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-1) var(--space-4);
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+/* Collapsible sections keep a disclosure triangle that turns when the section opens. */
+.markdown details {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.markdown summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.markdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.markdown summary::before {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent currentColor;
+  content: '';
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.markdown details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.markdown details[open] > summary {
+  margin-bottom: var(--space-3);
+}
+
+.markdown details > :not(summary):last-child {
+  margin-bottom: 0;
+}
+
+/* Centered blocks from README HTML: <center>, <div align="center">, <p align="center">. */
+.markdown center,
+.markdown [align='center'] {
+  text-align: center;
+}
+
+.markdown center {
+  display: block;
+}
+
+.markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown img[data-align='center'] {
+  display: block;
+  margin-inline: auto;
+}
+
+.image {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown sub,
+.markdown sup {
+  font-size: 0.75em;
+  line-height: 0;
+}

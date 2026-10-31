@@ -44,8 +44,12 @@ describe('Tauri network capability scopes', () => {
     expect(config.app.security.csp).not.toContain('localhost:*');
     expect(config.app.security.csp).not.toContain('ws://localhost');
     const directives = config.app.security.csp.split(';').map((directive) => directive.trim());
-    expect(directives.find((directive) => directive.startsWith('img-src '))).not.toMatch(
-      /\shttps:(?:\s|$)/,
+    // Plugin README images load from any HTTPS host (product decision); scripts and connections stay closed.
+    const imgSrc = directives.find((directive) => directive.startsWith('img-src '));
+    expect(imgSrc).toMatch(/\shttps:(?:\s|$)/);
+    expect(imgSrc).not.toMatch(/\shttp:(?:\s|$)/);
+    expect(directives.find((directive) => directive.startsWith('script-src '))).toBe(
+      "script-src 'self'",
     );
     const connect = directives.find((directive) => directive.startsWith('connect-src '));
     expect(connect).toBe("connect-src 'self'");

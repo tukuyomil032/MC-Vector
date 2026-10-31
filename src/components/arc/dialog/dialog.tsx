@@ -49,6 +49,10 @@ export interface DialogContentProps extends ComponentPropsWithoutRef<
   footer?: ReactNode;
   /** Overrides the panel width, for example `min(520px, calc(100vw - 2rem))`. Defaults to 440px, capped by the viewport. */
   width?: string;
+  /** Optional content before the title, such as a plugin icon. It sits in the header row. */
+  leading?: ReactNode;
+  /** Optional content after the title and before the close control, such as a status badge. */
+  trailing?: ReactNode;
   children: ReactNode;
 }
 
@@ -105,6 +109,8 @@ export function DialogContent({
   showCloseButton = false,
   footer,
   width,
+  leading,
+  trailing,
   children,
   className,
   onPointerDownOutside,
@@ -132,7 +138,8 @@ export function DialogContent({
   const inner = (
     <>
       <div className={styles.header}>
-        <div>
+        {leading ? <div className={styles.leading}>{leading}</div> : null}
+        <div className={styles.heading}>
           <DialogPrimitive.Title className={styles.title}>
             <SwapText text={title} />
           </DialogPrimitive.Title>
@@ -142,6 +149,7 @@ export function DialogContent({
             </DialogPrimitive.Description>
           ) : null}
         </div>
+        {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
         {showCloseButton ? (
           <DialogPrimitive.Close className={styles.close} aria-label="Close dialog">
             <X size={16} strokeWidth={1.75} aria-hidden="true" />

@@ -3,13 +3,11 @@ import { Button } from '@/components/arc/button/button';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, Gamepad2, Loader2, Puzzle } from 'lucide-react';
 import { useState } from 'react';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
-import ReactMarkdown from 'react-markdown';
 import { useTranslation } from '../../../i18n';
-import { CompatibilityBadge } from './PluginResultCard';
+import { CompatibilityBadge, PluginTile } from './PluginResultCard';
+import { PluginReadme } from './PluginReadme';
 import type { CompatibilityStatus, DetailTab, ProjectItem } from './plugin-model';
 import styles from './plugin-browser.module.css';
 
@@ -26,6 +24,7 @@ export interface PluginDetailDialogProps {
   loaderLabel: string;
   readme: PluginDetailReadme;
   onOpenProject: () => void;
+  onOpenLink: (url: string) => void;
   onClose: () => void;
 }
 
@@ -37,6 +36,7 @@ export function PluginDetailDialog({
   loaderLabel,
   readme,
   onOpenProject,
+  onOpenLink,
   onClose,
 }: PluginDetailDialogProps) {
   const { t } = useTranslation();
@@ -49,70 +49,80 @@ export function PluginDetailDialog({
           data-testid="plugin-detail-dialog"
           title={item.title}
           description={`${item.platform} · ${t('plugins.browser.byAuthor')} ${item.author || t('plugins.browser.unknownAuthor')}`}
-          width="min(640px, calc(100vw - 2rem))"
+          width="min(760px, calc(100vw - 2rem))"
+          leading={<PluginTile iconUrl={item.icon_url} title={item.title} size="lg" />}
+          trailing={<CompatibilityBadge status={compatibility} />}
           footer={
-            <Button type="button" variant="secondary" onClick={onClose}>
-              {t('common.close')}
-            </Button>
+            <div className={styles.footerRow}>
+              <Button type="button" variant="secondary" onClick={onOpenProject}>
+                <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
+                <span>{t('plugins.browser.detailProjectPage')}</span>
+              </Button>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                {t('common.close')}
+              </Button>
+            </div>
           }
         >
-          <div className={styles.detailBody}>
-            <div className={styles.detailMeta}>
-              <CompatibilityBadge status={compatibility} />
-            </div>
+          <Tabs value={tab} onValueChange={(value) => setTab(value as DetailTab)}>
+            <TabsList aria-label={t('plugins.browser.detailTabs')}>
+              <TabsTrigger value="info">{t('plugins.browser.detailInfo')}</TabsTrigger>
+              <TabsTrigger value="readme">{t('plugins.browser.detailReadme')}</TabsTrigger>
+            </TabsList>
 
-            <Tabs value={tab} onValueChange={(value) => setTab(value as DetailTab)}>
-              <TabsList aria-label={t('plugins.browser.detailInfo')}>
-                <TabsTrigger value="info">{t('plugins.browser.detailInfo')}</TabsTrigger>
-                <TabsTrigger value="readme">{t('plugins.browser.detailReadme')}</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="info">
-                <dl className={styles.detailRows}>
-                  <dt>{t('plugins.browser.detailProject')}</dt>
-                  <dd>{item.id}</dd>
-                  <dt>{t('plugins.browser.detailSlug')}</dt>
-                  <dd>{item.slug || t('plugins.browser.na')}</dd>
-                  <dt>{t('plugins.browser.detailSupportedMC')}</dt>
-                  <dd>{supportedVersionsLabel}</dd>
-                  <dt>{t('plugins.browser.detailLoader')}</dt>
-                  <dd>{loaderLabel}</dd>
-                  <dt>{t('plugins.browser.detailDownloads')}</dt>
+            <TabsContent value="info" className={styles.detailPanel}>
+              <dl className={styles.stats}>
+                <div className={styles.stat}>
+                  <dt>
+                    <Download size={13} strokeWidth={1.75} aria-hidden="true" />
+                    <span>{t('plugins.browser.detailDownloads')}</span>
+                  </dt>
                   <dd>{item.downloads ? item.downloads.toLocaleString() : '-'}</dd>
-                  <dt>{t('plugins.browser.detailSummary')}</dt>
-                  <dd>{item.description || t('plugins.browser.noDescription')}</dd>
-                </dl>
-                <div>
-                  <Button type="button" variant="secondary" size="sm" onClick={onOpenProject}>
-                    <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
-                    <span>{t('plugins.browser.detailProjectPage')}</span>
-                  </Button>
                 </div>
-              </TabsContent>
+                <div className={styles.stat}>
+                  <dt>
+                    <Gamepad2 size={13} strokeWidth={1.75} aria-hidden="true" />
+                    <span>{t('plugins.browser.detailSupportedMC')}</span>
+                  </dt>
+                  <dd>{supportedVersionsLabel}</dd>
+                </div>
+                <div className={styles.stat}>
+                  <dt>
+                    <Puzzle size={13} strokeWidth={1.75} aria-hidden="true" />
+                    <span>{t('plugins.browser.detailLoader')}</span>
+                  </dt>
+                  <dd>{loaderLabel}</dd>
+                </div>
+              </dl>
 
-              <TabsContent value="readme">
-                {readme.loading ? (
-                  <>
-                    <p className={styles.readmeNote}>
-                      <Loader2 size={14} strokeWidth={1.75} aria-hidden="true" />{' '}
-                      {t('plugins.browser.readmeLoading')}
-                    </p>
-                    <Skeleton label={t('plugins.browser.readmeLoading')} lines={4} />
-                  </>
-                ) : readme.error ? (
-                  <Alert tone="danger" title={readme.error} />
-                ) : readme.content ? (
-                  <div className={styles.readme}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                      {readme.content}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <p className={styles.readmeNote}>{t('plugins.browser.noReadme')}</p>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
+              <p className={styles.summary}>
+                {item.description || t('plugins.browser.noDescription')}
+              </p>
+
+              <p className={styles.quietLine}>
+                {t('plugins.browser.detailProject')}: {item.id} · {t('plugins.browser.detailSlug')}:{' '}
+                {item.slug || t('plugins.browser.na')}
+              </p>
+            </TabsContent>
+
+            <TabsContent value="readme" className={styles.detailPanel}>
+              {readme.loading ? (
+                <>
+                  <p className={styles.readmeNote}>
+                    <Loader2 size={14} strokeWidth={1.75} aria-hidden="true" />{' '}
+                    {t('plugins.browser.readmeLoading')}
+                  </p>
+                  <Skeleton label={t('plugins.browser.readmeLoading')} lines={4} />
+                </>
+              ) : readme.error ? (
+                <Alert tone="danger" title={readme.error} />
+              ) : readme.content ? (
+                <PluginReadme markdown={readme.content} onOpenLink={onOpenLink} />
+              ) : (
+                <p className={styles.readmeNote}>{t('plugins.browser.noReadme')}</p>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       ) : null}
     </Dialog>

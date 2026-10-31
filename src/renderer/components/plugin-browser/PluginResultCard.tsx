@@ -1,7 +1,6 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
-import { Card } from '@/components/arc/card/card';
 import { Download, ExternalLink, Star, User } from 'lucide-react';
 import { useTranslation } from '../../../i18n';
 import type { CompatibilityStatus, ProjectItem, UpdateStatus } from './plugin-model';
@@ -46,10 +45,18 @@ export function CompatibilityBadge({ status }: { status: CompatibilityStatus }) 
   );
 }
 
-/** The plugin icon, or the first letter of its name when the provider has no icon. */
-export function PluginTile({ iconUrl, title }: { iconUrl?: string; title: string }) {
+/** The plugin icon, or the first letter of its name when the provider has no icon. md is 48px for cards, lg is 56px for the dialog header. */
+export function PluginTile({
+  iconUrl,
+  title,
+  size = 'md',
+}: {
+  iconUrl?: string;
+  title: string;
+  size?: 'md' | 'lg';
+}) {
   return (
-    <div className={styles.tile}>
+    <div className={[styles.tile, size === 'lg' ? styles.tileLg : styles.tileMd].join(' ')}>
       {iconUrl ? (
         <img className={styles.tileIcon} src={iconUrl} alt="" loading="lazy" />
       ) : (
@@ -100,14 +107,64 @@ export function PluginResultCard({
         : t('plugins.install.button'));
 
   return (
-    <Card
+    <article
       className={[styles.resultCard, hasUpdateAction ? styles.updatable : ''].join(' ')}
       data-testid={`plugin-result-${item.id}`}
-      title={item.title}
-      description={item.description || t('plugins.browser.noDescription')}
-      media={<PluginTile iconUrl={item.icon_url} title={item.title} />}
-      action={
-        <>
+    >
+      <PluginTile iconUrl={item.icon_url} title={item.title} />
+
+      <div className={styles.cardBody}>
+        <div className={styles.cardHead}>
+          <h3 className={styles.cardTitle} title={item.title}>
+            {item.title}
+          </h3>
+          <CompatibilityBadge status={compatibility} />
+          {installedState !== 'none' ? (
+            <Badge tone="neutral">
+              {installedState === 'disabled'
+                ? t('plugins.browser.disabledBadge')
+                : t('plugins.browser.installedBadge')}
+            </Badge>
+          ) : null}
+          {requiresBrowser ? (
+            <Badge tone="neutral">{t('plugins.browser.externalDownload')}</Badge>
+          ) : null}
+        </div>
+
+        <p className={styles.metaLine}>
+          <span className={styles.metaItem}>
+            <User size={13} strokeWidth={1.75} aria-hidden="true" />
+            <span>{item.author || t('plugins.browser.unknownAuthor')}</span>
+          </span>
+          <span className={styles.metaItem}>
+            <Download size={13} strokeWidth={1.75} aria-hidden="true" />
+            <span>{item.downloads ? item.downloads.toLocaleString() : '-'}</span>
+          </span>
+          {item.stars ? (
+            <span className={styles.metaItem}>
+              <Star size={13} strokeWidth={1.75} aria-hidden="true" />
+              <span>{item.stars}</span>
+            </span>
+          ) : null}
+        </p>
+
+        <p className={styles.cardDescription}>
+          {item.description || t('plugins.browser.noDescription')}
+        </p>
+
+        {failureMessage ? (
+          <Alert
+            tone="danger"
+            title={failureMessage}
+            data-testid={`plugin-install-error-${item.id}`}
+          >
+            <Button type="button" size="sm" variant="secondary" onClick={() => onRetry(item)}>
+              {t('plugins.browser.retry')}
+            </Button>
+          </Alert>
+        ) : null}
+
+        <div className={styles.cardActions}>
           {showInstallAction ? (
             <Button
               type="button"
@@ -134,45 +191,8 @@ export function PluginResultCard({
           >
             {t('plugins.browser.details')}
           </Button>
-        </>
-      }
-    >
-      <div className={styles.meta}>
-        <span className={styles.metaItem}>
-          <User size={13} strokeWidth={1.75} aria-hidden="true" />
-          <span>{item.author || t('plugins.browser.unknownAuthor')}</span>
-        </span>
-        <span className={styles.metaItem}>
-          <Download size={13} strokeWidth={1.75} aria-hidden="true" />
-          <span>{item.downloads ? item.downloads.toLocaleString() : '-'}</span>
-        </span>
-        {item.stars ? (
-          <span className={styles.metaItem}>
-            <Star size={13} strokeWidth={1.75} aria-hidden="true" />
-            <span>{item.stars}</span>
-          </span>
-        ) : null}
+        </div>
       </div>
-      <div className={styles.badges}>
-        {installedState !== 'none' ? (
-          <Badge tone="neutral">
-            {installedState === 'disabled'
-              ? t('plugins.browser.disabledBadge')
-              : t('plugins.browser.installedBadge')}
-          </Badge>
-        ) : null}
-        <CompatibilityBadge status={compatibility} />
-        {requiresBrowser ? (
-          <Badge tone="neutral">{t('plugins.browser.externalDownload')}</Badge>
-        ) : null}
-      </div>
-      {failureMessage ? (
-        <Alert tone="danger" title={failureMessage} data-testid={`plugin-install-error-${item.id}`}>
-          <Button type="button" size="sm" variant="secondary" onClick={() => onRetry(item)}>
-            {t('plugins.browser.retry')}
-          </Button>
-        </Alert>
-      ) : null}
-    </Card>
+    </article>
   );
 }
