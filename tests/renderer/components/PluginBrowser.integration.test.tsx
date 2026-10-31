@@ -430,7 +430,8 @@ describe('PluginBrowser feedback integration', () => {
       </AppFeedbackProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('tab', { name: /installed/i }));
+    // Arc tabs switch on mousedown, the same as a real pointer press.
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: /installed/i }), { button: 0 });
     fireEvent.click(await screen.findByRole('button', { name: 'Disable' }));
     await waitFor(() =>
       expect(installerCommands.toggleInstalledPlugin).toHaveBeenCalledWith(
