@@ -1,5 +1,25 @@
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
+import { Button } from '@/components/arc/button/button';
+import { ButtonGroup } from '@/components/arc/button-group/button-group';
+import { SearchField } from '@/components/arc/search-field/search-field';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Input } from '@/components/arc/input/input';
+import SegmentedControl from '@/components/arc/segmented-control/segmented-control';
+import {
+  ArrowDown,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  Pin,
+  ScrollText,
+  Search,
+  Send,
+  X,
+} from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -13,6 +33,17 @@ import { notify } from '../shared/notify';
 import { tauriInvoke, tauriListen } from '../../lib/tauri-api';
 import { useConsoleStore } from '../../store/consoleStore';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import styles from './ConsoleView.module.css';
+
+/** Status labels come from the server namespace, so the console and the rest of the app show the same words. */
+const STATUS_LABEL_KEYS = {
+  online: 'server.status.online',
+  offline: 'server.status.offline',
+  starting: 'server.status.starting',
+  stopping: 'server.status.stopping',
+  restarting: 'server.status.restarting',
+  crashed: 'server.status.crashed',
+} as const;
 
 type AnsiStyle = {
   color?: string;
@@ -30,42 +61,43 @@ type LogLevelFilter = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 const LOG_FILTER_OPTIONS: LogLevelFilter[] = ['ALL', 'INFO', 'WARN', 'ERROR', 'FATAL'];
 const MAX_PINNED_LOGS = 5;
 
+// ANSI codes map to the token variables defined in ConsoleView.module.css, so the palette follows the theme.
 const ANSI_COLOR_MAP: Record<string, string> = {
-  '30': '#000000',
-  '31': '#ef4444',
-  '32': '#22c55e',
-  '33': '#eab308',
-  '34': '#3b82f6',
-  '35': '#a855f7',
-  '36': '#06b6d4',
-  '37': '#e5e7eb',
-  '90': '#6b7280',
-  '91': '#f87171',
-  '92': '#4ade80',
-  '93': '#facc15',
-  '94': '#60a5fa',
-  '95': '#c084fc',
-  '96': '#22d3ee',
-  '97': '#f8fafc',
+  '30': 'var(--ansi-black)',
+  '31': 'var(--ansi-red)',
+  '32': 'var(--ansi-green)',
+  '33': 'var(--ansi-yellow)',
+  '34': 'var(--ansi-blue)',
+  '35': 'var(--ansi-magenta)',
+  '36': 'var(--ansi-cyan)',
+  '37': 'var(--ansi-white)',
+  '90': 'var(--ansi-bright-black)',
+  '91': 'var(--ansi-red)',
+  '92': 'var(--ansi-green)',
+  '93': 'var(--ansi-yellow)',
+  '94': 'var(--ansi-blue)',
+  '95': 'var(--ansi-magenta)',
+  '96': 'var(--ansi-cyan)',
+  '97': 'var(--ansi-white)',
 };
 
 const ANSI_BG_MAP: Record<string, string> = {
-  '40': '#000000',
-  '41': '#7f1d1d',
-  '42': '#14532d',
-  '43': '#78350f',
-  '44': '#1e3a8a',
-  '45': '#4c1d95',
-  '46': '#0f766e',
-  '47': '#374151',
-  '100': '#1f2937',
-  '101': '#9f1239',
-  '102': '#166534',
-  '103': '#854d0e',
-  '104': '#1e40af',
-  '105': '#581c87',
-  '106': '#115e59',
-  '107': '#f3f4f6',
+  '40': 'var(--ansi-bg-black)',
+  '41': 'var(--ansi-bg-red)',
+  '42': 'var(--ansi-bg-green)',
+  '43': 'var(--ansi-bg-yellow)',
+  '44': 'var(--ansi-bg-blue)',
+  '45': 'var(--ansi-bg-magenta)',
+  '46': 'var(--ansi-bg-cyan)',
+  '47': 'var(--ansi-bg-white)',
+  '100': 'var(--ansi-bg-black)',
+  '101': 'var(--ansi-bg-red)',
+  '102': 'var(--ansi-bg-green)',
+  '103': 'var(--ansi-bg-yellow)',
+  '104': 'var(--ansi-bg-blue)',
+  '105': 'var(--ansi-bg-magenta)',
+  '106': 'var(--ansi-bg-cyan)',
+  '107': 'var(--ansi-bg-white)',
 };
 
 const ansiToSegments = (text: string): AnsiSegment[] => {
@@ -164,13 +196,13 @@ const detectLogLevel = (text: string): Exclude<LogLevelFilter, 'ALL'> => {
 const getSeverityStyle = (level: Exclude<LogLevelFilter, 'ALL'>): AnsiStyle => {
   switch (level) {
     case 'FATAL':
-      return { color: '#f43f5e', fontWeight: 700 };
+      return { color: 'var(--danger)', fontWeight: 700 };
     case 'ERROR':
-      return { color: '#ef4444', fontWeight: 700 };
+      return { color: 'var(--danger)', fontWeight: 700 };
     case 'WARN':
-      return { color: '#f59e0b', fontWeight: 700 };
+      return { color: 'var(--warning)', fontWeight: 700 };
     default:
-      return { color: '#d1d5db' };
+      return { color: 'var(--text-secondary)' };
   }
 };
 
@@ -185,6 +217,11 @@ const toLocalAnsiSegments = (segments: unknown): AnsiSegment[] | null => {
   const mapped: AnsiSegment[] = [];
   for (const segment of segments) {
     if (!isRecord(segment) || typeof segment.text !== 'string') {
+      return null;
+    }
+
+    // The Rust parser sends its own palette hex values. A colored line uses the local parser, whose colors are tokens.
+    if (typeof segment.color === 'string' || typeof segment.backgroundColor === 'string') {
       return null;
     }
 
@@ -275,7 +312,11 @@ const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): numbe
 };
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const memoryFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+    [locale],
+  );
   const logs = useConsoleStore((state) => state.serverLogs[server.id] ?? EMPTY_LOGS);
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -283,6 +324,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const [historyDraft, setHistoryDraft] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
+  const [addressCopied, setAddressCopied] = useState(false);
   const [memoryUsage, setMemoryUsage] = useState(0);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -517,6 +559,15 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     });
   }, [server.id]);
 
+  // The copied state clears on its own after a short time.
+  useEffect(() => {
+    if (!addressCopied) {
+      return;
+    }
+    const timer = window.setTimeout(() => setAddressCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [addressCopied]);
+
   // Ngrok status is now event-driven; cycle the display address periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -525,9 +576,12 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     return () => clearInterval(interval);
   }, [server.id]);
 
+  // Commands only reach a running server. Other states show the hint and refuse the send.
+  const canSendCommand = server.status === 'online';
+
   const handleSend = () => {
     const normalizedCommand = command.trim();
-    if (!normalizedCommand) {
+    if (!canSendCommand || !normalizedCommand) {
       return;
     }
 
@@ -605,8 +659,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       ? localAddress
       : publicAddress;
 
+  // The address shows "Copied" for a moment, so a click visibly does something even though the clipboard has no UI.
   const handleCopyAddress = () => {
-    void copyToClipboard(displayAddress);
+    void copyToClipboard(displayAddress)
+      .then(() => setAddressCopied(true))
+      .catch((error) => {
+        logError('Failed to copy console address', error, { serverId: server.id });
+        notify.error(t('console.toast.copyFailed'));
+      });
   };
 
   const handleExportLogs = async () => {
@@ -642,60 +702,65 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     }
   };
 
-  const formatMemoryDetailed = (usageBytes: number, allocatedMb: number) => {
-    const usageMb = (usageBytes / 1024 / 1024).toFixed(0);
-    return `${usageMb} / ${allocatedMb} MB`;
-  };
+  // Memory is shown in megabytes; the numbers follow the app language and the unit comes from the locale.
+  const memoryUnit = t('console.memory.unit');
+  const memoryLabel =
+    server.status === 'online'
+      ? t('console.memory.value', {
+          used: memoryFormatter.format(memoryUsage / 1024 / 1024),
+          total: memoryFormatter.format(server.memory),
+          unit: memoryUnit,
+        })
+      : t('console.memory.value', { used: '-', total: '-', unit: memoryUnit });
 
   return (
-    <div
-      className="console-view flex h-full min-h-0 flex-col gap-3 p-5 max-[1080px]:p-4"
-      data-testid="console-view"
-    >
-      <section className="console-view__status-strip surface-card rounded-2xl">
-        <div className="console-view__status-col console-view__status-col--with-divider">
-          <div className="console-view__status-label">{t('console.status.address')}</div>
-          <button
-            type="button"
-            onClick={handleCopyAddress}
-            title={t('console.status.clickToCopy')}
-            className={`console-view__address ${ngrokUrl && currentAddressIndex === 1 ? 'is-public' : 'is-local'}`}
-          >
-            {displayAddress}
-          </button>
+    <div className={styles.view} data-testid="console-view">
+      <section className={styles.statusStrip}>
+        <div className={`${styles.statusCol} ${styles.statusColDivider}`}>
+          <div className={styles.statusLabel}>{t('console.status.address')}</div>
+          <Tooltip content={t('console.status.clickToCopy')} side="bottom">
+            <button
+              type="button"
+              onClick={handleCopyAddress}
+              className={`${styles.address} ${ngrokUrl && currentAddressIndex === 1 ? styles.addressPublic : styles.addressLocal}`}
+            >
+              {displayAddress}
+              <span className={styles.copyFeedback} aria-live="polite">
+                {addressCopied ? (
+                  <>
+                    <Check aria-hidden="true" size={14} strokeWidth={2} />
+                    {t('console.status.copied')}
+                  </>
+                ) : (
+                  <Copy aria-hidden="true" size={14} strokeWidth={1.75} />
+                )}
+              </span>
+            </button>
+          </Tooltip>
         </div>
 
-        <div className="console-view__status-col console-view__status-col--with-divider">
-          <div className="console-view__status-label">{t('console.status.status')}</div>
-          <div
-            className={`console-view__status-value console-view__status-value--${server.status}`}
-          >
-            {server.status.toUpperCase()}
+        <div className={`${styles.statusCol} ${styles.statusColDivider}`}>
+          <div className={styles.statusLabel}>{t('console.status.status')}</div>
+          <div className={styles.statusValue} data-status={server.status}>
+            {t(STATUS_LABEL_KEYS[server.status])}
           </div>
         </div>
 
-        <div className="console-view__status-col">
-          <div className="console-view__status-label">{t('console.status.memory')}</div>
-          <div className="console-view__memory-value">
-            {server.status === 'online'
-              ? formatMemoryDetailed(memoryUsage, server.memory)
-              : '- / - MB'}
-          </div>
+        <div className={styles.statusCol}>
+          <div className={styles.statusLabel}>{t('console.status.memory')}</div>
+          <div className={styles.memoryValue}>{memoryLabel}</div>
         </div>
       </section>
 
-      <section
-        className={`console-view__search-strip surface-card rounded-2xl ${isSearchOpen ? 'is-open' : 'is-closed'}`}
-      >
-        <span className="console-view__search-label">{t('console.search.label')}</span>
+      <section className={styles.searchStrip} data-open={isSearchOpen}>
         {isSearchOpen ? (
           <>
-            <input
+            <SearchField
               ref={searchInputRef}
-              type="text"
+              label={t('console.search.label')}
               value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
+              onValueChange={(value) => {
+                setSearchQuery(value);
                 setActiveMatchIndex(0);
               }}
               onKeyDown={(event) => {
@@ -709,92 +774,112 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                 }
               }}
               placeholder={t('console.search.placeholder')}
-              className="console-view__search-input"
+              className={styles.searchField}
               data-testid="console-search-input"
             />
 
-            <div className="console-view__search-count">
-              {totalMatches === 0 ? '0 / 0' : `${activeMatchIndex + 1} / ${totalMatches}`}
-            </div>
+            <span
+              className={styles.matchCount}
+              data-testid="console-search-count"
+              aria-live="polite"
+            >
+              {t('console.search.count', {
+                current: totalMatches === 0 ? 0 : activeMatchIndex + 1,
+                total: totalMatches,
+              })}
+            </span>
 
-            <button
+            <Button
               type="button"
-              className={`console-view__search-mode-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all ${isRegexSearchMode ? 'is-active' : ''}`}
+              size="sm"
+              variant={isRegexSearchMode ? 'primary' : 'secondary'}
+              aria-pressed={isRegexSearchMode}
               onClick={() => {
                 setIsRegexSearchMode((prev) => !prev);
                 setActiveMatchIndex(0);
               }}
             >
               {t('console.search.regex')}
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              className="console-view__search-nav-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-              onClick={() => jumpToMatch(-1)}
-              disabled={totalMatches === 0}
-            >
-              {t('console.search.prev')}
-            </button>
+            <ButtonGroup
+              label={t('console.search.navigate')}
+              size="sm"
+              items={[
+                {
+                  id: 'prev',
+                  label: t('console.search.prev'),
+                  icon: <ChevronUp aria-hidden="true" size={14} strokeWidth={1.75} />,
+                  iconOnly: true,
+                  disabled: totalMatches === 0,
+                  onSelect: () => jumpToMatch(-1),
+                },
+                {
+                  id: 'next',
+                  label: t('console.search.next'),
+                  icon: <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} />,
+                  iconOnly: true,
+                  disabled: totalMatches === 0,
+                  onSelect: () => jumpToMatch(1),
+                },
+              ]}
+            />
 
-            <button
-              type="button"
-              className="console-view__search-nav-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-              onClick={() => jumpToMatch(1)}
-              disabled={totalMatches === 0}
-            >
-              {t('console.search.next')}
-            </button>
-
-            <button
-              type="button"
-              className="console-view__search-close-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-              onClick={closeSearch}
-            >
+            <Button type="button" size="sm" variant="ghost" onClick={closeSearch}>
+              <X aria-hidden="true" size={14} strokeWidth={1.75} />
               {t('common.close')}
-            </button>
+            </Button>
 
             {isRegexInvalid && (
-              <span className="console-view__search-error">{t('console.search.invalidRegex')}</span>
+              <span role="alert" className={styles.searchError}>
+                {t('console.search.invalidRegex')}
+              </span>
             )}
           </>
         ) : (
           <>
-            <span className="console-view__search-placeholder">
+            <span className={styles.searchPlaceholder}>
+              <Search aria-hidden="true" size={14} strokeWidth={1.75} />
               {t('console.search.placeholder')}
             </span>
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="secondary"
               data-testid="console-search-open-button"
-              className="console-view__search-open-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
               onClick={openSearch}
             >
               {t('console.actions.find')}
-            </button>
+            </Button>
           </>
         )}
       </section>
 
-      <section className="console-view__log-viewport surface-card rounded-2xl">
+      <section className={styles.logViewport}>
         {pinnedLogs.length > 0 && (
-          <div className="console-view__pinned-area">
-            <div className="console-view__pinned-title">{t('console.pinned.title')}</div>
-            <div className="console-view__pinned-list">
+          <div className={styles.pinnedArea}>
+            <div className={styles.pinnedTitle}>
+              <Pin aria-hidden="true" size={14} strokeWidth={1.75} />
+              {t('console.pinned.title')}
+            </div>
+            <div className={styles.pinnedList}>
               {pinnedLogs.map((entry) => (
                 <div
                   key={entry.key}
-                  className={`console-view__pinned-item console-view__pinned-item--${entry.level.toLowerCase()}`}
+                  className={styles.pinnedItem}
+                  data-level={entry.level.toLowerCase()}
                 >
-                  <span className="console-view__pinned-text">{entry.text}</span>
-                  <button
+                  <span className={styles.pinnedText}>{entry.text}</span>
+                  <Button
                     type="button"
-                    className="console-view__pinned-remove-btn"
+                    size="sm"
+                    variant="ghost"
                     onClick={() =>
                       setPinnedLogs((prev) => prev.filter((item) => item.key !== entry.key))
                     }
                   >
                     {t('console.pinned.unpin')}
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -803,7 +888,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
         <div
           ref={logContainerRef}
-          className="console-view__log-pane"
+          className={styles.logPane}
           onScroll={() => {
             const el = logContainerRef.current;
             if (!el) return;
@@ -817,9 +902,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             return visibleLogs.map((entry) => (
               <div
                 key={entry.originalIndex}
-                className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()}`}
+                className={styles.logLine}
+                data-level={entry.level.toLowerCase()}
               >
-                <div className="console-view__log-line-content break-words">
+                <div className={`${styles.logContent} break-words`}>
                   {(() => {
                     const severityStyle = getSeverityStyle(entry.level);
                     const segmentKeyCounts = new Map<string, number>();
@@ -882,7 +968,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                             ref={(element) => {
                               matchRefs.current[refKey] = element;
                             }}
-                            className={`console-view__search-hit ${isActive ? 'is-active' : ''}`}
+                            className={isActive ? styles.searchHitActive : styles.searchHit}
                           >
                             {matchedText}
                           </mark>,
@@ -908,18 +994,28 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                   })()}
                 </div>
 
-                <button
-                  type="button"
-                  className={`console-view__pin-btn ${pinnedLogKeySet.has(String(entry.originalIndex)) ? 'is-pinned' : ''}`}
-                  onClick={() => togglePinnedLog(entry)}
-                  title={
+                <Tooltip
+                  content={
                     pinnedLogKeySet.has(String(entry.originalIndex))
                       ? t('console.pinned.unpin')
                       : t('console.pinned.pin')
                   }
+                  side="left"
                 >
-                  📌
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.pinButton} ${pinnedLogKeySet.has(String(entry.originalIndex)) ? styles.pinButtonActive : ''}`}
+                    aria-pressed={pinnedLogKeySet.has(String(entry.originalIndex))}
+                    aria-label={
+                      pinnedLogKeySet.has(String(entry.originalIndex))
+                        ? t('console.pinned.unpin')
+                        : t('console.pinned.pin')
+                    }
+                    onClick={() => togglePinnedLog(entry)}
+                  >
+                    <Pin aria-hidden="true" size={14} strokeWidth={1.75} />
+                  </button>
+                </Tooltip>
               </div>
             ));
           })()}
@@ -927,92 +1023,105 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           <div ref={logEndRef} />
 
           {visibleLogs.length === 0 && (
-            <div className="console-view__empty-log">
-              {logFilter === 'ALL'
-                ? t('console.emptyLog.waiting')
-                : t('console.emptyLog.notFound', { level: logFilter })}
-            </div>
+            <EmptyState
+              className={styles.emptyLog}
+              icon={<ScrollText aria-hidden="true" size={22} strokeWidth={1.75} />}
+              title={
+                logFilter === 'ALL'
+                  ? t('console.emptyLog.waiting')
+                  : t('console.emptyLog.notFound', { level: logFilter })
+              }
+              description={
+                logFilter === 'ALL'
+                  ? t('console.emptyLog.waitingHint')
+                  : t('console.emptyLog.notFoundHint')
+              }
+            />
           )}
         </div>
 
         {!autoScroll && visibleLogs.length > 0 && (
-          <button
-            type="button"
-            className="console-view__jump-latest control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-            onClick={() => {
-              setAutoScroll(true);
-              logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }}
-          >
-            {t('console.actions.jumpLatest')}
-          </button>
+          <div className={styles.jumpLatest}>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setAutoScroll(true);
+                logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+              }}
+            >
+              <ArrowDown aria-hidden="true" size={14} strokeWidth={1.75} />
+              {t('console.actions.jumpLatest')}
+            </Button>
+          </div>
         )}
       </section>
 
-      <section className="console-view__command-strip surface-card rounded-2xl">
-        <div className="console-view__command-actions">
-          <button
+      <section className={styles.commandStrip}>
+        <div className={styles.commandActions}>
+          <Button
             type="button"
-            className="console-view__save-button control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
+            size="sm"
+            variant="secondary"
             data-testid="console-save-button"
             onClick={() => void handleExportLogs()}
           >
+            <Download aria-hidden="true" size={14} strokeWidth={1.75} />
             {t('console.actions.saveLogs')}
-          </button>
+          </Button>
 
-          <div className="console-view__filter-wrap">
-            <span className="console-view__filter-label">{t('console.filter.label')}</span>
-            <div
-              className="console-view__filter-pills"
-              role="tablist"
-              aria-label={t('console.filter.ariaLabel')}
-            >
-              {LOG_FILTER_OPTIONS.map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  role="tab"
-                  aria-selected={logFilter === level}
-                  className={`console-view__filter-pill control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all ${logFilter === level ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setLogFilter(level);
-                    setActiveMatchIndex(0);
-                  }}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
+          <div className={styles.filter}>
+            <span className={styles.filterLabel}>{t('console.filter.label')}</span>
+            <SegmentedControl
+              label={t('console.filter.ariaLabel')}
+              value={logFilter}
+              options={LOG_FILTER_OPTIONS.map((level) => ({
+                value: level,
+                label: level === 'ALL' ? t('console.filter.all') : level,
+              }))}
+              onValueChange={(value) => {
+                setLogFilter(value as LogLevelFilter);
+                setActiveMatchIndex(0);
+              }}
+            />
           </div>
         </div>
 
-        <div className="console-view__command-entry">
-          <span className="console-view__command-prefix">&gt;</span>
-          <input
-            type="text"
-            value={command}
-            onChange={(e) => {
-              setCommand(e.target.value);
-              if (historyCursor !== -1) {
-                setHistoryCursor(-1);
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={t('console.command.placeholder')}
-            className="console-view__command-input"
-            data-testid="console-command-input"
-          />
-          <button
+        <div className={styles.commandEntry}>
+          <span className={styles.commandPrefix} aria-hidden="true">
+            &gt;
+          </span>
+          <div className={styles.commandField}>
+            <Input
+              label={t('console.command.label')}
+              value={command}
+              onChange={(e) => {
+                setCommand(e.target.value);
+                if (historyCursor !== -1) {
+                  setHistoryCursor(-1);
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={t('console.command.placeholder')}
+              description={canSendCommand ? undefined : t('console.command.offlineHint')}
+              disabled={!canSendCommand}
+              data-testid="console-command-input"
+            />
+          </div>
+          <Button
             type="button"
-            onClick={handleSend}
-            className="console-view__send-button"
+            variant="primary"
             data-testid="console-send-button"
+            disabled={!canSendCommand}
+            onClick={handleSend}
           >
+            <Send aria-hidden="true" size={14} strokeWidth={1.75} />
             {t('console.actions.send')}
-          </button>
+          </Button>
         </div>
 
-        <div className="console-view__history-hint">{t('console.historyHint')}</div>
+        <div className={styles.historyHint}>{t('console.historyHint')}</div>
       </section>
     </div>
   );

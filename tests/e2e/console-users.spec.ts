@@ -3,6 +3,13 @@ import { expect, test } from './support/app-fixture';
 test.describe('console and user management', () => {
   test('sends a console command, renders its log, and searches the log', async ({ page, app }) => {
     await app.gotoApp('paper-plugin-success');
+    // Commands are only accepted while the server is online, so start it in the mock first.
+    await page.evaluate(() => {
+      const runtime = (
+        window as Window & { __MC_VECTOR_E2E__?: { state: { runningServerIds: string[] } } }
+      ).__MC_VECTOR_E2E__;
+      runtime?.state.runningServerIds.push('server-1');
+    });
     await app.openView('console');
 
     const commandInput = page.locator('[data-testid="console-command-input"]');
@@ -19,7 +26,7 @@ test.describe('console and user management', () => {
     await page.locator('[data-testid="console-search-open-button"]').click();
     const searchInput = page.locator('[data-testid="console-search-input"]');
     await searchInput.fill('hello from e2e');
-    await expect(page.locator('.console-view__search-count')).toContainText('1 / 1');
+    await expect(page.locator('[data-testid="console-search-count"]')).toContainText('1 / 1');
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(searchInput).toHaveCount(0);
   });

@@ -11,12 +11,13 @@ test.describe('files and backups', () => {
     await expect(page.locator('[data-testid="files-view"]')).toBeVisible();
     await expect(page.locator('[data-testid="file-row-server.properties"]')).toBeVisible();
     await page.locator('[data-testid="file-row-world"]').dblclick();
-    await expect(page.getByRole('button', { name: 'world', exact: true })).toBeVisible();
+    // The current folder is the last crumb, which the Arc breadcrumb renders as text with aria-current.
+    await expect(page.locator('[aria-current="page"]', { hasText: 'world' })).toBeVisible();
     await page.getByRole('button', { name: 'server-1', exact: true }).click();
     await expect(page.locator('[data-testid="file-row-server.properties"]')).toBeVisible();
 
-    await page.locator('[data-testid="files-create-button"]').click();
-    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page.getByRole('button', { name: 'Create / Import', exact: true }).click();
+    await page.locator('[data-testid="files-create-file-option"]').click();
     await page.locator('[data-testid="files-name-input"]').fill('e2e-created.txt');
     await page.locator('[data-testid="files-create-submit"]').click();
     await expect(page.locator('[data-testid="file-row-e2e-created.txt"]')).toBeVisible();

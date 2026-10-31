@@ -295,15 +295,20 @@ export interface TranslationDictionary {
       send: string;
     };
     command: {
+      label: string;
       placeholder: string;
+      offlineHint: string;
     };
     emptyLog: {
       waiting: string;
       notFound: string;
+      waitingHint: string;
+      notFoundHint: string;
     };
     filter: {
       label: string;
       ariaLabel: string;
+      all: string;
     };
     historyHint: string;
     search: {
@@ -313,6 +318,8 @@ export interface TranslationDictionary {
       invalidRegex: string;
       prev: string;
       next: string;
+      count: string;
+      navigate: string;
     };
     pinned: {
       title: string;
@@ -322,14 +329,20 @@ export interface TranslationDictionary {
     status: {
       address: string;
       clickToCopy: string;
+      copied: string;
       status: string;
       memory: string;
+    };
+    memory: {
+      value: string;
+      unit: string;
     };
     toast: {
       noLogsToSave: string;
       logsSaved: string;
       logsSaveFailed: string;
       pinLimitReached: string;
+      copyFailed: string;
     };
   };
 
@@ -343,6 +356,7 @@ export interface TranslationDictionary {
       discardButton: string;
     };
     contextMenu: {
+      label: string;
       rename: string;
       moveItem: string;
       compressItem: string;
@@ -366,8 +380,17 @@ export interface TranslationDictionary {
       minimap: string;
       wordWrap: string;
       loadFailed: string;
+      plainText: string;
+      saveShortcut: string;
+      unsupportedTitle: string;
+      binaryDescription: string;
+      largeDescription: string;
     };
     emptyFolder: string;
+    emptyFolderHint: string;
+    size: {
+      kb: string;
+    };
     loading: string;
     modal: {
       createImportTitle: string;
@@ -385,6 +408,13 @@ export interface TranslationDictionary {
       moveButton: string;
       renameTitle: string;
       renameButton: string;
+      renameLabel: string;
+      folderHint: string;
+      fileHint: string;
+      importHint: string;
+      nameInvalid: string;
+      moveDestLabel: string;
+      moveIntoItself: string;
     };
     toast: {
       uploadSuccess: string;
@@ -406,7 +436,10 @@ export interface TranslationDictionary {
       compressFailed: string;
       extracted: string;
       extractFailed: string;
+      extractNotZip: string;
+      extractSkipped: string;
       binaryNoDiff: string;
+      diffReadFailed: string;
       diffSelectOriginal: string;
       diffSelectModified: string;
     };
@@ -420,6 +453,13 @@ export interface TranslationDictionary {
       delete: string;
       diffOpen: string;
       diffClose: string;
+      diffCancel: string;
+      navigation: string;
+      tools: string;
+      selection: string;
+    };
+    breadcrumb: {
+      label: string;
     };
   };
 
