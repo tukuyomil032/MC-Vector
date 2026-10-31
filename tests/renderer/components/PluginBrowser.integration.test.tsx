@@ -200,6 +200,35 @@ describe('PluginBrowser feedback integration', () => {
     expect(pluginCommands.searchSpigot).toHaveBeenCalledWith('', 1, 25, signal, '1.21.4');
   });
 
+  it("does not keep another provider's results as placeholder data while a new provider loads", async () => {
+    render(
+      <AppFeedbackProvider>
+        <PluginBrowser server={server} />
+      </AppFeedbackProvider>,
+    );
+    const options = queryState.useQuery.mock.calls.at(-1)?.[0] as {
+      placeholderData: (previous: unknown, previousQuery: unknown) => unknown;
+    };
+    const previousData = { items: [incompatibleItem], hasNextPage: false, totalPages: 1 };
+    const previousKey = (platform: string) => [
+      'plugin-search',
+      platform,
+      '',
+      0,
+      'server-1',
+      '/managed/server-1',
+      '1.21.4',
+      false,
+    ];
+
+    expect(options.placeholderData(previousData, { queryKey: previousKey('Hangar') })).toBe(
+      undefined,
+    );
+    expect(options.placeholderData(previousData, { queryKey: previousKey('Modrinth') })).toBe(
+      previousData,
+    );
+  });
+
   it('uses backend unknown Modrinth status instead of assuming search hits are compatible', async () => {
     queryState.useQuery.mockReturnValue({
       data: {
@@ -218,7 +247,7 @@ describe('PluginBrowser feedback integration', () => {
       </AppFeedbackProvider>,
     );
     const result = await screen.findByTestId('plugin-result-modrinth-plugin');
-    expect(result.querySelector('.plugin-browser__compat-badge')).toHaveClass('is-unknown');
+    expect(result.querySelector('[data-compat]')).toHaveAttribute('data-compat', 'unknown');
     expect(within(result).queryByText('Compatible', { exact: true })).not.toBeInTheDocument();
   });
 
@@ -278,8 +307,9 @@ describe('PluginBrowser feedback integration', () => {
         </AppFeedbackProvider>,
       );
       const row = await screen.findByTestId('plugin-result-owner/plugin');
-      expect(row.querySelector('.plugin-browser__compat-badge')).toHaveClass(
-        `is-${result.compatibility}`,
+      expect(row.querySelector('[data-compat]')).toHaveAttribute(
+        'data-compat',
+        result.compatibility,
       );
     },
   );
@@ -371,6 +401,27 @@ describe('PluginBrowser feedback integration', () => {
     expect(useUiStore.getState().currentView).toBe('dashboard');
   });
 
+  it('does not show the card as installing while the confirm dialog is still open', async () => {
+    queryState.useQuery.mockReturnValue({
+      data: { items: [compatibleModrinthItem], hasNextPage: false, totalPages: 1 },
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: queryState.refetch,
+    });
+    render(
+      <AppFeedbackProvider>
+        <PluginBrowser server={server} />
+      </AppFeedbackProvider>,
+    );
+
+    fireEvent.click(await screen.findByTestId('plugin-install-modrinth-plugin'));
+    expect(await screen.findByTestId('feedback-dialog-primary-action')).toBeInTheDocument();
+    expect(installerCommands.executePluginInstall).not.toHaveBeenCalled();
+    expect(screen.queryByText('Installing...')).not.toBeInTheDocument();
+    expect(screen.getByTestId('plugin-install-modrinth-plugin')).not.toBeDisabled();
+  });
+
   it('routes installed-file toggle and uninstall through Rust commands', async () => {
     fileCommands.listFiles.mockResolvedValue([{ name: 'plugin.jar', isDirectory: false }]);
     render(
@@ -379,7 +430,8 @@ describe('PluginBrowser feedback integration', () => {
       </AppFeedbackProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('tab', { name: /installed/i }));
+    // Arc tabs switch on mousedown, the same as a real pointer press.
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: /installed/i }), { button: 0 });
     fireEvent.click(await screen.findByRole('button', { name: 'Disable' }));
     await waitFor(() =>
       expect(installerCommands.toggleInstalledPlugin).toHaveBeenCalledWith(

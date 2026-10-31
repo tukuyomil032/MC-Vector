@@ -292,6 +292,7 @@ MC-Vector/
 │       │   ├── ConsoleView.tsx
 │       │   ├── FilesView.tsx
 │       │   ├── PluginBrowser.tsx
+│       │   ├── plugin-browser/       # Plugin browser panels, cards, dialogs
 │       │   └── ...
 │       └── shared/                   # Shared utilities and types
 │
