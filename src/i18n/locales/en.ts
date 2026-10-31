@@ -225,7 +225,7 @@ export const en: TranslationDictionary = {
     },
     command: {
       label: 'Command',
-      placeholder: 'Type a command...',
+      placeholder: 'Type a command (↑ ↓ for history)',
       offlineHint: 'Start the server to send commands.',
     },
     emptyLog: {
@@ -236,7 +236,6 @@ export const en: TranslationDictionary = {
       ariaLabel: 'Log level filter',
       all: 'All',
     },
-    historyHint: '↑ / ↓ History',
     search: {
       label: 'Find',
       placeholder: 'Search logs...',

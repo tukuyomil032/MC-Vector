@@ -257,7 +257,6 @@ export interface TranslationDictionary {
       ariaLabel: string;
       all: string;
     };
-    historyHint: string;
     search: {
       label: string;
       placeholder: string;

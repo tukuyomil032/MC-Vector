@@ -221,7 +221,7 @@ export const ja: TranslationDictionary = {
     },
     command: {
       label: 'コマンド',
-      placeholder: 'コマンドを入力…',
+      placeholder: 'コマンドを入力（↑ ↓で履歴）',
       offlineHint: 'コマンドを送るには、サーバーを起動してください。',
     },
     emptyLog: {
@@ -232,7 +232,6 @@ export const ja: TranslationDictionary = {
       ariaLabel: 'ログレベルフィルター',
       all: 'すべて',
     },
-    historyHint: '↑ / ↓ 履歴',
     search: {
       label: '検索',
       placeholder: 'ログを検索…',

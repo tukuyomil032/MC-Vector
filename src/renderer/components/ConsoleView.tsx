@@ -714,6 +714,19 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         })
       : t('console.memory.value', { used: '-', total: '-', unit: memoryUnit });
 
+  const sendButton = (
+    <Button
+      type="button"
+      variant="primary"
+      data-testid="console-send-button"
+      disabled={!canSendCommand}
+      onClick={handleSend}
+    >
+      <Send aria-hidden="true" size={14} strokeWidth={1.75} />
+      {t('console.actions.send')}
+    </Button>
+  );
+
   return (
     <div className={styles.view} data-testid="console-view">
       <section className={styles.toolbar}>
@@ -1090,42 +1103,35 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         )}
       </section>
 
-      <section className={styles.commandStrip}>
-        <div className={styles.commandEntry}>
-          <span className={styles.commandPrefix} aria-hidden="true">
-            &gt;
-          </span>
-          <div className={styles.commandField}>
-            <Input
-              label={t('console.command.label')}
-              value={command}
-              onChange={(e) => {
-                setCommand(e.target.value);
-                if (historyCursor !== -1) {
-                  setHistoryCursor(-1);
-                }
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder={t('console.command.placeholder')}
-              description={canSendCommand ? undefined : t('console.command.offlineHint')}
-              disabled={!canSendCommand}
-              data-testid="console-command-input"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="primary"
-            data-testid="console-send-button"
+      <div className={styles.commandRow}>
+        <span className={styles.commandPrefix} aria-hidden="true">
+          &gt;
+        </span>
+        <div className={styles.commandField}>
+          <Input
+            label={t('console.command.label')}
+            value={command}
+            onChange={(e) => {
+              setCommand(e.target.value);
+              if (historyCursor !== -1) {
+                setHistoryCursor(-1);
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={t('console.command.placeholder')}
             disabled={!canSendCommand}
-            onClick={handleSend}
-          >
-            <Send aria-hidden="true" size={14} strokeWidth={1.75} />
-            {t('console.actions.send')}
-          </Button>
+            data-testid="console-command-input"
+          />
         </div>
-
-        <div className={styles.historyHint}>{t('console.historyHint')}</div>
-      </section>
+        {canSendCommand ? (
+          sendButton
+        ) : (
+          // A disabled button takes no pointer events, so the wrapper carries the hover that opens the reason.
+          <Tooltip content={t('console.command.offlineHint')} side="top">
+            <span className={styles.sendTrigger}>{sendButton}</span>
+          </Tooltip>
+        )}
+      </div>
     </div>
   );
 };
