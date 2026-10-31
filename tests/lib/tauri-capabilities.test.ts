@@ -48,6 +48,9 @@ describe('Tauri network capability scopes', () => {
     const imgSrc = directives.find((directive) => directive.startsWith('img-src '));
     expect(imgSrc).toMatch(/\shttps:(?:\s|$)/);
     expect(imgSrc).not.toMatch(/\shttp:(?:\s|$)/);
+    for (const directive of directives.filter((d) => !d.startsWith('img-src '))) {
+      expect(directive).not.toMatch(/\shttps?:(?:\s|$)/);
+    }
     expect(directives.find((directive) => directive.startsWith('script-src '))).toBe(
       "script-src 'self'",
     );

@@ -37,7 +37,7 @@ The backup target selector window was removed (backups always cover the whole se
 
 ## Decision: CSP and content rendering
 
-Release CSP is stricter than development CSP. It does not use wildcard `http:`, wildcard `https:`, `localhost:*`, or wildcard `ws://`. `connect-src` contains only provider origins actually used by the application.
+Release CSP is stricter than development CSP. It does not use wildcard `http:`, `localhost:*`, or wildcard `ws://`. `connect-src` contains only provider origins actually used by the application. Wildcard `https:` is allowed only in `img-src`, so plugin READMEs can show images hosted outside the provider CDNs (GitHub, imgur, shields.io and similar); `script-src` stays `'self'`, README images use `referrerpolicy="no-referrer"` and lazy loading, and the remaining exposure is the user's IP address reaching the image host, the same as viewing the README in a browser. `tests/lib/tauri-capabilities.test.ts` asserts that `https:` appears only in `img-src` and that `http:` does not appear.
 
 Where possible, remove `rehypeRaw`. Where raw HTML is necessary, use an explicit sanitizer schema that rejects:
 
