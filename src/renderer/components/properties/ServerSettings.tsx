@@ -449,6 +449,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
             label={t('serverSettings.port')}
             min={1}
             max={65535}
+            formatOptions={{ useGrouping: false }}
             value={form.port}
             onValueChange={(value) => setField('port', value)}
           />

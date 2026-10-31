@@ -373,6 +373,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
                 label={t('properties.serverPort')}
                 min={1}
                 max={65535}
+                formatOptions={{ useGrouping: false }}
                 value={props['server-port'] as number}
                 onValueChange={(value) => handleChange('server-port', value)}
               />

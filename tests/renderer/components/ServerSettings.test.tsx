@@ -116,7 +116,7 @@ describe('ServerSettings edits across server updates', () => {
 
     rerender(settingsElement({ ...server, port: 25600 }));
 
-    expect(screen.getByLabelText('serverSettings.port')).toHaveValue(25600);
+    expect(screen.getByLabelText('serverSettings.port')).toHaveValue('25600');
   });
 
   it('keeps an edited port when the saved server port changes underneath it', () => {
@@ -128,7 +128,7 @@ describe('ServerSettings edits across server updates', () => {
 
     rerender(settingsElement({ ...server, port: 25600 }));
 
-    expect(screen.getByLabelText('serverSettings.port')).toHaveValue(25700);
+    expect(screen.getByLabelText('serverSettings.port')).toHaveValue('25700');
   });
 });
 

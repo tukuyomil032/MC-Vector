@@ -186,6 +186,8 @@ export default function AdvancedSettingsWindow({
           description={fieldDescription(prop)}
           min={limits.min}
           max={limits.max}
+          // Server properties are plain integers, so digits are shown without thousands separators.
+          formatOptions={{ useGrouping: false }}
           value={Number(currentValue ?? 0)}
           onValueChange={(value) => handleChange(prop.key, value)}
         />
