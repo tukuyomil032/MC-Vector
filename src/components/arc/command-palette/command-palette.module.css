@@ -122,7 +122,20 @@
 
 /* The frame animates to the list height; the list keeps its own scroll. */
 .resultsFrame {
+  position: relative;
   overflow: hidden;
+}
+/* macOS overlay scrollbars stay hidden until scrolled, so a fade at the bottom edge signals rows below. */
+.resultsFrame[data-overflow='true']::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--surface) 85%);
+  pointer-events: none;
 }
 /* Long lists scroll inside the frame, with a visible thin bar so the hidden rows are discoverable. */
 .results {

@@ -252,12 +252,23 @@ export function CommandPalette({
   useLayoutEffect(() => {
     const list = listRef.current;
     if (!list) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setListHeight(Math.round(entry?.borderBoxSize?.[0]?.blockSize ?? list.offsetHeight)),
-    );
+    const observer = new ResizeObserver(([entry]) => {
+      setListHeight(Math.round(entry?.borderBoxSize?.[0]?.blockSize ?? list.offsetHeight));
+      updateMoreBelow();
+    });
     observer.observe(list);
     return () => observer.disconnect();
   }, []);
+
+  // Whether rows remain below the visible part of the list, which shows the bottom fade.
+  const [moreBelow, setMoreBelow] = useState(false);
+  function updateMoreBelow() {
+    const list = listRef.current;
+    if (!list) return;
+    setMoreBelow(list.scrollTop + list.clientHeight < list.scrollHeight - 4);
+  }
+  // Filtering can change the content height while the capped list keeps its own size.
+  useLayoutEffect(updateMoreBelow, [filtered]);
 
   // One highlight follows the active result on a snappy spring, for the pointer and arrow keys alike, and fades in when it first appears.
   useLayoutEffect(() => {
@@ -418,6 +429,7 @@ export function CommandPalette({
       </div>
       <motion.div
         className={styles.resultsFrame}
+        data-overflow={moreBelow}
         initial={false}
         animate={{ height: listHeight }}
         transition={reduced ? { duration: 0 } : motionTokens.spring.smooth}
@@ -427,6 +439,7 @@ export function CommandPalette({
           layoutScroll
           id={`${inputId}-results`}
           className={styles.results}
+          onScroll={updateMoreBelow}
           role="listbox"
           aria-label={messages.resultsLabel}
         >
