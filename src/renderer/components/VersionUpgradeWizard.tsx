@@ -71,7 +71,8 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
     try {
       unlisten = await onBackupProgress(({ serverId, progress }) => {
         if (serverId === server.id) {
-          setBackupProgress(Math.round(progress * 100));
+          // The backend already reports 0-100 (see backup.rs), so no scaling here.
+          setBackupProgress(Math.round(progress));
         }
       });
       const backupName = `pre-upgrade-${Date.now()}`;
