@@ -149,7 +149,7 @@ export const en: TranslationDictionary = {
       placeholder: 'Enter command...',
     },
     eula: {
-      title: 'Minecraft EULA agreement',
+      title: 'Accept the Minecraft EULA?',
       description: 'Before starting {name}, review and accept the Minecraft EULA.',
       fileMissing: 'This server does not have an eula.txt file yet.',
       fileNotAccepted: 'This server’s eula.txt file is not accepted yet.',

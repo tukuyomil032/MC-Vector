@@ -148,7 +148,7 @@ export const ja: TranslationDictionary = {
       placeholder: 'コマンドを入力...',
     },
     eula: {
-      title: 'Minecraft EULA への同意',
+      title: 'Minecraft EULA に同意しますか？',
       description: '{name} を起動する前に、Minecraft EULA を確認して同意してください。',
       fileMissing: 'このサーバーには eula.txt がまだ作成されていません。',
       fileNotAccepted: 'このサーバーの eula.txt はまだ承認されていません。',

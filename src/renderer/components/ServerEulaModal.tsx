@@ -1,11 +1,14 @@
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { useTranslation } from '@/i18n';
 import { logError } from '@/lib/error-utils';
-import { cn } from '@/lib/ui';
-import * as Dialog from '@radix-ui/react-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import type { PendingServerEula } from '../hooks/use-server-eula-gate';
-import { Button } from './ui/Button';
+import styles from './ServerEulaModal.module.css';
 
 export const MINECRAFT_EULA_URL = 'https://www.minecraft.net/en-us/eula';
 
@@ -19,6 +22,10 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
   const { t } = useTranslation();
   const [checked, setChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // The last request stays on screen while the dialog animates out, so the body does not blank mid-exit.
+  const lastPending = useRef(pending);
+  if (pending) lastPending.current = pending;
+  const view = pending ?? lastPending.current;
 
   useEffect(() => {
     if (!pending?.server.id) return;
@@ -26,7 +33,7 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
     setIsSubmitting(false);
   }, [pending?.server.id]);
 
-  const handleOpenEula = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleOpenEula = async (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     try {
       await openUrl(MINECRAFT_EULA_URL);
@@ -47,95 +54,85 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
     }
   };
 
+  // Saving the EULA writes a file, so the dialog cannot be dismissed until the write settles.
+  const blockDismiss = (event: Event) => event.preventDefault();
+
+  const footer = (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        data-testid="server-eula-cancel"
+        onClick={onCancel}
+        disabled={isSubmitting}
+      >
+        {t('common.cancel')}
+      </Button>
+      <Button
+        type="button"
+        variant="primary"
+        data-testid="server-eula-accept"
+        onClick={() => void handleAccept()}
+        disabled={!checked || isSubmitting}
+        loading={isSubmitting}
+      >
+        {isSubmitting ? t('server.eula.saving') : t('server.eula.acceptAndStart')}
+      </Button>
+    </>
+  );
+
   return (
-    <Dialog.Root
+    <Dialog
       open={pending !== null}
       onOpenChange={(open) => {
-        if (!open) onCancel();
+        if (!open && !isSubmitting) onCancel();
       }}
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="mc-modal-overlay" />
-        <Dialog.Content
-          data-testid="server-eula-modal"
-          className={cn(
-            'mc-modal-panel w-[min(520px,calc(100vw-2rem))] max-w-full',
-            'fixed left-1/2 top-1/2 z-[1001] -translate-x-1/2 -translate-y-1/2',
-          )}
-        >
-          {pending && (
-            <>
-              <Dialog.Title className="mb-2 mt-0 border-b border-zinc-700 pb-2.5 text-xl">
-                {t('server.eula.title')}
-              </Dialog.Title>
-              <Dialog.Description className="mb-4 text-sm leading-6 text-text-secondary">
-                {t('server.eula.description', { name: pending.server.name })}
-              </Dialog.Description>
+      <DialogContent
+        data-testid="server-eula-modal"
+        title={t('server.eula.title')}
+        description={view ? t('server.eula.description', { name: view.server.name }) : undefined}
+        width="min(520px, calc(100vw - var(--space-8)))"
+        onEscapeKeyDown={isSubmitting ? blockDismiss : undefined}
+        onPointerDownOutside={isSubmitting ? blockDismiss : undefined}
+        footer={footer}
+      >
+        {view && (
+          <div className={styles.body}>
+            <Alert
+              tone="warning"
+              title={
+                view.fileExists ? t('server.eula.fileNotAccepted') : t('server.eula.fileMissing')
+              }
+            >
+              <p>{t('server.eula.explanation')}</p>
+              <a
+                href={MINECRAFT_EULA_URL}
+                target="_blank"
+                rel="noreferrer"
+                data-testid="server-eula-link"
+                className={styles.link}
+                onClick={handleOpenEula}
+              >
+                {t('server.eula.openLink')}
+              </a>
+            </Alert>
 
-              <div className="mb-4 rounded-lg border border-[var(--mv-border-soft)] bg-black/10 p-3 text-sm leading-6 text-text-secondary">
-                <p className="mb-2 font-medium text-text-primary">
-                  {pending.fileExists
-                    ? t('server.eula.fileNotAccepted')
-                    : t('server.eula.fileMissing')}
-                </p>
-                <p>{t('server.eula.explanation')}</p>
-                <a
-                  href={MINECRAFT_EULA_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  data-testid="server-eula-link"
-                  className="mt-2 inline-flex min-h-11 items-center text-accent underline underline-offset-4 hover:text-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  onClick={handleOpenEula}
-                >
-                  {t('server.eula.openLink')}
-                </a>
-              </div>
+            <Checkbox
+              data-testid="server-eula-checkbox"
+              checked={checked}
+              onCheckedChange={(next) => setChecked(next === true)}
+              label={t('server.eula.consentLabel')}
+            />
 
-              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md p-2 text-sm leading-6 text-text-primary hover:bg-white/5 focus-within:ring-2 focus-within:ring-accent">
-                <input
-                  type="checkbox"
-                  data-testid="server-eula-checkbox"
-                  checked={checked}
-                  onChange={(event) => setChecked(event.target.checked)}
-                  className="mt-1.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
-                />
-                <span>{t('server.eula.consentLabel')}</span>
-              </label>
-
-              {pending.error && (
-                <p
-                  role="alert"
-                  data-testid="server-eula-error"
-                  className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300"
-                >
-                  {t('server.eula.writeError')}: {pending.error}
-                </p>
-              )}
-
-              <div className="mt-5 flex justify-end gap-2.5">
-                <Button
-                  type="button"
-                  variant="modalSecondary"
-                  data-testid="server-eula-cancel"
-                  onClick={onCancel}
-                  disabled={isSubmitting}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="modalPrimary"
-                  data-testid="server-eula-accept"
-                  onClick={() => void handleAccept()}
-                  disabled={!checked || isSubmitting}
-                >
-                  {isSubmitting ? t('server.eula.saving') : t('server.eula.acceptAndStart')}
-                </Button>
-              </div>
-            </>
-          )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+            {view.error && (
+              <Alert tone="danger" title={t('server.eula.writeError')}>
+                {view.error}
+              </Alert>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
