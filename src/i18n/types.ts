@@ -848,6 +848,7 @@ export interface TranslationDictionary {
     step2DownloadDesc: string;
     openPaperVelocity: string;
     openVelocityDocs: string;
+    openLinkFailed: string;
     step3Badge: string;
     step3Title: string;
     step3Edit: string;
@@ -1191,6 +1192,7 @@ export interface TranslationDictionary {
     title: string;
     introText: string;
     introRequirements: string;
+    openLinkFailed: string;
     summary: {
       requirementsLabel: string;
       requirementsValue: string;

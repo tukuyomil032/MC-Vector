@@ -864,6 +864,7 @@ export const en: TranslationDictionary = {
       'Download the JAR from the link below, rename it to server.jar, and place it in the folder above.',
     openPaperVelocity: 'Open Paper (Velocity)',
     openVelocityDocs: 'Open Velocity Docs',
+    openLinkFailed: 'Could not open the link in your browser',
     step3Badge: 'Step 3',
     step3Title: 'Edit Config & Finish',
     step3Edit: '1. Edit Configuration',
@@ -1210,6 +1211,7 @@ export const en: TranslationDictionary = {
     introText:
       'This feature allows you to invite friends from around the world to your server without complicated router settings (port forwarding).',
     introRequirements: 'A free ngrok account and authentication token are required.',
+    openLinkFailed: 'Could not open the link in your browser',
     summary: {
       requirementsLabel: 'Requirements',
       requirementsValue: 'ngrok Account',

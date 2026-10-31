@@ -5,6 +5,8 @@ import { CodeBlock } from '@/components/arc/code-block/code-block';
 import { ArrowLeft, Check, ExternalLink } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { useUiStore } from '../../store/uiStore';
+import { openGuideLink } from '../shared/guide-links';
+import { notify } from '../shared/notify';
 import { GuideStep } from './GuideStep';
 import styles from './GuideView.module.css';
 
@@ -12,8 +14,10 @@ export default function NgrokGuideView() {
   const { t } = useTranslation();
   const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
-  const openLink = (url: string) => {
-    window.open(url, '_blank');
+  const openLink = async (url: string) => {
+    if (!(await openGuideLink(url))) {
+      notify.error(t('ngrokGuide.openLinkFailed'));
+    }
   };
 
   const checklistItems = [
@@ -79,7 +83,9 @@ export default function NgrokGuideView() {
             <Button
               type="button"
               variant="primary"
-              onClick={() => openLink('https://dashboard.ngrok.com/get-started/your-authtoken')}
+              onClick={() =>
+                void openLink('https://dashboard.ngrok.com/get-started/your-authtoken')
+              }
             >
               {t('ngrokGuide.step1.button')}
               <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />

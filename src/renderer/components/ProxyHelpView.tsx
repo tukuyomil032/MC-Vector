@@ -6,6 +6,8 @@ import { ArrowLeft, Check, ExternalLink } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from '../../i18n';
 import { useUiStore } from '../../store/uiStore';
+import { openGuideLink } from '../shared/guide-links';
+import { notify } from '../shared/notify';
 import { GuideStep } from './GuideStep';
 import styles from './GuideView.module.css';
 
@@ -13,8 +15,10 @@ const ProxyHelpView: FC = () => {
   const { t } = useTranslation();
   const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
-  const openLink = (url: string) => {
-    window.open(url, '_blank');
+  const openLink = async (url: string) => {
+    if (!(await openGuideLink(url))) {
+      notify.error(t('proxyHelp.openLinkFailed'));
+    }
   };
 
   const checklistItems = [
@@ -109,7 +113,7 @@ const ProxyHelpView: FC = () => {
               <Button
                 type="button"
                 variant="primary"
-                onClick={() => openLink('https://papermc.io/downloads/velocity')}
+                onClick={() => void openLink('https://papermc.io/downloads/velocity')}
               >
                 {t('proxyHelp.openPaperVelocity')}
                 <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
@@ -117,7 +121,7 @@ const ProxyHelpView: FC = () => {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => openLink('https://docs.papermc.io/velocity/')}
+                onClick={() => void openLink('https://docs.papermc.io/velocity/')}
               >
                 {t('proxyHelp.openVelocityDocs')}
                 <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />

@@ -476,7 +476,7 @@
 - [x] プロキシのヘルプと Ngrok ガイド: チェックリスト（Check のアイコン）
 - [x] プロキシのヘルプと Ngrok ガイド: ステップ（Arc の Card。「Step 1 · 見出し」）
 - [x] プロキシのヘルプと Ngrok ガイド: コードブロック（Arc の CodeBlock。英語の表示は共有部品に残るので報告する）
-- [ ] プロキシのヘルプと Ngrok ガイド: CTA（`window.open` をやめて opener にそろえる）
+- [x] プロキシのヘルプと Ngrok ガイド: CTA（`window.open` をやめて opener にそろえる）
 - [x] プロキシのヘルプと Ngrok ガイド: 戻るボタンを足す（uiStore の returnToPreviousView）
 
 ## M. 共通部品、開発用、使われていないもの

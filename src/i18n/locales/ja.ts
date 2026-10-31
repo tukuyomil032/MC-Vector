@@ -859,6 +859,7 @@ export const ja: TranslationDictionary = {
       '以下のリンクからJarファイルをダウンロードし、ファイル名を server.jar に変更して、上記のフォルダ内に入れてください。',
     openPaperVelocity: 'Paper公式 (Velocity) を開く',
     openVelocityDocs: 'Velocity Docs を開く',
+    openLinkFailed: 'ブラウザでリンクを開けませんでした',
     step3Badge: 'ステップ 3',
     step3Title: '設定ファイルの編集と完了',
     step3Edit: '1. 設定ファイルの編集',
@@ -1208,6 +1209,7 @@ export const ja: TranslationDictionary = {
     introText:
       'この機能を使うと、難しいルーターの設定（ポート開放）をせずに、世界中の友達をあなたのサーバーに招待できます。',
     introRequirements: '利用には無料の ngrokアカウント と 認証トークン が必要です。',
+    openLinkFailed: 'ブラウザでリンクを開けませんでした',
     summary: {
       requirementsLabel: '必要なもの',
       requirementsValue: 'ngrok アカウント',
