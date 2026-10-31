@@ -314,6 +314,7 @@ export interface TranslationDictionary {
     status: {
       address: string;
       clickToCopy: string;
+      copied: string;
       status: string;
       memory: string;
     };
@@ -326,6 +327,7 @@ export interface TranslationDictionary {
       logsSaved: string;
       logsSaveFailed: string;
       pinLimitReached: string;
+      copyFailed: string;
     };
   };
 

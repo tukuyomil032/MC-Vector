@@ -292,6 +292,7 @@ export const ja: TranslationDictionary = {
     status: {
       address: 'アドレス',
       clickToCopy: 'クリックしてコピー',
+      copied: 'コピーしました',
       status: '状態',
       memory: 'メモリ',
     },
@@ -304,6 +305,7 @@ export const ja: TranslationDictionary = {
       logsSaved: 'ログを保存しました',
       logsSaveFailed: 'ログの保存に失敗しました',
       pinLimitReached: 'ピン留めできるのは最大{{max}}件です',
+      copyFailed: 'アドレスをコピーできませんでした',
     },
   },
 

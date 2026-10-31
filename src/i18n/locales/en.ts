@@ -296,6 +296,7 @@ export const en: TranslationDictionary = {
     status: {
       address: 'ADDRESS',
       clickToCopy: 'Click to Copy',
+      copied: 'Copied',
       status: 'STATUS',
       memory: 'MEMORY',
     },
@@ -308,6 +309,7 @@ export const en: TranslationDictionary = {
       logsSaved: 'Logs saved',
       logsSaveFailed: 'Failed to save logs',
       pinLimitReached: 'You can pin up to {{max}} lines',
+      copyFailed: 'Could not copy the address',
     },
   },
 

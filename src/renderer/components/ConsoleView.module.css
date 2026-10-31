@@ -65,6 +65,16 @@
   outline-offset: 2px;
 }
 
+.copyFeedback {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+}
+
 .addressLocal {
   color: var(--foreground);
 }

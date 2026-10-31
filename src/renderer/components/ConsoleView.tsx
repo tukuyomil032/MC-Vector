@@ -1,6 +1,7 @@
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Tooltip } from '@/components/arc/tooltip/tooltip';
+import { Check, Copy } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -299,6 +300,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const [historyDraft, setHistoryDraft] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
+  const [addressCopied, setAddressCopied] = useState(false);
   const [memoryUsage, setMemoryUsage] = useState(0);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -533,6 +535,15 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     });
   }, [server.id]);
 
+  // The copied state clears on its own after a short time.
+  useEffect(() => {
+    if (!addressCopied) {
+      return;
+    }
+    const timer = window.setTimeout(() => setAddressCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [addressCopied]);
+
   // Ngrok status is now event-driven; cycle the display address periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -621,8 +632,14 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       ? localAddress
       : publicAddress;
 
+  // The address shows "Copied" for a moment, so a click visibly does something even though the clipboard has no UI.
   const handleCopyAddress = () => {
-    void copyToClipboard(displayAddress);
+    void copyToClipboard(displayAddress)
+      .then(() => setAddressCopied(true))
+      .catch((error) => {
+        logError('Failed to copy console address', error, { serverId: server.id });
+        notify.error(t('console.toast.copyFailed'));
+      });
   };
 
   const handleExportLogs = async () => {
@@ -681,6 +698,16 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               className={`${styles.address} ${ngrokUrl && currentAddressIndex === 1 ? styles.addressPublic : styles.addressLocal}`}
             >
               {displayAddress}
+              <span className={styles.copyFeedback} aria-live="polite">
+                {addressCopied ? (
+                  <>
+                    <Check aria-hidden="true" size={14} strokeWidth={2} />
+                    {t('console.status.copied')}
+                  </>
+                ) : (
+                  <Copy aria-hidden="true" size={14} strokeWidth={1.75} />
+                )}
+              </span>
             </button>
           </Tooltip>
         </div>
