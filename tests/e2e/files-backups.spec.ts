@@ -38,7 +38,7 @@ test.describe('files and backups', () => {
     await expect.poll(async () => (await app.ipcCalls('listen')).length).toBeGreaterThan(0);
 
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await expect(page.locator('[data-testid="backups-whole-server-note"]')).toBeVisible();
+    await expect(page.locator('[data-testid="backups-target-size"]')).toBeVisible();
 
     await page.locator('[data-testid="backup-name-input"]').fill('e2e-backup.zip');
     await page.locator('[data-testid="backups-create-submit"]').click();
@@ -67,7 +67,7 @@ test.describe('files and backups', () => {
 
     const backups = page.locator('[data-testid="backups-view"]');
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await expect(page.locator('[data-testid="backups-whole-server-note"]')).toBeVisible();
+    await expect(page.locator('[data-testid="backups-target-size"]')).toBeVisible();
     await page.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
     await page.locator('[data-testid="backups-create-submit"]').click();
     await app.acceptConfirm();

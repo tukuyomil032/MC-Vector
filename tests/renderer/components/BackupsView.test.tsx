@@ -28,6 +28,7 @@ const {
     },
     fileCommands: {
       deleteItem: vi.fn(),
+      getManagedDirectorySize: vi.fn(),
       listFiles: vi.fn(),
       listFilesWithMetadata: vi.fn(),
     },
@@ -175,6 +176,7 @@ beforeEach(() => {
   backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   backupCommands.readBackupCatalog.mockResolvedValue({});
   fileCommands.listFiles.mockResolvedValue([]);
+  fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 0, complete: true });
   useBackupOperationStore.setState({
     activeManualOperations: {},
     completionRevisions: {},
@@ -1168,5 +1170,86 @@ describe('BackupsView lifecycle', () => {
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2);
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
     expect(logErrorMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('backup folder sizes and the create estimate', () => {
+  beforeEach(() => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
+  });
+
+  it('shows each world folder size as it is measured, and a lower bound when the scan ran out of time', async () => {
+    fileCommands.listFiles.mockImplementation(async (path: string) => {
+      if (path === server.path) {
+        return [
+          { name: 'world', isDirectory: true },
+          { name: 'world_nether', isDirectory: true },
+        ];
+      }
+      return [{ name: 'level.dat', isDirectory: false }];
+    });
+    fileCommands.getManagedDirectorySize.mockImplementation(async (path: string) =>
+      path.endsWith('/world') ? { bytes: 2048, complete: true } : { bytes: 4096, complete: false },
+    );
+
+    renderStrictMode();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('backup-world-size-world')).toHaveTextContent('2 KB'),
+    );
+    expect(screen.getByTestId('backup-world-size-world_nether')).toHaveTextContent(
+      'backups.size.atLeast',
+    );
+  });
+
+  it('shows a dash when a world folder cannot be measured', async () => {
+    fileCommands.listFiles.mockImplementation(async (path: string) =>
+      path === server.path ? [{ name: 'world', isDirectory: true }] : [{ name: 'level.dat' }],
+    );
+    fileCommands.getManagedDirectorySize.mockRejectedValue(new Error('denied'));
+
+    renderStrictMode();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('backup-world-size-world')).toHaveTextContent('—'),
+    );
+    expect(logErrorMock).toHaveBeenCalledWith('Failed to measure folder size', expect.any(Error), {
+      path: `${server.path}/world`,
+    });
+  });
+
+  it('shows the server folder size and an estimate when past backups recorded durations', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'old.zip', date: new Date(), size: 1_000_000, durationMs: 2000 },
+    ]);
+    fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 5_000_000, complete: true });
+
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-old.zip')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('backups-target-size')).toHaveTextContent('4.8 MB'),
+    );
+    expect(screen.getByTestId('backups-estimated-time')).toBeInTheDocument();
+    expect(fileCommands.getManagedDirectorySize).toHaveBeenCalledWith(server.path);
+  });
+
+  it('hides the estimate when no past backup has a recorded duration', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'legacy.zip', date: new Date(), size: 1_000_000 },
+    ]);
+    fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 5_000_000, complete: true });
+
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-legacy.zip')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('backups-create-button'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('backups-target-size')).toHaveTextContent('4.8 MB'),
+    );
+    expect(screen.queryByTestId('backups-estimated-time')).not.toBeInTheDocument();
   });
 });
