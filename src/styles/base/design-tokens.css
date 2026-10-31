@@ -4,61 +4,14 @@
 
     /* Legacy --mv-* names alias the Arc foundation tokens so existing selectors keep working. */
     --mv-surface-base: var(--background);
-    --mv-surface-muted: var(--surface-muted);
-    --mv-surface-elevated-start: var(--mv-panel-start, var(--surface));
-    --mv-surface-elevated-end: var(--mv-panel-end, var(--surface));
     --mv-surface-alt-start: var(--mv-panel-alt-start, var(--surface-raised));
-    --mv-surface-alt-end: var(--mv-panel-alt-end, var(--surface-raised));
 
     --mv-surface-border: var(--mv-border-soft, var(--border));
-    --mv-surface-border-strong: var(--mv-border-strong, var(--border-strong));
-
-    --mv-surface-shadow: var(--shadow-floating);
-    --mv-surface-shadow-soft: var(--shadow-raised);
 
     --mv-surface-card-bg: var(--surface);
-    --mv-surface-card-alt-bg: var(--surface-raised);
 
     --mv-surface-text-primary: var(--foreground);
     --mv-surface-text-secondary: var(--text-secondary);
-    --mv-surface-text-muted: var(--text-muted);
-    --mv-section-title-color: #334155;
-    --mv-kpi-label-color: #64748b;
-    --mv-kpi-value-color: #0f172a;
-    --mv-kpi-meta-color: #64748b;
-    --mv-dashboard-kpi-cpu-value-color: #0f172a;
-    --mv-dashboard-kpi-memory-value-color: #475569;
-
-    --mv-control-chip-bg: rgba(148, 163, 184, 0.14);
-    --mv-control-chip-bg-hover: rgba(148, 163, 184, 0.22);
-    --mv-control-chip-border: rgba(148, 163, 184, 0.42);
-    --mv-control-chip-text: #334155;
-    --mv-control-chip-active-bg: #000000;
-    --mv-control-chip-active-border: #000000;
-    --mv-control-chip-active-text: #ffffff;
-
-    --mv-console-status-divider: rgba(148, 163, 184, 0.5);
-    --mv-console-status-label: #475569;
-    --mv-console-address-local: var(--mv-surface-text-primary);
-    --mv-console-memory-value: var(--mv-surface-text-primary);
-    --mv-console-search-label: #475569;
-    --mv-console-search-placeholder: #475569;
-    --mv-console-search-count: #475569;
-    --mv-console-input-bg: rgba(248, 250, 252, 0.92);
-    --mv-console-input-border: rgba(148, 163, 184, 0.72);
-    --mv-console-input-text: var(--mv-surface-text-primary);
-    --mv-console-log-bg: #f8fafc;
-    --mv-console-log-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
-    --mv-console-log-text: #334155;
-    --mv-console-save-button-border: rgba(16, 185, 129, 0.48);
-    --mv-console-save-button-bg: rgba(16, 185, 129, 0.14);
-    --mv-console-save-button-bg-hover: rgba(5, 150, 105, 0.2);
-    --mv-console-save-button-text: #065f46;
-    --mv-console-filter-label: #475569;
-    --mv-console-filter-pills-border: rgba(148, 163, 184, 0.72);
-    --mv-console-filter-pills-bg: rgba(241, 245, 249, 0.72);
-    --mv-console-command-prefix: #475569;
-    --mv-console-history-hint: #475569;
 
     --mv-scrollbar-thumb: rgba(100, 116, 139, 0.62);
     --mv-scrollbar-thumb-hover: rgba(71, 85, 105, 0.72);
@@ -69,61 +22,14 @@
     --mv-color-scheme: dark;
 
     --mv-surface-base: var(--background);
-    --mv-surface-muted: var(--surface-muted);
-    --mv-surface-elevated-start: var(--mv-panel-start, var(--surface));
-    --mv-surface-elevated-end: var(--mv-panel-end, var(--surface));
     --mv-surface-alt-start: var(--mv-panel-alt-start, var(--surface-raised));
-    --mv-surface-alt-end: var(--mv-panel-alt-end, var(--surface-raised));
 
     --mv-surface-border: var(--mv-border-soft, var(--border));
-    --mv-surface-border-strong: var(--mv-border-strong, var(--border-strong));
-
-    --mv-surface-shadow: var(--shadow-floating);
-    --mv-surface-shadow-soft: var(--shadow-raised);
 
     --mv-surface-card-bg: var(--surface);
-    --mv-surface-card-alt-bg: var(--surface-raised);
 
     --mv-surface-text-primary: var(--foreground);
     --mv-surface-text-secondary: var(--text-secondary);
-    --mv-surface-text-muted: var(--text-muted);
-    --mv-section-title-color: #71717a;
-    --mv-kpi-label-color: #71717a;
-    --mv-kpi-value-color: #fafafa;
-    --mv-kpi-meta-color: #71717a;
-    --mv-dashboard-kpi-cpu-value-color: #fafafa;
-    --mv-dashboard-kpi-memory-value-color: #a1a1aa;
-
-    --mv-control-chip-bg: rgba(39, 39, 42, 0.72);
-    --mv-control-chip-bg-hover: rgba(63, 63, 70, 0.8);
-    --mv-control-chip-border: #3f3f46;
-    --mv-control-chip-text: #e4e4e7;
-    --mv-control-chip-active-bg: #ffffff;
-    --mv-control-chip-active-border: rgba(255, 255, 255, 0.7);
-    --mv-control-chip-active-text: #000000;
-
-    --mv-console-status-divider: #27272a;
-    --mv-console-status-label: #71717a;
-    --mv-console-address-local: #e4e4e7;
-    --mv-console-memory-value: #e4e4e7;
-    --mv-console-search-label: #71717a;
-    --mv-console-search-placeholder: #71717a;
-    --mv-console-search-count: #71717a;
-    --mv-console-input-bg: #18181b;
-    --mv-console-input-border: #27272a;
-    --mv-console-input-text: #f4f4f5;
-    --mv-console-log-bg: #18181b;
-    --mv-console-log-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --mv-console-log-text: #d4d4d8;
-    --mv-console-save-button-border: rgba(16, 185, 129, 0.55);
-    --mv-console-save-button-bg: rgba(6, 95, 70, 0.48);
-    --mv-console-save-button-bg-hover: rgba(6, 120, 87, 0.56);
-    --mv-console-save-button-text: #d1fae5;
-    --mv-console-filter-label: #71717a;
-    --mv-console-filter-pills-border: #27272a;
-    --mv-console-filter-pills-bg: rgba(24, 24, 27, 0.68);
-    --mv-console-command-prefix: #71717a;
-    --mv-console-history-hint: #71717a;
 
     --mv-scrollbar-thumb: #3f3f46;
     --mv-scrollbar-thumb-hover: #52525b;
@@ -132,11 +38,7 @@
   .app-shell {
     /* Contract: App.tsx sets the source shell vars that feed this token bridge. */
     color-scheme: var(--mv-color-scheme);
-    --mv-surface-elevated-start: var(--mv-panel-start);
-    --mv-surface-elevated-end: var(--mv-panel-end);
     --mv-surface-alt-start: var(--mv-panel-alt-start);
-    --mv-surface-alt-end: var(--mv-panel-alt-end);
     --mv-surface-border: var(--mv-border-soft);
-    --mv-surface-border-strong: var(--mv-border-strong);
   }
 }
