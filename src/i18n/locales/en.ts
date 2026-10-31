@@ -175,10 +175,14 @@ export const en: TranslationDictionary = {
   },
 
   dashboard: {
-    title: 'Dashboard: {name}',
     stats: {
       status: 'Status',
       software: 'Software',
+      serverInfo: 'Server info',
+      address: 'Address',
+      copyAddress: 'Copy address',
+      allocatedMemory: 'Allocated memory',
+      javaRuntime: 'Java runtime',
       currentCpu: 'Current CPU',
       currentMemory: 'Current Memory',
       currentTps: 'Current TPS',

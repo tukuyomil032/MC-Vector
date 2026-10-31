@@ -171,10 +171,14 @@ export const ja: TranslationDictionary = {
   },
 
   dashboard: {
-    title: 'ダッシュボード: {name}',
     stats: {
       status: 'ステータス',
       software: 'ソフトウェア',
+      serverInfo: 'サーバー情報',
+      address: 'アドレス',
+      copyAddress: 'アドレスをコピー',
+      allocatedMemory: '割り当てメモリ',
+      javaRuntime: 'Javaランタイム',
       currentCpu: '現在のCPU',
       currentMemory: '現在のメモリ',
       currentTps: '現在のTPS',

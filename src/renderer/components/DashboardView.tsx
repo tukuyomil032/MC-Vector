@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Activity, Server } from 'lucide-react';
+import { CopyButton } from '@/components/arc/copy-button/copy-button';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
 import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
+import { formatBytes } from '../shared/format-bytes';
 import { Phrase } from '../shared/japanese-phrase';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { tauriListen } from '../../lib/tauri-api';
@@ -20,6 +23,7 @@ import {
   normalizeMetric,
 } from '../shared/server-metrics';
 import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
+import { SectionTitle } from './ui/IconTile';
 import styles from './DashboardView.module.css';
 
 interface Props {
@@ -187,6 +191,7 @@ function MetricChartCard({
 
 export default function DashboardView({ server }: Props) {
   const { t, locale } = useTranslation();
+  const arc = useArcMessages();
   const snapshot = useServerMetricHistoryStore((state) => state.snapshotsByServer[server.id]);
   const receivedAt = useServerMetricHistoryStore(
     (state) => state.receivedAtByServer[server.id] ?? 0,
@@ -351,39 +356,68 @@ export default function DashboardView({ server }: Props) {
     };
   }, [server.id, server.notifyOnHighCpu, server.notifyHighCpuThreshold, server.name, t]);
 
-  const statusDot = <span className={styles.dot} data-status={server.status} aria-hidden="true" />;
+  const address = `localhost:${server.port}`;
 
   return (
     <div className={styles.page} data-testid="dashboard-view">
-      <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>{t('dashboard.title', { name: server.name })}</h2>
-          <p className={styles.meta}>
-            {t('dashboard.stats.software')}: {server.software} {server.version}
-          </p>
-        </div>
-        <div className={styles.headerStatus}>
-          <span>{t('dashboard.stats.status')}</span>
-          <span className={styles.statusValue} data-testid="dashboard-status">
-            {statusDot}
-            {statusLabel}
-          </span>
-        </div>
-      </header>
+      <div className={styles.overview}>
+        <article className={styles.card} data-testid="dashboard-status-card">
+          <SectionTitle as="h3" icon={Activity} title={t('dashboard.stats.status')} />
+          <div className={styles.statusBody}>
+            <p className={styles.statusValue} data-testid="dashboard-status">
+              <span className={styles.dot} data-status={server.status} aria-hidden="true" />
+              {statusLabel}
+            </p>
+            <p className={styles.uptime} data-testid="dashboard-kpi-uptime">
+              <span>{t('dashboard.stats.uptime')}</span>
+              <span className={styles.uptimeValue} data-testid="dashboard-kpi-uptime-value">
+                {uptime}
+              </span>
+            </p>
+          </div>
+        </article>
+
+        <article className={styles.card} data-testid="dashboard-server-card">
+          <SectionTitle as="h3" icon={Server} title={t('dashboard.stats.serverInfo')} />
+          <dl className={styles.facts}>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.software')}</dt>
+              <dd className={styles.factValue} data-testid="dashboard-software">
+                {server.software} {server.version}
+              </dd>
+            </div>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.address')}</dt>
+              <dd className={styles.addressRow}>
+                <code className={styles.address} data-testid="dashboard-address">
+                  {address}
+                </code>
+                <CopyButton
+                  value={address}
+                  label={t('dashboard.stats.copyAddress')}
+                  messages={arc.copy}
+                  iconOnly
+                  variant="plain"
+                />
+              </dd>
+            </div>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.allocatedMemory')}</dt>
+              <dd className={styles.factValue}>
+                {formatBytes(server.memory * 1024 * 1024, locale)}
+              </dd>
+            </div>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.javaRuntime')}</dt>
+              <dd className={styles.factValue}>
+                {server.javaPath || t('serverSettings.javaSystemDefault')}
+              </dd>
+            </div>
+          </dl>
+        </article>
+      </div>
 
       <section className={styles.kpiGrid} aria-label={t('dashboard.stats.kpiLabel')}>
-        <KpiTile
-          testId="dashboard-kpi-status"
-          label={t('dashboard.stats.status')}
-          value={
-            <span className={styles.statusValue}>
-              {statusDot}
-              {statusLabel}
-            </span>
-          }
-          context={`${t('dashboard.stats.software')}: ${server.software}`}
-        />
-
         <KpiTile
           testId="dashboard-kpi-tps"
           label={t('dashboard.stats.currentTps')}
@@ -409,15 +443,6 @@ export default function DashboardView({ server }: Props) {
             context={t('dashboard.stats.latestSample')}
           />
         </div>
-
-        <KpiTile
-          testId="dashboard-kpi-software"
-          label={t('dashboard.stats.software')}
-          value={server.software}
-          context={server.version}
-        />
-
-        <KpiTile testId="dashboard-kpi-uptime" label={t('dashboard.stats.uptime')} value={uptime} />
       </section>
 
       <section className={styles.chartGrid}>

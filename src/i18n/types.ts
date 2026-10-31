@@ -195,10 +195,14 @@ export interface TranslationDictionary {
 
   /** Dashboard view translations */
   dashboard: {
-    title: string;
     stats: {
       status: string;
       software: string;
+      serverInfo: string;
+      address: string;
+      copyAddress: string;
+      allocatedMemory: string;
+      javaRuntime: string;
       currentCpu: string;
       currentMemory: string;
       currentTps: string;
