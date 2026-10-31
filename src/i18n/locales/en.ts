@@ -580,6 +580,9 @@ export const en: TranslationDictionary = {
       alreadyExists: 'Already exists',
       listUpdated: 'List updated',
       removed: 'Removed',
+      addFailed: 'Could not add to the list',
+      removeFailed: 'Could not remove from the list',
+      liveCommandFailed: 'Saved to the list, but the server did not apply the change',
     },
   },
 

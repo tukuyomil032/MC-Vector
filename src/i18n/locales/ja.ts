@@ -576,6 +576,9 @@ export const ja: TranslationDictionary = {
       alreadyExists: '既に存在します',
       listUpdated: 'リストを更新しました',
       removed: '削除しました',
+      addFailed: 'リストに追加できませんでした',
+      removeFailed: 'リストから削除できませんでした',
+      liveCommandFailed: 'リストには保存しましたが、サーバーには反映されませんでした',
     },
   },
 

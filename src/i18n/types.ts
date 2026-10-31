@@ -582,6 +582,9 @@ export interface TranslationDictionary {
       alreadyExists: string;
       listUpdated: string;
       removed: string;
+      addFailed: string;
+      removeFailed: string;
+      liveCommandFailed: string;
     };
   };
 

@@ -23,6 +23,10 @@ interface Props {
   server: MinecraftServer;
 }
 
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
   const { confirm } = useAppFeedback();
@@ -106,13 +110,11 @@ export default function UsersView({ server }: Props) {
         await maybeApplyLiveCommand(type, 'add', result.canonicalTarget);
         notify.success(t('users.toast.listUpdated'));
       } catch (error) {
-        notify.error(
-          `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        notify.warning(t('users.toast.liveCommandFailed'), errorText(error));
       }
       return true;
     } catch (error) {
-      notify.error(error instanceof Error ? error.message : String(error));
+      notify.error(t('users.toast.addFailed'), errorText(error));
       return false;
     }
   };
@@ -136,12 +138,10 @@ export default function UsersView({ server }: Props) {
         await maybeApplyLiveCommand(type, 'remove', result.canonicalTarget);
         notify.success(t('users.toast.removed'));
       } catch (error) {
-        notify.error(
-          `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        notify.warning(t('users.toast.liveCommandFailed'), errorText(error));
       }
     } catch (error) {
-      notify.error(error instanceof Error ? error.message : String(error));
+      notify.error(t('users.toast.removeFailed'), errorText(error));
     }
   };
 

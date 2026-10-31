@@ -12,6 +12,7 @@ const { playerCommands, sendCommand, toastMock, confirmMock } = vi.hoisted(() =>
   toastMock: {
     error: vi.fn(),
     success: vi.fn(),
+    warning: vi.fn(),
   },
   confirmMock: vi.fn(),
 }));
@@ -19,7 +20,12 @@ const { playerCommands, sendCommand, toastMock, confirmMock } = vi.hoisted(() =>
 vi.mock('@/lib/player-commands', () => playerCommands);
 vi.mock('@/lib/server-commands', () => ({ sendCommand }));
 vi.mock('@/renderer/shared/notify', () => ({
-  notify: { error: toastMock.error, success: toastMock.success, info: vi.fn(), warning: vi.fn() },
+  notify: {
+    error: toastMock.error,
+    success: toastMock.success,
+    info: vi.fn(),
+    warning: toastMock.warning,
+  },
 }));
 vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
   useAppFeedback: () => ({ confirm: confirmMock }),
@@ -41,6 +47,7 @@ describe('UsersView', () => {
     sendCommand.mockReset().mockResolvedValue(undefined);
     toastMock.error.mockReset();
     toastMock.success.mockReset();
+    toastMock.warning.mockReset();
     confirmMock.mockReset().mockResolvedValue(false);
   });
 
@@ -131,10 +138,39 @@ describe('UsersView', () => {
     fireEvent.click(screen.getByTestId('users-add-banned-ips'));
 
     await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith('Enter a valid IPv4 or IPv6 address'),
+      expect(toastMock.error).toHaveBeenCalledWith(
+        'Could not add to the list',
+        'Enter a valid IPv4 or IPv6 address',
+      ),
     );
     expect(input).toHaveValue('999.1.1.1');
     expect(sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('keeps the saved entry and warns with the raw error when the server rejects the command', async () => {
+    sendCommand.mockRejectedValueOnce(new Error('Server is not accepting commands'));
+    playerCommands.mutatePlayerList.mockResolvedValueOnce({
+      lists: {
+        ...emptyLists,
+        whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+      },
+      changed: true,
+      canonicalTarget: 'Alex',
+    });
+    render(<UsersView server={server} />);
+    await screen.findByTestId('users-list-whitelist');
+
+    fireEvent.change(screen.getByTestId('users-input-whitelist'), { target: { value: 'alex' } });
+    fireEvent.click(screen.getByTestId('users-add-whitelist'));
+
+    await waitFor(() =>
+      expect(toastMock.warning).toHaveBeenCalledWith(
+        'Saved to the list, but the server did not apply the change',
+        'Server is not accepting commands',
+      ),
+    );
+    expect(await screen.findByText('Alex')).toBeInTheDocument();
+    expect(toastMock.error).not.toHaveBeenCalled();
   });
 
   it('explains an empty add inline, then submits the typed name from the form', async () => {
