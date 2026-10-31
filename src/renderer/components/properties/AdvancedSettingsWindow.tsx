@@ -7,6 +7,7 @@ import { Switch } from '@/components/arc/switch/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '../../../i18n';
+import { useArcMessages } from '../../shared/arc-messages';
 import {
   type PropertyCategory,
   type PropertyDefinition,
@@ -85,6 +86,7 @@ export default function AdvancedSettingsWindow({
   onCancel?: () => void;
 }) {
   const { t, locale } = useTranslation();
+  const arc = useArcMessages();
   const [activeTab, setActiveTab] = useState<PropertyCategory>('General');
   const [formData, setFormData] = useState<Record<string, unknown>>(initialData ?? {});
   const [isLoaded, setIsLoaded] = useState(!!initialData);
@@ -197,6 +199,7 @@ export default function AdvancedSettingsWindow({
       return (
         <Select
           label={label}
+          placeholder={arc.select.placeholder}
           description={fieldDescription(prop)}
           value={String(currentValue ?? '')}
           onValueChange={(value) => handleChange(prop.key, value)}

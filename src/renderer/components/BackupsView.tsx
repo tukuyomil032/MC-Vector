@@ -26,6 +26,7 @@ import {
 import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles } from '../../lib/file-commands';
 import { notify } from '../shared/notify';
+import { useArcMessages } from '../shared/arc-messages';
 import { useAppFeedback } from './AppFeedbackProvider';
 import {
   getManualBackupOperationId,
@@ -188,6 +189,7 @@ export async function persistBackupCatalogBestEffort(
 
 export default function BackupsView({ server }: Props) {
   const { t, locale } = useTranslation();
+  const arc = useArcMessages();
   const { confirm } = useAppFeedback();
   const activeManualOperation = useBackupOperationStore(
     (state) => state.activeManualOperations[server.id],
@@ -1270,6 +1272,7 @@ export default function BackupsView({ server }: Props) {
             <Select
               testId="backups-compression-select"
               label={t('backups.modal.compressionLevel')}
+              placeholder={arc.select.placeholder}
               description={t('backups.modal.compressionHelp')}
               options={COMPRESSION_OPTIONS}
               value={String(compressionLevel)}

@@ -5,6 +5,7 @@ import { Switch } from '@/components/arc/switch/switch';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import { saveAppSettings } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
@@ -20,6 +21,7 @@ const SettingsWindow = ({
   updateProgress,
 }: AppUpdaterSettings & { onClose?: () => void }) => {
   const { t, locale, setLocale } = useTranslation();
+  const arc = useArcMessages();
   const [isSavingSecuritySetting, setIsSavingSecuritySetting] = useState(false);
   const [securitySettingError, setSecuritySettingError] = useState<string | undefined>();
   const [updateChannelError, setUpdateChannelError] = useState<string | undefined>();
@@ -165,6 +167,7 @@ const SettingsWindow = ({
 
           <Select
             label={t('settings.update.channelLabel')}
+            placeholder={arc.select.placeholder}
             testId="update-channel-select"
             options={channelOptions}
             value={updateChannel}
@@ -189,6 +192,7 @@ const SettingsWindow = ({
           <Select
             id="language-select"
             label={t('settings.language.label')}
+            placeholder={arc.select.placeholder}
             options={languageOptions}
             value={locale}
             onValueChange={(value) => void handleLanguageChange(value as LocaleCode)}

@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { ExternalLink, type LucideIcon, Search } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useTranslation } from '../../../i18n';
+import { useArcMessages } from '../../shared/arc-messages';
 import { PluginPager } from './PluginPager';
 import { PluginResultCard, type PluginResultCardState } from './PluginResultCard';
 import type { BrowserPlatform, ProjectItem, SortMode } from './plugin-model';
@@ -92,6 +93,7 @@ export function PluginSearchPanel({
   onPageChange,
 }: PluginSearchPanelProps) {
   const { t } = useTranslation();
+  const arc = useArcMessages();
 
   const platformCards: RadioCardOption[] = platformOptions.map((option) => {
     const Icon = option.icon;
@@ -217,6 +219,7 @@ export function PluginSearchPanel({
             <div className={styles.searchField}>
               <SearchField
                 label={t('plugins.browser.searchLabel')}
+                clearLabel={arc.search.clear}
                 placeholder={t('plugins.browser.searchOn', { platform: searchPlatformLabel })}
                 value={query}
                 onValueChange={onQueryChange}
@@ -236,6 +239,7 @@ export function PluginSearchPanel({
           <div className={styles.sortRow}>
             <Select
               label={t('plugins.browser.sortLabel')}
+              placeholder={arc.select.placeholder}
               className={styles.sortSelect}
               testId="plugin-sort-select"
               options={sortOptions}

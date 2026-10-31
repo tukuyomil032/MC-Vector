@@ -826,6 +826,41 @@ export const ja: TranslationDictionary = {
     },
   },
 
+  arcUi: {
+    copy: {
+      copied: 'コピーしました',
+      failed: 'コピーできませんでした',
+    },
+    codeBlock: {
+      copyCode: 'コードをコピー',
+      sourceLabel: '{name} のソースコード',
+      untitled: 'ソースコード',
+      selectable: '選択可能なソースコード',
+      showAll: '{count} 行をすべて表示',
+      showFewer: '行数を減らして表示',
+    },
+    search: {
+      clear: '検索をクリア',
+    },
+    select: {
+      placeholder: '選択してください',
+    },
+    checkbox: {
+      fallback: 'チェックボックス',
+    },
+    lineChart: {
+      chooseSeries: '表示する系列を選択してください',
+      seriesShown: '{total} 系列中 {shown} 系列を表示中',
+      seriesGroup: '{label} の系列',
+      exploreBy: '{label}、{category} で探索',
+      summaryEmpty: '{label}。{empty}',
+      summaryRange: '{label}、{from} から {to} まで。',
+      summaryLatest: '{name}、最新 {value}',
+      reading: '{time}: {values}',
+      loading: '読み込み中',
+    },
+  },
+
   nav: {
     home: 'ホーム',
     servers: 'サーバー',

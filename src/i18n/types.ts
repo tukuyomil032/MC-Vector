@@ -814,6 +814,42 @@ export interface TranslationDictionary {
   };
 
   /** Navigation translations */
+  /** Labels the app supplies to shared Arc UI parts, such as CodeBlock and LineChart */
+  arcUi: {
+    copy: {
+      copied: string;
+      failed: string;
+    };
+    codeBlock: {
+      copyCode: string;
+      sourceLabel: string;
+      untitled: string;
+      selectable: string;
+      showAll: string;
+      showFewer: string;
+    };
+    search: {
+      clear: string;
+    };
+    select: {
+      placeholder: string;
+    };
+    checkbox: {
+      fallback: string;
+    };
+    lineChart: {
+      chooseSeries: string;
+      seriesShown: string;
+      seriesGroup: string;
+      exploreBy: string;
+      summaryEmpty: string;
+      summaryRange: string;
+      summaryLatest: string;
+      reading: string;
+      loading: string;
+    };
+  };
+
   nav: {
     home: string;
     servers: string;

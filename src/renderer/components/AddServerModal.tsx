@@ -10,6 +10,7 @@ import { Input } from '@/components/arc/input/input';
 import { NumberField } from '@/components/arc/number-field/number-field';
 import { Select, type SelectOption } from '@/components/arc/select/select';
 import { useTranslation } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import type { ServerTemplate } from '../../lib/server-commands';
@@ -45,6 +46,7 @@ interface AddServerModalProps {
 
 const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd, templates }) => {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const [rootPath, setRootPath] = useState<string>('');
 
   const {
@@ -199,6 +201,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
               render={({ field }) => (
                 <Select
                   label={t('addServer.template.label')}
+                  placeholder={arc.select.placeholder}
                   testId="server-template-select"
                   options={templateOptions}
                   value={field.value || NO_TEMPLATE}
@@ -241,6 +244,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
               render={({ field }) => (
                 <Select
                   label={t('addServer.software.label')}
+                  placeholder={arc.select.placeholder}
                   testId="server-software-select"
                   options={softwareOptions}
                   value={field.value}

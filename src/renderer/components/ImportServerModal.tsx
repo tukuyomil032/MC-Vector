@@ -7,6 +7,7 @@ import { Select } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import { cancelServerImport, pickServerImport } from '../../lib/server-import-commands';
 import { notify } from '../shared/notify';
 import styles from './ImportServerModal.module.css';
@@ -27,6 +28,7 @@ export default function ImportServerModal({
   onAdd,
 }: ImportServerModalProps) {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const [folderPath, setFolderPath] = useState('');
   const [serverName, setServerName] = useState('');
   const [version, setVersion] = useState('');
@@ -217,6 +219,7 @@ export default function ImportServerModal({
                 />
                 <Select
                   label={t('importServer.softwareLabel')}
+                  placeholder={arc.select.placeholder}
                   testId="import-software-select"
                   options={softwareOptions}
                   value={software}

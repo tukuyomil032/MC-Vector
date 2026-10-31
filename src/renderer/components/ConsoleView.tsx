@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
 import { logError } from '../../lib/error-utils';
@@ -313,6 +314,7 @@ const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): numbe
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const { t, locale } = useTranslation();
+  const arc = useArcMessages();
   const memoryFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
     [locale],
@@ -758,6 +760,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             <SearchField
               ref={searchInputRef}
               label={t('console.search.label')}
+              clearLabel={arc.search.clear}
               value={searchQuery}
               onValueChange={(value) => {
                 setSearchQuery(value);

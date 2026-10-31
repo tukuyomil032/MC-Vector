@@ -829,6 +829,41 @@ export const en: TranslationDictionary = {
     },
   },
 
+  arcUi: {
+    copy: {
+      copied: 'Copied',
+      failed: 'Failed',
+    },
+    codeBlock: {
+      copyCode: 'Copy code',
+      sourceLabel: '{name} source code',
+      untitled: 'Source code',
+      selectable: 'Selectable source code',
+      showAll: 'Show all {count} lines',
+      showFewer: 'Show fewer lines',
+    },
+    search: {
+      clear: 'Clear search',
+    },
+    select: {
+      placeholder: 'Select an option',
+    },
+    checkbox: {
+      fallback: 'Checkbox',
+    },
+    lineChart: {
+      chooseSeries: 'Choose a series to show',
+      seriesShown: '{shown} of {total} series shown',
+      seriesGroup: '{label} series',
+      exploreBy: '{label}, explore by {category}',
+      summaryEmpty: '{label}. {empty}.',
+      summaryRange: '{label}, {from} to {to}.',
+      summaryLatest: '{name}, latest {value}',
+      reading: '{time}: {values}',
+      loading: 'Loading',
+    },
+  },
+
   nav: {
     home: 'Home',
     servers: 'Servers',

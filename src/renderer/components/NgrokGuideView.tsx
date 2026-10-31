@@ -4,6 +4,7 @@ import { Card } from '@/components/arc/card/card';
 import { CodeBlock } from '@/components/arc/code-block/code-block';
 import { ArrowLeft, Check, ExternalLink } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import { useUiStore } from '../../store/uiStore';
 import { openGuideLink } from '../shared/guide-links';
 import { notify } from '../shared/notify';
@@ -12,6 +13,7 @@ import styles from './GuideView.module.css';
 
 export default function NgrokGuideView() {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
   const openLink = async (url: string) => {
@@ -100,6 +102,7 @@ export default function NgrokGuideView() {
           <CodeBlock
             code="2Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxx"
             filename={t('ngrokGuide.summary.obtainValue')}
+            messages={arc.codeBlock}
             language="text"
           />
           <Alert tone="warning" title={t('ngrokGuide.step2.securityWarning')} />

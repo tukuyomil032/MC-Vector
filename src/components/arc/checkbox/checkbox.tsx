@@ -11,6 +11,8 @@ import styles from './checkbox.module.css';
 export interface CheckboxProps extends ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root> {
   label?: string;
   description?: string;
+  /** Accessible name when there is no visible label and no aria-label. Pass a translated string. */
+  fallbackLabel?: string;
 }
 
 /** Both marks share three points, so the check morphs into the dash and back instead of swapping. */
@@ -19,7 +21,17 @@ const dashPath = 'M4.75 9 L9 9 L13.25 9';
 
 export const Checkbox = forwardRef<ElementRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
   function Checkbox(
-    { label, description, id, className, checked, defaultChecked, onCheckedChange, ...props },
+    {
+      label,
+      description,
+      fallbackLabel = 'Checkbox',
+      id,
+      className,
+      checked,
+      defaultChecked,
+      onCheckedChange,
+      ...props
+    },
     ref,
   ) {
     const generatedId = useId();
@@ -48,7 +60,7 @@ export const Checkbox = forwardRef<ElementRef<typeof CheckboxPrimitive.Root>, Ch
           onCheckedChange={change}
           className={[styles.box, className].filter(Boolean).join(' ')}
           aria-describedby={description ? `${controlId}-description` : undefined}
-          aria-label={props['aria-label'] ?? (label ? undefined : 'Checkbox')}
+          aria-label={props['aria-label'] ?? (label ? undefined : fallbackLabel)}
         >
           <span className={styles.visual} aria-hidden="true">
             <motion.span

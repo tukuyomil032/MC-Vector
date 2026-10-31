@@ -25,7 +25,37 @@ export interface CodeBlockProps {
   language?: string;
   /** Collapse longer sources to this many lines, with a toggle that expands the rest in place. */
   maxLines?: number;
+  /** Visible and accessible copy. Pass translated strings; the English defaults are for stand-alone use. */
+  messages?: Partial<CodeBlockMessages>;
 }
+
+export interface CodeBlockMessages {
+  /** Idle label of the copy button. */
+  copyCode: string;
+  /** Feedback words of the copy button. */
+  copied: string;
+  failed: string;
+  /** Accessible name of the whole block, given the file name. */
+  sourceLabel: (name: string) => string;
+  /** Header text when no file name is given. */
+  untitled: string;
+  /** Accessible name of the scrollable source area. */
+  selectable: string;
+  /** Expand toggle, given the total line count. */
+  showAll: (count: number) => string;
+  showFewer: string;
+}
+
+const defaultMessages: CodeBlockMessages = {
+  copyCode: 'Copy code',
+  copied: 'Copied',
+  failed: 'Failed',
+  sourceLabel: (name) => `${name} source code`,
+  untitled: 'Source code',
+  selectable: 'Selectable source code',
+  showAll: (count) => `Show all ${count} lines`,
+  showFewer: 'Show fewer lines',
+};
 
 type TokenKind =
   | 'comment'
@@ -188,7 +218,14 @@ function FileName({ name, reduced }: { name: string; reduced: boolean }) {
   );
 }
 
-export function CodeBlock({ code, filename, language = 'tsx', maxLines }: CodeBlockProps) {
+export function CodeBlock({
+  code,
+  filename,
+  language = 'tsx',
+  maxLines,
+  messages,
+}: CodeBlockProps) {
+  const copy = { ...defaultMessages, ...messages };
   const displayLanguage = normaliseLanguage(language);
   const reduced = useReducedMotion() ?? false;
   const preId = useId();
@@ -239,21 +276,25 @@ export function CodeBlock({ code, filename, language = 'tsx', maxLines }: CodeBl
     target.current = { open, reduced };
     settleRef.current(false);
   }, [open, reduced]);
-  const expandLabels = [`Show all ${lineCount} lines`, 'Show fewer lines'] as const;
+  const expandLabels = [copy.showAll(lineCount), copy.showFewer] as const;
 
   return (
     <section
       className={styles.block}
-      aria-label={filename ? `${filename} source code` : `${displayLanguage} source code`}
+      aria-label={copy.sourceLabel(filename ?? displayLanguage)}
       style={maxLines ? ({ '--code-lines': maxLines } as CSSProperties) : undefined}
     >
       <header className={styles.header}>
         <div className={styles.file}>
           <FileCode2 size={16} strokeWidth={1.75} aria-hidden="true" />
-          <FileName name={filename ?? 'Source code'} reduced={reduced} />
+          <FileName name={filename ?? copy.untitled} reduced={reduced} />
           <span className={styles.language}>{displayLanguage}</span>
         </div>
-        <CopyButton value={code} label="Copy code" />
+        <CopyButton
+          value={code}
+          label={copy.copyCode}
+          messages={{ copied: copy.copied, failed: copy.failed }}
+        />
       </header>
       <motion.div className={styles.viewport} style={{ height }}>
         <pre
@@ -261,7 +302,7 @@ export function CodeBlock({ code, filename, language = 'tsx', maxLines }: CodeBl
           id={preId}
           className={styles.pre}
           tabIndex={0}
-          aria-label="Selectable source code"
+          aria-label={copy.selectable}
         >
           <AnimatePresence initial={false} mode="popLayout">
             <motion.code

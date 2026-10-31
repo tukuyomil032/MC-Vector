@@ -7,15 +7,27 @@ import { motionTokens } from '../lib/motion-tokens';
 import { useCopyFeedback } from '../lib/use-copy-feedback';
 import styles from './copy-button.module.css';
 
+export interface CopyButtonMessages {
+  /** Shown for a moment after a successful copy. */
+  copied: string;
+  /** Shown for a moment when the clipboard rejects the copy. */
+  failed: string;
+}
+
 export interface CopyButtonProps {
   value: string;
+  /** Idle label and accessible name. */
   label?: string;
+  /** Feedback words. Pass translated strings; the English defaults are for stand-alone use. */
+  messages?: Partial<CopyButtonMessages>;
   className?: string;
   iconOnly?: boolean;
   variant?: 'outline' | 'plain';
   disabled?: boolean;
   onCopied?: () => void;
 }
+
+const defaultMessages: CopyButtonMessages = { copied: 'Copied', failed: 'Failed' };
 
 /** Copy feedback is quick and quiet: the old icon and word fade out fast while the new ones fade in, with no blur and no
  *  per-letter motion. The button eases to the width of the current word on a spring with no overshoot, so a long label
@@ -52,6 +64,7 @@ function DrawnCheck({ reduced }: { reduced: boolean }) {
 export function CopyButton({
   value,
   label = 'Copy',
+  messages,
   className,
   iconOnly = false,
   variant = 'outline',
@@ -60,7 +73,9 @@ export function CopyButton({
 }: CopyButtonProps) {
   const { state, copy } = useCopyFeedback();
   const reduced = useReducedMotion() ?? false;
-  const text = state === 'copied' ? 'Copied' : state === 'error' ? 'Failed' : label;
+  const copyMessages = { ...defaultMessages, ...messages };
+  const text =
+    state === 'copied' ? copyMessages.copied : state === 'error' ? copyMessages.failed : label;
   // Each word's natural width, measured off screen (and again when fonts load or the label changes).
   const measures = useRef<Record<string, HTMLSpanElement | null>>({});
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -79,7 +94,7 @@ export function CopyButton({
       if (node) observer.observe(node);
     });
     return () => observer.disconnect();
-  }, [label, iconOnly]);
+  }, [label, iconOnly, copyMessages.copied, copyMessages.failed]);
   const width = widths[state === 'copied' ? 'copied' : state === 'error' ? 'error' : 'idle'];
   // The first measured width applies at once; only later changes ease, so the very first copy animates too.
   const [shown, setShown] = useState<number | undefined>(undefined);

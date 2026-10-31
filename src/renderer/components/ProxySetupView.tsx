@@ -6,6 +6,7 @@ import { NumberField } from '@/components/arc/number-field/number-field';
 import { Select } from '@/components/arc/select/select';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import type { MinecraftServer } from '../shared/server declaration';
 import { useAppFeedback } from './AppFeedbackProvider';
 import styles from './ProxySetupView.module.css';
@@ -28,6 +29,7 @@ export default function ProxySetupView({
   onOpenHelp,
 }: ProxySetupViewProps) {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const { confirm } = useAppFeedback();
   const [proxySoftware, setProxySoftware] = useState('Velocity');
   const [proxyPort, setProxyPort] = useState(25577);
@@ -98,6 +100,7 @@ export default function ProxySetupView({
             <Select
               id="proxy-setup-software"
               label={t('proxySetup.proxySoftware')}
+              placeholder={arc.select.placeholder}
               options={softwareOptions}
               value={proxySoftware}
               onValueChange={setProxySoftware}

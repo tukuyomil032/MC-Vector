@@ -9,6 +9,7 @@ import { Switch } from '@/components/arc/switch/switch';
 import { SearchX } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
+import { useArcMessages } from '../../shared/arc-messages';
 import { logError } from '../../../lib/error-utils';
 import {
   getServerProperties,
@@ -31,6 +32,7 @@ type ServerProperties = Record<string, PropertyValue>;
 
 export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const currentServerIdRef = useRef(server.id);
   const serverViewGenerationRef = useRef(0);
   const propertiesLoadGenerationRef = useRef(0);
@@ -257,6 +259,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       <div className={styles.toolbar}>
         <SearchField
           label={t('properties.search.label')}
+          clearLabel={arc.search.clear}
           placeholder={t('properties.search.placeholder')}
           value={searchQuery}
           onValueChange={setSearchQuery}
@@ -292,6 +295,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
             {matchesSearch('gamemode') && (
               <Select
                 label={t('properties.gameMode.label')}
+                placeholder={arc.select.placeholder}
                 value={props.gamemode as string}
                 onValueChange={(value) => handleChange('gamemode', value)}
                 options={[
@@ -305,6 +309,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
             {matchesSearch('difficulty') && (
               <Select
                 label={t('properties.difficulty.label')}
+                placeholder={arc.select.placeholder}
                 value={props.difficulty as string}
                 onValueChange={(value) => handleChange('difficulty', value)}
                 options={[

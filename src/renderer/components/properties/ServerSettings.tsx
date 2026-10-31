@@ -13,6 +13,7 @@ import { Textarea } from '@/components/arc/textarea/textarea';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
+import { useArcMessages } from '../../shared/arc-messages';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
 import {
   hasNgrokToken,
@@ -145,6 +146,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
   onOpenNgrokGuide,
 }) => {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const [form, setForm] = useState<GeneralForm>(() => toForm(server));
   const [isSaving, setIsSaving] = useState(false);
 
@@ -405,6 +407,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
           />
           <Select
             label={t('serverSettings.serverSoftware')}
+            placeholder={arc.select.placeholder}
             value={form.software}
             onValueChange={(value) => setField('software', value)}
             options={softwareOptions}
@@ -423,6 +426,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
           <div className={styles.wide}>
             <Select
               label={t('serverSettings.javaRuntime')}
+              placeholder={arc.select.placeholder}
               value={form.javaPath}
               onValueChange={(value) => setField('javaPath', value)}
               options={javaOptions}
@@ -543,6 +547,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
         <div className={styles.grid}>
           <Select
             label={t('serverSettings.autoBackup.scheduleType')}
+            placeholder={arc.select.placeholder}
             value={form.autoBackupScheduleType}
             disabled={!form.autoBackupEnabled}
             onValueChange={(value) => setField('autoBackupScheduleType', value as ScheduleType)}
@@ -573,6 +578,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
           {form.autoBackupScheduleType === 'weekly' && (
             <Select
               label={t('serverSettings.autoBackup.weekday')}
+              placeholder={arc.select.placeholder}
               value={String(form.autoBackupWeekday)}
               disabled={!form.autoBackupEnabled}
               onValueChange={(value) => setField('autoBackupWeekday', Number(value))}
@@ -698,7 +704,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
                 </span>
                 <div className={styles.addressRow}>
                   <code className={styles.addressCode}>{address}</code>
-                  <CopyButton value={address} label={t('common.copy')} />
+                  <CopyButton value={address} label={t('common.copy')} messages={arc.copy} />
                 </div>
               </div>
             )}
