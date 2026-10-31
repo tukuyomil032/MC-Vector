@@ -74,6 +74,19 @@
   position: relative;
   overflow-wrap: anywhere;
 }
+/* The text block takes the free width so long titles wrap instead of pushing the trailing content out. */
+.heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.leading,
+.trailing {
+  flex: 0 0 auto;
+}
+.trailing {
+  align-self: flex-start;
+  padding-top: var(--space-1);
+}
 .swap {
   display: block;
 }
