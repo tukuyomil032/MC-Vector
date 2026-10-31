@@ -4,7 +4,18 @@ import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { Button } from '@/components/arc/button/button';
 import { ButtonGroup } from '@/components/arc/button-group/button-group';
 import { SearchField } from '@/components/arc/search-field/search-field';
-import { Check, ChevronDown, ChevronUp, Copy, Search, X } from 'lucide-react';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import {
+  ArrowDown,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Pin,
+  ScrollText,
+  Search,
+  X,
+} from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -46,42 +57,43 @@ type LogLevelFilter = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 const LOG_FILTER_OPTIONS: LogLevelFilter[] = ['ALL', 'INFO', 'WARN', 'ERROR', 'FATAL'];
 const MAX_PINNED_LOGS = 5;
 
+// ANSI codes map to the token variables defined in ConsoleView.module.css, so the palette follows the theme.
 const ANSI_COLOR_MAP: Record<string, string> = {
-  '30': '#000000',
-  '31': '#ef4444',
-  '32': '#22c55e',
-  '33': '#eab308',
-  '34': '#3b82f6',
-  '35': '#a855f7',
-  '36': '#06b6d4',
-  '37': '#e5e7eb',
-  '90': '#6b7280',
-  '91': '#f87171',
-  '92': '#4ade80',
-  '93': '#facc15',
-  '94': '#60a5fa',
-  '95': '#c084fc',
-  '96': '#22d3ee',
-  '97': '#f8fafc',
+  '30': 'var(--ansi-black)',
+  '31': 'var(--ansi-red)',
+  '32': 'var(--ansi-green)',
+  '33': 'var(--ansi-yellow)',
+  '34': 'var(--ansi-blue)',
+  '35': 'var(--ansi-magenta)',
+  '36': 'var(--ansi-cyan)',
+  '37': 'var(--ansi-white)',
+  '90': 'var(--ansi-bright-black)',
+  '91': 'var(--ansi-red)',
+  '92': 'var(--ansi-green)',
+  '93': 'var(--ansi-yellow)',
+  '94': 'var(--ansi-blue)',
+  '95': 'var(--ansi-magenta)',
+  '96': 'var(--ansi-cyan)',
+  '97': 'var(--ansi-white)',
 };
 
 const ANSI_BG_MAP: Record<string, string> = {
-  '40': '#000000',
-  '41': '#7f1d1d',
-  '42': '#14532d',
-  '43': '#78350f',
-  '44': '#1e3a8a',
-  '45': '#4c1d95',
-  '46': '#0f766e',
-  '47': '#374151',
-  '100': '#1f2937',
-  '101': '#9f1239',
-  '102': '#166534',
-  '103': '#854d0e',
-  '104': '#1e40af',
-  '105': '#581c87',
-  '106': '#115e59',
-  '107': '#f3f4f6',
+  '40': 'var(--ansi-bg-black)',
+  '41': 'var(--ansi-bg-red)',
+  '42': 'var(--ansi-bg-green)',
+  '43': 'var(--ansi-bg-yellow)',
+  '44': 'var(--ansi-bg-blue)',
+  '45': 'var(--ansi-bg-magenta)',
+  '46': 'var(--ansi-bg-cyan)',
+  '47': 'var(--ansi-bg-white)',
+  '100': 'var(--ansi-bg-black)',
+  '101': 'var(--ansi-bg-red)',
+  '102': 'var(--ansi-bg-green)',
+  '103': 'var(--ansi-bg-yellow)',
+  '104': 'var(--ansi-bg-blue)',
+  '105': 'var(--ansi-bg-magenta)',
+  '106': 'var(--ansi-bg-cyan)',
+  '107': 'var(--ansi-bg-white)',
 };
 
 const ansiToSegments = (text: string): AnsiSegment[] => {
@@ -180,13 +192,13 @@ const detectLogLevel = (text: string): Exclude<LogLevelFilter, 'ALL'> => {
 const getSeverityStyle = (level: Exclude<LogLevelFilter, 'ALL'>): AnsiStyle => {
   switch (level) {
     case 'FATAL':
-      return { color: '#f43f5e', fontWeight: 700 };
+      return { color: 'var(--danger)', fontWeight: 700 };
     case 'ERROR':
-      return { color: '#ef4444', fontWeight: 700 };
+      return { color: 'var(--danger)', fontWeight: 700 };
     case 'WARN':
-      return { color: '#f59e0b', fontWeight: 700 };
+      return { color: 'var(--warning)', fontWeight: 700 };
     default:
-      return { color: '#d1d5db' };
+      return { color: 'var(--text-secondary)' };
   }
 };
 
@@ -201,6 +213,11 @@ const toLocalAnsiSegments = (segments: unknown): AnsiSegment[] | null => {
   const mapped: AnsiSegment[] = [];
   for (const segment of segments) {
     if (!isRecord(segment) || typeof segment.text !== 'string') {
+      return null;
+    }
+
+    // The Rust parser sends its own palette hex values. A colored line uses the local parser, whose colors are tokens.
+    if (typeof segment.color === 'string' || typeof segment.backgroundColor === 'string') {
       return null;
     }
 
@@ -831,26 +848,31 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         )}
       </section>
 
-      <section className="console-view__log-viewport surface-card rounded-2xl">
+      <section className={styles.logViewport}>
         {pinnedLogs.length > 0 && (
-          <div className="console-view__pinned-area">
-            <div className="console-view__pinned-title">{t('console.pinned.title')}</div>
-            <div className="console-view__pinned-list">
+          <div className={styles.pinnedArea}>
+            <div className={styles.pinnedTitle}>
+              <Pin aria-hidden="true" size={14} strokeWidth={1.75} />
+              {t('console.pinned.title')}
+            </div>
+            <div className={styles.pinnedList}>
               {pinnedLogs.map((entry) => (
                 <div
                   key={entry.key}
-                  className={`console-view__pinned-item console-view__pinned-item--${entry.level.toLowerCase()}`}
+                  className={styles.pinnedItem}
+                  data-level={entry.level.toLowerCase()}
                 >
-                  <span className="console-view__pinned-text">{entry.text}</span>
-                  <button
+                  <span className={styles.pinnedText}>{entry.text}</span>
+                  <Button
                     type="button"
-                    className="console-view__pinned-remove-btn"
+                    size="sm"
+                    variant="ghost"
                     onClick={() =>
                       setPinnedLogs((prev) => prev.filter((item) => item.key !== entry.key))
                     }
                   >
                     {t('console.pinned.unpin')}
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -859,7 +881,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
         <div
           ref={logContainerRef}
-          className="console-view__log-pane"
+          className={styles.logPane}
           onScroll={() => {
             const el = logContainerRef.current;
             if (!el) return;
@@ -873,9 +895,10 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             return visibleLogs.map((entry) => (
               <div
                 key={entry.originalIndex}
-                className={`console-view__log-line console-view__log-line--${entry.level.toLowerCase()}`}
+                className={styles.logLine}
+                data-level={entry.level.toLowerCase()}
               >
-                <div className="console-view__log-line-content break-words">
+                <div className={`${styles.logContent} break-words`}>
                   {(() => {
                     const severityStyle = getSeverityStyle(entry.level);
                     const segmentKeyCounts = new Map<string, number>();
@@ -938,7 +961,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                             ref={(element) => {
                               matchRefs.current[refKey] = element;
                             }}
-                            className={`console-view__search-hit ${isActive ? 'is-active' : ''}`}
+                            className={isActive ? styles.searchHitActive : styles.searchHit}
                           >
                             {matchedText}
                           </mark>,
@@ -964,18 +987,28 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                   })()}
                 </div>
 
-                <button
-                  type="button"
-                  className={`console-view__pin-btn ${pinnedLogKeySet.has(String(entry.originalIndex)) ? 'is-pinned' : ''}`}
-                  onClick={() => togglePinnedLog(entry)}
-                  title={
+                <Tooltip
+                  content={
                     pinnedLogKeySet.has(String(entry.originalIndex))
                       ? t('console.pinned.unpin')
                       : t('console.pinned.pin')
                   }
+                  side="left"
                 >
-                  📌
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.pinButton} ${pinnedLogKeySet.has(String(entry.originalIndex)) ? styles.pinButtonActive : ''}`}
+                    aria-pressed={pinnedLogKeySet.has(String(entry.originalIndex))}
+                    aria-label={
+                      pinnedLogKeySet.has(String(entry.originalIndex))
+                        ? t('console.pinned.unpin')
+                        : t('console.pinned.pin')
+                    }
+                    onClick={() => togglePinnedLog(entry)}
+                  >
+                    <Pin aria-hidden="true" size={14} strokeWidth={1.75} />
+                  </button>
+                </Tooltip>
               </div>
             ));
           })()}
@@ -983,25 +1016,38 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           <div ref={logEndRef} />
 
           {visibleLogs.length === 0 && (
-            <div className="console-view__empty-log">
-              {logFilter === 'ALL'
-                ? t('console.emptyLog.waiting')
-                : t('console.emptyLog.notFound', { level: logFilter })}
-            </div>
+            <EmptyState
+              className={styles.emptyLog}
+              icon={<ScrollText aria-hidden="true" size={22} strokeWidth={1.75} />}
+              title={
+                logFilter === 'ALL'
+                  ? t('console.emptyLog.waiting')
+                  : t('console.emptyLog.notFound', { level: logFilter })
+              }
+              description={
+                logFilter === 'ALL'
+                  ? t('console.emptyLog.waitingHint')
+                  : t('console.emptyLog.notFoundHint')
+              }
+            />
           )}
         </div>
 
         {!autoScroll && visibleLogs.length > 0 && (
-          <button
-            type="button"
-            className="console-view__jump-latest control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-            onClick={() => {
-              setAutoScroll(true);
-              logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }}
-          >
-            {t('console.actions.jumpLatest')}
-          </button>
+          <div className={styles.jumpLatest}>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setAutoScroll(true);
+                logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+              }}
+            >
+              <ArrowDown aria-hidden="true" size={14} strokeWidth={1.75} />
+              {t('console.actions.jumpLatest')}
+            </Button>
+          </div>
         )}
       </section>
 

@@ -292,6 +292,8 @@ export interface TranslationDictionary {
     emptyLog: {
       waiting: string;
       notFound: string;
+      waitingHint: string;
+      notFoundHint: string;
     };
     filter: {
       label: string;
