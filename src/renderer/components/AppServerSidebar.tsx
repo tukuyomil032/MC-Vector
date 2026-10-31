@@ -198,6 +198,21 @@ export default function AppServerSidebar({
         </div>
       )}
 
+      {hasServers && (
+        <div className={styles.addRow}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="create-server-button"
+            onClick={onAddServer}
+          >
+            <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
+            {t('nav.addServer')}
+          </Button>
+        </div>
+      )}
+
       {isBulkMode && selectedIds.size > 0 && (
         <div className={styles.bulkBar}>
           <span className={styles.bulkCount}>
@@ -241,21 +256,6 @@ export default function AppServerSidebar({
               {t('nav.bulkClearSelection')}
             </Button>
           </div>
-        </div>
-      )}
-
-      {hasServers && (
-        <div className={styles.addRow}>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            data-testid="create-server-button"
-            onClick={onAddServer}
-          >
-            <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
-            {t('nav.addServer')}
-          </Button>
         </div>
       )}
     </div>

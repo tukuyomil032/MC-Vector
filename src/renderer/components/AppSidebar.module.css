@@ -1,12 +1,13 @@
 /* Sidebar chrome. Every color comes from an Arc token, so light and dark stay in step with the rest of the app. */
 
+/* The brand text starts where the nav labels start: the nav panel's 8px margin and 1px border, its 8px padding, and the item's 12px inset. */
 .header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
   height: 3.5rem;
-  padding: 0 var(--space-3);
+  padding: 0 calc(var(--space-2) * 2 + 1px) 0 calc(var(--space-2) * 2 + 1px + var(--space-3));
 }
 
 .headerCollapsed {
@@ -160,8 +161,9 @@
   background: var(--border);
 }
 
+/* The server panel sizes to its content. It never stretches to fill the sidebar; the list scrolls past its max height. */
 .serversPanel {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   margin: var(--space-2) var(--space-2) var(--space-3);
   padding: var(--space-2);
   overflow: hidden;
@@ -182,8 +184,8 @@
 }
 
 .serverList {
-  flex: 1 1 auto;
   min-height: 0;
+  max-height: min(14rem, 40vh);
   overflow-y: auto;
   padding: var(--space-1) 0;
 }

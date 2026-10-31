@@ -1,5 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import styles from './AppSidebar.module.css';
+import { Tooltip } from './ui/Tooltip';
 
 interface AppSidebarHeaderProps {
   isSidebarOpen: boolean;
@@ -41,20 +42,21 @@ export default function AppSidebarHeader({
       )}
 
       {onToggleSidebar && (
-        <button
-          type="button"
-          data-testid="sidebar-toggle-button"
-          onClick={onToggleSidebar}
-          className={styles.iconButton}
-          aria-label={toggleLabel}
-          title={toggleLabel}
-        >
-          {isSidebarOpen ? (
-            <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden={true} />
-          ) : (
-            <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden={true} />
-          )}
-        </button>
+        <Tooltip content={toggleLabel} side="right">
+          <button
+            type="button"
+            data-testid="sidebar-toggle-button"
+            onClick={onToggleSidebar}
+            className={styles.iconButton}
+            aria-label={toggleLabel}
+          >
+            {isSidebarOpen ? (
+              <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden={true} />
+            ) : (
+              <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden={true} />
+            )}
+          </button>
+        </Tooltip>
       )}
     </div>
   );
