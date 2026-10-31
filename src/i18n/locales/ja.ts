@@ -312,6 +312,7 @@ export const ja: TranslationDictionary = {
       discardButton: '破棄する',
     },
     contextMenu: {
+      label: 'フォルダーの操作',
       rename: '名前の変更',
       moveItem: 'アイテムを移動',
       compressItem: 'アイテムを圧縮',

@@ -316,6 +316,7 @@ export const en: TranslationDictionary = {
       discardButton: 'Discard',
     },
     contextMenu: {
+      label: 'Folder actions',
       rename: 'Rename',
       moveItem: 'Move Item',
       compressItem: 'Compress Item',

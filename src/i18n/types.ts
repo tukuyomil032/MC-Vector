@@ -335,6 +335,7 @@ export interface TranslationDictionary {
       discardButton: string;
     };
     contextMenu: {
+      label: string;
       rename: string;
       moveItem: string;
       compressItem: string;

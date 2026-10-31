@@ -146,6 +146,16 @@
   white-space: nowrap;
 }
 
+.emptyArea {
+  flex: 1 0 auto;
+  min-height: 56px;
+}
+
+.emptyAreaFill {
+  height: 100%;
+  min-height: 56px;
+}
+
 @media (max-width: 900px) {
   .view {
     padding: var(--space-4);

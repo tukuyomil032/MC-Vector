@@ -5,11 +5,13 @@ import {
   ArrowUp,
   File,
   Folder,
+  FolderInput,
   FolderOpen,
   FolderPlus,
   GitCompareArrows,
   Move,
   PackageOpen,
+  Pencil,
   Trash2,
   Upload,
   X,
@@ -18,11 +20,12 @@ import type * as React from 'react';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/arc/breadcrumb/breadcrumb';
 import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group';
 import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { ContextMenu, type ContextMenuItem } from '@/components/arc/context-menu/context-menu';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
-import { iconFiles, iconImport, iconMove, iconTrash, iconUnzip, iconZip } from '../../assets/icons';
+import { iconFile, iconFiles, iconImport } from '../../assets/icons';
 import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
@@ -125,11 +128,7 @@ export default function FilesView({ server }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [isExternalDropActive, setIsExternalDropActive] = useState(false);
 
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    file: FileEntry | null;
-  } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
   const [modalType, setModalType] = useState<string | null>(null);
 
   const [newFileName, setNewFileName] = useState('');
@@ -452,14 +451,6 @@ export default function FilesView({ server }: Props) {
     }
   };
 
-  const handleContextMenu = (e: React.MouseEvent, file: FileEntry | null) => {
-    e.preventDefault();
-    if (file && !selectedFiles.includes(file.name)) {
-      setSelectedFiles([file.name]);
-    }
-    setContextMenu({ x: e.pageX, y: e.pageY, file });
-  };
-
   const handleDelete = async () => {
     if (selectedFiles.length === 0) {
       return;
@@ -481,7 +472,6 @@ export default function FilesView({ server }: Props) {
       notify.success(t('files.toast.deleted'));
       setSelectedFiles([]);
       loadFiles(currentPath);
-      setContextMenu(null);
     } catch (e) {
       logError('Failed to delete selected files', e, {
         currentPath,
@@ -572,10 +562,10 @@ export default function FilesView({ server }: Props) {
   };
 
   const handleRename = async () => {
-    if (!renameFileName || !contextMenu?.file) {
+    if (!renameFileName || !renameTarget) {
       return;
     }
-    const src = `${currentPath}/${contextMenu.file.name}`;
+    const src = `${currentPath}/${renameTarget}`;
     const dest = `${currentPath}/${renameFileName}`;
     try {
       await moveItem(src, dest);
@@ -602,7 +592,6 @@ export default function FilesView({ server }: Props) {
       await compressItem(targets, dest);
       notify.success(t('files.toast.compressed'));
       loadFiles(currentPath);
-      setContextMenu(null);
     } catch (e) {
       logError('Failed to compress selected entries', e, {
         currentPath,
@@ -625,7 +614,6 @@ export default function FilesView({ server }: Props) {
       }
       notify.success(t('files.toast.extracted'));
       loadFiles(currentPath);
-      setContextMenu(null);
     } catch (e) {
       logError('Failed to extract selected archives', e, {
         currentPath,
@@ -751,8 +739,66 @@ export default function FilesView({ server }: Props) {
     },
   ];
 
+  const rowMenuItems = (file: FileEntry): ContextMenuItem[] => [
+    {
+      id: 'rename',
+      label: t('files.contextMenu.rename'),
+      icon: <Pencil aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => {
+        setRenameTarget(file.name);
+        setRenameFileName(file.name);
+        setModalType('rename');
+      },
+    },
+    {
+      id: 'move',
+      label: t('files.contextMenu.moveItem'),
+      icon: <Move aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => openMoveModal(false),
+    },
+    {
+      id: 'compress',
+      label: t('files.contextMenu.compressItem'),
+      icon: <Archive aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => void handleZip(),
+    },
+    {
+      id: 'extract',
+      label: t('files.contextMenu.extractItem'),
+      icon: <PackageOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => void handleUnzip(),
+    },
+    {
+      id: 'delete',
+      label: t('files.contextMenu.deleteItem'),
+      icon: <Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />,
+      destructive: true,
+      onSelect: () => void handleDelete(),
+    },
+  ];
+  const emptyAreaMenuItems: ContextMenuItem[] = [
+    {
+      id: 'create',
+      label: t('files.contextMenu.newCreate'),
+      icon: <FolderPlus aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => setModalType('create'),
+    },
+    {
+      id: 'import',
+      label: t('files.contextMenu.import'),
+      icon: <FolderInput aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => void handleImport(),
+    },
+    {
+      id: 'move',
+      label: t('files.contextMenu.move'),
+      icon: <Move aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => openMoveModal(true),
+    },
+  ];
+
   return (
-    <div className={styles.view} data-testid="files-view" onClick={() => setContextMenu(null)}>
+    <div className={styles.view} data-testid="files-view">
       <div className={styles.toolbar}>
         <ButtonGroup label={t('files.toolbar.navigation')} size="sm" items={upItems} />
         <div className={styles.breadcrumbShell}>{renderBreadcrumbs()}</div>
@@ -765,10 +811,7 @@ export default function FilesView({ server }: Props) {
       </div>
 
       {/* ファイルリスト表示エリア */}
-      <div
-        className={`${styles.pane}${isExternalDropActive ? ` ${styles.paneDropActive}` : ''}`}
-        onContextMenu={(e) => handleContextMenu(e, null)}
-      >
+      <div className={`${styles.pane}${isExternalDropActive ? ` ${styles.paneDropActive}` : ''}`}>
         {isExternalDropActive && (
           <div className={styles.dropOverlay} role="status">
             <Upload aria-hidden="true" size={24} strokeWidth={1.75} />
@@ -795,84 +838,104 @@ export default function FilesView({ server }: Props) {
                 .filter(Boolean)
                 .join(' ');
               return (
-                <div
+                <ContextMenu
                   key={file.name}
-                  className={rowClass}
-                  data-testid={`file-row-${file.name}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={file.name}
-                  aria-pressed={selected}
-                  onContextMenu={(e) => {
-                    e.stopPropagation();
-                    handleContextMenu(e, file);
-                  }}
-                  onClick={(e) => {
-                    if (diffSelectStep && !file.isDirectory) {
-                      void handleDiffSelect(file, filePath);
-                    } else {
-                      handleRowClick(file.name, e);
-                    }
-                  }}
-                  onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
+                  label={file.name}
+                  items={rowMenuItems(file)}
+                  trigger="context"
+                >
+                  <div
+                    className={rowClass}
+                    data-testid={`file-row-${file.name}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={file.name}
+                    aria-pressed={selected}
+                    onContextMenu={() => {
+                      if (!selected) setSelectedFiles([file.name]);
+                    }}
+                    onClick={(e) => {
                       if (diffSelectStep && !file.isDirectory) {
                         void handleDiffSelect(file, filePath);
                       } else {
-                        void handleFileDoubleClick(file.name);
+                        handleRowClick(file.name, e);
                       }
-                    }
-                  }}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, file.name)}
-                  onDragOver={(e) => {
-                    if (file.isDirectory) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }
-                  }}
-                  onDrop={(e) => {
-                    if (file.isDirectory) handleDropOnFolder(e, file.name);
-                  }}
-                >
-                  {/* The checkbox handles its own presses, so they do not also open or select the row. */}
-                  <span
-                    className={styles.checkCell}
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
+                    }}
+                    onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (diffSelectStep && !file.isDirectory) {
+                          void handleDiffSelect(file, filePath);
+                        } else {
+                          void handleFileDoubleClick(file.name);
+                        }
+                      }
+                    }}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, file.name)}
+                    onDragOver={(e) => {
+                      if (file.isDirectory) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                    onDrop={(e) => {
+                      if (file.isDirectory) handleDropOnFolder(e, file.name);
+                    }}
                   >
-                    <Checkbox
-                      aria-label={file.name}
-                      checked={selected}
-                      onCheckedChange={() => toggleSelect(file.name)}
-                    />
-                  </span>
-                  {file.isDirectory ? (
-                    <Folder
-                      aria-hidden="true"
-                      className={`${styles.icon} ${styles.iconDirectory}`}
-                      size={16}
-                      strokeWidth={1.75}
-                    />
-                  ) : (
-                    <File aria-hidden="true" className={styles.icon} size={16} strokeWidth={1.75} />
-                  )}
-                  <span className={styles.name}>{file.name}</span>
-                  <span className={styles.size}>
-                    {file.isDirectory
-                      ? '-'
-                      : t('files.size.kb', {
-                          value: sizeFormatter.format((file.size ?? 0) / 1024),
-                        })}
-                  </span>
-                </div>
+                    {/* The checkbox handles its own presses, so they do not also open or select the row. */}
+                    <span
+                      className={styles.checkCell}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        aria-label={file.name}
+                        checked={selected}
+                        onCheckedChange={() => toggleSelect(file.name)}
+                      />
+                    </span>
+                    {file.isDirectory ? (
+                      <Folder
+                        aria-hidden="true"
+                        className={`${styles.icon} ${styles.iconDirectory}`}
+                        size={16}
+                        strokeWidth={1.75}
+                      />
+                    ) : (
+                      <File
+                        aria-hidden="true"
+                        className={styles.icon}
+                        size={16}
+                        strokeWidth={1.75}
+                      />
+                    )}
+                    <span className={styles.name}>{file.name}</span>
+                    <span className={styles.size}>
+                      {file.isDirectory
+                        ? '-'
+                        : t('files.size.kb', {
+                            value: sizeFormatter.format((file.size ?? 0) / 1024),
+                          })}
+                    </span>
+                  </div>
+                </ContextMenu>
               );
             })}
           </div>
         )}
+
+        {/* The empty space below the rows opens the folder menu, so it never overlaps a row's own menu. */}
+        <ContextMenu
+          label={t('files.contextMenu.label')}
+          items={emptyAreaMenuItems}
+          trigger="context"
+          className={styles.emptyArea}
+        >
+          <div className={styles.emptyAreaFill} />
+        </ContextMenu>
       </div>
 
       {/* Diff View Overlay */}
@@ -1111,137 +1174,6 @@ export default function FilesView({ server }: Props) {
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Context Menu (機能追加・画像付き) */}
-      {contextMenu && (
-        <div
-          className="files-view__context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          role="menu"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setContextMenu(null);
-            } else if (e.key === 'Enter' || e.key === ' ') {
-              const target = e.target;
-              if (target instanceof HTMLElement && target !== e.currentTarget) {
-                e.preventDefault();
-                target.click();
-              }
-            }
-          }}
-        >
-          {contextMenu.file ? (
-            <>
-              {/* 1. 名前の変更 (画像なしのため透明なスペースで位置合わせ) */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  setRenameFileName(contextMenu.file?.name ?? '');
-                  setModalType('rename');
-                  setContextMenu(null);
-                }}
-              >
-                <div className="files-view__context-spacer" />
-                {t('files.contextMenu.rename')}
-              </div>
-
-              {/* 2. アイテムを移動 */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  openMoveModal(false);
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconMove} className="files-view__context-icon" />
-                {t('files.contextMenu.moveItem')}
-              </div>
-
-              {/* 3. アイテムを圧縮 */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  handleZip();
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconZip} className="files-view__context-icon" />
-                {t('files.contextMenu.compressItem')}
-              </div>
-
-              {/* 4. アイテムを解凍 */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  handleUnzip();
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconUnzip} className="files-view__context-icon" />
-                {t('files.contextMenu.extractItem')}
-              </div>
-
-              {/* 5. アイテムを削除 */}
-              <div
-                className="files-view__context-item files-view__context-item--danger"
-                role="menuitem"
-                tabIndex={0}
-                onClick={handleDelete}
-              >
-                <SvgMaskIcon src={iconTrash} className="files-view__context-icon" />
-                {t('files.contextMenu.deleteItem')}
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  setModalType('create');
-                  setContextMenu(null);
-                }}
-              >
-                <div className="files-view__context-spacer" />
-                {t('files.contextMenu.newCreate')}
-              </div>
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  handleImport();
-                  setContextMenu(null);
-                }}
-              >
-                <div className="files-view__context-spacer" />
-                {t('files.contextMenu.import')}
-              </div>
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  openMoveModal(true);
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconMove} className="files-view__context-icon" />
-                {t('files.contextMenu.move')}
-              </div>
-            </>
-          )}
         </div>
       )}
     </div>
