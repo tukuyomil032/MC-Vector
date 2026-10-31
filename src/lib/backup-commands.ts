@@ -9,6 +9,8 @@ export interface BackupInfo {
   origin?: 'manual' | 'automatic';
   consistency?: 'quiesced' | 'live';
   restoreEligible?: boolean;
+  /** How long the archive took to build. Missing for backups made before durations were recorded. */
+  durationMs?: number;
 }
 
 interface ManagedBackupRecord {
@@ -19,6 +21,7 @@ interface ManagedBackupRecord {
   createdAt: string;
   totalBytes: number;
   restoreEligible: boolean;
+  durationMs?: number | null;
 }
 
 export interface BackupRetentionResult {
@@ -260,6 +263,7 @@ export async function listBackupsWithMetadata(serverId: string): Promise<BackupI
         origin: record.origin,
         consistency: record.consistency,
         restoreEligible: record.restoreEligible,
+        ...(typeof record.durationMs === 'number' ? { durationMs: record.durationMs } : {}),
       };
     });
   } catch (error) {

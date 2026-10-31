@@ -206,6 +206,37 @@ describe('backup-commands', () => {
     expect(tauriInvokeMock).toHaveBeenCalledWith('list_managed_backups', { serverId: 'server-1' });
   });
 
+  it('carries the recorded duration and leaves it unset for older backups', async () => {
+    tauriInvokeMock.mockResolvedValueOnce([
+      {
+        backupId: 'backup-new',
+        archivePath: 'new.zip',
+        origin: 'manual',
+        consistency: 'quiesced',
+        createdAt: '200000',
+        totalBytes: 2048,
+        restoreEligible: true,
+        durationMs: 1500,
+      },
+      {
+        backupId: 'backup-old',
+        archivePath: 'old.zip',
+        origin: 'automatic',
+        consistency: 'quiesced',
+        createdAt: '100000',
+        totalBytes: 1024,
+        restoreEligible: true,
+        durationMs: null,
+      },
+    ]);
+    const { listBackupsWithMetadata } = await import('@/lib/backup-commands');
+    const backups = await listBackupsWithMetadata('server-1');
+
+    expect(backups[0]).toMatchObject({ name: 'new.zip', size: 2048, durationMs: 1500 });
+    expect(backups[1]).toMatchObject({ name: 'old.zip', size: 1024 });
+    expect(backups[1]).not.toHaveProperty('durationMs');
+  });
+
   it('returns an empty metadata list when the managed directory is missing', async () => {
     tauriInvokeMock
       .mockRejectedValueOnce(
