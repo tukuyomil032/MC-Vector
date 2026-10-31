@@ -18,6 +18,7 @@
 
 .fields {
   display: grid;
+  margin-top: var(--space-4);
   align-items: start;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-4);
