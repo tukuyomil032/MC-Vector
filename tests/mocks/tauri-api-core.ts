@@ -723,6 +723,10 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'get_server_stats':
       return { cpu: 1, memory: 256 };
 
+    // No history is recorded until a metrics event arrives; the Rust command returns None in the same case.
+    case 'get_server_metric_history':
+      return null;
+
     case 'ping_server':
       return true;
 
