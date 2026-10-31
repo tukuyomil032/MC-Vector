@@ -135,17 +135,6 @@
   gap: var(--space-4);
 }
 
-@media (min-width: 1024px) {
-  .overview {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .kpiGrid,
-  .chartGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 /* Stat cards: an icon tile with the label, then the big value. No caption lines. */
 .stat {
   display: flex;
@@ -229,6 +218,18 @@
   place-items: center;
   height: 226px;
   min-width: 0;
+}
+
+/* Declared after every base grid rule, so the wide layout wins over the stacked defaults above. */
+@media (min-width: 1024px) {
+  .overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpiGrid,
+  .chartGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 920px) {
