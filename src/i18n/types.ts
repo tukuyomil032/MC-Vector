@@ -1205,16 +1205,20 @@ export interface TranslationDictionary {
     title: string;
     folderLabel: string;
     folderPlaceholder: string;
+    folderHint: string;
+    analyzing: string;
     selectButton: string;
     nameLabel: string;
     versionLabel: string;
     softwareLabel: string;
+    noJarTitle: string;
+    noJarBody: string;
+    eulaTitle: string;
     eulaWarning: string;
     importButton: string;
     toast: {
       success: string;
       failed: string;
-      noJar: string;
     };
   };
 

@@ -15,6 +15,7 @@ import { logError } from '../../lib/error-utils';
 import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
 import styles from './AddServerModal.module.css';
+import { softwareSelectOptions } from './serverSoftwareOptions';
 
 /** Radix Select cannot take an empty string as an item value, so "no template" gets a sentinel. */
 const NO_TEMPLATE = '__none__';
@@ -110,24 +111,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
     ...templates.map((template) => ({ value: template.id, label: template.name })),
   ];
 
-  const softwareStandard = t('addServer.software.groups.standard');
-  const softwareModded = t('addServer.software.groups.modded');
-  const softwareProxy = t('addServer.software.groups.proxy');
-  const softwareOptions: SelectOption[] = [
-    { value: 'Vanilla', label: t('addServer.software.options.vanilla'), group: softwareStandard },
-    { value: 'Paper', label: t('addServer.software.options.paper'), group: softwareStandard },
-    { value: 'LeafMC', label: t('addServer.software.options.leafmc'), group: softwareStandard },
-    { value: 'Spigot', label: t('addServer.software.options.spigot'), group: softwareStandard },
-    { value: 'Fabric', label: t('addServer.software.options.fabric'), group: softwareModded },
-    { value: 'Forge', label: t('addServer.software.options.forge'), group: softwareModded },
-    { value: 'Velocity', label: t('addServer.software.options.velocity'), group: softwareProxy },
-    { value: 'Waterfall', label: t('addServer.software.options.waterfall'), group: softwareProxy },
-    {
-      value: 'BungeeCord',
-      label: t('addServer.software.options.bungeecord'),
-      group: softwareProxy,
-    },
-  ];
+  const softwareOptions = softwareSelectOptions(t);
 
   const versionOptions = VERSION_OPTIONS.map((version) => ({ value: version, label: version }));
 

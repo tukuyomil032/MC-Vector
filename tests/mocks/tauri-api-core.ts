@@ -850,6 +850,8 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       return '/mock/app';
 
     case 'pick_server_import':
+      // A test can seed config.serverImportAnalysis to exercise the analyzed import states.
+      return getE2eState().config.serverImportAnalysis ?? null;
     case 'cancel_server_import':
       return null;
 

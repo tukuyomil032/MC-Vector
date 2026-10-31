@@ -1209,19 +1209,24 @@ export const en: TranslationDictionary = {
   },
 
   importServer: {
-    title: 'Import Server',
+    title: 'Import an existing server folder',
     folderLabel: 'Server Folder',
     folderPlaceholder: 'Select a folder',
+    folderHint: 'Choose a folder to read its JAR, version, and software automatically.',
+    analyzing: 'Reading the folder...',
     selectButton: 'Select',
     nameLabel: 'Server Name',
     versionLabel: 'Version',
     softwareLabel: 'Software',
+    noJarTitle: 'No server JAR found',
+    noJarBody:
+      'Put a server JAR such as server.jar at the top of the folder, then choose it again.',
+    eulaTitle: 'EULA not accepted',
     eulaWarning: 'EULA is not accepted yet. You can accept it when you first start this server.',
     importButton: 'Import',
     toast: {
       success: 'Server imported successfully',
       failed: 'Failed to import server',
-      noJar: 'No server JAR found in folder',
     },
   },
 

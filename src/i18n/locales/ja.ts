@@ -1208,19 +1208,24 @@ export const ja: TranslationDictionary = {
   },
 
   importServer: {
-    title: 'サーバーをインポート',
+    title: '既存のサーバーフォルダを取り込む',
     folderLabel: 'サーバーフォルダ',
     folderPlaceholder: 'フォルダを選択してください',
+    folderHint: 'フォルダを選ぶと、JAR、バージョン、ソフトウェアを自動で読み取ります。',
+    analyzing: '解析中...',
     selectButton: '選択',
     nameLabel: 'サーバー名',
     versionLabel: 'バージョン',
     softwareLabel: 'ソフトウェア',
+    noJarTitle: 'サーバー JAR が見つかりません',
+    noJarBody:
+      'フォルダ直下に server.jar などのサーバー JAR を置いてから、もう一度選択してください。',
+    eulaTitle: 'EULA に未同意です',
     eulaWarning: 'EULA はまだ未承認です。初回起動時に同意できます。',
     importButton: 'インポート',
     toast: {
       success: 'サーバーをインポートしました',
       failed: 'インポートに失敗しました',
-      noJar: 'サーバー JAR が見つかりません',
     },
   },
 
