@@ -7,6 +7,17 @@
   font-size: var(--text-sm);
   font-weight: 500;
 }
+/* A label with a hint: the info icon sits on the label's line and the row keeps the label's bottom gap. */
+.labelRow {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.labelRow > label {
+  margin-bottom: 0;
+}
 /* Same focus language as Input: the ring contracts onto the border while it fades in, and the box never changes size. */
 .control {
   width: 100%;

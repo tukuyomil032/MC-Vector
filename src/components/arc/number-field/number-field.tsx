@@ -21,10 +21,12 @@ import {
   useState,
   type KeyboardEvent,
   type PointerEvent,
+  type ReactNode,
   type Ref,
 } from 'react';
 import { motionTokens } from '../lib/motion-tokens';
 import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
+import { HintIcon } from '../../../renderer/components/ui/FieldLabel';
 import styles from './number-field.module.css';
 
 /** Text shown beside the number. A function receives the value, so a unit can follow it: `n => n === 1 ? " seat" : " seats"`. */
@@ -41,6 +43,8 @@ export interface NumberFieldProps {
   /** PageUp, PageDown, and Shift with an arrow move this far. Defaults to ten steps. */
   largeStep?: number;
   description?: string;
+  /** Help that shows in a tooltip from an info icon beside the label, so it takes no space under the field. */
+  hint?: ReactNode;
   disabled?: boolean;
   id?: string;
   /** Text before the number, such as "$". */
@@ -586,6 +590,7 @@ export function NumberField({
   step: stepProp = 1,
   largeStep,
   description,
+  hint,
   disabled,
   id,
   prefix,
@@ -942,23 +947,26 @@ export function NumberField({
   return (
     <div className={styles.field} data-size={size}>
       <div className={styles.head}>
-        <label
-          htmlFor={inputId}
-          className={styles.label}
-          data-scrub={(scrub && !disabled) || undefined}
-          onPointerDown={onScrubStart}
-          onPointerMove={onScrubMove}
-          onPointerUp={onScrubEnd}
-          onPointerCancel={onScrubEnd}
-          onClick={(event) => {
-            if (suppressClick.current) {
-              event.preventDefault();
-              suppressClick.current = false;
-            }
-          }}
-        >
-          {label}
-        </label>
+        <span className={styles.labelGroup}>
+          <label
+            htmlFor={inputId}
+            className={styles.label}
+            data-scrub={(scrub && !disabled) || undefined}
+            onPointerDown={onScrubStart}
+            onPointerMove={onScrubMove}
+            onPointerUp={onScrubEnd}
+            onPointerCancel={onScrubEnd}
+            onClick={(event) => {
+              if (suppressClick.current) {
+                event.preventDefault();
+                suppressClick.current = false;
+              }
+            }}
+          >
+            {label}
+          </label>
+          {hint && <HintIcon hint={hint} label={label} />}
+        </span>
         <LimitNote id={limitId} edge={noteEdge} text={noteText} />
       </div>
       <div

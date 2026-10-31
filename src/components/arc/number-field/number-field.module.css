@@ -34,6 +34,13 @@
   gap: var(--space-3);
   margin-bottom: var(--space-2);
 }
+/* The label and its optional hint icon share one line; the icon stays vertically centred on the label text. */
+.labelGroup {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+}
 .label {
   min-width: 0;
   color: var(--foreground);

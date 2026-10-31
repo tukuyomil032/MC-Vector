@@ -1,15 +1,18 @@
 'use client';
 
 import { forwardRef, useEffect, useId, useRef, useState } from 'react';
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { motionTokens } from '../lib/motion-tokens';
 import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
+import { HintIcon } from '../../../renderer/components/ui/FieldLabel';
 import styles from './input.module.css';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   description?: string;
+  /** Help that shows in a tooltip from an info icon beside the label, so it takes no space under the field. */
+  hint?: ReactNode;
   error?: string;
 }
 
@@ -217,7 +220,7 @@ function MessageRow({
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, description, error, id, className, ...props },
+  { label, description, hint, error, id, className, ...props },
   ref,
 ) {
   const generatedId = useId();
@@ -226,11 +229,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const errorId = error ? `${controlId}-error` : undefined;
   const describedBy =
     [props['aria-describedby'], hintId, errorId].filter(Boolean).join(' ') || undefined;
+  const labelNode = (
+    <label className={styles.label} htmlFor={controlId}>
+      {label}
+    </label>
+  );
   return (
     <div className={styles.field}>
-      <label className={styles.label} htmlFor={controlId}>
-        {label}
-      </label>
+      {hint ? (
+        <span className={styles.labelRow}>
+          {labelNode}
+          <HintIcon hint={hint} label={label} />
+        </span>
+      ) : (
+        labelNode
+      )}
       <input
         {...props}
         id={controlId}
