@@ -19,7 +19,7 @@ test.describe('console and user management', () => {
     await page.locator('[data-testid="console-search-open-button"]').click();
     const searchInput = page.locator('[data-testid="console-search-input"]');
     await searchInput.fill('hello from e2e');
-    await expect(page.locator('.console-view__search-count')).toContainText('1 / 1');
+    await expect(page.locator('[data-testid="console-search-count"]')).toContainText('1 / 1');
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(searchInput).toHaveCount(0);
   });

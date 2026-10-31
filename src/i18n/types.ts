@@ -305,6 +305,8 @@ export interface TranslationDictionary {
       invalidRegex: string;
       prev: string;
       next: string;
+      count: string;
+      navigate: string;
     };
     pinned: {
       title: string;

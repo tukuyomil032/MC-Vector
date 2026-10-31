@@ -281,8 +281,10 @@ export const ja: TranslationDictionary = {
       placeholder: 'ログを検索...',
       regex: '正規表現',
       invalidRegex: '正規表現が不正です',
-      prev: '前へ',
-      next: '次へ',
+      prev: '前の一致',
+      next: '次の一致',
+      count: '{current} / {total}',
+      navigate: '一致の移動',
     },
     pinned: {
       title: 'ピン留めログ',

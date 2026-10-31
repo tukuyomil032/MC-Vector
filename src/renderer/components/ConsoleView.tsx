@@ -1,7 +1,10 @@
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Tooltip } from '@/components/arc/tooltip/tooltip';
-import { Check, Copy } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { ButtonGroup } from '@/components/arc/button-group/button-group';
+import { SearchField } from '@/components/arc/search-field/search-field';
+import { Check, ChevronDown, ChevronUp, Copy, Search, X } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -725,18 +728,15 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         </div>
       </section>
 
-      <section
-        className={`console-view__search-strip surface-card rounded-2xl ${isSearchOpen ? 'is-open' : 'is-closed'}`}
-      >
-        <span className="console-view__search-label">{t('console.search.label')}</span>
+      <section className={styles.searchStrip} data-open={isSearchOpen}>
         {isSearchOpen ? (
           <>
-            <input
+            <SearchField
               ref={searchInputRef}
-              type="text"
+              label={t('console.search.label')}
               value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
+              onValueChange={(value) => {
+                setSearchQuery(value);
                 setActiveMatchIndex(0);
               }}
               onKeyDown={(event) => {
@@ -750,68 +750,83 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
                 }
               }}
               placeholder={t('console.search.placeholder')}
-              className="console-view__search-input"
+              className={styles.searchField}
               data-testid="console-search-input"
             />
 
-            <div className="console-view__search-count">
-              {totalMatches === 0 ? '0 / 0' : `${activeMatchIndex + 1} / ${totalMatches}`}
-            </div>
+            <span
+              className={styles.matchCount}
+              data-testid="console-search-count"
+              aria-live="polite"
+            >
+              {t('console.search.count', {
+                current: totalMatches === 0 ? 0 : activeMatchIndex + 1,
+                total: totalMatches,
+              })}
+            </span>
 
-            <button
+            <Button
               type="button"
-              className={`console-view__search-mode-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all ${isRegexSearchMode ? 'is-active' : ''}`}
+              size="sm"
+              variant={isRegexSearchMode ? 'primary' : 'secondary'}
+              aria-pressed={isRegexSearchMode}
               onClick={() => {
                 setIsRegexSearchMode((prev) => !prev);
                 setActiveMatchIndex(0);
               }}
             >
               {t('console.search.regex')}
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              className="console-view__search-nav-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-              onClick={() => jumpToMatch(-1)}
-              disabled={totalMatches === 0}
-            >
-              {t('console.search.prev')}
-            </button>
+            <ButtonGroup
+              label={t('console.search.navigate')}
+              size="sm"
+              items={[
+                {
+                  id: 'prev',
+                  label: t('console.search.prev'),
+                  icon: <ChevronUp aria-hidden="true" size={14} strokeWidth={1.75} />,
+                  iconOnly: true,
+                  disabled: totalMatches === 0,
+                  onSelect: () => jumpToMatch(-1),
+                },
+                {
+                  id: 'next',
+                  label: t('console.search.next'),
+                  icon: <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} />,
+                  iconOnly: true,
+                  disabled: totalMatches === 0,
+                  onSelect: () => jumpToMatch(1),
+                },
+              ]}
+            />
 
-            <button
-              type="button"
-              className="console-view__search-nav-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-              onClick={() => jumpToMatch(1)}
-              disabled={totalMatches === 0}
-            >
-              {t('console.search.next')}
-            </button>
-
-            <button
-              type="button"
-              className="console-view__search-close-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
-              onClick={closeSearch}
-            >
+            <Button type="button" size="sm" variant="ghost" onClick={closeSearch}>
+              <X aria-hidden="true" size={14} strokeWidth={1.75} />
               {t('common.close')}
-            </button>
+            </Button>
 
             {isRegexInvalid && (
-              <span className="console-view__search-error">{t('console.search.invalidRegex')}</span>
+              <span role="alert" className={styles.searchError}>
+                {t('console.search.invalidRegex')}
+              </span>
             )}
           </>
         ) : (
           <>
-            <span className="console-view__search-placeholder">
+            <span className={styles.searchPlaceholder}>
+              <Search aria-hidden="true" size={14} strokeWidth={1.75} />
               {t('console.search.placeholder')}
             </span>
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="secondary"
               data-testid="console-search-open-button"
-              className="console-view__search-open-btn control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
               onClick={openSearch}
             >
               {t('console.actions.find')}
-            </button>
+            </Button>
           </>
         )}
       </section>

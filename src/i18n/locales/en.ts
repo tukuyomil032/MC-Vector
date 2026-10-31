@@ -285,8 +285,10 @@ export const en: TranslationDictionary = {
       placeholder: 'Search logs...',
       regex: 'Regex',
       invalidRegex: 'Invalid regular expression',
-      prev: 'Prev',
-      next: 'Next',
+      prev: 'Previous match',
+      next: 'Next match',
+      count: '{current} / {total}',
+      navigate: 'Match navigation',
     },
     pinned: {
       title: 'Pinned logs',
