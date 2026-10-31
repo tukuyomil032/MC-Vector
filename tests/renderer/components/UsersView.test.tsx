@@ -222,4 +222,22 @@ describe('UsersView', () => {
     expect(screen.queryByText('Could not load the lists')).not.toBeInTheDocument();
     expect(playerCommands.getPlayerLists).toHaveBeenCalledTimes(2);
   });
+
+  it('falls back from the player face to Steve, then to the User icon', async () => {
+    playerCommands.getPlayerLists.mockResolvedValue({
+      ...emptyLists,
+      whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+    });
+    const { container } = render(<UsersView server={server} />);
+    await screen.findByTestId('users-list-whitelist');
+
+    const avatar = () => container.querySelector('img');
+    expect(avatar()).toHaveAttribute('src', 'https://minotar.net/avatar/Alex/32');
+
+    fireEvent.error(avatar() as HTMLImageElement);
+    expect(avatar()).toHaveAttribute('src', 'https://minotar.net/avatar/MHF_Steve/32');
+
+    fireEvent.error(avatar() as HTMLImageElement);
+    expect(avatar()).toBeNull();
+  });
 });

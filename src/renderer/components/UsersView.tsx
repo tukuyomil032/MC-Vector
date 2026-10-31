@@ -325,7 +325,7 @@ function UserListCard({
         title={title}
         trailing={loaded ? <span className={styles.count}>{entries.length}</span> : undefined}
       />
-      {body}
+      <div className={styles.body}>{body}</div>
       <form className={styles.addForm} onSubmit={handleSubmit} noValidate>
         {/* The field has no visible label: the placeholder shows the hint and aria-label names it. */}
         <Input
@@ -386,8 +386,13 @@ function UserRow({ type, entry, onRemove }: UserRowProps) {
   );
 }
 
+const STEVE_AVATAR_URL = 'https://minotar.net/avatar/MHF_Steve/32';
+
+/**
+ * The player's face. When that image fails, Steve's face takes its place, and the User icon is the last resort if Steve fails too.
+ */
 function UserAvatar({ name, isIpList }: { name: string; isIpList: boolean }) {
-  const [failed, setFailed] = useState(false);
+  const [stage, setStage] = useState<'player' | 'steve' | 'icon'>('player');
 
   if (isIpList) {
     return (
@@ -396,7 +401,7 @@ function UserAvatar({ name, isIpList }: { name: string; isIpList: boolean }) {
       </span>
     );
   }
-  if (failed || !name) {
+  if (stage === 'icon' || !name) {
     return (
       <span className={styles.avatar} aria-hidden="true">
         <User size={16} strokeWidth={1.75} />
@@ -407,12 +412,16 @@ function UserAvatar({ name, isIpList }: { name: string; isIpList: boolean }) {
     <span className={styles.avatar} aria-hidden="true">
       <img
         className={styles.avatarImage}
-        src={`https://minotar.net/avatar/${encodeURIComponent(name)}/32`}
+        src={
+          stage === 'player'
+            ? `https://minotar.net/avatar/${encodeURIComponent(name)}/32`
+            : STEVE_AVATAR_URL
+        }
         alt=""
         width={32}
         height={32}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => setStage((current) => (current === 'player' ? 'steve' : 'icon'))}
       />
     </span>
   );
