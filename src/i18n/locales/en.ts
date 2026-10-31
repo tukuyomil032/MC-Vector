@@ -76,16 +76,6 @@ export const en: TranslationDictionary = {
         ja: '日本語',
       },
     },
-    theme: {
-      title: 'Theme',
-      description: 'Select the background theme for the application',
-      label: 'Color Scheme',
-      options: {
-        light: 'Light',
-        dark: 'Dark',
-        system: 'System',
-      },
-    },
     liquidGlass: {
       title: 'Liquid Glass (Experimental)',
       description:

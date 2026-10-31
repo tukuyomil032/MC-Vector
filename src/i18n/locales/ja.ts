@@ -75,16 +75,6 @@ export const ja: TranslationDictionary = {
         ja: '日本語',
       },
     },
-    theme: {
-      title: 'テーマ',
-      description: 'アプリ全体に適用される背景テーマを選択します',
-      label: '配色',
-      options: {
-        light: 'ライト',
-        dark: 'ダーク',
-        system: 'システム',
-      },
-    },
     liquidGlass: {
       title: 'Liquid Glass（試験的）',
       description:

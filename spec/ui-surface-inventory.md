@@ -16,9 +16,9 @@
 - [x] メインウィンドウ（`tauri.conf.json`。`minWidth: 720`、`minHeight: 520` を足す）
 - [x] ~~バックアップ対象選択ウィンドウ（`BackupsView.tsx:757`）~~（削除。バックアップは常にサーバー全体を対象にするため、対象選択ウィンドウは廃止した）
 - [x] 起動失敗のネイティブダイアログ（`lib.rs:92`。英語だけ。Rust 側は ja と en の切り替えが無いので、今回は対象外と注記する）
-- [ ] OS 通知: 起動
-- [ ] OS 通知: クラッシュ
-- [ ] OS 通知: CPU 高負荷（文言は i18n 済みであることを確認するだけ）
+- [x] OS 通知: 起動（`server.notification.started` を en と ja の両方で確認済み）
+- [x] OS 通知: クラッシュ（`server.notification.crashed` を en と ja の両方で確認済み）
+- [x] OS 通知: CPU 高負荷（`server.notification.highCpu` を en と ja の両方で確認済み）
 - [x] ネイティブのフォルダ選択（OS 標準なので見た目はそのまま）
 - [x] ネイティブのファイル選択（OS 標準なので見た目はそのまま）
 - [x] ネイティブの保存ダイアログ（OS 標準なので見た目はそのまま）
@@ -71,7 +71,7 @@
 - [x] ヘッダーバーの停止ボタン（■ のグリフを lucide にする）
 - [x] ヘッダーバーの状態の組み合わせ表
 - [x] コンテンツカード
-- [ ] 画面切り替えのアニメーション
+- [x] 画面切り替えのアニメーション（AppMainContent の切り替えは Arc の motion トークンを使い、reduced motion では即時に切り替える）
 - [x] Suspense の「Loading view...」
 - [x] ErrorBoundary
 - [x] サーバー未選択の状態
@@ -533,11 +533,11 @@
 - [x] `ui/Switch`
 - [x] `ui/Progress`
 - [x] `ui/Tooltip`
-- [ ] SvgMaskIcon
+- [x] ~~SvgMaskIcon~~（削除。参照が無かった）
 - [x] UI Lab（DEV のみ）
-- [ ] 使われていないもの: 再起動待ちの状態
+- [x] 使われていないもの: 再起動待ちの状態（アップデートの完了後に `settings.update.readyTitle` と `downloaded` で使われているため残した）
 - [ ] 使われていないもの: テーマのキー
-- [ ] 使われていないもの: `server.list.empty`
+- [x] 使われていないもの: `server.list.empty`（サーバーが0台の空の状態で使われているため残した）
 - [ ] 使われていないもの: `plugins.browser.*` の未使用キー21個など（後片付けのフェーズで扱う）
 
 ## 見つかった不具合

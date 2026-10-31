@@ -97,16 +97,6 @@ export interface TranslationDictionary {
         ja: string;
       };
     };
-    theme: {
-      title: string;
-      description: string;
-      label: string;
-      options: {
-        light: string;
-        dark: string;
-        system: string;
-      };
-    };
     liquidGlass: {
       title: string;
       description: string;
