@@ -9,10 +9,14 @@ test.describe('settings and properties', () => {
     await expect(settings).toBeVisible();
 
     const language = settings.locator('#language-select');
-    await language.selectOption('ja');
-    await expect(language).toHaveValue('ja');
-    await language.selectOption('en');
-    await expect(language).toHaveValue('en');
+    await language.click();
+    await page.getByRole('option', { name: '日本語' }).click();
+    await expect(language).toContainText('日本語');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+    await language.click();
+    await page.getByRole('option', { name: 'English' }).click();
+    await expect(language).toContainText('English');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
     const liquidGlass = settings.locator('#liquid-glass-toggle');
     await liquidGlass.check();
