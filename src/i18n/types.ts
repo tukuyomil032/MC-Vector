@@ -471,6 +471,7 @@ export interface TranslationDictionary {
       holdDone: string;
       deleted: string;
       deleteFailed: string;
+      stopServerFirst: string;
     };
   };
 

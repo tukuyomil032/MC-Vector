@@ -1,12 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Archive, Globe, Package } from 'lucide-react';
+import { Archive, Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/arc/alert/alert';
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
 import { ChipGroup } from '@/components/arc/chip-group/chip-group';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
-import { HoldToConfirm } from '@/components/arc/hold-to-confirm/hold-to-confirm';
 import { Input } from '@/components/arc/input/input';
 import { Select } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
@@ -24,9 +23,9 @@ import {
 } from '../../lib/backup-commands';
 import { ESTIMATE_SAMPLE_COUNT, estimateBackupDurationMs } from '../../lib/backup-estimate';
 import { logError } from '../../lib/error-utils';
-import { deleteItem, getManagedDirectorySize, listFiles } from '../../lib/file-commands';
 import { notify } from '../shared/notify';
 import { formatBytes } from '../shared/format-bytes';
+import { formatFolderSize, measureFolder, type FolderSize } from '../shared/folder-size';
 import { useArcMessages } from '../shared/arc-messages';
 import { useAppFeedback } from './AppFeedbackProvider';
 import { EmptyLine } from './ui/EmptyLine';
@@ -50,12 +49,6 @@ interface Backup {
   size: number;
   durationMs?: number;
 }
-
-/** A folder size as the UI shows it. `failed` means the measurement itself did not succeed. */
-type FolderSize =
-  | { status: 'loading' }
-  | { status: 'ready'; bytes: number; complete: boolean }
-  | { status: 'failed' };
 
 interface BackupSnapshotEntry {
   size: number;
@@ -160,17 +153,6 @@ function sanitizeCatalog(value: unknown): BackupCatalog {
   };
 }
 
-/** Measures a server or world folder. A failed walk comes back as `failed`, so one folder cannot break the view. */
-async function measureFolder(path: string): Promise<FolderSize> {
-  try {
-    const result = await getManagedDirectorySize(path);
-    return { status: 'ready', bytes: result.bytes, complete: result.complete };
-  } catch (error) {
-    logError('Failed to measure folder size', error, { path });
-    return { status: 'failed' };
-  }
-}
-
 const COMPRESSION_OPTIONS = Array.from({ length: 9 }, (_, index) => ({
   value: String(index + 1),
   label: String(index + 1),
@@ -207,10 +189,7 @@ export default function BackupsView({ server }: Props) {
   const [compressionLevel, setCompressionLevel] = useState(5);
   const [backupCatalog, setBackupCatalog] = useState<BackupCatalog>(createEmptyCatalog());
   const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>('loading');
-  const [worlds, setWorlds] = useState<string[]>([]);
-  const [worldSizes, setWorldSizes] = useState<Record<string, FolderSize>>({});
   const [serverSize, setServerSize] = useState<FolderSize | null>(null);
-  const worldSizeGenerationRef = useRef(0);
   const serverSizeGenerationRef = useRef(0);
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
   const [tagList, setTagList] = useState<string[]>([]);
@@ -344,8 +323,6 @@ export default function BackupsView({ server }: Props) {
     catalogOperationInFlightRef.current = false;
     setProcessing(false);
     setBackups([]);
-    setWorlds([]);
-    setWorldSizes({});
     setServerSize(null);
     setCatalogLoadState('loading');
     setBackupCatalog(createEmptyCatalog());
@@ -362,11 +339,6 @@ export default function BackupsView({ server }: Props) {
       }
 
       await loadBackupCatalog(dataReloadToken);
-      if (!isCurrentDataReload(dataReloadToken)) {
-        return;
-      }
-
-      await loadWorlds(initializationToken);
     })();
     return cleanupInitialization;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -458,77 +430,6 @@ export default function BackupsView({ server }: Props) {
     setCustomName('');
     setCompressionLevel(5);
     loadServerSize(operationToken);
-  };
-
-  const loadWorlds = async (expectedToken: InitializationToken) => {
-    if (!isCurrentInitialization(expectedToken)) {
-      return;
-    }
-    try {
-      const entries = await listFiles(server.path);
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      const candidates = entries.filter(
-        (entry) => entry.isDirectory && entry.name.toLowerCase() !== 'backups',
-      );
-
-      const worldNames: string[] = [];
-      await Promise.all(
-        candidates.map(async (candidate) => {
-          if (!isCurrentInitialization(expectedToken)) {
-            return;
-          }
-          try {
-            const children = await listFiles(`${server.path}/${candidate.name}`);
-            if (!isCurrentInitialization(expectedToken)) {
-              return;
-            }
-            const hasLevelDat = children.some(
-              (child) => !child.isDirectory && child.name === 'level.dat',
-            );
-            if (hasLevelDat || /^world($|[_-])/i.test(candidate.name)) {
-              worldNames.push(candidate.name);
-            }
-          } catch (error) {
-            if (!isCurrentInitialization(expectedToken)) {
-              return;
-            }
-            logError('Failed to inspect world directory candidate', error, {
-              serverPath: server.path,
-              candidate: candidate.name,
-            });
-          }
-        }),
-      );
-
-      const unique = Array.from(new Set(worldNames)).sort((a, b) => a.localeCompare(b));
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      setWorlds(unique);
-      // Sizes fill in after the list is shown. Each one is dropped if a newer listing has started since.
-      const generation = ++worldSizeGenerationRef.current;
-      setWorldSizes(
-        Object.fromEntries(
-          unique.map((name): [string, FolderSize] => [name, { status: 'loading' }]),
-        ),
-      );
-      for (const name of unique) {
-        void measureFolder(`${server.path}/${name}`).then((size) => {
-          if (worldSizeGenerationRef.current !== generation) return;
-          if (!isCurrentInitialization(expectedToken)) return;
-          setWorldSizes((current) => (name in current ? { ...current, [name]: size } : current));
-        });
-      }
-    } catch (error) {
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      logError('Failed to load world candidates', error, { serverPath: server.path });
-      setWorlds([]);
-      notify.error(t('backups.toast.worldLoadFailed'));
-    }
   };
 
   useEffect(() => {
@@ -1042,37 +943,6 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const handleDeleteWorld = async (worldName: string) => {
-    const operationToken = getCurrentInitializationToken(initializationKey);
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-    setProcessing(true);
-    try {
-      await deleteItem(`${server.path}/${worldName}`);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      notify.success(t('backups.world.deleted', { name: worldName }));
-      await loadWorlds(operationToken);
-    } catch (error) {
-      if (isCurrentInitialization(operationToken)) {
-        logError('Failed to delete world data', error, {
-          serverPath: server.path,
-          worldName,
-        });
-        notify.error(t('backups.world.deleteFailed'));
-      }
-    } finally {
-      if (isCurrentInitialization(operationToken)) {
-        setProcessing(false);
-      }
-    }
-  };
-
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
       new Date(date),
@@ -1097,13 +967,6 @@ export default function BackupsView({ server }: Props) {
   // Null until a server size and at least one past backup with a duration exist. The dialog hides the row then.
   const estimatedDurationMs =
     serverSize?.status === 'ready' ? estimateBackupDurationMs(serverSize.bytes, backups) : null;
-
-  const formatFolderSize = (size: FolderSize | null): string => {
-    if (!size || size.status === 'loading') return '…';
-    if (size.status === 'failed') return '—';
-    const formatted = formatBytes(size.bytes, locale);
-    return size.complete ? formatted : t('backups.size.atLeast', { size: formatted });
-  };
 
   const formatEstimate = (ms: number): string => {
     const totalSeconds = Math.max(1, Math.ceil(ms / 1000));
@@ -1265,42 +1128,6 @@ export default function BackupsView({ server }: Props) {
         )}
       </div>
 
-      <section className={styles.worlds} aria-labelledby="backups-world-title">
-        <div className={styles.worldHead}>
-          <h3 id="backups-world-title" className={styles.sectionTitle}>
-            {t('backups.world.title')}
-          </h3>
-          <span className={styles.muted}>{t('backups.world.detected')}</span>
-        </div>
-
-        {worlds.length === 0 ? (
-          <EmptyLine title={t('backups.world.empty')} />
-        ) : (
-          <ul className={styles.worldList}>
-            {worlds.map((worldName) => (
-              <li key={worldName} className={styles.worldRow}>
-                <span className={styles.worldIcon} aria-hidden="true">
-                  <Globe size={14} />
-                </span>
-                <span className={styles.worldName}>{worldName}</span>
-                <span className={styles.worldSize} data-testid={`backup-world-size-${worldName}`}>
-                  {formatFolderSize(worldSizes[worldName] ?? { status: 'loading' })}
-                </span>
-                {/* One hold is the confirmation. The row is removed on success, and confirmed={false} resets the hold after a failed delete. */}
-                <HoldToConfirm
-                  label={t('backups.world.holdToDelete')}
-                  confirmedLabel={t('backups.world.holdDone')}
-                  tone="danger"
-                  confirmed={false}
-                  disabled={isProcessing}
-                  onConfirm={() => void handleDeleteWorld(worldName)}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <Dialog
         open={showCreateModal}
         onOpenChange={(next) => {
@@ -1355,7 +1182,7 @@ export default function BackupsView({ server }: Props) {
                   />
                 </dt>
                 <dd className={styles.factValue} data-testid="backups-target-size">
-                  {formatFolderSize(serverSize)}
+                  {formatFolderSize(serverSize, locale, t)}
                 </dd>
               </div>
               {estimatedDurationMs !== null && (

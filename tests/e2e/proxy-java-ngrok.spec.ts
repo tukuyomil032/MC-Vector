@@ -37,6 +37,8 @@ test.describe('proxy, Java, and Ngrok flows', () => {
     await app.openView('general-settings');
 
     const settings = page.locator('[data-testid="server-settings-view"]');
+    // World management lives in the general settings, below the ngrok card.
+    await expect(settings.getByText('World Management', { exact: true })).toBeVisible();
     await settings.locator('[data-testid="server-settings-java-manage-button"]').click();
     const javaDialog = page.locator('[data-testid="java-manager-dialog"]');
     await expect(javaDialog).toBeVisible();

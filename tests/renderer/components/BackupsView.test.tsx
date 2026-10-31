@@ -27,10 +27,7 @@ const {
       writeBackupCatalog: vi.fn(),
     },
     fileCommands: {
-      deleteItem: vi.fn(),
       getManagedDirectorySize: vi.fn(),
-      listFiles: vi.fn(),
-      listFilesWithMetadata: vi.fn(),
     },
     logErrorMock: vi.fn(),
     toastErrorMock: vi.fn(),
@@ -175,7 +172,6 @@ beforeEach(() => {
   });
   backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   backupCommands.readBackupCatalog.mockResolvedValue({});
-  fileCommands.listFiles.mockResolvedValue([]);
   fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 0, complete: true });
   useBackupOperationStore.setState({
     activeManualOperations: {},
@@ -211,10 +207,9 @@ describe('BackupsView initialization', () => {
 
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledOnce();
     expect(backupCommands.readBackupCatalog).toHaveBeenCalledOnce();
-    expect(fileCommands.listFiles).toHaveBeenCalledOnce();
   });
 
-  it('loads backups, catalog, and worlds in order', async () => {
+  it('loads backups and then the catalog, in order', async () => {
     const calls: string[] = [];
     backupCommands.listBackupsWithMetadata.mockImplementation(async () => {
       calls.push('backups');
@@ -224,14 +219,10 @@ describe('BackupsView initialization', () => {
       calls.push('catalog');
       return {};
     });
-    fileCommands.listFiles.mockImplementation(async () => {
-      calls.push('worlds');
-      return [];
-    });
 
     renderStrictMode();
 
-    await waitFor(() => expect(calls).toEqual(['backups', 'catalog', 'worlds']));
+    await waitFor(() => expect(calls).toEqual(['backups', 'catalog']));
   });
 
   it('treats a null catalog as an empty ready catalog', async () => {
@@ -400,7 +391,6 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce({})
       .mockReturnValueOnce(completionCatalog.promise);
     backupCommands.listBackupsWithMetadata.mockResolvedValueOnce([]).mockReturnValueOnce([]);
-    fileCommands.listFiles.mockResolvedValue([{ name: 'server.properties', isDirectory: false }]);
 
     render(<BackupsView server={server} />);
     await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledOnce());
@@ -469,7 +459,6 @@ describe('BackupsView initialization', () => {
     await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledTimes(2));
 
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2);
-    expect(fileCommands.listFiles).toHaveBeenCalledTimes(2);
     expect(backupCommands.readBackupCatalog).toHaveBeenNthCalledWith(2, 'server-2');
   });
 
@@ -554,34 +543,18 @@ describe('BackupsView initialization', () => {
     expect(screen.queryByTestId('backup-row-stale-a.zip')).not.toBeInTheDocument();
   });
 
-  it('clears old backup and world data before a new server listing fails', async () => {
+  it('clears old backup data before a new server listing fails', async () => {
     const nextServer = { ...server, id: 'server-2', path: '/managed/server-2' };
     const nextServerListing = deferred<never[]>();
-    const nextServerWorldListing = deferred<never[]>();
     backupCommands.listBackupsWithMetadata.mockImplementation((serverId: string) => {
       if (serverId === nextServer.id) {
         return nextServerListing.promise;
       }
       return Promise.resolve([{ name: 'old-a.zip', date: new Date(), size: 1 }]);
     });
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        return Promise.resolve([{ name: 'world', isDirectory: true }]);
-      }
-      if (path === `${server.path}/world`) {
-        return Promise.resolve([{ name: 'level.dat', isDirectory: false }]);
-      }
-      if (path === nextServer.path) {
-        return nextServerWorldListing.promise;
-      }
-      return Promise.resolve([]);
-    });
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
 
     view.rerender(
       <StrictMode>
@@ -590,83 +563,14 @@ describe('BackupsView initialization', () => {
     );
 
     expect(screen.queryByTestId('backup-row-old-a.zip')).not.toBeInTheDocument();
-    expect(screen.queryByText('world', { selector: 'span' })).not.toBeInTheDocument();
 
     await act(async () => {
       nextServerListing.reject(new Error('server B listing failed'));
-      nextServerWorldListing.reject(new Error('server B worlds listing failed'));
       for (let index = 0; index < 4; index += 1) {
         await Promise.resolve();
       }
     });
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledTimes(2));
-  });
-
-  it('ignores stale catalog and world continuations after A to B to A changes', async () => {
-    const staleWorldCandidate = deferred<never[]>();
-    let worldRootCalls = 0;
-
-    backupCommands.listBackupsWithMetadata
-      .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ name: 'new-a.zip', date: new Date(), size: 2 }]);
-    backupCommands.readBackupCatalog.mockResolvedValue({});
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        worldRootCalls += 1;
-        if (worldRootCalls === 1) {
-          return Promise.resolve([
-            { name: 'old-world', isDirectory: true },
-            { name: 'old-broken-world', isDirectory: true },
-          ]);
-        }
-        return Promise.resolve([{ name: 'new-world', isDirectory: true }]);
-      }
-      if (path === `${server.path}/old-world` || path === `${server.path}/new-world`) {
-        return Promise.resolve([{ name: 'level.dat', isDirectory: false }]);
-      }
-      if (path === `${server.path}/old-broken-world`) {
-        return staleWorldCandidate.promise;
-      }
-      return Promise.resolve([]);
-    });
-    const view = renderStrictMode();
-    await waitFor(() =>
-      expect(fileCommands.listFiles).toHaveBeenCalledWith(`${server.path}/old-broken-world`),
-    );
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={{ ...server, id: 'server-b', path: '/managed/server-b' }} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2));
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(3));
-
-    await waitFor(() => expect(screen.getByTestId('backup-row-new-a.zip')).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByText('new-world')).toBeInTheDocument());
-
-    await act(async () => {
-      staleWorldCandidate.reject(new Error('stale world candidate failed'));
-      for (let index = 0; index < 8; index += 1) {
-        await Promise.resolve();
-      }
-    });
-
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(screen.getByText('new-world')).toBeInTheDocument();
-    expect(screen.queryByText('old-world')).not.toBeInTheDocument();
-    expect(logErrorMock).not.toHaveBeenCalledWith(
-      'Failed to inspect world directory candidate',
-      expect.anything(),
-      expect.anything(),
-    );
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.loadFailed'));
   });
 
   it('does not refresh or toast from a stale backup deletion operation', async () => {
@@ -738,60 +642,10 @@ describe('BackupsView initialization', () => {
     expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
   });
-
-  it('does not refresh or toast from a stale world deletion operation', async () => {
-    const deletion = deferred<void>();
-    let worldRootCalls = 0;
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        worldRootCalls += 1;
-        return worldRootCalls === 1
-          ? Promise.resolve([{ name: 'world', isDirectory: true }])
-          : Promise.resolve([]);
-      }
-      if (path === `${server.path}/world`) {
-        return Promise.resolve([{ name: 'level.dat', isDirectory: false }]);
-      }
-      return Promise.resolve([]);
-    });
-    fileCommands.deleteItem.mockReturnValue(deletion.promise);
-    confirmMock.mockResolvedValue(true);
-
-    const view = renderStrictMode();
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'backups.world.holdToDelete' }));
-    await waitFor(() => expect(fileCommands.deleteItem).toHaveBeenCalledOnce());
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={{ ...server, id: 'server-b', path: '/managed/server-b' }} />
-      </StrictMode>,
-    );
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(worldRootCalls).toBe(2));
-    const listCallsBeforeStaleCompletion = fileCommands.listFiles.mock.calls.length;
-
-    await act(async () => {
-      deletion.resolve();
-      for (let index = 0; index < 6; index += 1) {
-        await Promise.resolve();
-      }
-    });
-
-    expect(fileCommands.listFiles).toHaveBeenCalledTimes(listCallsBeforeStaleCompletion);
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.world.deleted');
-  });
 });
 
 describe('BackupsView lifecycle', () => {
   it('asks before stopping a running server and retries creation only after consent', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     confirmMock.mockResolvedValue(true);
     backupCommands.createBackup
       .mockResolvedValueOnce({ status: 'confirmation_required' })
@@ -809,9 +663,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
@@ -839,15 +691,12 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('does not retry or show success when stopping a running server is declined', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({ status: 'confirmation_required' });
     confirmMock.mockResolvedValue(false);
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
@@ -857,7 +706,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('keeps a created backup successful and warns if restart or registry update failed', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({
       status: 'created',
       backupName: 'backup-name.zip',
@@ -867,9 +715,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.created'));
@@ -880,7 +726,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('reports stop failure without treating the attempt as a created backup', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({
       status: 'failed',
       stage: 'stop',
@@ -890,9 +735,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -903,7 +746,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('reports both missing backup and failed restart without using the created-backup warning', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({
       status: 'failed',
       stage: 'backup',
@@ -913,9 +755,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -938,7 +778,6 @@ describe('BackupsView lifecycle', () => {
 
   it('continues a manual backup through create IPC after a keyed unmount', async () => {
     const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     const createPromise = deferred<{
       status: 'created';
       backupName: string;
@@ -954,9 +793,7 @@ describe('BackupsView lifecycle', () => {
 
     const view = renderKeyedStrictMode('server-a', server);
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
@@ -999,7 +836,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('shows a remounted server as creating and reloads after its manual operation completes', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     const createPromise = deferred<{
       status: 'created';
       backupName: string;
@@ -1015,9 +851,7 @@ describe('BackupsView lifecycle', () => {
 
     const view = renderKeyedStrictMode('server-a', server);
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
@@ -1066,10 +900,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('finishes the manual operation when create backup fails', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'server.properties', isDirectory: false }]);
-    fileCommands.listFilesWithMetadata.mockResolvedValue([
-      { name: 'server.properties', isDirectory: false, modified: 10, size: 100 },
-    ]);
     backupCommands.createBackup.mockRejectedValue(new Error('create failed'));
 
     renderStrictMode();
@@ -1101,36 +931,6 @@ describe('BackupsView lifecycle', () => {
 
     await act(async () => {
       oldCatalog.reject(new Error('old catalog rejected after unmount'));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(logErrorMock).not.toHaveBeenCalled();
-  });
-
-  it('ignores a world listing rejection after a keyed instance is unmounted', async () => {
-    const oldWorldListing = deferred<never[]>();
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        return oldWorldListing.promise;
-      }
-      return Promise.resolve([]);
-    });
-
-    const view = renderKeyedStrictMode('server-a', server);
-    await waitFor(() => expect(fileCommands.listFiles).toHaveBeenCalledWith(server.path));
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledTimes(2));
-
-    await act(async () => {
-      oldWorldListing.reject(new Error('old world listing rejected after unmount'));
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -1176,46 +976,6 @@ describe('BackupsView lifecycle', () => {
 describe('backup folder sizes and the create estimate', () => {
   beforeEach(() => {
     backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
-  });
-
-  it('shows each world folder size as it is measured, and a lower bound when the scan ran out of time', async () => {
-    fileCommands.listFiles.mockImplementation(async (path: string) => {
-      if (path === server.path) {
-        return [
-          { name: 'world', isDirectory: true },
-          { name: 'world_nether', isDirectory: true },
-        ];
-      }
-      return [{ name: 'level.dat', isDirectory: false }];
-    });
-    fileCommands.getManagedDirectorySize.mockImplementation(async (path: string) =>
-      path.endsWith('/world') ? { bytes: 2048, complete: true } : { bytes: 4096, complete: false },
-    );
-
-    renderStrictMode();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('backup-world-size-world')).toHaveTextContent('2 KB'),
-    );
-    expect(screen.getByTestId('backup-world-size-world_nether')).toHaveTextContent(
-      'backups.size.atLeast',
-    );
-  });
-
-  it('shows a dash when a world folder cannot be measured', async () => {
-    fileCommands.listFiles.mockImplementation(async (path: string) =>
-      path === server.path ? [{ name: 'world', isDirectory: true }] : [{ name: 'level.dat' }],
-    );
-    fileCommands.getManagedDirectorySize.mockRejectedValue(new Error('denied'));
-
-    renderStrictMode();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('backup-world-size-world')).toHaveTextContent('—'),
-    );
-    expect(logErrorMock).toHaveBeenCalledWith('Failed to measure folder size', expect.any(Error), {
-      path: `${server.path}/world`,
-    });
   });
 
   it('shows the server folder size and an estimate when past backups recorded durations', async () => {

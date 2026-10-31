@@ -31,6 +31,7 @@ import type { MinecraftServer } from '../../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
 import styles from './ServerSettings.module.css';
+import WorldManager from './WorldManager';
 import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
 interface ServerSettingsProps {
@@ -762,6 +763,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
           </div>
         )}
       </section>
+
+      <div className={`${styles.card} ${styles.cardFull}`}>
+        <WorldManager server={server} />
+      </div>
 
       <JavaManagerModal
         open={showJavaManager}

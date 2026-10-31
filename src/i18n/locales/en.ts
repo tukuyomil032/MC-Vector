@@ -454,6 +454,7 @@ export const en: TranslationDictionary = {
       holdDone: 'Deleted',
       deleted: 'Deleted world {name}',
       deleteFailed: 'Failed to delete world',
+      stopServerFirst: 'Stop the server to delete a world',
     },
   },
 

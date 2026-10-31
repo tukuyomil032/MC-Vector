@@ -34,6 +34,11 @@ vi.mock('@/lib/ngrok-commands', () => ({
 vi.mock('@/lib/java-commands', () => ({
   getJavaVersions: getJavaVersionsMock,
 }));
+vi.mock('@/lib/file-commands', () => ({
+  deleteItem: vi.fn(),
+  getManagedDirectorySize: vi.fn(async () => ({ bytes: 0, complete: true })),
+  listFiles: vi.fn(async () => []),
+}));
 vi.mock('@/lib/clipboard-commands', () => ({
   copyToClipboard: vi.fn(),
 }));

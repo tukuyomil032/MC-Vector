@@ -452,6 +452,7 @@ export const ja: TranslationDictionary = {
       holdDone: '削除しました',
       deleted: 'ワールド {name} を削除しました',
       deleteFailed: 'ワールド削除に失敗しました',
+      stopServerFirst: 'ワールドを削除するにはサーバーを停止してください',
     },
   },
 

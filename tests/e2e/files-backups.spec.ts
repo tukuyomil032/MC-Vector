@@ -34,7 +34,6 @@ test.describe('files and backups', () => {
 
     const backups = page.locator('[data-testid="backups-view"]');
     await expect(backups).toBeVisible();
-    await expect(backups.getByText('World Management', { exact: true })).toBeVisible();
     await expect.poll(async () => (await app.ipcCalls('listen')).length).toBeGreaterThan(0);
 
     await backups.locator('[data-testid="backups-create-button"]').click();
