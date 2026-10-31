@@ -13,6 +13,7 @@ export function softwareSelectOptions(t: Translate): SelectOption[] {
     { value: 'Spigot', label: t('addServer.software.options.spigot'), group: standard },
     { value: 'Fabric', label: t('addServer.software.options.fabric'), group: modded },
     { value: 'Forge', label: t('addServer.software.options.forge'), group: modded },
+    { value: 'NeoForge', label: t('addServer.software.options.neoforge'), group: modded },
     { value: 'Velocity', label: t('addServer.software.options.velocity'), group: proxy },
     { value: 'Waterfall', label: t('addServer.software.options.waterfall'), group: proxy },
     { value: 'BungeeCord', label: t('addServer.software.options.bungeecord'), group: proxy },

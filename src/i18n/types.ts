@@ -1179,6 +1179,7 @@ export interface TranslationDictionary {
         spigot: string;
         fabric: string;
         forge: string;
+        neoforge: string;
         velocity: string;
         waterfall: string;
         bungeecord: string;
