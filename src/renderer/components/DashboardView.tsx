@@ -462,7 +462,8 @@ export default function DashboardView({ server }: Props) {
           label={t('dashboard.stats.currentMemory')}
           value={currentMem}
           decimals={0}
-          suffix={` ${megabytesLabel}`}
+          // A no-break space: the counter lays its parts out as flex items, which drop a plain leading space.
+          suffix={` ${megabytesLabel}`}
           locale={locale}
         />
         <StatCard
