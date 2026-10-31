@@ -4,10 +4,10 @@
   padding: var(--space-6);
 }
 
+/* The card fills the content width. Settings sit beside the backend list from 1024px; below that they stack. */
 .inner {
   display: flex;
-  max-width: 44rem;
-  margin: 0 auto;
+  min-width: 0;
   flex-direction: column;
 }
 
@@ -15,19 +15,32 @@
   min-width: 0;
 }
 
-.fields {
+.body {
   display: grid;
   margin-top: var(--space-4);
   align-items: start;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.fields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
 .section {
   display: flex;
-  margin-top: var(--space-5);
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+@media (min-width: 1024px) {
+  .body {
+    grid-template-columns: minmax(16rem, 1fr) minmax(0, 1.6fr);
+  }
 }
 
 .sectionHead {
@@ -71,9 +84,5 @@
 @media (max-width: 40rem) {
   .root {
     padding: var(--space-4);
-  }
-
-  .fields {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
