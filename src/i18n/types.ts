@@ -412,6 +412,8 @@ export interface TranslationDictionary {
       compressFailed: string;
       extracted: string;
       extractFailed: string;
+      extractNotZip: string;
+      extractSkipped: string;
       binaryNoDiff: string;
       diffSelectOriginal: string;
       diffSelectModified: string;

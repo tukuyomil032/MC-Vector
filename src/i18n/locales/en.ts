@@ -393,6 +393,8 @@ export const en: TranslationDictionary = {
       compressFailed: 'Failed to compress',
       extracted: 'Extracted',
       extractFailed: 'Failed to extract',
+      extractNotZip: 'Select a .zip archive to extract.',
+      extractSkipped: 'Skipped {count} item(s) that are not .zip archives.',
       binaryNoDiff: 'Binary files cannot be diffed',
       diffSelectOriginal: 'Click the original file to compare',
       diffSelectModified: 'Click the modified file to compare',

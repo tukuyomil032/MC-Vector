@@ -611,13 +611,22 @@ export default function FilesView({ server }: Props) {
     if (selectedFiles.length === 0) {
       return;
     }
+    // Only .zip archives can be extracted. Anything else is reported instead of counting as a success.
+    const archives = selectedFiles.filter((name) => name.toLowerCase().endsWith('.zip'));
+    if (archives.length === 0) {
+      notify.error(t('files.toast.extractNotZip'));
+      return;
+    }
     try {
-      for (const f of selectedFiles) {
-        if (f.endsWith('.zip')) {
-          await extractItem(`${currentPath}/${f}`, currentPath);
-        }
+      for (const archive of archives) {
+        await extractItem(`${currentPath}/${archive}`, currentPath);
       }
-      notify.success(t('files.toast.extracted'));
+      const skipped = selectedFiles.length - archives.length;
+      if (skipped > 0) {
+        notify.warning(t('files.toast.extractSkipped', { count: skipped }));
+      } else {
+        notify.success(t('files.toast.extracted'));
+      }
       loadFiles(currentPath);
     } catch (e) {
       logError('Failed to extract selected archives', e, {
