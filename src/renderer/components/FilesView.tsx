@@ -867,6 +867,7 @@ export default function FilesView({ server }: Props) {
                   label={file.name}
                   items={rowMenuItems(file)}
                   trigger="context"
+                  className={styles.item}
                 >
                   <div
                     className={rowClass}

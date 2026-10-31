@@ -86,6 +86,11 @@
   padding: var(--space-1) 0;
 }
 
+/* Each row is a ContextMenu target; a 1px line separates it from the next row. */
+.item:not(:last-child) {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .row {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
