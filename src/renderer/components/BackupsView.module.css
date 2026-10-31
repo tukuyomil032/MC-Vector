@@ -22,6 +22,10 @@
   letter-spacing: var(--tracking-display);
 }
 
+.alertText {
+  margin: 0 0 var(--space-3);
+}
+
 .list {
   display: flex;
   flex: 1;

@@ -405,6 +405,10 @@ export const ja: TranslationDictionary = {
     createButton: '+ バックアップ作成',
     empty: 'バックアップはまだありません',
     emptyDescription: 'バックアップを作成すると、このサーバーの復元ポイントを残せます。',
+    catalogUnavailable: 'バックアップの詳細を読み込めませんでした',
+    catalogUnavailableDescription:
+      'バックアップの詳細が読み込めるまで、タグの編集と削除は使えません。',
+    catalogRetry: '再試行',
     units: {
       b: 'B',
       kb: 'KB',

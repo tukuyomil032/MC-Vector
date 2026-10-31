@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Alert } from '@/components/arc/alert/alert';
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
@@ -538,6 +539,19 @@ export default function BackupsView({ server }: Props) {
       setCatalogLoadState('error');
       notify.error(t('backups.toast.catalogLoadFailed'));
     }
+  };
+
+  const retryCatalogLoad = async () => {
+    const operationToken = getCurrentInitializationToken(initializationKey);
+    if (!isCurrentInitialization(operationToken)) {
+      return;
+    }
+    const dataReloadToken = beginDataReload(operationToken);
+    if (!dataReloadToken) {
+      return;
+    }
+    setCatalogLoadState('loading');
+    await loadBackupCatalog(dataReloadToken);
   };
 
   const loadBackups = async (expectedToken: DataReloadToken) => {
@@ -1381,6 +1395,24 @@ export default function BackupsView({ server }: Props) {
           {isProcessing ? t('backups.processing') : t('backups.createButton')}
         </Button>
       </header>
+
+      {catalogLoadState === 'error' && (
+        <Alert
+          tone="danger"
+          title={t('backups.catalogUnavailable')}
+          data-testid="backups-catalog-alert"
+        >
+          <p className={styles.alertText}>{t('backups.catalogUnavailableDescription')}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            data-testid="backups-catalog-retry"
+            onClick={() => void retryCatalogLoad()}
+          >
+            {t('backups.catalogRetry')}
+          </Button>
+        </Alert>
+      )}
 
       <div className={styles.list} ref={listParentRef}>
         {loading && <Skeleton label={t('common.loading')} lines={3} />}

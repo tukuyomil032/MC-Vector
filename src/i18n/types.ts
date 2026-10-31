@@ -429,6 +429,9 @@ export interface TranslationDictionary {
     createButton: string;
     empty: string;
     emptyDescription: string;
+    catalogUnavailable: string;
+    catalogUnavailableDescription: string;
+    catalogRetry: string;
     units: {
       b: string;
       kb: string;

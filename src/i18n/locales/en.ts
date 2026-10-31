@@ -409,6 +409,10 @@ export const en: TranslationDictionary = {
     createButton: '+ Create Backup',
     empty: 'No backups yet',
     emptyDescription: 'Create a backup to keep a restore point for this server.',
+    catalogUnavailable: 'Backup details could not be loaded',
+    catalogUnavailableDescription:
+      'Tagging and deleting stay unavailable until the backup details load again.',
+    catalogRetry: 'Retry',
     units: {
       b: 'B',
       kb: 'KB',
