@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Activity, Cpu, Gauge, MemoryStick, Server, type LucideIcon } from 'lucide-react';
 import { CopyButton } from '@/components/arc/copy-button/copy-button';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
@@ -32,6 +32,8 @@ interface Props {
 const EMPTY_RESOURCE_STATS: ResourcePoint[] = [];
 const EMPTY_TPS_STATS: TpsPoint[] = [];
 const CHART_HEIGHT = 200;
+/** The LineChart axis row sits under the plot, so the plot box is the plot height plus this row. */
+const AXIS_ROW_HEIGHT = 26;
 const SERIES_KEY = 'value';
 
 const STATUS_LABEL_KEYS: Record<ServerStatus, TranslationKey> = {
@@ -165,27 +167,53 @@ function MetricChartCard({
   yDomain,
 }: MetricChartCardProps) {
   const arc = useArcMessages();
+  const hasData = data.length > 0;
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [plotBoxHeight, setPlotBoxHeight] = useState(0);
+
+  // The plot box is whatever height the card gives it, so the chart measures that box and fills it.
+  useLayoutEffect(() => {
+    const plot = plotRef.current;
+    if (!hasData || !plot || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        setPlotBoxHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(plot);
+    return () => observer.disconnect();
+  }, [hasData]);
+
+  const chartHeight =
+    plotBoxHeight > 0
+      ? Math.max(CHART_HEIGHT, Math.floor(plotBoxHeight - AXIS_ROW_HEIGHT))
+      : CHART_HEIGHT;
+
   return (
     <article className={styles.chartCard} data-testid={testId}>
       <h3 className={styles.chartTitle}>{title}</h3>
-      {data.length === 0 ? (
+      {hasData ? (
+        <div className={styles.plot} ref={plotRef}>
+          <LineChart
+            label={title}
+            data={data}
+            series={[{ key: SERIES_KEY, label: seriesLabel }]}
+            height={chartHeight}
+            formatValue={formatValue}
+            formatTick={formatTick}
+            categoryLabel={elapsedAxisLabel}
+            legend={false}
+            yDomain={yDomain}
+            messages={arc.lineChart}
+          />
+        </div>
+      ) : (
         // Without data there is no plot, so no gridlines or axis: one centered line in the plot's place.
         <div className={styles.chartEmpty}>
           <EmptyLine title={emptyLabel} />
         </div>
-      ) : (
-        <LineChart
-          label={title}
-          data={data}
-          series={[{ key: SERIES_KEY, label: seriesLabel }]}
-          height={CHART_HEIGHT}
-          formatValue={formatValue}
-          formatTick={formatTick}
-          categoryLabel={elapsedAxisLabel}
-          legend={false}
-          yDomain={yDomain}
-          messages={arc.lineChart}
-        />
       )}
     </article>
   );

@@ -161,9 +161,12 @@
   background: var(--border);
 }
 
-/* The server panel sizes to its content. It never stretches to fill the sidebar; the list scrolls past its max height. */
+/* The server panel takes the sidebar's spare height. Its list scrolls inside the panel, and the add row sits right under the list. */
 .serversPanel {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   margin: var(--space-2) var(--space-2) var(--space-3);
   padding: var(--space-2);
   overflow: hidden;
@@ -171,6 +174,7 @@
 
 .serversTitle {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
@@ -183,9 +187,10 @@
   text-transform: uppercase;
 }
 
+/* Takes its content height and shrinks only when the panel runs out of room, then scrolls. */
 .serverList {
+  flex: 0 1 auto;
   min-height: 0;
-  max-height: min(14rem, 40vh);
   overflow-y: auto;
   padding: var(--space-1) 0;
 }

@@ -1,6 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   gap: var(--space-4);
   min-height: 100%;
   min-width: 0;
@@ -187,10 +188,14 @@
   color: var(--text-muted);
 }
 
+/* Takes the height left under the top rows. Stacked cards share it; from 1024px each row of charts stretches to the bottom. */
 .chartGrid {
   display: grid;
+  flex: 1;
+  align-items: stretch;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
+  min-height: 0;
 }
 
 .chartCard {
@@ -212,11 +217,21 @@
   font-weight: 600;
 }
 
-/* Same box as a plot without a legend: the 200px plot plus its 26px axis row, so the card does not jump when data arrives. */
+/* The plot takes the card's spare height. contain: size keeps the chart's own height out of the card's sizing,
+   so the plot can shrink again when the window does. The minimum is the 200px plot plus its 26px axis row. */
+.plot {
+  flex: 1;
+  min-width: 0;
+  min-height: 226px;
+  contain: size;
+}
+
+/* Same box as a plot without a legend: at least the 200px plot plus its 26px axis row, so the card does not jump when data arrives. */
 .chartEmpty {
   display: grid;
+  flex: 1;
   place-items: center;
-  height: 226px;
+  min-height: 226px;
   min-width: 0;
 }
 
