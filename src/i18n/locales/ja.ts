@@ -265,6 +265,7 @@ export const ja: TranslationDictionary = {
       send: '送信',
     },
     command: {
+      label: 'コマンド',
       placeholder: 'コマンドを入力...',
     },
     emptyLog: {
@@ -276,6 +277,7 @@ export const ja: TranslationDictionary = {
     filter: {
       label: 'レベル',
       ariaLabel: 'ログレベルフィルター',
+      all: 'すべて',
     },
     historyHint: '↑ / ↓ 履歴',
     search: {

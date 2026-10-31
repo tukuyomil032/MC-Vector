@@ -269,6 +269,67 @@
   transform: translateX(-50%);
 }
 
+.commandStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+}
+
+.commandActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filterLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.commandEntry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.commandPrefix {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.commandField {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The input keeps its label for screen readers, but the command line itself is the visible label. */
+.commandField label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.historyHint {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
 .searchStrip {
   display: flex;
   flex-wrap: wrap;

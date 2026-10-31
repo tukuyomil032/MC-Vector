@@ -269,6 +269,7 @@ export const en: TranslationDictionary = {
       send: 'Send',
     },
     command: {
+      label: 'Command',
       placeholder: 'Type a command...',
     },
     emptyLog: {
@@ -280,6 +281,7 @@ export const en: TranslationDictionary = {
     filter: {
       label: 'Level',
       ariaLabel: 'Log level filter',
+      all: 'All',
     },
     historyHint: '↑ / ↓ History',
     search: {

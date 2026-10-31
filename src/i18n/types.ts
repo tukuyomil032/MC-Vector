@@ -287,6 +287,7 @@ export interface TranslationDictionary {
       send: string;
     };
     command: {
+      label: string;
       placeholder: string;
     };
     emptyLog: {
@@ -298,6 +299,7 @@ export interface TranslationDictionary {
     filter: {
       label: string;
       ariaLabel: string;
+      all: string;
     };
     historyHint: string;
     search: {

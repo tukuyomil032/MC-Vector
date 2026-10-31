@@ -5,15 +5,19 @@ import { Button } from '@/components/arc/button/button';
 import { ButtonGroup } from '@/components/arc/button-group/button-group';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Input } from '@/components/arc/input/input';
+import SegmentedControl from '@/components/arc/segmented-control/segmented-control';
 import {
   ArrowDown,
   Check,
   ChevronDown,
   ChevronUp,
   Copy,
+  Download,
   Pin,
   ScrollText,
   Search,
+  Send,
   X,
 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
@@ -1051,70 +1055,67 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         )}
       </section>
 
-      <section className="console-view__command-strip surface-card rounded-2xl">
-        <div className="console-view__command-actions">
-          <button
+      <section className={styles.commandStrip}>
+        <div className={styles.commandActions}>
+          <Button
             type="button"
-            className="console-view__save-button control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all"
+            size="sm"
+            variant="secondary"
             data-testid="console-save-button"
             onClick={() => void handleExportLogs()}
           >
+            <Download aria-hidden="true" size={14} strokeWidth={1.75} />
             {t('console.actions.saveLogs')}
-          </button>
+          </Button>
 
-          <div className="console-view__filter-wrap">
-            <span className="console-view__filter-label">{t('console.filter.label')}</span>
-            <div
-              className="console-view__filter-pills"
-              role="tablist"
-              aria-label={t('console.filter.ariaLabel')}
-            >
-              {LOG_FILTER_OPTIONS.map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  role="tab"
-                  aria-selected={logFilter === level}
-                  className={`console-view__filter-pill control-chip inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-all ${logFilter === level ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setLogFilter(level);
-                    setActiveMatchIndex(0);
-                  }}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
+          <div className={styles.filter}>
+            <span className={styles.filterLabel}>{t('console.filter.label')}</span>
+            <SegmentedControl
+              label={t('console.filter.ariaLabel')}
+              value={logFilter}
+              options={LOG_FILTER_OPTIONS.map((level) => ({
+                value: level,
+                label: level === 'ALL' ? t('console.filter.all') : level,
+              }))}
+              onValueChange={(value) => {
+                setLogFilter(value as LogLevelFilter);
+                setActiveMatchIndex(0);
+              }}
+            />
           </div>
         </div>
 
-        <div className="console-view__command-entry">
-          <span className="console-view__command-prefix">&gt;</span>
-          <input
-            type="text"
-            value={command}
-            onChange={(e) => {
-              setCommand(e.target.value);
-              if (historyCursor !== -1) {
-                setHistoryCursor(-1);
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={t('console.command.placeholder')}
-            className="console-view__command-input"
-            data-testid="console-command-input"
-          />
-          <button
+        <div className={styles.commandEntry}>
+          <span className={styles.commandPrefix} aria-hidden="true">
+            &gt;
+          </span>
+          <div className={styles.commandField}>
+            <Input
+              label={t('console.command.label')}
+              value={command}
+              onChange={(e) => {
+                setCommand(e.target.value);
+                if (historyCursor !== -1) {
+                  setHistoryCursor(-1);
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={t('console.command.placeholder')}
+              data-testid="console-command-input"
+            />
+          </div>
+          <Button
             type="button"
-            onClick={handleSend}
-            className="console-view__send-button"
+            variant="primary"
             data-testid="console-send-button"
+            onClick={handleSend}
           >
+            <Send aria-hidden="true" size={14} strokeWidth={1.75} />
             {t('console.actions.send')}
-          </button>
+          </Button>
         </div>
 
-        <div className="console-view__history-hint">{t('console.historyHint')}</div>
+        <div className={styles.historyHint}>{t('console.historyHint')}</div>
       </section>
     </div>
   );
