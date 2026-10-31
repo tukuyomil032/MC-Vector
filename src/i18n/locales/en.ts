@@ -521,8 +521,6 @@ export const en: TranslationDictionary = {
       add: 'Add',
       remove: 'Remove',
     },
-    count: '{count} entries',
-    countOne: '1 entry',
     validation: {
       playerRequired: 'Enter a player name to add.',
       ipRequired: 'Enter an IP address to add.',

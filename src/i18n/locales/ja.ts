@@ -517,8 +517,6 @@ export const ja: TranslationDictionary = {
       add: '追加',
       remove: '削除',
     },
-    count: '{count} 件',
-    countOne: '1 件',
     validation: {
       playerRequired: '追加するプレイヤー名を入力してください。',
       ipRequired: '追加するIPアドレスを入力してください。',

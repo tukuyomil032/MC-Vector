@@ -14,8 +14,21 @@
   gap: var(--space-4);
 }
 
+/* The list card is a plain Arc surface: its heading is a SectionTitle, so it cannot use the Card title slot. */
 .card {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
 }
 
 .list {
@@ -82,16 +95,11 @@
   white-space: nowrap;
 }
 
-.emptyWrap > section {
-  padding: var(--space-6) var(--space-3);
-}
-
 .addForm {
   display: grid;
   align-items: start;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
-  margin-top: var(--space-3);
 }
 
 /* Sits level with the input, below its label. */

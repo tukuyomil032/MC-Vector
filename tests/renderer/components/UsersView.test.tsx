@@ -1,6 +1,6 @@
 import { useI18nStore } from '@/i18n';
 import UsersView from '@/renderer/components/UsersView';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { playerCommands, sendCommand, toastMock, confirmMock } = vi.hoisted(() => ({
@@ -58,7 +58,8 @@ describe('UsersView', () => {
     });
 
     render(<UsersView server={server} />);
-    expect(await screen.findByText('1 entry')).toBeInTheDocument();
+    const whitelistCard = await screen.findByTestId('users-list-whitelist');
+    expect(await within(whitelistCard).findByText('1')).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());

@@ -537,8 +537,6 @@ export interface TranslationDictionary {
       add: string;
       remove: string;
     };
-    count: string;
-    countOne: string;
     validation: {
       playerRequired: string;
       ipRequired: string;
