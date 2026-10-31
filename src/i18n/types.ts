@@ -561,6 +561,10 @@ export interface TranslationDictionary {
     notOnline: string;
     notOnlineHint: string;
     count: string;
+    validation: {
+      playerRequired: string;
+      ipRequired: string;
+    };
     emptyList: {
       whitelist: { title: string; description: string };
       ops: { title: string; description: string };

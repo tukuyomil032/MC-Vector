@@ -222,13 +222,23 @@ function UserListCard({
   const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
+  const [inputError, setInputError] = useState<string | undefined>();
+  const inputRef = useRef<HTMLInputElement>(null);
   const isIpList = type === 'banned-ips';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!value.trim() || pending) {
+    if (pending) {
       return;
     }
+    if (!value.trim()) {
+      setInputError(
+        t(isIpList ? 'users.validation.ipRequired' : 'users.validation.playerRequired'),
+      );
+      inputRef.current?.focus();
+      return;
+    }
+    setInputError(undefined);
     setPending(true);
     try {
       if (await onAdd(value)) {
@@ -273,12 +283,17 @@ function UserListCard({
       {body}
       <form className={styles.addForm} onSubmit={handleSubmit} noValidate>
         <Input
+          ref={inputRef}
           label={isIpList ? t('users.placeholder.ipAddress') : t('users.placeholder.playerName')}
           data-testid={`users-input-${type}`}
           value={value}
+          error={inputError}
           autoComplete="off"
           spellCheck={false}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setInputError(undefined);
+          }}
         />
         <Button
           type="submit"

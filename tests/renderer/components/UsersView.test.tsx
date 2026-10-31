@@ -137,6 +137,37 @@ describe('UsersView', () => {
     expect(sendCommand).not.toHaveBeenCalled();
   });
 
+  it('explains an empty add inline, then submits the typed name from the form', async () => {
+    playerCommands.mutatePlayerList.mockResolvedValueOnce({
+      lists: {
+        ...emptyLists,
+        whitelist: [{ name: 'Alex', uuid: '0123456789abcdef0123456789abcdef' }],
+      },
+      changed: true,
+      canonicalTarget: 'Alex',
+    });
+    render(<UsersView server={server} />);
+    await screen.findByTestId('users-list-whitelist');
+
+    fireEvent.click(screen.getByTestId('users-add-whitelist'));
+    expect(await screen.findByText('Enter a player name to add.')).toBeInTheDocument();
+    expect(playerCommands.mutatePlayerList).not.toHaveBeenCalled();
+
+    const input = screen.getByTestId('users-input-whitelist');
+    fireEvent.change(input, { target: { value: 'alex' } });
+    expect(screen.queryByText('Enter a player name to add.')).not.toBeInTheDocument();
+    fireEvent.submit(input.closest('form') as HTMLFormElement);
+
+    await waitFor(() =>
+      expect(playerCommands.mutatePlayerList).toHaveBeenCalledWith(
+        'server-1',
+        'whitelist',
+        'add',
+        'alex',
+      ),
+    );
+  });
+
   it('surfaces malformed list data instead of silently rendering an empty list', async () => {
     playerCommands.getPlayerLists.mockRejectedValueOnce(new Error('Player list JSON is malformed'));
     render(<UsersView server={server} />);
