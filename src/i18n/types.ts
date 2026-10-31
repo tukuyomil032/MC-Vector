@@ -359,6 +359,8 @@ export interface TranslationDictionary {
       minimap: string;
       wordWrap: string;
       loadFailed: string;
+      plainText: string;
+      saveShortcut: string;
     };
     emptyFolder: string;
     emptyFolderHint: string;

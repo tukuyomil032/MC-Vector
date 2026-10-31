@@ -336,6 +336,8 @@ export const ja: TranslationDictionary = {
       minimap: 'ミニマップ',
       wordWrap: '折り返し',
       loadFailed: 'ファイルを読み込めませんでした',
+      plainText: 'プレーンテキスト',
+      saveShortcut: '保存（{shortcut}）',
     },
     emptyFolder: 'フォルダは空です',
     emptyFolderHint: 'ここにファイルをドロップするか、新規作成してください。',

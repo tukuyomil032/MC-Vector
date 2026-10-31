@@ -340,6 +340,8 @@ export const en: TranslationDictionary = {
       minimap: 'Minimap',
       wordWrap: 'Word wrap',
       loadFailed: 'Could not load file',
+      plainText: 'Plain text',
+      saveShortcut: 'Save ({shortcut})',
     },
     emptyFolder: 'Folder is empty',
     emptyFolderHint: 'Drop files here, or create a new file or folder.',
