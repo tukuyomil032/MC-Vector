@@ -130,3 +130,26 @@ describe('ServerSettings edits across server updates', () => {
     expect(screen.getByLabelText('serverSettings.port')).toHaveValue(25700);
   });
 });
+
+describe('ServerSettings auto restart and auto backup fields', () => {
+  it('disables the restart limits while auto restart is off, and enables them when it is switched on', () => {
+    render(settingsElement({ ...server, autoRestartOnCrash: false }));
+    const retries = screen.getByLabelText('serverSettings.autoRestart.maxRetries');
+    const delay = screen.getByLabelText('serverSettings.autoRestart.delaySeconds');
+    expect(retries).toBeDisabled();
+    expect(delay).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('auto-restart-toggle'));
+
+    expect(retries).not.toBeDisabled();
+    expect(delay).not.toBeDisabled();
+  });
+
+  it('disables the backup schedule fields while auto backup is off', () => {
+    render(settingsElement({ ...server, autoBackupEnabled: false }));
+
+    expect(screen.getByLabelText('serverSettings.autoBackup.intervalMinutes')).toBeDisabled();
+    expect(screen.getByLabelText('serverSettings.autoBackup.retainCount')).toBeDisabled();
+    expect(screen.getByLabelText('serverSettings.autoBackup.retainDays')).toBeDisabled();
+  });
+});
