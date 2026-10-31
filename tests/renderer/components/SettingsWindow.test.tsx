@@ -3,6 +3,9 @@ import SettingsWindow from '@/renderer/components/SettingsWindow';
 import type { AppUpdaterSettings } from '@/renderer/hooks/use-app-updater';
 import { useSettingsStore } from '@/store/settingsStore';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+
+// Radix Select calls scrollIntoView when it opens, which jsdom does not provide.
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { saveAppSettingsMock, onCheckForUpdatesMock, logErrorMock } = vi.hoisted(() => ({
@@ -40,7 +43,7 @@ describe('SettingsWindow plugin download security setting', () => {
   it('renders the hashless-download option disabled by default with an accessible warning', () => {
     renderSettings();
 
-    const checkbox = screen.getByRole('checkbox', {
+    const checkbox = screen.getByRole('switch', {
       name: 'Allow unverified plugin downloads',
     });
     expect(checkbox).not.toBeChecked();
@@ -55,7 +58,7 @@ describe('SettingsWindow plugin download security setting', () => {
     saveAppSettingsMock.mockRejectedValueOnce(new Error('store unavailable'));
     renderSettings();
 
-    const checkbox = screen.getByRole('checkbox', {
+    const checkbox = screen.getByRole('switch', {
       name: 'Allow unverified plugin downloads',
     });
     fireEvent.click(checkbox);
@@ -96,9 +99,10 @@ describe('SettingsWindow plugin download security setting', () => {
     renderSettings();
 
     const selector = screen.getByRole('combobox', { name: 'Update channel' });
-    fireEvent.change(selector, { target: { value: 'beta' } });
+    fireEvent.keyDown(selector, { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Beta releases' }));
 
-    await waitFor(() => expect(selector).toHaveValue('beta'));
+    await waitFor(() => expect(selector).toHaveTextContent('Beta releases'));
     expect(saveAppSettingsMock).toHaveBeenCalledWith({ updateChannel: 'beta' });
     await waitFor(() => {
       expect(

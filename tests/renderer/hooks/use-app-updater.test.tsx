@@ -146,6 +146,8 @@ describe('useAppUpdater', () => {
     await act(async () => result.current.handleUpdateNow());
 
     expect(downloadAndInstallUpdateMock).toHaveBeenCalledTimes(1);
-    expect(result.current.updateProgress).toBe(25);
+    // Once the update is installed, progress clears and the restart state takes over.
+    expect(result.current.updateProgress).toBeNull();
+    expect(result.current.updateReady).toBe(true);
   });
 });
