@@ -582,7 +582,7 @@ export const ja: TranslationDictionary = {
       searching: '検索中...',
       retry: '再試行',
       searchError: 'プラグイン検索に失敗しました。接続を確認して再試行してください。',
-      sortLabel: 'ソート',
+      sortLabel: 'このページを並び替え',
       sortRelevance: '関連度',
       sortDownloads: 'ダウンロード数',
       sortName: '名前',
@@ -626,7 +626,7 @@ export const ja: TranslationDictionary = {
         'Spigot にはブラウザ経由でのみ配布されるリソースがあります。Open と表示される場合は外部ページから取得してください。',
       hangarNote:
         'Hangar には直接ダウンロード URL を公開していないバージョンがあります。その場合は自動的に外部ページを開きます。',
-      updateSummary: '{{count}} 件の更新候補があります。',
+      updateSummary: 'このページの {{count}} 件のプラグインは更新できます。',
       updateSummaryNote: 'Install を押すと更新処理として実行されます。',
       pageInputError: 'ページ番号は 1 以上で入力してください',
       fetchHangarError: 'Hangarの取得に失敗しました: {{message}}',

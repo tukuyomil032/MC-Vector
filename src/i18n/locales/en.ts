@@ -586,7 +586,7 @@ export const en: TranslationDictionary = {
       searching: 'Searching...',
       retry: 'Retry',
       searchError: 'Plugin search failed. Check your connection and try again.',
-      sortLabel: 'Sort',
+      sortLabel: 'Sort this page',
       sortRelevance: 'Relevance',
       sortDownloads: 'Downloads',
       sortName: 'Name',
@@ -629,7 +629,7 @@ export const en: TranslationDictionary = {
         'Some Spigot resources are distributed only via browser. If "Open" is displayed, please download from the external page.',
       hangarNote:
         'Some Hangar versions do not have public download URLs. In that case, the external page will open automatically.',
-      updateSummary: '{{count}} update(s) available.',
+      updateSummary: '{{count}} plugin(s) on this page can be updated.',
       updateSummaryNote: 'Pressing Install will perform an update.',
       pageInputError: 'Please enter a page number of 1 or higher.',
       fetchHangarError: 'Failed to fetch from Hangar: {{message}}',
