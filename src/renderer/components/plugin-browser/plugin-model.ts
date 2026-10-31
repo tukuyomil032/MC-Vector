@@ -196,7 +196,8 @@ export function mapModrinthProject(hit: ModrinthProject): ProjectItem | null {
     id,
     title: hit.title,
     description: hit.description,
-    author: hit.author || 'Unknown',
+    // Empty means "unknown"; the card shows the translated fallback.
+    author: hit.author || '',
     icon_url: hit.icon_url || undefined,
     downloads: hit.downloads || undefined,
     slug: hit.slug || hit.project_id || '',
@@ -230,8 +231,8 @@ export function mapSpigotResource(resource: SpigetResource): ProjectItem {
   return {
     id: String(resource.id),
     title: resource.name,
-    description: resource.tag || 'No description provided.',
-    author: resource.authorName || 'Unknown',
+    description: resource.tag || '',
+    author: resource.authorName || '',
     icon_url: resource.iconUrl,
     downloads: resource.downloads,
     slug: toSlug(resource.name),

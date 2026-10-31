@@ -1,21 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Download,
-  ExternalLink,
-  Flame,
-  Info,
-  Loader2,
-  type LucideIcon,
-  Package,
-  Search,
-  Server,
-  Star,
-  X,
-} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
+import { ExternalLink, Flame, Loader2, Package, Server, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -55,8 +41,9 @@ import {
 } from '../shared/plugin-install-policy';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
-import InlineError from './InlineError';
-import { NativeSelect } from './ui/Field';
+import { type PlatformOption, PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
+import type { PluginResultCardState } from './plugin-browser/PluginResultCard';
+import styles from './plugin-browser/plugin-browser.module.css';
 import {
   ASYNC_CHECK_CONCURRENCY,
   type BrowserPlatform,
@@ -92,18 +79,8 @@ interface Props {
   server: MinecraftServer;
 }
 
-interface PlatformOption {
-  key: BrowserPlatform;
-  label: string;
-  hint: string;
-  inApp: boolean;
-  icon: LucideIcon;
-  logoUrl: string;
-}
-
 export default function PluginBrowser({ server }: Props) {
   const { t } = useTranslation();
-  const prefersReducedMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState<BrowserSection>('browse');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
@@ -162,7 +139,9 @@ export default function PluginBrowser({ server }: Props) {
       {
         key: 'Modrinth',
         label: 'Modrinth',
-        hint: isModServer ? 'Mods + Datapacks' : 'Plugins + Mods',
+        hint: isModServer
+          ? t('plugins.browser.hintModrinthMods')
+          : t('plugins.browser.hintModrinthPlugins'),
         inApp: true,
         icon: Package,
         logoUrl: 'https://modrinth.com/favicon.ico',
@@ -173,7 +152,7 @@ export default function PluginBrowser({ server }: Props) {
       options.push({
         key: 'Hangar',
         label: 'Hangar',
-        hint: 'Paper ecosystem',
+        hint: t('plugins.browser.hintHangar'),
         inApp: true,
         icon: Server,
         logoUrl: paperLogoUrl,
@@ -184,7 +163,7 @@ export default function PluginBrowser({ server }: Props) {
       options.push({
         key: 'Spigot',
         label: 'SpigotMC',
-        hint: 'Spiget API',
+        hint: t('plugins.browser.hintSpigot'),
         inApp: true,
         icon: Flame,
         logoUrl: 'https://www.spigotmc.org/favicon.ico',
@@ -195,7 +174,7 @@ export default function PluginBrowser({ server }: Props) {
       options.push({
         key: 'CurseForge',
         label: 'CurseForge',
-        hint: 'Open in web',
+        hint: t('plugins.browser.hintOpenWeb'),
         inApp: false,
         icon: ExternalLink,
         logoUrl: 'https://www.curseforge.com/favicon.ico',
@@ -203,7 +182,7 @@ export default function PluginBrowser({ server }: Props) {
     }
 
     return options;
-  }, [isModServer, isPaper]);
+  }, [isModServer, isPaper, t]);
 
   // Keep the current query when the available platform set changes.
   useEffect(() => {
@@ -1342,23 +1321,6 @@ export default function PluginBrowser({ server }: Props) {
         });
   };
 
-  const actionLabel = (
-    item: ProjectItem,
-    installedState: 'none' | 'enabled' | 'disabled',
-    updateStatus: UpdateStatus | null,
-  ) => {
-    if (installingId === item.id) {
-      return installingLabel(item.id);
-    }
-    const requiresBrowser =
-      item.platform === 'Spigot' &&
-      (item.source_obj.external === true || item.source_obj.premium === true);
-    if (!requiresBrowser && installedState !== 'none' && updateStatus === 'update-available') {
-      return t('plugins.browser.update');
-    }
-    return requiresBrowser ? t('plugins.browser.open') : t('plugins.install.button');
-  };
-
   const getCompatibilityPriority = (itemId: string): number => {
     const status = compatibilityByItemId[itemId] ?? 'unknown';
     if (status === 'compatible') {
@@ -1566,565 +1528,245 @@ export default function PluginBrowser({ server }: Props) {
     ? (compatibilityByItemId[detailItem.id] ?? 'unknown')
     : 'unknown';
   const detailProjectUrl = detailItem ? projectPageUrl(detailItem) : '';
-  const platformSwitchInitial = prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 };
-  const platformSwitchAnimate = { opacity: 1, y: 0 };
-  const platformSwitchExit = prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 };
-  const platformSwitchTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.2, ease: 'easeOut' as const };
+  // Card state for one result, built from the same lookups the install and update paths use.
+  const resolveResultCard = (item: ProjectItem): PluginResultCardState => {
+    const installedMatch = findInstalledMatchStrict(item);
+    const installFailure = installFailureByItemId[item.id];
+    return {
+      installedState: installedMatch
+        ? isDisabledPluginFile(installedMatch)
+          ? 'disabled'
+          : 'enabled'
+        : 'none',
+      compatibility: compatibilityByItemId[item.id] ?? 'unknown',
+      updateStatus: installedMatch ? (updateStatusByItemId[item.id] ?? 'unknown') : null,
+      busy:
+        installingId === item.id ? 'installing' : preparingId === item.id ? 'preparing' : 'idle',
+      progress: installProgressByItemId[item.id],
+      failureMessage:
+        installFailure === 'network' || installFailure === 'unknown'
+          ? installFailureCopy(installFailure).description
+          : null,
+    };
+  };
 
   return (
-    <div className="plugin-browser flex h-full flex-col gap-4 p-5" data-testid="plugin-browser">
-      <div
-        className="plugin-browser__section-switch"
-        role="tablist"
-        aria-label={t('plugins.browser.viewSwitch')}
+    <div className={styles.root} data-testid="plugin-browser">
+      <Tabs
+        value={activeSection}
+        onValueChange={(value) => setActiveSection(value as BrowserSection)}
       >
-        <button
-          type="button"
-          className={`plugin-browser__section-tab ${activeSection === 'browse' ? 'is-active' : ''}`}
-          onClick={() => setActiveSection('browse')}
-          role="tab"
-          aria-selected={activeSection === 'browse'}
-        >
-          {t('plugins.browser.tabBrowse')}
-        </button>
-        <button
-          type="button"
-          className={`plugin-browser__section-tab ${activeSection === 'installed' ? 'is-active' : ''}`}
-          onClick={() => setActiveSection('installed')}
-          role="tab"
-          aria-selected={activeSection === 'installed'}
-        >
-          {t('plugins.browser.tabInstalled', { count: installedFiles.length })}
-        </button>
-      </div>
+        <TabsList aria-label={t('plugins.browser.viewSwitch')}>
+          <TabsTrigger value="browse">{t('plugins.browser.tabBrowse')}</TabsTrigger>
+          <TabsTrigger value="installed">
+            {t('plugins.browser.tabInstalled', { count: installedFiles.length })}
+          </TabsTrigger>
+        </TabsList>
 
-      {activeSection === 'browse' ? (
-        <>
-          <div className="plugin-browser__platform-grid">
-            {platformOptions.map((option) => {
-              const Icon = option.icon;
-              const active = option.key === platform;
-              const showLogo = option.logoUrl.length > 0 && !logoLoadFailed[option.key];
+        <TabsContent value="browse" className={styles.panel}>
+          <PluginSearchPanel
+            platform={platform}
+            platformOptions={platformOptions}
+            logoFailed={logoLoadFailed}
+            onPlatformChange={(next) => {
+              setPlatform(next);
+              setPage(0);
+              setCommittedQuery(query);
+            }}
+            onLogoFailed={(key) => setLogoLoadFailed((prev) => ({ ...prev, [key]: true }))}
+            selectedPlatformLabel={selectedPlatform?.label || platform}
+            isInAppSearch={isInAppSearch}
+            searchPlatformLabel={searchPlatformLabel}
+            query={query}
+            onQueryChange={setQuery}
+            onSubmitSearch={() => {
+              setCommittedQuery(query);
+              setPage(0);
+            }}
+            loading={loading}
+            searchFailed={searchQuery.isError}
+            onRetrySearch={() => {
+              void searchQuery.refetch();
+            }}
+            sortMode={sortMode}
+            onSortModeChange={setSortMode}
+            folderName={folderName}
+            onOpenCurseForge={() => {
+              void openExternal('https://www.curseforge.com/minecraft/mc-mods');
+            }}
+            updateAvailableCount={updateAvailableCount}
+            results={sortedResults}
+            resolveCard={resolveResultCard}
+            onInstall={handleInstall}
+            onDetails={openDetailModal}
+            onRetryInstall={handleInstall}
+            page={page}
+            totalPages={totalPages}
+            hasNextPage={hasNextPage}
+            pageInput={pageInput}
+            onPageInputChange={setPageInput}
+            onJumpToPage={jumpToPage}
+            onPageChange={setPage}
+          />
+        </TabsContent>
 
-              return (
-                <motion.button
-                  key={option.key}
-                  type="button"
-                  data-testid={`plugin-provider-${option.key.toLowerCase()}`}
-                  whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-                  whileHover={prefersReducedMotion ? undefined : { y: -1 }}
-                  className={`plugin-browser__platform-chip ${active ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setPlatform(option.key);
-                    setPage(0);
-                    setCommittedQuery(query);
-                  }}
-                >
-                  <div className="plugin-browser__platform-logo-wrap">
-                    {showLogo ? (
-                      <img
-                        src={option.logoUrl}
-                        alt={`${option.label} logo`}
-                        className="plugin-browser__platform-logo"
-                        loading="lazy"
-                        onError={() =>
-                          setLogoLoadFailed((prev) => ({
-                            ...prev,
-                            [option.key]: true,
-                          }))
-                        }
-                      />
-                    ) : (
-                      <Icon size={14} className="plugin-browser__platform-fallback-icon" />
-                    )}
-                  </div>
-                  <div className="plugin-browser__platform-copy">
-                    <span className="plugin-browser__platform-label">{option.label}</span>
-                    <span className="plugin-browser__platform-hint">{option.hint}</span>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-
-          {isInAppSearch ? (
-            <>
-              <div className="plugin-browser__search-row">
-                <div className="plugin-browser__search-input-wrap">
-                  <Search size={16} />
-                  <input
-                    type="text"
-                    data-testid="plugin-search-input"
-                    className="plugin-browser__search-input"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={t('plugins.browser.searchOn', {
-                      platform: searchPlatformLabel,
-                    })}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        setCommittedQuery(query);
-                        setPage(0);
-                      }
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="plugin-browser__search-btn"
-                  onClick={() => {
-                    setCommittedQuery(query);
-                    setPage(0);
-                  }}
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                  <span>{loading ? t('plugins.browser.searching') : t('common.search')}</span>
-                </button>
-              </div>
-
-              <div className="plugin-browser__sort-row">
-                <span className="plugin-browser__sort-label">{t('plugins.browser.sortLabel')}</span>
-                <NativeSelect
-                  className="plugin-browser__sort-select"
-                  value={sortMode}
-                  onChange={(event) => setSortMode(event.target.value as SortMode)}
-                >
-                  <option value="relevance">{t('plugins.browser.sortRelevance')}</option>
-                  <option value="downloads">{t('plugins.browser.sortDownloads')}</option>
-                  <option value="name">{t('plugins.browser.sortName')}</option>
-                  <option value="compatibility">{t('plugins.browser.sortCompatibility')}</option>
-                </NativeSelect>
-              </div>
-              {searchQuery.isError && (
-                <InlineError
-                  className="plugin-browser__search-error"
-                  testId="plugin-search-error"
-                  message={t('plugins.browser.searchError')}
-                  onRetry={() => {
-                    void searchQuery.refetch();
-                  }}
-                  retryLabel={t('plugins.browser.retry')}
-                />
-              )}
-            </>
-          ) : (
-            <div className="plugin-browser__unsupported-panel">
-              <p>{t('plugins.browser.unsupportedPlatform')}</p>
-              <button
-                type="button"
-                className="plugin-browser__unsupported-btn"
-                onClick={() => openExternal('https://www.curseforge.com/minecraft/mc-mods')}
-              >
-                <ExternalLink size={16} />
-                <span>
-                  {t('plugins.browser.openInBrowser', {
-                    platform: selectedPlatform?.label || platform,
-                  })}
-                </span>
-              </button>
-              <p className="plugin-browser__unsupported-note">
-                {t('plugins.browser.downloadInstructions', { folder: folderName })}
-              </p>
-            </div>
-          )}
-
-          {isInAppSearch && updateAvailableCount > 0 && (
-            <div className="plugin-browser__update-summary">
-              <Info size={12} className="shrink-0 opacity-70" />
-              <span>{t('plugins.browser.updateSummary', { count: updateAvailableCount })}</span>
-              <span className="plugin-browser__update-summary-note">
-                {t('plugins.browser.updateSummaryNote')}
+        <TabsContent value="installed" className={styles.panel}>
+          <div className="plugin-browser__installed-panel">
+            <div className="plugin-browser__installed-header">
+              <h2 className="plugin-browser__installed-title">{t('plugins.installed.title')}</h2>
+              <span className="plugin-browser__installed-count">
+                {t('plugins.browser.tabInstalled', { count: installedEntries.length })}
               </span>
             </div>
-          )}
 
-          {isInAppSearch && (
-            <>
-              <div className="plugin-browser__results-grid">
-                <AnimatePresence initial={false} mode="wait">
-                  {sortedResults.map((item) => {
-                    const installedMatch = findInstalledMatchStrict(item);
-                    const installedState = installedMatch
-                      ? isDisabledPluginFile(installedMatch)
-                        ? 'disabled'
-                        : 'enabled'
-                      : 'none';
-                    const compatibility = compatibilityByItemId[item.id] ?? 'unknown';
-                    const updateStatus = installedMatch
-                      ? (updateStatusByItemId[item.id] ?? 'unknown')
-                      : null;
-                    const hasUpdateAction =
-                      installedState !== 'none' && updateStatus === 'update-available';
-                    const showInstallAction = installedState === 'none' || hasUpdateAction;
-                    const requiresBrowser =
-                      item.platform === 'Spigot' &&
-                      (item.source_obj.external === true || item.source_obj.premium === true);
-                    const installFailure = installFailureByItemId[item.id];
-                    const installActionButton = showInstallAction ? (
-                      <button
-                        type="button"
-                        data-testid={`plugin-install-${item.id}`}
-                        onClick={() => void handleInstall(item)}
-                        disabled={installingId === item.id || preparingId === item.id}
-                        className={`plugin-browser__install-btn ${
-                          requiresBrowser ? 'plugin-browser__install-btn--external' : ''
-                        }`}
-                      >
-                        {installingId === item.id || preparingId === item.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : requiresBrowser ? (
-                          <ExternalLink size={14} />
-                        ) : (
-                          <Download size={14} />
-                        )}
-                        <span>{actionLabel(item, installedState, updateStatus)}</span>
-                      </button>
-                    ) : null;
-                    const detailsButton = (
-                      <button
-                        type="button"
-                        className="plugin-browser__details-btn"
-                        data-testid={`plugin-details-${item.id}`}
-                        onClick={() => openDetailModal(item)}
-                      >
-                        {t('plugins.browser.details')}
-                      </button>
-                    );
-
-                    return (
-                      <motion.div
-                        key={`${item.platform}-${item.id}`}
-                        data-testid={`plugin-result-${item.id}`}
-                        initial={platformSwitchInitial}
-                        animate={platformSwitchAnimate}
-                        exit={platformSwitchExit}
-                        transition={platformSwitchTransition}
-                        className={`plugin-browser__result-card ${
-                          hasUpdateAction ? 'is-update-available' : ''
-                        }`}
-                      >
-                        <div
-                          className="plugin-browser__result-icon"
-                          style={{
-                            backgroundImage: item.icon_url ? `url(${item.icon_url})` : 'none',
-                          }}
-                        />
-
-                        <div className="plugin-browser__result-body">
-                          <div
-                            className={`plugin-browser__result-top ${
-                              hasUpdateAction ? 'is-update-available' : ''
-                            }`}
-                          >
-                            <div className="plugin-browser__result-title-wrap">
-                              <div className="plugin-browser__result-title">{item.title}</div>
-                              <div className="plugin-browser__result-source">{item.platform}</div>
-                              <div className="plugin-browser__result-flags">
-                                {installedMatch ? (
-                                  <span
-                                    className={`plugin-browser__installed-badge ${
-                                      installedState === 'disabled' ? 'is-disabled' : ''
-                                    }`}
-                                  >
-                                    {installedState === 'disabled'
-                                      ? t('plugins.browser.disabledBadge')
-                                      : t('plugins.browser.installedBadge')}
-                                  </span>
-                                ) : null}
-                                <span
-                                  className={`plugin-browser__compat-badge is-${compatibility}`}
-                                >
-                                  {compatibilityLabel(compatibility)}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div
-                              className={`plugin-browser__result-actions ${
-                                hasUpdateAction ? 'is-update-available' : ''
-                              }`}
-                            >
-                              {installActionButton}
-                              {detailsButton}
-                            </div>
-                          </div>
-
-                          <div className="plugin-browser__result-description">
-                            {item.description || t('plugins.browser.noDescription')}
-                          </div>
-
-                          <div className="plugin-browser__result-meta">
-                            <span className="plugin-browser__meta-item">
-                              <Server size={13} />
-                              <span>{item.author}</span>
-                            </span>
-                            <span className="plugin-browser__meta-item">
-                              <Download size={13} />
-                              <span>{item.downloads ? item.downloads.toLocaleString() : '-'}</span>
-                            </span>
-                            {item.stars ? (
-                              <span className="plugin-browser__meta-item">
-                                <Star size={13} />
-                                <span>{item.stars}</span>
-                              </span>
-                            ) : null}
-                          </div>
-
-                          {requiresBrowser && (
-                            <div className="plugin-browser__result-tag">
-                              {t('plugins.browser.externalDownload')}
-                            </div>
-                          )}
-                          {installFailure &&
-                          (installFailure === 'network' || installFailure === 'unknown') ? (
-                            <InlineError
-                              className="mt-3"
-                              testId={`plugin-install-error-${item.id}`}
-                              message={installFailureCopy(installFailure).description}
-                              onRetry={() => handleInstall(item)}
-                              retryLabel={t('plugins.browser.retry')}
-                            />
-                          ) : null}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-
-                  {sortedResults.length === 0 && !loading && (
-                    <motion.div
-                      key="empty"
-                      initial={platformSwitchInitial}
-                      animate={platformSwitchAnimate}
-                      exit={platformSwitchExit}
-                      transition={platformSwitchTransition}
-                      className="plugin-browser__result-empty"
-                    >
-                      {t('plugins.browser.noResults')}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="plugin-browser__pager">
-                <button
-                  type="button"
-                  className="plugin-browser__pager-btn"
-                  data-testid="plugin-prev-page"
-                  onClick={() => setPage((value) => Math.max(0, value - 1))}
-                  disabled={page === 0 || loading}
-                >
-                  <ArrowLeft size={14} />
-                  <span>{t('plugins.browser.prev')}</span>
-                </button>
-
-                <span className="plugin-browser__pager-label">
-                  {totalPages
-                    ? t('plugins.browser.pageLabelWithTotal', {
-                        current: page + 1,
-                        total: totalPages,
-                      })
-                    : t('plugins.browser.pageLabel', { current: page + 1 })}
-                </span>
-
-                <div className="plugin-browser__pager-jump">
-                  <input
-                    type="number"
-                    min={1}
-                    max={totalPages ?? undefined}
-                    value={pageInput}
-                    onChange={(event) => setPageInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        jumpToPage();
-                      }
-                    }}
-                    className="plugin-browser__pager-input"
-                    data-testid="plugin-page-input"
-                    aria-label={t('plugins.browser.pageNumberAriaLabel')}
-                  />
-                  <button
-                    type="button"
-                    className="plugin-browser__pager-go"
-                    data-testid="plugin-page-go"
-                    onClick={jumpToPage}
-                    disabled={loading}
-                  >
-                    {t('plugins.browser.go')}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  className="plugin-browser__pager-btn"
-                  data-testid="plugin-next-page"
-                  onClick={() => setPage((value) => value + 1)}
-                  disabled={!hasNextPage || loading}
-                >
-                  <span>{t('plugins.browser.next')}</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </>
-          )}
-        </>
-      ) : (
-        <div className="plugin-browser__installed-panel">
-          <div className="plugin-browser__installed-header">
-            <h2 className="plugin-browser__installed-title">{t('plugins.installed.title')}</h2>
-            <span className="plugin-browser__installed-count">
-              {t('plugins.browser.tabInstalled', { count: installedEntries.length })}
-            </span>
-          </div>
-
-          {installedEntries.length === 0 ? (
-            <div className="plugin-browser__result-empty">{t('plugins.installed.empty')}</div>
-          ) : (
-            <div className="plugin-browser__installed-grid">
-              {installedEntries.map((entry) => {
-                const isProcessing =
-                  busyInstalledFile === entry.normalizedFileName ||
-                  installingId === entry.actionItem.id;
-                const canReinstall = Boolean(entry.sourceItem);
-                const installedUpdateStatus = entry.sourceItem
-                  ? (updateStatusByItemId[entry.sourceItem.id] ?? null)
-                  : null;
-                const installedStatusBadge =
-                  installedUpdateStatus === 'update-available' ||
-                  installedUpdateStatus === 'up-to-date'
-                    ? installedUpdateStatus
+            {installedEntries.length === 0 ? (
+              <div className="plugin-browser__result-empty">{t('plugins.installed.empty')}</div>
+            ) : (
+              <div className="plugin-browser__installed-grid">
+                {installedEntries.map((entry) => {
+                  const isProcessing =
+                    busyInstalledFile === entry.normalizedFileName ||
+                    installingId === entry.actionItem.id;
+                  const canReinstall = Boolean(entry.sourceItem);
+                  const installedUpdateStatus = entry.sourceItem
+                    ? (updateStatusByItemId[entry.sourceItem.id] ?? null)
                     : null;
-                const installedLatestFileName = entry.sourceItem
-                  ? (latestFileByItemId[entry.sourceItem.id] ?? null)
-                  : null;
+                  const installedStatusBadge =
+                    installedUpdateStatus === 'update-available' ||
+                    installedUpdateStatus === 'up-to-date'
+                      ? installedUpdateStatus
+                      : null;
+                  const installedLatestFileName = entry.sourceItem
+                    ? (latestFileByItemId[entry.sourceItem.id] ?? null)
+                    : null;
 
-                return (
-                  <div key={entry.fileName} className="plugin-browser__installed-card">
-                    <div className="plugin-browser__result-body plugin-browser__installed-body">
-                      <div className="plugin-browser__installed-head">
-                        <div
-                          className="plugin-browser__result-icon plugin-browser__installed-icon"
-                          style={{
-                            backgroundImage: entry.iconUrl ? `url(${entry.iconUrl})` : 'none',
-                          }}
-                        >
-                          {!entry.iconUrl ? (
-                            <Package
-                              size={20}
-                              className="plugin-browser__installed-fallback-icon"
-                            />
-                          ) : null}
-                        </div>
-                        <div className="plugin-browser__result-title-wrap">
-                          <div className="plugin-browser__result-title">{entry.displayName}</div>
-                          <div className="plugin-browser__result-source">
-                            {entry.sourceItem?.platform ?? t('plugins.browser.localSource')}
-                          </div>
-                          <div className="plugin-browser__result-flags plugin-browser__installed-flags">
-                            <span
-                              className={`plugin-browser__installed-badge ${
-                                entry.state === 'disabled' ? 'is-disabled' : ''
-                              }`}
-                            >
-                              {entry.state === 'disabled'
-                                ? t('plugins.browser.disabledBadge')
-                                : t('plugins.browser.installedBadge')}
-                            </span>
-                            {installedStatusBadge ? (
-                              <span
-                                className={`plugin-browser__update-badge is-${installedStatusBadge}`}
-                                title={
-                                  installedStatusBadge === 'update-available' &&
-                                  installedLatestFileName
-                                    ? t('plugins.browser.latestTooltip', {
-                                        fileName: installedLatestFileName,
-                                      })
-                                    : undefined
-                                }
-                              >
-                                {updateStatusLabel(installedStatusBadge)}
-                              </span>
+                  return (
+                    <div key={entry.fileName} className="plugin-browser__installed-card">
+                      <div className="plugin-browser__result-body plugin-browser__installed-body">
+                        <div className="plugin-browser__installed-head">
+                          <div
+                            className="plugin-browser__result-icon plugin-browser__installed-icon"
+                            style={{
+                              backgroundImage: entry.iconUrl ? `url(${entry.iconUrl})` : 'none',
+                            }}
+                          >
+                            {!entry.iconUrl ? (
+                              <Package
+                                size={20}
+                                className="plugin-browser__installed-fallback-icon"
+                              />
                             ) : null}
                           </div>
+                          <div className="plugin-browser__result-title-wrap">
+                            <div className="plugin-browser__result-title">{entry.displayName}</div>
+                            <div className="plugin-browser__result-source">
+                              {entry.sourceItem?.platform ?? t('plugins.browser.localSource')}
+                            </div>
+                            <div className="plugin-browser__result-flags plugin-browser__installed-flags">
+                              <span
+                                className={`plugin-browser__installed-badge ${
+                                  entry.state === 'disabled' ? 'is-disabled' : ''
+                                }`}
+                              >
+                                {entry.state === 'disabled'
+                                  ? t('plugins.browser.disabledBadge')
+                                  : t('plugins.browser.installedBadge')}
+                              </span>
+                              {installedStatusBadge ? (
+                                <span
+                                  className={`plugin-browser__update-badge is-${installedStatusBadge}`}
+                                  title={
+                                    installedStatusBadge === 'update-available' &&
+                                    installedLatestFileName
+                                      ? t('plugins.browser.latestTooltip', {
+                                          fileName: installedLatestFileName,
+                                        })
+                                      : undefined
+                                  }
+                                >
+                                  {updateStatusLabel(installedStatusBadge)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="plugin-browser__result-description">{entry.description}</div>
+                        <div className="plugin-browser__result-description">
+                          {entry.description}
+                        </div>
 
-                      <div className="plugin-browser__installed-meta">
-                        <div className="plugin-browser__installed-meta-row">
-                          <span className="plugin-browser__installed-meta-key">
-                            {t('plugins.browser.installedFile')}
-                          </span>
-                          <span className="plugin-browser__installed-meta-value">
-                            {entry.fileName}
-                          </span>
+                        <div className="plugin-browser__installed-meta">
+                          <div className="plugin-browser__installed-meta-row">
+                            <span className="plugin-browser__installed-meta-key">
+                              {t('plugins.browser.installedFile')}
+                            </span>
+                            <span className="plugin-browser__installed-meta-value">
+                              {entry.fileName}
+                            </span>
+                          </div>
+                          <div className="plugin-browser__installed-meta-row">
+                            <span className="plugin-browser__installed-meta-key">
+                              {t('plugins.browser.installedVersion')}
+                            </span>
+                            <span className="plugin-browser__installed-meta-value">
+                              {entry.fileVersion || t('plugins.browser.na')}
+                            </span>
+                          </div>
+                          <div className="plugin-browser__installed-meta-row">
+                            <span className="plugin-browser__installed-meta-key">
+                              {t('plugins.browser.installedGameVersions')}
+                            </span>
+                            <span className="plugin-browser__installed-meta-value">
+                              {entry.minecraftVersions.length > 0
+                                ? entry.minecraftVersions.join(', ')
+                                : t('plugins.browser.na')}
+                            </span>
+                          </div>
                         </div>
-                        <div className="plugin-browser__installed-meta-row">
-                          <span className="plugin-browser__installed-meta-key">
-                            {t('plugins.browser.installedVersion')}
-                          </span>
-                          <span className="plugin-browser__installed-meta-value">
-                            {entry.fileVersion || t('plugins.browser.na')}
-                          </span>
-                        </div>
-                        <div className="plugin-browser__installed-meta-row">
-                          <span className="plugin-browser__installed-meta-key">
-                            {t('plugins.browser.installedGameVersions')}
-                          </span>
-                          <span className="plugin-browser__installed-meta-value">
-                            {entry.minecraftVersions.length > 0
-                              ? entry.minecraftVersions.join(', ')
-                              : t('plugins.browser.na')}
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="plugin-browser__installed-actions">
-                        <button
-                          type="button"
-                          className="plugin-browser__installed-action plugin-browser__installed-action--danger"
-                          onClick={() => void handleUninstallInstalled(entry)}
-                          disabled={isProcessing}
-                        >
-                          {t('plugins.browser.uninstall')}
-                        </button>
-                        <button
-                          type="button"
-                          className="plugin-browser__installed-action plugin-browser__installed-action--primary"
-                          onClick={() => handleReinstallInstalled(entry)}
-                          disabled={isProcessing || !canReinstall}
-                        >
-                          {installingId === entry.actionItem.id
-                            ? installingLabel(entry.actionItem.id)
-                            : t('plugins.browser.reinstall')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`plugin-browser__installed-action plugin-browser__installed-action--toggle ${
-                            entry.state === 'disabled' ? 'is-enable' : 'is-disable'
-                          }`}
-                          onClick={() =>
-                            void handleToggleInstalled(entry.actionItem, entry.fileName)
-                          }
-                          disabled={isProcessing}
-                        >
-                          {entry.state === 'disabled'
-                            ? t('plugins.browser.enable')
-                            : t('plugins.browser.disable')}
-                        </button>
+                        <div className="plugin-browser__installed-actions">
+                          <button
+                            type="button"
+                            className="plugin-browser__installed-action plugin-browser__installed-action--danger"
+                            onClick={() => void handleUninstallInstalled(entry)}
+                            disabled={isProcessing}
+                          >
+                            {t('plugins.browser.uninstall')}
+                          </button>
+                          <button
+                            type="button"
+                            className="plugin-browser__installed-action plugin-browser__installed-action--primary"
+                            onClick={() => handleReinstallInstalled(entry)}
+                            disabled={isProcessing || !canReinstall}
+                          >
+                            {installingId === entry.actionItem.id
+                              ? installingLabel(entry.actionItem.id)
+                              : t('plugins.browser.reinstall')}
+                          </button>
+                          <button
+                            type="button"
+                            className={`plugin-browser__installed-action plugin-browser__installed-action--toggle ${
+                              entry.state === 'disabled' ? 'is-enable' : 'is-disable'
+                            }`}
+                            onClick={() =>
+                              void handleToggleInstalled(entry.actionItem, entry.fileName)
+                            }
+                            disabled={isProcessing}
+                          >
+                            {entry.state === 'disabled'
+                              ? t('plugins.browser.enable')
+                              : t('plugins.browser.disable')}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {detailItem && (
         <div

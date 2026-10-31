@@ -595,6 +595,18 @@ export interface TranslationDictionary {
     };
     browser: {
       viewSwitch: string;
+      platformLabel: string;
+      hintModrinthMods: string;
+      hintModrinthPlugins: string;
+      hintHangar: string;
+      hintSpigot: string;
+      hintOpenWeb: string;
+      searchLabel: string;
+      loading: string;
+      noResultsHint: string;
+      preparing: string;
+      unknownAuthor: string;
+      pagerLabel: string;
       tabBrowse: string;
       tabInstalled: string;
       searchOn: string;

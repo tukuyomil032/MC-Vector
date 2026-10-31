@@ -247,7 +247,7 @@ describe('PluginBrowser feedback integration', () => {
       </AppFeedbackProvider>,
     );
     const result = await screen.findByTestId('plugin-result-modrinth-plugin');
-    expect(result.querySelector('.plugin-browser__compat-badge')).toHaveClass('is-unknown');
+    expect(result.querySelector('[data-compat]')).toHaveAttribute('data-compat', 'unknown');
     expect(within(result).queryByText('Compatible', { exact: true })).not.toBeInTheDocument();
   });
 
@@ -307,8 +307,9 @@ describe('PluginBrowser feedback integration', () => {
         </AppFeedbackProvider>,
       );
       const row = await screen.findByTestId('plugin-result-owner/plugin');
-      expect(row.querySelector('.plugin-browser__compat-badge')).toHaveClass(
-        `is-${result.compatibility}`,
+      expect(row.querySelector('[data-compat]')).toHaveAttribute(
+        'data-compat',
+        result.compatibility,
       );
     },
   );
