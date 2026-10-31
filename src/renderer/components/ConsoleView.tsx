@@ -1058,18 +1058,19 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           })()}
 
           <div ref={logEndRef} />
-
-          {visibleLogs.length === 0 && (
-            <EmptyLine
-              className={styles.emptyLog}
-              title={
-                logFilter === 'ALL'
-                  ? t('console.emptyLog.waiting')
-                  : t('console.emptyLog.notFound', { level: logFilter })
-              }
-            />
-          )}
         </div>
+
+        {/* Outside the scrolling pane, so the one line stays centered over the whole log area. */}
+        {visibleLogs.length === 0 && (
+          <EmptyLine
+            className={styles.emptyLog}
+            title={
+              logFilter === 'ALL'
+                ? t('console.emptyLog.waiting')
+                : t('console.emptyLog.notFound', { level: logFilter })
+            }
+          />
+        )}
 
         {!autoScroll && visibleLogs.length > 0 && (
           <div className={styles.jumpLatest}>

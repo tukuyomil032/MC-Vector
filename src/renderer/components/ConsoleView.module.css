@@ -337,8 +337,11 @@
   outline: 1px solid var(--accent);
 }
 
+/* Fills the log area and centers the one line; pointer events pass through to the log behind it. */
 .emptyLog {
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .jumpLatest {

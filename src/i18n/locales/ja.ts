@@ -227,8 +227,6 @@ export const ja: TranslationDictionary = {
     emptyLog: {
       waiting: 'ログを待機中…',
       notFound: '{level} レベルのログが見つかりません。',
-      waitingHint: 'サーバーを起動すると、ここにログが表示されます。',
-      notFoundHint: '別のレベルを選ぶと、ほかのログを表示できます。',
     },
     filter: {
       ariaLabel: 'ログレベルフィルター',

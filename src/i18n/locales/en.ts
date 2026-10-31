@@ -231,8 +231,6 @@ export const en: TranslationDictionary = {
     emptyLog: {
       waiting: 'Waiting for logs...',
       notFound: '{level} logs not found.',
-      waitingHint: 'Logs appear here once the server starts.',
-      notFoundHint: 'Choose another level to see more lines.',
     },
     filter: {
       ariaLabel: 'Log level filter',
