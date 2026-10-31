@@ -42,7 +42,8 @@ import { useAppFeedback } from './AppFeedbackProvider';
 import { PluginInstallList, type PluginInstallItem } from './PluginInstallList';
 import { PluginDetailDialog } from './plugin-browser/PluginDetailDialog';
 import { PluginInstalledPanel } from './plugin-browser/PluginInstalledPanel';
-import { type PlatformOption, PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
+import { PluginPlatformSwitch, type PlatformOption } from './plugin-browser/PluginPlatformSwitch';
+import { PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
 import type { PluginResultCardState } from './plugin-browser/PluginResultCard';
 import styles from './plugin-browser/plugin-browser.module.css';
 import {
@@ -1504,24 +1505,32 @@ export default function PluginBrowser({ server }: Props) {
         value={activeSection}
         onValueChange={(value) => setActiveSection(value as BrowserSection)}
       >
-        <TabsList aria-label={t('plugins.browser.viewSwitch')}>
-          <TabsTrigger value="browse">{t('plugins.browser.tabBrowse')}</TabsTrigger>
-          <TabsTrigger value="installed">
-            {t('plugins.browser.tabInstalled', { count: installedFiles.length })}
-          </TabsTrigger>
-        </TabsList>
+        <div className={styles.headerRow}>
+          <TabsList aria-label={t('plugins.browser.viewSwitch')}>
+            <TabsTrigger value="browse">{t('plugins.browser.tabBrowse')}</TabsTrigger>
+            <TabsTrigger value="installed">
+              {t('plugins.browser.tabInstalled', { count: installedFiles.length })}
+            </TabsTrigger>
+          </TabsList>
+
+          {activeSection === 'browse' ? (
+            <PluginPlatformSwitch
+              value={platform}
+              options={platformOptions}
+              label={t('plugins.browser.platformLabel')}
+              logoFailed={logoLoadFailed}
+              onChange={(next) => {
+                setPlatform(next);
+                setPage(0);
+                setCommittedQuery(query);
+              }}
+              onLogoFailed={(key) => setLogoLoadFailed((prev) => ({ ...prev, [key]: true }))}
+            />
+          ) : null}
+        </div>
 
         <TabsContent value="browse" className={styles.panel}>
           <PluginSearchPanel
-            platform={platform}
-            platformOptions={platformOptions}
-            logoFailed={logoLoadFailed}
-            onPlatformChange={(next) => {
-              setPlatform(next);
-              setPage(0);
-              setCommittedQuery(query);
-            }}
-            onLogoFailed={(key) => setLogoLoadFailed((prev) => ({ ...prev, [key]: true }))}
             selectedPlatformLabel={selectedPlatform?.label || platform}
             isInAppSearch={isInAppSearch}
             searchPlatformLabel={searchPlatformLabel}

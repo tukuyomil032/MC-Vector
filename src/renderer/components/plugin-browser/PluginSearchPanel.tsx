@@ -1,34 +1,19 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
-import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import { Select, type SelectOption } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
-import { ExternalLink, type LucideIcon } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useTranslation } from '../../../i18n';
 import { useArcMessages } from '../../shared/arc-messages';
 import { EmptyLine } from '../ui/EmptyLine';
 import { PluginPager } from './PluginPager';
 import { PluginResultCard, type PluginResultCardState } from './PluginResultCard';
-import type { BrowserPlatform, ProjectItem, SortMode } from './plugin-model';
+import type { ProjectItem, SortMode } from './plugin-model';
 import styles from './plugin-browser.module.css';
 
-export interface PlatformOption {
-  key: BrowserPlatform;
-  label: string;
-  hint: string;
-  inApp: boolean;
-  icon: LucideIcon;
-  logoUrl: string;
-}
-
 export interface PluginSearchPanelProps {
-  platform: BrowserPlatform;
-  platformOptions: PlatformOption[];
-  logoFailed: Record<string, boolean>;
-  onPlatformChange: (platform: BrowserPlatform) => void;
-  onLogoFailed: (platform: BrowserPlatform) => void;
   selectedPlatformLabel: string;
   isInAppSearch: boolean;
   searchPlatformLabel: string;
@@ -59,11 +44,6 @@ export interface PluginSearchPanelProps {
 const SKELETON_CARD_COUNT = 4;
 
 export function PluginSearchPanel({
-  platform,
-  platformOptions,
-  logoFailed,
-  onPlatformChange,
-  onLogoFailed,
   selectedPlatformLabel,
   isInAppSearch,
   searchPlatformLabel,
@@ -92,30 +72,6 @@ export function PluginSearchPanel({
 }: PluginSearchPanelProps) {
   const { t } = useTranslation();
   const arc = useArcMessages();
-
-  const platformCards: RadioCardOption[] = platformOptions.map((option) => {
-    const Icon = option.icon;
-    const showLogo = option.logoUrl.length > 0 && !logoFailed[option.key];
-    return {
-      value: option.key,
-      label: option.label,
-      description: option.hint,
-      testId: `plugin-provider-${option.key.toLowerCase()}`,
-      icon: showLogo ? (
-        <img
-          src={option.logoUrl}
-          alt=""
-          width={18}
-          height={18}
-          loading="lazy"
-          className={styles.platformLogo}
-          onError={() => onLogoFailed(option.key)}
-        />
-      ) : (
-        <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-      ),
-    };
-  });
 
   const sortOptions: SelectOption[] = [
     { value: 'relevance', label: t('plugins.browser.sortRelevance') },
@@ -196,15 +152,6 @@ export function PluginSearchPanel({
 
   return (
     <div className={styles.panel}>
-      <RadioCards
-        aria-label={t('plugins.browser.platformLabel')}
-        layout="grid"
-        minColumnWidth={200}
-        options={platformCards}
-        value={platform}
-        onValueChange={(value) => onPlatformChange(value as BrowserPlatform)}
-      />
-
       {isInAppSearch ? (
         <>
           <form className={styles.searchRow} role="search" onSubmit={submitSearch}>

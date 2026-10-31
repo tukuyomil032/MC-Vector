@@ -191,7 +191,8 @@ describe('PluginBrowser feedback integration', () => {
         <PluginBrowser server={server} />
       </AppFeedbackProvider>,
     );
-    fireEvent.click(await screen.findByTestId('plugin-provider-spigot'));
+    // Arc tabs switch on mousedown, the same as a real pointer press.
+    fireEvent.mouseDown(await screen.findByTestId('plugin-provider-spigot'), { button: 0 });
     const options = queryState.useQuery.mock.calls.at(-1)?.[0] as {
       queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
     };
