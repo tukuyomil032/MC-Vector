@@ -21,6 +21,7 @@ import {
   normalizeMetric,
 } from '../shared/server-metrics';
 import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
+import { EmptyLine } from './ui/EmptyLine';
 import { IconTile, SectionTitle } from './ui/IconTile';
 import styles from './DashboardView.module.css';
 
@@ -167,20 +168,25 @@ function MetricChartCard({
   return (
     <article className={styles.chartCard} data-testid={testId}>
       <h3 className={styles.chartTitle}>{title}</h3>
-      <LineChart
-        label={title}
-        data={data}
-        series={[{ key: SERIES_KEY, label: seriesLabel }]}
-        height={CHART_HEIGHT}
-        formatValue={formatValue}
-        formatTick={formatTick}
-        emptyLabel={emptyLabel}
-        categoryLabel={elapsedAxisLabel}
-        legend={false}
-        yDomain={yDomain}
-        messages={arc.lineChart}
-      />
-      <p className={styles.chartAxis}>{elapsedAxisLabel}</p>
+      {data.length === 0 ? (
+        // Without data there is no plot, so no gridlines or axis: one centered line in the plot's place.
+        <div className={styles.chartEmpty}>
+          <EmptyLine title={emptyLabel} />
+        </div>
+      ) : (
+        <LineChart
+          label={title}
+          data={data}
+          series={[{ key: SERIES_KEY, label: seriesLabel }]}
+          height={CHART_HEIGHT}
+          formatValue={formatValue}
+          formatTick={formatTick}
+          categoryLabel={elapsedAxisLabel}
+          legend={false}
+          yDomain={yDomain}
+          messages={arc.lineChart}
+        />
+      )}
     </article>
   );
 }

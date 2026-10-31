@@ -224,11 +224,12 @@
   font-weight: 600;
 }
 
-.chartAxis {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  text-align: right;
+/* Same box as a plot without a legend: the 200px plot plus its 26px axis row, so the card does not jump when data arrives. */
+.chartEmpty {
+  display: grid;
+  place-items: center;
+  height: 226px;
+  min-width: 0;
 }
 
 @media (max-width: 920px) {

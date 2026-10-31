@@ -105,6 +105,8 @@ describe('DashboardView metric charts', () => {
       within(screen.getByTestId('dashboard-chart-tps')).getByText('dashboard.charts.tpsNoData'),
     ).toBeInTheDocument();
     expect(screen.queryAllByTestId('line-chart-datum')).toHaveLength(0);
+    // An empty chart draws no plot, so no gridlines or axis are rendered at all.
+    expect(screen.queryAllByTestId('line-chart')).toHaveLength(0);
   });
 
   it('keeps the waiting state and excludes an anchor-only snapshot from readouts', () => {

@@ -198,7 +198,7 @@ export const ja: TranslationDictionary = {
       cpuLast60s: 'CPU使用率（%） - 直近60秒',
       memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
       tpsLast60s: 'TPS - 直近60秒',
-      tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
+      tpsNoData: 'TPSは計測待ち',
       metricsNoData: '計測待ち',
       elapsedSeconds: '{seconds}秒',
       elapsedTime: '起動からの経過時間（秒）',
