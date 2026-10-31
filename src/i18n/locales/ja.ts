@@ -675,11 +675,9 @@ export const ja: TranslationDictionary = {
       prev: '前へ',
       next: '次へ',
       pageLabel: 'ページ {{current}}',
-      pageLabelWithTotal: 'ページ {{current}} / {{total}}',
       go: '移動',
       pageNumberAriaLabel: 'ページ番号',
       details: '詳細',
-      closeDetailsAriaLabel: '詳細を閉じる',
       byAuthor: '作成者',
       installing: 'インストール中...',
       update: 'アップデート',
@@ -706,43 +704,21 @@ export const ja: TranslationDictionary = {
       openInBrowser: 'ブラウザで {{platform}} を開く',
       downloadInstructions:
         'ダウンロードした .jar は Files から {{folder}} フォルダへ配置してください。',
-      spigotNote:
-        'Spigot にはブラウザ経由でのみ配布されるリソースがあります。Open と表示される場合は外部ページから取得してください。',
-      hangarNote:
-        'Hangar には直接ダウンロード URL を公開していないバージョンがあります。その場合は自動的に外部ページを開きます。',
       updateSummary: 'このページの {{count}} 件のプラグインは更新できます。',
       updateSummaryNote: 'Install を押すと更新処理として実行されます。',
       pageInputError: 'ページ番号は 1 以上で入力してください',
-      fetchHangarError: 'Hangarの取得に失敗しました: {{message}}',
-      fetchSpigotError: 'Spigotの取得に失敗しました: {{message}}',
-      fetchError: 'データの取得に失敗しました',
-      deleteExistingError: '既存ファイルの削除に失敗しました',
-      noCompatibleVersion: '対応バージョンが見つかりませんでした',
-      dependencyCheck: '依存関係チェック',
-      dependencyMissing:
-        '不足依存プラグインが {{count}} 件あります。\n{{preview}}{{suffix}}\n先に一括インストールしますか？',
-      dependencyVersionNotFound: '依存プラグイン {{title}} の対応バージョンが見つかりません',
-      dependencyInstallFailed: '依存プラグイン {{title}} の導入に失敗しました',
-      dependencyInstallIncomplete:
-        '必要な依存プラグインがすべてインストールされませんでした。メインプラグインの導入を中止しました。',
-      dependencyInstallSuccess: '依存プラグインを {{count}} 件インストールしました',
-      dependencyCheckOnly:
-        '依存関係チェックのみ実行しました。必要に応じて先に依存プラグインを導入してください。',
       installPlanConfirmTitle: 'プラグインをインストールしますか？',
       installPlanTarget: 'ファイルは {{directory}} に配置します。',
       browserOpenErrorDescription:
         'ブラウザでプラグインのページを開けませんでした。手動で開くか、もう一度お試しください。',
       toggleErrorTitle: 'プラグインの状態を変更できませんでした',
       uninstallErrorTitle: 'プラグインをアンインストールできませんでした',
-      installPlanConfirmDescription:
-        '{{directory}} フォルダに次の {{count}} 件をインストールしますか？\n{{artifacts}}{{dependencyNote}}\n{{warnings}}',
       installPlanConfirmButton: 'インストール',
       installPlanDependencies: '必須の依存プラグインも含まれます: {{names}}',
       installPlanUnverifiedWarning:
         'プロバイダーのチェックサムがない成果物が含まれています。Rust側のポリシー設定で許可されている必要があります。',
       installPlanUnknownCompatibility: '互換性が確認できていない成果物が含まれています。',
       installingProgress: '{{progress}}% — {{label}}',
-      incompatibilityWarning: 'このプラグインは現在のサーバーバージョンと非互換の可能性があります',
       incompatibleInstallTitle: 'プラグインのインストールを中止しました',
       incompatibleInstallDescription:
         '{{title}} は {{software}} {{version}} と互換性がないため、インストールできません。プロバイダーが示す対応バージョン: {{supportedVersions}}',
@@ -766,16 +742,9 @@ export const ja: TranslationDictionary = {
       unknownInstallError:
         'プラグインをインストールできませんでした。対象を確認して再試行してください。',
       openGeneralSettings: '全般設定を開く',
-      compatibilityUnknown: 'サーバー {{version}} との互換性が未確認です',
-      compatibilityUnknownWithVersions:
-        'サーバー {{version}} との互換性が未確認です (対応候補: {{versions}})',
-      browserDownloadRequired: 'このHangarリソースはブラウザ経由でのダウンロードが必要です',
-      spigotIdInvalid: 'SpigotリソースIDが不正です',
-      spigotBrowserRequired: 'このリソースはブラウザ経由でのダウンロードが必要です',
       installSuccess: 'インストール完了: {{title}}',
       overwriteSuccess: '上書き完了: {{title}}',
       updateSuccess: 'アップデート完了: {{title}}',
-      installError: 'インストールエラー',
       browserOpenError: 'ブラウザを開けませんでした',
       pluginEnabled: '{{title}} を有効化しました',
       pluginDisabled: '{{title}} を無効化しました',
@@ -788,7 +757,6 @@ export const ja: TranslationDictionary = {
       dupExistingFile: '既存ファイル: {{file}}',
       dupOverwriteNote: '上書きは既存のファイルをこのビルドに置き換えます。',
       dupUpdateNote: 'アップデートは、このサーバーバージョンに合う最新ビルドを入れ直します。',
-      dupCancel: 'キャンセル',
       dupOverwrite: '上書き',
       dupUpdate: 'アップデート',
       detailProject: 'プロジェクト',
