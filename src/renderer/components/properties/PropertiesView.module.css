@@ -34,17 +34,20 @@
   gap: var(--space-3) var(--space-5);
 }
 
-.title {
-  margin: 0;
-  font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: var(--tracking-body);
-}
-
 /* Capped at 24rem so the search stays a search box and does not stretch across a wide header. */
 .search {
   flex: 0 1 24rem;
   min-width: min(100%, 14rem);
+}
+
+/* The placeholder says what the field is for, so its label is kept for screen readers only. */
+.search label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .actions {

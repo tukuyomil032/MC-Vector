@@ -520,7 +520,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const header = (
     <header className={styles.header}>
       <div className={styles.titleGroup}>
-        <h2 className={styles.title}>{t('properties.title')}</h2>
+        {/* The header breadcrumb already names the view, so the page has no title of its own. */}
         {!loadError && (
           <div className={styles.search}>
             <SearchField
