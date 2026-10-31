@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
 import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
+import { useArcMessages } from '../shared/arc-messages';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { tauriListen } from '../../lib/tauri-api';
 import type { MinecraftServer, ServerStatus } from '../components/../shared/server declaration';
@@ -140,6 +141,8 @@ interface MetricChartCardProps {
   elapsedAxisLabel: string;
   formatValue: (value: number) => string;
   formatTick: (value: number) => string;
+  /** Fixed value axis: CPU is a percentage, TPS tops out near the server's 20-tick target. */
+  yDomain?: readonly [number, number];
 }
 
 function MetricChartCard({
@@ -151,7 +154,9 @@ function MetricChartCard({
   elapsedAxisLabel,
   formatValue,
   formatTick,
+  yDomain,
 }: MetricChartCardProps) {
+  const arc = useArcMessages();
   return (
     <article className={styles.chartCard} data-testid={testId}>
       <h3 className={styles.chartTitle}>{title}</h3>
@@ -165,6 +170,8 @@ function MetricChartCard({
         emptyLabel={emptyLabel}
         categoryLabel={elapsedAxisLabel}
         legend={false}
+        yDomain={yDomain}
+        messages={arc.lineChart}
       />
       <p className={styles.chartAxis}>{elapsedAxisLabel}</p>
     </article>
@@ -416,6 +423,7 @@ export default function DashboardView({ server }: Props) {
           elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
           formatValue={(value) => `${formatters.decimal.format(value)}%`}
           formatTick={(value) => `${formatters.whole.format(value)}%`}
+          yDomain={[0, 100]}
         />
 
         <MetricChartCard
@@ -438,6 +446,7 @@ export default function DashboardView({ server }: Props) {
           elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
           formatValue={(value) => formatters.tps.format(value)}
           formatTick={(value) => formatters.decimal.format(value)}
+          yDomain={[0, 22]}
         />
       </section>
     </div>

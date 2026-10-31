@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { CodeBlockMessages } from '@/components/arc/code-block/code-block';
 import type { CopyButtonMessages } from '@/components/arc/copy-button/copy-button';
+import type { LineChartMessages } from '@/components/arc/line-chart/line-chart';
 import { useTranslation } from '../../i18n';
 
 /**
@@ -27,9 +28,22 @@ export function useArcMessages() {
       showFewer: t('arcUi.codeBlock.showFewer'),
     };
 
+    const lineChart: LineChartMessages = {
+      chooseSeries: t('arcUi.lineChart.chooseSeries'),
+      seriesShown: (shown, total) => t('arcUi.lineChart.seriesShown', { shown, total }),
+      seriesGroup: (label) => t('arcUi.lineChart.seriesGroup', { label }),
+      exploreBy: (label, category) => t('arcUi.lineChart.exploreBy', { label, category }),
+      summaryEmpty: (label, empty) => t('arcUi.lineChart.summaryEmpty', { label, empty }),
+      summaryRange: (label, from, to) => t('arcUi.lineChart.summaryRange', { label, from, to }),
+      summaryLatest: (name, value) => t('arcUi.lineChart.summaryLatest', { name, value }),
+      reading: (time, values) => t('arcUi.lineChart.reading', { time, values }),
+      loading: t('arcUi.lineChart.loading'),
+    };
+
     return {
       copy,
       codeBlock,
+      lineChart,
       search: { clear: t('arcUi.search.clear') },
       select: { placeholder: t('arcUi.select.placeholder') },
       checkbox: { fallback: t('arcUi.checkbox.fallback') },

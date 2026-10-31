@@ -855,7 +855,7 @@ export const ja: TranslationDictionary = {
       exploreBy: '{label}、{category} で探索',
       summaryEmpty: '{label}。{empty}',
       summaryRange: '{label}、{from} から {to} まで。',
-      summaryLatest: '{name}、最新 {value}',
+      summaryLatest: '{name}、最新 {value}。',
       reading: '{time}: {values}',
       loading: '読み込み中',
     },

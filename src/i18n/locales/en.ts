@@ -858,7 +858,7 @@ export const en: TranslationDictionary = {
       exploreBy: '{label}, explore by {category}',
       summaryEmpty: '{label}. {empty}.',
       summaryRange: '{label}, {from} to {to}.',
-      summaryLatest: '{name}, latest {value}',
+      summaryLatest: '{name}, latest {value}.',
       reading: '{time}: {values}',
       loading: 'Loading',
     },

@@ -159,6 +159,8 @@
   opacity: 0;
   transition: opacity var(--duration-instant) var(--ease-standard);
 }
+/* One sample is a flat line, so its marker stays visible without a scrub. */
+.chart[data-single] .dot:not([data-hidden]),
 .chart[data-scrubbing] .dot:not([data-hidden]) {
   opacity: 1;
 }

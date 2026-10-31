@@ -84,9 +84,46 @@ export interface LineChartProps {
   categoryLabel?: string;
   /** Smooth monotone curves that never swing past the data, or straight segments. */
   curve?: 'smooth' | 'linear';
+  /** Fixes the value axis, such as [0, 100] for a percentage, instead of fitting the data. */
+  yDomain?: readonly [number, number];
+  /** Visible and spoken copy. Pass translated strings; the English defaults are for stand-alone use. */
+  messages?: Partial<LineChartMessages>;
   ref?: Ref<HTMLElement>;
   className?: string;
 }
+
+export interface LineChartMessages {
+  /** Shown instead of the plot when every series is hidden. */
+  chooseSeries: string;
+  /** For example "2 of 3 series shown". */
+  seriesShown: (shown: number, total: number) => string;
+  /** Accessible name of the legend group, given the chart name. */
+  seriesGroup: (label: string) => string;
+  /** Accessible name of the scrub slider, given the chart name and the category word. */
+  exploreBy: (label: string, category: string) => string;
+  /** Summary when there are no points. */
+  summaryEmpty: (label: string, empty: string) => string;
+  /** Opening of the summary: the chart name, then the first and last category. */
+  summaryRange: (label: string, from: string, to: string) => string;
+  /** One series' latest value, as a full sentence. */
+  summaryLatest: (name: string, value: string) => string;
+  /** Scrub readout: the category, then the visible values. */
+  reading: (time: string, values: string) => string;
+  /** Spoken while loading. */
+  loading: string;
+}
+
+const defaultMessages: LineChartMessages = {
+  chooseSeries: 'Choose a series to show',
+  seriesShown: (shown, total) => `${shown} of ${total} series shown`,
+  seriesGroup: (label) => `${label} series`,
+  exploreBy: (label, category) => `${label}, explore by ${category}`,
+  summaryEmpty: (label, empty) => `${label}. ${empty}.`,
+  summaryRange: (label, from, to) => `${label}, ${from} to ${to}.`,
+  summaryLatest: (name, value) => `${name}, latest ${value}.`,
+  reading: (time, values) => `${time}: ${values}`,
+  loading: 'Loading',
+};
 
 type Point = [x: number, value: number];
 type Track = { shape: Point[]; presence: number; fade: { stop: () => void } | null };
@@ -144,6 +181,20 @@ function niceScale(low: number, high: number) {
     }
   }
   return { min: lo, max: hi, ticks: [lo, hi] };
+}
+
+/** A caller-fixed value axis. The ends stay exactly where asked; the gridlines use the same step rule as niceScale. */
+function fixedScale(min: number, max: number) {
+  const span = max - min || 1,
+    magnitude = 10 ** Math.floor(Math.log10(span / 4));
+  const step =
+    [1, 2, 2.5, 5, 10]
+      .map((factor) => factor * magnitude)
+      .find((candidate) => span / candidate <= 4 + 1e-9) ?? span;
+  const ticks = [clean(min)];
+  for (let value = Math.floor(min / step) * step + step; value <= max + step / 1000; value += step)
+    ticks.push(clean(value));
+  return { min: clean(min), max: clean(max), ticks };
 }
 
 /** The line through every value, sampled densely on x from 0 to 1 in data units. Monotone cubic tangents keep a smooth curve from swinging past the data. */
@@ -310,9 +361,12 @@ export function LineChart({
   legend,
   categoryLabel = 'Date',
   curve = 'smooth',
+  yDomain,
+  messages,
   ref,
   className,
 }: LineChartProps) {
+  const copy = { ...defaultMessages, ...messages };
   const reduced = useReducedMotionSafe();
   const figure = useRef<HTMLElement>(null);
   const plot = useRef<HTMLDivElement>(null);
@@ -328,6 +382,8 @@ export function LineChart({
   const uid = `line${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const last = data.length - 1;
   const empty = data.length === 0;
+  // One sample has no slope, so it gets a persistent marker instead of a scrub-only dot.
+  const single = data.length === 1;
 
   // Hidden series, controlled or not.
   const [ownHidden, setOwnHidden] = useState<string[]>(defaultHiddenSeries ?? []);
@@ -363,7 +419,11 @@ export function LineChart({
       low = Math.min(low, value);
       high = Math.max(high, value);
     }
-  const range = Number.isFinite(low) ? niceScale(low, high) : null;
+  const range = yDomain
+    ? fixedScale(yDomain[0], yDomain[1])
+    : Number.isFinite(low)
+      ? niceScale(low, high)
+      : null;
   const [steady, setSteady] = useState(() => range ?? niceScale(0, 100));
   if (range && (range.min !== steady.min || range.max !== steady.max)) setSteady(range);
   const scale = { min: useMotionValue(steady.min), max: useMotionValue(steady.max) };
@@ -388,9 +448,9 @@ export function LineChart({
     tipTargetY = useMotionValue(0);
   const tipSpringX = useSpring(tipTargetX, follow),
     tipSpringY = useSpring(tipTargetY, follow);
-  const live = useRef({ series, hidden });
+  const live = useRef({ series, hidden, single });
   useLayoutEffect(() => {
-    live.current = { series, hidden };
+    live.current = { series, hidden, single };
   });
 
   // One writer for every drawn attribute: morphs, toggles, the scale, the crosshair, and the measured size all repaint through here.
@@ -419,7 +479,8 @@ export function LineChart({
       const dot = dots.current.get(line.key);
       if (dot && track.shape.length) {
         const cy = y(valueAt(track.shape, at));
-        dot.setAttribute('cx', (at * w).toFixed(1));
+        // A single sample is drawn as a flat line, so its marker sits mid-plot rather than at the cursor.
+        dot.setAttribute('cx', (live.current.single ? w / 2 : at * w).toFixed(1));
         dot.setAttribute('cy', cy.toFixed(1));
         if (p > 0.5) dotYs.push(cy);
       }
@@ -636,13 +697,22 @@ export function LineChart({
     `${formatValue ? formatValue(value, line) : grouped.format(value)}${unit ? ` ${unit}` : ''}`;
   const reading = index === null ? null : data[index];
   const valueText = reading
-    ? `${reading.label}: ${visible.map((line) => `${line.label} ${format(reading.values[line.key] ?? 0, line)}`).join(', ')}`
+    ? copy.reading(
+        reading.label,
+        visible
+          .map((line) => `${line.label} ${format(reading.values[line.key] ?? 0, line)}`)
+          .join(', '),
+      )
     : empty
       ? emptyLabel
-      : `${visible.length} of ${series.length} series shown`;
+      : copy.seriesShown(visible.length, series.length);
   const summary = empty
-    ? `${label}. ${emptyLabel}.`
-    : `${label}, ${data[0]!.label} to ${data[last]!.label}. ${visible.map((line) => `${line.label}, latest ${format(data[last]!.values[line.key] ?? 0, line)}`).join('. ')}.`;
+    ? copy.summaryEmpty(label, emptyLabel)
+    : `${copy.summaryRange(label, data[0]!.label, data[last]!.label)} ${visible
+        .map((line) =>
+          copy.summaryLatest(line.label, format(data[last]!.values[line.key] ?? 0, line)),
+        )
+        .join(' ')}`;
   const picks = axisPicks(data, plotWidth);
   const allHidden = !empty && visible.length === 0;
   const tipX = reduced ? tipTargetX : tipSpringX,
@@ -656,7 +726,7 @@ export function LineChart({
       aria-busy={loading || undefined}
     >
       {showLegend && (
-        <div className={styles.legend} role="group" aria-label={`${label} series`}>
+        <div className={styles.legend} role="group" aria-label={copy.seriesGroup(label)}>
           {series.map((line, at) => (
             <button
               key={line.key}
@@ -678,6 +748,7 @@ export function LineChart({
       )}
       <div
         className={styles.chart}
+        data-single={single || undefined}
         data-scrubbing={scrubbing || undefined}
         data-loading={loading || undefined}
       >
@@ -687,7 +758,7 @@ export function LineChart({
           style={{ height }}
           role="slider"
           tabIndex={empty ? -1 : 0}
-          aria-label={`${label}, explore by ${categoryLabel.toLowerCase()}`}
+          aria-label={copy.exploreBy(label, categoryLabel.toLowerCase())}
           aria-orientation="horizontal"
           aria-valuemin={1}
           aria-valuemax={Math.max(1, data.length)}
@@ -808,7 +879,7 @@ export function LineChart({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, transition: fadeFast }}
               >
-                {empty ? emptyLabel : 'Choose a series to show'}
+                {empty ? emptyLabel : copy.chooseSeries}
               </motion.p>
             )}
             {loading && empty && (
@@ -886,7 +957,7 @@ export function LineChart({
         </div>
       )}
       <p className={styles.srOnly} aria-live="polite" aria-atomic="true">
-        {loading ? 'Loading' : ''}
+        {loading ? copy.loading : ''}
       </p>
     </figure>
   );

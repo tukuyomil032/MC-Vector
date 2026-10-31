@@ -172,7 +172,7 @@
 - [x] グラフ: メモリ（Recharts を Arc の line-chart に置き換える）
 - [x] グラフ: TPS（Recharts を Arc の line-chart に置き換える）
 - [x] グラフの計測待ちの空の状態
-- [ ] グラフのサンプルが1点のときの点（未完: Arc の LineChart は点を scrub 中にしか出さない。共有部品の変更が必要）
+- [x] グラフのサンプルが1点のときの点（LineChart に常時表示の点を足した。CPU と TPS は yDomain で軸を固定した）
 - [x] グラフの X 軸（Arc の LineChart の軸と、その下の経過時間のキャプション）
 - [x] グラフの Y 軸（Arc の LineChart が自動で目盛りを出す。固定の 0〜100 と 0〜22 は使わない）
 - [x] グラフのツールチップ
