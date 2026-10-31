@@ -477,6 +477,10 @@ export interface TranslationDictionary {
       title: string;
       tagsLabel: string;
       tagsPlaceholder: string;
+      addTag: string;
+      currentTags: string;
+      noTags: string;
+      removeHint: string;
       noteLabel: string;
       notePlaceholder: string;
     };

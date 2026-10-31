@@ -5,8 +5,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Alert } from '@/components/arc/alert/alert';
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
+import { ChipGroup } from '@/components/arc/chip-group/chip-group';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Input } from '@/components/arc/input/input';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
+import { Textarea } from '@/components/arc/textarea/textarea';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import {
   applyBackupRetention,
@@ -30,7 +34,7 @@ import {
 } from '../../store/backupOperationStore';
 import { buildManualBackupName } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
-import { Input, NativeSelect, Textarea } from './ui/Field';
+import { Input as FieldInput, NativeSelect } from './ui/Field';
 import styles from './BackupsView.module.css';
 
 interface Props {
@@ -201,13 +205,6 @@ function formatBackupSize(bytes: number, t: Translate, locale: string): string {
   return `${formatted} ${t(SIZE_UNIT_KEYS[SIZE_UNITS[index]])}`;
 }
 
-function parseTagsInput(value: string): string[] {
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0);
-}
-
 export async function persistBackupCatalogBestEffort(
   persist: () => Promise<void>,
   onFailure: (error: unknown) => void,
@@ -241,7 +238,8 @@ export default function BackupsView({ server }: Props) {
   const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>('loading');
   const [worlds, setWorlds] = useState<string[]>([]);
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState('');
+  const [tagList, setTagList] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState('');
   const [noteInput, setNoteInput] = useState('');
   const catalogOperationInFlightRef = useRef(false);
   const initializationKey = `${server.id}\0${server.path}`;
@@ -1272,8 +1270,18 @@ export default function BackupsView({ server }: Props) {
   const openTagEditor = (backupName: string) => {
     const meta = getBackupMeta(backupName);
     setTagEditorTarget(backupName);
-    setTagInput(meta.tags.join(', '));
+    setTagList(meta.tags);
+    setTagDraft('');
     setNoteInput(meta.note);
+  };
+
+  const addTagDraft = () => {
+    const nextTag = tagDraft.trim();
+    if (!nextTag) {
+      return;
+    }
+    setTagList((current) => (current.includes(nextTag) ? current : [...current, nextTag]));
+    setTagDraft('');
   };
 
   const handleSaveTagEditor = async () => {
@@ -1293,7 +1301,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     try {
-      const tags = parseTagsInput(tagInput);
+      const tags = tagList;
       const current = getBackupMeta(tagEditorTarget);
       const nextCatalog: BackupCatalog = {
         ...backupCatalog,
@@ -1381,6 +1389,19 @@ export default function BackupsView({ server }: Props) {
       new Date(date),
     );
   };
+
+  const blockDismiss = (event: Event) => event.preventDefault();
+
+  const tagFooter = (
+    <>
+      <Button variant="secondary" onClick={() => setTagEditorTarget(null)} disabled={isProcessing}>
+        {t('common.cancel')}
+      </Button>
+      <Button variant="primary" onClick={() => void handleSaveTagEditor()} disabled={isProcessing}>
+        {t('common.save')}
+      </Button>
+    </>
+  );
 
   return (
     <div className={styles.page} data-testid="backups-view">
@@ -1552,7 +1573,7 @@ export default function BackupsView({ server }: Props) {
               <div className="backups-view__form-grid">
                 <div className="backups-view__form-group">
                   <label className="backups-view__form-label">{t('backups.modal.fileName')}</label>
-                  <Input
+                  <FieldInput
                     data-testid="backup-name-input"
                     placeholder={defaultName()}
                     value={customName}
@@ -1650,54 +1671,64 @@ export default function BackupsView({ server }: Props) {
         </div>
       )}
 
-      {tagEditorTarget && (
-        <div
-          className="backups-view__tag-overlay modal-backdrop"
-          onClick={() => setTagEditorTarget(null)}
+      <Dialog
+        open={tagEditorTarget !== null}
+        onOpenChange={(next) => {
+          if (!next && !isProcessing) setTagEditorTarget(null);
+        }}
+      >
+        <DialogContent
+          aria-describedby={undefined}
+          data-testid="backups-tag-dialog"
+          title={t('backups.tagEditor.title')}
+          description={tagEditorTarget ?? undefined}
+          width="min(520px, calc(100vw - var(--space-8)))"
+          footer={tagFooter}
+          onEscapeKeyDown={isProcessing ? blockDismiss : undefined}
+          onPointerDownOutside={isProcessing ? blockDismiss : undefined}
         >
-          <div
-            className="backups-view__tag-panel modal-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="backups-view__tag-header">
-              <h4 className="backups-view__tag-title">{t('backups.tagEditor.title')}</h4>
-              <div className="backups-view__tag-target">{tagEditorTarget}</div>
-            </div>
-
-            <div className="backups-view__tag-body">
-              <label className="backups-view__form-label">{t('backups.tagEditor.tagsLabel')}</label>
+          <div className={styles.form}>
+            <div className={styles.tagAdd}>
               <Input
-                value={tagInput}
-                onChange={(event) => setTagInput(event.target.value)}
+                label={t('backups.tagEditor.tagsLabel')}
                 placeholder={t('backups.tagEditor.tagsPlaceholder')}
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addTagDraft();
+                  }
+                }}
               />
-
-              <label className="backups-view__form-label mt-3">
-                {t('backups.tagEditor.noteLabel')}
-              </label>
-              <Textarea
-                className="backups-view__tag-note"
-                value={noteInput}
-                onChange={(event) => setNoteInput(event.target.value)}
-                placeholder={t('backups.tagEditor.notePlaceholder')}
-              />
-            </div>
-
-            <div className="backups-view__tag-actions">
-              <Button variant="secondary" onClick={() => setTagEditorTarget(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => void handleSaveTagEditor()}
-                disabled={isProcessing}
-              >
-                {t('common.save')}
+              <Button variant="secondary" disabled={!tagDraft.trim()} onClick={addTagDraft}>
+                {t('backups.tagEditor.addTag')}
               </Button>
             </div>
+
+            {tagList.length > 0 ? (
+              <div className={styles.tagChips}>
+                <ChipGroup
+                  label={t('backups.tagEditor.currentTags')}
+                  options={tagList.map((tag) => ({ value: tag, label: tag }))}
+                  value={tagList}
+                  onValueChange={setTagList}
+                />
+                <p className={styles.muted}>{t('backups.tagEditor.removeHint')}</p>
+              </div>
+            ) : (
+              <p className={styles.muted}>{t('backups.tagEditor.noTags')}</p>
+            )}
+
+            <Textarea
+              label={t('backups.tagEditor.noteLabel')}
+              placeholder={t('backups.tagEditor.notePlaceholder')}
+              value={noteInput}
+              onChange={(event) => setNoteInput(event.target.value)}
+            />
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
