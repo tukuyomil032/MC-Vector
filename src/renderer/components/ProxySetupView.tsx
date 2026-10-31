@@ -39,9 +39,11 @@ export default function ProxySetupView({
       !['Velocity', 'Waterfall', 'BungeeCord'].includes(s.software) &&
       !s.name.toLowerCase().includes('proxy'),
   );
-  const selectedCount = backendCandidates.filter((server) =>
-    selectedBackendIds.includes(server.id),
-  ).length;
+  // A selection for a server that is no longer listed (deleted, or renamed into a proxy) is ignored, so it is never sent.
+  const listedSelectedIds = backendCandidates
+    .map((server) => server.id)
+    .filter((id) => selectedBackendIds.includes(id));
+  const selectedCount = listedSelectedIds.length;
   const allSelected = backendCandidates.length > 0 && selectedCount === backendCandidates.length;
   const selectAllState = allSelected ? true : selectedCount > 0 ? 'indeterminate' : false;
 
@@ -60,7 +62,7 @@ export default function ProxySetupView({
       return;
     }
     // One confirm covers the whole build. Fewer than two backends adds its warning above the rewrite notice.
-    const fewBackends = selectedBackendIds.length < 2;
+    const fewBackends = listedSelectedIds.length < 2;
     const confirmed = await confirm({
       title: t('proxySetup.dialogTitle'),
       description: fewBackends
@@ -75,7 +77,7 @@ export default function ProxySetupView({
       await onBuildNetwork({
         proxySoftware,
         proxyPort,
-        backendServerIds: selectedBackendIds,
+        backendServerIds: listedSelectedIds,
       });
     } finally {
       setIsBuilding(false);

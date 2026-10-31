@@ -62,6 +62,30 @@ describe('ProxySetupView', () => {
     });
   });
 
+  it('sends only the backends that are still listed', async () => {
+    const onBuildNetwork = vi.fn();
+    const { rerender } = render(
+      <ProxySetupView servers={servers} onBuildNetwork={onBuildNetwork} onOpenHelp={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Lobby' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Survival' }));
+
+    rerender(
+      <ProxySetupView
+        servers={servers.filter((server) => server.id !== 'server-1')}
+        onBuildNetwork={onBuildNetwork}
+        onOpenHelp={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('1 of 1 selected')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Build Network' }));
+
+    await waitFor(() => expect(onBuildNetwork).toHaveBeenCalledOnce());
+    expect(onBuildNetwork).toHaveBeenCalledWith(
+      expect.objectContaining({ backendServerIds: ['server-2'] }),
+    );
+  });
+
   it('does not build when the confirm is canceled', async () => {
     confirmMock.mockResolvedValue(false);
     const onBuildNetwork = vi.fn();
