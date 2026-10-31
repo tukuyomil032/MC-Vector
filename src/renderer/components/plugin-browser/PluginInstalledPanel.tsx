@@ -1,8 +1,9 @@
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
-import { Card } from '@/components/arc/card/card';
+import { Puzzle } from 'lucide-react';
 import { useTranslation } from '../../../i18n';
 import { EmptyLine } from '../ui/EmptyLine';
+import { SectionTitle } from '../ui/IconTile';
 import { PluginTile } from './PluginResultCard';
 import type { InstalledPluginEntry, UpdateStatus } from './plugin-model';
 import styles from './plugin-browser.module.css';
@@ -51,7 +52,7 @@ export function PluginInstalledPanel({
     <div className={styles.panel}>
       <div className={styles.installedHeader}>
         <div>
-          <h2 className={styles.installedTitle}>{t('plugins.installed.title')}</h2>
+          <SectionTitle icon={Puzzle} title={t('plugins.installed.title')} />
           <p className={styles.folder}>
             {t('plugins.browser.installedFolder', { folder: folderName })}
           </p>
@@ -80,83 +81,88 @@ export function PluginInstalledPanel({
             const reinstalling = installingId === entry.actionItem.id;
 
             return (
-              <Card
-                key={entry.fileName}
-                className={styles.resultCard}
-                title={entry.displayName}
-                description={entry.description || t('plugins.browser.noDescription')}
-                media={<PluginTile iconUrl={entry.iconUrl} title={entry.displayName} />}
-              >
-                <div className={styles.badges}>
-                  <Badge tone="neutral">
-                    {entry.state === 'disabled'
-                      ? t('plugins.browser.disabledBadge')
-                      : t('plugins.browser.installedBadge')}
-                  </Badge>
-                  {statusBadge ? (
-                    <Badge
-                      tone="neutral"
-                      title={
-                        statusBadge === 'update-available' && latestFileName
-                          ? t('plugins.browser.latestTooltip', { fileName: latestFileName })
-                          : undefined
-                      }
-                    >
-                      {updateStatusLabel(statusBadge)}
+              <article key={entry.fileName} className={styles.resultCard}>
+                <PluginTile iconUrl={entry.iconUrl} title={entry.displayName} />
+
+                <div className={styles.cardBody}>
+                  <div className={styles.cardHead}>
+                    <h3 className={styles.cardTitle} title={entry.displayName}>
+                      {entry.displayName}
+                    </h3>
+                    <Badge tone="neutral">
+                      {entry.state === 'disabled'
+                        ? t('plugins.browser.disabledBadge')
+                        : t('plugins.browser.installedBadge')}
                     </Badge>
-                  ) : null}
-                </div>
+                    {statusBadge ? (
+                      <Badge
+                        tone="neutral"
+                        title={
+                          statusBadge === 'update-available' && latestFileName
+                            ? t('plugins.browser.latestTooltip', { fileName: latestFileName })
+                            : undefined
+                        }
+                      >
+                        {updateStatusLabel(statusBadge)}
+                      </Badge>
+                    ) : null}
+                  </div>
 
-                <dl className={styles.facts}>
-                  <dt>{t('plugins.browser.installedSource')}</dt>
-                  <dd>{entry.sourceItem?.platform ?? t('plugins.browser.localSource')}</dd>
-                  <dt>{t('plugins.browser.installedFile')}</dt>
-                  <dd className={styles.fileName}>{entry.fileName}</dd>
-                  <dt>{t('plugins.browser.installedVersion')}</dt>
-                  <dd>{entry.fileVersion || t('plugins.browser.na')}</dd>
-                  <dt>{t('plugins.browser.installedGameVersions')}</dt>
-                  <dd>
-                    {entry.minecraftVersions.length > 0
-                      ? entry.minecraftVersions.join(', ')
-                      : t('plugins.browser.na')}
-                  </dd>
-                </dl>
+                  <p className={styles.cardDescription}>
+                    {entry.description || t('plugins.browser.noDescription')}
+                  </p>
 
-                <div className={styles.actions}>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={isProcessing}
-                    onClick={() => onUninstall(entry)}
-                  >
-                    {t('plugins.browser.uninstall')}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    loading={reinstalling}
-                    disabled={isProcessing || !canReinstall}
-                    onClick={() => onReinstall(entry)}
-                  >
-                    {reinstalling
-                      ? installingLabel(entry.actionItem.id)
-                      : t('plugins.browser.reinstall')}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={isProcessing}
-                    onClick={() => onToggle(entry)}
-                  >
-                    {entry.state === 'disabled'
-                      ? t('plugins.browser.enable')
-                      : t('plugins.browser.disable')}
-                  </Button>
+                  <dl className={styles.facts}>
+                    <dt>{t('plugins.browser.installedSource')}</dt>
+                    <dd>{entry.sourceItem?.platform ?? t('plugins.browser.localSource')}</dd>
+                    <dt>{t('plugins.browser.installedFile')}</dt>
+                    <dd className={styles.fileName}>{entry.fileName}</dd>
+                    <dt>{t('plugins.browser.installedVersion')}</dt>
+                    <dd>{entry.fileVersion || t('plugins.browser.na')}</dd>
+                    <dt>{t('plugins.browser.installedGameVersions')}</dt>
+                    <dd>
+                      {entry.minecraftVersions.length > 0
+                        ? entry.minecraftVersions.join(', ')
+                        : t('plugins.browser.na')}
+                    </dd>
+                  </dl>
+
+                  <div className={styles.cardActions}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={isProcessing}
+                      onClick={() => onUninstall(entry)}
+                    >
+                      {t('plugins.browser.uninstall')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      loading={reinstalling}
+                      disabled={isProcessing || !canReinstall}
+                      onClick={() => onReinstall(entry)}
+                    >
+                      {reinstalling
+                        ? installingLabel(entry.actionItem.id)
+                        : t('plugins.browser.reinstall')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={isProcessing}
+                      onClick={() => onToggle(entry)}
+                    >
+                      {entry.state === 'disabled'
+                        ? t('plugins.browser.enable')
+                        : t('plugins.browser.disable')}
+                    </Button>
+                  </div>
                 </div>
-              </Card>
+              </article>
             );
           })}
         </div>
