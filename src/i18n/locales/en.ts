@@ -528,22 +528,10 @@ export const en: TranslationDictionary = {
     loadFailed: 'Could not load the lists',
     retry: 'Try again',
     emptyList: {
-      whitelist: {
-        title: 'No whitelisted players',
-        description: 'While the whitelist is on, only players on this list can join.',
-      },
-      ops: {
-        title: 'No operators',
-        description: 'Operators can run commands in the game and manage other players.',
-      },
-      bannedPlayers: {
-        title: 'No banned players',
-        description: 'Banned players cannot join this server.',
-      },
-      bannedIps: {
-        title: 'No banned IP addresses',
-        description: 'Connections from banned addresses are refused.',
-      },
+      whitelist: { title: 'No whitelisted players' },
+      ops: { title: 'No operators' },
+      bannedPlayers: { title: 'No banned players' },
+      bannedIps: { title: 'No banned IP addresses' },
     },
     placeholder: {
       playerName: 'Player Name',

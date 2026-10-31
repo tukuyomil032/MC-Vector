@@ -544,10 +544,10 @@ export interface TranslationDictionary {
     loadFailed: string;
     retry: string;
     emptyList: {
-      whitelist: { title: string; description: string };
-      ops: { title: string; description: string };
-      bannedPlayers: { title: string; description: string };
-      bannedIps: { title: string; description: string };
+      whitelist: { title: string };
+      ops: { title: string };
+      bannedPlayers: { title: string };
+      bannedIps: { title: string };
     };
     placeholder: {
       playerName: string;

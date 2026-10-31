@@ -524,22 +524,10 @@ export const ja: TranslationDictionary = {
     loadFailed: 'リストを読み込めませんでした',
     retry: '再試行',
     emptyList: {
-      whitelist: {
-        title: 'ホワイトリストのプレイヤーはいません',
-        description: 'ホワイトリストが有効な間は、このリストのプレイヤーだけが参加できます。',
-      },
-      ops: {
-        title: 'OPはいません',
-        description: 'OPはゲーム内でコマンドを実行し、他のプレイヤーを管理できます。',
-      },
-      bannedPlayers: {
-        title: 'BANされたプレイヤーはいません',
-        description: 'BANされたプレイヤーは、このサーバーに参加できません。',
-      },
-      bannedIps: {
-        title: 'BANされたIPアドレスはありません',
-        description: 'BANされたアドレスからの接続は拒否されます。',
-      },
+      whitelist: { title: 'ホワイトリストのプレイヤーはいません' },
+      ops: { title: 'OPはいません' },
+      bannedPlayers: { title: 'BANされたプレイヤーはいません' },
+      bannedIps: { title: 'BANされたIPアドレスはありません' },
     },
     placeholder: {
       playerName: 'プレイヤー名',
