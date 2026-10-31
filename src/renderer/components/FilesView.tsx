@@ -1050,7 +1050,7 @@ export default function FilesView({ server }: Props) {
       >
         <DialogContent
           title={t('files.modal.createImportTitle')}
-          width="min(520px, calc(100vw - 2rem))"
+          width="min(560px, calc(100vw - 2rem))"
           data-testid="files-create-modal"
           footer={
             <>
