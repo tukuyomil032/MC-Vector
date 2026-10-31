@@ -46,7 +46,7 @@ import {
   saveFileContent,
 } from '../../lib/file-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
-import FileEditorWorkspace from './FileEditorWorkspace';
+import FileEditorWorkspace, { ARC_MONACO_THEME, defineArcMonacoTheme } from './FileEditorWorkspace';
 import styles from './FilesView.module.css';
 
 interface Props {
@@ -998,65 +998,63 @@ export default function FilesView({ server }: Props) {
         </ContextMenu>
       </div>
 
-      {/* Diff View Overlay */}
+      {/* Diff viewer: the Arc header and status bar frame the read-only Monaco diff */}
       {diffMode && diffOriginal && diffModified && (
-        <div className="files-view__editor-overlay" aria-label={t('files.toolbar.diffOpen')}>
-          <div className="files-view__editor-header">
-            <div className="files-view__editor-identity">
-              <span className="files-view__editor-file-icon" aria-hidden="true">
-                <GitCompareArrows size={18} strokeWidth={1.8} />
+        <section className={styles.overlay} aria-label={t('files.toolbar.diffOpen')}>
+          <header className={styles.overlayHeader}>
+            <div className={styles.overlayIdentity}>
+              <span className={styles.overlayIcon} aria-hidden="true">
+                <GitCompareArrows size={18} strokeWidth={1.75} />
               </span>
-              <div className="files-view__editor-file-meta">
-                <div className="files-view__editor-file-title">
-                  <strong>
-                    {diffOriginal.path.split(/[\\/]/).at(-1)}
-                    {' → '}
-                    {diffModified.path.split(/[\\/]/).at(-1)}
-                  </strong>
-                </div>
-                <span className="files-view__editor-file-path">{t('files.toolbar.diffOpen')}</span>
+              <div className={styles.overlayMeta}>
+                <strong className={styles.overlayTitle}>
+                  {diffOriginal.path.split(/[\\/]/).at(-1)}
+                  {' → '}
+                  {diffModified.path.split(/[\\/]/).at(-1)}
+                </strong>
+                <span className={styles.overlaySubtitle}>{t('files.toolbar.diffOpen')}</span>
               </div>
             </div>
-            <div className="files-view__editor-actions">
-              <button
-                type="button"
-                className="files-view__editor-icon-button"
-                onClick={() => {
-                  setDiffMode(false);
-                  setDiffOriginal(null);
-                  setDiffModified(null);
-                }}
-                aria-label={t('common.close')}
-                title={t('common.close')}
-              >
-                <X aria-hidden="true" size={18} strokeWidth={1.8} />
-                {t('common.close')}
-              </button>
-            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setDiffMode(false);
+                setDiffOriginal(null);
+                setDiffModified(null);
+              }}
+            >
+              <X aria-hidden="true" size={16} strokeWidth={1.75} />
+              {t('common.close')}
+            </Button>
+          </header>
+          <div className={styles.overlayBody}>
+            <DiffEditor
+              height="100%"
+              original={diffOriginal.content}
+              modified={diffModified.content}
+              language={detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}
+              theme={ARC_MONACO_THEME}
+              beforeMount={defineArcMonacoTheme}
+              options={{ readOnly: true, minimap: { enabled: false }, renderSideBySide: true }}
+            />
           </div>
-          <DiffEditor
-            height="100%"
-            original={diffOriginal.content}
-            modified={diffModified.content}
-            language={detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}
-            theme="vs-dark"
-            options={{ readOnly: true, minimap: { enabled: false }, renderSideBySide: true }}
-          />
-          <div className="files-view__editor-statusbar" aria-live="polite">
+          <footer className={styles.overlayStatus} aria-live="polite">
             <span>{detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}</span>
             <span>{t('files.editor.readOnly')}</span>
-          </div>
-        </div>
+          </footer>
+        </section>
       )}
 
-      {/* Editor Modal */}
+      {/* Shown while the file is read, before the editor opens */}
       {isEditorLoading && (
-        <div
-          className="files-view__editor-overlay files-view__editor-overlay--loading"
-          aria-busy="true"
-        >
-          <div className="files-view__editor-loading">{t('files.loading')}</div>
-        </div>
+        <section className={styles.overlay} aria-busy="true" aria-label={t('files.loading')}>
+          <div className={styles.loadingPanel} role="status">
+            <span className={styles.loadingBar} aria-hidden="true" />
+            {t('files.loading')}
+          </div>
+        </section>
       )}
       {isEditorOpen && editingFile && !isEditorLoading && (
         <FileEditorWorkspace
