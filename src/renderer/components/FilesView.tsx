@@ -1070,11 +1070,11 @@ export default function FilesView({ server }: Props) {
           }
         >
           <div className={styles.createBody}>
-            {/* 120px is the narrowest column, so the three choices stay in one row of equal widths. */}
+            {/* Three fixed columns: auto-fill can open an empty fourth column in a wide dialog and squeeze the cards. */}
             <RadioCards
               aria-label={t('files.modal.createImportTitle')}
               layout="grid"
-              minColumnWidth={120}
+              style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
               options={createOptions}
               value={createMode}
               onValueChange={(value) => setCreateMode(value as CreateMode)}
