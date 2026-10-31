@@ -86,6 +86,11 @@
   padding: var(--space-1) 0;
 }
 
+/* Each row is a ContextMenu target; a 1px line separates it from the next row. */
+.item:not(:last-child) {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .row {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
@@ -114,10 +119,6 @@
   background: var(--accent-subtle);
 }
 
-.rowPick {
-  cursor: crosshair;
-}
-
 .checkCell {
   display: inline-flex;
 }
@@ -139,7 +140,7 @@
 }
 
 .size {
-  min-width: 80px;
+  min-width: 6rem;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -168,63 +169,10 @@
   font-family: var(--font-body);
 }
 
-.overlayHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: 56px;
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-raised);
-}
-
-.overlayIdentity {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.overlayIcon {
-  display: inline-flex;
-  flex: none;
-  color: var(--text-secondary);
-}
-
-.overlayMeta {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.overlayTitle {
-  overflow: hidden;
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.overlaySubtitle {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-}
-
-.overlayBody {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.overlayStatus {
-  display: flex;
-  align-items: center;
+/* The create dialog stacks the choice cards above the name field, with the same gap as the rest of the form. */
+.createBody {
+  display: grid;
   gap: var(--space-4);
-  min-height: 32px;
-  padding: var(--space-1) var(--space-4);
-  border-top: 1px solid var(--border);
-  background: var(--surface-raised);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
 }
 
 .loadingPanel {

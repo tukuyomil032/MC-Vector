@@ -120,11 +120,6 @@ export const en: TranslationDictionary = {
     },
     eula: {
       title: 'Accept the Minecraft EULA?',
-      description: 'Before starting {name}, review and accept the Minecraft EULA.',
-      fileMissing: 'This server does not have an eula.txt file yet.',
-      fileNotAccepted: 'This server’s eula.txt file is not accepted yet.',
-      explanation:
-        'The server will create and use eula.txt to record this server’s agreement to the Minecraft EULA.',
       openLink: 'Read the official Minecraft EULA',
       consentLabel: 'I have read the Minecraft EULA and agree to it.',
       acceptAndStart: 'Accept and start',
@@ -310,10 +305,6 @@ export const en: TranslationDictionary = {
       largeDescription: 'Files larger than {megabytes} MB cannot be opened in the editor.',
     },
     emptyFolder: 'Folder is empty',
-    emptyFolderHint: 'Drop files here, or create a new file or folder.',
-    size: {
-      kb: '{value} KB',
-    },
     loading: 'Loading...',
     modal: {
       createImportTitle: 'Create / Import',
@@ -332,9 +323,6 @@ export const en: TranslationDictionary = {
       renameTitle: 'Rename',
       renameButton: 'Rename',
       renameLabel: 'New name',
-      folderHint: 'Create an empty folder here.',
-      fileHint: 'Create an empty text file here.',
-      importHint: 'Copy files from this computer into this folder.',
       nameInvalid: 'Names cannot contain / or \\.',
       moveDestLabel: 'Destination',
       moveIntoItself: 'Items cannot be moved into themselves.',
@@ -361,10 +349,6 @@ export const en: TranslationDictionary = {
       extractFailed: 'Failed to extract',
       extractNotZip: 'Select a .zip archive to extract.',
       extractSkipped: 'Skipped {count} item(s) that are not .zip archives.',
-      binaryNoDiff: 'Binary files cannot be diffed',
-      diffReadFailed: 'Could not read this file for comparison',
-      diffSelectOriginal: 'Click the original file to compare',
-      diffSelectModified: 'Click the modified file to compare',
     },
     toolbar: {
       goUp: 'Go Up',
@@ -374,9 +358,6 @@ export const en: TranslationDictionary = {
       compress: 'Compress',
       extract: 'Extract',
       delete: 'Delete',
-      diffOpen: 'Diff View',
-      diffClose: 'Close Diff',
-      diffCancel: 'Cancel Compare',
       navigation: 'Folder navigation',
       tools: 'File tools',
       selection: 'Selected items',
@@ -521,10 +502,6 @@ export const en: TranslationDictionary = {
       add: 'Add',
       remove: 'Remove',
     },
-    notOnline: 'The server is not online',
-    notOnlineHint: 'Changes are saved to the list and take effect the next time the server starts.',
-    count: '{count} entries',
-    countOne: '1 entry',
     validation: {
       playerRequired: 'Enter a player name to add.',
       ipRequired: 'Enter an IP address to add.',
@@ -532,22 +509,10 @@ export const en: TranslationDictionary = {
     loadFailed: 'Could not load the lists',
     retry: 'Try again',
     emptyList: {
-      whitelist: {
-        title: 'No whitelisted players',
-        description: 'While the whitelist is on, only players on this list can join.',
-      },
-      ops: {
-        title: 'No operators',
-        description: 'Operators can run commands in the game and manage other players.',
-      },
-      bannedPlayers: {
-        title: 'No banned players',
-        description: 'Banned players cannot join this server.',
-      },
-      bannedIps: {
-        title: 'No banned IP addresses',
-        description: 'Connections from banned addresses are refused.',
-      },
+      whitelist: { title: 'No whitelisted players' },
+      ops: { title: 'No operators' },
+      bannedPlayers: { title: 'No banned players' },
+      bannedIps: { title: 'No banned IP addresses' },
     },
     placeholder: {
       playerName: 'Player Name',

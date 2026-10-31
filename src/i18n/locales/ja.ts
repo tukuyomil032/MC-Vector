@@ -119,10 +119,6 @@ export const ja: TranslationDictionary = {
     },
     eula: {
       title: 'Minecraft EULA に同意しますか？',
-      description: '{name} を起動する前に、Minecraft EULA を確認して同意してください。',
-      fileMissing: 'このサーバーには eula.txt がまだ作成されていません。',
-      fileNotAccepted: 'このサーバーの eula.txt はまだ承認されていません。',
-      explanation: 'サーバーは Minecraft EULA への同意を eula.txt に記録してから起動します。',
       openLink: '公式の Minecraft EULA を読む',
       consentLabel: 'Minecraft EULA を読み、内容に同意します。',
       acceptAndStart: '同意して起動',
@@ -306,10 +302,6 @@ export const ja: TranslationDictionary = {
       largeDescription: '{megabytes} MB を超えるファイルはエディタで開けません。',
     },
     emptyFolder: 'フォルダは空です',
-    emptyFolderHint: 'ここにファイルをドロップするか、新規作成してください。',
-    size: {
-      kb: '{value} KB',
-    },
     loading: '読み込み中…',
     modal: {
       createImportTitle: '新規作成 / インポート',
@@ -328,9 +320,6 @@ export const ja: TranslationDictionary = {
       renameTitle: '名前の変更',
       renameButton: '変更',
       renameLabel: '新しい名前',
-      folderHint: 'このフォルダー内に空のフォルダーを作成します。',
-      fileHint: 'このフォルダー内に空のテキストファイルを作成します。',
-      importHint: 'このパソコンのファイルをこのフォルダーにコピーします。',
       nameInvalid: '名前に / や \\ は使えません。',
       moveDestLabel: '移動先',
       moveIntoItself: '項目を自分自身の中へ移動することはできません。',
@@ -357,10 +346,6 @@ export const ja: TranslationDictionary = {
       extractFailed: '解凍に失敗しました',
       extractNotZip: '解凍できるのは .zip ファイルだけです。',
       extractSkipped: '.zip 以外の{count}件は解凍せずに飛ばしました。',
-      binaryNoDiff: 'バイナリファイルは差分表示できません',
-      diffReadFailed: '比較のためにファイルを読み込めませんでした',
-      diffSelectOriginal: '比較元ファイルをクリックしてください',
-      diffSelectModified: '比較先ファイルをクリックしてください',
     },
     toolbar: {
       goUp: '上の階層へ',
@@ -370,9 +355,6 @@ export const ja: TranslationDictionary = {
       compress: '圧縮',
       extract: '解凍',
       delete: '削除',
-      diffOpen: '差分表示',
-      diffClose: '差分を閉じる',
-      diffCancel: '比較を取りやめる',
       navigation: 'フォルダー移動',
       tools: 'ファイルツール',
       selection: '選択中の項目',
@@ -517,10 +499,6 @@ export const ja: TranslationDictionary = {
       add: '追加',
       remove: '削除',
     },
-    notOnline: 'サーバーはオンラインではありません',
-    notOnlineHint: '変更はリストに保存され、次回サーバーが起動したときに反映されます。',
-    count: '{count} 件',
-    countOne: '1 件',
     validation: {
       playerRequired: '追加するプレイヤー名を入力してください。',
       ipRequired: '追加するIPアドレスを入力してください。',
@@ -528,22 +506,10 @@ export const ja: TranslationDictionary = {
     loadFailed: 'リストを読み込めませんでした',
     retry: '再試行',
     emptyList: {
-      whitelist: {
-        title: 'ホワイトリストのプレイヤーはいません',
-        description: 'ホワイトリストが有効な間は、このリストのプレイヤーだけが参加できます。',
-      },
-      ops: {
-        title: 'OPはいません',
-        description: 'OPはゲーム内でコマンドを実行し、他のプレイヤーを管理できます。',
-      },
-      bannedPlayers: {
-        title: 'BANされたプレイヤーはいません',
-        description: 'BANされたプレイヤーは、このサーバーに参加できません。',
-      },
-      bannedIps: {
-        title: 'BANされたIPアドレスはありません',
-        description: 'BANされたアドレスからの接続は拒否されます。',
-      },
+      whitelist: { title: 'ホワイトリストのプレイヤーはいません' },
+      ops: { title: 'OPはいません' },
+      bannedPlayers: { title: 'BANされたプレイヤーはいません' },
+      bannedIps: { title: 'BANされたIPアドレスはありません' },
     },
     placeholder: {
       playerName: 'プレイヤー名',

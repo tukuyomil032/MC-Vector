@@ -91,7 +91,8 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
       <DialogContent
         data-testid="server-eula-modal"
         title={t('server.eula.title')}
-        description={view ? t('server.eula.description', { name: view.server.name }) : undefined}
+        // The body is the link and the consent checkbox, so the dialog has no description to point at.
+        aria-describedby={undefined}
         width="min(520px, calc(100vw - var(--space-8)))"
         onEscapeKeyDown={isSubmitting ? blockDismiss : undefined}
         onPointerDownOutside={isSubmitting ? blockDismiss : undefined}
@@ -99,24 +100,16 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
       >
         {view && (
           <div className={styles.body}>
-            <Alert
-              tone="warning"
-              title={
-                view.fileExists ? t('server.eula.fileNotAccepted') : t('server.eula.fileMissing')
-              }
+            <a
+              href={MINECRAFT_EULA_URL}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="server-eula-link"
+              className={styles.link}
+              onClick={handleOpenEula}
             >
-              <p>{t('server.eula.explanation')}</p>
-              <a
-                href={MINECRAFT_EULA_URL}
-                target="_blank"
-                rel="noreferrer"
-                data-testid="server-eula-link"
-                className={styles.link}
-                onClick={handleOpenEula}
-              >
-                {t('server.eula.openLink')}
-              </a>
-            </Alert>
+              {t('server.eula.openLink')}
+            </a>
 
             <Checkbox
               data-testid="server-eula-checkbox"

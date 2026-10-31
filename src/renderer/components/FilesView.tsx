@@ -1,4 +1,3 @@
-import { DiffEditor } from '@monaco-editor/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
   Archive,
@@ -8,13 +7,11 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
-  GitCompareArrows,
   Move,
   PackageOpen,
   Pencil,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react';
 import type * as React from 'react';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/arc/breadcrumb/breadcrumb';
@@ -26,7 +23,8 @@ import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { EmptyLine } from './ui/EmptyLine';
 import { Input } from '@/components/arc/input/input';
 import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatBytes } from '../shared/format-bytes';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
 import { useTranslation } from '../../i18n';
@@ -37,9 +35,11 @@ import {
   createFolder,
   deleteItem,
   extractItem,
+  getManagedDirectorySize,
   importFilesDialog,
   importFilesFromPaths,
   listFilesWithMetadata,
+  type ManagedDirectorySize,
   moveItem,
   openInFinder,
   readFileContent,
@@ -47,8 +47,6 @@ import {
 } from '../../lib/file-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import FileEditorWorkspace, {
-  ARC_MONACO_THEME,
-  defineArcMonacoTheme,
   MAX_EDITABLE_MEGABYTES,
   type UnsupportedReason,
 } from './FileEditorWorkspace';
@@ -121,7 +119,7 @@ function detectLanguage(fileName: string): string {
   return map[ext] ?? 'plaintext';
 }
 
-// Extensions that are never opened as text, in the editor or the diff viewer.
+// Extensions that are never opened as text in the editor.
 const BINARY_EXTENSIONS = ['jar', 'zip', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'exe', 'dll', 'class'];
 
 const MAX_EDITABLE_BYTES = MAX_EDITABLE_MEGABYTES * 1024 * 1024;
@@ -141,9 +139,69 @@ function getUnsupportedReason(
   return null;
 }
 
+/** Folder sizes measured this session, by managed path. Only successful walks are kept, so a failed folder is measured again later. */
+const folderSizeCache = new Map<string, ManagedDirectorySize>();
+/** Folders measured at once. Each walk runs on a blocking thread, so a small number keeps the listing responsive. */
+const FOLDER_SIZE_CONCURRENCY = 2;
+
+/** A folder's measured size, or 'failed' when the walk could not run. */
+type FolderSizeResult = ManagedDirectorySize | 'failed';
+
+/** The folder-size cell: an ellipsis while the walk runs, a dash when it failed, and a plus when it stopped early. */
+function folderSizeLabel(result: FolderSizeResult | undefined, locale: string): string {
+  if (result === undefined) {
+    return '…';
+  }
+  if (result === 'failed') {
+    return '—';
+  }
+  return `${formatBytes(result.bytes, locale)}${result.complete ? '' : '+'}`;
+}
+
+/**
+ * Measures the folders of one listing in the background, a few at a time, and reports each result as it lands.
+ * A new listing stops the walks still queued for the old one, so a result never lands on the wrong listing.
+ */
+function useFolderSizes(folderKey: string): ReadonlyMap<string, FolderSizeResult> {
+  const [results, setResults] = useState<ReadonlyMap<string, FolderSizeResult>>(() => new Map());
+
+  useEffect(() => {
+    const queue = folderKey.split('\n').filter((path) => path !== '' && !folderSizeCache.has(path));
+    if (queue.length === 0) {
+      return;
+    }
+    let current = true;
+    const measureNext = async () => {
+      let path = queue.shift();
+      while (path !== undefined && current) {
+        const target = path;
+        try {
+          const size = await getManagedDirectorySize(target);
+          folderSizeCache.set(target, size);
+          if (current) setResults((prev) => new Map(prev).set(target, size));
+        } catch (error) {
+          logError('Failed to measure folder size', error, { path: target });
+          if (current) setResults((prev) => new Map(prev).set(target, 'failed'));
+        }
+        path = queue.shift();
+      }
+    };
+    for (let slot = 0; slot < Math.min(FOLDER_SIZE_CONCURRENCY, queue.length); slot += 1) {
+      void measureNext();
+    }
+    return () => {
+      current = false;
+    };
+  }, [folderKey]);
+
+  return results;
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
+  // The folder that `files` was listed from. It lags `currentPath` until the new listing arrives.
+  const [listedPath, setListedPath] = useState('');
   const [serversRootAbsPath, setServersRootAbsPath] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
@@ -165,19 +223,16 @@ export default function FilesView({ server }: Props) {
   const [moveDestPath, setMoveDestPath] = useState('');
   const [renameFileName, setRenameFileName] = useState('');
 
-  const [diffMode, setDiffMode] = useState(false);
-  const [diffOriginal, setDiffOriginal] = useState<{ path: string; content: string } | null>(null);
-  const [diffModified, setDiffModified] = useState<{ path: string; content: string } | null>(null);
-  const [diffSelectStep, setDiffSelectStep] = useState<'original' | 'modified' | null>(null);
   const editorRequestId = useRef(0);
   const filesRequestId = useRef(0);
 
   const { t, locale } = useTranslation();
   const { confirm } = useAppFeedback();
-  const sizeFormatter = useMemo(
-    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-    [locale],
-  );
+  const folderKey = files
+    .filter((file) => file.isDirectory)
+    .map((file) => joinManagedPath(listedPath, file.name))
+    .join('\n');
+  const folderSizeResults = useFolderSizes(folderKey);
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -261,6 +316,7 @@ export default function FilesView({ server }: Props) {
         return;
       }
       setFiles(entries);
+      setListedPath(path);
     } catch (e) {
       if (requestId !== filesRequestId.current) {
         return;
@@ -456,35 +512,6 @@ export default function FilesView({ server }: Props) {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleSaveFile, isEditorOpen]);
-
-  const handleDiffSelect = async (file: FileEntry, filePath: string) => {
-    if (!diffSelectStep) {
-      return;
-    }
-    const ext = file.name.split('.').at(-1)?.toLowerCase() ?? '';
-    if (BINARY_EXTENSIONS.includes(ext)) {
-      notify.error(t('files.toast.binaryNoDiff'));
-      return;
-    }
-    let content: string;
-    try {
-      content = await readFileContent(filePath);
-    } catch (e) {
-      // The selection stays on the same step, so the user can pick another file.
-      logError('Failed to read file for diff', e, { filePath, step: diffSelectStep });
-      notify.error(t('files.toast.diffReadFailed'));
-      return;
-    }
-    if (diffSelectStep === 'original') {
-      setDiffOriginal({ path: filePath, content });
-      setDiffSelectStep('modified');
-      notify.info(t('files.toast.diffSelectModified'));
-    } else {
-      setDiffModified({ path: filePath, content });
-      setDiffSelectStep(null);
-      setDiffMode(true);
-    }
-  };
 
   const handleDelete = async () => {
     if (selectedFiles.length === 0) {
@@ -698,26 +725,6 @@ export default function FilesView({ server }: Props) {
     }
   };
 
-  // The diff button has three states: idle, picking the original, and a diff that is open.
-  const diffActive = diffMode || diffSelectStep !== null;
-  const diffToolbarLabel = diffMode
-    ? t('files.toolbar.diffClose')
-    : diffSelectStep
-      ? t('files.toolbar.diffCancel')
-      : t('files.toolbar.diffOpen');
-  const toggleDiff = () => {
-    if (diffMode) {
-      setDiffMode(false);
-      setDiffOriginal(null);
-      setDiffModified(null);
-    } else if (diffSelectStep) {
-      setDiffSelectStep(null);
-    } else {
-      setDiffSelectStep('original');
-      notify.info(t('files.toast.diffSelectOriginal'));
-    }
-  };
-
   const upItems: ButtonGroupItem[] = [
     {
       id: 'up',
@@ -742,17 +749,6 @@ export default function FilesView({ server }: Props) {
       icon: <FolderOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
       iconOnly: true,
       onSelect: handleOpenExplorer,
-    },
-    {
-      id: 'diff',
-      label: diffToolbarLabel,
-      icon: diffActive ? (
-        <X aria-hidden="true" size={16} strokeWidth={1.75} />
-      ) : (
-        <GitCompareArrows aria-hidden="true" size={16} strokeWidth={1.75} />
-      ),
-      iconOnly: true,
-      onSelect: toggleDiff,
     },
   ];
   const selectionItems: ButtonGroupItem[] = [
@@ -790,21 +786,18 @@ export default function FilesView({ server }: Props) {
     {
       value: 'folder',
       label: t('files.modal.folder'),
-      description: t('files.modal.folderHint'),
       icon: <Folder aria-hidden="true" size={16} strokeWidth={1.75} />,
       testId: 'files-create-folder-option',
     },
     {
       value: 'file',
       label: t('files.modal.file'),
-      description: t('files.modal.fileHint'),
       icon: <File aria-hidden="true" size={16} strokeWidth={1.75} />,
       testId: 'files-create-file-option',
     },
     {
       value: 'import',
       label: t('files.modal.import'),
-      description: t('files.modal.importHint'),
       icon: <FolderInput aria-hidden="true" size={16} strokeWidth={1.75} />,
       testId: 'files-import-button',
     },
@@ -926,13 +919,9 @@ export default function FilesView({ server }: Props) {
         ) : (
           <div className={styles.list}>
             {files.map((file) => {
-              const filePath = joinManagedPath(currentPath, file.name);
+              const filePath = joinManagedPath(listedPath, file.name);
               const selected = selectedFiles.includes(file.name);
-              const rowClass = [
-                styles.row,
-                selected ? styles.rowSelected : '',
-                diffSelectStep && !file.isDirectory ? styles.rowPick : '',
-              ]
+              const rowClass = [styles.row, selected ? styles.rowSelected : '']
                 .filter(Boolean)
                 .join(' ');
               return (
@@ -941,6 +930,7 @@ export default function FilesView({ server }: Props) {
                   label={file.name}
                   items={rowMenuItems(file)}
                   trigger="context"
+                  className={styles.item}
                 >
                   <div
                     className={rowClass}
@@ -952,22 +942,12 @@ export default function FilesView({ server }: Props) {
                     onContextMenu={() => {
                       if (!selected) setSelectedFiles([file.name]);
                     }}
-                    onClick={(e) => {
-                      if (diffSelectStep && !file.isDirectory) {
-                        void handleDiffSelect(file, filePath);
-                      } else {
-                        handleRowClick(file.name, e);
-                      }
-                    }}
-                    onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
+                    onClick={(e) => handleRowClick(file.name, e)}
+                    onDoubleClick={() => handleFileDoubleClick(file.name)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        if (diffSelectStep && !file.isDirectory) {
-                          void handleDiffSelect(file, filePath);
-                        } else {
-                          void handleFileDoubleClick(file.name);
-                        }
+                        void handleFileDoubleClick(file.name);
                       }
                     }}
                     draggable
@@ -1013,10 +993,11 @@ export default function FilesView({ server }: Props) {
                     <span className={styles.name}>{file.name}</span>
                     <span className={styles.size}>
                       {file.isDirectory
-                        ? '-'
-                        : t('files.size.kb', {
-                            value: sizeFormatter.format((file.size ?? 0) / 1024),
-                          })}
+                        ? folderSizeLabel(
+                            folderSizeCache.get(filePath) ?? folderSizeResults.get(filePath),
+                            locale,
+                          )
+                        : formatBytes(file.size ?? 0, locale)}
                     </span>
                   </div>
                 </ContextMenu>
@@ -1035,55 +1016,6 @@ export default function FilesView({ server }: Props) {
           <div className={styles.emptyAreaFill} />
         </ContextMenu>
       </div>
-
-      {/* Diff viewer: the Arc header and status bar frame the read-only Monaco diff */}
-      {diffMode && diffOriginal && diffModified && (
-        <section className={styles.overlay} aria-label={t('files.toolbar.diffOpen')}>
-          <header className={styles.overlayHeader}>
-            <div className={styles.overlayIdentity}>
-              <span className={styles.overlayIcon} aria-hidden="true">
-                <GitCompareArrows size={18} strokeWidth={1.75} />
-              </span>
-              <div className={styles.overlayMeta}>
-                <strong className={styles.overlayTitle}>
-                  {diffOriginal.path.split(/[\\/]/).at(-1)}
-                  {' → '}
-                  {diffModified.path.split(/[\\/]/).at(-1)}
-                </strong>
-                <span className={styles.overlaySubtitle}>{t('files.toolbar.diffOpen')}</span>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setDiffMode(false);
-                setDiffOriginal(null);
-                setDiffModified(null);
-              }}
-            >
-              <X aria-hidden="true" size={16} strokeWidth={1.75} />
-              {t('common.close')}
-            </Button>
-          </header>
-          <div className={styles.overlayBody}>
-            <DiffEditor
-              height="100%"
-              original={diffOriginal.content}
-              modified={diffModified.content}
-              language={detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}
-              theme={ARC_MONACO_THEME}
-              beforeMount={defineArcMonacoTheme}
-              options={{ readOnly: true, minimap: { enabled: false }, renderSideBySide: true }}
-            />
-          </div>
-          <footer className={styles.overlayStatus} aria-live="polite">
-            <span>{detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}</span>
-            <span>{t('files.editor.readOnly')}</span>
-          </footer>
-        </section>
-      )}
 
       {/* Shown while the file is read, before the editor opens */}
       {isEditorLoading && (
@@ -1118,7 +1050,7 @@ export default function FilesView({ server }: Props) {
       >
         <DialogContent
           title={t('files.modal.createImportTitle')}
-          width="min(520px, calc(100vw - 2rem))"
+          width="min(560px, calc(100vw - 2rem))"
           data-testid="files-create-modal"
           footer={
             <>
@@ -1137,34 +1069,37 @@ export default function FilesView({ server }: Props) {
             </>
           }
         >
-          <RadioCards
-            aria-label={t('files.modal.createImportTitle')}
-            layout="grid"
-            minColumnWidth={150}
-            options={createOptions}
-            value={createMode}
-            onValueChange={(value) => setCreateMode(value as CreateMode)}
-          />
-          {createMode !== 'import' && (
-            <Input
-              label={t('files.modal.nameLabel')}
-              data-testid="files-name-input"
-              value={newFileName}
-              placeholder={
-                createMode === 'folder'
-                  ? t('files.modal.newFolderPlaceholder')
-                  : t('files.modal.newFilePlaceholder')
-              }
-              error={createNameError}
-              onChange={(e) => setNewFileName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submitCreate();
-                }
-              }}
+          <div className={styles.createBody}>
+            {/* Three fixed columns: auto-fill can open an empty fourth column in a wide dialog and squeeze the cards. */}
+            <RadioCards
+              aria-label={t('files.modal.createImportTitle')}
+              layout="grid"
+              style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+              options={createOptions}
+              value={createMode}
+              onValueChange={(value) => setCreateMode(value as CreateMode)}
             />
-          )}
+            {createMode !== 'import' && (
+              <Input
+                label={t('files.modal.nameLabel')}
+                data-testid="files-name-input"
+                value={newFileName}
+                placeholder={
+                  createMode === 'folder'
+                    ? t('files.modal.newFolderPlaceholder')
+                    : t('files.modal.newFilePlaceholder')
+                }
+                error={createNameError}
+                onChange={(e) => setNewFileName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitCreate();
+                  }
+                }}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

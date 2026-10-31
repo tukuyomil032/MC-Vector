@@ -142,10 +142,6 @@ export interface TranslationDictionary {
     };
     eula: {
       title: string;
-      description: string;
-      fileMissing: string;
-      fileNotAccepted: string;
-      explanation: string;
       openLink: string;
       consentLabel: string;
       acceptAndStart: string;
@@ -332,10 +328,6 @@ export interface TranslationDictionary {
       largeDescription: string;
     };
     emptyFolder: string;
-    emptyFolderHint: string;
-    size: {
-      kb: string;
-    };
     loading: string;
     modal: {
       createImportTitle: string;
@@ -354,9 +346,6 @@ export interface TranslationDictionary {
       renameTitle: string;
       renameButton: string;
       renameLabel: string;
-      folderHint: string;
-      fileHint: string;
-      importHint: string;
       nameInvalid: string;
       moveDestLabel: string;
       moveIntoItself: string;
@@ -383,10 +372,6 @@ export interface TranslationDictionary {
       extractFailed: string;
       extractNotZip: string;
       extractSkipped: string;
-      binaryNoDiff: string;
-      diffReadFailed: string;
-      diffSelectOriginal: string;
-      diffSelectModified: string;
     };
     toolbar: {
       goUp: string;
@@ -396,9 +381,6 @@ export interface TranslationDictionary {
       compress: string;
       extract: string;
       delete: string;
-      diffOpen: string;
-      diffClose: string;
-      diffCancel: string;
       navigation: string;
       tools: string;
       selection: string;
@@ -537,10 +519,6 @@ export interface TranslationDictionary {
       add: string;
       remove: string;
     };
-    notOnline: string;
-    notOnlineHint: string;
-    count: string;
-    countOne: string;
     validation: {
       playerRequired: string;
       ipRequired: string;
@@ -548,10 +526,10 @@ export interface TranslationDictionary {
     loadFailed: string;
     retry: string;
     emptyList: {
-      whitelist: { title: string; description: string };
-      ops: { title: string; description: string };
-      bannedPlayers: { title: string; description: string };
-      bannedIps: { title: string; description: string };
+      whitelist: { title: string };
+      ops: { title: string };
+      bannedPlayers: { title: string };
+      bannedIps: { title: string };
     };
     placeholder: {
       playerName: string;

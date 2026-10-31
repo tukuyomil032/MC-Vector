@@ -31,7 +31,7 @@ interface FileEditorWorkspaceProps {
 }
 
 /** Theme name used by every Monaco instance in the app. It is defined from the Arc tokens on each mount. */
-export const ARC_MONACO_THEME = 'mc-vector-arc';
+const ARC_MONACO_THEME = 'mc-vector-arc';
 
 const COLOR_PROBE = '#010203';
 
@@ -71,8 +71,8 @@ function isDarkHex(hex: string): boolean {
   return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255 < 0.5;
 }
 
-/** Defines the Arc theme for Monaco. Both the editor and the diff viewer call it from beforeMount. */
-export function defineArcMonacoTheme(monaco: Monaco): void {
+/** Defines the Arc theme for Monaco. The editor calls it from beforeMount. */
+function defineArcMonacoTheme(monaco: Monaco): void {
   const background = resolveMonacoColor('--surface', '#1d1e21');
   monaco.editor.defineTheme(ARC_MONACO_THEME, {
     base: isDarkHex(background) ? 'vs-dark' : 'vs',

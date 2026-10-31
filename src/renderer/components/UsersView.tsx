@@ -1,12 +1,20 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
-import { Card } from '@/components/arc/card/card';
-import { Input } from '@/components/arc/input/input';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
-import { Globe, User } from 'lucide-react';
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { type Translate, useTranslation } from '../../i18n';
+import { Ban, Crown, Globe, ShieldCheck, User, UserX, type LucideIcon } from 'lucide-react';
+import {
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
+import { useTranslation } from '../../i18n';
+import { Input } from './ui/Field';
 import { EmptyLine } from './ui/EmptyLine';
+import { SectionTitle } from './ui/IconTile';
 import {
   getPlayerLists,
   mutatePlayerList,
@@ -27,9 +35,12 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function entryCount(count: number, t: Translate): string {
-  return count === 1 ? t('users.countOne') : t('users.count', { count });
-}
+const LIST_ICONS: Record<PlayerListType, LucideIcon> = {
+  whitelist: ShieldCheck,
+  ops: Crown,
+  'banned-players': UserX,
+  'banned-ips': Ban,
+};
 
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
@@ -163,11 +174,6 @@ export default function UsersView({ server }: Props) {
 
   return (
     <div className={styles.root} data-testid="users-view">
-      {server.status !== 'online' && (
-        <Alert tone="info" title={t('users.notOnline')}>
-          {t('users.notOnlineHint')}
-        </Alert>
-      )}
       {loadError !== null && (
         <Alert tone="danger" title={t('users.loadFailed')}>
           <span className={styles.alertDetail}>{loadError}</span>
@@ -250,7 +256,11 @@ function UserListCard({
   const [pending, setPending] = useState(false);
   const [inputError, setInputError] = useState<string | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
+  const headingId = useId();
   const isIpList = type === 'banned-ips';
+  const inputLabel = isIpList
+    ? t('users.placeholder.ipAddress')
+    : t('users.placeholder.playerName');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -279,11 +289,7 @@ function UserListCard({
   if (!loaded) {
     body = <Skeleton label={t('common.loading')} lines={3} />;
   } else if (entries.length === 0) {
-    body = (
-      <div className={styles.emptyWrap}>
-        <EmptyLine title={emptyTitle} />
-      </div>
-    );
+    body = <EmptyLine title={emptyTitle} />;
   } else {
     body = (
       <ul className={styles.list}>
@@ -300,17 +306,21 @@ function UserListCard({
   }
 
   return (
-    <Card
-      title={title}
-      description={loaded ? entryCount(entries.length, t) : undefined}
-      className={styles.card}
-      data-testid={`users-list-${type}`}
-    >
+    <section className={styles.card} aria-labelledby={headingId} data-testid={`users-list-${type}`}>
+      <SectionTitle
+        as="h3"
+        id={headingId}
+        icon={LIST_ICONS[type]}
+        title={title}
+        trailing={loaded ? <span className={styles.count}>{entries.length}</span> : undefined}
+      />
       {body}
       <form className={styles.addForm} onSubmit={handleSubmit} noValidate>
+        {/* The field has no visible label: the placeholder shows the hint and aria-label names it. */}
         <Input
           ref={inputRef}
-          label={isIpList ? t('users.placeholder.ipAddress') : t('users.placeholder.playerName')}
+          aria-label={inputLabel}
+          placeholder={inputLabel}
           data-testid={`users-input-${type}`}
           value={value}
           error={inputError}
@@ -324,14 +334,13 @@ function UserListCard({
         <Button
           type="submit"
           variant="secondary"
-          className={styles.addButton}
           data-testid={`users-add-${type}`}
           loading={pending}
         >
           {t('users.actions.add')}
         </Button>
       </form>
-    </Card>
+    </section>
   );
 }
 
