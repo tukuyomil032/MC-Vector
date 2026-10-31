@@ -480,17 +480,12 @@ export interface TranslationDictionary {
       gb: string;
     };
     processing: string;
-    parent: string;
     confirmDelete: string;
     deleteTitle: string;
     confirmRestore: string;
     restoreTitle: string;
     confirmStopForBackup: string;
     stopForBackupTitle: string;
-    mode: {
-      full: string;
-      differential: string;
-    };
     actions: {
       restore: string;
       tag: string;
@@ -501,16 +496,7 @@ export interface TranslationDictionary {
       fileNameHelp: string;
       compressionLevel: string;
       compressionHelp: string;
-      modeLabel: string;
-      modeFull: string;
-      modeDiff: string;
-      modeHelp: string;
-      selectTarget: string;
-      openSelector: string;
-      clearAll: string;
-      noSelection: string;
-      selectedCount: string;
-      andMore: string;
+      wholeServerNote: string;
       create: string;
       creating: string;
     };
@@ -526,15 +512,9 @@ export interface TranslationDictionary {
       notePlaceholder: string;
     };
     toast: {
-      targetUpdated: string;
-      selectorOpenError: string;
-      targetInitFailed: string;
       loadFailed: string;
       catalogLoadFailed: string;
       worldLoadFailed: string;
-      selectAtLeastOne: string;
-      noDiffSkipped: string;
-      diffCreated: string;
       created: string;
       serverStopFailed: string;
       stoppedCreateFailed: string;
@@ -1250,39 +1230,6 @@ export interface TranslationDictionary {
         label: string;
         description: string;
       };
-    };
-  };
-
-  /** Backup target selector window translations */
-  backupSelector: {
-    title: string;
-    subtitle: string;
-    serverPathNotSet: string;
-    selectionCount: string;
-    viewMode: string;
-    viewTree: string;
-    viewGraph: string;
-    selectAll: string;
-    clearAll: string;
-    loading: string;
-    empty: string;
-    cancel: string;
-    apply: string;
-    saving: string;
-    ariaCollapseDirectory: string;
-    ariaExpandDirectory: string;
-    treeLabel: string;
-    emptyDescription: string;
-    loadFailed: string;
-    retry: string;
-    applyFailed: string;
-    windowTitle: string;
-    units: {
-      b: string;
-      kb: string;
-      mb: string;
-      gb: string;
-      tb: string;
     };
   };
 

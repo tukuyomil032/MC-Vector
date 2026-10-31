@@ -34,7 +34,6 @@ export type E2eState = {
   javaVersions: unknown[];
   backups: Record<string, unknown[]>;
   runningServerIds: string[];
-  selectedBackupPaths: string[];
   pluginDownloadAttempts: number;
   pluginInstallPlans: Record<
     string,
@@ -132,7 +131,6 @@ export function createE2eState(scenario: E2eScenario): E2eState {
     javaVersions: [],
     backups: {},
     runningServerIds: [],
-    selectedBackupPaths: scenario === 'backup-flow' ? ['server.properties'] : [],
     pluginDownloadAttempts: 0,
     pluginInstallPlans: {},
     ngrokStatus: 'offline',

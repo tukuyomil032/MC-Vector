@@ -20,7 +20,6 @@ import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
 import AppSidebarRailActions from '@/renderer/components/AppSidebarRailActions';
-import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
 import { notify } from '@/renderer/shared/notify';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
@@ -55,20 +54,7 @@ const RAIL_BELOW_QUERY = '(max-width: 1023px)';
 /** Below 768px the sidebar leaves the layout and opens as a drawer from the header menu button. */
 const DRAWER_BELOW_QUERY = '(max-width: 767px)';
 
-function isBackupSelectorWindow(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('backupSelector') === '1';
-}
-
 function App() {
-  if (isBackupSelectorWindow()) {
-    return <BackupTargetSelectorWindow />;
-  }
-
-  return <MainApp />;
-}
-
-function MainApp() {
   const { t } = useTranslation();
   const { confirm } = useAppFeedback();
   const servers = useServerStore((state) => state.servers);

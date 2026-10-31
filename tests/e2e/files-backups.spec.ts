@@ -37,10 +37,8 @@ test.describe('files and backups', () => {
     await expect(backups.getByText('World Management', { exact: true })).toBeVisible();
     await expect.poll(async () => (await app.ipcCalls('listen')).length).toBeGreaterThan(0);
 
-    await app.setBackupSelection(['server.properties']);
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await page.locator('[data-testid="backups-open-selector-button"]').click();
-    await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-testid="backups-whole-server-note"]')).toBeVisible();
 
     await page.locator('[data-testid="backup-name-input"]').fill('e2e-backup.zip');
     await page.locator('[data-testid="backups-create-submit"]').click();
@@ -68,10 +66,8 @@ test.describe('files and backups', () => {
     await app.openView('backups');
 
     const backups = page.locator('[data-testid="backups-view"]');
-    await app.setBackupSelection(['server.properties']);
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await page.locator('[data-testid="backups-open-selector-button"]').click();
-    await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-testid="backups-whole-server-note"]')).toBeVisible();
     await page.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
     await page.locator('[data-testid="backups-create-submit"]').click();
     await app.acceptConfirm();

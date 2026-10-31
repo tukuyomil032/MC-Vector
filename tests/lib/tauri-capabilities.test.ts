@@ -37,21 +37,6 @@ describe('Tauri network capability scopes', () => {
     ).toBe(false);
   });
 
-  it('keeps backup selector permissions free of process, store, updater, and HTTP access', () => {
-    const capability = JSON.parse(
-      readFileSync(resolve(process.cwd(), 'src-tauri/capabilities/backup-selector.json'), 'utf8'),
-    ) as { permissions: unknown[] };
-    const permissions = capability.permissions.filter(
-      (permission): permission is string => typeof permission === 'string',
-    );
-
-    expect(permissions).not.toEqual(expect.arrayContaining(['process:default', 'store:default']));
-    expect(permissions.some((permission) => permission.startsWith('updater:'))).toBe(false);
-    expect(capability.permissions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ identifier: 'http:default' })]),
-    );
-  });
-
   it('does not ship wildcard localhost or websocket CSP sources', () => {
     const config = JSON.parse(
       readFileSync(resolve(process.cwd(), 'src-tauri/tauri.conf.json'), 'utf8'),

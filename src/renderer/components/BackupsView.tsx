@@ -1,5 +1,4 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { Globe, Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/arc/alert/alert';
@@ -20,7 +19,6 @@ import {
   deleteBackup,
   getBackupNameValidationError,
   listBackupsWithMetadata,
-  normalizeBackupSources,
   readBackupCatalog,
   restoreBackup,
   writeBackupCatalog,
@@ -29,7 +27,6 @@ import { logError } from '../../lib/error-utils';
 import { deleteItem, listFiles } from '../../lib/file-commands';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
-import { tauriListen } from '../../lib/tauri-api';
 import {
   getManualBackupOperationId,
   useBackupOperationStore,
@@ -48,19 +45,16 @@ interface Backup {
   size: number;
 }
 
-type BackupMode = 'full' | 'differential';
-
 interface BackupSnapshotEntry {
   size: number;
   modified: number;
 }
 
+// Backups are always full snapshots of the whole server. Fields written by older
+// builds (mode, parent, sourceCount) are ignored when the catalog is read.
 interface BackupCatalogEntry {
-  mode: BackupMode;
-  parent: string | null;
   tags: string[];
   note: string;
-  sourceCount: number;
   createdAt: string;
 }
 
@@ -89,38 +83,12 @@ interface DataReloadToken {
   generation: number;
 }
 
-type MaybeAsyncUnlisten = () => void | Promise<void>;
-
-interface SelectorOnceRegistration {
-  cancelled: boolean;
-  unlistenFns: Set<MaybeAsyncUnlisten>;
-}
-
-function safeUnlisten(unlisten: MaybeAsyncUnlisten | undefined): void {
-  if (!unlisten) {
-    return;
-  }
-
-  try {
-    const result = unlisten();
-    if (result instanceof Promise) {
-      void result.catch(() => undefined);
-    }
-  } catch {
-    return;
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 function normalizeBackupName(backupName: string): string {
   return backupName.endsWith('.zip') ? backupName : `${backupName}.zip`;
-}
-
-function parseBackupMode(value: unknown): BackupMode {
-  return value === 'differential' ? 'differential' : 'full';
 }
 
 function createEmptyCatalog(): BackupCatalog {
@@ -167,14 +135,8 @@ function sanitizeCatalog(value: unknown): BackupCatalog {
       : [];
 
     entries[backupName] = {
-      mode: parseBackupMode(entry.mode),
-      parent: typeof entry.parent === 'string' ? entry.parent : null,
       tags,
       note: typeof entry.note === 'string' ? entry.note : '',
-      sourceCount:
-        typeof entry.sourceCount === 'number' && Number.isFinite(entry.sourceCount)
-          ? entry.sourceCount
-          : 0,
       createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : '',
     };
   }
@@ -237,7 +199,6 @@ export default function BackupsView({ server }: Props) {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [customName, setCustomName] = useState('');
   const [compressionLevel, setCompressionLevel] = useState(5);
   const [backupCatalog, setBackupCatalog] = useState<BackupCatalog>(createEmptyCatalog());
@@ -253,14 +214,12 @@ export default function BackupsView({ server }: Props) {
   const initializationKeyRef = useRef<string | null>(null);
   const initializationGenerationRef = useRef(0);
   const dataReloadGenerationRef = useRef(0);
-  const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(false);
   const pendingUnmountRef = useRef<symbol | null>(null);
   const observedManualCompletionRef = useRef({
     key: initializationKey,
     revision: manualCompletionRevision,
   });
-  const selectorOnceRegistrationsRef = useRef(new Set<SelectorOnceRegistration>());
   const getCurrentInitializationToken = useCallback((fallbackKey: string): InitializationToken => {
     return {
       key: fallbackKey,
@@ -322,20 +281,9 @@ export default function BackupsView({ server }: Props) {
       pendingUnmountRef.current = null;
     });
   }, []);
-  const cleanupSelectorOnceRegistrations = useCallback(() => {
-    for (const registration of selectorOnceRegistrationsRef.current) {
-      registration.cancelled = true;
-      for (const unlisten of registration.unlistenFns) {
-        safeUnlisten(unlisten);
-      }
-      registration.unlistenFns.clear();
-    }
-    selectorOnceRegistrationsRef.current.clear();
-  }, []);
   const cleanupInitialization = useCallback(() => {
-    cleanupSelectorOnceRegistrations();
     scheduleUnmountInvalidation();
-  }, [cleanupSelectorOnceRegistrations, scheduleUnmountInvalidation]);
+  }, [scheduleUnmountInvalidation]);
   const isManualBackupCreating = activeManualOperation?.kind === 'create';
   const isProcessing = processing || isManualBackupCreating;
   const beginCatalogOperation = () => {
@@ -390,7 +338,6 @@ export default function BackupsView({ server }: Props) {
     setWorlds([]);
     setCatalogLoadState('loading');
     setBackupCatalog(createEmptyCatalog());
-    setSelectedPaths(new Set());
     setShowCreateModal(false);
     setTagEditorTarget(null);
     const dataReloadToken = beginDataReload(initializationToken);
@@ -413,113 +360,6 @@ export default function BackupsView({ server }: Props) {
     return cleanupInitialization;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [beginDataReload, cleanupInitialization, initializationKey, isCurrentDataReload]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | undefined;
-
-    const registrationToken = getCurrentInitializationToken(initializationKey);
-
-    void tauriListen<{ serverPath: string; paths: string[] }>(
-      'backup-selector:apply',
-      (payload) => {
-        if (
-          cancelled ||
-          !isCurrentInitialization(registrationToken) ||
-          payload.serverPath !== server.path
-        ) {
-          return;
-        }
-
-        const normalizedPaths = normalizeBackupSources(payload.paths);
-        selectionGenerationRef.current += 1;
-        setSelectedPaths(new Set(normalizedPaths));
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        notify.success(t('backups.toast.targetUpdated', { count: normalizedPaths.length }));
-      },
-    ).then(
-      (dispose) => {
-        if (cancelled) {
-          safeUnlisten(dispose);
-          return;
-        }
-        unlisten = dispose;
-      },
-      (error) => {
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        logError('Failed to register backup selector apply listener', error, {
-          serverPath: server.path,
-        });
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      safeUnlisten(unlisten);
-    };
-  }, [getCurrentInitializationToken, initializationKey, isCurrentInitialization, server.path, t]);
-
-  // The completion reload intentionally uses the lifecycle callbacks from this render.
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | undefined;
-    const registrationToken = getCurrentInitializationToken(initializationKey);
-
-    void tauriListen<{ serverPath: string }>('backup-selector:close-request', async (payload) => {
-      if (
-        cancelled ||
-        !isCurrentInitialization(registrationToken) ||
-        payload.serverPath !== server.path
-      ) {
-        return;
-      }
-      try {
-        const selectorWindow = await WebviewWindow.getByLabel('backup-selector');
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        if (!selectorWindow) {
-          return;
-        }
-        await selectorWindow.close();
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-      } catch (error) {
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        logError('Failed to close backup selector window', error, {
-          serverPath: server.path,
-        });
-      }
-    }).then(
-      (dispose) => {
-        if (cancelled) {
-          safeUnlisten(dispose);
-          return;
-        }
-        unlisten = dispose;
-      },
-      (error) => {
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        logError('Failed to register backup selector close-request listener', error, {
-          serverPath: server.path,
-        });
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      safeUnlisten(unlisten);
-    };
-  }, [getCurrentInitializationToken, initializationKey, isCurrentInitialization, server.path]);
 
   const persistBackupCatalog = async (catalog: BackupCatalog) => {
     await writeBackupCatalog(server.id, catalog);
@@ -587,42 +427,14 @@ export default function BackupsView({ server }: Props) {
     return buildManualBackupName(server);
   };
 
-  const openCreateModal = async () => {
+  const openCreateModal = () => {
     const operationToken = getCurrentInitializationToken(initializationKey);
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
-    const selectionGeneration = selectionGenerationRef.current + 1;
-    selectionGenerationRef.current = selectionGeneration;
     setShowCreateModal(true);
     setCustomName('');
     setCompressionLevel(5);
-    try {
-      const entries = await listFiles(server.path);
-      if (
-        !isCurrentInitialization(operationToken) ||
-        selectionGenerationRef.current !== selectionGeneration
-      ) {
-        return;
-      }
-      const initial = entries
-        .filter((entry) => entry.name.toLowerCase() !== 'backups')
-        .map((entry) => entry.name)
-        .sort((left, right) => left.localeCompare(right));
-      setSelectedPaths(new Set(initial));
-    } catch (error) {
-      if (
-        !isCurrentInitialization(operationToken) ||
-        selectionGenerationRef.current !== selectionGeneration
-      ) {
-        return;
-      }
-      logError('Failed to initialize backup target selection', error, {
-        serverPath: server.path,
-      });
-      setSelectedPaths(new Set());
-      notify.error(t('backups.toast.targetInitFailed'));
-    }
   };
 
   const loadWorlds = async (expectedToken: InitializationToken) => {
@@ -729,163 +541,14 @@ export default function BackupsView({ server }: Props) {
     manualCompletionRevision,
   ]);
 
-  const clearAll = () => {
-    selectionGenerationRef.current += 1;
-    setSelectedPaths(new Set());
-  };
-
-  const openSelectorWindow = async () => {
-    const operationToken = getCurrentInitializationToken(initializationKey);
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-
-    try {
-      const label = 'backup-selector';
-      const selected = Array.from(selectedPaths).sort((a, b) => a.localeCompare(b));
-
-      const existing = await WebviewWindow.getByLabel(label);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      if (existing) {
-        if (!isCurrentInitialization(operationToken)) {
-          return;
-        }
-        await existing.emit('backup-selector:load', {
-          serverPath: server.path,
-          selected,
-        });
-        if (!isCurrentInitialization(operationToken)) {
-          return;
-        }
-
-        try {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          await existing.setFocus();
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-        } catch (focusError) {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          logError('Failed to focus backup selector window', focusError, {
-            serverPath: server.path,
-          });
-        }
-        return;
-      }
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      const params = new URLSearchParams({
-        backupSelector: '1',
-        serverPath: server.path,
-        selected: JSON.stringify(selected),
-      });
-
-      const selectorWindow = new WebviewWindow(label, {
-        title: t('backupSelector.windowTitle', { name: server.name }),
-        url: `/?${params.toString()}`,
-        width: 980,
-        height: 760,
-        resizable: true,
-        center: true,
-        focus: true,
-      });
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-
-      const onceRegistration: SelectorOnceRegistration = {
-        cancelled: false,
-        unlistenFns: new Set(),
-      };
-      selectorOnceRegistrationsRef.current.add(onceRegistration);
-      const trackOnceRegistration = (
-        registrationPromise: Promise<() => void>,
-        errorMessage: string,
-      ) => {
-        void registrationPromise.then(
-          (unlisten) => {
-            if (onceRegistration.cancelled || !isCurrentInitialization(operationToken)) {
-              safeUnlisten(unlisten);
-              return;
-            }
-            onceRegistration.unlistenFns.add(unlisten);
-          },
-          (error) => {
-            if (onceRegistration.cancelled || !isCurrentInitialization(operationToken)) {
-              return;
-            }
-            logError(errorMessage, error, { serverPath: server.path });
-          },
-        );
-      };
-
-      trackOnceRegistration(
-        selectorWindow.once('tauri://created', () => {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          void selectorWindow
-            .emit('backup-selector:load', {
-              serverPath: server.path,
-              selected,
-            })
-            .catch((error) => {
-              if (!isCurrentInitialization(operationToken)) {
-                return;
-              }
-              logError('Failed to load backup selector window', error, {
-                serverPath: server.path,
-              });
-              notify.error(t('backups.toast.selectorOpenError'));
-            });
-        }),
-        'Failed to register backup selector created listener',
-      );
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      trackOnceRegistration(
-        selectorWindow.once('tauri://error', (error) => {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          logError('Backup selector window emitted tauri error event', error, {
-            serverPath: server.path,
-          });
-          notify.error(t('backups.toast.selectorOpenError'));
-        }),
-        'Failed to register backup selector error listener',
-      );
-    } catch (error) {
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      logError('Failed to open backup selector window', error, { serverPath: server.path });
-      notify.error(t('backups.toast.selectorOpenError'));
-    }
-  };
-
   const getBackupMeta = (backupName: string): BackupCatalogEntry => {
     const existing = backupCatalog.entries[backupName];
     if (existing) {
       return existing;
     }
     return {
-      mode: 'full',
-      parent: null,
       tags: [],
       note: '',
-      sourceCount: 0,
       createdAt: '',
     };
   };
@@ -938,7 +601,6 @@ export default function BackupsView({ server }: Props) {
     }
 
     const capturedServer = { ...server };
-    const capturedSelectedPaths = normalizeBackupSources(Array.from(selectedPaths));
     const capturedCatalog = backupCatalog;
     const capturedCompressionLevel = compressionLevel;
     const requestedName = customName.trim() || buildManualBackupName(capturedServer);
@@ -1029,11 +691,8 @@ export default function BackupsView({ server }: Props) {
       }
 
       const currentMeta = capturedCatalog.entries[normalizedName] ?? {
-        mode: 'full' as const,
-        parent: null,
         tags: [],
         note: '',
-        sourceCount: 0,
         createdAt: '',
       };
       const nextCatalog: BackupCatalog = {
@@ -1043,9 +702,6 @@ export default function BackupsView({ server }: Props) {
           ...capturedCatalog.entries,
           [normalizedName]: {
             ...currentMeta,
-            mode: 'full',
-            parent: null,
-            sourceCount: 0,
             createdAt: currentMeta.createdAt || new Date().toISOString(),
           },
         },
@@ -1125,7 +781,6 @@ export default function BackupsView({ server }: Props) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to create backup', error, {
           serverPath: capturedServer.path,
-          selectedCount: capturedSelectedPaths.length,
         });
         notify.error(t('backups.toast.createFailed'));
       }
@@ -1495,21 +1150,11 @@ export default function BackupsView({ server }: Props) {
                   <div className={styles.rowMain}>
                     <div className={styles.rowHead}>
                       <span className={styles.rowName}>{backup.name}</span>
-                      <Badge tone="neutral" size="sm">
-                        {meta.mode === 'differential'
-                          ? t('backups.mode.differential')
-                          : t('backups.mode.full')}
-                      </Badge>
                     </div>
 
                     <div className={styles.rowMeta}>
                       <span>{formatDate(backup.date)}</span>
                       <span>{formatBackupSize(backup.size, t, locale)}</span>
-                      {meta.parent && (
-                        <span>
-                          {t('backups.parent')}: {meta.parent}
-                        </span>
-                      )}
                     </div>
 
                     {meta.tags.length > 0 && (
@@ -1632,51 +1277,9 @@ export default function BackupsView({ server }: Props) {
               disabled={isProcessing}
             />
 
-            <section className={styles.target} aria-labelledby="backups-target-title">
-              <div className={styles.targetHead}>
-                <h3 id="backups-target-title" className={styles.sectionTitle}>
-                  {t('backups.modal.selectTarget')}
-                </h3>
-                <div className={styles.targetActions}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    data-testid="backups-open-selector-button"
-                    onClick={() => void openSelectorWindow()}
-                  >
-                    {t('backups.modal.openSelector')}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={clearAll}>
-                    {t('backups.modal.clearAll')}
-                  </Button>
-                </div>
-              </div>
-
-              {selectedPaths.size === 0 ? (
-                <p className={styles.muted}>{t('backups.modal.noSelection')}</p>
-              ) : (
-                <div className={styles.targetSummary}>
-                  <p className={styles.targetCount}>
-                    {t('backups.modal.selectedCount', { count: selectedPaths.size })}
-                  </p>
-                  <ul className={styles.targetList}>
-                    {Array.from(selectedPaths)
-                      .sort((left, right) => left.localeCompare(right))
-                      .slice(0, 14)
-                      .map((path) => (
-                        <li key={path} className={styles.targetItem}>
-                          {path}
-                        </li>
-                      ))}
-                    {selectedPaths.size > 14 && (
-                      <li className={styles.targetItem}>
-                        {t('backups.modal.andMore', { count: selectedPaths.size - 14 })}
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-            </section>
+            <p className={styles.muted} data-testid="backups-whole-server-note">
+              {t('backups.modal.wholeServerNote')}
+            </p>
           </div>
         </DialogContent>
       </Dialog>

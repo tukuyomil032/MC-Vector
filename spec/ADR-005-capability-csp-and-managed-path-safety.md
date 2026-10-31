@@ -31,10 +31,9 @@ main-core
 main-server-runtime
 main-backup
 main-artifact-install
-backup-selector
 ```
 
-The backup selector does not receive updater, process, or unrelated HTTP/store permissions. Each new permission requires a corresponding ADR update and a test explaining the need.
+The backup target selector window was removed (backups always cover the whole server), so its `backup-selector` capability no longer exists. Each new permission requires a corresponding ADR update and a test explaining the need.
 
 ## Decision: CSP and content rendering
 

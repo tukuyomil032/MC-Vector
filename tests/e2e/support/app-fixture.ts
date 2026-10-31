@@ -19,7 +19,6 @@ export interface AppFixture {
   }): Promise<string>;
   selectServer(serverId: string): Promise<void>;
   openView(view: string): Promise<void>;
-  setBackupSelection(paths: string[]): Promise<void>;
   runtimeFiles(): Promise<string[]>;
   runtimeState(): Promise<E2eState | undefined>;
   acceptConfirm(): Promise<void>;
@@ -109,13 +108,6 @@ export function createAppFixture(page: Page): AppFixture {
         return;
       }
       await page.locator(`[data-testid="nav-item-${view}"]`).click();
-    },
-
-    async setBackupSelection(paths: string[]) {
-      await page.evaluate((selectedPaths) => {
-        const runtime = (window as E2eWindow).__MC_VECTOR_E2E__;
-        if (runtime) runtime.state.selectedBackupPaths = selectedPaths;
-      }, paths);
     },
 
     async runtimeFiles() {

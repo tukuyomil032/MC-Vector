@@ -10,40 +10,10 @@ const {
   backupCommands,
   fileCommands,
   logErrorMock,
-  registeredTauriHandlers,
-  selectorWindowInstances,
-  onceRegistrationResults,
-  tauriListenMock,
   toastErrorMock,
   toastSuccessMock,
   toastWarningMock,
-  webviewWindowMock,
 } = vi.hoisted(() => {
-  const selectorWindowInstances: Array<{
-    emit: ReturnType<typeof vi.fn>;
-    label: string;
-    once: ReturnType<typeof vi.fn>;
-    setFocus: ReturnType<typeof vi.fn>;
-  }> = [];
-  const onceRegistrationResults: Array<Promise<() => void>> = [];
-
-  class MockWebviewWindow {
-    static getByLabel = vi.fn();
-    emit = vi.fn().mockResolvedValue(undefined);
-    once = vi.fn((_event: string, _handler: unknown) => {
-      return onceRegistrationResults.shift() ?? Promise.resolve(vi.fn());
-    });
-    setFocus = vi.fn().mockResolvedValue(undefined);
-    label: string;
-
-    constructor(label: string, _options: unknown) {
-      this.label = label;
-      selectorWindowInstances.push(this);
-    }
-  }
-
-  const registeredTauriHandlers: Array<{ event: string; handler: unknown }> = [];
-
   return {
     confirmMock: vi.fn(),
     backupCommands: {
@@ -52,7 +22,6 @@ const {
       deleteBackup: vi.fn(),
       getBackupNameValidationError: vi.fn(),
       listBackupsWithMetadata: vi.fn(),
-      normalizeBackupSources: vi.fn((paths: readonly string[]) => Array.from(new Set(paths))),
       readBackupCatalog: vi.fn(),
       restoreBackup: vi.fn(),
       writeBackupCatalog: vi.fn(),
@@ -63,14 +32,9 @@ const {
       listFilesWithMetadata: vi.fn(),
     },
     logErrorMock: vi.fn(),
-    registeredTauriHandlers,
-    selectorWindowInstances,
-    onceRegistrationResults,
-    tauriListenMock: vi.fn(),
     toastErrorMock: vi.fn(),
     toastSuccessMock: vi.fn(),
     toastWarningMock: vi.fn(),
-    webviewWindowMock: MockWebviewWindow,
   };
 });
 
@@ -98,8 +62,6 @@ vi.mock('@/components/arc/hold-to-confirm/hold-to-confirm', () => ({
     </button>
   ),
 }));
-
-vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: webviewWindowMock }));
 
 vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
   useAppFeedback: () => ({ confirm: confirmMock }),
@@ -139,7 +101,6 @@ vi.mock('@/i18n', () => ({
 vi.mock('@/lib/backup-commands', () => backupCommands);
 vi.mock('@/lib/error-utils', () => ({ logError: logErrorMock }));
 vi.mock('@/lib/file-commands', () => fileCommands);
-vi.mock('@/lib/tauri-api', () => ({ tauriListen: tauriListenMock }));
 vi.mock('@/renderer/shared/auto-backup', () => ({
   buildManualBackupName: () => 'backup-name',
 }));
@@ -204,9 +165,6 @@ function deferred<T>() {
 beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
-  registeredTauriHandlers.length = 0;
-  selectorWindowInstances.length = 0;
-  onceRegistrationResults.length = 0;
   confirmMock.mockResolvedValue(false);
   backupCommands.createBackup.mockResolvedValue({
     status: 'created',
@@ -216,12 +174,7 @@ beforeEach(() => {
   });
   backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   backupCommands.readBackupCatalog.mockResolvedValue({});
-  backupCommands.normalizeBackupSources.mockImplementation((paths: readonly string[]) =>
-    Array.from(new Set(paths)),
-  );
   fileCommands.listFiles.mockResolvedValue([]);
-  tauriListenMock.mockResolvedValue(vi.fn());
-  webviewWindowMock.getByLabel.mockResolvedValue(null);
   useBackupOperationStore.setState({
     activeManualOperations: {},
     completionRevisions: {},
@@ -406,11 +359,8 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce({
         entries: {
           'catalog-race.zip': {
-            mode: 'full',
-            parent: null,
             tags: ['new-catalog'],
             note: '',
-            sourceCount: 1,
             createdAt: '',
           },
         },
@@ -430,11 +380,8 @@ describe('BackupsView initialization', () => {
       initialCatalog.resolve({
         entries: {
           'catalog-race.zip': {
-            mode: 'full',
-            parent: null,
             tags: ['old-catalog'],
             note: '',
-            sourceCount: 1,
             createdAt: '',
           },
         },
@@ -463,7 +410,7 @@ describe('BackupsView initialization', () => {
     await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('server.properties')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -605,232 +552,6 @@ describe('BackupsView initialization', () => {
     expect(screen.queryByTestId('backup-row-stale-a.zip')).not.toBeInTheDocument();
   });
 
-  it('ignores an old apply listener after an A to B to A server switch', async () => {
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    const view = renderStrictMode();
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThanOrEqual(2),
-    );
-    const oldApplyHandler = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    )[0].handler as (payload: { paths: string[]; serverPath: string }) => void;
-    const initialApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={{ ...server, id: 'server-b', path: '/managed/server-b' }} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(initialApplyHandlerCount),
-    );
-    const bApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(bApplyHandlerCount),
-    );
-
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    await act(async () => {
-      oldApplyHandler({ serverPath: server.path, paths: ['old-selection'] });
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
-    expect(screen.queryByText('old-selection')).not.toBeInTheDocument();
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.targetUpdated');
-  });
-
-  it('ignores an apply listener retained from a keyed instance after an A to B to A remount', async () => {
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    const view = renderKeyedStrictMode('server-a', server);
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThanOrEqual(2),
-    );
-    const oldApplyHandler = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    )[0].handler as (payload: { paths: string[]; serverPath: string }) => void;
-    const initialApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(initialApplyHandlerCount),
-    );
-    const bApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-a" server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(bApplyHandlerCount),
-    );
-
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    await act(async () => {
-      oldApplyHandler({ serverPath: server.path, paths: ['old-selection'] });
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
-    expect(screen.queryByText('old-selection')).not.toBeInTheDocument();
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.targetUpdated');
-  });
-
-  it('normalizes selector apply paths before storing them in the create modal', async () => {
-    const normalizedSentinel = 'sentinel/normalized';
-    backupCommands.normalizeBackupSources.mockReturnValue([normalizedSentinel]);
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    renderStrictMode();
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    const applyHandlers = await waitFor(() => {
-      const registrations = registeredTauriHandlers.filter(
-        ({ event }) => event === 'backup-selector:apply',
-      );
-      expect(registrations.length).toBeGreaterThanOrEqual(2);
-      return registrations.map(
-        ({ handler }) => handler as (payload: { paths: string[]; serverPath: string }) => void,
-      );
-    });
-
-    await act(async () => {
-      for (const applyHandler of applyHandlers) {
-        applyHandler({
-          serverPath: server.path,
-          paths: ['world', 'world', 'plugins'],
-        });
-      }
-      await Promise.resolve();
-    });
-
-    expect(backupCommands.normalizeBackupSources).toHaveBeenCalledWith([
-      'world',
-      'world',
-      'plugins',
-    ]);
-    expect(screen.getByText(normalizedSentinel)).toBeInTheDocument();
-    expect(screen.queryByText('world', { selector: 'span' })).not.toBeInTheDocument();
-    expect(screen.queryByText('plugins')).not.toBeInTheDocument();
-    expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.targetUpdated');
-  });
-
-  it('ignores a stale open-create listing after a selector apply', async () => {
-    const initialListing = deferred<Array<{ name: string; isDirectory: boolean }>>();
-    let rootListingCalls = 0;
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        rootListingCalls += 1;
-        return rootListingCalls === 1 ? Promise.resolve([]) : initialListing.promise;
-      }
-      return Promise.resolve([]);
-    });
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    renderStrictMode();
-    await waitFor(() => expect(rootListingCalls).toBe(1));
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThanOrEqual(2),
-    );
-    const applyHandler = registeredTauriHandlers
-      .filter(({ event }) => event === 'backup-selector:apply')
-      .at(-1)?.handler as (payload: { paths: string[]; serverPath: string }) => void;
-    await act(async () => {
-      applyHandler({ serverPath: server.path, paths: ['applied-selection'] });
-      await Promise.resolve();
-      initialListing.resolve([{ name: 'stale-selection', isDirectory: false }]);
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('applied-selection')).toBeInTheDocument();
-    expect(screen.queryByText('stale-selection')).not.toBeInTheDocument();
-  });
-
-  it('ignores a stale open-create listing after clear-all', async () => {
-    const initialListing = deferred<Array<{ name: string; isDirectory: boolean }>>();
-    let rootListingCalls = 0;
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        rootListingCalls += 1;
-        return rootListingCalls === 1 ? Promise.resolve([]) : initialListing.promise;
-      }
-      return Promise.resolve([]);
-    });
-
-    renderStrictMode();
-    await waitFor(() => expect(rootListingCalls).toBe(1));
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: 'backups.modal.clearAll' }));
-    await act(async () => {
-      initialListing.resolve([{ name: 'stale-selection', isDirectory: false }]);
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
-    expect(screen.queryByText('stale-selection')).not.toBeInTheDocument();
-  });
-
   it('clears old backup and world data before a new server listing fails', async () => {
     const nextServer = { ...server, id: 'server-2', path: '/managed/server-2' };
     const nextServerListing = deferred<never[]>();
@@ -944,35 +665,6 @@ describe('BackupsView initialization', () => {
       expect.anything(),
       expect.anything(),
     );
-  });
-
-  it('logs current selector listener registration failures without an unhandled rejection', async () => {
-    const applyError = new Error('apply listener registration failed');
-    const closeError = new Error('close listener registration failed');
-    tauriListenMock.mockImplementation((event: string) => {
-      if (event === 'backup-selector:apply') {
-        return Promise.reject(applyError);
-      }
-      if (event === 'backup-selector:close-request') {
-        return Promise.reject(closeError);
-      }
-      return Promise.resolve(vi.fn());
-    });
-
-    renderStrictMode();
-
-    await waitFor(() => {
-      expect(logErrorMock).toHaveBeenCalledWith(
-        'Failed to register backup selector apply listener',
-        applyError,
-        { serverPath: server.path },
-      );
-      expect(logErrorMock).toHaveBeenCalledWith(
-        'Failed to register backup selector close-request listener',
-        closeError,
-        { serverPath: server.path },
-      );
-    });
   });
 
   it('does not refresh or toast from a stale backup deletion operation', async () => {
@@ -1475,154 +1167,6 @@ describe('BackupsView lifecycle', () => {
 
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2);
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
-    expect(logErrorMock).not.toHaveBeenCalled();
-  });
-
-  it('does not create a selector for a keyed instance after it is unmounted', async () => {
-    const pendingLookup = deferred<null>();
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    webviewWindowMock.getByLabel.mockReturnValue(pendingLookup.promise);
-
-    const view = renderKeyedStrictMode('server-a', server);
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByTestId('backups-open-selector-button')).toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByTestId('backups-open-selector-button'));
-    await waitFor(() => expect(webviewWindowMock.getByLabel).toHaveBeenCalledOnce());
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      pendingLookup.resolve(null);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(selectorWindowInstances).toHaveLength(0);
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(logErrorMock).not.toHaveBeenCalled();
-  });
-
-  it('ignores selector callbacks after a keyed instance is unmounted', async () => {
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    webviewWindowMock.getByLabel.mockResolvedValue(null);
-
-    const view = renderKeyedStrictMode('server-a', server);
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByTestId('backups-open-selector-button')).toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByTestId('backups-open-selector-button'));
-    await waitFor(() => expect(selectorWindowInstances).toHaveLength(1));
-
-    const selectorWindow = selectorWindowInstances[0];
-    const createdCallback = selectorWindow.once.mock.calls.find(
-      ([event]) => event === 'tauri://created',
-    )?.[1] as (() => void) | undefined;
-    const errorCallback = selectorWindow.once.mock.calls.find(
-      ([event]) => event === 'tauri://error',
-    )?.[1] as ((error: unknown) => void) | undefined;
-    expect(selectorWindow.once).toHaveBeenCalledTimes(2);
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      createdCallback?.();
-      errorCallback?.(new Error('stale selector creation failed'));
-      await Promise.resolve();
-    });
-
-    expect(selectorWindow.emit).not.toHaveBeenCalled();
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(logErrorMock).not.toHaveBeenCalled();
-  });
-
-  it('handles selector once registration rejection and cleans up resolved listeners', async () => {
-    const createdRegistrationError = new Error('created listener registration failed');
-    const createdRegistration = deferred<() => void>();
-    const errorRegistration = deferred<() => void>();
-    const errorListenerUnlisten = vi.fn().mockRejectedValue(new Error('unlisten failed'));
-    onceRegistrationResults.push(createdRegistration.promise, errorRegistration.promise);
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-
-    const view = renderKeyedStrictMode('server-a', server);
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByTestId('backups-open-selector-button')).toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByTestId('backups-open-selector-button'));
-
-    const selectorWindow = await waitFor(() => {
-      expect(selectorWindowInstances).toHaveLength(1);
-      return selectorWindowInstances[0];
-    });
-    await waitFor(() => {
-      expect(selectorWindow.once).toHaveBeenCalledTimes(2);
-    });
-
-    await act(async () => {
-      createdRegistration.reject(createdRegistrationError);
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(logErrorMock).toHaveBeenCalledWith(
-        'Failed to register backup selector created listener',
-        createdRegistrationError,
-        { serverPath: server.path },
-      );
-    });
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      errorRegistration.resolve(errorListenerUnlisten);
-      await Promise.resolve();
-    });
-
-    expect(errorListenerUnlisten).toHaveBeenCalledOnce();
-  });
-
-  it('suppresses a close-request error after the listener instance is unmounted', async () => {
-    const pendingLookup = deferred<null>();
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    let closeRequestHandler: ((payload: { serverPath: string }) => Promise<void>) | undefined;
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      if (event === 'backup-selector:close-request') {
-        closeRequestHandler = handler as (payload: { serverPath: string }) => Promise<void>;
-      }
-      return Promise.resolve(vi.fn());
-    });
-    webviewWindowMock.getByLabel.mockReturnValue(pendingLookup.promise);
-
-    const view = renderKeyedStrictMode('server-a', server);
-    await waitFor(() => expect(closeRequestHandler).toBeDefined());
-    const closePromise = closeRequestHandler?.({ serverPath: server.path });
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      pendingLookup.reject(new Error('stale close lookup failed'));
-      await closePromise;
-    });
-
     expect(logErrorMock).not.toHaveBeenCalled();
   });
 });

@@ -26,20 +26,13 @@ loader.config({ monaco });
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
-function isBackupSelectorWindow(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('backupSelector') === '1';
-}
-
 async function bootstrap() {
   try {
     await restoreStateCurrent();
   } catch {
     // window-state の復元失敗はアプリ起動を妨げない
   }
-  if (!isBackupSelectorWindow()) {
-    await useI18nStore.getState().initLocale();
-  }
+  await useI18nStore.getState().initLocale();
 
   root.render(
     <React.StrictMode>

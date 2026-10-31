@@ -20,7 +20,6 @@ const playwrightAliases = isPlaywright
       '@tauri-apps/api/app': mockPath('tauri-api-app.ts'),
       '@tauri-apps/api/path': mockPath('tauri-api-path.ts'),
       '@tauri-apps/api/window': mockPath('tauri-api-window.ts'),
-      '@tauri-apps/api/webviewWindow': mockPath('tauri-api-webview-window.ts'),
       '@tauri-apps/plugin-store': mockPath('tauri-plugin-store.ts'),
       '@tauri-apps/plugin-global-shortcut': mockPath('tauri-plugin-global-shortcut.ts'),
       '@tauri-apps/plugin-updater': mockPath('tauri-plugin-updater.ts'),

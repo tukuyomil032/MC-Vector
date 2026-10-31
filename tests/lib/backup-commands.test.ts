@@ -355,39 +355,6 @@ describe('backup-commands', () => {
     expect(tauriInvokeMock).not.toHaveBeenCalled();
   });
 
-  it('normalizes selected backup sources to minimal safe roots', async () => {
-    const { normalizeBackupSources } = await import('@/lib/backup-commands');
-
-    expect(
-      normalizeBackupSources([
-        'world/level.dat',
-        'world\\region\\r.0.0.mca',
-        'world',
-        'plugins',
-        'plugins',
-        'backups',
-        'backups/old.zip',
-        'Backups/new.zip',
-        'BACKUPS/archive.zip',
-        'Backups',
-      ]),
-    ).toEqual(['plugins', 'world']);
-  });
-
-  it('rejects absolute, UNC, and drive-style source paths before normalization', async () => {
-    const { normalizeBackupSources } = await import('@/lib/backup-commands');
-
-    expect(
-      normalizeBackupSources([
-        '/world/level.dat',
-        '\\\\server\\share\\world',
-        'C:\\server\\world',
-        'D:/server/world',
-        'world\\region\\r.0.0.mca',
-      ]),
-    ).toEqual(['world/region/r.0.0.mca']);
-  });
-
   it('deletes a backup using a typed managed request', async () => {
     const { deleteBackup } = await import('@/lib/backup-commands');
     await deleteBackup('server-1', 'backup-2024.zip');
