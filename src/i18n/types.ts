@@ -247,6 +247,8 @@ export interface TranslationDictionary {
       tpsAutoSampled: string;
       tpsLogBased: string;
       uptime: string;
+      latestSample: string;
+      kpiLabel: string;
       statusValues: {
         online: string;
         offline: string;
@@ -257,6 +259,9 @@ export interface TranslationDictionary {
         unknown: string;
       };
     };
+    units: {
+      megabytes: string;
+    };
     charts: {
       cpuLast60s: string;
       memoryLast60s: string;
@@ -266,6 +271,9 @@ export interface TranslationDictionary {
       elapsedSeconds: string;
       elapsedTime: string;
       heldSince: string;
+      seriesCpu: string;
+      seriesMemory: string;
+      seriesTps: string;
     };
     healthCheck: {
       title: string;
@@ -420,6 +428,17 @@ export interface TranslationDictionary {
     title: string;
     createButton: string;
     empty: string;
+    emptyDescription: string;
+    catalogUnavailable: string;
+    catalogUnavailableDescription: string;
+    restoring: string;
+    catalogRetry: string;
+    units: {
+      b: string;
+      kb: string;
+      mb: string;
+      gb: string;
+    };
     processing: string;
     parent: string;
     confirmDelete: string;
@@ -459,6 +478,10 @@ export interface TranslationDictionary {
       title: string;
       tagsLabel: string;
       tagsPlaceholder: string;
+      addTag: string;
+      currentTags: string;
+      noTags: string;
+      removeHint: string;
       noteLabel: string;
       notePlaceholder: string;
     };
@@ -501,6 +524,9 @@ export interface TranslationDictionary {
       confirmDelete: string;
       deleteTitle: string;
       finalConfirm: string;
+      holdToDelete: string;
+      holdDone: string;
+      emptyDescription: string;
       finalConfirmTitle: string;
       deleted: string;
       deleteFailed: string;
@@ -1186,6 +1212,19 @@ export interface TranslationDictionary {
     saving: string;
     ariaCollapseDirectory: string;
     ariaExpandDirectory: string;
+    treeLabel: string;
+    emptyDescription: string;
+    loadFailed: string;
+    retry: string;
+    applyFailed: string;
+    windowTitle: string;
+    units: {
+      b: string;
+      kb: string;
+      mb: string;
+      gb: string;
+      tb: string;
+    };
   };
 
   /** Advanced settings window translations */

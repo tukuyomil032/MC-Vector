@@ -9,16 +9,13 @@
 @import './layout/app-layout.css';
 
 @import './views/console-view.css';
-@import './views/backups-view.css';
 @import './views/files-view.css';
-@import './views/dashboard-view.css';
 @import './views/java-manager-modal.css';
 @import './views/plugin-browser.css';
 @import './views/settings-window.css';
 @import './views/advanced-settings-window.css';
 @import './views/properties-view.css';
 @import './views/server-settings.css';
-@import './views/backup-selector-window.css';
 
 @tailwind base;
 @tailwind components;

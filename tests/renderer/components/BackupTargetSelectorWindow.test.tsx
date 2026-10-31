@@ -110,10 +110,17 @@ function createDeferred<T>() {
   return { promise, resolve: resolvePromise };
 }
 
-function checkbox(path: string): HTMLInputElement {
-  return screen.getByRole('checkbox', {
-    name: `${path.split('/').at(-1)} (${path})`,
-  }) as HTMLInputElement;
+// Radix checkboxes are plain buttons with role=checkbox, so the lookup reads the aria-label directly.
+// A getByRole scan over the whole tree is too slow for the hierarchy cases.
+function checkbox(path: string): HTMLElement {
+  const name = `${path.split('/').at(-1)} (${path})`;
+  const match = Array.from(document.querySelectorAll<HTMLElement>('[role="checkbox"]')).find(
+    (node) => node.getAttribute('aria-label') === name,
+  );
+  if (!match) {
+    throw new Error(`Checkbox not found: ${name}`);
+  }
+  return match;
 }
 
 function expandDirectory(path: string) {
@@ -157,8 +164,7 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
 
     const worldCheckbox = checkbox('world');
     expect(worldCheckbox).not.toBeChecked();
-    await waitFor(() => expect(worldCheckbox.indeterminate).toBe(true));
-    expect(worldCheckbox).toHaveAttribute('aria-checked', 'mixed');
+    await waitFor(() => expect(worldCheckbox).toHaveAttribute('aria-checked', 'mixed'));
     expect(checkbox('world/level.dat')).not.toBeChecked();
   });
 
@@ -170,7 +176,7 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
     fireEvent.click(levelDatCheckbox);
 
     await waitFor(() => expect(checkbox('world')).not.toBeChecked());
-    expect(checkbox('world')).toHaveProperty('indeterminate', true);
+    expect(checkbox('world')).toHaveAttribute('aria-checked', 'mixed');
     expect(checkbox('world/region')).toBeChecked();
     expect(levelDatCheckbox).not.toBeChecked();
 
@@ -303,5 +309,40 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
     expect(checkbox('new-dir/new-child.txt')).toBeChecked();
     expect(screen.queryByRole('checkbox', { name: 'old.txt (old.txt)' })).not.toBeInTheDocument();
     expect(screen.queryByText('backupSelector.loading')).not.toBeInTheDocument();
+  });
+
+  it('shows a read error with retry instead of the empty state', async () => {
+    listFilesWithMetadataMock.mockImplementationOnce(() => Promise.reject(new Error('denied')));
+    renderSelector();
+
+    expect(await screen.findByText('backupSelector.loadFailed')).toBeInTheDocument();
+    expect(screen.queryByText('backupSelector.empty')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'backupSelector.retry' }));
+
+    expect(
+      await screen.findByRole('checkbox', { name: 'server.properties (server.properties)' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('backupSelector.loadFailed')).not.toBeInTheDocument();
+  });
+
+  it('surfaces an apply failure and keeps the selection editable', async () => {
+    emitMock.mockRejectedValueOnce(new Error('ipc down'));
+    renderSelector(['server.properties']);
+    await waitFor(() => expect(checkbox('server.properties')).toBeChecked());
+
+    fireEvent.click(screen.getByRole('button', { name: 'backupSelector.apply' }));
+
+    expect(await screen.findByText('backupSelector.applyFailed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'backupSelector.apply' })).toBeEnabled();
+    expect(checkbox('server.properties')).toBeChecked();
+  });
+
+  it('keeps the empty state for a readable folder with nothing in it', async () => {
+    listFilesWithMetadataMock.mockImplementation(() => Promise.resolve([]));
+    renderSelector();
+
+    expect(await screen.findByText('backupSelector.empty')).toBeInTheDocument();
+    expect(screen.queryByText('backupSelector.loadFailed')).not.toBeInTheDocument();
   });
 });

@@ -38,11 +38,11 @@ test.describe('files and backups', () => {
 
     await app.setBackupSelection(['server.properties']);
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await backups.locator('[data-testid="backups-open-selector-button"]').click();
-    await expect(backups.getByText('Selected: 1', { exact: true })).toBeVisible();
+    await page.locator('[data-testid="backups-open-selector-button"]').click();
+    await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
 
-    await backups.locator('[data-testid="backup-name-input"]').fill('e2e-backup.zip');
-    await backups.locator('[data-testid="backups-create-submit"]').click();
+    await page.locator('[data-testid="backup-name-input"]').fill('e2e-backup.zip');
+    await page.locator('[data-testid="backups-create-submit"]').click();
     await expect(backups.locator('[data-testid="backup-row-e2e-backup.zip"]')).toBeVisible({
       timeout: 15_000,
     });
@@ -69,10 +69,10 @@ test.describe('files and backups', () => {
     const backups = page.locator('[data-testid="backups-view"]');
     await app.setBackupSelection(['server.properties']);
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await backups.locator('[data-testid="backups-open-selector-button"]').click();
-    await expect(backups.getByText('Selected: 1', { exact: true })).toBeVisible();
-    await backups.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
-    await backups.locator('[data-testid="backups-create-submit"]').click();
+    await page.locator('[data-testid="backups-open-selector-button"]').click();
+    await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
+    await page.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
+    await page.locator('[data-testid="backups-create-submit"]').click();
     await app.acceptConfirm();
 
     await expect(backups.locator('[data-testid="backup-row-e2e-running-backup.zip"]')).toBeVisible({
