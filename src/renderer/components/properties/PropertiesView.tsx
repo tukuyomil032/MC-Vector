@@ -6,15 +6,7 @@ import { SearchField } from '@/components/arc/search-field/search-field';
 import { Select } from '@/components/arc/select/select';
 import { useMediaQuery } from '@/renderer/hooks/use-media-query';
 import { Gamepad2, Network, SlidersHorizontal } from 'lucide-react';
-import {
-  Fragment,
-  type ReactNode,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import { EmptyLine } from '../ui/EmptyLine';
 import { SectionTitle } from '../ui/IconTile';
@@ -122,6 +114,37 @@ export function splitIntoColumns(heights: readonly number[], columnCount: number
   return columns;
 }
 
+/**
+ * Splits the cards into two columns whose heights differ as little as possible. The first card stays top left and
+ * the second top right, and each column keeps the placement order. With ten cards at most, every assignment is
+ * tried; on a tie the greedy split wins, so equal or unknown heights keep the reading order.
+ */
+export function balanceTwoColumns(heights: readonly number[]): [number[], number[]] {
+  const greedy = splitIntoColumns(heights, 2);
+  if (heights.length <= 2) {
+    return [greedy[0], greedy[1]];
+  }
+  const total = heights.reduce((sum, height) => sum + height, 0);
+  const sumOf = (indexes: readonly number[]) =>
+    indexes.reduce((sum, index) => sum + heights[index], 0);
+  let best: [number[], number[]] = [greedy[0], greedy[1]];
+  let bestDiff = Math.abs(total - 2 * sumOf(greedy[0]));
+  const free = heights.length - 2;
+  for (let mask = 0; mask < 1 << free; mask++) {
+    const left = [0];
+    const right = [1];
+    for (let bit = 0; bit < free; bit++) {
+      (mask & (1 << bit) ? right : left).push(bit + 2);
+    }
+    const diff = Math.abs(total - 2 * sumOf(left));
+    if (diff < bestDiff) {
+      best = [left, right];
+      bestDiff = diff;
+    }
+  }
+  return best;
+}
+
 export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const { t } = useTranslation();
   const arc = useArcMessages();
@@ -149,6 +172,41 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const isWide = useMediaQuery(WIDE_QUERY);
   useUnsavedChangesGuard(hasChanges);
+
+  // Column balancing uses each card's rendered height. When the cards, their contents, or the column width change,
+  // one render lays the cards out at their natural height (data-measuring), reads them, and then the balanced
+  // layout renders. Both renders happen before paint.
+  const columnsRef = useRef<HTMLDivElement>(null);
+  const measuredLayoutKeyRef = useRef('');
+  const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
+  const [measuring, setMeasuring] = useState(false);
+  const [columnsWidth, setColumnsWidth] = useState(0);
+  useLayoutEffect(() => {
+    const container = columnsRef.current;
+    if (!container) return;
+    const layoutKey = container.dataset.layoutKey ?? '';
+    if (measuring) {
+      const heights: Record<string, number> = {};
+      container.querySelectorAll<HTMLElement>('[data-card-slot]').forEach((slot) => {
+        heights[slot.dataset.cardSlot ?? ''] = slot.offsetHeight;
+      });
+      measuredLayoutKeyRef.current = layoutKey;
+      setMeasuredHeights(heights);
+      setMeasuring(false);
+    } else if (layoutKey !== measuredLayoutKeyRef.current) {
+      setMeasuring(true);
+    }
+    // The layout key is read from the DOM, so these are the inputs that can change it.
+  }, [measuring, columnsWidth, isWide, props, searchQuery, loading, loadError]);
+  useEffect(() => {
+    const container = columnsRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      setColumnsWidth(Math.round(entry.contentRect.width));
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [loading, loadError]);
   useLayoutEffect(() => {
     currentServerIdRef.current = server.id;
     const generation = ++serverViewGenerationRef.current;
@@ -513,13 +571,23 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     );
   }
 
-  // Narrow layouts use one column, so every card lands in `left` in placement order.
-  const [left = [], right = []] = splitIntoColumns(
-    cards.map((card) => card.height),
-    isWide ? 2 : 1,
-  );
+  // Measured heights replace the estimates once the cards have rendered. Narrow layouts use one column, so every
+  // card lands in `left` in placement order.
+  const heights = cards.map((card) => measuredHeights[card.id] ?? card.height);
+  const [left = [], right = []] = isWide
+    ? balanceTwoColumns(heights)
+    : splitIntoColumns(heights, 1);
+  const layoutKey = [
+    isWide ? 'wide' : 'narrow',
+    columnsWidth,
+    ...cards.map((card) => `${card.id}:${card.height}`),
+  ].join('|');
   const renderCards = (indexes: readonly number[]) =>
-    indexes.map((index) => <Fragment key={cards[index].id}>{cards[index].node}</Fragment>);
+    indexes.map((index) => (
+      <div key={cards[index].id} className={styles.slot} data-card-slot={cards[index].id}>
+        {cards[index].node}
+      </div>
+    ));
 
   return (
     <div className={styles.page} data-testid="properties-view">
@@ -529,7 +597,12 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
         <EmptyLine className={styles.empty} title={t('properties.search.emptyTitle')} />
       )}
 
-      <div className={isWide ? styles.columns : styles.stack}>
+      <div
+        ref={columnsRef}
+        className={isWide ? styles.columns : styles.stack}
+        data-layout-key={layoutKey}
+        data-measuring={measuring || undefined}
+      >
         <div className={styles.column}>{renderCards(left)}</div>
         {isWide && <div className={styles.column}>{renderCards(right)}</div>}
       </div>

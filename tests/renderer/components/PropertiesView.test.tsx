@@ -1,7 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useI18nStore } from '@/i18n';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
-import PropertiesView, { splitIntoColumns } from '@/renderer/components/properties/PropertiesView';
+import PropertiesView, {
+  balanceTwoColumns,
+  splitIntoColumns,
+} from '@/renderer/components/properties/PropertiesView';
 import { hasUnsavedViewChanges } from '@/renderer/components/properties/use-unsaved-changes-guard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -291,6 +294,20 @@ describe('PropertiesView advanced cards', () => {
     expect(screen.getByRole('heading', { name: 'World' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Advanced' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('MOTD')).not.toBeInTheDocument();
+  });
+});
+
+describe('balanceTwoColumns', () => {
+  it('picks the split with the smallest height difference, keeping the first two cards on top', () => {
+    // Greedy gives left 400+300 = 700 and right 300+200+100 = 600; the best split is 400+200+100 vs 300+300.
+    expect(balanceTwoColumns([400, 300, 300, 200, 100])).toEqual([
+      [0, 3, 4],
+      [1, 2],
+    ]);
+  });
+
+  it('keeps the greedy reading order when the heights are equal or unknown', () => {
+    expect(balanceTwoColumns([0, 0, 0, 0])).toEqual(splitIntoColumns([0, 0, 0, 0], 2));
   });
 });
 

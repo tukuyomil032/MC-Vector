@@ -70,13 +70,32 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-5);
-  /* Both columns take the taller one's height, and the last card of the shorter column grows to fill it,
-     so the two columns end on the same line. */
+  /* Both columns take the taller one's height. The cards of the shorter column share the difference, which the
+     balancing keeps small, so the two columns end on the same line without one card holding a large gap. */
   align-items: stretch;
 }
 
-.columns > .column > :last-child {
-  flex: 1;
+.slot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.slot > * {
+  flex: 1 1 auto;
+}
+
+.columns .slot {
+  flex: 1 1 auto;
+}
+
+/* While the cards are measured, every card keeps its natural height. */
+.columns[data-measuring] {
+  align-items: start;
+}
+
+.columns[data-measuring] .slot {
+  flex: 0 0 auto;
 }
 
 /* Below 1024px the cards stack in one column, in placement order. */
