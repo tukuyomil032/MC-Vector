@@ -1581,6 +1581,7 @@ export default function PluginBrowser({ server }: Props) {
         loaderLabel={detailItem ? loaderLabel(detailItem) : ''}
         readme={{ loading: detailLoading, error: detailError, content: detailReadme }}
         onOpenProject={() => void openExternal(detailProjectUrl)}
+        onOpenLink={(url) => void openExternal(url)}
         onClose={closeDetailModal}
       />
     </div>

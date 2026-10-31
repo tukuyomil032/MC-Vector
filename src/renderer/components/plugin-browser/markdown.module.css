@@ -1,0 +1,13 @@
+.markdown {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.image {
+  max-width: 100%;
+  height: auto;
+}
+
+.plainLink {
+  color: inherit;
+}

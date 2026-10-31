@@ -5,11 +5,9 @@ import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
-import ReactMarkdown from 'react-markdown';
 import { useTranslation } from '../../../i18n';
 import { CompatibilityBadge } from './PluginResultCard';
+import { PluginReadme } from './PluginReadme';
 import type { CompatibilityStatus, DetailTab, ProjectItem } from './plugin-model';
 import styles from './plugin-browser.module.css';
 
@@ -26,6 +24,7 @@ export interface PluginDetailDialogProps {
   loaderLabel: string;
   readme: PluginDetailReadme;
   onOpenProject: () => void;
+  onOpenLink: (url: string) => void;
   onClose: () => void;
 }
 
@@ -37,6 +36,7 @@ export function PluginDetailDialog({
   loaderLabel,
   readme,
   onOpenProject,
+  onOpenLink,
   onClose,
 }: PluginDetailDialogProps) {
   const { t } = useTranslation();
@@ -103,9 +103,7 @@ export function PluginDetailDialog({
                   <Alert tone="danger" title={readme.error} />
                 ) : readme.content ? (
                   <div className={styles.readme}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                      {readme.content}
-                    </ReactMarkdown>
+                    <PluginReadme markdown={readme.content} onOpenLink={onOpenLink} />
                   </div>
                 ) : (
                   <p className={styles.readmeNote}>{t('plugins.browser.noReadme')}</p>
