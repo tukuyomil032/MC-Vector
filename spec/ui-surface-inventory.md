@@ -11,6 +11,14 @@
 - 着手前に担当ファイルを rg で洗う（`&&`、三項演算子、`ask(`、`prompt(`、`toast`、`notify`、`openDialog`、`WebviewWindow`、`title=`、`aria-label`）。一覧に無い面が見つかったら、先にこのファイルへ追記してから載せ替える。
 - 対象外にした項目は、理由を括弧で書いたうえでチェックを付ける。
 
+## 共通ルール（全画面で守る）
+
+- 説明文は常時表示しない。ラベル横の情報アイコンに入れる。`ui/FieldLabel`（ラベル、任意のヒント、必須マーク）を使い、ラベルだけの場所では `HintIcon` を使う。ヒントはホバーとフォーカスで Arc の Tooltip に出る。
+- 空の状態は1行にする。`ui/EmptyLine` を使い、Arc の EmptyState は使わない。操作（追加ボタンなど）があれば、その行の下に小さなボタンを置く。
+- 見出しと統計カードのアイコンは `ui/IconTile` と `ui/SectionTitle` を使う（アクセント 15% の角丸の四角）。状態色（稼働、停止、警告）は、状態が伝わる場面だけに使う。
+- 選択で枠線の太さを変えない。選択は色か、`box-shadow: inset 0 0 0 1px` で表す。radio-cards は実装済み。
+- 画面のスクロールは `AppMainContent` の `.viewFrame` の1か所だけ。各ビューは `min-height: 100%` にとどめ、`height: 100%` と `overflow-y: auto` を重ねない。コンソールとファイルは、内部のスクロール領域を持つ。
+
 ## A. ネイティブ、OS、別ウィンドウ
 
 - [x] メインウィンドウ（`tauri.conf.json`。`minWidth: 720`、`minHeight: 520` を足す）
