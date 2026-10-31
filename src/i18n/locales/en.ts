@@ -413,6 +413,7 @@ export const en: TranslationDictionary = {
     catalogUnavailableDescription:
       'Tagging and deleting stay unavailable until the backup details load again.',
     catalogRetry: 'Retry',
+    restoring: 'Restoring {name}...',
     units: {
       b: 'B',
       kb: 'KB',

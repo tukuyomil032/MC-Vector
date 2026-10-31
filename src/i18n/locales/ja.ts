@@ -409,6 +409,7 @@ export const ja: TranslationDictionary = {
     catalogUnavailableDescription:
       'バックアップの詳細が読み込めるまで、タグの編集と削除は使えません。',
     catalogRetry: '再試行',
+    restoring: '{name} を復元しています…',
     units: {
       b: 'B',
       kb: 'KB',

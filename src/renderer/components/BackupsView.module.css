@@ -26,6 +26,12 @@
   margin: 0 0 var(--space-3);
 }
 
+.status {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
 .form {
   display: flex;
   flex-direction: column;

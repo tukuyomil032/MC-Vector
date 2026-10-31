@@ -431,6 +431,7 @@ export interface TranslationDictionary {
     emptyDescription: string;
     catalogUnavailable: string;
     catalogUnavailableDescription: string;
+    restoring: string;
     catalogRetry: string;
     units: {
       b: string;

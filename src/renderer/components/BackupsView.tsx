@@ -246,6 +246,7 @@ export default function BackupsView({ server }: Props) {
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
   const [tagList, setTagList] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState('');
+  const [restoringName, setRestoringName] = useState<string | null>(null);
   const [noteInput, setNoteInput] = useState('');
   const catalogOperationInFlightRef = useRef(false);
   const initializationKey = `${server.id}\0${server.path}`;
@@ -1155,6 +1156,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     setProcessing(true);
+    setRestoringName(backupName);
     try {
       await restoreBackup(server.id, backupName);
       if (!isCurrentInitialization(operationToken)) {
@@ -1172,6 +1174,7 @@ export default function BackupsView({ server }: Props) {
     } finally {
       if (isCurrentInitialization(operationToken)) {
         setProcessing(false);
+        setRestoringName(null);
       }
     }
   };
@@ -1458,7 +1461,13 @@ export default function BackupsView({ server }: Props) {
         </Alert>
       )}
 
-      <div className={styles.list} ref={listParentRef}>
+      {restoringName !== null && (
+        <p className={styles.status} role="status" aria-live="polite">
+          {t('backups.restoring', { name: restoringName })}
+        </p>
+      )}
+
+      <div className={styles.list} ref={listParentRef} aria-busy={isProcessing || undefined}>
         {loading && <Skeleton label={t('common.loading')} lines={3} />}
 
         {!loading && backups.length === 0 && (
