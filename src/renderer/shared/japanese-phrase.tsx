@@ -25,7 +25,7 @@ export function Phrase({ text }: { text: string }): ReactNode {
   // Each phrase is keyed by its start offset, which is unique within the copy.
   let offset = 0;
   return (
-    <>
+    <span className="mv-phrase">
       {segmenter.parse(text).map((phrase) => {
         const start = offset;
         offset += phrase.length;
@@ -36,7 +36,7 @@ export function Phrase({ text }: { text: string }): ReactNode {
           </Fragment>
         );
       })}
-    </>
+    </span>
   );
 }
 

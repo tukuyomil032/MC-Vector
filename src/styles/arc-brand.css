@@ -34,7 +34,7 @@ body {
   line-break: strict;
 }
 
-:lang(ja) :is(p, h1, h2, h3, h4, h5, h6, li, label, figcaption) {
+:lang(ja) :is(p, h1, h2, h3, h4, h5, h6, li, label, figcaption, .mv-phrase) {
   word-break: keep-all;
   overflow-wrap: anywhere;
 }

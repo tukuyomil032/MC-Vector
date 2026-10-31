@@ -38,7 +38,7 @@ export const serverPropertiesList: PropertyDefinition[] = [
   {
     key: 'broadcast-console-to-ops',
     label: 'コンソールメッセージをOPに送信',
-    description: 'コンソールからのメッセージをOPに送るかどうか。',
+    description: 'コンソールからのメッセージをOPにも送ります。',
     type: 'boolean',
     category: 'General',
     default: true,
@@ -46,7 +46,7 @@ export const serverPropertiesList: PropertyDefinition[] = [
   {
     key: 'broadcast-rcon-to-ops',
     label: 'RCONメッセージをOPに送信',
-    description: 'RCONからのメッセージをOPに送るかどうか。',
+    description: 'RCONからのメッセージをOPにも送ります。',
     type: 'boolean',
     category: 'General',
     default: true,
