@@ -67,6 +67,27 @@
   align-items: flex-end;
 }
 
+/* The Java runtime select and its manage button share one row; the button sits on the select's baseline. */
+.javaRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.javaSelect {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Memory and port sit side by side, each with its own label. */
+.pair {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
 .actionRow {
   display: flex;
   flex-wrap: wrap;

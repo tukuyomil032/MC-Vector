@@ -989,7 +989,7 @@ export const ja: TranslationDictionary = {
     version: 'バージョン',
     javaRuntime: 'Javaランタイム',
     javaSystemDefault: 'System Default (Path環境変数)',
-    manageJava: 'Javaを管理...',
+    manageJava: 'Javaを管理…',
     memory: 'メモリ (MB)',
     port: 'ポート',
     savePath: '保存先パス',

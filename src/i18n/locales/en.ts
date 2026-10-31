@@ -990,7 +990,7 @@ export const en: TranslationDictionary = {
     version: 'Version',
     javaRuntime: 'Java Runtime',
     javaSystemDefault: 'System Default (PATH environment)',
-    manageJava: 'Manage Java...',
+    manageJava: 'Manage Java…',
     memory: 'Memory (MB)',
     port: 'Port',
     savePath: 'Save Path',

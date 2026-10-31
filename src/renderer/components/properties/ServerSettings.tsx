@@ -424,39 +424,43 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
             </Button>
           </div>
           <div className={styles.wide}>
-            <Select
-              label={t('serverSettings.javaRuntime')}
-              placeholder={arc.select.placeholder}
-              value={form.javaPath}
-              onValueChange={(value) => setField('javaPath', value)}
-              options={javaOptions}
+            <div className={styles.javaRow}>
+              <div className={styles.javaSelect}>
+                <Select
+                  label={t('serverSettings.javaRuntime')}
+                  placeholder={arc.select.placeholder}
+                  value={form.javaPath}
+                  onValueChange={(value) => setField('javaPath', value)}
+                  options={javaOptions}
+                />
+              </div>
+              <Button
+                variant="secondary"
+                data-testid="server-settings-java-manage-button"
+                onClick={() => {
+                  setShowJavaManager(true);
+                  void loadJavaList();
+                }}
+              >
+                {t('serverSettings.manageJava')}
+              </Button>
+            </div>
+          </div>
+          <div className={styles.pair}>
+            <NumberField
+              label={t('serverSettings.memory')}
+              value={form.memory}
+              onValueChange={(value) => setField('memory', value)}
+            />
+            <NumberField
+              label={t('serverSettings.port')}
+              min={1}
+              max={65535}
+              formatOptions={{ useGrouping: false }}
+              value={form.port}
+              onValueChange={(value) => setField('port', value)}
             />
           </div>
-          <div className={styles.actionCell}>
-            <Button
-              variant="secondary"
-              data-testid="server-settings-java-manage-button"
-              onClick={() => {
-                setShowJavaManager(true);
-                void loadJavaList();
-              }}
-            >
-              {t('serverSettings.manageJava')}
-            </Button>
-          </div>
-          <NumberField
-            label={t('serverSettings.memory')}
-            value={form.memory}
-            onValueChange={(value) => setField('memory', value)}
-          />
-          <NumberField
-            label={t('serverSettings.port')}
-            min={1}
-            max={65535}
-            formatOptions={{ useGrouping: false }}
-            value={form.port}
-            onValueChange={(value) => setField('port', value)}
-          />
           <div className={styles.wide}>
             <Input label={t('serverSettings.savePath')} type="text" value={server.path} readOnly />
           </div>
