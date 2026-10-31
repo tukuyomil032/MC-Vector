@@ -163,11 +163,6 @@ export default function UsersView({ server }: Props) {
 
   return (
     <div className={styles.root} data-testid="users-view">
-      {server.status !== 'online' && (
-        <Alert tone="info" title={t('users.notOnline')}>
-          {t('users.notOnlineHint')}
-        </Alert>
-      )}
       {loadError !== null && (
         <Alert tone="danger" title={t('users.loadFailed')}>
           <span className={styles.alertDetail}>{loadError}</span>

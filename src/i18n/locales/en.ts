@@ -521,8 +521,6 @@ export const en: TranslationDictionary = {
       add: 'Add',
       remove: 'Remove',
     },
-    notOnline: 'The server is not online',
-    notOnlineHint: 'Changes are saved to the list and take effect the next time the server starts.',
     count: '{count} entries',
     countOne: '1 entry',
     validation: {

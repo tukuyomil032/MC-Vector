@@ -517,8 +517,6 @@ export const ja: TranslationDictionary = {
       add: '追加',
       remove: '削除',
     },
-    notOnline: 'サーバーはオンラインではありません',
-    notOnlineHint: '変更はリストに保存され、次回サーバーが起動したときに反映されます。',
     count: '{count} 件',
     countOne: '1 件',
     validation: {

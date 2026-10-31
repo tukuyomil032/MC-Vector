@@ -537,8 +537,6 @@ export interface TranslationDictionary {
       add: string;
       remove: string;
     };
-    notOnline: string;
-    notOnlineHint: string;
     count: string;
     countOne: string;
     validation: {
