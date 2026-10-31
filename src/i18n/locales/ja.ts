@@ -247,6 +247,9 @@ export const ja: TranslationDictionary = {
       elapsedSeconds: '{seconds}秒',
       elapsedTime: '起動からの経過時間（秒）',
       heldSince: '{{time}}の実測値を保持中',
+      seriesCpu: 'CPU',
+      seriesMemory: 'メモリ',
+      seriesTps: 'TPS',
     },
     units: {
       megabytes: 'MB',

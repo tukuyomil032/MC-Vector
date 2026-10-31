@@ -271,6 +271,9 @@ export interface TranslationDictionary {
       elapsedSeconds: string;
       elapsedTime: string;
       heldSince: string;
+      seriesCpu: string;
+      seriesMemory: string;
+      seriesTps: string;
     };
     healthCheck: {
       title: string;

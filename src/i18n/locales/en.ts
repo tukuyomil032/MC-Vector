@@ -251,6 +251,9 @@ export const en: TranslationDictionary = {
       elapsedSeconds: '{seconds}s',
       elapsedTime: 'Time since startup (seconds)',
       heldSince: 'Held since {{time}} (last measured)',
+      seriesCpu: 'CPU',
+      seriesMemory: 'Memory',
+      seriesTps: 'TPS',
     },
     units: {
       megabytes: 'MB',

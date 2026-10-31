@@ -1,16 +1,6 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  type DotItemDotProps,
-  type TooltipContentProps,
-} from 'recharts';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
 import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { sendServerNotification } from '../../lib/notification-commands';
@@ -25,8 +15,6 @@ import {
   createMetricDisplaySeries,
   formatMetricUptime,
   getMetricWindowPoints,
-  getMetricTimeDomain,
-  getMetricTimeTicks,
   normalizeMetric,
 } from '../shared/server-metrics';
 import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
@@ -36,42 +24,10 @@ interface Props {
   server: MinecraftServer;
 }
 
-interface ChartTimeAxisProps {
-  timeDomain: [number, number];
-  timeTicks: number[];
-  formatElapsed: (elapsedMs: number) => string;
-  elapsedAxisLabel: string;
-  heldSinceLabel: (elapsedMs: number) => string;
-}
-
-interface ResourceChartCardProps extends ChartTimeAxisProps {
-  title: string;
-  data: MetricDisplayPoint<ResourcePoint>[];
-  dataKey: 'cpu' | 'memory';
-  stroke: string;
-  fill: string;
-  yDomain?: [number, number];
-  emptyLabel: string;
-}
-
-interface TpsChartCardProps extends ChartTimeAxisProps {
-  title: string;
-  data: MetricDisplayPoint<TpsPoint>[];
-  emptyLabel: string;
-}
-
 const EMPTY_RESOURCE_STATS: ResourcePoint[] = [];
 const EMPTY_TPS_STATS: TpsPoint[] = [];
-
-const AXIS_STROKE_COLOR = '#94a3b8';
-const GRID_STROKE_COLOR = '#334155';
-const TOOLTIP_STYLE = {
-  backgroundColor: '#111827',
-  border: '1px solid rgba(82, 82, 91, 0.7)',
-};
-const TICK_STYLE = { fontSize: 10 };
-const CPU_Y_DOMAIN: [number, number] = [0, 100];
-const TPS_Y_DOMAIN: [number, number] = [0, 22];
+const CHART_HEIGHT = 200;
+const SERIES_KEY = 'value';
 
 const STATUS_LABEL_KEYS: Record<ServerStatus, TranslationKey> = {
   online: 'dashboard.stats.statusValues.online',
@@ -93,59 +49,9 @@ const isDisplayOnlyMetricPoint = (point: unknown): point is DisplayOnlyMetricPoi
   );
 };
 
-interface MetricChartTooltipProps extends Pick<
-  TooltipContentProps,
-  'active' | 'label' | 'payload'
-> {
-  formatElapsed: (elapsedMs: number) => string;
-  heldSinceLabel: (elapsedMs: number) => string;
-}
-
-const MetricChartTooltip = memo(function MetricChartTooltip({
-  active,
-  label,
-  payload,
-  formatElapsed,
-  heldSinceLabel,
-}: MetricChartTooltipProps) {
-  const item = payload[0];
-  if (!active || !item) {
-    return null;
-  }
-
-  const point = item.payload as
-    | { displayOnly?: boolean; measuredAtElapsedMs?: number; windowAnchor?: boolean }
-    | undefined;
-  if (point?.windowAnchor) {
-    return null;
-  }
-  const heldSinceElapsedMs = point?.displayOnly ? point.measuredAtElapsedMs : undefined;
-
-  return (
-    <div style={TOOLTIP_STYLE}>
-      <p>{formatElapsed(Number(label))}</p>
-      <p>
-        {item.name}: {String(item.value ?? '')}
-      </p>
-      {typeof heldSinceElapsedMs === 'number' && <p>{heldSinceLabel(heldSinceElapsedMs)}</p>}
-    </div>
-  );
-});
-
-const renderActualSampleDot = (props: DotItemDotProps): ReactNode => {
-  if (isDisplayOnlyMetricPoint(props.payload)) {
-    return null;
-  }
-
-  return (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={3}
-      fill={props.fill ?? props.stroke}
-      stroke={props.stroke}
-    />
-  );
+/** The anchor is the last sample before the window. It only carries the line in, so it never becomes a datum of its own. */
+const isWindowAnchor = (point: unknown): boolean => {
+  return isDisplayOnlyMetricPoint(point) && point.windowAnchor === true;
 };
 
 const getStatusLabel = (status: ServerStatus, t: Translate): string => {
@@ -190,171 +96,80 @@ function KpiTile({ testId, label, value, context, tone }: KpiTileProps) {
   );
 }
 
-const getMetricAxisDomain = (values: readonly number[]): [number, number] | undefined => {
-  if (values.length === 0) {
-    return undefined;
+/**
+ * Arc LineChart spaces its data evenly rather than by time, so each measured point is one datum. A display-only point
+ * holds the latest value up to now, and its tooltip title says when that value was measured.
+ */
+function toMetricChartData<T extends { elapsedMs: number }>(
+  series: readonly MetricDisplayPoint<T>[],
+  valueOf: (point: T) => number,
+  formatElapsed: (elapsedMs: number) => string,
+  heldSinceLabel: (elapsedMs: number) => string,
+): LineChartDatum[] {
+  const data: LineChartDatum[] = [];
+  for (const point of series) {
+    if (isWindowAnchor(point)) {
+      continue;
+    }
+    const elapsed = formatElapsed(point.elapsedMs);
+    if (isDisplayOnlyMetricPoint(point)) {
+      data.push({
+        key: `${point.elapsedMs}-held`,
+        label: `${elapsed} · ${heldSinceLabel(point.measuredAtElapsedMs)}`,
+        axisLabel: elapsed,
+        values: { [SERIES_KEY]: valueOf(point) },
+      });
+      continue;
+    }
+    data.push({
+      key: `${point.elapsedMs}`,
+      label: elapsed,
+      axisLabel: elapsed,
+      values: { [SERIES_KEY]: valueOf(point) },
+    });
   }
+  return data;
+}
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min;
-  const padding = range === 0 ? Math.max(Math.abs(min) * 0.05, 1) : range * 0.05;
+interface MetricChartCardProps {
+  testId: string;
+  title: string;
+  seriesLabel: string;
+  data: LineChartDatum[];
+  emptyLabel: string;
+  elapsedAxisLabel: string;
+  formatValue: (value: number) => string;
+  formatTick: (value: number) => string;
+}
 
-  return [Math.max(0, min - padding), max + padding];
-};
-
-const ResourceChartCard = memo(function ResourceChartCard({
+function MetricChartCard({
+  testId,
   title,
-  data,
-  dataKey,
-  stroke,
-  fill,
-  yDomain,
-  emptyLabel,
-  timeDomain,
-  timeTicks,
-  formatElapsed,
-  elapsedAxisLabel,
-  heldSinceLabel,
-}: ResourceChartCardProps) {
-  const actualValues = data
-    .filter((point) => !isDisplayOnlyMetricPoint(point))
-    .map((point) => point[dataKey]);
-  const actualPointCount = actualValues.length;
-  const actualDataYDomain = getMetricAxisDomain(actualValues);
-
-  return (
-    <article className="dashboard-view__chart-card surface-card rounded-2xl">
-      <h3 className="dashboard-view__chart-title section-title">{title}</h3>
-      <div className="dashboard-view__chart-body">
-        {actualPointCount === 0 ? (
-          <div className="dashboard-view__chart-empty">{emptyLabel}</div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-            <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 20, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
-              <XAxis
-                dataKey="elapsedMs"
-                type="number"
-                domain={timeDomain}
-                ticks={timeTicks}
-                tickFormatter={formatElapsed}
-                allowDataOverflow
-                label={{
-                  value: elapsedAxisLabel,
-                  position: 'insideBottom',
-                  offset: -12,
-                  fontSize: 10,
-                  fill: AXIS_STROKE_COLOR,
-                }}
-                stroke={AXIS_STROKE_COLOR}
-                tick={TICK_STYLE}
-                minTickGap={24}
-              />
-              <YAxis
-                stroke={AXIS_STROKE_COLOR}
-                tick={TICK_STYLE}
-                domain={yDomain ?? actualDataYDomain}
-                allowDataOverflow
-              />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                content={(props) => (
-                  <MetricChartTooltip
-                    {...props}
-                    formatElapsed={formatElapsed}
-                    heldSinceLabel={heldSinceLabel}
-                  />
-                )}
-              />
-              <Area
-                type="monotone"
-                dataKey={dataKey}
-                stroke={stroke}
-                fill={fill}
-                isAnimationActive={false}
-                dot={actualPointCount === 1 ? renderActualSampleDot : false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-    </article>
-  );
-});
-
-const TpsChartCard = memo(function TpsChartCard({
-  title,
+  seriesLabel,
   data,
   emptyLabel,
-  timeDomain,
-  timeTicks,
-  formatElapsed,
   elapsedAxisLabel,
-  heldSinceLabel,
-}: TpsChartCardProps) {
-  const actualPointCount = data.filter((point) => !isDisplayOnlyMetricPoint(point)).length;
-
+  formatValue,
+  formatTick,
+}: MetricChartCardProps) {
   return (
-    <article className="dashboard-view__chart-card dashboard-view__chart-card--tps surface-card rounded-2xl">
-      <h3 className="dashboard-view__chart-title section-title">{title}</h3>
-      <div className="dashboard-view__chart-body">
-        {actualPointCount === 0 ? (
-          <div className="dashboard-view__chart-empty">{emptyLabel}</div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-            <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 20, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE_COLOR} />
-              <XAxis
-                dataKey="elapsedMs"
-                type="number"
-                domain={timeDomain}
-                ticks={timeTicks}
-                tickFormatter={formatElapsed}
-                allowDataOverflow
-                label={{
-                  value: elapsedAxisLabel,
-                  position: 'insideBottom',
-                  offset: -12,
-                  fontSize: 10,
-                  fill: AXIS_STROKE_COLOR,
-                }}
-                stroke={AXIS_STROKE_COLOR}
-                tick={TICK_STYLE}
-                minTickGap={24}
-              />
-              <YAxis
-                stroke={AXIS_STROKE_COLOR}
-                tick={TICK_STYLE}
-                domain={TPS_Y_DOMAIN}
-                allowDataOverflow
-              />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                content={(props) => (
-                  <MetricChartTooltip
-                    {...props}
-                    formatElapsed={formatElapsed}
-                    heldSinceLabel={heldSinceLabel}
-                  />
-                )}
-              />
-              <Area
-                type="monotone"
-                dataKey="tps"
-                stroke="#22c55e"
-                fill="rgba(34, 197, 94, 0.24)"
-                isAnimationActive={false}
-                dot={actualPointCount === 1 ? renderActualSampleDot : false}
-                connectNulls
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+    <article className={styles.chartCard} data-testid={testId}>
+      <h3 className={styles.chartTitle}>{title}</h3>
+      <LineChart
+        label={title}
+        data={data}
+        series={[{ key: SERIES_KEY, label: seriesLabel }]}
+        height={CHART_HEIGHT}
+        formatValue={formatValue}
+        formatTick={formatTick}
+        emptyLabel={emptyLabel}
+        categoryLabel={elapsedAxisLabel}
+        legend={false}
+      />
+      <p className={styles.chartAxis}>{elapsedAxisLabel}</p>
     </article>
   );
-});
+}
 
 export default function DashboardView({ server }: Props) {
   const { t, locale } = useTranslation();
@@ -376,8 +191,6 @@ export default function DashboardView({ server }: Props) {
 
   const elapsedMs = snapshot ? snapshot.elapsedMs + Math.max(0, clockNow - receivedAt) : 0;
   const uptime = snapshot ? formatMetricUptime(elapsedMs) : '--:--:--';
-  const timeDomain = useMemo(() => getMetricTimeDomain(elapsedMs), [elapsedMs]);
-  const timeTicks = useMemo(() => getMetricTimeTicks(timeDomain), [timeDomain]);
   const formatElapsed = useCallback(
     (value: number) => t('dashboard.charts.elapsedSeconds', { seconds: Math.floor(value / 1_000) }),
     [t],
@@ -438,11 +251,46 @@ export default function DashboardView({ server }: Props) {
     return getTpsTone(currentTps);
   }, [currentTps]);
 
-  const tpsFormatter = useMemo(
-    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  const formatters = useMemo(
+    () => ({
+      tps: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      decimal: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }),
+      whole: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+    }),
     [locale],
   );
   const megabytesLabel = t('dashboard.units.megabytes');
+
+  const cpuChartData = useMemo(
+    () =>
+      toMetricChartData(
+        resourceChartStats,
+        (point: ResourcePoint) => point.cpu,
+        formatElapsed,
+        heldSinceLabel,
+      ),
+    [formatElapsed, heldSinceLabel, resourceChartStats],
+  );
+  const memoryChartData = useMemo(
+    () =>
+      toMetricChartData(
+        resourceChartStats,
+        (point: ResourcePoint) => point.memory,
+        formatElapsed,
+        heldSinceLabel,
+      ),
+    [formatElapsed, heldSinceLabel, resourceChartStats],
+  );
+  const tpsChartData = useMemo(
+    () =>
+      toMetricChartData(
+        tpsChartStats,
+        (point: TpsPoint) => point.tps,
+        formatElapsed,
+        heldSinceLabel,
+      ),
+    [formatElapsed, heldSinceLabel, tpsChartStats],
+  );
 
   const tpsSamplingLabel = useMemo(() => {
     return supportsTpsPolling
@@ -525,7 +373,7 @@ export default function DashboardView({ server }: Props) {
         <KpiTile
           testId="dashboard-kpi-tps"
           label={t('dashboard.stats.currentTps')}
-          value={currentTps === null ? '--' : tpsFormatter.format(currentTps)}
+          value={currentTps === null ? '--' : formatters.tps.format(currentTps)}
           tone={tpsTone}
           context={tpsSamplingLabel}
         />
@@ -558,45 +406,38 @@ export default function DashboardView({ server }: Props) {
         <KpiTile testId="dashboard-kpi-uptime" label={t('dashboard.stats.uptime')} value={uptime} />
       </section>
 
-      <section className="dashboard-view__chart-grid">
-        <ResourceChartCard
+      <section className={styles.chartGrid}>
+        <MetricChartCard
+          testId="dashboard-chart-cpu"
           title={t('dashboard.charts.cpuLast60s')}
-          data={resourceChartStats}
-          dataKey="cpu"
-          stroke="#38bdf8"
-          fill="rgba(56, 189, 248, 0.28)"
-          yDomain={CPU_Y_DOMAIN}
+          seriesLabel={t('dashboard.charts.seriesCpu')}
+          data={cpuChartData}
           emptyLabel={t('dashboard.charts.metricsNoData')}
-          timeDomain={timeDomain}
-          timeTicks={timeTicks}
-          formatElapsed={formatElapsed}
           elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
-          heldSinceLabel={heldSinceLabel}
+          formatValue={(value) => `${formatters.decimal.format(value)}%`}
+          formatTick={(value) => `${formatters.whole.format(value)}%`}
         />
 
-        <ResourceChartCard
+        <MetricChartCard
+          testId="dashboard-chart-memory"
           title={t('dashboard.charts.memoryLast60s')}
-          data={resourceChartStats}
-          dataKey="memory"
-          stroke="#34d399"
-          fill="rgba(52, 211, 153, 0.24)"
+          seriesLabel={t('dashboard.charts.seriesMemory')}
+          data={memoryChartData}
           emptyLabel={t('dashboard.charts.metricsNoData')}
-          timeDomain={timeDomain}
-          timeTicks={timeTicks}
-          formatElapsed={formatElapsed}
           elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
-          heldSinceLabel={heldSinceLabel}
+          formatValue={(value) => `${formatters.whole.format(value)} ${megabytesLabel}`}
+          formatTick={(value) => formatters.whole.format(value)}
         />
 
-        <TpsChartCard
+        <MetricChartCard
+          testId="dashboard-chart-tps"
           title={t('dashboard.charts.tpsLast60s')}
-          data={tpsChartStats}
+          seriesLabel={t('dashboard.charts.seriesTps')}
+          data={tpsChartData}
           emptyLabel={t('dashboard.charts.tpsNoData')}
-          timeDomain={timeDomain}
-          timeTicks={timeTicks}
-          formatElapsed={formatElapsed}
           elapsedAxisLabel={t('dashboard.charts.elapsedTime')}
-          heldSinceLabel={heldSinceLabel}
+          formatValue={(value) => formatters.tps.format(value)}
+          formatTick={(value) => formatters.decimal.format(value)}
         />
       </section>
     </div>
