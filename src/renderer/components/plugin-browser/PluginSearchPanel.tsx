@@ -1,14 +1,14 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import { Select, type SelectOption } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
-import { ExternalLink, type LucideIcon, Search } from 'lucide-react';
+import { ExternalLink, type LucideIcon } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useTranslation } from '../../../i18n';
 import { useArcMessages } from '../../shared/arc-messages';
+import { EmptyLine } from '../ui/EmptyLine';
 import { PluginPager } from './PluginPager';
 import { PluginResultCard, type PluginResultCardState } from './PluginResultCard';
 import type { BrowserPlatform, ProjectItem, SortMode } from './plugin-model';
@@ -40,7 +40,6 @@ export interface PluginSearchPanelProps {
   onRetrySearch: () => void;
   sortMode: SortMode;
   onSortModeChange: (mode: SortMode) => void;
-  folderName: string;
   onOpenCurseForge: () => void;
   updateAvailableCount: number;
   results: ProjectItem[];
@@ -76,7 +75,6 @@ export function PluginSearchPanel({
   onRetrySearch,
   sortMode,
   onSortModeChange,
-  folderName,
   onOpenCurseForge,
   updateAvailableCount,
   results,
@@ -134,10 +132,8 @@ export function PluginSearchPanel({
   let body: ReactNode = null;
   if (!isInAppSearch) {
     body = (
-      <EmptyState
-        icon={<ExternalLink size={20} strokeWidth={1.75} aria-hidden="true" />}
+      <EmptyLine
         title={t('plugins.browser.unsupportedPlatform')}
-        description={t('plugins.browser.downloadInstructions', { folder: folderName })}
         action={
           <Button type="button" variant="secondary" onClick={onOpenCurseForge}>
             <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
@@ -179,11 +175,7 @@ export function PluginSearchPanel({
           ))}
           {results.length === 0 && !loading && !searchFailed ? (
             <div className={styles.empty}>
-              <EmptyState
-                icon={<Search size={20} strokeWidth={1.75} aria-hidden="true" />}
-                title={t('plugins.browser.noResults')}
-                description={t('plugins.browser.noResultsHint')}
-              />
+              <EmptyLine title={t('plugins.browser.noResults')} />
             </div>
           ) : null}
         </div>

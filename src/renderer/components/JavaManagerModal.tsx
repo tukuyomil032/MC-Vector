@@ -1,9 +1,7 @@
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Progress } from '@/components/arc/progress/progress';
-import { Coffee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
@@ -18,6 +16,7 @@ import {
 } from '../../lib/java-commands';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
+import { EmptyLine } from './ui/EmptyLine';
 import styles from './JavaManagerModal.module.css';
 
 interface Props {
@@ -214,12 +213,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>{t('javaManager.installedRuntimes')}</h3>
           {installed.length === 0 ? (
-            <EmptyState
-              className={styles.empty}
-              icon={<Coffee size={20} strokeWidth={1.75} aria-hidden={true} />}
-              title={t('javaManager.emptyTitle')}
-              description={t('javaManager.noRuntimes')}
-            />
+            <EmptyLine className={styles.empty} title={t('javaManager.emptyTitle')} />
           ) : (
             <ul className={styles.runtimeList}>
               {installed.map((java) => (

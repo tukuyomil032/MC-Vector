@@ -1,4 +1,4 @@
-import { Plus, SearchX, Server } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { type JSX, lazy } from 'react';
 import { Button } from '@/components/arc/button/button';
 import type { Translate } from '../../i18n';
@@ -79,9 +79,7 @@ export default function AppContentRouter({
     const hasServers = servers.length > 0;
     return (
       <ContentState
-        icon={<Server size={20} strokeWidth={1.75} aria-hidden={true} />}
-        title={hasServers ? t('server.title') : t('server.list.emptyTitle')}
-        description={hasServers ? t('server.list.selectOrCreate') : t('server.list.empty')}
+        title={hasServers ? t('server.list.selectOrCreate') : t('server.list.emptyTitle')}
         action={
           <Button
             type="button"
@@ -135,11 +133,5 @@ export default function AppContentRouter({
     return serverRenderer();
   }
 
-  return (
-    <ContentState
-      icon={<SearchX size={20} strokeWidth={1.75} aria-hidden={true} />}
-      title={t('errors.notFound')}
-      description={t('errors.notFoundDescription')}
-    />
-  );
+  return <ContentState title={t('errors.notFound')} />;
 }

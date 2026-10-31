@@ -1538,7 +1538,6 @@ export default function PluginBrowser({ server }: Props) {
             }}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
-            folderName={folderName}
             onOpenCurseForge={() => {
               void openExternal('https://www.curseforge.com/minecraft/mc-mods');
             }}

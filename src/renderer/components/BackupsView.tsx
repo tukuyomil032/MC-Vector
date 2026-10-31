@@ -6,7 +6,6 @@ import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
 import { ChipGroup } from '@/components/arc/chip-group/chip-group';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { HoldToConfirm } from '@/components/arc/hold-to-confirm/hold-to-confirm';
 import { Input } from '@/components/arc/input/input';
 import { Select } from '@/components/arc/select/select';
@@ -28,6 +27,7 @@ import { deleteItem, listFiles } from '../../lib/file-commands';
 import { notify } from '../shared/notify';
 import { useArcMessages } from '../shared/arc-messages';
 import { useAppFeedback } from './AppFeedbackProvider';
+import { EmptyLine } from './ui/EmptyLine';
 import {
   getManualBackupOperationId,
   useBackupOperationStore,
@@ -1127,9 +1127,7 @@ export default function BackupsView({ server }: Props) {
       <div className={styles.list} ref={listParentRef} aria-busy={isProcessing || undefined}>
         {loading && <Skeleton label={t('common.loading')} lines={3} />}
 
-        {!loading && backups.length === 0 && (
-          <EmptyState title={t('backups.empty')} description={t('backups.emptyDescription')} />
-        )}
+        {!loading && backups.length === 0 && <EmptyLine title={t('backups.empty')} />}
 
         {!loading && backups.length > 0 && (
           <div style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -1215,10 +1213,7 @@ export default function BackupsView({ server }: Props) {
         </div>
 
         {worlds.length === 0 ? (
-          <EmptyState
-            title={t('backups.world.empty')}
-            description={t('backups.world.emptyDescription')}
-          />
+          <EmptyLine title={t('backups.world.empty')} />
         ) : (
           <ul className={styles.worldList}>
             {worlds.map((worldName) => (

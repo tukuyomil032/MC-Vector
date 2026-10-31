@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Search, Server } from 'lucide-react';
+import { EmptyLine } from '../ui/EmptyLine';
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
 import { Card } from '@/components/arc/card/card';
 import { CodeBlock } from '@/components/arc/code-block/code-block';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
 import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area';
@@ -167,21 +166,13 @@ export function ScrollAreaDemo() {
   );
 }
 
-export function EmptyStateDemo() {
+export function EmptyLineDemo() {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <EmptyState
-        label="サーバーがない状態"
-        icon={<Server size={28} strokeWidth={1.5} />}
+      <EmptyLine title="バックアップはまだありません" />
+      <EmptyLine
         title="サーバーがありません"
-        description="サーバーを追加すると、ここに一覧が表示されます。"
         action={<Button variant="secondary">サーバーを追加</Button>}
-      />
-      <EmptyState
-        label="検索結果がない状態"
-        icon={<Search size={28} strokeWidth={1.5} />}
-        title="一致する結果がありません"
-        description="別のキーワードで検索してください。"
       />
     </div>
   );

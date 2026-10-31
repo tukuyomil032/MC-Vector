@@ -4,7 +4,6 @@ import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { Button } from '@/components/arc/button/button';
 import { ButtonGroup } from '@/components/arc/button-group/button-group';
 import { SearchField } from '@/components/arc/search-field/search-field';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Input } from '@/components/arc/input/input';
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control';
 import {
@@ -15,13 +14,13 @@ import {
   Copy,
   Download,
   Pin,
-  ScrollText,
   Search,
   Send,
   X,
 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
+import { EmptyLine } from './ui/EmptyLine';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
 import { logError } from '../../lib/error-utils';
@@ -1026,18 +1025,12 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           <div ref={logEndRef} />
 
           {visibleLogs.length === 0 && (
-            <EmptyState
+            <EmptyLine
               className={styles.emptyLog}
-              icon={<ScrollText aria-hidden="true" size={22} strokeWidth={1.75} />}
               title={
                 logFilter === 'ALL'
                   ? t('console.emptyLog.waiting')
                   : t('console.emptyLog.notFound', { level: logFilter })
-              }
-              description={
-                logFilter === 'ALL'
-                  ? t('console.emptyLog.waitingHint')
-                  : t('console.emptyLog.notFoundHint')
               }
             />
           )}

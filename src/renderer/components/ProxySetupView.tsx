@@ -1,12 +1,12 @@
 import { Button } from '@/components/arc/button/button';
 import { Card } from '@/components/arc/card/card';
 import { Checkbox } from '@/components/arc/checkbox/checkbox';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { NumberField } from '@/components/arc/number-field/number-field';
 import { Select } from '@/components/arc/select/select';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
+import { EmptyLine } from './ui/EmptyLine';
 import type { MinecraftServer } from '../shared/server declaration';
 import { useAppFeedback } from './AppFeedbackProvider';
 import styles from './ProxySetupView.module.css';
@@ -135,10 +135,7 @@ export default function ProxySetupView({
             </div>
 
             {backendCandidates.length === 0 ? (
-              <EmptyState
-                title={t('proxySetup.noBackendServers')}
-                description={t('proxySetup.noBackendServersHint')}
-              />
+              <EmptyLine title={t('proxySetup.noBackendServers')} />
             ) : (
               <div className={styles.backendList}>
                 <Checkbox

@@ -1,12 +1,12 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
 import { Card } from '@/components/arc/card/card';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Input } from '@/components/arc/input/input';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Globe, User } from 'lucide-react';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { type Translate, useTranslation } from '../../i18n';
+import { EmptyLine } from './ui/EmptyLine';
 import {
   getPlayerLists,
   mutatePlayerList,
@@ -190,7 +190,6 @@ export default function UsersView({ server }: Props) {
             entries={whitelist}
             loaded={loaded}
             emptyTitle={t('users.emptyList.whitelist.title')}
-            emptyDescription={t('users.emptyList.whitelist.description')}
             onAdd={(val) => handleAdd('whitelist', val)}
             onRemove={(val) => handleRemove('whitelist', val)}
           />
@@ -200,7 +199,6 @@ export default function UsersView({ server }: Props) {
             entries={ops}
             loaded={loaded}
             emptyTitle={t('users.emptyList.ops.title')}
-            emptyDescription={t('users.emptyList.ops.description')}
             onAdd={(val) => handleAdd('ops', val)}
             onRemove={(val) => handleRemove('ops', val)}
           />
@@ -210,7 +208,6 @@ export default function UsersView({ server }: Props) {
             entries={bannedPlayers}
             loaded={loaded}
             emptyTitle={t('users.emptyList.bannedPlayers.title')}
-            emptyDescription={t('users.emptyList.bannedPlayers.description')}
             onAdd={(val) => handleAdd('banned-players', val)}
             onRemove={(val) => handleRemove('banned-players', val)}
           />
@@ -220,7 +217,6 @@ export default function UsersView({ server }: Props) {
             entries={bannedIps}
             loaded={loaded}
             emptyTitle={t('users.emptyList.bannedIps.title')}
-            emptyDescription={t('users.emptyList.bannedIps.description')}
             onAdd={(val) => handleAdd('banned-ips', val)}
             onRemove={(val) => handleRemove('banned-ips', val)}
           />
@@ -236,7 +232,6 @@ interface UserListCardProps {
   entries: PlayerEntry[];
   loaded: boolean;
   emptyTitle: string;
-  emptyDescription: string;
   onAdd: (value: string) => Promise<boolean>;
   onRemove: (identifier: string) => Promise<void>;
 }
@@ -247,7 +242,6 @@ function UserListCard({
   entries,
   loaded,
   emptyTitle,
-  emptyDescription,
   onAdd,
   onRemove,
 }: UserListCardProps) {
@@ -287,7 +281,7 @@ function UserListCard({
   } else if (entries.length === 0) {
     body = (
       <div className={styles.emptyWrap}>
-        <EmptyState title={emptyTitle} description={emptyDescription} />
+        <EmptyLine title={emptyTitle} />
       </div>
     );
   } else {

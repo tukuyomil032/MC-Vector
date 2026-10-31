@@ -40,7 +40,7 @@ import {
   AlertDemo,
   CardDemo,
   CodeBlockDemo,
-  EmptyStateDemo,
+  EmptyLineDemo,
   LineChartDemo,
   MetricCardDemo,
   ScrollAreaDemo,
@@ -176,8 +176,8 @@ export default function UiLabView() {
           <LabSection title="Scroll area">
             <ScrollAreaDemo />
           </LabSection>
-          <LabSection title="Empty state">
-            <EmptyStateDemo />
+          <LabSection title="Empty line">
+            <EmptyLineDemo />
           </LabSection>
           <LabSection title="Skeleton">
             <SkeletonDemo />

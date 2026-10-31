@@ -23,7 +23,7 @@ import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group
 import { Checkbox } from '@/components/arc/checkbox/checkbox';
 import { ContextMenu, type ContextMenuItem } from '@/components/arc/context-menu/context-menu';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { EmptyLine } from './ui/EmptyLine';
 import { Input } from '@/components/arc/input/input';
 import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -922,11 +922,7 @@ export default function FilesView({ server }: Props) {
         )}
 
         {files.length === 0 ? (
-          <EmptyState
-            icon={<FolderOpen aria-hidden="true" size={22} strokeWidth={1.75} />}
-            title={t('files.emptyFolder')}
-            description={t('files.emptyFolderHint')}
-          />
+          <EmptyLine title={t('files.emptyFolder')} />
         ) : (
           <div className={styles.list}>
             {files.map((file) => {

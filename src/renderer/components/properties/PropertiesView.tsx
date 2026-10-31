@@ -1,14 +1,13 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Input } from '@/components/arc/input/input';
 import { NumberField } from '@/components/arc/number-field/number-field';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import { Select } from '@/components/arc/select/select';
 import { Switch } from '@/components/arc/switch/switch';
-import { SearchX } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
+import { EmptyLine } from '../ui/EmptyLine';
 import { useArcMessages } from '../../shared/arc-messages';
 import { logError } from '../../../lib/error-utils';
 import {
@@ -267,12 +266,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       </div>
 
       {!anyVisible && (
-        <EmptyState
-          className={styles.empty}
-          icon={<SearchX size={20} strokeWidth={1.75} aria-hidden={true} />}
-          title={t('properties.search.emptyTitle')}
-          description={t('properties.search.empty')}
-        />
+        <EmptyLine className={styles.empty} title={t('properties.search.emptyTitle')} />
       )}
 
       {basicVisible && (

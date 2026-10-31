@@ -1,9 +1,8 @@
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
 import { Card } from '@/components/arc/card/card';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
-import { Package } from 'lucide-react';
 import { useTranslation } from '../../../i18n';
+import { EmptyLine } from '../ui/EmptyLine';
 import { PluginTile } from './PluginResultCard';
 import type { InstalledPluginEntry, UpdateStatus } from './plugin-model';
 import styles from './plugin-browser.module.css';
@@ -60,11 +59,7 @@ export function PluginInstalledPanel({
       </div>
 
       {entries.length === 0 ? (
-        <EmptyState
-          icon={<Package size={20} strokeWidth={1.75} aria-hidden="true" />}
-          title={t('plugins.installed.empty')}
-          description={t('plugins.browser.installedEmptyHint', { folder: folderName })}
-        />
+        <EmptyLine title={t('plugins.installed.empty')} />
       ) : (
         <div className={styles.grid}>
           {entries.map((entry) => {

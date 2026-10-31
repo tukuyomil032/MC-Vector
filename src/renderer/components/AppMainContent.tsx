@@ -12,7 +12,6 @@ const exitTransition = {
   duration: motionTokens.duration.exit,
   ease: [...motionTokens.ease.exit],
 } as const;
-import { TriangleAlert } from 'lucide-react';
 import { Suspense } from 'react';
 import type { Translate } from '../../i18n';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
@@ -78,9 +77,7 @@ export default function AppMainContent({
           <ViewErrorBoundary
             fallback={(reset) => (
               <ContentState
-                icon={<TriangleAlert size={20} strokeWidth={1.75} aria-hidden={true} />}
                 title={t('errors.generic')}
-                description={t('errors.viewFailedDescription')}
                 action={
                   <Button type="button" variant="secondary" size="sm" onClick={reset}>
                     {t('common.reload')}

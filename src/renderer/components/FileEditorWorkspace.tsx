@@ -1,10 +1,10 @@
 import { Editor, type Monaco } from '@monaco-editor/react';
-import { ArrowLeft, Check, Circle, FileText, FileX, Save } from 'lucide-react';
+import { ArrowLeft, Check, Circle, FileText, Save } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/arc/button/button';
-import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import type { Translate } from '../../i18n';
+import { EmptyLine } from './ui/EmptyLine';
 import styles from './FileEditorWorkspace.module.css';
 
 /** Why a file opens without an editor: binary files are not text, and large files are too slow to edit in Monaco. */
@@ -186,15 +186,7 @@ export default function FileEditorWorkspace({
       <div className={styles.canvas} aria-busy={!isEditorReady}>
         {unsupported ? (
           <div className={styles.unsupported}>
-            <EmptyState
-              icon={<FileX aria-hidden="true" size={22} strokeWidth={1.75} />}
-              title={t('files.editor.unsupportedTitle')}
-              description={
-                unsupported === 'binary'
-                  ? t('files.editor.binaryDescription')
-                  : t('files.editor.largeDescription', { megabytes: MAX_EDITABLE_MEGABYTES })
-              }
-            />
+            <EmptyLine title={t('files.editor.unsupportedTitle')} />
           </div>
         ) : (
           <>
