@@ -543,6 +543,7 @@ export const ja: TranslationDictionary = {
     notOnline: 'サーバーはオンラインではありません',
     notOnlineHint: '変更はリストに保存され、次回サーバーが起動したときに反映されます。',
     count: '{count} 件',
+    countOne: '1 件',
     validation: {
       playerRequired: '追加するプレイヤー名を入力してください。',
       ipRequired: '追加するIPアドレスを入力してください。',

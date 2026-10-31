@@ -58,6 +58,7 @@ describe('UsersView', () => {
     });
 
     render(<UsersView server={server} />);
+    expect(await screen.findByText('1 entry')).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());

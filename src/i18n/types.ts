@@ -561,6 +561,7 @@ export interface TranslationDictionary {
     notOnline: string;
     notOnlineHint: string;
     count: string;
+    countOne: string;
     validation: {
       playerRequired: string;
       ipRequired: string;

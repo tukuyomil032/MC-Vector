@@ -6,7 +6,7 @@ import { Input } from '@/components/arc/input/input';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Globe, User } from 'lucide-react';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from '../../i18n';
+import { type Translate, useTranslation } from '../../i18n';
 import {
   getPlayerLists,
   mutatePlayerList,
@@ -25,6 +25,10 @@ interface Props {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function entryCount(count: number, t: Translate): string {
+  return count === 1 ? t('users.countOne') : t('users.count', { count });
 }
 
 export default function UsersView({ server }: Props) {
@@ -304,7 +308,7 @@ function UserListCard({
   return (
     <Card
       title={title}
-      description={loaded ? t('users.count', { count: entries.length }) : undefined}
+      description={loaded ? entryCount(entries.length, t) : undefined}
       className={styles.card}
       data-testid={`users-list-${type}`}
     >

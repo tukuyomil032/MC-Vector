@@ -547,6 +547,7 @@ export const en: TranslationDictionary = {
     notOnline: 'The server is not online',
     notOnlineHint: 'Changes are saved to the list and take effect the next time the server starts.',
     count: '{count} entries',
+    countOne: '1 entry',
     validation: {
       playerRequired: 'Enter a player name to add.',
       ipRequired: 'Enter an IP address to add.',
