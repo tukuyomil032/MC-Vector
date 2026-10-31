@@ -169,6 +169,12 @@
   font-family: var(--font-body);
 }
 
+/* The create dialog stacks the choice cards above the name field, with the same gap as the rest of the form. */
+.createBody {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .loadingPanel {
   display: flex;
   flex: 1 1 auto;

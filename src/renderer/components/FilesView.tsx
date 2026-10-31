@@ -786,21 +786,18 @@ export default function FilesView({ server }: Props) {
     {
       value: 'folder',
       label: t('files.modal.folder'),
-      description: t('files.modal.folderHint'),
       icon: <Folder aria-hidden="true" size={16} strokeWidth={1.75} />,
       testId: 'files-create-folder-option',
     },
     {
       value: 'file',
       label: t('files.modal.file'),
-      description: t('files.modal.fileHint'),
       icon: <File aria-hidden="true" size={16} strokeWidth={1.75} />,
       testId: 'files-create-file-option',
     },
     {
       value: 'import',
       label: t('files.modal.import'),
-      description: t('files.modal.importHint'),
       icon: <FolderInput aria-hidden="true" size={16} strokeWidth={1.75} />,
       testId: 'files-import-button',
     },
@@ -1072,34 +1069,37 @@ export default function FilesView({ server }: Props) {
             </>
           }
         >
-          <RadioCards
-            aria-label={t('files.modal.createImportTitle')}
-            layout="grid"
-            minColumnWidth={150}
-            options={createOptions}
-            value={createMode}
-            onValueChange={(value) => setCreateMode(value as CreateMode)}
-          />
-          {createMode !== 'import' && (
-            <Input
-              label={t('files.modal.nameLabel')}
-              data-testid="files-name-input"
-              value={newFileName}
-              placeholder={
-                createMode === 'folder'
-                  ? t('files.modal.newFolderPlaceholder')
-                  : t('files.modal.newFilePlaceholder')
-              }
-              error={createNameError}
-              onChange={(e) => setNewFileName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submitCreate();
-                }
-              }}
+          <div className={styles.createBody}>
+            {/* 120px is the narrowest column, so the three choices stay in one row of equal widths. */}
+            <RadioCards
+              aria-label={t('files.modal.createImportTitle')}
+              layout="grid"
+              minColumnWidth={120}
+              options={createOptions}
+              value={createMode}
+              onValueChange={(value) => setCreateMode(value as CreateMode)}
             />
-          )}
+            {createMode !== 'import' && (
+              <Input
+                label={t('files.modal.nameLabel')}
+                data-testid="files-name-input"
+                value={newFileName}
+                placeholder={
+                  createMode === 'folder'
+                    ? t('files.modal.newFolderPlaceholder')
+                    : t('files.modal.newFilePlaceholder')
+                }
+                error={createNameError}
+                onChange={(e) => setNewFileName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitCreate();
+                  }
+                }}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
