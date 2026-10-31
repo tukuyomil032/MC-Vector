@@ -94,7 +94,6 @@ const ADVANCED_CARD_ORDER: readonly PropertyGroupId[] = [
   'Security',
   'ResourcePack',
   'Management',
-  'Advanced',
 ];
 
 interface LayoutCard {
@@ -254,7 +253,11 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   }
 
   const basicVisible = ['motd', 'gamemode', 'difficulty'].some(matchesSearch);
-  const advancedGroups = getVisibleAdvancedGroups(props, BASIC_PROPERTY_KEYS, matchesSearch);
+  // The leftover "Advanced" group (tick limits, JMX, keys the app does not define) is not shown here. Its values
+  // stay in props and are written back on save, and the file can still be edited from the Files view.
+  const advancedGroups = getVisibleAdvancedGroups(props, BASIC_PROPERTY_KEYS, matchesSearch).filter(
+    (group) => group.id !== 'Advanced',
+  );
   const findGroup = (id: PropertyGroupId): AdvancedGroup | undefined =>
     advancedGroups.find((group) => group.id === id);
   const gameplayGroup = findGroup('Gameplay');

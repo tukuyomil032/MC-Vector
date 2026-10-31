@@ -207,7 +207,7 @@ describe('PropertiesView load failure', () => {
 });
 
 describe('PropertiesView advanced cards', () => {
-  it('shows advanced properties on the same page, including keys the app does not define', async () => {
+  it('shows advanced properties on the same page and leaves out the Advanced card', async () => {
     getServerPropertiesMock.mockResolvedValue({
       motd: 'Hello',
       'server-port': 25565,
@@ -224,10 +224,31 @@ describe('PropertiesView advanced cards', () => {
       'aria-checked',
       'false',
     );
-    // An unknown key from the file keeps its raw name as the label and lands under Advanced.
-    expect(screen.getByLabelText('custom-key')).toHaveValue('kept');
     expect(screen.getByRole('heading', { name: 'World' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Advanced' })).toBeInTheDocument();
+    // The Advanced group, which holds keys the app does not define, is not shown on this page.
+    expect(screen.queryByLabelText('custom-key')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Advanced' })).not.toBeInTheDocument();
+  });
+
+  it('keeps hidden Advanced values when saving', async () => {
+    getServerPropertiesMock.mockResolvedValue({
+      motd: 'Hello',
+      'server-port': 25565,
+      'max-tick-time': 60000,
+      'custom-key': 'kept',
+    });
+    saveServerPropertiesMock.mockResolvedValue(null);
+    render(<PropertiesView server={serverA} />);
+    await waitFor(() => expect(motdInput()).toHaveValue('Hello'));
+
+    fireEvent.change(motdInput(), { target: { value: 'Changed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(saveServerPropertiesMock).toHaveBeenCalledOnce());
+    expect(saveServerPropertiesMock).toHaveBeenCalledWith(
+      serverA.id,
+      expect.objectContaining({ motd: 'Changed', 'max-tick-time': 60000, 'custom-key': 'kept' }),
+    );
   });
 
   it('saves an advanced change together with the basic values', async () => {

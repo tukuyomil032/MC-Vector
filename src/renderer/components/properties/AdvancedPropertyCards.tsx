@@ -215,9 +215,12 @@ export function countGroupFields(fields: readonly AdvancedField[]): FieldCounts 
   return countFieldTypes(fields.map(({ definition }) => definition.type));
 }
 
-/** Rough card height in px: the header, then the rows the counts lay out. Used to balance the columns. */
+/**
+ * Rough card height in px: the header, then the rows the counts lay out. Used to balance the columns.
+ * A half-page card is narrower than two 16rem grid tracks, so number and select fields stack one per row too.
+ */
 export function estimateCardHeight(counts: FieldCounts): number {
-  return 60 + counts.fullWidth * 88 + Math.ceil(counts.paired / 2) * 88 + counts.toggles * 64;
+  return 60 + (counts.fullWidth + counts.paired) * 88 + counts.toggles * 57;
 }
 
 function groupLabel(group: PropertyGroupId, t: Translate): string {
