@@ -592,6 +592,10 @@ export const en: TranslationDictionary = {
       preparing: 'Preparing...',
       unknownAuthor: 'Unknown author',
       pagerLabel: 'Result pages',
+      installedFolder: 'Plugin files go in the {{folder}} folder.',
+      installedEmptyHint:
+        'Add .jar files to the {{folder}} folder, or install one from the Browse tab.',
+      installedSource: 'Source',
       tabBrowse: 'Browse',
       tabInstalled: 'Installed ({{count}})',
       searchOn: 'Search on {{platform}}...',

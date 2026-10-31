@@ -588,6 +588,10 @@ export const ja: TranslationDictionary = {
       preparing: '準備中...',
       unknownAuthor: '作成者不明',
       pagerLabel: '検索結果のページ',
+      installedFolder: 'プラグインのファイルは {{folder}} フォルダに置きます。',
+      installedEmptyHint:
+        '.jar ファイルを {{folder}} フォルダに置くか、検索タブから導入してください。',
+      installedSource: '取得元',
       tabBrowse: '検索',
       tabInstalled: '導入済み ({{count}})',
       searchOn: '{{platform}} で検索...',

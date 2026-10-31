@@ -607,6 +607,9 @@ export interface TranslationDictionary {
       preparing: string;
       unknownAuthor: string;
       pagerLabel: string;
+      installedFolder: string;
+      installedEmptyHint: string;
+      installedSource: string;
       tabBrowse: string;
       tabInstalled: string;
       searchOn: string;

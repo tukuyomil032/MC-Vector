@@ -41,6 +41,7 @@ import {
 } from '../shared/plugin-install-policy';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
+import { PluginInstalledPanel } from './plugin-browser/PluginInstalledPanel';
 import { type PlatformOption, PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
 import type { PluginResultCardState } from './plugin-browser/PluginResultCard';
 import styles from './plugin-browser/plugin-browser.module.css';
@@ -1298,19 +1299,6 @@ export default function PluginBrowser({ server }: Props) {
     }
   };
 
-  const updateStatusLabel = (status: UpdateStatus): string => {
-    switch (status) {
-      case 'checking':
-        return t('plugins.browser.updateChecking');
-      case 'update-available':
-        return t('plugins.browser.updateAvailable');
-      case 'up-to-date':
-        return t('plugins.browser.upToDate');
-      default:
-        return t('plugins.browser.updateUnknown');
-    }
-  };
-
   const installingLabel = (itemId: string): string => {
     const progress = installProgressByItemId[itemId];
     return progress === undefined
@@ -1611,160 +1599,18 @@ export default function PluginBrowser({ server }: Props) {
         </TabsContent>
 
         <TabsContent value="installed" className={styles.panel}>
-          <div className="plugin-browser__installed-panel">
-            <div className="plugin-browser__installed-header">
-              <h2 className="plugin-browser__installed-title">{t('plugins.installed.title')}</h2>
-              <span className="plugin-browser__installed-count">
-                {t('plugins.browser.tabInstalled', { count: installedEntries.length })}
-              </span>
-            </div>
-
-            {installedEntries.length === 0 ? (
-              <div className="plugin-browser__result-empty">{t('plugins.installed.empty')}</div>
-            ) : (
-              <div className="plugin-browser__installed-grid">
-                {installedEntries.map((entry) => {
-                  const isProcessing =
-                    busyInstalledFile === entry.normalizedFileName ||
-                    installingId === entry.actionItem.id;
-                  const canReinstall = Boolean(entry.sourceItem);
-                  const installedUpdateStatus = entry.sourceItem
-                    ? (updateStatusByItemId[entry.sourceItem.id] ?? null)
-                    : null;
-                  const installedStatusBadge =
-                    installedUpdateStatus === 'update-available' ||
-                    installedUpdateStatus === 'up-to-date'
-                      ? installedUpdateStatus
-                      : null;
-                  const installedLatestFileName = entry.sourceItem
-                    ? (latestFileByItemId[entry.sourceItem.id] ?? null)
-                    : null;
-
-                  return (
-                    <div key={entry.fileName} className="plugin-browser__installed-card">
-                      <div className="plugin-browser__result-body plugin-browser__installed-body">
-                        <div className="plugin-browser__installed-head">
-                          <div
-                            className="plugin-browser__result-icon plugin-browser__installed-icon"
-                            style={{
-                              backgroundImage: entry.iconUrl ? `url(${entry.iconUrl})` : 'none',
-                            }}
-                          >
-                            {!entry.iconUrl ? (
-                              <Package
-                                size={20}
-                                className="plugin-browser__installed-fallback-icon"
-                              />
-                            ) : null}
-                          </div>
-                          <div className="plugin-browser__result-title-wrap">
-                            <div className="plugin-browser__result-title">{entry.displayName}</div>
-                            <div className="plugin-browser__result-source">
-                              {entry.sourceItem?.platform ?? t('plugins.browser.localSource')}
-                            </div>
-                            <div className="plugin-browser__result-flags plugin-browser__installed-flags">
-                              <span
-                                className={`plugin-browser__installed-badge ${
-                                  entry.state === 'disabled' ? 'is-disabled' : ''
-                                }`}
-                              >
-                                {entry.state === 'disabled'
-                                  ? t('plugins.browser.disabledBadge')
-                                  : t('plugins.browser.installedBadge')}
-                              </span>
-                              {installedStatusBadge ? (
-                                <span
-                                  className={`plugin-browser__update-badge is-${installedStatusBadge}`}
-                                  title={
-                                    installedStatusBadge === 'update-available' &&
-                                    installedLatestFileName
-                                      ? t('plugins.browser.latestTooltip', {
-                                          fileName: installedLatestFileName,
-                                        })
-                                      : undefined
-                                  }
-                                >
-                                  {updateStatusLabel(installedStatusBadge)}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="plugin-browser__result-description">
-                          {entry.description}
-                        </div>
-
-                        <div className="plugin-browser__installed-meta">
-                          <div className="plugin-browser__installed-meta-row">
-                            <span className="plugin-browser__installed-meta-key">
-                              {t('plugins.browser.installedFile')}
-                            </span>
-                            <span className="plugin-browser__installed-meta-value">
-                              {entry.fileName}
-                            </span>
-                          </div>
-                          <div className="plugin-browser__installed-meta-row">
-                            <span className="plugin-browser__installed-meta-key">
-                              {t('plugins.browser.installedVersion')}
-                            </span>
-                            <span className="plugin-browser__installed-meta-value">
-                              {entry.fileVersion || t('plugins.browser.na')}
-                            </span>
-                          </div>
-                          <div className="plugin-browser__installed-meta-row">
-                            <span className="plugin-browser__installed-meta-key">
-                              {t('plugins.browser.installedGameVersions')}
-                            </span>
-                            <span className="plugin-browser__installed-meta-value">
-                              {entry.minecraftVersions.length > 0
-                                ? entry.minecraftVersions.join(', ')
-                                : t('plugins.browser.na')}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="plugin-browser__installed-actions">
-                          <button
-                            type="button"
-                            className="plugin-browser__installed-action plugin-browser__installed-action--danger"
-                            onClick={() => void handleUninstallInstalled(entry)}
-                            disabled={isProcessing}
-                          >
-                            {t('plugins.browser.uninstall')}
-                          </button>
-                          <button
-                            type="button"
-                            className="plugin-browser__installed-action plugin-browser__installed-action--primary"
-                            onClick={() => handleReinstallInstalled(entry)}
-                            disabled={isProcessing || !canReinstall}
-                          >
-                            {installingId === entry.actionItem.id
-                              ? installingLabel(entry.actionItem.id)
-                              : t('plugins.browser.reinstall')}
-                          </button>
-                          <button
-                            type="button"
-                            className={`plugin-browser__installed-action plugin-browser__installed-action--toggle ${
-                              entry.state === 'disabled' ? 'is-enable' : 'is-disable'
-                            }`}
-                            onClick={() =>
-                              void handleToggleInstalled(entry.actionItem, entry.fileName)
-                            }
-                            disabled={isProcessing}
-                          >
-                            {entry.state === 'disabled'
-                              ? t('plugins.browser.enable')
-                              : t('plugins.browser.disable')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <PluginInstalledPanel
+            folderName={folderName}
+            entries={installedEntries}
+            updateStatusByItemId={updateStatusByItemId}
+            latestFileByItemId={latestFileByItemId}
+            installingId={installingId}
+            busyInstalledFile={busyInstalledFile}
+            installingLabel={installingLabel}
+            onUninstall={(entry) => void handleUninstallInstalled(entry)}
+            onReinstall={handleReinstallInstalled}
+            onToggle={(entry) => void handleToggleInstalled(entry.actionItem, entry.fileName)}
+          />
         </TabsContent>
       </Tabs>
 
