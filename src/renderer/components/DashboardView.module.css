@@ -112,19 +112,19 @@
 
 .addressRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
   margin: var(--space-1) 0 0;
 }
 
+/* Never truncated: when the column is narrow, the copy button wraps under the address so the port stays visible. */
 .address {
   min-width: 0;
-  overflow: hidden;
   color: var(--foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--text-sm);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
