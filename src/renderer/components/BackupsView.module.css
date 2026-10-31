@@ -55,6 +55,56 @@
   font-size: var(--text-sm);
 }
 
+.worlds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+}
+
+.worldHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.worldList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.worldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.worldIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+}
+
+.worldName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .target {
   display: flex;
   flex-direction: column;

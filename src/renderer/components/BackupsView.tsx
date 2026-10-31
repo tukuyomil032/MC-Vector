@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { Package } from 'lucide-react';
+import { Globe, Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/arc/alert/alert';
 import { Badge } from '@/components/arc/badge/badge';
@@ -8,6 +8,7 @@ import { Button } from '@/components/arc/button/button';
 import { ChipGroup } from '@/components/arc/chip-group/chip-group';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { HoldToConfirm } from '@/components/arc/hold-to-confirm/hold-to-confirm';
 import { Input } from '@/components/arc/input/input';
 import { Select } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
@@ -1351,18 +1352,6 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
-    // One danger confirm that names the world. The warning about backups goes in the body.
-    const confirmed = await confirm({
-      title: t('backups.world.deleteTitle'),
-      description: t('backups.world.confirmDelete', { name: worldName }),
-      body: t('backups.world.finalConfirm'),
-      confirmLabel: t('backups.world.deleteButton'),
-      tone: 'danger',
-    });
-    if (!confirmed) {
-      return;
-    }
-
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
@@ -1561,31 +1550,41 @@ export default function BackupsView({ server }: Props) {
         )}
       </div>
 
-      <div className="backups-view__world-panel">
-        <div className="backups-view__world-header">
-          <h4 className="backups-view__world-title">{t('backups.world.title')}</h4>
-          <span className="backups-view__world-help">{t('backups.world.detected')}</span>
+      <section className={styles.worlds} aria-labelledby="backups-world-title">
+        <div className={styles.worldHead}>
+          <h3 id="backups-world-title" className={styles.sectionTitle}>
+            {t('backups.world.title')}
+          </h3>
+          <span className={styles.muted}>{t('backups.world.detected')}</span>
         </div>
 
         {worlds.length === 0 ? (
-          <div className="backups-view__world-empty">{t('backups.world.empty')}</div>
+          <EmptyState
+            title={t('backups.world.empty')}
+            description={t('backups.world.emptyDescription')}
+          />
         ) : (
-          worlds.map((worldName) => (
-            <div key={worldName} className="backups-view__world-row">
-              <div className="backups-view__world-name">🌍 {worldName}</div>
-              <Button
-                type="button"
-                variant="danger"
-                size="sm"
-                onClick={() => void handleDeleteWorld(worldName)}
-                disabled={isProcessing}
-              >
-                {t('backups.world.deleteButton')}
-              </Button>
-            </div>
-          ))
+          <ul className={styles.worldList}>
+            {worlds.map((worldName) => (
+              <li key={worldName} className={styles.worldRow}>
+                <span className={styles.worldIcon} aria-hidden="true">
+                  <Globe size={16} />
+                </span>
+                <span className={styles.worldName}>{worldName}</span>
+                {/* One hold is the confirmation. The row is removed on success, and confirmed={false} resets the hold after a failed delete. */}
+                <HoldToConfirm
+                  label={t('backups.world.holdToDelete')}
+                  confirmedLabel={t('backups.world.holdDone')}
+                  tone="danger"
+                  confirmed={false}
+                  disabled={isProcessing}
+                  onConfirm={() => void handleDeleteWorld(worldName)}
+                />
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </section>
 
       <Dialog
         open={showCreateModal}

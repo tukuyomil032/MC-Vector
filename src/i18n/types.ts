@@ -523,6 +523,9 @@ export interface TranslationDictionary {
       confirmDelete: string;
       deleteTitle: string;
       finalConfirm: string;
+      holdToDelete: string;
+      holdDone: string;
+      emptyDescription: string;
       finalConfirmTitle: string;
       deleted: string;
       deleteFailed: string;
