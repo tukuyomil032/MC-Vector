@@ -162,6 +162,17 @@ describe('DashboardView metric charts', () => {
     expect(screen.getAllByText(/held since 70s/)).toHaveLength(3);
   });
 
+  it('shows the software and address only in the server info card', () => {
+    render(<DashboardView server={server} />);
+
+    const card = screen.getByTestId('dashboard-server-card');
+    expect(within(card).getByTestId('dashboard-software')).toHaveTextContent('Paper 1.21');
+    expect(within(card).getByTestId('dashboard-address')).toHaveTextContent('localhost:25565');
+    expect(within(card).getByRole('button', { name: 'dashboard.stats.copyAddress' })).toBeEnabled();
+    // The software name appears once on the whole screen, in the server info card.
+    expect(screen.getAllByText(/Paper/)).toHaveLength(1);
+  });
+
   it('renders each sample as a datum and keeps the series key stable', () => {
     useServerMetricHistoryStore.getState().applySnapshot(snapshot(2));
     render(<DashboardView server={server} />);
