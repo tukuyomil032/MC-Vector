@@ -3,6 +3,9 @@ import SettingsWindow from '@/renderer/components/SettingsWindow';
 import type { AppUpdaterSettings } from '@/renderer/hooks/use-app-updater';
 import { useSettingsStore } from '@/store/settingsStore';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+
+// Radix Select calls scrollIntoView when it opens, which jsdom does not provide.
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { saveAppSettingsMock, onCheckForUpdatesMock, logErrorMock } = vi.hoisted(() => ({
@@ -40,7 +43,7 @@ describe('SettingsWindow plugin download security setting', () => {
   it('renders the hashless-download option disabled by default with an accessible warning', () => {
     renderSettings();
 
-    const checkbox = screen.getByRole('checkbox', {
+    const checkbox = screen.getByRole('switch', {
       name: 'Allow unverified plugin downloads',
     });
     expect(checkbox).not.toBeChecked();
@@ -55,7 +58,7 @@ describe('SettingsWindow plugin download security setting', () => {
     saveAppSettingsMock.mockRejectedValueOnce(new Error('store unavailable'));
     renderSettings();
 
-    const checkbox = screen.getByRole('checkbox', {
+    const checkbox = screen.getByRole('switch', {
       name: 'Allow unverified plugin downloads',
     });
     fireEvent.click(checkbox);
@@ -84,11 +87,14 @@ describe('SettingsWindow plugin download security setting', () => {
       <SettingsWindow
         {...defaultProps}
         updateCheckStatus="error"
-        updateCheckError="Feed unavailable"
+        updateCheckError="Error: Feed unavailable"
       />,
     );
 
-    expect(screen.getByText('Error: Feed unavailable')).toBeInTheDocument();
+    // The translated title names the failure once; the raw message is the detail, without the "Error: " prefix.
+    expect(screen.getByText('Could not check for updates')).toBeInTheDocument();
+    expect(screen.getByText('Feed unavailable')).toBeInTheDocument();
+    expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
   });
 
   it('persists the selected update channel and dispatches one shared check event', async () => {
@@ -96,9 +102,10 @@ describe('SettingsWindow plugin download security setting', () => {
     renderSettings();
 
     const selector = screen.getByRole('combobox', { name: 'Update channel' });
-    fireEvent.change(selector, { target: { value: 'beta' } });
+    fireEvent.keyDown(selector, { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Beta releases' }));
 
-    await waitFor(() => expect(selector).toHaveValue('beta'));
+    await waitFor(() => expect(selector).toHaveTextContent('Beta releases'));
     expect(saveAppSettingsMock).toHaveBeenCalledWith({ updateChannel: 'beta' });
     await waitFor(() => {
       expect(
@@ -108,9 +115,8 @@ describe('SettingsWindow plugin download security setting', () => {
       ).toHaveLength(1);
     });
     expect(onCheckForUpdatesMock).not.toHaveBeenCalled();
-    expect(
-      screen.getByText('Receive prerelease builds for early access to upcoming changes.'),
-    ).toBeInTheDocument();
+    // The channel description is a hint now: it sits in a tooltip behind the info icon beside the label.
+    expect(screen.getByRole('button', { name: 'Update channel: More info' })).toBeInTheDocument();
     dispatchSpy.mockRestore();
   });
 

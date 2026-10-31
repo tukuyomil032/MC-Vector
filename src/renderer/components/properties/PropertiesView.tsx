@@ -1,18 +1,44 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Input } from '@/components/arc/input/input';
+import { NumberField } from '@/components/arc/number-field/number-field';
+import { SearchField } from '@/components/arc/search-field/search-field';
+import { Select } from '@/components/arc/select/select';
+import { useMediaQuery } from '@/renderer/hooks/use-media-query';
+import { Gamepad2, Network, SlidersHorizontal } from 'lucide-react';
+import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
+import { EmptyLine } from '../ui/EmptyLine';
+import { SectionTitle } from '../ui/IconTile';
+import { useArcMessages } from '../../shared/arc-messages';
 import { logError } from '../../../lib/error-utils';
 import {
   getServerProperties,
   saveServerProperties,
   type PropertyValue,
 } from '../../../lib/properties-commands';
-import { serverPropertiesList } from '../../shared/propertiesData';
+import { notify } from '../../shared/notify';
+import {
+  type PropertyType,
+  serverPropertiesList,
+  serverPropertyEnglish,
+} from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
-import { Button } from '../ui/Button';
-import { Input, NativeSelect } from '../ui/Field';
-import { Switch } from '../ui/Switch';
-import AdvancedSettingsWindow from './AdvancedSettingsWindow';
+import {
+  type AdvancedField,
+  type AdvancedGroup,
+  AdvancedInlineFields,
+  AdvancedPropertyCard,
+  countFieldTypes,
+  countGroupFields,
+  estimateCardHeight,
+  getVisibleAdvancedGroups,
+  type PropertyGroupId,
+} from './AdvancedPropertyCards';
+import cardStyles from './PropertyCards.module.css';
+import { PropertyToggleRow } from './PropertyToggleRow';
+import styles from './PropertiesView.module.css';
+import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
 interface Props {
   server: MinecraftServer;
@@ -21,8 +47,107 @@ interface Props {
 
 type ServerProperties = Record<string, PropertyValue>;
 
+/** The keys the basic, gameplay and network cards show. The advanced cards skip them so nothing appears twice. */
+const BASIC_PROPERTY_KEYS: readonly string[] = [
+  'motd',
+  'gamemode',
+  'difficulty',
+  'pvp',
+  'allow-flight',
+  'enable-command-block',
+  'max-players',
+  'server-port',
+  'online-mode',
+  'white-list',
+];
+
+/** The field type of each basic property, so a basic card's height estimate counts only the fields the search shows. */
+const BASIC_FIELD_TYPES: Record<string, PropertyType> = {
+  motd: 'string',
+  gamemode: 'select',
+  difficulty: 'select',
+  pvp: 'boolean',
+  'allow-flight': 'boolean',
+  'enable-command-block': 'boolean',
+  'max-players': 'number',
+  'server-port': 'number',
+  'online-mode': 'boolean',
+  'white-list': 'boolean',
+};
+
+/** Two columns from this width up, one below it. */
+const WIDE_QUERY = '(min-width: 1024px)';
+
+/** The cards after the basic ones, in placement order. The columns are balanced from this order. */
+const ADVANCED_CARD_ORDER: readonly PropertyGroupId[] = [
+  'Remote',
+  'World',
+  'General',
+  'Security',
+  'ResourcePack',
+  'Management',
+];
+
+interface LayoutCard {
+  id: string;
+  height: number;
+  node: ReactNode;
+}
+
+/**
+ * Assigns each card, in order, to the column with the smaller estimated height so far. Ties go to the left.
+ * Returns the card indexes of each column, in the order they were placed.
+ */
+export function splitIntoColumns(heights: readonly number[], columnCount: number): number[][] {
+  const columns: number[][] = Array.from({ length: columnCount }, () => []);
+  const totals: number[] = Array.from({ length: columnCount }, () => 0);
+  heights.forEach((height, index) => {
+    let target = 0;
+    for (let column = 1; column < columnCount; column++) {
+      if (totals[column] < totals[target]) {
+        target = column;
+      }
+    }
+    columns[target].push(index);
+    totals[target] += height;
+  });
+  return columns;
+}
+
+/**
+ * Splits the cards into two columns whose heights differ as little as possible. The first card stays top left and
+ * the second top right, and each column keeps the placement order. With ten cards at most, every assignment is
+ * tried; on a tie the greedy split wins, so equal or unknown heights keep the reading order.
+ */
+export function balanceTwoColumns(heights: readonly number[]): [number[], number[]] {
+  const greedy = splitIntoColumns(heights, 2);
+  if (heights.length <= 2) {
+    return [greedy[0], greedy[1]];
+  }
+  const total = heights.reduce((sum, height) => sum + height, 0);
+  const sumOf = (indexes: readonly number[]) =>
+    indexes.reduce((sum, index) => sum + heights[index], 0);
+  let best: [number[], number[]] = [greedy[0], greedy[1]];
+  let bestDiff = Math.abs(total - 2 * sumOf(greedy[0]));
+  const free = heights.length - 2;
+  for (let mask = 0; mask < 1 << free; mask++) {
+    const left = [0];
+    const right = [1];
+    for (let bit = 0; bit < free; bit++) {
+      (mask & (1 << bit) ? right : left).push(bit + 2);
+    }
+    const diff = Math.abs(total - 2 * sumOf(left));
+    if (diff < bestDiff) {
+      best = [left, right];
+      bestDiff = diff;
+    }
+  }
+  return best;
+}
+
 export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const { t } = useTranslation();
+  const arc = useArcMessages();
   const currentServerIdRef = useRef(server.id);
   const serverViewGenerationRef = useRef(0);
   const propertiesLoadGenerationRef = useRef(0);
@@ -40,14 +165,48 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // A failed read leaves the defaults above on screen. While this is set, the form is hidden and saving is blocked,
+  // so the defaults can never overwrite the real server.properties file.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') toast.success(msg);
-    else if (type === 'error') toast.error(msg);
-    else toast(msg);
-  };
+  const isWide = useMediaQuery(WIDE_QUERY);
+  useUnsavedChangesGuard(hasChanges);
 
+  // Column balancing uses each card's rendered height. When the cards, their contents, or the column width change,
+  // one render lays the cards out at their natural height (data-measuring), reads them, and then the balanced
+  // layout renders. Both renders happen before paint.
+  const columnsRef = useRef<HTMLDivElement>(null);
+  const measuredLayoutKeyRef = useRef('');
+  const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
+  const [measuring, setMeasuring] = useState(false);
+  const [columnsWidth, setColumnsWidth] = useState(0);
+  useLayoutEffect(() => {
+    const container = columnsRef.current;
+    if (!container) return;
+    const layoutKey = container.dataset.layoutKey ?? '';
+    if (measuring) {
+      const heights: Record<string, number> = {};
+      container.querySelectorAll<HTMLElement>('[data-card-slot]').forEach((slot) => {
+        heights[slot.dataset.cardSlot ?? ''] = slot.offsetHeight;
+      });
+      measuredLayoutKeyRef.current = layoutKey;
+      setMeasuredHeights(heights);
+      setMeasuring(false);
+    } else if (layoutKey !== measuredLayoutKeyRef.current) {
+      setMeasuring(true);
+    }
+    // The layout key is read from the DOM, so these are the inputs that can change it.
+  }, [measuring, columnsWidth, isWide, props, searchQuery, loading, loadError]);
+  useEffect(() => {
+    const container = columnsRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      setColumnsWidth(Math.round(entry.contentRect.width));
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [loading, loadError]);
   useLayoutEffect(() => {
     currentServerIdRef.current = server.id;
     const generation = ++serverViewGenerationRef.current;
@@ -67,6 +226,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     const isCurrentLoad = () => propertiesLoadGenerationRef.current === generation;
     const loadProperties = async () => {
       setLoading(true);
+      setLoadError(false);
       try {
         const newProps = await getServerProperties(serverId);
         if (!isCurrentLoad()) return;
@@ -80,7 +240,8 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
       } catch (e) {
         if (!isCurrentLoad()) return;
         logError('Failed to load server properties', e, { serverId });
-        showToast(t('properties.loadFailed'), 'error');
+        setLoadError(true);
+        setHasChanges(false);
       } finally {
         if (isCurrentLoad()) {
           setLoading(false);
@@ -94,21 +255,24 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
         propertiesLoadGenerationRef.current += 1;
       }
     };
-  }, [server.id, server.port, t]);
+  }, [server.id, reloadToken, t]);
+
+  const definitions = useMemo(() => new Map(serverPropertiesList.map((d) => [d.key, d])), []);
 
   const matchesSearch = useMemo(() => {
     if (!searchQuery.trim()) return (_key: string) => true;
     const q = searchQuery.toLowerCase();
-    const defMap = new Map(serverPropertiesList.map((d) => [d.key, d]));
     return (key: string) => {
-      const def = defMap.get(key);
+      const def = definitions.get(key);
+      const english = serverPropertyEnglish[key];
       return (
         key.toLowerCase().includes(q) ||
         (def?.label ?? '').toLowerCase().includes(q) ||
+        (english?.label ?? '').toLowerCase().includes(q) ||
         (def?.description ?? '').toLowerCase().includes(q)
       );
     };
-  }, [searchQuery]);
+  }, [searchQuery, definitions]);
 
   const handleChange = (key: string, value: PropertyValue) => {
     setProps((prev) => ({ ...prev, [key]: value }));
@@ -116,259 +280,332 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   };
 
   const handleSave = async () => {
+    // Defaults shown after a failed read must never be written back to the file.
+    if (loadError) return;
     const serverId = server.id;
     const viewGeneration = serverViewGenerationRef.current;
     const isCurrentServerView = () =>
       currentServerIdRef.current === serverId && serverViewGenerationRef.current === viewGeneration;
     try {
+      // The whole map goes to the backend, so basic and advanced changes are saved together.
       const savedPort = await saveServerProperties(serverId, props);
       if (savedPort !== null) {
         onServerPortChanged?.(serverId, savedPort);
       }
       if (!isCurrentServerView()) return;
       setHasChanges(false);
-      showToast(t('properties.saveSuccess'), 'success');
+      notify.success(t('properties.saveSuccess'));
     } catch (e) {
       if (!isCurrentServerView()) return;
       logError('Failed to save server properties', e, { serverId });
-      showToast(t('properties.saveFailed'), 'error');
-    }
-  };
-
-  const openAdvancedWindow = () => {
-    setShowAdvanced(true);
-  };
-
-  const handleAdvancedSave = async (data: Record<string, unknown>) => {
-    const serverId = server.id;
-    const viewGeneration = serverViewGenerationRef.current;
-    const isCurrentServerView = () =>
-      currentServerIdRef.current === serverId && serverViewGenerationRef.current === viewGeneration;
-    try {
-      const safeData: ServerProperties = {};
-      Object.entries(data).forEach(([key, value]) => {
-        safeData[key] =
-          typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string'
-            ? value
-            : String(value);
-      });
-      const savedPort = await saveServerProperties(serverId, safeData);
-      if (savedPort !== null) {
-        onServerPortChanged?.(serverId, savedPort);
-      }
-      if (!isCurrentServerView()) return;
-      // Sync local props state with advanced changes
-      setProps((prev) => ({ ...prev, ...safeData }));
-      setShowAdvanced(false);
-      setHasChanges(false);
-      showToast(t('properties.advancedSaveSuccess'), 'success');
-    } catch (e) {
-      if (!isCurrentServerView()) return;
-      logError('Failed to save advanced server properties', e, { serverId });
-      showToast(t('properties.saveFailed'), 'error');
+      notify.error(t('properties.saveFailed'));
     }
   };
 
   if (loading) {
-    return <div className="properties-view__loading">{t('properties.loading')}</div>;
-  }
-
-  if (showAdvanced) {
     return (
-      <AdvancedSettingsWindow
-        initialData={props as Record<string, unknown>}
-        onSave={handleAdvancedSave}
-        onCancel={() => setShowAdvanced(false)}
-      />
+      <div className={styles.loading} role="status" data-testid="properties-loading">
+        {t('properties.loading')}
+      </div>
     );
   }
 
-  return (
-    <div className="properties-view relative h-full overflow-y-auto" data-testid="properties-view">
-      <div className="properties-view__container">
-        <div className="properties-view__header">
-          <h3>{t('properties.title')}</h3>
-          <div className="properties-view__actions">
-            <Button variant="secondary" onClick={openAdvancedWindow}>
-              {t('properties.openAdvanced')}
-            </Button>
+  const basicVisible = ['motd', 'gamemode', 'difficulty'].some(matchesSearch);
+  // The leftover "Advanced" group (tick limits, JMX, keys the app does not define) is not shown here. Its values
+  // stay in props and are written back on save, and the file can still be edited from the Files view.
+  const advancedGroups = getVisibleAdvancedGroups(props, BASIC_PROPERTY_KEYS, matchesSearch).filter(
+    (group) => group.id !== 'Advanced',
+  );
+  const findGroup = (id: PropertyGroupId): AdvancedGroup | undefined =>
+    advancedGroups.find((group) => group.id === id);
+  const gameplayGroup = findGroup('Gameplay');
+  const networkGroup = findGroup('Network');
+  const gameplayVisible =
+    ['pvp', 'allow-flight', 'enable-command-block'].some(matchesSearch) ||
+    gameplayGroup !== undefined;
+  const networkVisible =
+    ['max-players', 'server-port', 'online-mode', 'white-list'].some(matchesSearch) ||
+    networkGroup !== undefined;
+  const anyVisible = basicVisible || gameplayVisible || networkVisible || advancedGroups.length > 0;
 
-            <Button variant="primary" onClick={handleSave} disabled={!hasChanges}>
-              {t('properties.saveChanges')}
-            </Button>
-          </div>
-        </div>
+  /** The field types of the visible basic keys, for a card's height estimate. */
+  const visibleBasicTypes = (keys: readonly string[]): PropertyType[] =>
+    keys.filter((key) => matchesSearch(key)).map((key) => BASIC_FIELD_TYPES[key]);
+  const groupTypes = (group: AdvancedGroup | undefined): PropertyType[] =>
+    (group?.fields ?? []).map((field: AdvancedField) => field.definition.type);
 
-        <div className="properties-view__search-bar">
-          <Input
-            type="text"
-            className="properties-view__search-input"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('properties.search.placeholder')}
+  const cards: LayoutCard[] = [];
+  if (basicVisible) {
+    cards.push({
+      id: 'basic',
+      height: estimateCardHeight(
+        countFieldTypes(visibleBasicTypes(['motd', 'gamemode', 'difficulty'])),
+      ),
+      node: (
+        <section className={cardStyles.card} aria-labelledby="properties-basic-title">
+          <SectionTitle
+            icon={SlidersHorizontal}
+            as="h3"
+            id="properties-basic-title"
+            title={t('properties.sections.basic')}
           />
-        </div>
-
-        <div className="properties-view__section">
-          <div className="properties-view__section-title">{t('properties.sections.basic')}</div>
-
-          {matchesSearch('motd') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.motd.label')}</span>
-                <span
-                  className="properties-view__row-description"
-                  title={t('properties.motd.description')}
-                >
-                  {t('properties.motd.description')}
-                </span>
+          <div className={cardStyles.grid}>
+            {matchesSearch('motd') && (
+              <div className={cardStyles.wide}>
+                <Input
+                  label={t('properties.motd.label')}
+                  hint={t('properties.motd.description')}
+                  type="text"
+                  value={props.motd as string}
+                  onChange={(e) => handleChange('motd', e.target.value)}
+                />
               </div>
-              <Input
-                type="text"
-                className="properties-view__motd-input"
-                value={props.motd as string}
-                onChange={(e) => handleChange('motd', e.target.value)}
-              />
-            </div>
-          )}
-
-          {matchesSearch('gamemode') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.gameMode.label')}</span>
-              </div>
-              <NativeSelect
+            )}
+            {matchesSearch('gamemode') && (
+              <Select
+                label={t('properties.gameMode.label')}
+                placeholder={arc.select.placeholder}
                 value={props.gamemode as string}
-                onChange={(e) => handleChange('gamemode', e.target.value)}
-              >
-                <option value="survival">{t('properties.gameMode.options.survival')}</option>
-                <option value="creative">{t('properties.gameMode.options.creative')}</option>
-                <option value="adventure">{t('properties.gameMode.options.adventure')}</option>
-                <option value="spectator">{t('properties.gameMode.options.spectator')}</option>
-              </NativeSelect>
-            </div>
-          )}
-
-          {matchesSearch('difficulty') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.difficulty.label')}</span>
-              </div>
-              <NativeSelect
+                onValueChange={(value) => handleChange('gamemode', value)}
+                options={[
+                  { value: 'survival', label: t('properties.gameMode.options.survival') },
+                  { value: 'creative', label: t('properties.gameMode.options.creative') },
+                  { value: 'adventure', label: t('properties.gameMode.options.adventure') },
+                  { value: 'spectator', label: t('properties.gameMode.options.spectator') },
+                ]}
+              />
+            )}
+            {matchesSearch('difficulty') && (
+              <Select
+                label={t('properties.difficulty.label')}
+                placeholder={arc.select.placeholder}
                 value={props.difficulty as string}
-                onChange={(e) => handleChange('difficulty', e.target.value)}
-              >
-                <option value="peaceful">{t('properties.difficulty.options.peaceful')}</option>
-                <option value="easy">{t('properties.difficulty.options.easy')}</option>
-                <option value="normal">{t('properties.difficulty.options.normal')}</option>
-                <option value="hard">{t('properties.difficulty.options.hard')}</option>
-              </NativeSelect>
-            </div>
-          )}
-        </div>
+                onValueChange={(value) => handleChange('difficulty', value)}
+                options={[
+                  { value: 'peaceful', label: t('properties.difficulty.options.peaceful') },
+                  { value: 'easy', label: t('properties.difficulty.options.easy') },
+                  { value: 'normal', label: t('properties.difficulty.options.normal') },
+                  { value: 'hard', label: t('properties.difficulty.options.hard') },
+                ]}
+              />
+            )}
+          </div>
+        </section>
+      ),
+    });
+  }
 
-        <div className="properties-view__section">
-          <div className="properties-view__section-title">{t('properties.sections.gameplay')}</div>
+  if (gameplayVisible) {
+    cards.push({
+      id: 'gameplay',
+      height: estimateCardHeight(
+        countFieldTypes([
+          ...visibleBasicTypes(['pvp', 'allow-flight', 'enable-command-block']),
+          ...groupTypes(gameplayGroup),
+        ]),
+      ),
+      node: (
+        <section className={cardStyles.card} aria-labelledby="properties-gameplay-title">
+          <SectionTitle
+            icon={Gamepad2}
+            as="h3"
+            id="properties-gameplay-title"
+            title={t('properties.sections.gameplay')}
+          />
           {matchesSearch('pvp') && (
-            <ToggleItem
+            <PropertyToggleRow
+              id="pvp"
               label={t('properties.toggles.pvp.label')}
-              desc={t('properties.toggles.pvp.description')}
+              description={t('properties.toggles.pvp.description')}
               checked={Boolean(props.pvp)}
               onChange={(v) => handleChange('pvp', v)}
             />
           )}
           {matchesSearch('allow-flight') && (
-            <ToggleItem
+            <PropertyToggleRow
+              id="allow-flight"
               label={t('properties.toggles.allowFlight.label')}
-              desc={t('properties.toggles.allowFlight.description')}
+              description={t('properties.toggles.allowFlight.description')}
               checked={Boolean(props['allow-flight'])}
               onChange={(v) => handleChange('allow-flight', v)}
             />
           )}
           {matchesSearch('enable-command-block') && (
-            <ToggleItem
+            <PropertyToggleRow
+              id="enable-command-block"
               label={t('properties.toggles.commandBlock.label')}
-              desc={t('properties.toggles.commandBlock.description')}
+              description={t('properties.toggles.commandBlock.description')}
               checked={Boolean(props['enable-command-block'])}
               onChange={(v) => handleChange('enable-command-block', v)}
             />
           )}
-        </div>
+          <AdvancedInlineFields fields={gameplayGroup?.fields ?? []} onChange={handleChange} />
+        </section>
+      ),
+    });
+  }
 
-        <div className="properties-view__section">
-          <div className="properties-view__section-title">{t('properties.sections.network')}</div>
-
-          {matchesSearch('max-players') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.maxPlayers')}</span>
-              </div>
-              <Input
-                type="number"
-                className="properties-view__number-input properties-view__number-input--sm"
+  if (networkVisible) {
+    cards.push({
+      id: 'network',
+      height: estimateCardHeight(
+        countFieldTypes([
+          ...visibleBasicTypes(['max-players', 'server-port', 'online-mode', 'white-list']),
+          ...groupTypes(networkGroup),
+        ]),
+      ),
+      node: (
+        <section className={cardStyles.card} aria-labelledby="properties-network-title">
+          <SectionTitle
+            icon={Network}
+            as="h3"
+            id="properties-network-title"
+            title={t('properties.sections.network')}
+          />
+          <div className={cardStyles.grid}>
+            {matchesSearch('max-players') && (
+              <NumberField
+                label={t('properties.maxPlayers')}
+                min={0}
                 value={props['max-players'] as number}
-                onChange={(e) => handleChange('max-players', Number(e.target.value))}
+                onValueChange={(value) => handleChange('max-players', value)}
               />
-            </div>
-          )}
-
-          {matchesSearch('server-port') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.serverPort')}</span>
-              </div>
-              <Input
-                type="number"
-                className="properties-view__number-input properties-view__number-input--md"
+            )}
+            {matchesSearch('server-port') && (
+              <NumberField
+                label={t('properties.serverPort')}
+                min={1}
+                max={65535}
+                formatOptions={{ useGrouping: false }}
                 value={props['server-port'] as number}
-                onChange={(e) => handleChange('server-port', Number(e.target.value))}
+                onValueChange={(value) => handleChange('server-port', value)}
               />
-            </div>
-          )}
-
+            )}
+          </div>
           {matchesSearch('online-mode') && (
-            <ToggleItem
+            <PropertyToggleRow
+              id="online-mode"
               label={t('properties.toggles.onlineMode.label')}
-              desc={t('properties.toggles.onlineMode.description')}
+              description={t('properties.toggles.onlineMode.description')}
               checked={Boolean(props['online-mode'])}
               onChange={(v) => handleChange('online-mode', v)}
             />
           )}
-
           {matchesSearch('white-list') && (
-            <ToggleItem
+            <PropertyToggleRow
+              id="white-list"
               label={t('properties.toggles.whitelist.label')}
-              desc={t('properties.toggles.whitelist.description')}
+              description={t('properties.toggles.whitelist.description')}
               checked={Boolean(props['white-list'])}
               onChange={(v) => handleChange('white-list', v)}
             />
           )}
+          <AdvancedInlineFields fields={networkGroup?.fields ?? []} onChange={handleChange} />
+        </section>
+      ),
+    });
+  }
+
+  for (const id of ADVANCED_CARD_ORDER) {
+    const group = findGroup(id);
+    if (group) {
+      cards.push({
+        id,
+        height: estimateCardHeight(countGroupFields(group.fields)),
+        node: <AdvancedPropertyCard group={group} onChange={handleChange} />,
+      });
+    }
+  }
+
+  const header = (
+    <header className={styles.header}>
+      <div className={styles.titleGroup}>
+        {/* The header breadcrumb already names the view, so the page has no title of its own. */}
+        {!loadError && (
+          <div className={styles.search}>
+            <SearchField
+              label={t('properties.search.label')}
+              clearLabel={arc.search.clear}
+              placeholder={t('properties.search.placeholder')}
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+          </div>
+        )}
+      </div>
+      <div className={styles.actions}>
+        {hasChanges && (
+          <span className={styles.unsaved} role="status">
+            {t('properties.unsavedChanges')}
+          </span>
+        )}
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          disabled={!hasChanges || loadError}
+          data-testid="properties-save-button"
+        >
+          {t('properties.saveChanges')}
+        </Button>
+      </div>
+    </header>
+  );
+
+  if (loadError) {
+    return (
+      <div className={styles.page} data-testid="properties-view">
+        {header}
+        <Alert tone="danger" open title={t('properties.loadFailed')}>
+          <p>{t('properties.loadFailedDescription')}</p>
+        </Alert>
+        <div>
+          <Button
+            variant="secondary"
+            onClick={() => setReloadToken((value) => value + 1)}
+            data-testid="properties-retry-button"
+          >
+            {t('properties.retry')}
+          </Button>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function ToggleItem({
-  label,
-  desc,
-  checked,
-  onChange,
-}: {
-  label: string;
-  desc: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-}) {
-  return (
-    <div className="properties-view__row">
-      <div className="properties-view__row-info">
-        <span>{label}</span>
-        <span className="properties-view__row-description" title={desc}>
-          {desc}
-        </span>
+  // Measured heights replace the estimates once the cards have rendered. Narrow layouts use one column, so every
+  // card lands in `left` in placement order.
+  const heights = cards.map((card) => measuredHeights[card.id] ?? card.height);
+  const [left = [], right = []] = isWide
+    ? balanceTwoColumns(heights)
+    : splitIntoColumns(heights, 1);
+  const layoutKey = [
+    isWide ? 'wide' : 'narrow',
+    columnsWidth,
+    ...cards.map((card) => `${card.id}:${card.height}`),
+  ].join('|');
+  const renderCards = (indexes: readonly number[]) =>
+    indexes.map((index) => (
+      <div key={cards[index].id} className={styles.slot} data-card-slot={cards[index].id}>
+        {cards[index].node}
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
+    ));
+
+  return (
+    <div className={styles.page} data-testid="properties-view">
+      {header}
+
+      {!anyVisible && (
+        <EmptyLine className={styles.empty} title={t('properties.search.emptyTitle')} />
+      )}
+
+      <div
+        ref={columnsRef}
+        className={isWide ? styles.columns : styles.stack}
+        data-layout-key={layoutKey}
+        data-measuring={measuring || undefined}
+      >
+        <div className={styles.column}>{renderCards(left)}</div>
+        {isWide && <div className={styles.column}>{renderCards(right)}</div>}
+      </div>
     </div>
   );
 }

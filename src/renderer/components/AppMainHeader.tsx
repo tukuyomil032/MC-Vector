@@ -1,7 +1,13 @@
+import { Menu, Play, RotateCw, Square } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Button, type ButtonVariant } from '@/components/arc/button/button';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import type { Translate } from '../../i18n';
+import { useMediaQuery } from '../hooks/use-media-query';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
+import { canStartServer } from '../shared/server-status';
 import { getViewLabel } from '../shared/view-labels';
-import { Button } from './ui/Button';
+import styles from './AppMainHeader.module.css';
 
 interface AppMainHeaderProps {
   currentView: AppView;
@@ -10,7 +16,68 @@ interface AppMainHeaderProps {
   onStart: () => void;
   onRestart: () => void;
   onStop: () => void;
+  /** Shown only in the narrow layout, where the sidebar lives in a drawer behind this button. */
+  onOpenMenu?: () => void;
   t: Translate;
+}
+
+/** Views that act on the selected server. Start, restart and stop are hidden on every other view. */
+const SERVER_ACTION_VIEWS: ReadonlySet<AppView> = new Set<AppView>([
+  'dashboard',
+  'console',
+  'users',
+  'files',
+  'plugins',
+  'backups',
+  'properties',
+  'general-settings',
+]);
+
+/** Under 900px the header keeps only icons, and each one names itself through a tooltip and aria-label. */
+const COMPACT_QUERY = '(max-width: 899px)';
+
+interface ServerActionProps {
+  compact: boolean;
+  label: string;
+  icon: ReactNode;
+  variant: ButtonVariant;
+  testId: string;
+  disabled: boolean;
+  onClick: () => void;
+}
+
+function ServerAction({
+  compact,
+  label,
+  icon,
+  variant,
+  testId,
+  disabled,
+  onClick,
+}: ServerActionProps) {
+  const button = (
+    <Button
+      type="button"
+      variant={variant}
+      size="sm"
+      data-testid={testId}
+      title={compact ? undefined : label}
+      aria-label={compact ? label : undefined}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      {compact ? null : label}
+    </Button>
+  );
+
+  return compact ? (
+    <Tooltip content={label} side="bottom">
+      {button}
+    </Tooltip>
+  ) : (
+    button
+  );
 }
 
 export default function AppMainHeader({
@@ -20,56 +87,76 @@ export default function AppMainHeader({
   onStart,
   onRestart,
   onStop,
+  onOpenMenu,
   t,
 }: AppMainHeaderProps) {
-  const canStart = activeServerStatus === 'offline' || activeServerStatus === 'crashed';
+  const compact = useMediaQuery(COMPACT_QUERY);
+  const canStart = canStartServer(activeServerStatus);
   const isOnline = activeServerStatus === 'online';
+  const subtitle = getViewLabel(currentView, t);
+  // Static views repeat their title as the subtitle (settings, proxy). Show the pair only when they differ.
+  const showSubtitle = subtitle !== headerTitle;
+  const showServerActions = SERVER_ACTION_VIEWS.has(currentView);
 
   return (
     <header
-      className="z-10 flex h-[60px] shrink-0 items-center justify-between border-b px-5 backdrop-blur-xl app-shell__surface app-shell__surface--header"
+      className={[styles.header, compact ? styles.headerCompact : ''].filter(Boolean).join(' ')}
       data-testid="app-main-header"
     >
-      <div className="flex items-center gap-2.5">
-        <h2 className="app-main__title text-xl font-bold">{headerTitle}</h2>
-        <span className="app-main__subtitle text-sm opacity-70">
-          {' / '}
-          {getViewLabel(currentView, t)}
-        </span>
-      </div>
-      <div className="flex items-center gap-2.5 ml-auto">
-        {currentView !== 'proxy' && (
-          <>
-            <Button
-              variant="start"
-              data-testid="server-start-button"
-              onClick={onStart}
-              title={t('server.actions.start')}
-              disabled={!canStart}
-            >
-              ▶ {t('server.actions.start')}
-            </Button>
-            <Button
-              variant="restart"
-              data-testid="server-restart-button"
-              onClick={onRestart}
-              title={t('server.actions.restart')}
-              disabled={!isOnline}
-            >
-              ↻ {t('server.actions.restart')}
-            </Button>
-            <Button
-              variant="stop"
-              data-testid="server-stop-button"
-              onClick={onStop}
-              title={t('server.actions.stop')}
-              disabled={!isOnline}
-            >
-              ■ {t('server.actions.stop')}
-            </Button>
-          </>
+      {onOpenMenu && (
+        <Tooltip content={t('nav.openMenu')} side="bottom">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="sidebar-drawer-button"
+            aria-label={t('nav.openMenu')}
+            onClick={onOpenMenu}
+          >
+            <Menu size={16} strokeWidth={1.75} aria-hidden={true} />
+          </Button>
+        </Tooltip>
+      )}
+      <div className={styles.titleGroup}>
+        <h2 className={`app-main__title ${styles.title}`}>{headerTitle}</h2>
+        {showSubtitle && (
+          <span className={`app-main__subtitle ${styles.subtitle}`}>
+            {' / '}
+            {subtitle}
+          </span>
         )}
       </div>
+      {showServerActions && (
+        <div className={styles.actions}>
+          <ServerAction
+            compact={compact}
+            label={t('server.actions.start')}
+            icon={<Play size={14} strokeWidth={1.75} fill="currentColor" aria-hidden={true} />}
+            variant="primary"
+            testId="server-start-button"
+            disabled={!canStart}
+            onClick={onStart}
+          />
+          <ServerAction
+            compact={compact}
+            label={t('server.actions.restart')}
+            icon={<RotateCw size={14} strokeWidth={1.75} aria-hidden={true} />}
+            variant="secondary"
+            testId="server-restart-button"
+            disabled={!isOnline}
+            onClick={onRestart}
+          />
+          <ServerAction
+            compact={compact}
+            label={t('server.actions.stop')}
+            icon={<Square size={13} strokeWidth={1.75} fill="currentColor" aria-hidden={true} />}
+            variant="danger"
+            testId="server-stop-button"
+            disabled={!isOnline}
+            onClick={onStop}
+          />
+        </div>
+      )}
     </header>
   );
 }

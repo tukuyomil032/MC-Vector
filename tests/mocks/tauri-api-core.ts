@@ -34,8 +34,8 @@ function emitStatus(serverId: string, status: string): void {
   void emit('server-status-change', { serverId, status });
 }
 
-function emitProgress(serverId: string, status: string): void {
-  void emit('download-progress', { serverId, progress: 100, status });
+function emitProgress(serverId: string): void {
+  void emit('download-progress', { serverId, progress: 100 });
 }
 
 function serverEulaPath(serverId: string): string {
@@ -368,6 +368,10 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'list_dir_with_metadata':
       return listRuntimeChildren(requestPath(payload.request));
 
+    // A fixed 50 MB keeps the e2e folder sizes deterministic.
+    case 'get_managed_directory_size':
+      return { bytes: 52_428_800, complete: true };
+
     case 'read_managed_text_file':
       return readRuntimeFile(requestPath(payload.request));
 
@@ -478,7 +482,7 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
         resolveRuntimePath({ root: 'servers', serverId, relativePath: 'server.jar' }),
         'e2e-server-jar',
       );
-      emitProgress(serverId, 'server.jar');
+      emitProgress(serverId);
       return { serverId, version };
     }
 
@@ -723,6 +727,10 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'get_server_stats':
       return { cpu: 1, memory: 256 };
 
+    // No history is recorded until a metrics event arrives; the Rust command returns None in the same case.
+    case 'get_server_metric_history':
+      return null;
+
     case 'ping_server':
       return true;
 
@@ -850,6 +858,8 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
       return '/mock/app';
 
     case 'pick_server_import':
+      // A test can seed config.serverImportAnalysis to exercise the analyzed import states.
+      return getE2eState().config.serverImportAnalysis ?? null;
     case 'cancel_server_import':
       return null;
 

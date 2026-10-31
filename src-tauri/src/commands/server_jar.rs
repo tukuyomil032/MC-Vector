@@ -1200,8 +1200,7 @@ pub async fn execute_server_jar_install(
                     "download-progress",
                     serde_json::json!({
                         "serverId": server_id,
-                        "progress": progress,
-                        "status": format!("Downloading... {progress}%")
+                        "progress": progress
                     }),
                 )
                 .map_err(|error| format!("Failed to emit download progress: {error}"))
@@ -1231,8 +1230,7 @@ pub async fn execute_server_jar_install(
         "download-progress",
         serde_json::json!({
             "serverId": plan.server_id,
-            "progress": 100,
-            "status": "Download complete"
+            "progress": 100
         }),
     );
     Ok(ServerJarInstallResult {
@@ -1291,8 +1289,7 @@ pub(crate) async fn install_server_jar_for_creation(
                 "server-creation-download-progress",
                 serde_json::json!({
                     "operationId": operation_id,
-                    "progress": progress,
-                    "status": format!("Downloading... {progress}%")
+                    "progress": progress
                 }),
             )
             .map_err(|error| format!("Failed to emit server creation progress: {error}"))

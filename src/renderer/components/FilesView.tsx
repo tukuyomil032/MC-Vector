@@ -1,21 +1,32 @@
-import { DiffEditor } from '@monaco-editor/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { ask } from '@tauri-apps/plugin-dialog';
-import { ArrowUp, FolderPlus, GitCompareArrows, X } from 'lucide-react';
-import type * as React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import {
-  iconFile,
-  iconFiles,
-  iconFolder,
-  iconImport,
-  iconMove,
-  iconOpenFolder,
-  iconTrash,
-  iconUnzip,
-  iconZip,
-} from '../../assets/icons';
+  Archive,
+  ArrowUp,
+  File,
+  Folder,
+  FolderInput,
+  FolderOpen,
+  FolderPlus,
+  Move,
+  PackageOpen,
+  Pencil,
+  Trash2,
+  Upload,
+} from 'lucide-react';
+import type * as React from 'react';
+import { Breadcrumb, type BreadcrumbItem } from '@/components/arc/breadcrumb/breadcrumb';
+import { Button } from '@/components/arc/button/button';
+import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { ContextMenu, type ContextMenuItem } from '@/components/arc/context-menu/context-menu';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
+import { EmptyLine } from './ui/EmptyLine';
+import { Input } from '@/components/arc/input/input';
+import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatBytes } from '../shared/format-bytes';
+import { notify } from '../shared/notify';
+import { useAppFeedback } from './AppFeedbackProvider';
 import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
@@ -24,19 +35,22 @@ import {
   createFolder,
   deleteItem,
   extractItem,
+  getManagedDirectorySize,
   importFilesDialog,
   importFilesFromPaths,
   listFilesWithMetadata,
+  type ManagedDirectorySize,
   moveItem,
   openInFinder,
   readFileContent,
   saveFileContent,
 } from '../../lib/file-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
-import FileEditorWorkspace from './FileEditorWorkspace';
-import SvgMaskIcon from './SvgMaskIcon';
-import { Button } from './ui/Button';
-import { Input } from './ui/Field';
+import FileEditorWorkspace, {
+  MAX_EDITABLE_MEGABYTES,
+  type UnsupportedReason,
+} from './FileEditorWorkspace';
+import styles from './FilesView.module.css';
 
 interface Props {
   server: MinecraftServer;
@@ -47,6 +61,8 @@ interface FileEntry {
   isDirectory: boolean;
   size?: number;
 }
+
+type CreateMode = 'folder' | 'file' | 'import';
 
 interface EditingFileState {
   name: string;
@@ -103,9 +119,89 @@ function detectLanguage(fileName: string): string {
   return map[ext] ?? 'plaintext';
 }
 
+// Extensions that are never opened as text in the editor.
+const BINARY_EXTENSIONS = ['jar', 'zip', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'exe', 'dll', 'class'];
+
+const MAX_EDITABLE_BYTES = MAX_EDITABLE_MEGABYTES * 1024 * 1024;
+
+/** Says why a file cannot be opened in the editor, or returns null. It is checked before the file is read. */
+function getUnsupportedReason(
+  fileName: string,
+  size: number | undefined,
+): UnsupportedReason | null {
+  const ext = fileName.includes('.') ? (fileName.split('.').at(-1) ?? '').toLowerCase() : '';
+  if (BINARY_EXTENSIONS.includes(ext)) {
+    return 'binary';
+  }
+  if ((size ?? 0) > MAX_EDITABLE_BYTES) {
+    return 'large';
+  }
+  return null;
+}
+
+/** Folder sizes measured this session, by managed path. Only successful walks are kept, so a failed folder is measured again later. */
+const folderSizeCache = new Map<string, ManagedDirectorySize>();
+/** Folders measured at once. Each walk runs on a blocking thread, so a small number keeps the listing responsive. */
+const FOLDER_SIZE_CONCURRENCY = 2;
+
+/** A folder's measured size, or 'failed' when the walk could not run. */
+type FolderSizeResult = ManagedDirectorySize | 'failed';
+
+/** The folder-size cell: an ellipsis while the walk runs, a dash when it failed, and a plus when it stopped early. */
+function folderSizeLabel(result: FolderSizeResult | undefined, locale: string): string {
+  if (result === undefined) {
+    return '…';
+  }
+  if (result === 'failed') {
+    return '—';
+  }
+  return `${formatBytes(result.bytes, locale)}${result.complete ? '' : '+'}`;
+}
+
+/**
+ * Measures the folders of one listing in the background, a few at a time, and reports each result as it lands.
+ * A new listing stops the walks still queued for the old one, so a result never lands on the wrong listing.
+ */
+function useFolderSizes(folderKey: string): ReadonlyMap<string, FolderSizeResult> {
+  const [results, setResults] = useState<ReadonlyMap<string, FolderSizeResult>>(() => new Map());
+
+  useEffect(() => {
+    const queue = folderKey.split('\n').filter((path) => path !== '' && !folderSizeCache.has(path));
+    if (queue.length === 0) {
+      return;
+    }
+    let current = true;
+    const measureNext = async () => {
+      let path = queue.shift();
+      while (path !== undefined && current) {
+        const target = path;
+        try {
+          const size = await getManagedDirectorySize(target);
+          folderSizeCache.set(target, size);
+          if (current) setResults((prev) => new Map(prev).set(target, size));
+        } catch (error) {
+          logError('Failed to measure folder size', error, { path: target });
+          if (current) setResults((prev) => new Map(prev).set(target, 'failed'));
+        }
+        path = queue.shift();
+      }
+    };
+    for (let slot = 0; slot < Math.min(FOLDER_SIZE_CONCURRENCY, queue.length); slot += 1) {
+      void measureNext();
+    }
+    return () => {
+      current = false;
+    };
+  }, [folderKey]);
+
+  return results;
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
+  // The folder that `files` was listed from. It lags `currentPath` until the new listing arrives.
+  const [listedPath, setListedPath] = useState('');
   const [serversRootAbsPath, setServersRootAbsPath] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
@@ -116,37 +212,27 @@ export default function FilesView({ server }: Props) {
   const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExternalDropActive, setIsExternalDropActive] = useState(false);
+  const [editorUnsupported, setEditorUnsupported] = useState<UnsupportedReason | null>(null);
 
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    file: FileEntry | null;
-  } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
   const [modalType, setModalType] = useState<string | null>(null);
 
   const [newFileName, setNewFileName] = useState('');
-  const [createMode, setCreateMode] = useState<'folder' | 'file'>('folder');
+  const [createMode, setCreateMode] = useState<CreateMode>('folder');
 
   const [moveDestPath, setMoveDestPath] = useState('');
   const [renameFileName, setRenameFileName] = useState('');
 
-  const [diffMode, setDiffMode] = useState(false);
-  const [diffOriginal, setDiffOriginal] = useState<{ path: string; content: string } | null>(null);
-  const [diffModified, setDiffModified] = useState<{ path: string; content: string } | null>(null);
-  const [diffSelectStep, setDiffSelectStep] = useState<'original' | 'modified' | null>(null);
   const editorRequestId = useRef(0);
   const filesRequestId = useRef(0);
 
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const { confirm } = useAppFeedback();
+  const folderKey = files
+    .filter((file) => file.isDirectory)
+    .map((file) => joinManagedPath(listedPath, file.name))
+    .join('\n');
+  const folderSizeResults = useFolderSizes(folderKey);
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -194,7 +280,7 @@ export default function FilesView({ server }: Props) {
         try {
           const imported = await importFilesFromPaths(payload.paths, currentPath);
           if (imported.length > 0) {
-            showToast(t('files.toast.uploadSuccess', { count: imported.length }), 'success');
+            notify.success(t('files.toast.uploadSuccess', { count: imported.length }));
             await loadFiles(currentPath);
           }
         } catch (error) {
@@ -202,7 +288,7 @@ export default function FilesView({ server }: Props) {
             currentPath,
             pathCount: payload.paths.length,
           });
-          showToast(t('files.toast.uploadFailed'), 'error');
+          notify.error(t('files.toast.uploadFailed'));
         }
       })
       .then((dispose) => {
@@ -230,71 +316,47 @@ export default function FilesView({ server }: Props) {
         return;
       }
       setFiles(entries);
+      setListedPath(path);
     } catch (e) {
       if (requestId !== filesRequestId.current) {
         return;
       }
       logError('Failed to list files', e, { path });
-      showToast(t('files.toast.loadFailed'), 'error');
+      notify.error(t('files.toast.loadFailed'));
     }
   };
 
   const renderBreadcrumbs = () => {
     if (!serversRootAbsPath) {
-      return <span className="font-mono">{t('files.loading')}</span>;
+      return <span className={styles.loading}>{t('files.loading')}</span>;
     }
 
     const normalizedCurrent = currentPath.replace(/\\/g, '/');
     const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
 
-    let relativePath = '';
-    if (normalizedCurrent.startsWith(normalizedRoot)) {
-      relativePath = normalizedCurrent.substring(normalizedRoot.length);
-    } else {
-      return <span className="font-mono">{currentPath}</span>;
+    // A path outside the servers root has no crumbs to click, so the raw path is shown as-is.
+    if (!normalizedCurrent.startsWith(normalizedRoot)) {
+      return <code className={styles.rawPath}>{currentPath}</code>;
     }
 
-    const segments = relativePath.split('/').filter(Boolean);
-    const breadcrumbEntries: Array<{ segment: string; path: string }> = [];
+    const normalizedServerPath = server.path.replace(/\\/g, '/');
+    const segments = normalizedCurrent.substring(normalizedRoot.length).split('/').filter(Boolean);
+    const items: BreadcrumbItem[] = [
+      { label: t('nav.servers'), onClick: () => setCurrentPath(normalizedRoot) },
+    ];
     let path = normalizedRoot;
     for (const segment of segments) {
       path = `${path}/${segment}`;
-      breadcrumbEntries.push({ segment, path });
+      const target = path;
+      // Crumbs above the server folder stay as plain text, so the user cannot leave the server.
+      const isWithinServerPath = target.startsWith(normalizedServerPath);
+      items.push({
+        label: segment,
+        onClick: isWithinServerPath ? () => setCurrentPath(target) : undefined,
+      });
     }
 
-    return (
-      <div className="files-view__breadcrumbs">
-        <button
-          type="button"
-          className="files-view__breadcrumb-link"
-          onClick={() => setCurrentPath(normalizedRoot)}
-        >
-          {t('nav.servers')}
-        </button>
-
-        {breadcrumbEntries.map(({ segment, path: pathUpToHere }) => {
-          const normalizedServerPath = server.path.replace(/\\/g, '/');
-          const isWithinServerPath = pathUpToHere.startsWith(normalizedServerPath);
-
-          return (
-            <span key={pathUpToHere} className="flex items-center">
-              <span className="files-view__breadcrumb-separator">/</span>
-              <button
-                type="button"
-                className={`files-view__breadcrumb-link ${!isWithinServerPath ? 'files-view__breadcrumb-link--disabled' : ''}`}
-                onClick={() => {
-                  if (isWithinServerPath) {
-                    setCurrentPath(pathUpToHere);
-                  }
-                }}
-              >
-                {segment}
-              </button>
-            </span>
-          );
-        })}
-      </div>
-    );
+    return <Breadcrumb ariaLabel={t('files.breadcrumb.label')} items={items} />;
   };
 
   const getDisplayPath = (fullPath: string) => {
@@ -313,11 +375,6 @@ export default function FilesView({ server }: Props) {
     } else {
       setSelectedFiles([fileName]);
     }
-  };
-
-  const handleCheckboxClick = (fileName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleSelect(fileName);
   };
 
   const toggleSelect = (name: string) => {
@@ -342,6 +399,16 @@ export default function FilesView({ server }: Props) {
         setSelectedFiles([]);
       }
     } else {
+      const unsupported = getUnsupportedReason(fileName, target.size);
+      if (unsupported) {
+        // The file is not read at all. The editor shows why instead of loading garbage text.
+        setEditingFile({ name: fileName, path: joinManagedPath(currentPath, fileName) });
+        setFileContent('');
+        setOriginalFileContent('');
+        setEditorUnsupported(unsupported);
+        setIsEditorOpen(true);
+        return;
+      }
       const requestId = editorRequestId.current + 1;
       editorRequestId.current = requestId;
       setIsEditorLoading(true);
@@ -352,6 +419,7 @@ export default function FilesView({ server }: Props) {
           return;
         }
         setEditingFile({ name: fileName, path: filePath });
+        setEditorUnsupported(null);
         setFileContent(content);
         setOriginalFileContent(content);
         setIsEditorOpen(true);
@@ -360,7 +428,7 @@ export default function FilesView({ server }: Props) {
           currentPath,
           fileName,
         });
-        showToast(t('files.toast.readFailed'), 'error');
+        notify.error(t('files.toast.readFailed'));
       } finally {
         if (requestId === editorRequestId.current) {
           setIsEditorLoading(false);
@@ -392,14 +460,14 @@ export default function FilesView({ server }: Props) {
     try {
       await saveFileContent(editingFile.path, fileContent);
       setOriginalFileContent(fileContent);
-      showToast(t('files.toast.saved'), 'success');
+      notify.success(t('files.toast.saved'));
     } catch (err) {
       console.error('Failed to save file content', {
         currentPath,
         filePath: editingFile.path,
         error: err,
       });
-      showToast(t('files.toast.saveFailed'), 'error');
+      notify.error(t('files.toast.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -411,9 +479,11 @@ export default function FilesView({ server }: Props) {
     }
 
     if (fileContent !== originalFileContent) {
-      const discard = await ask(t('files.confirm.discardChanges'), {
+      const discard = await confirm({
         title: t('files.confirm.discardChangesTitle'),
-        kind: 'warning',
+        description: t('files.confirm.discardChanges'),
+        confirmLabel: t('files.confirm.discardButton'),
+        tone: 'danger',
       });
       if (!discard) {
         return;
@@ -422,9 +492,10 @@ export default function FilesView({ server }: Props) {
 
     setIsEditorOpen(false);
     setEditingFile(null);
+    setEditorUnsupported(null);
     setFileContent('');
     setOriginalFileContent('');
-  }, [editingFile, fileContent, isSaving, originalFileContent, t]);
+  }, [confirm, editingFile, fileContent, isSaving, originalFileContent, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -442,55 +513,15 @@ export default function FilesView({ server }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleSaveFile, isEditorOpen]);
 
-  const BINARY_EXTENSIONS = [
-    'jar',
-    'zip',
-    'png',
-    'jpg',
-    'jpeg',
-    'gif',
-    'ico',
-    'exe',
-    'dll',
-    'class',
-  ];
-
-  const handleDiffSelect = async (file: FileEntry, filePath: string) => {
-    if (!diffSelectStep) {
-      return;
-    }
-    const ext = file.name.split('.').at(-1)?.toLowerCase() ?? '';
-    if (BINARY_EXTENSIONS.includes(ext)) {
-      showToast(t('files.toast.binaryNoDiff'), 'error');
-      return;
-    }
-    const content = await readFileContent(filePath);
-    if (diffSelectStep === 'original') {
-      setDiffOriginal({ path: filePath, content });
-      setDiffSelectStep('modified');
-      showToast(t('files.toast.diffSelectModified'), 'info');
-    } else {
-      setDiffModified({ path: filePath, content });
-      setDiffSelectStep(null);
-      setDiffMode(true);
-    }
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, file: FileEntry | null) => {
-    e.preventDefault();
-    if (file && !selectedFiles.includes(file.name)) {
-      setSelectedFiles([file.name]);
-    }
-    setContextMenu({ x: e.pageX, y: e.pageY, file });
-  };
-
   const handleDelete = async () => {
     if (selectedFiles.length === 0) {
       return;
     }
-    const confirmed = await ask(t('files.confirm.delete', { count: selectedFiles.length }), {
+    const confirmed = await confirm({
       title: t('files.confirm.deleteTitle'),
-      kind: 'warning',
+      description: t('files.confirm.delete', { count: selectedFiles.length }),
+      confirmLabel: t('common.delete'),
+      tone: 'danger',
     });
     if (!confirmed) {
       return;
@@ -500,16 +531,15 @@ export default function FilesView({ server }: Props) {
       for (const name of selectedFiles) {
         await deleteItem(`${currentPath}/${name}`);
       }
-      showToast(t('files.toast.deleted'), 'success');
+      notify.success(t('files.toast.deleted'));
       setSelectedFiles([]);
       loadFiles(currentPath);
-      setContextMenu(null);
     } catch (e) {
       logError('Failed to delete selected files', e, {
         currentPath,
         selectedFiles,
       });
-      showToast(t('files.toast.deleteFailed'), 'error');
+      notify.error(t('files.toast.deleteFailed'));
     }
   };
 
@@ -525,7 +555,7 @@ export default function FilesView({ server }: Props) {
       } else {
         await saveFileContent(target, '');
       }
-      showToast(t('files.toast.created'), 'success');
+      notify.success(t('files.toast.created'));
       setModalType(null);
       setNewFileName('');
       loadFiles(currentPath);
@@ -534,7 +564,7 @@ export default function FilesView({ server }: Props) {
         target,
         createMode,
       });
-      showToast(t('files.toast.createFailed'), 'error');
+      notify.error(t('files.toast.createFailed'));
     }
   };
 
@@ -544,22 +574,25 @@ export default function FilesView({ server }: Props) {
 
     if (result.length > 0) {
       loadFiles(currentPath);
-      showToast(t('files.toast.imported'), 'success');
+      notify.success(t('files.toast.imported'));
     }
   };
 
+  // Turns the typed destination into an absolute path. A leading "servers/" is relative to the servers root.
+  const resolveMoveDestination = (input: string): string => {
+    const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
+    let dest = input.trim().replace(/\\/g, '/');
+    if (dest.startsWith('servers/')) {
+      dest = dest.replace('servers', normalizedRoot);
+    }
+    return dest.replace(/\/+/g, '/');
+  };
+
   const handleMove = async () => {
-    if (!moveDestPath) {
+    const realDest = resolveMoveDestination(moveDestPath);
+    if (!realDest || moveDestinationError) {
       return;
     }
-
-    let realDest = moveDestPath.replace(/\\/g, '/');
-    const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
-
-    if (realDest.startsWith('servers/')) {
-      realDest = realDest.replace('servers', normalizedRoot);
-    }
-    realDest = realDest.replace(/\/+/g, '/');
 
     try {
       if (modalType === 'moveCurrent') {
@@ -574,7 +607,7 @@ export default function FilesView({ server }: Props) {
         setSelectedFiles([]);
         loadFiles(currentPath);
       }
-      showToast(t('files.toast.moved'), 'success');
+      notify.success(t('files.toast.moved'));
       setModalType(null);
     } catch (e) {
       logError('Failed to move filesystem entries', e, {
@@ -583,7 +616,7 @@ export default function FilesView({ server }: Props) {
         selectedFiles,
         modalType,
       });
-      showToast(t('files.toast.moveFailed'), 'error');
+      notify.error(t('files.toast.moveFailed'));
     }
   };
 
@@ -594,14 +627,14 @@ export default function FilesView({ server }: Props) {
   };
 
   const handleRename = async () => {
-    if (!renameFileName || !contextMenu?.file) {
+    if (!renameFileName || !renameTarget) {
       return;
     }
-    const src = `${currentPath}/${contextMenu.file.name}`;
+    const src = `${currentPath}/${renameTarget}`;
     const dest = `${currentPath}/${renameFileName}`;
     try {
       await moveItem(src, dest);
-      showToast(t('files.toast.renamed'), 'success');
+      notify.success(t('files.toast.renamed'));
       setModalType(null);
       setRenameFileName('');
       loadFiles(currentPath);
@@ -610,7 +643,7 @@ export default function FilesView({ server }: Props) {
         sourcePath: src,
         targetPath: dest,
       });
-      showToast(t('files.toast.renameFailed'), 'error');
+      notify.error(t('files.toast.renameFailed'));
     }
   };
 
@@ -622,16 +655,15 @@ export default function FilesView({ server }: Props) {
     const dest = `${currentPath}/archive-${Date.now()}.zip`;
     try {
       await compressItem(targets, dest);
-      showToast(t('files.toast.compressed'), 'success');
+      notify.success(t('files.toast.compressed'));
       loadFiles(currentPath);
-      setContextMenu(null);
     } catch (e) {
       logError('Failed to compress selected entries', e, {
         currentPath,
         targets,
         destination: dest,
       });
-      showToast(t('files.toast.compressFailed'), 'error');
+      notify.error(t('files.toast.compressFailed'));
     }
   };
 
@@ -639,21 +671,29 @@ export default function FilesView({ server }: Props) {
     if (selectedFiles.length === 0) {
       return;
     }
+    // Only .zip archives can be extracted. Anything else is reported instead of counting as a success.
+    const archives = selectedFiles.filter((name) => name.toLowerCase().endsWith('.zip'));
+    if (archives.length === 0) {
+      notify.error(t('files.toast.extractNotZip'));
+      return;
+    }
     try {
-      for (const f of selectedFiles) {
-        if (f.endsWith('.zip')) {
-          await extractItem(`${currentPath}/${f}`, currentPath);
-        }
+      for (const archive of archives) {
+        await extractItem(`${currentPath}/${archive}`, currentPath);
       }
-      showToast(t('files.toast.extracted'), 'success');
+      const skipped = selectedFiles.length - archives.length;
+      if (skipped > 0) {
+        notify.warning(t('files.toast.extractSkipped', { count: skipped }));
+      } else {
+        notify.success(t('files.toast.extracted'));
+      }
       loadFiles(currentPath);
-      setContextMenu(null);
     } catch (e) {
       logError('Failed to extract selected archives', e, {
         currentPath,
         selectedFiles,
       });
-      showToast(t('files.toast.extractFailed'), 'error');
+      notify.error(t('files.toast.extractFailed'));
     }
   };
 
@@ -681,259 +721,311 @@ export default function FilesView({ server }: Props) {
         currentPath,
         folderName,
       });
-      showToast(t('files.toast.moveFailed'), 'error');
+      notify.error(t('files.toast.moveFailed'));
     }
   };
 
+  const upItems: ButtonGroupItem[] = [
+    {
+      id: 'up',
+      label: t('files.toolbar.goUp'),
+      icon: <ArrowUp aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      disabled: currentPath === server.path,
+      onSelect: handleGoUp,
+    },
+  ];
+  const toolItems: ButtonGroupItem[] = [
+    {
+      id: 'create',
+      label: t('files.toolbar.createImport'),
+      icon: <FolderPlus aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      testId: 'files-create-button',
+      onSelect: () => setModalType('create'),
+    },
+    {
+      id: 'explorer',
+      label: t('files.toolbar.openExplorer'),
+      icon: <FolderOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: handleOpenExplorer,
+    },
+  ];
+  const selectionItems: ButtonGroupItem[] = [
+    {
+      id: 'move',
+      label: t('files.toolbar.move'),
+      icon: <Move aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => openMoveModal(false),
+    },
+    {
+      id: 'compress',
+      label: t('files.toolbar.compress'),
+      icon: <Archive aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => void handleZip(),
+    },
+    {
+      id: 'extract',
+      label: t('files.toolbar.extract'),
+      icon: <PackageOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => void handleUnzip(),
+    },
+    {
+      id: 'delete',
+      label: t('files.toolbar.delete'),
+      icon: <Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => void handleDelete(),
+    },
+  ];
+
+  const createOptions: RadioCardOption[] = [
+    {
+      value: 'folder',
+      label: t('files.modal.folder'),
+      icon: <Folder aria-hidden="true" size={16} strokeWidth={1.75} />,
+      testId: 'files-create-folder-option',
+    },
+    {
+      value: 'file',
+      label: t('files.modal.file'),
+      icon: <File aria-hidden="true" size={16} strokeWidth={1.75} />,
+      testId: 'files-create-file-option',
+    },
+    {
+      value: 'import',
+      label: t('files.modal.import'),
+      icon: <FolderInput aria-hidden="true" size={16} strokeWidth={1.75} />,
+      testId: 'files-import-button',
+    },
+  ];
+  const createNameError =
+    createMode !== 'import' && /[\\/]/.test(newFileName) ? t('files.modal.nameInvalid') : undefined;
+  const createDisabled =
+    createMode !== 'import' && (!newFileName.trim() || createNameError !== undefined);
+  const submitCreate = () => {
+    if (createMode === 'import') {
+      void handleImport();
+      return;
+    }
+    if (!createDisabled) {
+      void handleCreate();
+    }
+  };
+
+  // A folder cannot be moved into itself or into one of its own subfolders.
+  const moveSources =
+    modalType === 'moveCurrent'
+      ? [currentPath]
+      : selectedFiles.map((name) => `${currentPath}/${name}`);
+  const resolvedMoveDestination = resolveMoveDestination(moveDestPath);
+  const moveDestinationError = moveSources.some(
+    (source) =>
+      resolvedMoveDestination === source || resolvedMoveDestination.startsWith(`${source}/`),
+  )
+    ? t('files.modal.moveIntoItself')
+    : undefined;
+  const moveDisabled = !moveDestPath.trim() || moveDestinationError !== undefined;
+
+  const renameError = /[\\/]/.test(renameFileName) ? t('files.modal.nameInvalid') : undefined;
+  const renameDisabled =
+    !renameFileName.trim() || renameFileName.trim() === renameTarget || renameError !== undefined;
+
+  const rowMenuItems = (file: FileEntry): ContextMenuItem[] => [
+    {
+      id: 'rename',
+      label: t('files.contextMenu.rename'),
+      icon: <Pencil aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => {
+        setRenameTarget(file.name);
+        setRenameFileName(file.name);
+        setModalType('rename');
+      },
+    },
+    {
+      id: 'move',
+      label: t('files.contextMenu.moveItem'),
+      icon: <Move aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => openMoveModal(false),
+    },
+    {
+      id: 'compress',
+      label: t('files.contextMenu.compressItem'),
+      icon: <Archive aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => void handleZip(),
+    },
+    {
+      id: 'extract',
+      label: t('files.contextMenu.extractItem'),
+      icon: <PackageOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => void handleUnzip(),
+    },
+    {
+      id: 'delete',
+      label: t('files.contextMenu.deleteItem'),
+      icon: <Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />,
+      destructive: true,
+      onSelect: () => void handleDelete(),
+    },
+  ];
+  const emptyAreaMenuItems: ContextMenuItem[] = [
+    {
+      id: 'create',
+      label: t('files.contextMenu.newCreate'),
+      icon: <FolderPlus aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => setModalType('create'),
+    },
+    {
+      id: 'import',
+      label: t('files.contextMenu.import'),
+      icon: <FolderInput aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => void handleImport(),
+    },
+    {
+      id: 'move',
+      label: t('files.contextMenu.move'),
+      icon: <Move aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onSelect: () => openMoveModal(true),
+    },
+  ];
+
   return (
-    <div
-      className="files-view flex h-full flex-col gap-4 p-5 max-[900px]:p-4"
-      data-testid="files-view"
-      onClick={() => setContextMenu(null)}
-    >
-      {/* ツールバー */}
-      <div className="files-view__toolbar">
-        <button
-          type="button"
-          className="files-view__toolbar-btn"
-          onClick={handleGoUp}
-          disabled={currentPath === server.path}
-          aria-label={t('files.toolbar.goUp')}
-          title={t('files.toolbar.goUp')}
-        >
-          <ArrowUp aria-hidden="true" className="files-view__toolbar-icon" size={16} />
-        </button>
-
-        {/* パンくずリスト */}
-        <div className="files-view__breadcrumb-shell">{renderBreadcrumbs()}</div>
-
-        <button
-          type="button"
-          className="files-view__toolbar-btn"
-          data-testid="files-create-button"
-          onClick={() => setModalType('create')}
-          aria-label={t('files.toolbar.createImport')}
-          title={t('files.toolbar.createImport')}
-        >
-          <FolderPlus aria-hidden="true" className="files-view__toolbar-icon" size={16} />
-        </button>
-        <button
-          type="button"
-          className="files-view__toolbar-btn"
-          onClick={handleOpenExplorer}
-          aria-label={t('files.toolbar.openExplorer')}
-          title={t('files.toolbar.openExplorer')}
-        >
-          <SvgMaskIcon src={iconOpenFolder} className="files-view__toolbar-icon" />
-        </button>
-        <button
-          type="button"
-          className={`files-view__toolbar-btn${diffSelectStep ? ' is-active' : ''}`}
-          onClick={() => {
-            if (diffMode) {
-              setDiffMode(false);
-              setDiffOriginal(null);
-              setDiffModified(null);
-            } else if (diffSelectStep) {
-              setDiffSelectStep(null);
-            } else {
-              setDiffSelectStep('original');
-              showToast(t('files.toast.diffSelectOriginal'), 'info');
-            }
-          }}
-          aria-label={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
-          title={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
-        >
-          <GitCompareArrows aria-hidden="true" className="files-view__toolbar-icon" size={16} />
-          <span className="sr-only">
-            {diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
-          </span>
-        </button>
-        {selectedFiles.length > 0 && (
-          <>
-            <div className="files-view__toolbar-divider" />
-            <button
-              type="button"
-              className="files-view__toolbar-btn"
-              onClick={() => openMoveModal(false)}
-              aria-label={t('files.toolbar.move')}
-              title={t('files.toolbar.move')}
-            >
-              <SvgMaskIcon src={iconMove} className="files-view__toolbar-icon" />
-            </button>
-            <button
-              type="button"
-              className="files-view__toolbar-btn"
-              onClick={handleZip}
-              aria-label={t('files.toolbar.compress')}
-              title={t('files.toolbar.compress')}
-            >
-              <SvgMaskIcon src={iconZip} className="files-view__toolbar-icon" />
-            </button>
-            <button
-              type="button"
-              className="files-view__toolbar-btn"
-              onClick={handleUnzip}
-              aria-label={t('files.toolbar.extract')}
-              title={t('files.toolbar.extract')}
-            >
-              <SvgMaskIcon src={iconUnzip} className="files-view__toolbar-icon" />
-            </button>
-            <button
-              type="button"
-              className="files-view__toolbar-btn files-view__toolbar-btn--danger"
-              onClick={handleDelete}
-              aria-label={t('files.toolbar.delete')}
-              title={t('files.toolbar.delete')}
-            >
-              <SvgMaskIcon src={iconTrash} className="files-view__toolbar-icon" />
-            </button>
-          </>
-        )}
+    <div className={styles.view} data-testid="files-view">
+      <div className={styles.toolbar}>
+        <ButtonGroup label={t('files.toolbar.navigation')} size="sm" items={upItems} />
+        <div className={styles.breadcrumbShell}>{renderBreadcrumbs()}</div>
+        <div className={styles.toolbarEnd}>
+          <ButtonGroup label={t('files.toolbar.tools')} size="sm" items={toolItems} />
+          {selectedFiles.length > 0 && (
+            <ButtonGroup label={t('files.toolbar.selection')} size="sm" items={selectionItems} />
+          )}
+        </div>
       </div>
 
       {/* ファイルリスト表示エリア */}
-      <div
-        className={`files-view__list-pane ${isExternalDropActive ? 'is-drop-active' : ''}`}
-        onContextMenu={(e) => handleContextMenu(e, null)}
-      >
-        {isExternalDropActive && <div className="files-view__drop-hint">{t('files.dropHint')}</div>}
+      <div className={`${styles.pane}${isExternalDropActive ? ` ${styles.paneDropActive}` : ''}`}>
+        {isExternalDropActive && (
+          <div className={styles.dropOverlay} role="status">
+            <Upload aria-hidden="true" size={24} strokeWidth={1.75} />
+            <span>{t('files.dropHint')}</span>
+          </div>
+        )}
 
-        <div className="flex flex-col gap-0">
-          {files.map((file) => {
-            const filePath = joinManagedPath(currentPath, file.name);
-            return (
-              <div
-                key={file.name}
-                className={`files-view__row ${selectedFiles.includes(file.name) ? 'is-selected' : ''}${diffSelectStep && !file.isDirectory ? ' cursor-crosshair' : ''}`}
-                data-testid={`file-row-${file.name}`}
-                role="button"
-                tabIndex={0}
-                aria-label={file.name}
-                aria-pressed={selectedFiles.includes(file.name)}
-                onContextMenu={(e) => {
-                  e.stopPropagation();
-                  handleContextMenu(e, file);
-                }}
-                onClick={(e) => {
-                  if (diffSelectStep && !file.isDirectory) {
-                    void handleDiffSelect(file, filePath);
-                  } else {
-                    handleRowClick(file.name, e);
-                  }
-                }}
-                onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    if (diffSelectStep && !file.isDirectory) {
-                      void handleDiffSelect(file, filePath);
-                    } else {
-                      void handleFileDoubleClick(file.name);
-                    }
-                  }
-                }}
-                draggable
-                onDragStart={(e) => handleDragStart(e, file.name)}
-                onDragOver={(e) => {
-                  if (file.isDirectory) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
-                onDrop={(e) => {
-                  if (file.isDirectory) handleDropOnFolder(e, file.name);
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedFiles.includes(file.name)}
-                  aria-label={file.name}
-                  onClick={(e) => handleCheckboxClick(file.name, e)}
-                  className="cursor-pointer mr-2.5 ml-2.5"
-                />
-                <SvgMaskIcon
-                  src={file.isDirectory ? iconFolder : iconFile}
-                  className={`files-view__row-icon ${file.isDirectory ? 'files-view__row-icon--dir' : 'files-view__row-icon--file'}`}
-                />
-                <span
-                  className={`files-view__name ${file.isDirectory ? 'files-view__name--dir' : 'files-view__name--file'}`}
+        {files.length === 0 ? (
+          <EmptyLine title={t('files.emptyFolder')} />
+        ) : (
+          <div className={styles.list}>
+            {files.map((file) => {
+              const filePath = joinManagedPath(listedPath, file.name);
+              const selected = selectedFiles.includes(file.name);
+              const rowClass = [styles.row, selected ? styles.rowSelected : '']
+                .filter(Boolean)
+                .join(' ');
+              return (
+                <ContextMenu
+                  key={file.name}
+                  label={file.name}
+                  items={rowMenuItems(file)}
+                  trigger="context"
+                  className={styles.item}
                 >
-                  {file.name}
-                </span>
-                <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">
-                  {file.isDirectory
-                    ? '-'
-                    : file.size
-                      ? `${(file.size / 1024).toFixed(1)} KB`
-                      : '0 KB'}
-                </span>
-              </div>
-            );
-          })}
-          {files.length === 0 && <div className="files-view__empty">{t('files.emptyFolder')}</div>}
-        </div>
+                  <div
+                    className={rowClass}
+                    data-testid={`file-row-${file.name}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={file.name}
+                    aria-pressed={selected}
+                    onContextMenu={() => {
+                      if (!selected) setSelectedFiles([file.name]);
+                    }}
+                    onClick={(e) => handleRowClick(file.name, e)}
+                    onDoubleClick={() => handleFileDoubleClick(file.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        void handleFileDoubleClick(file.name);
+                      }
+                    }}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, file.name)}
+                    onDragOver={(e) => {
+                      if (file.isDirectory) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                    onDrop={(e) => {
+                      if (file.isDirectory) handleDropOnFolder(e, file.name);
+                    }}
+                  >
+                    {/* The checkbox handles its own presses, so they do not also open or select the row. */}
+                    <span
+                      className={styles.checkCell}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        aria-label={file.name}
+                        checked={selected}
+                        onCheckedChange={() => toggleSelect(file.name)}
+                      />
+                    </span>
+                    {file.isDirectory ? (
+                      <Folder
+                        aria-hidden="true"
+                        className={`${styles.icon} ${styles.iconDirectory}`}
+                        size={16}
+                        strokeWidth={1.75}
+                      />
+                    ) : (
+                      <File
+                        aria-hidden="true"
+                        className={styles.icon}
+                        size={16}
+                        strokeWidth={1.75}
+                      />
+                    )}
+                    <span className={styles.name}>{file.name}</span>
+                    <span className={styles.size}>
+                      {file.isDirectory
+                        ? folderSizeLabel(
+                            folderSizeCache.get(filePath) ?? folderSizeResults.get(filePath),
+                            locale,
+                          )
+                        : formatBytes(file.size ?? 0, locale)}
+                    </span>
+                  </div>
+                </ContextMenu>
+              );
+            })}
+          </div>
+        )}
+
+        {/* The empty space below the rows opens the folder menu, so it never overlaps a row's own menu. */}
+        <ContextMenu
+          label={t('files.contextMenu.label')}
+          items={emptyAreaMenuItems}
+          trigger="context"
+          className={styles.emptyArea}
+        >
+          <div className={styles.emptyAreaFill} />
+        </ContextMenu>
       </div>
 
-      {/* Diff View Overlay */}
-      {diffMode && diffOriginal && diffModified && (
-        <div className="files-view__editor-overlay" aria-label={t('files.toolbar.diffOpen')}>
-          <div className="files-view__editor-header">
-            <div className="files-view__editor-identity">
-              <span className="files-view__editor-file-icon" aria-hidden="true">
-                <GitCompareArrows size={18} strokeWidth={1.8} />
-              </span>
-              <div className="files-view__editor-file-meta">
-                <div className="files-view__editor-file-title">
-                  <strong>
-                    {diffOriginal.path.split(/[\\/]/).at(-1)}
-                    {' → '}
-                    {diffModified.path.split(/[\\/]/).at(-1)}
-                  </strong>
-                </div>
-                <span className="files-view__editor-file-path">{t('files.toolbar.diffOpen')}</span>
-              </div>
-            </div>
-            <div className="files-view__editor-actions">
-              <button
-                type="button"
-                className="files-view__editor-icon-button"
-                onClick={() => {
-                  setDiffMode(false);
-                  setDiffOriginal(null);
-                  setDiffModified(null);
-                }}
-                aria-label={t('common.close')}
-                title={t('common.close')}
-              >
-                <X aria-hidden="true" size={18} strokeWidth={1.8} />
-                {t('common.close')}
-              </button>
-            </div>
-          </div>
-          <DiffEditor
-            height="100%"
-            original={diffOriginal.content}
-            modified={diffModified.content}
-            language={detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}
-            theme="vs-dark"
-            options={{ readOnly: true, minimap: { enabled: false }, renderSideBySide: true }}
-          />
-          <div className="files-view__editor-statusbar" aria-live="polite">
-            <span>{detectLanguage(diffModified.path.split(/[\\/]/).at(-1) ?? '')}</span>
-            <span>{t('files.editor.readOnly')}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Editor Modal */}
+      {/* Shown while the file is read, before the editor opens */}
       {isEditorLoading && (
-        <div
-          className="files-view__editor-overlay files-view__editor-overlay--loading"
-          aria-busy="true"
-        >
-          <div className="files-view__editor-loading">{t('files.loading')}</div>
-        </div>
+        <section className={styles.overlay} aria-busy="true" aria-label={t('files.loading')}>
+          <div className={styles.loadingPanel} role="status">
+            <span className={styles.loadingBar} aria-hidden="true" />
+            {t('files.loading')}
+          </div>
+        </section>
       )}
       {isEditorOpen && editingFile && !isEditorLoading && (
         <FileEditorWorkspace
@@ -945,305 +1037,168 @@ export default function FilesView({ server }: Props) {
           onChange={setFileContent}
           onSave={() => void handleSaveFile()}
           onClose={() => void handleCloseEditor()}
+          unsupported={editorUnsupported}
           t={t}
         />
       )}
 
-      {/* New Create / Import Modal */}
-      {modalType === 'create' && (
-        <div className="mc-modal-overlay modal-backdrop">
-          <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-              {t('files.modal.createImportTitle')}
-            </h3>
-
-            <div className="files-view__create-grid">
-              <div
-                className={`files-view__create-option ${createMode === 'folder' ? 'is-active' : ''}`}
-                onClick={() => setCreateMode('folder')}
-                role="button"
-                tabIndex={0}
-                aria-pressed={createMode === 'folder'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setCreateMode('folder');
-                  }
-                }}
-              >
-                <SvgMaskIcon src={iconFiles} className="w-8 h-8" />
-                <span
-                  className={`files-view__create-option-label ${createMode === 'folder' ? 'is-active' : 'is-idle'}`}
-                >
-                  {t('files.modal.folder')}
-                </span>
-              </div>
-
-              <div
-                className={`files-view__create-option ${createMode === 'file' ? 'is-active' : ''}`}
-                data-testid="files-create-file-option"
-                onClick={() => setCreateMode('file')}
-                role="button"
-                tabIndex={0}
-                aria-pressed={createMode === 'file'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setCreateMode('file');
-                  }
-                }}
-              >
-                <SvgMaskIcon src={iconFile} className="w-8 h-8" />
-                <span
-                  className={`files-view__create-option-label ${createMode === 'file' ? 'is-active' : 'is-idle'}`}
-                >
-                  {t('files.modal.file')}
-                </span>
-              </div>
-
-              <div
-                className="files-view__create-option files-view__create-option--import"
-                data-testid="files-import-button"
-                onClick={handleImport}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    void handleImport();
-                  }
-                }}
-              >
-                <SvgMaskIcon src={iconImport} className="w-8 h-8" />
-                <span className="files-view__create-option-label is-idle">
-                  {t('files.modal.import')}
-                </span>
-              </div>
-            </div>
-
-            <label className="files-view__modal-label">{t('files.modal.nameLabel')}</label>
-            <Input
-              type="text"
-              value={newFileName}
-              data-testid="files-name-input"
-              onChange={(e) => setNewFileName(e.target.value)}
-              placeholder={
-                createMode === 'folder'
-                  ? t('files.modal.newFolderPlaceholder')
-                  : t('files.modal.newFilePlaceholder')
-              }
-              variant="modal"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreate();
-              }}
-            />
-
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
+      {/* Create / Import: one choice card per action, and the name only when it is needed */}
+      <Dialog
+        open={modalType === 'create'}
+        onOpenChange={(open) => {
+          if (!open) setModalType(null);
+        }}
+      >
+        <DialogContent
+          title={t('files.modal.createImportTitle')}
+          width="min(560px, calc(100vw - 2rem))"
+          data-testid="files-create-modal"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
               <Button
-                onClick={handleCreate}
-                variant="modalPrimary"
+                type="button"
+                variant="primary"
                 data-testid="files-create-submit"
-                disabled={!newFileName}
+                disabled={createDisabled}
+                onClick={submitCreate}
               >
-                {t('common.create')}
+                {createMode === 'import' ? t('files.modal.import') : t('common.create')}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Move Modal */}
-      {(modalType === 'move' || modalType === 'moveCurrent') && (
-        <div className="mc-modal-overlay modal-backdrop">
-          <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-              {modalType === 'moveCurrent'
-                ? t('files.modal.moveDirectoryTitle')
-                : t('files.modal.moveTitle')}
-            </h3>
-            <p className="text-zinc-400 text-sm mb-2.5">
-              {modalType === 'moveCurrent'
-                ? t('files.modal.moveDirectoryDescription')
-                : t('files.modal.moveDescription', { count: selectedFiles.length })}
-            </p>
-            <Input
-              type="text"
-              value={moveDestPath}
-              data-testid="files-move-input"
-              onChange={(e) => setMoveDestPath(e.target.value)}
-              placeholder={t('files.modal.moveDestPlaceholder')}
-              variant="modal"
+            </>
+          }
+        >
+          <div className={styles.createBody}>
+            {/* Three fixed columns: auto-fill can open an empty fourth column in a wide dialog and squeeze the cards. */}
+            <RadioCards
+              aria-label={t('files.modal.createImportTitle')}
+              layout="grid"
+              style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+              options={createOptions}
+              value={createMode}
+              onValueChange={(value) => setCreateMode(value as CreateMode)}
             />
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
+            {createMode !== 'import' && (
+              <Input
+                label={t('files.modal.nameLabel')}
+                data-testid="files-name-input"
+                value={newFileName}
+                placeholder={
+                  createMode === 'folder'
+                    ? t('files.modal.newFolderPlaceholder')
+                    : t('files.modal.newFilePlaceholder')
+                }
+                error={createNameError}
+                onChange={(e) => setNewFileName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitCreate();
+                  }
+                }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move: the destination is checked before Move is enabled */}
+      <Dialog
+        open={modalType === 'move' || modalType === 'moveCurrent'}
+        onOpenChange={(open) => {
+          if (!open) setModalType(null);
+        }}
+      >
+        <DialogContent
+          title={
+            modalType === 'moveCurrent'
+              ? t('files.modal.moveDirectoryTitle')
+              : t('files.modal.moveTitle')
+          }
+          description={
+            modalType === 'moveCurrent'
+              ? t('files.modal.moveDirectoryDescription')
+              : t('files.modal.moveDescription', { count: selectedFiles.length })
+          }
+          data-testid="files-move-modal"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
-              <Button variant="modalPrimary" onClick={handleMove}>
+              <Button
+                type="button"
+                variant="primary"
+                data-testid="files-move-submit"
+                disabled={moveDisabled}
+                onClick={() => void handleMove()}
+              >
                 {t('files.modal.moveButton')}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </>
+          }
+        >
+          <Input
+            label={t('files.modal.moveDestLabel')}
+            data-testid="files-move-input"
+            value={moveDestPath}
+            placeholder={t('files.modal.moveDestPlaceholder')}
+            error={moveDestinationError}
+            onChange={(e) => setMoveDestPath(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !moveDisabled) {
+                e.preventDefault();
+                void handleMove();
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Rename Modal */}
-      {modalType === 'rename' && (
-        <div className="mc-modal-overlay modal-backdrop">
-          <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-              {t('files.modal.renameTitle')}
-            </h3>
-            <Input
-              type="text"
-              value={renameFileName}
-              onChange={(e) => setRenameFileName(e.target.value)}
-              variant="modal"
-            />
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
+      {/* Rename: the name must differ from the current one and must not contain a slash */}
+      <Dialog
+        open={modalType === 'rename'}
+        onOpenChange={(open) => {
+          if (!open) setModalType(null);
+        }}
+      >
+        <DialogContent
+          title={t('files.modal.renameTitle')}
+          data-testid="files-rename-modal"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
-              <Button variant="modalPrimary" onClick={handleRename}>
+              <Button
+                type="button"
+                variant="primary"
+                data-testid="files-rename-submit"
+                disabled={renameDisabled}
+                onClick={() => void handleRename()}
+              >
                 {t('files.modal.renameButton')}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Context Menu (機能追加・画像付き) */}
-      {contextMenu && (
-        <div
-          className="files-view__context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          role="menu"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setContextMenu(null);
-            } else if (e.key === 'Enter' || e.key === ' ') {
-              const target = e.target;
-              if (target instanceof HTMLElement && target !== e.currentTarget) {
-                e.preventDefault();
-                target.click();
-              }
-            }
-          }}
+            </>
+          }
         >
-          {contextMenu.file ? (
-            <>
-              {/* 1. 名前の変更 (画像なしのため透明なスペースで位置合わせ) */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  setRenameFileName(contextMenu.file?.name ?? '');
-                  setModalType('rename');
-                  setContextMenu(null);
-                }}
-              >
-                <div className="files-view__context-spacer" />
-                {t('files.contextMenu.rename')}
-              </div>
-
-              {/* 2. アイテムを移動 */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  openMoveModal(false);
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconMove} className="files-view__context-icon" />
-                {t('files.contextMenu.moveItem')}
-              </div>
-
-              {/* 3. アイテムを圧縮 */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  handleZip();
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconZip} className="files-view__context-icon" />
-                {t('files.contextMenu.compressItem')}
-              </div>
-
-              {/* 4. アイテムを解凍 */}
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  handleUnzip();
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconUnzip} className="files-view__context-icon" />
-                {t('files.contextMenu.extractItem')}
-              </div>
-
-              {/* 5. アイテムを削除 */}
-              <div
-                className="files-view__context-item files-view__context-item--danger"
-                role="menuitem"
-                tabIndex={0}
-                onClick={handleDelete}
-              >
-                <SvgMaskIcon src={iconTrash} className="files-view__context-icon" />
-                {t('files.contextMenu.deleteItem')}
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  setModalType('create');
-                  setContextMenu(null);
-                }}
-              >
-                <div className="files-view__context-spacer" />
-                {t('files.contextMenu.newCreate')}
-              </div>
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  handleImport();
-                  setContextMenu(null);
-                }}
-              >
-                <div className="files-view__context-spacer" />
-                {t('files.contextMenu.import')}
-              </div>
-              <div
-                className="files-view__context-item"
-                role="menuitem"
-                tabIndex={0}
-                onClick={() => {
-                  openMoveModal(true);
-                  setContextMenu(null);
-                }}
-              >
-                <SvgMaskIcon src={iconMove} className="files-view__context-icon" />
-                {t('files.contextMenu.move')}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+          <Input
+            label={t('files.modal.renameLabel')}
+            data-testid="files-rename-input"
+            value={renameFileName}
+            error={renameError}
+            onChange={(e) => setRenameFileName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !renameDisabled) {
+                e.preventDefault();
+                void handleRename();
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

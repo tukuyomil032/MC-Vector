@@ -25,11 +25,9 @@ export const DEFAULT_LOCALE: LocaleCode = 'en';
 export interface TranslationDictionary {
   /** Common UI elements used across the app */
   common: {
-    ok: string;
     cancel: string;
     save: string;
     delete: string;
-    edit: string;
     create: string;
     close: string;
     back: string;
@@ -37,15 +35,14 @@ export interface TranslationDictionary {
     loading: string;
     downloading: string;
     loadingView: string;
-    error: string;
-    success: string;
     confirm: string;
-    yes: string;
-    no: string;
     search: string;
-    refresh: string;
     copy: string;
-    paste: string;
+    reload: string;
+    /** Accessible name of the notification region */
+    notifications: string;
+    /** Accessible name of the info button that shows a field hint */
+    moreInfo: string;
   };
 
   /** Settings page translations */
@@ -56,17 +53,25 @@ export interface TranslationDictionary {
       title: string;
       description: string;
       checkButton: string;
-      checking: string;
       download: string;
       restart: string;
       idle: string;
       checkingStatus: string;
       available: string;
       notAvailable: string;
-      downloading: string;
       downloaded: string;
-      error: string;
       releaseNotes: string;
+      availableTitle: string;
+      readyTitle: string;
+      downloadingTitle: string;
+      errorTitle: string;
+      /** Title of the alert shown when the update check itself fails. */
+      checkErrorTitle: string;
+      downloadingLabel: string;
+      downloadHint: string;
+      later: string;
+      skipVersion: string;
+      retry: string;
       channelLabel: string;
       channels: {
         stable: string;
@@ -85,16 +90,6 @@ export interface TranslationDictionary {
         ja: string;
       };
     };
-    theme: {
-      title: string;
-      description: string;
-      label: string;
-      options: {
-        light: string;
-        dark: string;
-        system: string;
-      };
-    };
     liquidGlass: {
       title: string;
       description: string;
@@ -108,31 +103,33 @@ export interface TranslationDictionary {
       saving: string;
       saveError: string;
     };
-    general: {
-      title: string;
-    };
-    advanced: {
-      title: string;
-    };
   };
 
   /** Server management translations */
   server: {
     title: string;
-    create: {
+    exit: {
       title: string;
-      name: string;
-      version: string;
-      type: string;
       description: string;
+      confirm: string;
+    };
+    status: {
+      online: string;
+      offline: string;
+      starting: string;
+      stopping: string;
+      restarting: string;
+      crashed: string;
+    };
+    create: {
       templateNamePrompt: string;
+      templateNameLabel: string;
       templateDefaultName: string;
       cloneDefaultName: string;
     };
     list: {
       empty: string;
-      running: string;
-      stopped: string;
+      emptyTitle: string;
       selectOrCreate: string;
       ungrouped: string;
     };
@@ -140,22 +137,11 @@ export interface TranslationDictionary {
       start: string;
       stop: string;
       restart: string;
-      backup: string;
-      delete: string;
-      openFolder: string;
       clone: string;
       saveTemplate: string;
     };
-    console: {
-      title: string;
-      placeholder: string;
-    };
     eula: {
       title: string;
-      description: string;
-      fileMissing: string;
-      fileNotAccepted: string;
-      explanation: string;
       openLink: string;
       consentLabel: string;
       acceptAndStart: string;
@@ -164,8 +150,8 @@ export interface TranslationDictionary {
     };
     toast: {
       loadError: string;
-      downloadStarting: string;
       downloadComplete: string;
+      downloadingServer: string;
       autoBackupCreated: string;
       autoBackupFailed: string;
       autoRestartLimitReached: string;
@@ -178,9 +164,7 @@ export interface TranslationDictionary {
       restartFailed: string;
       settingsSaved: string;
       saveFailed: string;
-      pathEmpty: string;
       created: string;
-      jarDownloadFailed: string;
       jarUrlFailed: string;
       createFailed: string;
       deleted: string;
@@ -200,25 +184,26 @@ export interface TranslationDictionary {
       highCpu: string;
     };
     confirm: {
-      delete: string;
       deleteManaged: string;
-      deleteExternal: string;
       clone: string;
     };
   };
 
   /** Dashboard view translations */
   dashboard: {
-    title: string;
     stats: {
       status: string;
       software: string;
+      serverInfo: string;
+      address: string;
+      copyAddress: string;
+      allocatedMemory: string;
+      javaRuntime: string;
       currentCpu: string;
       currentMemory: string;
       currentTps: string;
-      tpsAutoSampled: string;
-      tpsLogBased: string;
       uptime: string;
+      kpiLabel: string;
       statusValues: {
         online: string;
         offline: string;
@@ -229,6 +214,9 @@ export interface TranslationDictionary {
         unknown: string;
       };
     };
+    units: {
+      megabytes: string;
+    };
     charts: {
       cpuLast60s: string;
       memoryLast60s: string;
@@ -238,15 +226,9 @@ export interface TranslationDictionary {
       elapsedSeconds: string;
       elapsedTime: string;
       heldSince: string;
-    };
-    healthCheck: {
-      title: string;
-      pinging: string;
-      online: string;
-      offline: string;
-      latency: string;
-      players: string;
-      version: string;
+      seriesCpu: string;
+      seriesMemory: string;
+      seriesTps: string;
     };
   };
 
@@ -259,17 +241,18 @@ export interface TranslationDictionary {
       send: string;
     };
     command: {
+      label: string;
       placeholder: string;
+      offlineHint: string;
     };
     emptyLog: {
       waiting: string;
       notFound: string;
     };
     filter: {
-      label: string;
       ariaLabel: string;
+      all: string;
     };
-    historyHint: string;
     search: {
       label: string;
       placeholder: string;
@@ -277,6 +260,8 @@ export interface TranslationDictionary {
       invalidRegex: string;
       prev: string;
       next: string;
+      count: string;
+      navigate: string;
     };
     pinned: {
       title: string;
@@ -284,16 +269,20 @@ export interface TranslationDictionary {
       unpin: string;
     };
     status: {
-      address: string;
       clickToCopy: string;
-      status: string;
+      copied: string;
       memory: string;
+    };
+    memory: {
+      value: string;
+      unit: string;
     };
     toast: {
       noLogsToSave: string;
       logsSaved: string;
       logsSaveFailed: string;
       pinLimitReached: string;
+      copyFailed: string;
     };
   };
 
@@ -304,8 +293,10 @@ export interface TranslationDictionary {
       deleteTitle: string;
       discardChanges: string;
       discardChangesTitle: string;
+      discardButton: string;
     };
     contextMenu: {
+      label: string;
       rename: string;
       moveItem: string;
       compressItem: string;
@@ -325,10 +316,11 @@ export interface TranslationDictionary {
       encoding: string;
       lineEnding: string;
       readOnly: string;
-      settings: string;
-      minimap: string;
-      wordWrap: string;
-      loadFailed: string;
+      plainText: string;
+      saveShortcut: string;
+      unsupportedTitle: string;
+      binaryDescription: string;
+      largeDescription: string;
     };
     emptyFolder: string;
     loading: string;
@@ -348,6 +340,10 @@ export interface TranslationDictionary {
       moveButton: string;
       renameTitle: string;
       renameButton: string;
+      renameLabel: string;
+      nameInvalid: string;
+      moveDestLabel: string;
+      moveIntoItself: string;
     };
     toast: {
       uploadSuccess: string;
@@ -369,9 +365,8 @@ export interface TranslationDictionary {
       compressFailed: string;
       extracted: string;
       extractFailed: string;
-      binaryNoDiff: string;
-      diffSelectOriginal: string;
-      diffSelectModified: string;
+      extractNotZip: string;
+      extractSkipped: string;
     };
     toolbar: {
       goUp: string;
@@ -381,8 +376,12 @@ export interface TranslationDictionary {
       compress: string;
       extract: string;
       delete: string;
-      diffOpen: string;
-      diffClose: string;
+      navigation: string;
+      tools: string;
+      selection: string;
+    };
+    breadcrumb: {
+      label: string;
     };
   };
 
@@ -391,16 +390,25 @@ export interface TranslationDictionary {
     title: string;
     createButton: string;
     empty: string;
+    catalogUnavailable: string;
+    catalogUnavailableDescription: string;
+    restoring: string;
+    catalogRetry: string;
+    size: {
+      atLeast: string;
+    };
+    duration: {
+      seconds: string;
+      minutes: string;
+      hoursMinutes: string;
+    };
     processing: string;
-    parent: string;
     confirmDelete: string;
     deleteTitle: string;
+    confirmRestore: string;
+    restoreTitle: string;
     confirmStopForBackup: string;
     stopForBackupTitle: string;
-    mode: {
-      full: string;
-      differential: string;
-    };
     actions: {
       restore: string;
       tag: string;
@@ -411,16 +419,11 @@ export interface TranslationDictionary {
       fileNameHelp: string;
       compressionLevel: string;
       compressionHelp: string;
-      modeLabel: string;
-      modeFull: string;
-      modeDiff: string;
-      modeHelp: string;
-      selectTarget: string;
-      openSelector: string;
-      clearAll: string;
-      noSelection: string;
-      selectedCount: string;
-      andMore: string;
+      wholeServerNote: string;
+      targetSize: string;
+      estimatedTime: string;
+      estimateHint: string;
+      estimateValue: string;
       create: string;
       creating: string;
     };
@@ -428,19 +431,17 @@ export interface TranslationDictionary {
       title: string;
       tagsLabel: string;
       tagsPlaceholder: string;
+      addTag: string;
+      currentTags: string;
+      noTags: string;
+      removeHint: string;
       noteLabel: string;
       notePlaceholder: string;
     };
     toast: {
-      targetUpdated: string;
-      selectorOpenError: string;
-      targetInitFailed: string;
       loadFailed: string;
       catalogLoadFailed: string;
       worldLoadFailed: string;
-      selectAtLeastOne: string;
-      noDiffSkipped: string;
-      diffCreated: string;
       created: string;
       serverStopFailed: string;
       stoppedCreateFailed: string;
@@ -466,13 +467,11 @@ export interface TranslationDictionary {
       title: string;
       detected: string;
       empty: string;
-      deleteButton: string;
-      confirmDelete: string;
-      deleteTitle: string;
-      finalConfirm: string;
-      finalConfirmTitle: string;
+      holdToDelete: string;
+      holdDone: string;
       deleted: string;
       deleteFailed: string;
+      stopServerFirst: string;
     };
   };
 
@@ -481,8 +480,10 @@ export interface TranslationDictionary {
     title: string;
     availableVersions: string;
     download: string;
-    downloading: string;
-    downloadingStatus: string;
+    versionTitle: string;
+    downloadingLabel: string;
+    downloadStatus: string;
+    emptyTitle: string;
     installed: string;
     installedRuntimes: string;
     noRuntimes: string;
@@ -508,11 +509,7 @@ export interface TranslationDictionary {
 
   /** Users view translations */
   users: {
-    title: string;
-    entriesCount: string;
-    empty: string;
     lists: {
-      online: string;
       whitelist: string;
       operators: string;
       bannedPlayers: string;
@@ -521,45 +518,66 @@ export interface TranslationDictionary {
     actions: {
       add: string;
       remove: string;
-      kick: string;
-      ban: string;
     };
-    offlineNotice: string;
+    validation: {
+      playerRequired: string;
+      ipRequired: string;
+    };
+    loadFailed: string;
+    retry: string;
+    emptyList: {
+      whitelist: { title: string };
+      ops: { title: string };
+      bannedPlayers: { title: string };
+      bannedIps: { title: string };
+    };
     placeholder: {
       playerName: string;
       ipAddress: string;
     };
     level: string;
+    removeTitle: string;
+    confirmRemove: string;
     toast: {
       alreadyExists: string;
       listUpdated: string;
       removed: string;
+      addFailed: string;
+      removeFailed: string;
+      liveCommandFailed: string;
     };
   };
 
   /** Plugin management translations */
   plugins: {
-    title: string;
-    search: {
-      placeholder: string;
-      noResults: string;
-    };
     install: {
       button: string;
-      success: string;
-      error: string;
     };
     installed: {
       title: string;
       empty: string;
     };
-    sources: {
-      modrinth: string;
-      hangar: string;
-      spigot: string;
-    };
     browser: {
       viewSwitch: string;
+      platformLabel: string;
+      hintModrinthMods: string;
+      hintModrinthPlugins: string;
+      hintHangar: string;
+      hintSpigot: string;
+      hintOpenWeb: string;
+      searchLabel: string;
+      loading: string;
+      noResultsHint: string;
+      preparing: string;
+      unknownAuthor: string;
+      pagerLabel: string;
+      installedFolder: string;
+      installedEmptyHint: string;
+      installedSource: string;
+      installPlanTarget: string;
+      browserOpenErrorDescription: string;
+      toggleErrorTitle: string;
+      uninstallErrorTitle: string;
       tabBrowse: string;
       tabInstalled: string;
       searchOn: string;
@@ -567,6 +585,7 @@ export interface TranslationDictionary {
       retry: string;
       searchError: string;
       sortLabel: string;
+      sortHint: string;
       sortRelevance: string;
       sortDownloads: string;
       sortName: string;
@@ -575,11 +594,9 @@ export interface TranslationDictionary {
       prev: string;
       next: string;
       pageLabel: string;
-      pageLabelWithTotal: string;
       go: string;
       pageNumberAriaLabel: string;
       details: string;
-      closeDetailsAriaLabel: string;
       byAuthor: string;
       installing: string;
       update: string;
@@ -605,31 +622,15 @@ export interface TranslationDictionary {
       unsupportedPlatform: string;
       openInBrowser: string;
       downloadInstructions: string;
-      spigotNote: string;
-      hangarNote: string;
       updateSummary: string;
       updateSummaryNote: string;
       pageInputError: string;
-      fetchHangarError: string;
-      fetchSpigotError: string;
-      fetchError: string;
-      deleteExistingError: string;
-      noCompatibleVersion: string;
-      dependencyCheck: string;
-      dependencyMissing: string;
-      dependencyVersionNotFound: string;
-      dependencyInstallFailed: string;
-      dependencyInstallIncomplete: string;
-      dependencyInstallSuccess: string;
-      dependencyCheckOnly: string;
       installPlanConfirmTitle: string;
-      installPlanConfirmDescription: string;
       installPlanConfirmButton: string;
       installPlanDependencies: string;
       installPlanUnverifiedWarning: string;
       installPlanUnknownCompatibility: string;
       installingProgress: string;
-      incompatibilityWarning: string;
       incompatibleInstallTitle: string;
       incompatibleInstallDescription: string;
       unverifiedInstallTitle: string;
@@ -645,15 +646,9 @@ export interface TranslationDictionary {
       networkInstallError: string;
       unknownInstallError: string;
       openGeneralSettings: string;
-      compatibilityUnknown: string;
-      compatibilityUnknownWithVersions: string;
-      browserDownloadRequired: string;
-      spigotIdInvalid: string;
-      spigotBrowserRequired: string;
       installSuccess: string;
       overwriteSuccess: string;
       updateSuccess: string;
-      installError: string;
       browserOpenError: string;
       pluginEnabled: string;
       pluginDisabled: string;
@@ -666,7 +661,6 @@ export interface TranslationDictionary {
       dupExistingFile: string;
       dupOverwriteNote: string;
       dupUpdateNote: string;
-      dupCancel: string;
       dupOverwrite: string;
       dupUpdate: string;
       detailProject: string;
@@ -674,10 +668,10 @@ export interface TranslationDictionary {
       detailSupportedMC: string;
       detailLoader: string;
       detailDownloads: string;
-      detailSummary: string;
       detailProjectPage: string;
       detailInfo: string;
       detailReadme: string;
+      detailTabs: string;
       localSource: string;
       installedFile: string;
       installedVersion: string;
@@ -695,10 +689,51 @@ export interface TranslationDictionary {
   };
 
   /** Navigation translations */
+  /** Confirmation shown before leaving a view that has unsaved edits */
+  unsavedChanges: {
+    title: string;
+    description: string;
+    confirm: string;
+  };
+
+  /** Labels the app supplies to shared Arc UI parts, such as CodeBlock and LineChart */
+  arcUi: {
+    copy: {
+      copied: string;
+      failed: string;
+    };
+    codeBlock: {
+      copyCode: string;
+      sourceLabel: string;
+      untitled: string;
+      selectable: string;
+      showAll: string;
+      showFewer: string;
+    };
+    search: {
+      clear: string;
+    };
+    select: {
+      placeholder: string;
+    };
+    checkbox: {
+      fallback: string;
+    };
+    lineChart: {
+      chooseSeries: string;
+      seriesShown: string;
+      seriesGroup: string;
+      exploreBy: string;
+      summaryEmpty: string;
+      summaryRange: string;
+      summaryLatest: string;
+      reading: string;
+      loading: string;
+    };
+  };
+
   nav: {
-    home: string;
     servers: string;
-    plugins: string;
     settings: string;
     dashboard: string;
     console: string;
@@ -709,8 +744,8 @@ export interface TranslationDictionary {
     properties: string;
     generalSettings: string;
     proxyNetwork: string;
+    uiLab: string;
     addServer: string;
-    importServer: string;
     openSettings: string;
     bulkSelect: string;
     bulkStartSelected: string;
@@ -718,11 +753,17 @@ export interface TranslationDictionary {
     bulkBackupSelected: string;
     bulkClearSelection: string;
     bulkSelectedCount: string;
+    collapseSidebar: string;
+    expandSidebar: string;
+    serverMenu: string;
+    selectServer: string;
+    openMenu: string;
+    menuTitle: string;
+    serverSwitcher: string;
   };
 
   /** Proxy configuration translations */
   proxy: {
-    configTitle: string;
     settingsUpdated: string;
     configError: string;
     confirmRewriteProperties: string;
@@ -730,7 +771,6 @@ export interface TranslationDictionary {
 
   /** Proxy setup view translations */
   proxySetup: {
-    title: string;
     proxySoftware: string;
     velocityRecommended: string;
     waterfall: string;
@@ -739,6 +779,9 @@ export interface TranslationDictionary {
     portHint: string;
     backendServers: string;
     noBackendServers: string;
+    noBackendServersHint: string;
+    selectAll: string;
+    selectedCount: string;
     backendDetail: string;
     building: string;
     buildNetwork: string;
@@ -784,6 +827,7 @@ export interface TranslationDictionary {
     step2DownloadDesc: string;
     openPaperVelocity: string;
     openVelocityDocs: string;
+    openLinkFailed: string;
     step3Badge: string;
     step3Title: string;
     step3Edit: string;
@@ -800,10 +844,9 @@ export interface TranslationDictionary {
   /** Error messages */
   errors: {
     generic: string;
-    network: string;
+    viewFailedDescription: string;
+    notFoundDescription: string;
     notFound: string;
-    permission: string;
-    validation: string;
     updateSignatureVerificationFailed: string;
     updateSignatureVerificationDetails: string;
     updateReadOnlyLocationTitle: string;
@@ -852,6 +895,7 @@ export interface TranslationDictionary {
       spigot: string;
       fabric: string;
       forge: string;
+      neoforge: string;
       velocity: string;
       waterfall: string;
       bungeecord: string;
@@ -894,11 +938,14 @@ export interface TranslationDictionary {
       saturday: string;
     };
     saveSettings: string;
+    unsavedChanges: string;
     jvmArgs: {
       label: string;
       placeholder: string;
       help: string;
       clear: string;
+      presetsLabel: string;
+      customLabel: string;
       presets: {
         aikar: string;
         zgc: string;
@@ -915,10 +962,10 @@ export interface TranslationDictionary {
       ready: string;
       initializing: string;
       initializingWithNewToken: string;
-      addressCopied: string;
       tokenRequired: {
         title: string;
         description: string;
+        label: string;
         placeholder: string;
         cancel: string;
         saveAndConnect: string;
@@ -930,6 +977,12 @@ export interface TranslationDictionary {
       currentVersion: string;
       latestVersion: string;
       alreadyLatest: string;
+      stepCheck: string;
+      blockedWhileRunning: string;
+      unverifiedReason: string;
+      stepsLabel: string;
+      backupProgressLabel: string;
+      downloadProgressLabel: string;
       serverMustBeOffline: string;
       startUpgrade: string;
       stepBackup: string;
@@ -965,9 +1018,11 @@ export interface TranslationDictionary {
     name: {
       label: string;
       placeholder: string;
+      required: string;
       invalid: string;
     };
     savePath: string;
+    pathPlaceholder: string;
     profileName: {
       label: string;
       placeholder: string;
@@ -990,6 +1045,7 @@ export interface TranslationDictionary {
         spigot: string;
         fabric: string;
         forge: string;
+        neoforge: string;
         velocity: string;
         waterfall: string;
         bungeecord: string;
@@ -1019,14 +1075,18 @@ export interface TranslationDictionary {
   properties: {
     title: string;
     search: {
+      label: string;
       placeholder: string;
+      emptyTitle: string;
+      empty: string;
     };
-    openAdvanced: string;
     saveChanges: string;
     loadFailed: string;
+    loadFailedDescription: string;
+    retry: string;
+    unsavedChanges: string;
     saveSuccess: string;
     saveFailed: string;
-    advancedSaveSuccess: string;
     loading: string;
     sections: {
       basic: string;
@@ -1081,31 +1141,8 @@ export interface TranslationDictionary {
     };
   };
 
-  /** Backup target selector window translations */
-  backupSelector: {
-    title: string;
-    subtitle: string;
-    serverPathNotSet: string;
-    selectionCount: string;
-    viewMode: string;
-    viewTree: string;
-    viewGraph: string;
-    selectAll: string;
-    clearAll: string;
-    loading: string;
-    empty: string;
-    cancel: string;
-    apply: string;
-    saving: string;
-    ariaCollapseDirectory: string;
-    ariaExpandDirectory: string;
-  };
-
-  /** Advanced settings window translations */
+  /** Advanced server property card translations */
   advancedSettings: {
-    title: string;
-    loading: string;
-    applyAndClose: string;
     inferredDescription: string;
     propertyDescriptionFallback: string;
     categories: {
@@ -1115,6 +1152,9 @@ export interface TranslationDictionary {
       network: string;
       security: string;
       advanced: string;
+      remote: string;
+      resourcePack: string;
+      management: string;
     };
   };
 
@@ -1123,6 +1163,7 @@ export interface TranslationDictionary {
     title: string;
     introText: string;
     introRequirements: string;
+    openLinkFailed: string;
     summary: {
       requirementsLabel: string;
       requirementsValue: string;
@@ -1151,7 +1192,6 @@ export interface TranslationDictionary {
       title: string;
       description1: string;
       description2: string;
-      example: string;
       securityWarning: string;
     };
     step3: {
@@ -1169,16 +1209,31 @@ export interface TranslationDictionary {
     title: string;
     folderLabel: string;
     folderPlaceholder: string;
+    folderHint: string;
+    analyzing: string;
     selectButton: string;
     nameLabel: string;
     versionLabel: string;
     softwareLabel: string;
+    noJarTitle: string;
+    noJarBody: string;
+    eulaTitle: string;
     eulaWarning: string;
     importButton: string;
     toast: {
       success: string;
       failed: string;
-      noJar: string;
+    };
+  };
+
+  releaseNotes: {
+    ariaLabel: string;
+    version: string;
+    sections: {
+      breaking: string;
+      features: string;
+      fixes: string;
+      performance: string;
     };
   };
 
@@ -1187,6 +1242,15 @@ export interface TranslationDictionary {
     noResults: string;
     navigate: string;
     serverActions: string;
+    label: string;
+    servers: string;
+    switchServer: string;
+    clearSearch: string;
+    close: string;
+    results: string;
+    noResultsFor: string;
+    noResultsHint: string;
+    resultCount: string;
   };
 }
 

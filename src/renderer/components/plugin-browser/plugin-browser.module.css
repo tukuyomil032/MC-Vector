@@ -1,0 +1,405 @@
+.root {
+  display: flex;
+  box-sizing: border-box;
+  min-height: 100%;
+  min-width: 0;
+  padding: var(--space-5);
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* One row: search field, search button, and the sort control on the right. */
+.toolbar {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.searchForm {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.searchField {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Field labels stay in the accessibility tree but are not drawn; the placeholder and tooltip explain the field. */
+.searchField label,
+.sortField label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sortControl {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sortField {
+  width: 200px;
+  max-width: 100%;
+}
+
+/* The header row holds the section tabs on the left and the provider switch on the right. */
+.headerRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.platformLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.platformLogo {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.grid[aria-busy='true'] {
+  opacity: 0.72;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.empty {
+  grid-column: 1 / -1;
+}
+
+/* Horizontal card: a 48px icon on the left, the text column on the right. Grid rows stretch, so every card in a row matches. */
+.resultCard {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  color: var(--foreground);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.resultCard.updatable {
+  border-color: var(--accent);
+}
+
+.cardBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.cardHead {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cardTitle {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardDescription {
+  display: -webkit-box;
+  margin: var(--space-1) 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Buttons sit on the card's bottom edge so every card's actions line up. */
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+
+.tile {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
+.tileMd {
+  width: 48px;
+  height: 48px;
+}
+
+.tileLg {
+  width: 56px;
+  height: 56px;
+}
+
+.tileIcon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.monogram {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.metaItem {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.skeletonCard {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pagerSimple {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pageLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.pagerJump {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.pagerInput {
+  width: 96px;
+}
+
+.installedHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.folder {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.facts {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.facts dt {
+  color: var(--text-secondary);
+}
+
+.facts dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.fileName {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+}
+
+.detailPanel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+/* Three quiet stat cards: downloads, supported Minecraft versions, loader. */
+.stats {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.stat {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
+.stat dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.stat dd {
+  display: -webkit-box;
+  min-width: 0;
+  margin: var(--space-1) 0 0;
+  overflow: hidden;
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.summary {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.quietLine {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.footerRow {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.readmeNote {
+  margin: 0;
+  padding: var(--space-4) 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.confirmBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.caption {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.fileList {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

@@ -1,9 +1,9 @@
-import { ask } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
 import type { Translate } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import { cloneServerProfile, deleteManagedServer } from '../../lib/server-lifecycle-commands';
 import { type ServerTemplate, saveServerTemplate } from '../../lib/server-commands';
+import { useAppFeedback } from '../components/AppFeedbackProvider';
 import type { MinecraftServer } from '../shared/server declaration';
 import type { ToastKind } from '../shared/toast';
 type SetServers = (
@@ -53,6 +53,8 @@ export function useServerContextActions({
   removeServerLogs,
   loadTemplates,
 }: UseServerContextActionsOptions) {
+  const { confirm, prompt } = useAppFeedback();
+
   const handleDeleteServer = useCallback(
     async (serverId: string) => {
       const target = servers.find((server) => server.id === serverId);
@@ -60,16 +62,15 @@ export function useServerContextActions({
         return;
       }
 
-      const confirmed = await ask(
-        t('server.confirm.deleteManaged', {
+      const confirmed = await confirm({
+        title: t('common.delete'),
+        description: t('server.confirm.deleteManaged', {
           name: target.name,
           path: target.path,
         }),
-        {
-          title: t('common.delete'),
-          kind: 'warning',
-        },
-      );
+        confirmLabel: t('common.delete'),
+        tone: 'danger',
+      });
       if (!confirmed) {
         return;
       }
@@ -98,7 +99,16 @@ export function useServerContextActions({
         );
       }
     },
-    [removeServerLogs, selectedServerId, servers, setSelectedServerId, setServers, showToast, t],
+    [
+      confirm,
+      removeServerLogs,
+      selectedServerId,
+      servers,
+      setSelectedServerId,
+      setServers,
+      showToast,
+      t,
+    ],
   );
 
   const handleDuplicateServer = useCallback(
@@ -108,9 +118,9 @@ export function useServerContextActions({
         return;
       }
 
-      const confirmed = await ask(t('server.confirm.clone', { name: target.name }), {
+      const confirmed = await confirm({
         title: t('common.confirm'),
-        kind: 'info',
+        description: t('server.confirm.clone', { name: target.name }),
       });
       if (!confirmed) {
         return;
@@ -132,7 +142,7 @@ export function useServerContextActions({
         showToast(t('server.toast.cloneFailed'), 'error');
       }
     },
-    [servers, setSelectedServerId, setServers, showToast, t],
+    [confirm, servers, setSelectedServerId, setServers, showToast, t],
   );
 
   const handleSaveServerTemplate = useCallback(
@@ -142,11 +152,13 @@ export function useServerContextActions({
         return;
       }
 
-      const templateName = window.prompt(
-        t('server.create.templateNamePrompt'),
-        t('server.create.templateDefaultName', { name: target.name }),
-      );
-      if (!templateName || !templateName.trim()) {
+      const templateName = await prompt({
+        title: t('server.create.templateNamePrompt'),
+        label: t('server.create.templateNameLabel'),
+        defaultValue: t('server.create.templateDefaultName', { name: target.name }),
+        confirmLabel: t('common.save'),
+      });
+      if (!templateName) {
         return;
       }
 
@@ -163,7 +175,7 @@ export function useServerContextActions({
         showToast(t('server.toast.templateSaveFailed'), 'error');
       }
     },
-    [loadTemplates, servers, showToast, t],
+    [loadTemplates, prompt, servers, showToast, t],
   );
 
   return {

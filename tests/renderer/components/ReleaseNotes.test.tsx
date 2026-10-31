@@ -34,7 +34,7 @@ describe('ReleaseNotes', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Features' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'New features' })).toBeInTheDocument();
     expect(screen.getByText('shared updater checks')).toBeInTheDocument();
   });
 

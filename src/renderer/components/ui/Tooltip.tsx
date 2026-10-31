@@ -1,12 +1,13 @@
-import { cn } from '@/lib/ui';
-import * as TooltipPrimitive from '@radix-ui/react-tooltip';
-import type { ReactNode } from 'react';
+import type { ReactElement } from 'react';
+import { Tooltip as ArcTooltip } from '@/components/arc/tooltip/tooltip';
 
 interface TooltipProps {
   content: string;
-  children: ReactNode;
+  children: ReactElement;
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /** Accepted for existing call sites. Arc tooltips position on the side only, so this is ignored. */
   align?: 'start' | 'center' | 'end';
+  /** Accepted for existing call sites. Arc tooltips use a fixed open delay, so this is ignored. */
   delayDuration?: number;
   disabled?: boolean;
 }
@@ -15,40 +16,17 @@ export function Tooltip({
   content,
   children,
   side = 'right',
-  align = 'center',
-  delayDuration = 400,
+  align: _align,
+  delayDuration: _delayDuration,
   disabled = false,
 }: TooltipProps) {
   if (disabled || !content) {
-    return <>{children}</>;
+    return children;
   }
 
   return (
-    <TooltipPrimitive.Provider delayDuration={delayDuration}>
-      <TooltipPrimitive.Root>
-        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            side={side}
-            align={align}
-            sideOffset={6}
-            className={cn(
-              'z-50 max-w-xs rounded-md px-2.5 py-1.5',
-              'bg-zinc-800 border border-zinc-700',
-              'text-xs text-zinc-100 leading-snug',
-              'shadow-lg',
-              'animate-in fade-in-0 zoom-in-95',
-              'data-[side=bottom]:slide-in-from-top-1',
-              'data-[side=left]:slide-in-from-right-1',
-              'data-[side=right]:slide-in-from-left-1',
-              'data-[side=top]:slide-in-from-bottom-1',
-            )}
-          >
-            {content}
-            <TooltipPrimitive.Arrow className="fill-zinc-700" />
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
-    </TooltipPrimitive.Provider>
+    <ArcTooltip content={content} side={side}>
+      {children}
+    </ArcTooltip>
   );
 }

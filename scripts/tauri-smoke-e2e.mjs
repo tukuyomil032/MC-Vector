@@ -557,7 +557,9 @@ async function exerciseFilesAndSettings(driver, fixture) {
   );
 
   await click(driver, '[data-testid="files-create-button"]');
+  // Import is one of the create modes; the modal's submit button runs it.
   await click(driver, '[data-testid="files-import-button"]');
+  await click(driver, '[data-testid="files-create-submit"]');
   const importedPath = path.join(fixture.serverPath, path.basename(fixture.importSource));
   await waitFor(() => existsSync(importedPath), 'Debug E2E import fixture was not committed');
   assert.equal(readFileSync(importedPath, 'utf8'), importedFixtureContent);
@@ -680,7 +682,7 @@ async function exerciseJava(driver, fixture) {
   const javaInstallRoot = path.join(fixture.appDataDir, 'java', 'jdk-21');
   assert.ok(existsSync(javaInstallRoot), 'Java fixture was not installed below managed storage');
   assert.ok(readdirSync(javaInstallRoot).length > 0, 'Java fixture install directory is empty');
-  await click(driver, '.java-manager-modal__close-button');
+  await click(driver, '[data-testid="java-manager-close"]');
 }
 
 async function exerciseNgrok(driver, fixture) {
@@ -711,7 +713,8 @@ async function exerciseNgrok(driver, fixture) {
   await waitFor(
     () =>
       driver.executeScript(
-        'return document.querySelector("[data-testid=ngrok-toggle]")?.checked === false;',
+        // The toggle is a role="switch" button, so its state is aria-checked rather than a checkbox's checked.
+        'return document.querySelector("[data-testid=ngrok-toggle]")?.getAttribute("aria-checked") === "false";',
       ),
     'Fake ngrok process did not stop through IPC',
   );
@@ -826,6 +829,8 @@ async function restoreThroughUi(driver, expectedFileContent) {
   const restoreButton = await row.findElement(By.css('button'));
   await waitFor(() => restoreButton.isEnabled(), 'Restore button is not enabled');
   await restoreButton.click();
+  // Restoring overwrites the server folder, so the app asks for confirmation first.
+  await click(driver, '[data-testid="feedback-confirm-confirm"]');
   return waitFor(
     () => readFileSync(expectedFileContent.path, 'utf8') === expectedFileContent.value,
     'Restore did not update the real server directory',
@@ -983,6 +988,7 @@ async function main() {
       `[data-testid="backup-row-${backupName}"]`,
     );
     await failureRow.findElement(By.css('button')).click();
+    await click(failureWebDriver, '[data-testid="feedback-confirm-confirm"]');
     await waitForToast(failureWebDriver, 'Failed to restore backup');
     assert.equal(readFileSync(propertiesPath, 'utf8'), 'failure-mutated-properties');
     assert.equal(

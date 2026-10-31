@@ -1,0 +1,500 @@
+/* Sidebar chrome. Every color comes from an Arc token, so light and dark stay in step with the rest of the app. */
+
+/* The brand text starts where the nav labels start: the nav panel's 8px margin and 1px border, its 8px padding, and the item's 12px inset. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  height: 3.5rem;
+  padding: 0 calc(var(--space-2) * 2 + 1px) 0 calc(var(--space-2) * 2 + 1px + var(--space-3));
+}
+
+.headerCollapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+.brand {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border-radius: var(--radius-control);
+}
+
+.iconButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.iconButton:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.brand:focus-visible,
+.iconButton:focus-visible,
+.navItem:focus-visible,
+.serverItem:focus-visible,
+.bulkToggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+/* The nav panel takes the sidebar's spare height. Its items stack from the top at a fixed pitch, so the spare
+   room stays at the bottom of the panel, right above the server panel. */
+.nav {
+  flex: 1 1 auto;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin: 0 var(--space-2);
+}
+
+/* In the 60px rail the panel stays at its content height, with the icons at the top. */
+.navRail {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  margin: 0 var(--space-1);
+  padding: var(--space-1);
+}
+
+.navItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: 100%;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.navItem:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.navItemIcon {
+  flex-shrink: 0;
+}
+
+.navItemLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The active row is a muted pill with a thin accent bar on its leading edge. */
+.navItem[aria-current='page'] {
+  background: var(--surface-muted);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.navItem[aria-current='page']::before,
+.serverItem[aria-current='true']::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 1rem;
+  margin-top: -0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+.navItemCollapsed {
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.divider {
+  height: 1px;
+  margin: var(--space-2) var(--space-2);
+  border: 0;
+  background: var(--border);
+}
+
+/* The server panel is sized to its content and sits right under the nav panel. Its list scrolls past a cap,
+   and the add row sits right under the list. */
+.serversPanel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: var(--space-2) var(--space-2) var(--space-3);
+  padding: var(--space-2);
+  overflow: hidden;
+}
+
+.serversTitle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Takes its content height up to 14rem (or 40% of the viewport), then scrolls. */
+.serverList {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(14rem, 40vh);
+  overflow-y: auto;
+  padding: var(--space-1) 0;
+}
+
+.groupTitle {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.serverRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.serverMenuTarget {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.serverItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 1px 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.serverItem:hover {
+  background: var(--surface-muted);
+}
+
+.serverItem[aria-current='true'] {
+  background: var(--surface-muted);
+}
+
+.serverText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.serverName,
+.serverMeta,
+.serverWarning {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.serverName {
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.serverMeta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.serverWarning {
+  color: var(--warning);
+  font-size: 0.75rem;
+}
+
+.checkboxCell {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding-left: var(--space-1);
+}
+
+.bulkBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.bulkCount {
+  padding: 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.bulkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.addRow {
+  flex-shrink: 0;
+  margin-top: var(--space-2);
+}
+
+.addRow > * {
+  width: 100%;
+}
+
+/* With no servers the content area shows the full empty state and its add action, so this stays a single muted line. */
+.emptyHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
+
+/* Rail actions sit at the bottom of the 60px rail. */
+.railActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding: var(--space-2) 0 var(--space-3);
+}
+
+.railButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.railButton:hover,
+.railButton[aria-expanded='true'] {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.railButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Shows the selected server's status on top of the switcher icon. */
+.railStatus {
+  position: absolute;
+  right: 0.375rem;
+  bottom: 0.375rem;
+  width: 0.375rem;
+  height: 0.375rem;
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+.switcherContent {
+  box-sizing: border-box;
+  width: 15rem;
+  max-height: min(22rem, 70vh);
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.switcherTitle {
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.switcherItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.switcherItem:hover,
+.switcherItem[aria-current='true'] {
+  background: var(--surface-muted);
+}
+
+.switcherName {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.switcherEmpty {
+  padding: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* Status dot: six states, one token each. Motion is dropped under reduced motion. */
+.dot {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+}
+
+.dot[data-status='online'] {
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 20%, transparent);
+}
+
+.dot[data-status='offline'] {
+  background: var(--text-muted);
+}
+
+.dot[data-status='starting'] {
+  background: var(--warning);
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+.dot[data-status='stopping'] {
+  background: var(--warning);
+}
+
+.dot[data-status='restarting'] {
+  width: 0.625rem;
+  height: 0.625rem;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-top-color: transparent;
+  animation: dot-spin 0.9s linear infinite;
+}
+
+.dot[data-status='crashed'] {
+  background: var(--danger);
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes dot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none !important;
+  }
+
+  .navItem,
+  .serverItem,
+  .iconButton {
+    transition: none;
+  }
+}

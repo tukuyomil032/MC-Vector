@@ -37,21 +37,6 @@ describe('Tauri network capability scopes', () => {
     ).toBe(false);
   });
 
-  it('keeps backup selector permissions free of process, store, updater, and HTTP access', () => {
-    const capability = JSON.parse(
-      readFileSync(resolve(process.cwd(), 'src-tauri/capabilities/backup-selector.json'), 'utf8'),
-    ) as { permissions: unknown[] };
-    const permissions = capability.permissions.filter(
-      (permission): permission is string => typeof permission === 'string',
-    );
-
-    expect(permissions).not.toEqual(expect.arrayContaining(['process:default', 'store:default']));
-    expect(permissions.some((permission) => permission.startsWith('updater:'))).toBe(false);
-    expect(capability.permissions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ identifier: 'http:default' })]),
-    );
-  });
-
   it('does not ship wildcard localhost or websocket CSP sources', () => {
     const config = JSON.parse(
       readFileSync(resolve(process.cwd(), 'src-tauri/tauri.conf.json'), 'utf8'),
@@ -59,8 +44,15 @@ describe('Tauri network capability scopes', () => {
     expect(config.app.security.csp).not.toContain('localhost:*');
     expect(config.app.security.csp).not.toContain('ws://localhost');
     const directives = config.app.security.csp.split(';').map((directive) => directive.trim());
-    expect(directives.find((directive) => directive.startsWith('img-src '))).not.toMatch(
-      /\shttps:(?:\s|$)/,
+    // Plugin README images load from any HTTPS host (product decision); scripts and connections stay closed.
+    const imgSrc = directives.find((directive) => directive.startsWith('img-src '));
+    expect(imgSrc).toMatch(/\shttps:(?:\s|$)/);
+    expect(imgSrc).not.toMatch(/\shttp:(?:\s|$)/);
+    for (const directive of directives.filter((d) => !d.startsWith('img-src '))) {
+      expect(directive).not.toMatch(/\shttps?:(?:\s|$)/);
+    }
+    expect(directives.find((directive) => directive.startsWith('script-src '))).toBe(
+      "script-src 'self'",
     );
     const connect = directives.find((directive) => directive.startsWith('connect-src '));
     expect(connect).toBe("connect-src 'self'");

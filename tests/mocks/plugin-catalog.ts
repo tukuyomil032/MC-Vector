@@ -1,4 +1,5 @@
 import { getE2eScenario } from '../e2e/support/e2e-runtime';
+import modrinthReadme from './plugin-readme-modrinth.md?raw';
 
 // Browser-only fixtures model the Rust command DTOs. The real Tauri smoke
 // suite uses its separate explicit debug fixture and the actual artifact IPC.
@@ -54,7 +55,7 @@ export function pluginCatalogFixture(command: string): unknown {
     case 'get_plugin_modrinth_identity':
       return { id: 'veinminer-project', slug: 'veinminer', title: 'VeinMiner' };
     case 'get_plugin_modrinth_body':
-      return '# VeinMiner';
+      return modrinthReadme;
     case 'get_plugin_modrinth_artifact':
       return {
         url: 'https://cdn.modrinth.example/veinminer.jar',

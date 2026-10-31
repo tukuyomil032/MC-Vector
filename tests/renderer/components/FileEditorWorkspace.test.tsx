@@ -72,4 +72,25 @@ describe('FileEditorWorkspace', () => {
     fireEvent.change(screen.getByTestId('monaco-editor'), { target: { value: 'motd=Updated' } });
     expect(onChange).toHaveBeenCalledWith('motd=Updated');
   });
+
+  it('replaces the editor with a cannot-edit state for unsupported files', () => {
+    render(
+      <FileEditorWorkspace
+        file={{ name: 'level.dat', path: '/servers/Test/level.dat' }}
+        content=""
+        language="plaintext"
+        isDirty={false}
+        isSaving={false}
+        unsupported="binary"
+        onChange={vi.fn()}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+        t={translate}
+      />,
+    );
+
+    expect(screen.getByText('files.editor.unsupportedTitle')).toBeInTheDocument();
+    expect(screen.queryByTestId('monaco-editor')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common.save' })).toBeDisabled();
+  });
 });

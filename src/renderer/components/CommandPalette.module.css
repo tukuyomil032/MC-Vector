@@ -1,0 +1,18 @@
+/* The Arc command palette brings its own surface and motion. This only supplies the scrim and the centered column. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh var(--space-4) var(--space-4);
+  background: oklch(0% 0 0 / 0.5);
+}
+
+.panel {
+  width: 100%;
+  max-width: 36rem;
+  min-width: 0;
+}

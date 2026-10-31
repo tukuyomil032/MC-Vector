@@ -1,0 +1,85 @@
+/* Full width of the content card. The card scrolls the page, so this only grows with its content.
+   The header spans the page; from 1024px the section cards flow into two columns. */
+.page {
+  display: grid;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.page > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page > .card {
+    grid-column: auto;
+  }
+}
+
+/* The back button and the title share one row, centred on the same line. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2rem;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-body);
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 14px);
+  background: var(--surface-raised);
+}
+
+.cardDescription {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.status {
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.accent {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.success {
+  color: var(--success, var(--foreground));
+}
+
+@media (max-width: 40rem) {
+  .page {
+    padding: var(--space-4);
+  }
+}

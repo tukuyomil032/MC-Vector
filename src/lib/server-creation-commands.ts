@@ -35,10 +35,10 @@ export interface CreatedServerProfile {
   jarInstalled: boolean;
 }
 
+/** Numbers only: the renderer owns every piece of display text for download progress. */
 export interface ServerCreationProgress {
   operationId: string;
   progress: number;
-  status: string;
 }
 
 export function createServerProfile(

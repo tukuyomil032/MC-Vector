@@ -1,18 +1,26 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
+import { Progress } from '@/components/arc/progress/progress';
+import { type StepperStep, Stepper } from '@/components/arc/stepper/stepper';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { createBackup, onBackupProgress } from '../../lib/backup-commands';
+import { logError } from '../../lib/error-utils';
 import {
   executeServerJarInstall,
   onDownloadProgress,
   prepareServerJarInstall,
 } from '../../lib/server-commands';
 import type { UnlistenFn } from '../../lib/tauri-api';
-import { logError } from '../../lib/error-utils';
+import { notify } from '../shared/notify';
 import type { MinecraftServer } from '../shared/server declaration';
-import { Button } from './ui/Button';
+import styles from './VersionUpgradeWizard.module.css';
 
 type WizardStep = 'check' | 'backup' | 'download' | 'done';
+
+/** Stepper position per wizard step. `done` is past the last step, which marks the whole flow complete. */
+const STEP_INDEX: Record<WizardStep, number> = { check: 0, backup: 1, download: 2, done: 4 };
 
 interface Props {
   server: MinecraftServer;
@@ -22,17 +30,6 @@ interface Props {
 
 export default function VersionUpgradeWizard({ server, onClose, onServerVersionChanged }: Props) {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else if (type === 'warning') {
-      toast.warning(msg);
-    } else {
-      toast(msg);
-    }
-  };
 
   const [step, setStep] = useState<WizardStep>('check');
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
@@ -82,7 +79,8 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
     try {
       unlisten = await onBackupProgress(({ serverId, progress }) => {
         if (serverId === server.id) {
-          setBackupProgress(Math.round(progress * 100));
+          // The backend already reports 0-100 (see backup.rs), so no scaling here.
+          setBackupProgress(Math.round(progress));
         }
       });
       const backupName = `pre-upgrade-${Date.now()}`;
@@ -90,7 +88,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
       if (outcome.status === 'confirmation_required') {
         // Version upgrades require the server to stay offline after this step.
         // Do not use the normal stop-and-restart backup flow here.
-        showToast(t('serverSettings.versionUpgrade.serverMustBeOffline'), 'error');
+        notify.error(t('serverSettings.versionUpgrade.serverMustBeOffline'));
         return;
       }
       if (outcome.status === 'failed') {
@@ -101,16 +99,12 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
           restartError: outcome.restartError,
         });
         if (outcome.restartError) {
-          showToast(
-            t('backups.toast.backupNotCreatedRestartFailed', { name: server.name }),
-            'error',
-          );
+          notify.error(t('backups.toast.backupNotCreatedRestartFailed', { name: server.name }));
         } else {
-          showToast(
+          notify.error(
             outcome.stage === 'stop'
               ? t('backups.toast.serverStopFailed')
               : t('serverSettings.versionUpgrade.backupFailed'),
-            'error',
           );
         }
         return;
@@ -121,7 +115,7 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
           serverPath: server.path,
           backupName: outcome.backupName,
         });
-        showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+        notify.warning(t('backups.toast.registryUpdateFailed'));
       }
       if (outcome.restart.status === 'failed') {
         logError('Backup created but server restart failed', outcome.restart.error, {
@@ -129,11 +123,11 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
           serverPath: server.path,
           backupName: outcome.backupName,
         });
-        showToast(t('backups.toast.serverRestartFailed'), 'warning');
+        notify.warning(t('backups.toast.serverRestartFailed'));
       }
       setStep('download');
     } catch {
-      showToast(t('serverSettings.versionUpgrade.backupFailed'), 'error');
+      notify.error(t('serverSettings.versionUpgrade.backupFailed'));
     } finally {
       unlisten?.();
       setProcessing(false);
@@ -158,136 +152,184 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
       onServerVersionChanged(installed.version);
       setStep('done');
     } catch {
-      showToast(t('serverSettings.versionUpgrade.downloadFailed'), 'error');
+      notify.error(t('serverSettings.versionUpgrade.downloadFailed'));
     } finally {
       unlisten?.();
       setProcessing(false);
     }
   };
 
+  const steps: StepperStep[] = [
+    { id: 'check', label: t('serverSettings.versionUpgrade.stepCheck') },
+    { id: 'backup', label: t('serverSettings.versionUpgrade.stepBackup') },
+    { id: 'download', label: t('serverSettings.versionUpgrade.stepDownload') },
+    { id: 'done', label: t('serverSettings.versionUpgrade.stepDone') },
+  ];
+
+  const closeButton = (
+    <Button variant="secondary" onClick={onClose} disabled={processing}>
+      {t('serverSettings.versionUpgrade.close')}
+    </Button>
+  );
+
+  let footer: ReactNode;
+  if (step === 'check') {
+    footer = (
+      <>
+        {closeButton}
+        {!unsupported && !isLatest && isOffline && latestVersion !== null && (
+          <Button variant="primary" onClick={() => setStep('backup')}>
+            {t('serverSettings.versionUpgrade.startUpgrade')}
+          </Button>
+        )}
+      </>
+    );
+  } else if (step === 'backup') {
+    footer = (
+      <>
+        {closeButton}
+        <Button
+          variant="primary"
+          onClick={() => {
+            void handleBackup();
+          }}
+          disabled={processing}
+        >
+          {t('serverSettings.versionUpgrade.runBackup')}
+        </Button>
+      </>
+    );
+  } else if (step === 'download') {
+    footer = (
+      <>
+        {closeButton}
+        <Button
+          variant="primary"
+          onClick={() => {
+            void handleDownload();
+          }}
+          disabled={processing || !preparedPlanId || !verified}
+        >
+          {t('serverSettings.versionUpgrade.runDownload')}
+        </Button>
+      </>
+    );
+  } else {
+    footer = (
+      <Button variant="primary" onClick={onClose}>
+        {t('serverSettings.versionUpgrade.close')}
+      </Button>
+    );
+  }
+
+  // A backup or download writes into the server folder, so Escape and outside presses are ignored until it settles.
+  const blockDismiss = (event: Event) => event.preventDefault();
+
   return (
-    <div className="mc-modal-overlay" onClick={onClose}>
-      <div className="mc-modal-panel w-[520px]" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-          {t('serverSettings.versionUpgrade.title')}
-        </h3>
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next && !processing) onClose();
+      }}
+    >
+      <DialogContent
+        title={t('serverSettings.versionUpgrade.title')}
+        width="min(560px, calc(100vw - var(--space-8)))"
+        footer={footer}
+        onEscapeKeyDown={processing ? blockDismiss : undefined}
+        onPointerDownOutside={processing ? blockDismiss : undefined}
+        data-testid="version-upgrade-wizard"
+      >
+        <Alert
+          tone="warning"
+          open={processing}
+          title={t('serverSettings.versionUpgrade.blockedWhileRunning')}
+          data-testid="version-upgrade-busy-notice"
+        />
+
+        <Stepper
+          steps={steps}
+          current={STEP_INDEX[step]}
+          label={t('serverSettings.versionUpgrade.stepsLabel')}
+          completeLabel={t('serverSettings.versionUpgrade.stepDone')}
+        />
 
         {/* Step: check */}
         {step === 'check' && (
-          <div>
-            <div className="server-settings__row mb-4">
-              <div className="server-settings__col">
-                <label className="server-settings__label">
-                  {t('serverSettings.versionUpgrade.currentVersion')}
-                </label>
-                <span>{server.version}</span>
+          <div className={styles.stack}>
+            <dl className={styles.facts}>
+              <div className={styles.fact}>
+                <dt>{t('serverSettings.versionUpgrade.currentVersion')}</dt>
+                <dd>{server.version}</dd>
               </div>
-              <div className="server-settings__col">
-                <label className="server-settings__label">
-                  {t('serverSettings.versionUpgrade.latestVersion')}
-                </label>
-                <span>{latestVersion ?? t('serverSettings.versionUpgrade.fetching')}</span>
+              <div className={styles.fact}>
+                <dt>{t('serverSettings.versionUpgrade.latestVersion')}</dt>
+                <dd>{latestVersion ?? t('serverSettings.versionUpgrade.fetching')}</dd>
               </div>
-            </div>
+            </dl>
 
             {unsupported && (
-              <p className="text-red-400">{t('serverSettings.versionUpgrade.unsupported')}</p>
+              <Alert tone="danger" open title={t('serverSettings.versionUpgrade.unsupported')} />
             )}
 
-            {!unsupported && isLatest && <p>{t('serverSettings.versionUpgrade.alreadyLatest')}</p>}
+            {!unsupported && isLatest && (
+              <Alert tone="success" open title={t('serverSettings.versionUpgrade.alreadyLatest')} />
+            )}
 
             {!unsupported && !isOffline && (
-              <p className="text-red-400">
-                {t('serverSettings.versionUpgrade.serverMustBeOffline')}
-              </p>
+              <Alert
+                tone="warning"
+                open
+                title={t('serverSettings.versionUpgrade.serverMustBeOffline')}
+              />
             )}
-
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={onClose}>
-                {t('serverSettings.versionUpgrade.close')}
-              </Button>
-              {!unsupported && !isLatest && isOffline && latestVersion !== null && (
-                <Button variant="modalPrimary" onClick={() => setStep('backup')}>
-                  {t('serverSettings.versionUpgrade.startUpgrade')}
-                </Button>
-              )}
-            </div>
           </div>
         )}
 
         {/* Step: backup */}
         {step === 'backup' && (
-          <div>
-            <p>{t('serverSettings.versionUpgrade.backupDescription')}</p>
-            {backupProgress > 0 && (
-              <div className="my-3">
-                <div className="h-1.5 rounded bg-[#3e3e42]">
-                  <div
-                    style={{ width: `${backupProgress}%` }}
-                    className="h-full rounded bg-[#5865F2] transition-[width] duration-200"
-                  />
-                </div>
-                <span className="mt-1 block text-xs text-[#9ca3af]">{backupProgress}%</span>
-              </div>
+          <div className={styles.stack}>
+            <p className={styles.text}>{t('serverSettings.versionUpgrade.backupDescription')}</p>
+            {(processing || backupProgress > 0) && (
+              <Progress
+                value={backupProgress}
+                max={100}
+                label={t('serverSettings.versionUpgrade.backupProgressLabel')}
+                showValue
+              />
             )}
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button
-                variant="modalPrimary"
-                onClick={() => {
-                  void handleBackup();
-                }}
-                disabled={processing}
-              >
-                {t('serverSettings.versionUpgrade.runBackup')}
-              </Button>
-            </div>
           </div>
         )}
 
         {/* Step: download */}
         {step === 'download' && (
-          <div>
-            <p>{t('serverSettings.versionUpgrade.downloadDescription')}</p>
-            {dlProgress > 0 && (
-              <div className="my-3">
-                <div className="h-1.5 rounded bg-[#3e3e42]">
-                  <div
-                    style={{ width: `${dlProgress}%` }}
-                    className="h-full rounded bg-[#5865F2] transition-[width] duration-200"
-                  />
-                </div>
-                <span className="mt-1 block text-xs text-[#9ca3af]">{dlProgress}%</span>
-              </div>
+          <div className={styles.stack}>
+            <p className={styles.text}>{t('serverSettings.versionUpgrade.downloadDescription')}</p>
+            {!verified && preparedPlanId !== null && (
+              <Alert
+                tone="warning"
+                open
+                title={t('serverSettings.versionUpgrade.unverifiedReason')}
+              />
             )}
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={onClose} disabled={processing}>
-                {t('serverSettings.versionUpgrade.close')}
-              </Button>
-              <Button
-                variant="modalPrimary"
-                onClick={() => {
-                  void handleDownload();
-                }}
-                disabled={processing || !preparedPlanId || !verified}
-              >
-                {t('serverSettings.versionUpgrade.runDownload')}
-              </Button>
-            </div>
+            {(processing || dlProgress > 0) && (
+              <Progress
+                value={dlProgress}
+                max={100}
+                label={t('serverSettings.versionUpgrade.downloadProgressLabel')}
+                showValue
+              />
+            )}
           </div>
         )}
 
         {/* Step: done */}
         {step === 'done' && (
-          <div>
-            <p>{t('serverSettings.versionUpgrade.doneDescription')}</p>
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalPrimary" onClick={onClose}>
-                {t('serverSettings.versionUpgrade.close')}
-              </Button>
-            </div>
+          <div className={styles.stack}>
+            <p className={styles.text}>{t('serverSettings.versionUpgrade.doneDescription')}</p>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

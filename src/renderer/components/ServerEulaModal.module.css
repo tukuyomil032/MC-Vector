@@ -1,0 +1,27 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The checkbox centers its 18px square in a control-height hit area. Pulling it left by the inset puts the square on the text edge. */
+.consent {
+  margin-left: calc((var(--control-height-md) - 18px) / -2);
+}
+
+/* The official link is a real anchor that opens through the opener plugin, with a tap target near 44px. */
+.link {
+  display: inline-flex;
+  align-self: flex-start;
+  min-height: 2.75rem;
+  align-items: center;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--ring, currentColor);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}

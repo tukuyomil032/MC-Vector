@@ -1,0 +1,122 @@
+/* Full width of the content card. The card scrolls the page, so this only grows with its content.
+   The header and any one-line empty state span the page; the section cards sit in two columns (see .columns). */
+.page {
+  display: flex;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: var(--space-6);
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.loading {
+  padding: var(--space-6);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* One row: the title and search on the left, the unsaved note and the save button at the right edge. It wraps only when narrow. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  /* Bottom-aligned, so the save button lines up with the search field rather than with its label. */
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.titleGroup {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-5);
+}
+
+/* Capped at 24rem so the search stays a search box and does not stretch across a wide header. */
+.search {
+  flex: 0 1 24rem;
+  min-width: min(100%, 14rem);
+}
+
+/* The placeholder says what the field is for, so its label is kept for screen readers only. */
+.search label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.unsaved {
+  margin-right: var(--space-2);
+  color: var(--warning);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  margin-top: var(--space-4);
+}
+
+/* Two balanced columns from 1024px. PropertiesView assigns each card to a column by its estimated height, so the
+   column tops line up and neither column runs far longer than the other. */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  /* Both columns take the taller one's height. The cards of the shorter column share the difference, which the
+     balancing keeps small, so the two columns end on the same line without one card holding a large gap. */
+  align-items: stretch;
+}
+
+.slot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.slot > * {
+  flex: 1 1 auto;
+}
+
+.columns .slot {
+  flex: 1 1 auto;
+}
+
+/* While the cards are measured, every card keeps its natural height. */
+.columns[data-measuring] {
+  align-items: start;
+}
+
+.columns[data-measuring] .slot {
+  flex: 0 0 auto;
+}
+
+/* Below 1024px the cards stack in one column, in placement order. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 40rem) {
+  .page {
+    padding: var(--space-4);
+  }
+}

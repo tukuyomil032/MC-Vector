@@ -1,0 +1,71 @@
+/* Every color is an Arc token. The tint is the token at 15% over transparent, so it sits on any surface. */
+
+.tile {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-control);
+  background: color-mix(in oklab, var(--tile-color) 15%, transparent);
+  color: var(--tile-color);
+}
+
+.sm {
+  width: 24px;
+  height: 24px;
+}
+
+.md {
+  width: 36px;
+  height: 36px;
+}
+
+.accent {
+  --tile-color: var(--accent);
+}
+
+.success {
+  --tile-color: var(--success);
+}
+
+.warning {
+  --tile-color: var(--warning);
+}
+
+.danger {
+  --tile-color: var(--danger);
+}
+
+/* Neutral drops the tint: a muted fill with the secondary text color. */
+.neutral {
+  --tile-color: var(--text-secondary);
+  background: var(--surface-muted);
+}
+
+.title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.heading {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trailing {
+  display: flex;
+  min-width: 0;
+  margin-left: auto;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}

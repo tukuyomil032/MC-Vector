@@ -2,7 +2,13 @@ import { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { getTranslation } from '../../../src/i18n';
 import AppUpdateModal from '../../../src/renderer/components/AppUpdateModal';
+// Same stylesheet order as src/main.tsx. Arc components read the foundation tokens.
+import '../../../src/components/arc/foundation.css';
+import '../../../src/styles/arc-brand.css';
 import '../../../src/styles/index.css';
+
+// The app is dark-only and sets its theme on the document root. Arc tokens are scoped to that root.
+document.documentElement.dataset.theme = 'dark';
 
 const SHORT_RELEASE_NOTES = `## v2.4.0
 
@@ -76,6 +82,8 @@ function ReleaseNotesPreview() {
     <div className="app-shell flex h-screen w-screen theme-dark" data-theme="dark">
       <div data-testid="release-notes-preview" data-action-message={actionMessage} />
       <AppUpdateModal
+        open={isOpen}
+        onSkipVersion={() => undefined}
         updatePrompt={
           isOpen
             ? {

@@ -1,5 +1,5 @@
+import { Drawer, DrawerContent } from '@/components/arc/drawer/drawer';
 import { useTranslation } from '@/i18n';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { applyBackupRetention, createBackup } from '@/lib/backup-commands';
 import { logError } from '@/lib/error-utils';
 import { isEulaRequiredError } from '@/lib/eula-commands';
@@ -19,12 +19,15 @@ import AppOverlayLayer from '@/renderer/components/AppOverlayLayer';
 import AppServerSidebar from '@/renderer/components/AppServerSidebar';
 import AppSidebarHeader from '@/renderer/components/AppSidebarHeader';
 import AppSidebarNavigation from '@/renderer/components/AppSidebarNavigation';
-import BackupTargetSelectorWindow from '@/renderer/components/BackupTargetSelectorWindow';
+import AppSidebarRailActions from '@/renderer/components/AppSidebarRailActions';
 import { CommandPalette } from '@/renderer/components/CommandPalette';
+import { notify } from '@/renderer/shared/notify';
 import { useAppThemeSync } from '@/renderer/hooks/use-app-theme-sync';
 import { useAppUpdater } from '@/renderer/hooks/use-app-updater';
 import { useGroupedServers } from '@/renderer/hooks/use-grouped-servers';
 import { useLiquidGlassSync } from '@/renderer/hooks/use-liquid-glass-sync';
+import { useExitConfirmation } from '@/renderer/hooks/use-exit-confirmation';
+import { useMediaQuery } from '@/renderer/hooks/use-media-query';
 import { useUpdateChannelSync } from '@/renderer/hooks/use-update-channel-sync';
 import { useProxyNetworkAction } from '@/renderer/hooks/use-proxy-network-action';
 import { useServerAutomation } from '@/renderer/hooks/use-server-automation';
@@ -34,10 +37,12 @@ import { runExclusiveServerStart, useServerEulaGate } from '@/renderer/hooks/use
 import { useServerProcessActions } from '@/renderer/hooks/use-server-process-actions';
 import { useServerRuntimeListeners } from '@/renderer/hooks/use-server-runtime-listeners';
 import { useServerMetricHistorySync } from '@/renderer/hooks/use-server-metric-history-sync';
+import { useGuardedViewNavigation } from '@/renderer/hooks/use-guarded-view-navigation';
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
 import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
-import type { MinecraftServer } from '@/renderer/shared/server declaration';
+import type { AppView, MinecraftServer } from '@/renderer/shared/server declaration';
+import { canStartServer } from '@/renderer/shared/server-status';
 import { getHeaderTitle } from '@/renderer/shared/view-labels';
 import { useConsoleStore } from '@/store/consoleStore';
 import { useServerStore } from '@/store/serverStore';
@@ -45,45 +50,32 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUiStore } from '@/store/uiStore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-function isBackupSelectorWindow(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('backupSelector') === '1';
-}
+/** Below 1024px the sidebar is forced to the 60px icon rail; the user's expand choice is kept for wider windows. */
+const RAIL_BELOW_QUERY = '(max-width: 1023px)';
+/** Below 768px the sidebar leaves the layout and opens as a drawer from the header menu button. */
+const DRAWER_BELOW_QUERY = '(max-width: 767px)';
 
 function App() {
-  if (isBackupSelectorWindow()) {
-    return <BackupTargetSelectorWindow />;
-  }
-
-  return <MainApp />;
-}
-
-function MainApp() {
   const { t } = useTranslation();
-  const { notify } = useAppFeedback();
+  const { confirm } = useAppFeedback();
   const servers = useServerStore((state) => state.servers);
   const setServers = useServerStore((state) => state.setServers);
   const selectedServerId = useServerStore((state) => state.selectedServerId);
   const setSelectedServerId = useServerStore((state) => state.setSelectedServerId);
 
   const currentView = useUiStore((state) => state.currentView);
-  const setCurrentView = useUiStore((state) => state.setCurrentView);
+  const setCurrentView = useGuardedViewNavigation();
   const showAddServerModal = useUiStore((state) => state.showAddServerModal);
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
   const [showImportServerModal, setShowImportServerModal] = useState(false);
   const [showAddServerChoiceModal, setShowAddServerChoiceModal] = useState(false);
 
-  const [downloadStatus, setDownloadStatus] = useState<{
-    id: string;
-    progress: number;
-    msg: string;
-  } | null>(null);
   const [serverTemplates, setServerTemplates] = useState<ServerTemplate[]>([]);
   const showToast = useCallback(
     (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-      notify(msg, type);
+      notify[type](msg);
     },
-    [notify],
+    [],
   );
 
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);
@@ -108,6 +100,8 @@ function MainApp() {
     handleUpdateNow,
     handleInstallUpdate,
     handleDismissUpdate,
+    updateModalOpen,
+    handleSkipUpdateVersion,
   } = useAppUpdater();
 
   useViewCycleShortcut({ currentView, setCurrentView });
@@ -137,7 +131,7 @@ function MainApp() {
         }
         if (srv.status === 'online') {
           void stop();
-        } else if (srv.status === 'offline') {
+        } else if (canStartServer(srv.status)) {
           void start();
         }
       },
@@ -155,6 +149,10 @@ function MainApp() {
   }, []);
 
   useAppThemeSync({ setAppTheme });
+  useEffect(() => {
+    // Expose the theme on <html> so portaled overlays (Radix, toasts) inherit Arc tokens.
+    document.documentElement.setAttribute('data-theme', resolveAppTheme(appTheme));
+  }, [appTheme]);
   useLiquidGlassSync({ setLiquidGlassEnabled, setAllowUnverifiedPluginDownloads });
   useUpdateChannelSync({ setUpdateChannel });
 
@@ -208,7 +206,6 @@ function MainApp() {
     appendServerLog,
     showToast,
     t,
-    setDownloadStatus,
     setNgrokData,
     handleServerStatusChange,
   });
@@ -229,7 +226,7 @@ function MainApp() {
   serverActionsRef.current = { handleStart, handleStop, handleRestart, activeServer };
 
   const handleBulkStart = async (servers: MinecraftServer[]) => {
-    for (const s of servers.filter((srv) => srv.status === 'offline')) {
+    for (const s of servers.filter((srv) => canStartServer(srv.status))) {
       try {
         const gateResult = await runExclusiveServerStart(s.id, async () => {
           let result = await ensureServerEula(s, 'interactive');
@@ -283,9 +280,9 @@ function MainApp() {
         const backupName = buildAutoBackupName(s, new Date());
         let outcome = await createBackup(s.id, backupName, undefined, false);
         if (outcome.status === 'confirmation_required') {
-          const confirmed = await ask(t('backups.confirmStopForBackup', { name: s.name }), {
+          const confirmed = await confirm({
             title: t('backups.stopForBackupTitle'),
-            kind: 'warning',
+            description: t('backups.confirmStopForBackup', { name: s.name }),
           });
           if (!confirmed) {
             await new Promise((r) => setTimeout(r, 1000));
@@ -374,8 +371,6 @@ function MainApp() {
     setServers,
     setSelectedServerId,
     setShowAddServerModal,
-    setDownloadStatus,
-    showToast,
     t,
   });
   const { handleBuildProxyNetwork } = useProxyNetworkAction({
@@ -389,10 +384,49 @@ function MainApp() {
 
   const groupedServers = useGroupedServers({ servers, t });
 
+  useExitConfirmation({
+    activeServerCount: servers.filter(
+      (server) => server.status !== 'offline' && server.status !== 'crashed',
+    ).length,
+    confirm,
+    t,
+  });
+
   const headerTitle = getHeaderTitle(currentView, activeServer?.name, t);
+
+  const isRailForced = useMediaQuery(RAIL_BELOW_QUERY);
+  const isDrawerLayout = useMediaQuery(DRAWER_BELOW_QUERY);
+  const isSidebarExpanded = !isRailForced && isSidebarOpen;
+  const [isSidebarDrawerOpen, setIsSidebarDrawerOpen] = useState(false);
 
   const handleOpenSettingsWindow = () => {
     setCurrentView('app-settings');
+  };
+
+  const serverPanelProps = {
+    groupedServers,
+    selectedServerId,
+    onSelectServer: setSelectedServerId,
+    onAddServer: () => setShowAddServerChoiceModal(true),
+    onDuplicateServer: handleDuplicateServer,
+    onSaveServerTemplate: handleSaveServerTemplate,
+    onDeleteServer: handleDeleteServer,
+    onBulkStart: handleBulkStart,
+    onBulkStop: handleBulkStop,
+    onBulkBackup: handleBulkBackup,
+  };
+
+  // In the drawer every choice also closes it, so the content underneath is visible again.
+  const drawerNavigate = (view: AppView) => {
+    setCurrentView(view);
+    setIsSidebarDrawerOpen(false);
+  };
+  const drawerServerPanelProps = {
+    ...serverPanelProps,
+    onSelectServer: (serverId: string) => {
+      setSelectedServerId(serverId);
+      setIsSidebarDrawerOpen(false);
+    },
   };
 
   return (
@@ -402,49 +436,65 @@ function MainApp() {
       data-testid="app-root"
       style={appShellStyle}
     >
-      <aside
-        className={`app-sidebar z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarOpen ? 'app-sidebar--open w-[260px]' : 'app-sidebar--collapsed w-[60px]'}`}
-        data-testid="app-sidebar"
-      >
-        <AppSidebarHeader
-          isSidebarOpen={isSidebarOpen}
-          onOpenSettings={handleOpenSettingsWindow}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          openSettingsLabel={t('nav.openSettings')}
-        />
+      {!isDrawerLayout && (
+        <aside
+          className={`app-sidebar z-20 flex shrink-0 flex-col border-r transition-all duration-200 app-shell__surface app-shell__surface--sidebar ${isSidebarExpanded ? 'app-sidebar--open w-[260px]' : 'app-sidebar--collapsed w-[60px]'}`}
+          data-testid="app-sidebar"
+        >
+          <AppSidebarHeader
+            isSidebarOpen={isSidebarExpanded}
+            onOpenSettings={handleOpenSettingsWindow}
+            onToggleSidebar={isRailForced ? undefined : () => setIsSidebarOpen(!isSidebarOpen)}
+            openSettingsLabel={t('nav.openSettings')}
+            collapseLabel={t('nav.collapseSidebar')}
+            expandLabel={t('nav.expandSidebar')}
+          />
 
-        <AppSidebarNavigation
-          isSidebarOpen={isSidebarOpen}
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          t={t}
-        />
+          <AppSidebarNavigation
+            isSidebarOpen={isSidebarExpanded}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            t={t}
+          />
 
-        <AppServerSidebar
-          isSidebarOpen={isSidebarOpen}
-          groupedServers={groupedServers}
-          selectedServerId={selectedServerId}
-          onSelectServer={setSelectedServerId}
-          onAddServer={() => setShowAddServerChoiceModal(true)}
-          onDuplicateServer={handleDuplicateServer}
-          onSaveServerTemplate={handleSaveServerTemplate}
-          onDeleteServer={handleDeleteServer}
-          serversLabel={t('nav.servers')}
-          addServerLabel={t('nav.addServer')}
-          bulkSelectLabel={t('nav.bulkSelect')}
-          bulkStartLabel={t('nav.bulkStartSelected')}
-          bulkStopLabel={t('nav.bulkStopSelected')}
-          bulkBackupLabel={t('nav.bulkBackupSelected')}
-          bulkClearLabel={t('nav.bulkClearSelection')}
-          bulkSelectedCountLabel={(count) => t('nav.bulkSelectedCount', { count })}
-          duplicateLabel={t('server.actions.clone')}
-          saveTemplateLabel={t('server.actions.saveTemplate')}
-          deleteLabel={t('common.delete')}
-          onBulkStart={handleBulkStart}
-          onBulkStop={handleBulkStop}
-          onBulkBackup={handleBulkBackup}
-        />
-      </aside>
+          {isSidebarExpanded && <AppServerSidebar {...serverPanelProps} />}
+
+          {!isSidebarExpanded && (
+            <AppSidebarRailActions
+              servers={groupedServers.flatMap((group) => group.servers)}
+              selectedServerId={selectedServerId}
+              onSelectServer={setSelectedServerId}
+              onAddServer={() => setShowAddServerChoiceModal(true)}
+              onOpenSettings={handleOpenSettingsWindow}
+            />
+          )}
+        </aside>
+      )}
+
+      {isDrawerLayout && (
+        <Drawer open={isSidebarDrawerOpen} onOpenChange={setIsSidebarDrawerOpen}>
+          <DrawerContent
+            title={t('nav.menuTitle')}
+            side="left"
+            closeLabel={t('common.close')}
+            width="min(300px, 85vw)"
+          >
+            <div
+              className="app-sidebar app-sidebar--open flex h-full min-h-0 flex-col"
+              data-testid="app-sidebar-drawer"
+            >
+              <AppSidebarNavigation
+                isSidebarOpen
+                currentView={currentView}
+                setCurrentView={drawerNavigate}
+                showAppSettings
+                t={t}
+              />
+              <AppServerSidebar {...drawerServerPanelProps} />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
 
       <main
         className="relative flex min-w-0 flex-1 flex-col overflow-hidden app-shell__surface app-shell__surface--main"
@@ -457,6 +507,7 @@ function MainApp() {
           onStart={handleStart}
           onRestart={handleRestart}
           onStop={handleStop}
+          onOpenMenu={isDrawerLayout ? () => setIsSidebarDrawerOpen(true) : undefined}
           t={t}
         />
         <AppMainContent
@@ -478,6 +529,7 @@ function MainApp() {
               prev.map((server) => (server.id === serverId ? { ...server, port } : server)),
             );
           }}
+          onAddServer={() => setShowAddServerChoiceModal(true)}
           updaterSettings={{
             onCheckForUpdates: handleCheckForUpdates,
             updateCheckStatus,
@@ -498,14 +550,16 @@ function MainApp() {
 
       <CommandPalette
         activeServer={activeServer}
+        servers={servers}
         setCurrentView={setCurrentView}
+        onSelectServer={setSelectedServerId}
+        onAddServer={() => setShowAddServerChoiceModal(true)}
         onStart={handleStart}
         onStop={handleStop}
         onRestart={handleRestart}
       />
 
       <AppOverlayLayer
-        downloadStatus={downloadStatus}
         showAddServerModal={showAddServerModal}
         onCloseAddServerModal={() => setShowAddServerModal(false)}
         onAddServer={handleAddServer}
@@ -516,9 +570,11 @@ function MainApp() {
         updateProgress={updateProgress}
         updateError={updateError}
         updateReady={updateReady}
+        updateModalOpen={updateModalOpen}
         onDismissUpdate={handleDismissUpdate}
         onUpdateNow={handleUpdateNow}
         onInstallUpdate={handleInstallUpdate}
+        onSkipUpdateVersion={handleSkipUpdateVersion}
         pendingEula={pendingEula}
         onAcceptEula={acceptPendingEula}
         onCancelEula={cancelPendingEula}

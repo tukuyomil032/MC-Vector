@@ -2,7 +2,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface ViewErrorBoundaryProps {
   children: ReactNode;
-  fallback: ReactNode;
+  /** Shown after a render error. A function receives `reset`, which clears the error and retries the children. */
+  fallback: ReactNode | ((reset: () => void) => ReactNode);
 }
 
 interface ViewErrorBoundaryState {
@@ -33,9 +34,14 @@ export default class ViewErrorBoundary extends Component<
     }
   }
 
+  reset = () => {
+    this.setState({ hasError: false });
+  };
+
   render() {
     if (this.state.hasError) {
-      return this.props.fallback;
+      const { fallback } = this.props;
+      return typeof fallback === 'function' ? fallback(this.reset) : fallback;
     }
     return this.props.children;
   }

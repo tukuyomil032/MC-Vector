@@ -11,12 +11,13 @@ test.describe('files and backups', () => {
     await expect(page.locator('[data-testid="files-view"]')).toBeVisible();
     await expect(page.locator('[data-testid="file-row-server.properties"]')).toBeVisible();
     await page.locator('[data-testid="file-row-world"]').dblclick();
-    await expect(page.getByRole('button', { name: 'world', exact: true })).toBeVisible();
+    // The current folder is the last crumb, which the Arc breadcrumb renders as text with aria-current.
+    await expect(page.locator('[aria-current="page"]', { hasText: 'world' })).toBeVisible();
     await page.getByRole('button', { name: 'server-1', exact: true }).click();
     await expect(page.locator('[data-testid="file-row-server.properties"]')).toBeVisible();
 
-    await page.locator('[data-testid="files-create-button"]').click();
-    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page.getByRole('button', { name: 'Create / Import', exact: true }).click();
+    await page.locator('[data-testid="files-create-file-option"]').click();
     await page.locator('[data-testid="files-name-input"]').fill('e2e-created.txt');
     await page.locator('[data-testid="files-create-submit"]').click();
     await expect(page.locator('[data-testid="file-row-e2e-created.txt"]')).toBeVisible();
@@ -33,16 +34,13 @@ test.describe('files and backups', () => {
 
     const backups = page.locator('[data-testid="backups-view"]');
     await expect(backups).toBeVisible();
-    await expect(backups.getByText('World Management', { exact: true })).toBeVisible();
     await expect.poll(async () => (await app.ipcCalls('listen')).length).toBeGreaterThan(0);
 
-    await app.setBackupSelection(['server.properties']);
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await backups.locator('[data-testid="backups-open-selector-button"]').click();
-    await expect(backups.getByText('Selected: 1', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-testid="backups-target-size"]')).toBeVisible();
 
-    await backups.locator('[data-testid="backup-name-input"]').fill('e2e-backup.zip');
-    await backups.locator('[data-testid="backups-create-submit"]').click();
+    await page.locator('[data-testid="backup-name-input"]').fill('e2e-backup.zip');
+    await page.locator('[data-testid="backups-create-submit"]').click();
     await expect(backups.locator('[data-testid="backup-row-e2e-backup.zip"]')).toBeVisible({
       timeout: 15_000,
     });
@@ -64,16 +62,14 @@ test.describe('files and backups', () => {
       ).__MC_VECTOR_E2E__;
       runtime?.state.runningServerIds.push('server-1');
     });
-    await app.confirmDialogs();
     await app.openView('backups');
 
     const backups = page.locator('[data-testid="backups-view"]');
-    await app.setBackupSelection(['server.properties']);
     await backups.locator('[data-testid="backups-create-button"]').click();
-    await backups.locator('[data-testid="backups-open-selector-button"]').click();
-    await expect(backups.getByText('Selected: 1', { exact: true })).toBeVisible();
-    await backups.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
-    await backups.locator('[data-testid="backups-create-submit"]').click();
+    await expect(page.locator('[data-testid="backups-target-size"]')).toBeVisible();
+    await page.locator('[data-testid="backup-name-input"]').fill('e2e-running-backup.zip');
+    await page.locator('[data-testid="backups-create-submit"]').click();
+    await app.acceptConfirm();
 
     await expect(backups.locator('[data-testid="backup-row-e2e-running-backup.zip"]')).toBeVisible({
       timeout: 15_000,

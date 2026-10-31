@@ -9,6 +9,8 @@ export interface BackupInfo {
   origin?: 'manual' | 'automatic';
   consistency?: 'quiesced' | 'live';
   restoreEligible?: boolean;
+  /** How long the archive took to build. Missing for backups made before durations were recorded. */
+  durationMs?: number;
 }
 
 interface ManagedBackupRecord {
@@ -19,6 +21,7 @@ interface ManagedBackupRecord {
   createdAt: string;
   totalBytes: number;
   restoreEligible: boolean;
+  durationMs?: number | null;
 }
 
 export interface BackupRetentionResult {
@@ -138,44 +141,6 @@ export function getBackupNameValidationError(backupName: string): BackupNameVali
     return 'unsafeCharacters';
   }
   return null;
-}
-
-export function normalizeBackupSources(paths: readonly string[]): string[] {
-  const candidates = new Set<string>();
-  for (const path of paths) {
-    const trimmed = path.trim();
-    if (trimmed.startsWith('/') || trimmed.startsWith('\\') || /^[A-Za-z]:/.test(trimmed)) {
-      continue;
-    }
-
-    const normalized = trimmed
-      .replace(/\\/g, '/')
-      .replace(/\/{2,}/g, '/')
-      .replace(/^\/+|\/+$/g, '');
-    const lowerCaseNormalized = normalized.toLowerCase();
-    if (
-      !normalized ||
-      lowerCaseNormalized === 'backups' ||
-      lowerCaseNormalized.startsWith('backups/')
-    ) {
-      continue;
-    }
-    const segments = normalized.split('/');
-    if (segments.some((segment) => !segment || segment === '.' || segment === '..')) {
-      continue;
-    }
-    candidates.add(normalized);
-  }
-
-  return Array.from(candidates)
-    .sort((left, right) => {
-      const depthDifference = left.split('/').length - right.split('/').length;
-      return depthDifference || left.localeCompare(right);
-    })
-    .filter((path, index, sorted) => {
-      return !sorted.slice(0, index).some((ancestor) => path.startsWith(`${ancestor}/`));
-    })
-    .sort((left, right) => left.localeCompare(right));
 }
 
 function backupFileRequest(serverId: string, backupName: string): ManagedPathRequest {
@@ -298,6 +263,7 @@ export async function listBackupsWithMetadata(serverId: string): Promise<BackupI
         origin: record.origin,
         consistency: record.consistency,
         restoreEligible: record.restoreEligible,
+        ...(typeof record.durationMs === 'number' ? { durationMs: record.durationMs } : {}),
       };
     });
   } catch (error) {

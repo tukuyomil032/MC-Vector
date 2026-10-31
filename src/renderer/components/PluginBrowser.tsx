@@ -1,35 +1,14 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { ask } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Download,
-  ExternalLink,
-  Flame,
-  Info,
-  Loader2,
-  type LucideIcon,
-  Package,
-  Search,
-  Server,
-  Star,
-  X,
-} from 'lucide-react';
+import { Alert } from '@/components/arc/alert/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
+import { ExternalLink, Flame, Package, Server } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
 import paperLogoUrl from '../../assets/papermc_logo.svg';
 import { useTranslation } from '../../i18n';
 import { logError } from '../../lib/error-utils';
 import { listFiles } from '../../lib/file-commands';
 import {
-  type HangarProject,
-  type ModrinthProject,
-  type PluginCompatibility,
-  type SpigetResource,
   checkHangarCompatibility,
   getCompatibleModrinthVersion,
   getHangarProjectBody,
@@ -52,349 +31,57 @@ import {
   type PluginInstallFailureCode,
   classifyPluginInstallFailure,
 } from '../../lib/plugin-install-errors';
-import { useUiStore } from '../../store/uiStore';
+import { useGuardedViewNavigation } from '../hooks/use-guarded-view-navigation';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import {
   pluginInstallFailurePresentation,
   shouldBlockPluginInstall,
 } from '../shared/plugin-install-policy';
+import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
-import InlineError from './InlineError';
-import { NativeSelect } from './ui/Field';
+import { PluginInstallList, type PluginInstallItem } from './PluginInstallList';
+import { PluginDetailDialog } from './plugin-browser/PluginDetailDialog';
+import { PluginInstalledPanel } from './plugin-browser/PluginInstalledPanel';
+import { PluginPlatformSwitch, type PlatformOption } from './plugin-browser/PluginPlatformSwitch';
+import { PluginSearchPanel } from './plugin-browser/PluginSearchPanel';
+import type { PluginResultCardState } from './plugin-browser/PluginResultCard';
+import styles from './plugin-browser/plugin-browser.module.css';
+import {
+  ASYNC_CHECK_CONCURRENCY,
+  type BrowserPlatform,
+  type BrowserSection,
+  type CompatibilityDetail,
+  type CompatibilityStatus,
+  type InstalledPluginEntry,
+  LIMIT,
+  type ProjectItem,
+  type SortMode,
+  type UpdateStatus,
+  buildInstalledMetadataLookupCandidates,
+  collectPluginFileNames,
+  extractLoaderHintsFromUnknown,
+  extractVersionHints,
+  formatInstalledTitle,
+  inferInstalledFileVersion,
+  isAllowedPluginBrowserUrl,
+  isDisabledPluginFile,
+  isLikelyVersionSuffix,
+  mapHangarProject,
+  mapModrinthProject,
+  mapSpigotResource,
+  mapWithConcurrency,
+  normalizeInstalledPluginFileName,
+  normalizeReadme,
+  projectPageUrl,
+  toSlug,
+} from './plugin-browser/plugin-model';
 
 interface Props {
   server: MinecraftServer;
 }
 
-type BrowserPlatform = 'Modrinth' | 'Hangar' | 'CurseForge' | 'Spigot';
-
-interface ProjectItem {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  icon_url?: string;
-  downloads?: number;
-  stars?: number;
-  platform: 'Modrinth' | 'Hangar' | 'Spigot';
-  slug?: string;
-  source_obj: Record<string, unknown>;
-  compatibility?: PluginCompatibility;
-  supportedVersions?: string[];
-}
-
-interface PlatformOption {
-  key: BrowserPlatform;
-  label: string;
-  hint: string;
-  inApp: boolean;
-  icon: LucideIcon;
-  logoUrl: string;
-}
-
-const LIMIT = 25;
-const ASYNC_CHECK_CONCURRENCY = 4;
-
-type CompatibilityStatus = 'checking' | PluginCompatibility;
-type UpdateStatus = 'checking' | 'update-available' | 'up-to-date' | 'unknown';
-type SortMode = 'relevance' | 'downloads' | 'name' | 'compatibility';
-type BrowserSection = 'browse' | 'installed';
-
-type CompatibilityDetail = {
-  supportedVersions: string[];
-};
-
-type DetailTab = 'info' | 'readme';
-
-interface InstalledPluginEntry {
-  fileName: string;
-  normalizedFileName: string;
-  displayName: string;
-  description: string;
-  iconUrl?: string;
-  state: 'enabled' | 'disabled';
-  fileVersion: string;
-  minecraftVersions: string[];
-  sourceItem: ProjectItem | null;
-  actionItem: ProjectItem;
-}
-
-const MINECRAFT_VERSION_REGEX = /\b1\.\d+(?:\.\d+)?\b/g;
-const LOADER_KEYWORDS = [
-  'paper',
-  'spigot',
-  'bukkit',
-  'velocity',
-  'waterfall',
-  'fabric',
-  'forge',
-  'neoforge',
-];
-
-function toSlug(value: string): string {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return normalized || 'plugin';
-}
-
-function extractVersionHints(text: string): string[] {
-  const matches = text.match(MINECRAFT_VERSION_REGEX);
-  if (!matches) {
-    return [];
-  }
-
-  return Array.from(new Set(matches));
-}
-
-function extractLoaderHintsFromUnknown(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const hints = value
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => entry.trim())
-    .filter((entry) => {
-      const lower = entry.toLowerCase();
-      return LOADER_KEYWORDS.some((keyword) => lower.includes(keyword));
-    });
-
-  return Array.from(new Set(hints));
-}
-
-function isDisabledPluginFile(fileName: string): boolean {
-  return fileName.toLowerCase().endsWith('.disabled');
-}
-
-function normalizeInstalledPluginFileName(fileName: string): string {
-  return fileName.toLowerCase().replace(/\.disabled$/i, '');
-}
-
-function collectPluginFileNames(entries: Array<{ name: string; isDirectory: boolean }>): string[] {
-  return entries
-    .filter((entry) => {
-      if (entry.isDirectory) {
-        return false;
-      }
-      const lower = entry.name.toLowerCase();
-      return lower.endsWith('.jar') || lower.endsWith('.jar.disabled');
-    })
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-}
-
-function stripInstalledPluginFile(fileName: string): string {
-  return fileName.replace(/\.disabled$/i, '').replace(/\.[^.]+$/, '');
-}
-
-function inferInstalledFileVersion(fileName: string): string {
-  const baseName = stripInstalledPluginFile(fileName);
-  const versionMatch = baseName.match(
-    /(?:^|[-_ ])v?(\d+(?:\.\d+){0,4}(?:[-+._]?(?:alpha|beta|rc|snapshot|pre)?\d*)?)/i,
-  );
-  return versionMatch?.[1] ?? '';
-}
-
-function formatInstalledTitle(fileName: string): string {
-  const baseName = stripInstalledPluginFile(fileName);
-  return baseName.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function isLikelyVersionSuffix(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return true;
-  }
-
-  // Direct version suffixes (e.g. "-1.2.3", "v2.0", "1.20.4")
-  if (/^[-_.\s]*v?\d/i.test(trimmed)) {
-    return true;
-  }
-
-  // Classifier + version suffixes (e.g. "-bukkit-7.4.3-beta-01")
-  if (!/^[-_.\s]+/.test(trimmed)) {
-    return false;
-  }
-
-  const withoutLeadingSeparator = trimmed.replace(/^[-_.\s]+/, '');
-  if (!withoutLeadingSeparator) {
-    return true;
-  }
-
-  return /^(?:[a-z][a-z0-9]{1,31}[-_.\s]+){1,3}v?\d[\w.+-]*$/i.test(withoutLeadingSeparator);
-}
-
-function buildInstalledMetadataLookupCandidates(fileName: string): string[] {
-  const baseName = stripInstalledPluginFile(fileName).trim();
-  if (!baseName) {
-    return [];
-  }
-
-  const versionStrippedBase = baseName.replace(/(?:[-_.\s]+v?\d[\w.+-]*)$/i, '').trim();
-  const candidates = [baseName];
-
-  if (versionStrippedBase && versionStrippedBase.toLowerCase() !== baseName.toLowerCase()) {
-    candidates.push(versionStrippedBase);
-
-    // "name-classifier-version" -> include "name" as a broader lookup fallback.
-    const classifierParts = versionStrippedBase.split(/[-_.\s]+/).filter(Boolean);
-    if (classifierParts.length >= 2) {
-      const classifierStrippedBase = classifierParts.slice(0, -1).join('-').trim();
-      if (classifierStrippedBase) {
-        candidates.push(classifierStrippedBase);
-      }
-    }
-  }
-
-  return Array.from(
-    new Set(candidates.map((candidate) => candidate.replace(/\s+/g, ' ').trim()).filter(Boolean)),
-  );
-}
-
-function mapModrinthProject(hit: ModrinthProject): ProjectItem | null {
-  const id = hit.project_id || hit.slug;
-  if (!id) {
-    return null;
-  }
-
-  return {
-    id,
-    title: hit.title,
-    description: hit.description,
-    author: hit.author || 'Unknown',
-    icon_url: hit.icon_url || undefined,
-    downloads: hit.downloads || undefined,
-    slug: hit.slug || hit.project_id || '',
-    platform: 'Modrinth',
-    compatibility: hit.compatibility,
-    supportedVersions: hit.supportedVersions,
-    source_obj: {
-      ...hit,
-    },
-  };
-}
-
-function mapHangarProject(project: HangarProject): ProjectItem {
-  return {
-    id: `${project.namespace.owner}/${project.namespace.slug}`,
-    title: project.name,
-    description: project.description,
-    author: project.namespace.owner,
-    icon_url: project.avatarUrl || undefined,
-    stars: project.stats.stars || undefined,
-    downloads: project.stats.downloads || undefined,
-    slug: project.namespace.slug,
-    platform: 'Hangar',
-    source_obj: {
-      ...project,
-    },
-  };
-}
-
-function mapSpigotResource(resource: SpigetResource): ProjectItem {
-  return {
-    id: String(resource.id),
-    title: resource.name,
-    description: resource.tag || 'No description provided.',
-    author: resource.authorName || 'Unknown',
-    icon_url: resource.iconUrl,
-    downloads: resource.downloads,
-    slug: toSlug(resource.name),
-    platform: 'Spigot',
-    compatibility: resource.compatibility,
-    supportedVersions: resource.supportedVersions,
-    source_obj: {
-      ...resource,
-    },
-  };
-}
-
-function stripHtmlToText(value: string): string {
-  try {
-    const parsed = new DOMParser().parseFromString(value, 'text/html');
-    const text = parsed.body.textContent || '';
-    return text.replace(/\n{3,}/g, '\n\n').trim();
-  } catch {
-    return value;
-  }
-}
-
-function normalizeReadme(platform: ProjectItem['platform'], value: string): string {
-  const normalized = value.replace(/\r\n/g, '\n').trim();
-  if (!normalized) {
-    return '';
-  }
-  return platform === 'Spigot' ? stripHtmlToText(normalized) : normalized;
-}
-
-function projectPageUrl(item: ProjectItem): string {
-  if (item.platform === 'Modrinth') {
-    return `https://modrinth.com/project/${item.slug || item.id}`;
-  }
-  if (item.platform === 'Hangar') {
-    const slug = item.slug || toSlug(item.title);
-    return `https://hangar.papermc.io/${encodeURIComponent(item.author)}/${encodeURIComponent(slug)}`;
-  }
-  return `https://www.spigotmc.org/resources/${item.id}/`;
-}
-
-const ALLOWED_PLUGIN_BROWSER_HOSTS = new Set([
-  'modrinth.com',
-  'hangar.papermc.io',
-  'www.spigotmc.org',
-  'www.curseforge.com',
-]);
-
-function isAllowedPluginBrowserUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === 'https:' &&
-      !url.username &&
-      !url.password &&
-      !url.port &&
-      !url.hash &&
-      ALLOWED_PLUGIN_BROWSER_HOSTS.has(url.hostname.toLowerCase())
-    );
-  } catch {
-    return false;
-  }
-}
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  mapper: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  if (items.length === 0) {
-    return [];
-  }
-
-  const workerCount = Math.max(1, Math.min(limit, items.length));
-  const results: R[] = [];
-  let cursor = 0;
-
-  const workers = Array.from({ length: workerCount }, async () => {
-    while (true) {
-      const index = cursor;
-      cursor += 1;
-      if (index >= items.length) {
-        return;
-      }
-      results[index] = await mapper(items[index], index);
-    }
-  });
-
-  await Promise.all(workers);
-  return results;
-}
-
 export default function PluginBrowser({ server }: Props) {
   const { t } = useTranslation();
-  const prefersReducedMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState<BrowserSection>('browse');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
@@ -402,6 +89,8 @@ export default function PluginBrowser({ server }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('relevance');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
+  // Set while the install preview is fetched. It is not "installing": the user has not confirmed anything yet.
+  const [preparingId, setPreparingId] = useState<string | null>(null);
   const [installFailureByItemId, setInstallFailureByItemId] = useState<
     Record<string, PluginInstallFailureCode>
   >({});
@@ -409,7 +98,6 @@ export default function PluginBrowser({ server }: Props) {
     {},
   );
   const [detailItem, setDetailItem] = useState<ProjectItem | null>(null);
-  const [detailTab, setDetailTab] = useState<DetailTab>('info');
   const [detailReadme, setDetailReadme] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -418,9 +106,6 @@ export default function PluginBrowser({ server }: Props) {
     Record<string, ProjectItem>
   >({});
   const [busyInstalledFile, setBusyInstalledFile] = useState<string | null>(null);
-  const [dupDialog, setDupDialog] = useState<{ item: ProjectItem; installedFile: string } | null>(
-    null,
-  );
   const [page, setPage] = useState(0);
   const [updateStatusByItemId, setUpdateStatusByItemId] = useState<Record<string, UpdateStatus>>(
     {},
@@ -434,27 +119,18 @@ export default function PluginBrowser({ server }: Props) {
   const isModServer = ['Fabric', 'Forge', 'NeoForge'].includes(server.software || '');
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
-  const { notify, openDialog } = useAppFeedback();
-  const setCurrentView = useUiStore((state) => state.setCurrentView);
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    notify(msg, type);
-  };
+  const { confirm, openDialog } = useAppFeedback();
+  const setCurrentView = useGuardedViewNavigation();
   const folderName = isModServer ? 'mods' : 'plugins';
-  const tSafe = (
-    key: Parameters<typeof t>[0],
-    fallback: string,
-    params?: Parameters<typeof t>[1],
-  ): string => {
-    const translated = t(key, params);
-    return translated === key ? fallback : translated;
-  };
 
   const platformOptions = useMemo<PlatformOption[]>(() => {
     const options: PlatformOption[] = [
       {
         key: 'Modrinth',
         label: 'Modrinth',
-        hint: isModServer ? 'Mods + Datapacks' : 'Plugins + Mods',
+        hint: isModServer
+          ? t('plugins.browser.hintModrinthMods')
+          : t('plugins.browser.hintModrinthPlugins'),
         inApp: true,
         icon: Package,
         logoUrl: 'https://modrinth.com/favicon.ico',
@@ -465,7 +141,7 @@ export default function PluginBrowser({ server }: Props) {
       options.push({
         key: 'Hangar',
         label: 'Hangar',
-        hint: 'Paper ecosystem',
+        hint: t('plugins.browser.hintHangar'),
         inApp: true,
         icon: Server,
         logoUrl: paperLogoUrl,
@@ -476,7 +152,7 @@ export default function PluginBrowser({ server }: Props) {
       options.push({
         key: 'Spigot',
         label: 'SpigotMC',
-        hint: 'Spiget API',
+        hint: t('plugins.browser.hintSpigot'),
         inApp: true,
         icon: Flame,
         logoUrl: 'https://www.spigotmc.org/favicon.ico',
@@ -487,7 +163,7 @@ export default function PluginBrowser({ server }: Props) {
       options.push({
         key: 'CurseForge',
         label: 'CurseForge',
-        hint: 'Open in web',
+        hint: t('plugins.browser.hintOpenWeb'),
         inApp: false,
         icon: ExternalLink,
         logoUrl: 'https://www.curseforge.com/favicon.ico',
@@ -495,7 +171,7 @@ export default function PluginBrowser({ server }: Props) {
     }
 
     return options;
-  }, [isModServer, isPaper]);
+  }, [isModServer, isPaper, t]);
 
   // Keep the current query when the available platform set changes.
   useEffect(() => {
@@ -588,8 +264,10 @@ export default function PluginBrowser({ server }: Props) {
     retry: 1,
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 1_000),
     refetchOnWindowFocus: false,
+    // Only reuse the previous data for the same provider; another provider's hits must never show as this one's.
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[4] === server.id &&
+      previousQuery?.queryKey[1] === platform &&
+      previousQuery.queryKey[4] === server.id &&
       previousQuery.queryKey[5] === server.path &&
       previousQuery.queryKey[6] === server.version
         ? previous
@@ -1320,7 +998,8 @@ export default function PluginBrowser({ server }: Props) {
       severity: 'error',
       title: copy.title,
       description: copy.description,
-      primaryAction: isUnverified
+      // One button only: the dialog is informational, and the settings link is its single action.
+      secondaryAction: isUnverified
         ? {
             label: t('plugins.browser.openGeneralSettings'),
             onSelect: () => setCurrentView('app-settings'),
@@ -1344,8 +1023,7 @@ export default function PluginBrowser({ server }: Props) {
       delete next[item.id];
       return next;
     });
-    setInstallingId(item.id);
-    setInstallProgressByItemId((previous) => ({ ...previous, [item.id]: 0 }));
+    setPreparingId(item.id);
     try {
       let project: PluginProjectRef;
       if (item.platform === 'Modrinth') {
@@ -1389,62 +1067,60 @@ export default function PluginBrowser({ server }: Props) {
         (artifact) => !artifact.dependency || confirmedDependencies.has(artifact.id),
       );
       const unverifiedWarning = preview.requiresUnverifiedDownloads
-        ? tSafe(
-            'plugins.browser.installPlanUnverifiedWarning',
-            'At least one artifact has no provider checksum. The current Rust policy setting must allow this download.',
-          )
+        ? t('plugins.browser.installPlanUnverifiedWarning')
         : '';
       const unknownCompatibilityWarning = installArtifacts.some(
         (artifact) => artifact.compatibility === 'unknown',
       )
-        ? tSafe(
-            'plugins.browser.installPlanUnknownCompatibility',
-            'Compatibility is unknown for at least one artifact.',
-          )
+        ? t('plugins.browser.installPlanUnknownCompatibility')
         : '';
-      const dependencyNote = preview.missingDependencyIds.length
-        ? tSafe(
-            'plugins.browser.installPlanDependencies',
-            '\nRequired dependencies will also be installed: {{names}}',
-            {
-              names: installArtifacts
-                .filter((artifact) => artifact.dependency)
-                .map((artifact) => artifact.title)
-                .join(', '),
-            },
-          )
-        : '';
-      const artifactList = installArtifacts
-        .map((artifact) => `• ${artifact.title} (${artifact.version}) → ${artifact.fileName}`)
-        .join('\n');
-      const prompt = tSafe(
-        'plugins.browser.installPlanConfirmDescription',
-        'Install these files into {{directory}}?\n{{artifacts}}\n{{dependencyNote}}\n{{warnings}}',
-        {
-          count: installArtifacts.length,
-          directory: preview.targetDirectory,
-          artifacts: artifactList,
-          dependencyNote,
-          warnings: [unknownCompatibilityWarning, unverifiedWarning].filter(Boolean).join('\n'),
-        },
-      );
+      const dependencyNames = installArtifacts
+        .filter((artifact) => artifact.dependency)
+        .map((artifact) => artifact.title);
+      // Only the plugin itself has the icon from the results. Dependencies have none and fall back to a monogram.
+      const installItems: PluginInstallItem[] = installArtifacts.map((artifact) => ({
+        name: artifact.title,
+        iconUrl: artifact.dependency ? undefined : item.icon_url,
+        detail: artifact.fileName,
+      }));
+      // The confirm dialog is open from here on, so the card must not read as installing yet.
+      setPreparingId(null);
       let accepted = false;
       await openDialog({
         severity: preview.requiresUnverifiedDownloads ? 'warning' : 'info',
-        title: tSafe('plugins.browser.installPlanConfirmTitle', 'Confirm plugin installation'),
-        description: prompt,
+        title: t('plugins.browser.installPlanConfirmTitle'),
+        body: (
+          <div className={styles.confirmBody}>
+            <PluginInstallList items={installItems} />
+            <p className={styles.caption}>
+              {t('plugins.browser.installPlanTarget', { directory: preview.targetDirectory })}
+            </p>
+            {dependencyNames.length > 0 ? (
+              <p className={styles.caption}>
+                {t('plugins.browser.installPlanDependencies', {
+                  names: dependencyNames.join(', '),
+                })}
+              </p>
+            ) : null}
+            {unknownCompatibilityWarning ? (
+              <Alert tone="warning" title={unknownCompatibilityWarning} />
+            ) : null}
+            {unverifiedWarning ? <Alert tone="warning" title={unverifiedWarning} /> : null}
+          </div>
+        ),
         primaryAction: {
-          label: tSafe('plugins.browser.installPlanConfirmButton', 'Install'),
+          label: t('plugins.browser.installPlanConfirmButton'),
           onSelect: () => {
             accepted = true;
           },
         },
-        secondaryAction: { label: t('common.cancel') },
       });
       if (!accepted) {
         return;
       }
 
+      setInstallingId(item.id);
+      setInstallProgressByItemId((previous) => ({ ...previous, [item.id]: 0 }));
       const stopListening = await onPluginInstallProgress(
         preview.token,
         ({ downloaded, total }) => {
@@ -1469,7 +1145,7 @@ export default function PluginBrowser({ server }: Props) {
           : mode === 'overwrite'
             ? t('plugins.browser.overwriteSuccess', { title: item.title })
             : t('plugins.browser.updateSuccess', { title: item.title });
-      showToast(successLabel, 'success');
+      notify.success(successLabel);
     } catch (error) {
       logError('Plugin installation flow failed', error, {
         itemId: item.id,
@@ -1479,6 +1155,7 @@ export default function PluginBrowser({ server }: Props) {
       handleInstallFailure(item, error);
     } finally {
       await refreshInstalled();
+      setPreparingId(null);
       setInstallingId(null);
       setInstallProgressByItemId((previous) => {
         const next = { ...previous };
@@ -1486,6 +1163,36 @@ export default function PluginBrowser({ server }: Props) {
         return next;
       });
     }
+  };
+
+  // Cancel, Escape and a backdrop press keep the installed file. One action is offered: an update when one is
+  // known, otherwise an overwrite. The body says what the action does.
+  const openAlreadyInstalledDialog = (item: ProjectItem, installedFile: string) => {
+    const primary = updateStatusByItemId[item.id] === 'update-available' ? 'update' : 'overwrite';
+    void openDialog({
+      severity: 'info',
+      title: t('plugins.browser.dupTitle'),
+      description: t('plugins.browser.dupDescription', { title: item.title, folder: folderName }),
+      body: (
+        <div className={styles.confirmBody}>
+          <p className={styles.caption}>
+            {t('plugins.browser.dupExistingFile', { file: installedFile })}
+          </p>
+          <p className={styles.caption}>
+            {primary === 'update'
+              ? t('plugins.browser.dupUpdateNote')
+              : t('plugins.browser.dupOverwriteNote')}
+          </p>
+        </div>
+      ),
+      primaryAction: {
+        label:
+          primary === 'update' ? t('plugins.browser.dupUpdate') : t('plugins.browser.dupOverwrite'),
+        onSelect: () => {
+          void performInstall(item, primary, installedFile);
+        },
+      },
+    });
   };
 
   const handleInstall = (item: ProjectItem) => {
@@ -1502,7 +1209,7 @@ export default function PluginBrowser({ server }: Props) {
         void performInstall(item, 'update', installedMatch);
         return;
       }
-      setDupDialog({ item, installedFile: installedMatch });
+      openAlreadyInstalledDialog(item, installedMatch);
       return;
     }
 
@@ -1520,7 +1227,7 @@ export default function PluginBrowser({ server }: Props) {
       void openDialog({
         severity: 'error',
         title: t('plugins.browser.browserOpenError'),
-        description: t('plugins.browser.browserOpenError'),
+        description: t('plugins.browser.browserOpenErrorDescription'),
       });
     }
   };
@@ -1529,11 +1236,10 @@ export default function PluginBrowser({ server }: Props) {
     setInstallingId(item.id);
     try {
       const nextFile = await toggleInstalledPlugin(server.id, installedFile);
-      showToast(
+      notify.success(
         !isDisabledPluginFile(nextFile)
           ? t('plugins.browser.pluginEnabled', { title: item.title })
           : t('plugins.browser.pluginDisabled', { title: item.title }),
-        'success',
       );
     } catch (error) {
       logError('Failed to toggle plugin state', error, {
@@ -1542,7 +1248,7 @@ export default function PluginBrowser({ server }: Props) {
       });
       void openDialog({
         severity: 'error',
-        title: t('plugins.browser.toggleError'),
+        title: t('plugins.browser.toggleErrorTitle'),
         description: t('plugins.browser.toggleError'),
       });
     } finally {
@@ -1554,15 +1260,14 @@ export default function PluginBrowser({ server }: Props) {
   const handleUninstallInstalled = async (entry: InstalledPluginEntry) => {
     setBusyInstalledFile(entry.normalizedFileName);
     try {
-      const confirmed = await ask(
-        t('plugins.browser.confirmUninstall', {
+      const confirmed = await confirm({
+        title: t('plugins.browser.uninstallTitle'),
+        description: t('plugins.browser.confirmUninstall', {
           name: entry.displayName || entry.fileName,
         }),
-        {
-          title: t('plugins.browser.uninstallTitle'),
-          kind: 'warning',
-        },
-      );
+        confirmLabel: t('plugins.browser.uninstall'),
+        tone: 'danger',
+      });
 
       if (!confirmed) {
         setBusyInstalledFile(null);
@@ -1570,14 +1275,14 @@ export default function PluginBrowser({ server }: Props) {
       }
 
       await uninstallInstalledPlugin(server.id, entry.fileName);
-      showToast(t('plugins.browser.uninstallSuccess', { title: entry.displayName }), 'success');
+      notify.success(t('plugins.browser.uninstallSuccess', { title: entry.displayName }));
     } catch (error) {
       logError('Failed to uninstall installed plugin', error, {
         fileName: entry.fileName,
       });
       void openDialog({
         severity: 'error',
-        title: t('plugins.browser.uninstallError'),
+        title: t('plugins.browser.uninstallErrorTitle'),
         description: t('plugins.browser.uninstallError'),
       });
     } finally {
@@ -1588,63 +1293,20 @@ export default function PluginBrowser({ server }: Props) {
 
   const handleReinstallInstalled = (entry: InstalledPluginEntry) => {
     if (!entry.sourceItem) {
-      showToast(t('plugins.browser.reinstallUnavailable'), 'info');
+      notify.info(t('plugins.browser.reinstallUnavailable'));
       return;
     }
     void performInstall(entry.sourceItem, 'overwrite', entry.fileName);
-  };
-
-  const compatibilityLabel = (status: CompatibilityStatus): string => {
-    switch (status) {
-      case 'compatible':
-        return t('plugins.browser.compatCompatible');
-      case 'incompatible':
-        return t('plugins.browser.compatIncompatible');
-      case 'checking':
-        return t('plugins.browser.compatChecking');
-      default:
-        return t('plugins.browser.compatUnknown');
-    }
-  };
-
-  const updateStatusLabel = (status: UpdateStatus): string => {
-    switch (status) {
-      case 'checking':
-        return t('plugins.browser.updateChecking');
-      case 'update-available':
-        return t('plugins.browser.updateAvailable');
-      case 'up-to-date':
-        return t('plugins.browser.upToDate');
-      default:
-        return t('plugins.browser.updateUnknown');
-    }
   };
 
   const installingLabel = (itemId: string): string => {
     const progress = installProgressByItemId[itemId];
     return progress === undefined
       ? t('plugins.browser.installing')
-      : tSafe('plugins.browser.installingProgress', '{{progress}}% — {{label}}', {
+      : t('plugins.browser.installingProgress', {
           progress,
           label: t('plugins.browser.installing'),
         });
-  };
-
-  const actionLabel = (
-    item: ProjectItem,
-    installedState: 'none' | 'enabled' | 'disabled',
-    updateStatus: UpdateStatus | null,
-  ) => {
-    if (installingId === item.id) {
-      return installingLabel(item.id);
-    }
-    const requiresBrowser =
-      item.platform === 'Spigot' &&
-      (item.source_obj.external === true || item.source_obj.premium === true);
-    if (!requiresBrowser && installedState !== 'none' && updateStatus === 'update-available') {
-      return t('plugins.browser.update');
-    }
-    return requiresBrowser ? t('plugins.browser.open') : t('plugins.install.button');
   };
 
   const getCompatibilityPriority = (itemId: string): number => {
@@ -1754,13 +1416,11 @@ export default function PluginBrowser({ server }: Props) {
   const closeDetailModal = () => {
     detailRequestIdRef.current += 1;
     setDetailItem(null);
-    setDetailTab('info');
     setDetailError(null);
   };
 
   const openDetailModal = (item: ProjectItem) => {
     setDetailItem(item);
-    setDetailTab('info');
     setDetailError(null);
 
     const cacheKey = `${item.platform}:${item.id}`;
@@ -1804,27 +1464,10 @@ export default function PluginBrowser({ server }: Props) {
     })();
   };
 
-  useEffect(() => {
-    if (!detailItem) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeDetailModal();
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [detailItem]);
-
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
-      showToast(t('plugins.browser.pageInputError'), 'info');
+      notify.info(t('plugins.browser.pageInputError'));
       return;
     }
 
@@ -1833,763 +1476,123 @@ export default function PluginBrowser({ server }: Props) {
     setPage(clamped);
   };
 
-  const detailCompatibility = detailItem
-    ? (compatibilityByItemId[detailItem.id] ?? 'unknown')
-    : 'unknown';
   const detailProjectUrl = detailItem ? projectPageUrl(detailItem) : '';
-  const platformSwitchInitial = prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 };
-  const platformSwitchAnimate = { opacity: 1, y: 0 };
-  const platformSwitchExit = prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 };
-  const platformSwitchTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.2, ease: 'easeOut' as const };
+  // Card state for one result, built from the same lookups the install and update paths use.
+  const resolveResultCard = (item: ProjectItem): PluginResultCardState => {
+    const installedMatch = findInstalledMatchStrict(item);
+    const installFailure = installFailureByItemId[item.id];
+    return {
+      installedState: installedMatch
+        ? isDisabledPluginFile(installedMatch)
+          ? 'disabled'
+          : 'enabled'
+        : 'none',
+      compatibility: compatibilityByItemId[item.id] ?? 'unknown',
+      updateStatus: installedMatch ? (updateStatusByItemId[item.id] ?? 'unknown') : null,
+      busy:
+        installingId === item.id ? 'installing' : preparingId === item.id ? 'preparing' : 'idle',
+      progress: installProgressByItemId[item.id],
+      failureMessage:
+        installFailure === 'network' || installFailure === 'unknown'
+          ? installFailureCopy(installFailure).description
+          : null,
+    };
+  };
 
   return (
-    <div className="plugin-browser flex h-full flex-col gap-4 p-5" data-testid="plugin-browser">
-      <div
-        className="plugin-browser__section-switch"
-        role="tablist"
-        aria-label={t('plugins.browser.viewSwitch')}
+    <div className={styles.root} data-testid="plugin-browser">
+      <Tabs
+        value={activeSection}
+        onValueChange={(value) => setActiveSection(value as BrowserSection)}
       >
-        <button
-          type="button"
-          className={`plugin-browser__section-tab ${activeSection === 'browse' ? 'is-active' : ''}`}
-          onClick={() => setActiveSection('browse')}
-          role="tab"
-          aria-selected={activeSection === 'browse'}
-        >
-          {t('plugins.browser.tabBrowse')}
-        </button>
-        <button
-          type="button"
-          className={`plugin-browser__section-tab ${activeSection === 'installed' ? 'is-active' : ''}`}
-          onClick={() => setActiveSection('installed')}
-          role="tab"
-          aria-selected={activeSection === 'installed'}
-        >
-          {t('plugins.browser.tabInstalled', { count: installedFiles.length })}
-        </button>
-      </div>
+        <div className={styles.headerRow}>
+          <TabsList aria-label={t('plugins.browser.viewSwitch')}>
+            <TabsTrigger value="browse">{t('plugins.browser.tabBrowse')}</TabsTrigger>
+            <TabsTrigger value="installed">
+              {t('plugins.browser.tabInstalled', { count: installedFiles.length })}
+            </TabsTrigger>
+          </TabsList>
 
-      {activeSection === 'browse' ? (
-        <>
-          <div className="plugin-browser__platform-grid">
-            {platformOptions.map((option) => {
-              const Icon = option.icon;
-              const active = option.key === platform;
-              const showLogo = option.logoUrl.length > 0 && !logoLoadFailed[option.key];
-
-              return (
-                <motion.button
-                  key={option.key}
-                  type="button"
-                  data-testid={`plugin-provider-${option.key.toLowerCase()}`}
-                  whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-                  whileHover={prefersReducedMotion ? undefined : { y: -1 }}
-                  className={`plugin-browser__platform-chip ${active ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setPlatform(option.key);
-                    setPage(0);
-                    setCommittedQuery(query);
-                  }}
-                >
-                  <div className="plugin-browser__platform-logo-wrap">
-                    {showLogo ? (
-                      <img
-                        src={option.logoUrl}
-                        alt={`${option.label} logo`}
-                        className="plugin-browser__platform-logo"
-                        loading="lazy"
-                        onError={() =>
-                          setLogoLoadFailed((prev) => ({
-                            ...prev,
-                            [option.key]: true,
-                          }))
-                        }
-                      />
-                    ) : (
-                      <Icon size={14} className="plugin-browser__platform-fallback-icon" />
-                    )}
-                  </div>
-                  <div className="plugin-browser__platform-copy">
-                    <span className="plugin-browser__platform-label">{option.label}</span>
-                    <span className="plugin-browser__platform-hint">{option.hint}</span>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-
-          {isInAppSearch ? (
-            <>
-              <div className="plugin-browser__search-row">
-                <div className="plugin-browser__search-input-wrap">
-                  <Search size={16} />
-                  <input
-                    type="text"
-                    data-testid="plugin-search-input"
-                    className="plugin-browser__search-input"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={t('plugins.browser.searchOn', {
-                      platform: searchPlatformLabel,
-                    })}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        setCommittedQuery(query);
-                        setPage(0);
-                      }
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="plugin-browser__search-btn"
-                  onClick={() => {
-                    setCommittedQuery(query);
-                    setPage(0);
-                  }}
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                  <span>{loading ? t('plugins.browser.searching') : t('common.search')}</span>
-                </button>
-              </div>
-
-              <div className="plugin-browser__sort-row">
-                <span className="plugin-browser__sort-label">{t('plugins.browser.sortLabel')}</span>
-                <NativeSelect
-                  className="plugin-browser__sort-select"
-                  value={sortMode}
-                  onChange={(event) => setSortMode(event.target.value as SortMode)}
-                >
-                  <option value="relevance">{t('plugins.browser.sortRelevance')}</option>
-                  <option value="downloads">{t('plugins.browser.sortDownloads')}</option>
-                  <option value="name">{t('plugins.browser.sortName')}</option>
-                  <option value="compatibility">{t('plugins.browser.sortCompatibility')}</option>
-                </NativeSelect>
-              </div>
-              {searchQuery.isError && (
-                <InlineError
-                  className="plugin-browser__search-error"
-                  testId="plugin-search-error"
-                  message={t('plugins.browser.searchError')}
-                  onRetry={() => {
-                    void searchQuery.refetch();
-                  }}
-                  retryLabel={t('plugins.browser.retry')}
-                />
-              )}
-            </>
-          ) : (
-            <div className="plugin-browser__unsupported-panel">
-              <p>{t('plugins.browser.unsupportedPlatform')}</p>
-              <button
-                type="button"
-                className="plugin-browser__unsupported-btn"
-                onClick={() => openExternal('https://www.curseforge.com/minecraft/mc-mods')}
-              >
-                <ExternalLink size={16} />
-                <span>
-                  {t('plugins.browser.openInBrowser', {
-                    platform: selectedPlatform?.label || platform,
-                  })}
-                </span>
-              </button>
-              <p className="plugin-browser__unsupported-note">
-                {t('plugins.browser.downloadInstructions', { folder: folderName })}
-              </p>
-            </div>
-          )}
-
-          {isInAppSearch && updateAvailableCount > 0 && (
-            <div className="plugin-browser__update-summary">
-              <Info size={12} className="shrink-0 opacity-70" />
-              <span>{t('plugins.browser.updateSummary', { count: updateAvailableCount })}</span>
-              <span className="plugin-browser__update-summary-note">
-                {t('plugins.browser.updateSummaryNote')}
-              </span>
-            </div>
-          )}
-
-          {isInAppSearch && (
-            <>
-              <div className="plugin-browser__results-grid">
-                <AnimatePresence initial={false} mode="wait">
-                  {sortedResults.map((item) => {
-                    const installedMatch = findInstalledMatchStrict(item);
-                    const installedState = installedMatch
-                      ? isDisabledPluginFile(installedMatch)
-                        ? 'disabled'
-                        : 'enabled'
-                      : 'none';
-                    const compatibility = compatibilityByItemId[item.id] ?? 'unknown';
-                    const updateStatus = installedMatch
-                      ? (updateStatusByItemId[item.id] ?? 'unknown')
-                      : null;
-                    const hasUpdateAction =
-                      installedState !== 'none' && updateStatus === 'update-available';
-                    const showInstallAction = installedState === 'none' || hasUpdateAction;
-                    const requiresBrowser =
-                      item.platform === 'Spigot' &&
-                      (item.source_obj.external === true || item.source_obj.premium === true);
-                    const installFailure = installFailureByItemId[item.id];
-                    const installActionButton = showInstallAction ? (
-                      <button
-                        type="button"
-                        data-testid={`plugin-install-${item.id}`}
-                        onClick={() => void handleInstall(item)}
-                        disabled={installingId === item.id}
-                        className={`plugin-browser__install-btn ${
-                          requiresBrowser ? 'plugin-browser__install-btn--external' : ''
-                        }`}
-                      >
-                        {installingId === item.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : requiresBrowser ? (
-                          <ExternalLink size={14} />
-                        ) : (
-                          <Download size={14} />
-                        )}
-                        <span>{actionLabel(item, installedState, updateStatus)}</span>
-                      </button>
-                    ) : null;
-                    const detailsButton = (
-                      <button
-                        type="button"
-                        className="plugin-browser__details-btn"
-                        data-testid={`plugin-details-${item.id}`}
-                        onClick={() => openDetailModal(item)}
-                      >
-                        {t('plugins.browser.details')}
-                      </button>
-                    );
-
-                    return (
-                      <motion.div
-                        key={`${item.platform}-${item.id}`}
-                        data-testid={`plugin-result-${item.id}`}
-                        initial={platformSwitchInitial}
-                        animate={platformSwitchAnimate}
-                        exit={platformSwitchExit}
-                        transition={platformSwitchTransition}
-                        className={`plugin-browser__result-card ${
-                          hasUpdateAction ? 'is-update-available' : ''
-                        }`}
-                      >
-                        <div
-                          className="plugin-browser__result-icon"
-                          style={{
-                            backgroundImage: item.icon_url ? `url(${item.icon_url})` : 'none',
-                          }}
-                        />
-
-                        <div className="plugin-browser__result-body">
-                          <div
-                            className={`plugin-browser__result-top ${
-                              hasUpdateAction ? 'is-update-available' : ''
-                            }`}
-                          >
-                            <div className="plugin-browser__result-title-wrap">
-                              <div className="plugin-browser__result-title">{item.title}</div>
-                              <div className="plugin-browser__result-source">{item.platform}</div>
-                              <div className="plugin-browser__result-flags">
-                                {installedMatch ? (
-                                  <span
-                                    className={`plugin-browser__installed-badge ${
-                                      installedState === 'disabled' ? 'is-disabled' : ''
-                                    }`}
-                                  >
-                                    {installedState === 'disabled'
-                                      ? t('plugins.browser.disabledBadge')
-                                      : t('plugins.browser.installedBadge')}
-                                  </span>
-                                ) : null}
-                                <span
-                                  className={`plugin-browser__compat-badge is-${compatibility}`}
-                                >
-                                  {compatibilityLabel(compatibility)}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div
-                              className={`plugin-browser__result-actions ${
-                                hasUpdateAction ? 'is-update-available' : ''
-                              }`}
-                            >
-                              {installActionButton}
-                              {detailsButton}
-                            </div>
-                          </div>
-
-                          <div className="plugin-browser__result-description">
-                            {item.description || t('plugins.browser.noDescription')}
-                          </div>
-
-                          <div className="plugin-browser__result-meta">
-                            <span className="plugin-browser__meta-item">
-                              <Server size={13} />
-                              <span>{item.author}</span>
-                            </span>
-                            <span className="plugin-browser__meta-item">
-                              <Download size={13} />
-                              <span>{item.downloads ? item.downloads.toLocaleString() : '-'}</span>
-                            </span>
-                            {item.stars ? (
-                              <span className="plugin-browser__meta-item">
-                                <Star size={13} />
-                                <span>{item.stars}</span>
-                              </span>
-                            ) : null}
-                          </div>
-
-                          {requiresBrowser && (
-                            <div className="plugin-browser__result-tag">
-                              {t('plugins.browser.externalDownload')}
-                            </div>
-                          )}
-                          {installFailure &&
-                          (installFailure === 'network' || installFailure === 'unknown') ? (
-                            <InlineError
-                              className="mt-3"
-                              testId={`plugin-install-error-${item.id}`}
-                              message={installFailureCopy(installFailure).description}
-                              onRetry={() => handleInstall(item)}
-                              retryLabel={t('plugins.browser.retry')}
-                            />
-                          ) : null}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-
-                  {sortedResults.length === 0 && !loading && (
-                    <motion.div
-                      key="empty"
-                      initial={platformSwitchInitial}
-                      animate={platformSwitchAnimate}
-                      exit={platformSwitchExit}
-                      transition={platformSwitchTransition}
-                      className="plugin-browser__result-empty"
-                    >
-                      {t('plugins.browser.noResults')}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="plugin-browser__pager">
-                <button
-                  type="button"
-                  className="plugin-browser__pager-btn"
-                  data-testid="plugin-prev-page"
-                  onClick={() => setPage((value) => Math.max(0, value - 1))}
-                  disabled={page === 0 || loading}
-                >
-                  <ArrowLeft size={14} />
-                  <span>{t('plugins.browser.prev')}</span>
-                </button>
-
-                <span className="plugin-browser__pager-label">
-                  {totalPages
-                    ? t('plugins.browser.pageLabelWithTotal', {
-                        current: page + 1,
-                        total: totalPages,
-                      })
-                    : t('plugins.browser.pageLabel', { current: page + 1 })}
-                </span>
-
-                <div className="plugin-browser__pager-jump">
-                  <input
-                    type="number"
-                    min={1}
-                    max={totalPages ?? undefined}
-                    value={pageInput}
-                    onChange={(event) => setPageInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        jumpToPage();
-                      }
-                    }}
-                    className="plugin-browser__pager-input"
-                    data-testid="plugin-page-input"
-                    aria-label={t('plugins.browser.pageNumberAriaLabel')}
-                  />
-                  <button
-                    type="button"
-                    className="plugin-browser__pager-go"
-                    data-testid="plugin-page-go"
-                    onClick={jumpToPage}
-                    disabled={loading}
-                  >
-                    {t('plugins.browser.go')}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  className="plugin-browser__pager-btn"
-                  data-testid="plugin-next-page"
-                  onClick={() => setPage((value) => value + 1)}
-                  disabled={!hasNextPage || loading}
-                >
-                  <span>{t('plugins.browser.next')}</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </>
-          )}
-        </>
-      ) : (
-        <div className="plugin-browser__installed-panel">
-          <div className="plugin-browser__installed-header">
-            <h2 className="plugin-browser__installed-title">{t('plugins.installed.title')}</h2>
-            <span className="plugin-browser__installed-count">
-              {t('plugins.browser.tabInstalled', { count: installedEntries.length })}
-            </span>
-          </div>
-
-          {installedEntries.length === 0 ? (
-            <div className="plugin-browser__result-empty">{t('plugins.installed.empty')}</div>
-          ) : (
-            <div className="plugin-browser__installed-grid">
-              {installedEntries.map((entry) => {
-                const isProcessing =
-                  busyInstalledFile === entry.normalizedFileName ||
-                  installingId === entry.actionItem.id;
-                const canReinstall = Boolean(entry.sourceItem);
-                const installedUpdateStatus = entry.sourceItem
-                  ? (updateStatusByItemId[entry.sourceItem.id] ?? null)
-                  : null;
-                const installedStatusBadge =
-                  installedUpdateStatus === 'update-available' ||
-                  installedUpdateStatus === 'up-to-date'
-                    ? installedUpdateStatus
-                    : null;
-                const installedLatestFileName = entry.sourceItem
-                  ? (latestFileByItemId[entry.sourceItem.id] ?? null)
-                  : null;
-
-                return (
-                  <div key={entry.fileName} className="plugin-browser__installed-card">
-                    <div className="plugin-browser__result-body plugin-browser__installed-body">
-                      <div className="plugin-browser__installed-head">
-                        <div
-                          className="plugin-browser__result-icon plugin-browser__installed-icon"
-                          style={{
-                            backgroundImage: entry.iconUrl ? `url(${entry.iconUrl})` : 'none',
-                          }}
-                        >
-                          {!entry.iconUrl ? (
-                            <Package
-                              size={20}
-                              className="plugin-browser__installed-fallback-icon"
-                            />
-                          ) : null}
-                        </div>
-                        <div className="plugin-browser__result-title-wrap">
-                          <div className="plugin-browser__result-title">{entry.displayName}</div>
-                          <div className="plugin-browser__result-source">
-                            {entry.sourceItem?.platform ?? t('plugins.browser.localSource')}
-                          </div>
-                          <div className="plugin-browser__result-flags plugin-browser__installed-flags">
-                            <span
-                              className={`plugin-browser__installed-badge ${
-                                entry.state === 'disabled' ? 'is-disabled' : ''
-                              }`}
-                            >
-                              {entry.state === 'disabled'
-                                ? t('plugins.browser.disabledBadge')
-                                : t('plugins.browser.installedBadge')}
-                            </span>
-                            {installedStatusBadge ? (
-                              <span
-                                className={`plugin-browser__update-badge is-${installedStatusBadge}`}
-                                title={
-                                  installedStatusBadge === 'update-available' &&
-                                  installedLatestFileName
-                                    ? t('plugins.browser.latestTooltip', {
-                                        fileName: installedLatestFileName,
-                                      })
-                                    : undefined
-                                }
-                              >
-                                {updateStatusLabel(installedStatusBadge)}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="plugin-browser__result-description">{entry.description}</div>
-
-                      <div className="plugin-browser__installed-meta">
-                        <div className="plugin-browser__installed-meta-row">
-                          <span className="plugin-browser__installed-meta-key">
-                            {t('plugins.browser.installedFile')}
-                          </span>
-                          <span className="plugin-browser__installed-meta-value">
-                            {entry.fileName}
-                          </span>
-                        </div>
-                        <div className="plugin-browser__installed-meta-row">
-                          <span className="plugin-browser__installed-meta-key">
-                            {t('plugins.browser.installedVersion')}
-                          </span>
-                          <span className="plugin-browser__installed-meta-value">
-                            {entry.fileVersion || t('plugins.browser.na')}
-                          </span>
-                        </div>
-                        <div className="plugin-browser__installed-meta-row">
-                          <span className="plugin-browser__installed-meta-key">
-                            {t('plugins.browser.installedGameVersions')}
-                          </span>
-                          <span className="plugin-browser__installed-meta-value">
-                            {entry.minecraftVersions.length > 0
-                              ? entry.minecraftVersions.join(', ')
-                              : t('plugins.browser.na')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="plugin-browser__installed-actions">
-                        <button
-                          type="button"
-                          className="plugin-browser__installed-action plugin-browser__installed-action--danger"
-                          onClick={() => void handleUninstallInstalled(entry)}
-                          disabled={isProcessing}
-                        >
-                          {t('plugins.browser.uninstall')}
-                        </button>
-                        <button
-                          type="button"
-                          className="plugin-browser__installed-action plugin-browser__installed-action--primary"
-                          onClick={() => handleReinstallInstalled(entry)}
-                          disabled={isProcessing || !canReinstall}
-                        >
-                          {installingId === entry.actionItem.id
-                            ? installingLabel(entry.actionItem.id)
-                            : t('plugins.browser.reinstall')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`plugin-browser__installed-action plugin-browser__installed-action--toggle ${
-                            entry.state === 'disabled' ? 'is-enable' : 'is-disable'
-                          }`}
-                          onClick={() =>
-                            void handleToggleInstalled(entry.actionItem, entry.fileName)
-                          }
-                          disabled={isProcessing}
-                        >
-                          {entry.state === 'disabled'
-                            ? t('plugins.browser.enable')
-                            : t('plugins.browser.disable')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {activeSection === 'browse' ? (
+            <PluginPlatformSwitch
+              value={platform}
+              options={platformOptions}
+              label={t('plugins.browser.platformLabel')}
+              logoFailed={logoLoadFailed}
+              onChange={(next) => {
+                setPlatform(next);
+                setPage(0);
+                setCommittedQuery(query);
+              }}
+              onLogoFailed={(key) => setLogoLoadFailed((prev) => ({ ...prev, [key]: true }))}
+            />
+          ) : null}
         </div>
-      )}
 
-      {detailItem && (
-        <div
-          className="plugin-browser__detail-modal-overlay modal-backdrop"
-          onClick={closeDetailModal}
-        >
-          <div
-            className="plugin-browser__detail-modal modal-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="plugin-browser__detail-header">
-              <div className="plugin-browser__detail-title-wrap">
-                <h3 className="plugin-browser__detail-title">{detailItem.title}</h3>
-                <div className="plugin-browser__detail-subtitle">
-                  <span>{detailItem.platform}</span>
-                  <span>
-                    {t('plugins.browser.byAuthor')} {detailItem.author}
-                  </span>
-                  <span className={`plugin-browser__compat-badge is-${detailCompatibility}`}>
-                    {compatibilityLabel(detailCompatibility)}
-                  </span>
-                </div>
-              </div>
+        <TabsContent value="browse" className={styles.panel}>
+          <PluginSearchPanel
+            selectedPlatformLabel={selectedPlatform?.label || platform}
+            isInAppSearch={isInAppSearch}
+            searchPlatformLabel={searchPlatformLabel}
+            query={query}
+            onQueryChange={setQuery}
+            onSubmitSearch={() => {
+              setCommittedQuery(query);
+              setPage(0);
+            }}
+            loading={loading}
+            searchFailed={searchQuery.isError}
+            onRetrySearch={() => {
+              void searchQuery.refetch();
+            }}
+            sortMode={sortMode}
+            onSortModeChange={setSortMode}
+            onOpenCurseForge={() => {
+              void openExternal('https://www.curseforge.com/minecraft/mc-mods');
+            }}
+            updateAvailableCount={updateAvailableCount}
+            results={sortedResults}
+            resolveCard={resolveResultCard}
+            onInstall={handleInstall}
+            onDetails={openDetailModal}
+            onRetryInstall={handleInstall}
+            page={page}
+            totalPages={totalPages}
+            hasNextPage={hasNextPage}
+            pageInput={pageInput}
+            onPageInputChange={setPageInput}
+            onJumpToPage={jumpToPage}
+            onPageChange={setPage}
+          />
+        </TabsContent>
 
-              <button
-                type="button"
-                className="plugin-browser__detail-close"
-                onClick={closeDetailModal}
-                aria-label={t('plugins.browser.closeDetailsAriaLabel')}
-              >
-                <X size={16} />
-              </button>
-            </div>
+        <TabsContent value="installed" className={styles.panel}>
+          <PluginInstalledPanel
+            folderName={folderName}
+            entries={installedEntries}
+            updateStatusByItemId={updateStatusByItemId}
+            latestFileByItemId={latestFileByItemId}
+            installingId={installingId}
+            busyInstalledFile={busyInstalledFile}
+            installingLabel={installingLabel}
+            onUninstall={(entry) => void handleUninstallInstalled(entry)}
+            onReinstall={handleReinstallInstalled}
+            onToggle={(entry) => void handleToggleInstalled(entry.actionItem, entry.fileName)}
+          />
+        </TabsContent>
+      </Tabs>
 
-            <div className="plugin-browser__detail-tabs">
-              <button
-                type="button"
-                className={`plugin-browser__detail-tab ${detailTab === 'info' ? 'is-active' : ''}`}
-                onClick={() => setDetailTab('info')}
-              >
-                {t('plugins.browser.detailInfo')}
-              </button>
-              <button
-                type="button"
-                className={`plugin-browser__detail-tab ${detailTab === 'readme' ? 'is-active' : ''}`}
-                onClick={() => setDetailTab('readme')}
-              >
-                {t('plugins.browser.detailReadme')}
-              </button>
-            </div>
-
-            {detailTab === 'info' ? (
-              <div className="plugin-browser__detail-info-panel">
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailProject')}
-                  </span>
-                  <span className="plugin-browser__detail-value">{detailItem.id}</span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailSlug')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {detailItem.slug || t('plugins.browser.na')}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailSupportedMC')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {supportedVersionsLabel(detailItem.id)}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailLoader')}
-                  </span>
-                  <span className="plugin-browser__detail-value">{loaderLabel(detailItem)}</span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailDownloads')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {detailItem.downloads ? detailItem.downloads.toLocaleString() : '-'}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-row">
-                  <span className="plugin-browser__detail-key">
-                    {t('plugins.browser.detailSummary')}
-                  </span>
-                  <span className="plugin-browser__detail-value">
-                    {detailItem.description || t('plugins.browser.noDescription')}
-                  </span>
-                </div>
-                <div className="plugin-browser__detail-actions">
-                  <button
-                    type="button"
-                    className="plugin-browser__detail-link-btn"
-                    onClick={() => void openExternal(detailProjectUrl)}
-                  >
-                    <ExternalLink size={14} />
-                    <span>{t('plugins.browser.detailProjectPage')}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="plugin-browser__detail-readme-panel">
-                {detailLoading ? (
-                  <div className="plugin-browser__detail-readme-empty">
-                    <Loader2 size={15} className="animate-spin" />
-                    <span>{t('plugins.browser.readmeLoading')}</span>
-                  </div>
-                ) : detailError ? (
-                  <div className="plugin-browser__detail-readme-empty is-error">{detailError}</div>
-                ) : detailReadme ? (
-                  <div className="plugin-browser__detail-readme-markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                      {detailReadme}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <div className="plugin-browser__detail-readme-empty">
-                    {t('plugins.browser.noReadme')}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {dupDialog && (
-        <div className="plugin-browser__dup-overlay modal-backdrop">
-          <div className="plugin-browser__dup-panel modal-panel">
-            <h3 className="plugin-browser__dup-title">{t('plugins.browser.dupTitle')}</h3>
-            <p className="plugin-browser__dup-description">
-              {t('plugins.browser.dupDescription', {
-                title: dupDialog.item.title,
-                folder: folderName,
-              })}
-            </p>
-
-            <div className="plugin-browser__dup-file">
-              {t('plugins.browser.dupExistingFile', { file: dupDialog.installedFile })}
-            </div>
-
-            <div className="plugin-browser__dup-notes">
-              <div>{t('plugins.browser.dupOverwriteNote')}</div>
-              <div>{t('plugins.browser.dupUpdateNote')}</div>
-            </div>
-
-            <div className="plugin-browser__dup-actions">
-              <button
-                type="button"
-                className="plugin-browser__dup-btn plugin-browser__dup-btn--cancel"
-                onClick={() => setDupDialog(null)}
-              >
-                {t('plugins.browser.dupCancel')}
-              </button>
-
-              <button
-                type="button"
-                className="plugin-browser__dup-btn plugin-browser__dup-btn--overwrite"
-                onClick={() => {
-                  const target = dupDialog;
-                  setDupDialog(null);
-                  if (target) {
-                    void performInstall(target.item, 'overwrite', target.installedFile);
-                  }
-                }}
-              >
-                {t('plugins.browser.dupOverwrite')}
-              </button>
-
-              <button
-                type="button"
-                className="plugin-browser__dup-btn plugin-browser__dup-btn--update"
-                onClick={() => {
-                  const target = dupDialog;
-                  setDupDialog(null);
-                  if (target) {
-                    void performInstall(target.item, 'update', target.installedFile);
-                  }
-                }}
-              >
-                {t('plugins.browser.dupUpdate')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PluginDetailDialog
+        key={detailItem ? `${detailItem.platform}:${detailItem.id}` : 'closed'}
+        item={detailItem}
+        compatibility={detailItem ? (compatibilityByItemId[detailItem.id] ?? 'unknown') : 'unknown'}
+        supportedVersionsLabel={detailItem ? supportedVersionsLabel(detailItem.id) : ''}
+        loaderLabel={detailItem ? loaderLabel(detailItem) : ''}
+        readme={{ loading: detailLoading, error: detailError, content: detailReadme }}
+        onOpenProject={() => void openExternal(detailProjectUrl)}
+        onOpenLink={(url) => void openExternal(url)}
+        onClose={closeDetailModal}
+      />
     </div>
   );
 }

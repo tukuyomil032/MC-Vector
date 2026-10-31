@@ -1,6 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Skeleton } from '@/components/arc/skeleton/skeleton';
+import { Ban, Crown, Globe, ShieldCheck, User, UserX, type LucideIcon } from 'lucide-react';
+import {
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from '../../i18n';
+import { Input } from './ui/Field';
+import { EmptyLine } from './ui/EmptyLine';
+import { SectionTitle } from './ui/IconTile';
 import {
   getPlayerLists,
   mutatePlayerList,
@@ -8,30 +22,35 @@ import {
   type PlayerListType,
 } from '../../lib/player-commands';
 import { sendCommand } from '../../lib/server-commands';
-import type { MinecraftServer } from '../components/../shared/server declaration';
-import { Button } from './ui/Button';
-import { Input } from './ui/Field';
+import { notify } from '../shared/notify';
+import type { MinecraftServer } from '../shared/server declaration';
+import { useAppFeedback } from './AppFeedbackProvider';
+import styles from './UsersView.module.css';
 
 interface Props {
   server: MinecraftServer;
 }
 
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const LIST_ICONS: Record<PlayerListType, LucideIcon> = {
+  whitelist: ShieldCheck,
+  ops: Crown,
+  'banned-players': UserX,
+  'banned-ips': Ban,
+};
+
 export default function UsersView({ server }: Props) {
   const { t } = useTranslation();
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else {
-      toast(msg);
-    }
-  };
-
+  const { confirm } = useAppFeedback();
   const [whitelist, setWhitelist] = useState<PlayerEntry[]>([]);
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
   const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadRequestId = useRef(0);
   const currentServerId = useRef(server.id);
 
@@ -40,26 +59,44 @@ export default function UsersView({ server }: Props) {
     setOps(lists.ops);
     setBannedPlayers(lists.bannedPlayers);
     setBannedIps(lists.bannedIps);
+    setLoaded(true);
+    setLoadError(null);
   }, []);
 
   const loadAllLists = useCallback(async () => {
     const requestedServerId = server.id;
     const requestId = ++loadRequestId.current;
-    const lists = await getPlayerLists(requestedServerId);
-    if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
-      applyLists(lists);
+    try {
+      const lists = await getPlayerLists(requestedServerId);
+      if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
+        applyLists(lists);
+      }
+    } catch (error) {
+      if (requestId === loadRequestId.current && currentServerId.current === requestedServerId) {
+        setLoadError(errorText(error));
+      }
     }
   }, [applyLists, server.id]);
 
+  // The reload scheduled after a live command; cleared when the view unmounts or the server changes.
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     currentServerId.current = server.id;
-    void loadAllLists().catch((error: unknown) => {
-      toast.error(error instanceof Error ? error.message : String(error));
-    });
+    void loadAllLists();
     return () => {
       loadRequestId.current += 1;
+      if (reloadTimer.current) {
+        clearTimeout(reloadTimer.current);
+        reloadTimer.current = null;
+      }
     };
   }, [loadAllLists, server.id]);
+
+  const retryLoad = () => {
+    setLoadError(null);
+    void loadAllLists();
+  };
 
   const maybeApplyLiveCommand = async (
     type: PlayerListType,
@@ -82,10 +119,12 @@ export default function UsersView({ server }: Props) {
       return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${canonicalTarget}`;
     })();
     await sendCommand(server.id, command);
-    setTimeout(() => {
-      void loadAllLists().catch((error: unknown) => {
-        toast.error(error instanceof Error ? error.message : String(error));
-      });
+    if (reloadTimer.current) {
+      clearTimeout(reloadTimer.current);
+    }
+    reloadTimer.current = setTimeout(() => {
+      reloadTimer.current = null;
+      void loadAllLists();
     }, 500);
   };
 
@@ -99,25 +138,32 @@ export default function UsersView({ server }: Props) {
         applyLists(result.lists);
       }
       if (!result.changed) {
-        showToast(t('users.toast.alreadyExists'), 'info');
+        notify.info(t('users.toast.alreadyExists'));
         return true;
       }
       try {
         await maybeApplyLiveCommand(type, 'add', result.canonicalTarget);
-        showToast(t('users.toast.listUpdated'), 'success');
+        notify.success(t('users.toast.listUpdated'));
       } catch (error) {
-        toast.error(
-          `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        notify.warning(t('users.toast.liveCommandFailed'), errorText(error));
       }
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      notify.error(t('users.toast.addFailed'), errorText(error));
       return false;
     }
   };
 
   const handleRemove = async (type: PlayerListType, identifier: string): Promise<void> => {
+    const confirmed = await confirm({
+      title: t('users.removeTitle'),
+      description: t('users.confirmRemove', { name: identifier }),
+      confirmLabel: t('users.actions.remove'),
+      tone: 'danger',
+    });
+    if (!confirmed) {
+      return;
+    }
     try {
       const result = await mutatePlayerList(server.id, type, 'remove', identifier);
       if (currentServerId.current === server.id) {
@@ -125,187 +171,258 @@ export default function UsersView({ server }: Props) {
       }
       try {
         await maybeApplyLiveCommand(type, 'remove', result.canonicalTarget);
-        showToast(t('users.toast.removed'), 'success');
+        notify.success(t('users.toast.removed'));
       } catch (error) {
-        toast.error(
-          `List was saved, but the running server command failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        notify.warning(t('users.toast.liveCommandFailed'), errorText(error));
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      notify.error(t('users.toast.removeFailed'), errorText(error));
     }
   };
 
+  // Until the first load succeeds, a failed load shows its error instead of four empty lists.
+  const showCards = loaded || loadError === null;
+
   return (
-    <div
-      className="users-view flex h-full flex-col gap-4 p-5 max-[980px]:p-4"
-      data-testid="users-view"
-    >
-      <div className="users-view__grid">
-        <UserListCard
-          title={t('users.lists.whitelist')}
-          data={whitelist}
-          type="whitelist"
-          onAdd={(val) => handleAdd('whitelist', val)}
-          onRemove={(val) => handleRemove('whitelist', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
-        />
-        <UserListCard
-          title={t('users.lists.operators')}
-          data={ops}
-          type="ops"
-          onAdd={(val) => handleAdd('ops', val)}
-          onRemove={(val) => handleRemove('ops', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
-        />
-        <UserListCard
-          title={t('users.lists.bannedPlayers')}
-          data={bannedPlayers}
-          type="banned-players"
-          onAdd={(val) => handleAdd('banned-players', val)}
-          onRemove={(val) => handleRemove('banned-players', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
-        />
-        <UserListCard
-          title={t('users.lists.bannedIps')}
-          data={bannedIps}
-          type="banned-ips"
-          onAdd={(val) => handleAdd('banned-ips', val)}
-          onRemove={(val) => handleRemove('banned-ips', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
-        />
-      </div>
+    <div className={styles.root} data-testid="users-view">
+      {loadError !== null && (
+        <Alert tone="danger" title={t('users.loadFailed')}>
+          <span className={styles.alertDetail}>{loadError}</span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className={styles.retry}
+            onClick={retryLoad}
+          >
+            {t('users.retry')}
+          </Button>
+        </Alert>
+      )}
+      {showCards && (
+        <div className={styles.grid}>
+          <UserListCard
+            type="whitelist"
+            title={t('users.lists.whitelist')}
+            entries={whitelist}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.whitelist.title')}
+            onAdd={(val) => handleAdd('whitelist', val)}
+            onRemove={(val) => handleRemove('whitelist', val)}
+          />
+          <UserListCard
+            type="ops"
+            title={t('users.lists.operators')}
+            entries={ops}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.ops.title')}
+            onAdd={(val) => handleAdd('ops', val)}
+            onRemove={(val) => handleRemove('ops', val)}
+          />
+          <UserListCard
+            type="banned-players"
+            title={t('users.lists.bannedPlayers')}
+            entries={bannedPlayers}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.bannedPlayers.title')}
+            onAdd={(val) => handleAdd('banned-players', val)}
+            onRemove={(val) => handleRemove('banned-players', val)}
+          />
+          <UserListCard
+            type="banned-ips"
+            title={t('users.lists.bannedIps')}
+            entries={bannedIps}
+            loaded={loaded}
+            emptyTitle={t('users.emptyList.bannedIps.title')}
+            onAdd={(val) => handleAdd('banned-ips', val)}
+            onRemove={(val) => handleRemove('banned-ips', val)}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
+interface UserListCardProps {
+  type: PlayerListType;
+  title: string;
+  entries: PlayerEntry[];
+  loaded: boolean;
+  emptyTitle: string;
+  onAdd: (value: string) => Promise<boolean>;
+  onRemove: (identifier: string) => Promise<void>;
+}
+
 function UserListCard({
-  title,
-  data,
   type,
+  title,
+  entries,
+  loaded,
+  emptyTitle,
   onAdd,
   onRemove,
-  entriesLabel,
-  emptyLabel,
-  removeLabel,
-  addLabel,
-  placeholderPlayer,
-  placeholderIp,
-}: {
-  title: string;
-  data: PlayerEntry[];
-  type: PlayerListType;
-  onAdd: (val: string) => Promise<boolean>;
-  onRemove: (val: string) => Promise<void>;
-  entriesLabel: string;
-  emptyLabel: string;
-  removeLabel: string;
-  addLabel: string;
-  placeholderPlayer: string;
-  placeholderIp: string;
-}) {
-  const [input, setInput] = useState('');
+}: UserListCardProps) {
   const { t } = useTranslation();
+  const [value, setValue] = useState('');
+  const [pending, setPending] = useState(false);
+  const [inputError, setInputError] = useState<string | undefined>();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const headingId = useId();
+  const isIpList = type === 'banned-ips';
+  const inputLabel = isIpList
+    ? t('users.placeholder.ipAddress')
+    : t('users.placeholder.playerName');
 
-  const handleAddClick = async () => {
-    if (!input) {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending) {
       return;
     }
-    if (await onAdd(input)) {
-      setInput('');
+    if (!value.trim()) {
+      setInputError(
+        t(isIpList ? 'users.validation.ipRequired' : 'users.validation.playerRequired'),
+      );
+      inputRef.current?.focus();
+      return;
+    }
+    setInputError(undefined);
+    setPending(true);
+    try {
+      if (await onAdd(value)) {
+        setValue('');
+      }
+    } finally {
+      setPending(false);
     }
   };
 
+  let body: ReactNode;
+  if (!loaded) {
+    body = <Skeleton label={t('common.loading')} lines={3} />;
+  } else if (entries.length === 0) {
+    body = <EmptyLine title={emptyTitle} />;
+  } else {
+    body = (
+      <ul className={styles.list}>
+        {entries.map((entry) => (
+          <UserRow
+            key={`${type}:${entry.uuid ?? entry.ip ?? entry.name}`}
+            type={type}
+            entry={entry}
+            onRemove={onRemove}
+          />
+        ))}
+      </ul>
+    );
+  }
+
   return (
-    <div className="users-view__card" data-testid={`users-list-${type}`}>
-      <div className="users-view__card-header">
-        {title}
-        <span className="users-view__count">
-          {data.length} {entriesLabel}
-        </span>
-      </div>
-
-      <div className="users-view__list">
-        {data.length === 0 ? (
-          <div className="users-view__empty">{emptyLabel}</div>
-        ) : (
-          data.map((item) => (
-            <div key={`${type}:${item.uuid ?? item.ip ?? item.name}`} className="users-view__item">
-              <div className="users-view__item-main">
-                {type !== 'banned-ips' && (
-                  <img
-                    src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
-                    alt=""
-                    className="users-view__avatar"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://minotar.net/avatar/MHF_Steve/24';
-                    }}
-                  />
-                )}
-                <div className="users-view__item-meta">
-                  <div className="users-view__item-name">
-                    {type === 'banned-ips' ? item.ip : item.name}
-                  </div>
-                  {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
-                  {item.level && (
-                    <div className="text-xs text-yellow-500">
-                      {t('users.level', { level: item.level })}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="stop"
-                className="users-view__remove-btn"
-                onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
-              >
-                {removeLabel}
-              </Button>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="users-view__form">
+    <section className={styles.card} aria-labelledby={headingId} data-testid={`users-list-${type}`}>
+      <SectionTitle
+        as="h3"
+        id={headingId}
+        icon={LIST_ICONS[type]}
+        title={title}
+        trailing={loaded ? <span className={styles.count}>{entries.length}</span> : undefined}
+      />
+      <div className={styles.body}>{body}</div>
+      <form className={styles.addForm} onSubmit={handleSubmit} noValidate>
+        {/* The field has no visible label: the placeholder shows the hint and aria-label names it. */}
         <Input
-          type="text"
-          className="users-view__input"
+          ref={inputRef}
+          aria-label={inputLabel}
+          placeholder={inputLabel}
           data-testid={`users-input-${type}`}
-          placeholder={type === 'banned-ips' ? placeholderIp : placeholderPlayer}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
+          value={value}
+          error={inputError}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setInputError(undefined);
+          }}
         />
         <Button
-          variant="primary"
-          className="users-view__add-btn"
+          type="submit"
+          variant="secondary"
           data-testid={`users-add-${type}`}
-          onClick={handleAddClick}
+          loading={pending}
         >
-          {addLabel}
+          {t('users.actions.add')}
         </Button>
+      </form>
+    </section>
+  );
+}
+
+interface UserRowProps {
+  type: PlayerListType;
+  entry: PlayerEntry;
+  onRemove: (identifier: string) => Promise<void>;
+}
+
+function UserRow({ type, entry, onRemove }: UserRowProps) {
+  const { t } = useTranslation();
+  const isIpList = type === 'banned-ips';
+  const identifier = isIpList ? (entry.ip ?? '') : entry.name;
+  const details = [
+    entry.reason,
+    typeof entry.level === 'number' ? t('users.level', { level: entry.level }) : undefined,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <li className={styles.row}>
+      <UserAvatar name={entry.name} isIpList={isIpList} />
+      <div className={styles.rowText}>
+        <span className={styles.rowName}>{isIpList ? entry.ip : entry.name}</span>
+        {details && <span className={styles.rowMeta}>{details}</span>}
       </div>
-    </div>
+      <Button type="button" variant="ghost" size="sm" onClick={() => void onRemove(identifier)}>
+        {t('users.actions.remove')}
+      </Button>
+    </li>
+  );
+}
+
+const STEVE_AVATAR_URL = 'https://minotar.net/avatar/MHF_Steve/32';
+
+/**
+ * The player's face. When that image fails, Steve's face takes its place, and the User icon is the last resort if Steve fails too.
+ */
+function UserAvatar({ name, isIpList }: { name: string; isIpList: boolean }) {
+  const [stage, setStage] = useState<'player' | 'steve' | 'icon'>('player');
+
+  if (isIpList) {
+    return (
+      <span className={styles.avatar} aria-hidden="true">
+        <Globe size={16} strokeWidth={1.75} />
+      </span>
+    );
+  }
+  if (stage === 'icon' || !name) {
+    return (
+      <span className={styles.avatar} aria-hidden="true">
+        <User size={16} strokeWidth={1.75} />
+      </span>
+    );
+  }
+  return (
+    <span className={styles.avatar} aria-hidden="true">
+      <img
+        className={styles.avatarImage}
+        src={
+          stage === 'player'
+            ? `https://minotar.net/avatar/${encodeURIComponent(name)}/32`
+            : STEVE_AVATAR_URL
+        }
+        alt=""
+        width={32}
+        height={32}
+        loading="lazy"
+        onError={() => setStage((current) => (current === 'player' ? 'steve' : 'icon'))}
+      />
+    </span>
   );
 }

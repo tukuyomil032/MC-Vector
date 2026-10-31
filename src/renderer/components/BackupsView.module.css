@@ -1,0 +1,193 @@
+/* Fills the scroll frame. The backup list is the scroll area inside it, so its height is bounded by this box. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  min-width: 0;
+  padding: var(--space-5);
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.alertText {
+  margin: 0 0 var(--space-3);
+}
+
+.status {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tagAdd {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.tagAdd > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.tagChips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The virtualized list takes the height the header and alerts leave, and scrolls inside itself. */
+.list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* The virtualizer sizes this box to every row. It must not shrink inside the list, or the rows would overlap. */
+.virtualRows {
+  flex-shrink: 0;
+}
+
+/* The empty line centers vertically in the list area. */
+.listEmpty {
+  flex: 1;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.factTerm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.factValue {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  min-width: 0;
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.rowIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.rowMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rowName {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.rowNote {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.rowActions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.dangerAction {
+  color: var(--danger);
+}

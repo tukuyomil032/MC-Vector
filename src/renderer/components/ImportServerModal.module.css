@@ -1,0 +1,40 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The button sits on the field's bottom edge, so it lines up with the read-only input and not its label. */
+.folderRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.folderRow > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.row > * {
+  min-width: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+@media (max-width: 40rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

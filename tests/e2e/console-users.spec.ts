@@ -2,7 +2,8 @@ import { expect, test } from './support/app-fixture';
 
 test.describe('console and user management', () => {
   test('sends a console command, renders its log, and searches the log', async ({ page, app }) => {
-    await app.gotoApp('paper-plugin-success');
+    // Commands are only accepted while the server is online, so the mock starts server-1 before the app loads.
+    await app.gotoApp('paper-plugin-success', { runningServerIds: ['server-1'] });
     await app.openView('console');
 
     const commandInput = page.locator('[data-testid="console-command-input"]');
@@ -19,7 +20,7 @@ test.describe('console and user management', () => {
     await page.locator('[data-testid="console-search-open-button"]').click();
     const searchInput = page.locator('[data-testid="console-search-input"]');
     await searchInput.fill('hello from e2e');
-    await expect(page.locator('.console-view__search-count')).toContainText('1 / 1');
+    await expect(page.locator('[data-testid="console-search-count"]')).toContainText('1 / 1');
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(searchInput).toHaveCount(0);
   });
@@ -43,6 +44,7 @@ test.describe('console and user management', () => {
       (await app.runtimeState())?.files['/mock/app-data/servers/server-1/whitelist.json']?.content,
     ).toContain('E2EPlayer');
     await list.getByRole('button', { name: 'Remove', exact: true }).click();
+    await app.acceptConfirm();
     await expect(list.getByText('E2EPlayer', { exact: true })).toHaveCount(0);
     await expect.poll(async () => (await app.ipcCalls('mutate_player_list')).length).toBe(2);
     expect(

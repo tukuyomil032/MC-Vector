@@ -1,0 +1,25 @@
+/*
+ * Bundled web fonts. Vite emits these as same-origin assets, which the app CSP
+ * (font-src 'self' data:) allows. Inter Variable is loaded from the
+ * @fontsource-variable/inter import in main.tsx.
+ *
+ * The geist package only exposes its fonts through Next.js helpers, so the
+ * variable woff2 files are referenced from node_modules directly.
+ */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2')
+    format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

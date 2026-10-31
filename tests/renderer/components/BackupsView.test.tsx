@@ -1,76 +1,50 @@
 import { persistBackupCatalogBestEffort } from '@/renderer/components/BackupsView';
 import BackupsView from '@/renderer/components/BackupsView';
 import { useBackupOperationStore } from '@/store/backupOperationStore';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { StrictMode, useLayoutEffect, useRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// These lifecycle tests chain several async steps. Under a full parallel run the default 1s wait can expire
+// before the view settles, although each step finishes, so the wait gets more room here.
+configure({ asyncUtilTimeout: 5000 });
+
 const {
-  askMock,
+  confirmMock,
   backupCommands,
   fileCommands,
   logErrorMock,
-  registeredTauriHandlers,
-  selectorWindowInstances,
-  onceRegistrationResults,
-  tauriListenMock,
   toastErrorMock,
   toastSuccessMock,
   toastWarningMock,
-  webviewWindowMock,
 } = vi.hoisted(() => {
-  const selectorWindowInstances: Array<{
-    emit: ReturnType<typeof vi.fn>;
-    label: string;
-    once: ReturnType<typeof vi.fn>;
-    setFocus: ReturnType<typeof vi.fn>;
-  }> = [];
-  const onceRegistrationResults: Array<Promise<() => void>> = [];
-
-  class MockWebviewWindow {
-    static getByLabel = vi.fn();
-    emit = vi.fn().mockResolvedValue(undefined);
-    once = vi.fn((_event: string, _handler: unknown) => {
-      return onceRegistrationResults.shift() ?? Promise.resolve(vi.fn());
-    });
-    setFocus = vi.fn().mockResolvedValue(undefined);
-    label: string;
-
-    constructor(label: string, _options: unknown) {
-      this.label = label;
-      selectorWindowInstances.push(this);
-    }
-  }
-
-  const registeredTauriHandlers: Array<{ event: string; handler: unknown }> = [];
-
   return {
-    askMock: vi.fn(),
+    confirmMock: vi.fn(),
     backupCommands: {
       applyBackupRetention: vi.fn(),
       createBackup: vi.fn(),
       deleteBackup: vi.fn(),
       getBackupNameValidationError: vi.fn(),
       listBackupsWithMetadata: vi.fn(),
-      normalizeBackupSources: vi.fn((paths: readonly string[]) => Array.from(new Set(paths))),
       readBackupCatalog: vi.fn(),
       restoreBackup: vi.fn(),
       writeBackupCatalog: vi.fn(),
     },
     fileCommands: {
-      deleteItem: vi.fn(),
-      listFiles: vi.fn(),
-      listFilesWithMetadata: vi.fn(),
+      getManagedDirectorySize: vi.fn(),
     },
     logErrorMock: vi.fn(),
-    registeredTauriHandlers,
-    selectorWindowInstances,
-    onceRegistrationResults,
-    tauriListenMock: vi.fn(),
     toastErrorMock: vi.fn(),
     toastSuccessMock: vi.fn(),
     toastWarningMock: vi.fn(),
-    webviewWindowMock: MockWebviewWindow,
   };
 });
 
@@ -83,15 +57,32 @@ vi.mock('@tanstack/react-virtual', () => ({
   }),
 }));
 
-vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: webviewWindowMock }));
+vi.mock('@/components/arc/hold-to-confirm/hold-to-confirm', () => ({
+  HoldToConfirm: ({
+    label,
+    onConfirm,
+    disabled,
+  }: {
+    label: string;
+    onConfirm: () => void;
+    disabled?: boolean;
+  }) => (
+    <button type="button" disabled={disabled} onClick={onConfirm}>
+      {label}
+    </button>
+  ),
+}));
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({ ask: askMock }));
+vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
+  useAppFeedback: () => ({ confirm: confirmMock }),
+}));
 
-vi.mock('sonner', () => ({
-  toast: {
+vi.mock('@/renderer/shared/notify', () => ({
+  notify: {
     error: toastErrorMock,
     success: toastSuccessMock,
     warning: toastWarningMock,
+    info: vi.fn(),
   },
 }));
 
@@ -106,6 +97,12 @@ vi.mock('@/i18n', () => ({
       if (key === 'backups.deleteTitle') {
         return 'Delete Backup';
       }
+      if (key === 'backups.confirmRestore') {
+        return `Restore backup "${params?.name}"?`;
+      }
+      if (key === 'backups.restoreTitle') {
+        return 'Restore Backup';
+      }
       return key;
     },
   }),
@@ -114,7 +111,6 @@ vi.mock('@/i18n', () => ({
 vi.mock('@/lib/backup-commands', () => backupCommands);
 vi.mock('@/lib/error-utils', () => ({ logError: logErrorMock }));
 vi.mock('@/lib/file-commands', () => fileCommands);
-vi.mock('@/lib/tauri-api', () => ({ tauriListen: tauriListenMock }));
 vi.mock('@/renderer/shared/auto-backup', () => ({
   buildManualBackupName: () => 'backup-name',
 }));
@@ -179,10 +175,7 @@ function deferred<T>() {
 beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
-  registeredTauriHandlers.length = 0;
-  selectorWindowInstances.length = 0;
-  onceRegistrationResults.length = 0;
-  askMock.mockResolvedValue(false);
+  confirmMock.mockResolvedValue(false);
   backupCommands.createBackup.mockResolvedValue({
     status: 'created',
     backupName: 'backup-name.zip',
@@ -191,12 +184,7 @@ beforeEach(() => {
   });
   backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   backupCommands.readBackupCatalog.mockResolvedValue({});
-  backupCommands.normalizeBackupSources.mockImplementation((paths: readonly string[]) =>
-    Array.from(new Set(paths)),
-  );
-  fileCommands.listFiles.mockResolvedValue([]);
-  tauriListenMock.mockResolvedValue(vi.fn());
-  webviewWindowMock.getByLabel.mockResolvedValue(null);
+  fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 0, complete: true });
   useBackupOperationStore.setState({
     activeManualOperations: {},
     completionRevisions: {},
@@ -231,10 +219,9 @@ describe('BackupsView initialization', () => {
 
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledOnce();
     expect(backupCommands.readBackupCatalog).toHaveBeenCalledOnce();
-    expect(fileCommands.listFiles).toHaveBeenCalledOnce();
   });
 
-  it('loads backups, catalog, and worlds in order', async () => {
+  it('loads backups and then the catalog, in order', async () => {
     const calls: string[] = [];
     backupCommands.listBackupsWithMetadata.mockImplementation(async () => {
       calls.push('backups');
@@ -244,14 +231,10 @@ describe('BackupsView initialization', () => {
       calls.push('catalog');
       return {};
     });
-    fileCommands.listFiles.mockImplementation(async () => {
-      calls.push('worlds');
-      return [];
-    });
 
     renderStrictMode();
 
-    await waitFor(() => expect(calls).toEqual(['backups', 'catalog', 'worlds']));
+    await waitFor(() => expect(calls).toEqual(['backups', 'catalog']));
   });
 
   it('treats a null catalog as an empty ready catalog', async () => {
@@ -260,7 +243,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce([{ name: 'backup.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockResolvedValue(undefined);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
@@ -273,11 +256,14 @@ describe('BackupsView initialization', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.deleted'));
-    expect(askMock).toHaveBeenCalledOnce();
-    expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
-      title: 'Delete Backup',
-      kind: 'warning',
-    });
+    expect(confirmMock).toHaveBeenCalledOnce();
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Delete Backup',
+        description: 'Delete backup "backup.zip"?',
+        tone: 'danger',
+      }),
+    );
     expect(backupCommands.deleteBackup).toHaveBeenCalledOnce();
     expect(toastErrorMock).not.toHaveBeenCalledWith('backups.toast.catalogLoadFailed');
   }, 10_000);
@@ -297,14 +283,44 @@ describe('BackupsView initialization', () => {
     });
     fireEvent.click(deleteButton);
 
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
-    expect(askMock).toHaveBeenCalledWith('Delete backup "backup.zip"?', {
-      title: 'Delete Backup',
-      kind: 'warning',
-    });
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Delete Backup',
+        description: 'Delete backup "backup.zip"?',
+        tone: 'danger',
+      }),
+    );
     expect(backupCommands.deleteBackup).not.toHaveBeenCalled();
     expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
+  });
+
+  it('asks before restoring a backup and leaves the world alone when canceled', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'backup.zip', date: new Date(), size: 1 },
+    ]);
+    confirmMock.mockResolvedValue(false);
+
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-backup.zip')).toBeInTheDocument());
+
+    const restoreButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'backups.actions.restore' });
+      expect(button).not.toBeDisabled();
+      return button;
+    });
+    fireEvent.click(restoreButton);
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Restore Backup',
+        description: 'Restore backup "backup.zip"?',
+      }),
+    );
+    expect(backupCommands.restoreBackup).not.toHaveBeenCalled();
+    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.restored');
   });
 
   it('blocks delete while the catalog is loading and allows it once ready', async () => {
@@ -314,7 +330,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValue([]);
     backupCommands.readBackupCatalog.mockReturnValue(catalog.promise);
     backupCommands.deleteBackup.mockResolvedValue(undefined);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     renderStrictMode();
 
@@ -348,11 +364,8 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce({
         entries: {
           'catalog-race.zip': {
-            mode: 'full',
-            parent: null,
             tags: ['new-catalog'],
             note: '',
-            sourceCount: 1,
             createdAt: '',
           },
         },
@@ -372,11 +385,8 @@ describe('BackupsView initialization', () => {
       initialCatalog.resolve({
         entries: {
           'catalog-race.zip': {
-            mode: 'full',
-            parent: null,
             tags: ['old-catalog'],
             note: '',
-            sourceCount: 1,
             createdAt: '',
           },
         },
@@ -393,7 +403,6 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce({})
       .mockReturnValueOnce(completionCatalog.promise);
     backupCommands.listBackupsWithMetadata.mockResolvedValueOnce([]).mockReturnValueOnce([]);
-    fileCommands.listFiles.mockResolvedValue([{ name: 'server.properties', isDirectory: false }]);
 
     render(<BackupsView server={server} />);
     await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledOnce());
@@ -405,7 +414,7 @@ describe('BackupsView initialization', () => {
     await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('server.properties')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -462,7 +471,6 @@ describe('BackupsView initialization', () => {
     await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledTimes(2));
 
     expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2);
-    expect(fileCommands.listFiles).toHaveBeenCalledTimes(2);
     expect(backupCommands.readBackupCatalog).toHaveBeenNthCalledWith(2, 'server-2');
   });
 
@@ -547,258 +555,18 @@ describe('BackupsView initialization', () => {
     expect(screen.queryByTestId('backup-row-stale-a.zip')).not.toBeInTheDocument();
   });
 
-  it('ignores an old apply listener after an A to B to A server switch', async () => {
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    const view = renderStrictMode();
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThanOrEqual(2),
-    );
-    const oldApplyHandler = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    )[0].handler as (payload: { paths: string[]; serverPath: string }) => void;
-    const initialApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={{ ...server, id: 'server-b', path: '/managed/server-b' }} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(initialApplyHandlerCount),
-    );
-    const bApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(bApplyHandlerCount),
-    );
-
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    await act(async () => {
-      oldApplyHandler({ serverPath: server.path, paths: ['old-selection'] });
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
-    expect(screen.queryByText('old-selection')).not.toBeInTheDocument();
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.targetUpdated');
-  });
-
-  it('ignores an apply listener retained from a keyed instance after an A to B to A remount', async () => {
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    const view = renderKeyedStrictMode('server-a', server);
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThanOrEqual(2),
-    );
-    const oldApplyHandler = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    )[0].handler as (payload: { paths: string[]; serverPath: string }) => void;
-    const initialApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(initialApplyHandlerCount),
-    );
-    const bApplyHandlerCount = registeredTauriHandlers.filter(
-      ({ event }) => event === 'backup-selector:apply',
-    ).length;
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-a" server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThan(bApplyHandlerCount),
-    );
-
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    await act(async () => {
-      oldApplyHandler({ serverPath: server.path, paths: ['old-selection'] });
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
-    expect(screen.queryByText('old-selection')).not.toBeInTheDocument();
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.targetUpdated');
-  });
-
-  it('normalizes selector apply paths before storing them in the create modal', async () => {
-    const normalizedSentinel = 'sentinel/normalized';
-    backupCommands.normalizeBackupSources.mockReturnValue([normalizedSentinel]);
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    renderStrictMode();
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    const applyHandlers = await waitFor(() => {
-      const registrations = registeredTauriHandlers.filter(
-        ({ event }) => event === 'backup-selector:apply',
-      );
-      expect(registrations.length).toBeGreaterThanOrEqual(2);
-      return registrations.map(
-        ({ handler }) => handler as (payload: { paths: string[]; serverPath: string }) => void,
-      );
-    });
-
-    await act(async () => {
-      for (const applyHandler of applyHandlers) {
-        applyHandler({
-          serverPath: server.path,
-          paths: ['world', 'world', 'plugins'],
-        });
-      }
-      await Promise.resolve();
-    });
-
-    expect(backupCommands.normalizeBackupSources).toHaveBeenCalledWith([
-      'world',
-      'world',
-      'plugins',
-    ]);
-    expect(screen.getByText(normalizedSentinel)).toBeInTheDocument();
-    expect(screen.queryByText('world')).not.toBeInTheDocument();
-    expect(screen.queryByText('plugins')).not.toBeInTheDocument();
-    expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.targetUpdated');
-  });
-
-  it('ignores a stale open-create listing after a selector apply', async () => {
-    const initialListing = deferred<Array<{ name: string; isDirectory: boolean }>>();
-    let rootListingCalls = 0;
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        rootListingCalls += 1;
-        return rootListingCalls === 1 ? Promise.resolve([]) : initialListing.promise;
-      }
-      return Promise.resolve([]);
-    });
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      registeredTauriHandlers.push({ event, handler });
-      return Promise.resolve(vi.fn());
-    });
-
-    renderStrictMode();
-    await waitFor(() => expect(rootListingCalls).toBe(1));
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    await waitFor(() =>
-      expect(
-        registeredTauriHandlers.filter(({ event }) => event === 'backup-selector:apply').length,
-      ).toBeGreaterThanOrEqual(2),
-    );
-    const applyHandler = registeredTauriHandlers
-      .filter(({ event }) => event === 'backup-selector:apply')
-      .at(-1)?.handler as (payload: { paths: string[]; serverPath: string }) => void;
-    await act(async () => {
-      applyHandler({ serverPath: server.path, paths: ['applied-selection'] });
-      await Promise.resolve();
-      initialListing.resolve([{ name: 'stale-selection', isDirectory: false }]);
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('applied-selection')).toBeInTheDocument();
-    expect(screen.queryByText('stale-selection')).not.toBeInTheDocument();
-  });
-
-  it('ignores a stale open-create listing after clear-all', async () => {
-    const initialListing = deferred<Array<{ name: string; isDirectory: boolean }>>();
-    let rootListingCalls = 0;
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        rootListingCalls += 1;
-        return rootListingCalls === 1 ? Promise.resolve([]) : initialListing.promise;
-      }
-      return Promise.resolve([]);
-    });
-
-    renderStrictMode();
-    await waitFor(() => expect(rootListingCalls).toBe(1));
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: 'backups.modal.clearAll' }));
-    await act(async () => {
-      initialListing.resolve([{ name: 'stale-selection', isDirectory: false }]);
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('backups.modal.noSelection')).toBeInTheDocument();
-    expect(screen.queryByText('stale-selection')).not.toBeInTheDocument();
-  });
-
-  it('clears old backup and world data before a new server listing fails', async () => {
+  it('clears old backup data before a new server listing fails', async () => {
     const nextServer = { ...server, id: 'server-2', path: '/managed/server-2' };
     const nextServerListing = deferred<never[]>();
-    const nextServerWorldListing = deferred<never[]>();
     backupCommands.listBackupsWithMetadata.mockImplementation((serverId: string) => {
       if (serverId === nextServer.id) {
         return nextServerListing.promise;
       }
       return Promise.resolve([{ name: 'old-a.zip', date: new Date(), size: 1 }]);
     });
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        return Promise.resolve([{ name: 'world', isDirectory: true }]);
-      }
-      if (path === `${server.path}/world`) {
-        return Promise.resolve([{ name: 'level.dat', isDirectory: false }]);
-      }
-      if (path === nextServer.path) {
-        return nextServerWorldListing.promise;
-      }
-      return Promise.resolve([]);
-    });
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByText('🌍 world')).toBeInTheDocument());
 
     view.rerender(
       <StrictMode>
@@ -807,112 +575,14 @@ describe('BackupsView initialization', () => {
     );
 
     expect(screen.queryByTestId('backup-row-old-a.zip')).not.toBeInTheDocument();
-    expect(screen.queryByText('🌍 world')).not.toBeInTheDocument();
 
     await act(async () => {
       nextServerListing.reject(new Error('server B listing failed'));
-      nextServerWorldListing.reject(new Error('server B worlds listing failed'));
       for (let index = 0; index < 4; index += 1) {
         await Promise.resolve();
       }
     });
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledTimes(2));
-  });
-
-  it('ignores stale catalog and world continuations after A to B to A changes', async () => {
-    const staleWorldCandidate = deferred<never[]>();
-    let worldRootCalls = 0;
-
-    backupCommands.listBackupsWithMetadata
-      .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ name: 'new-a.zip', date: new Date(), size: 2 }]);
-    backupCommands.readBackupCatalog.mockResolvedValue({});
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        worldRootCalls += 1;
-        if (worldRootCalls === 1) {
-          return Promise.resolve([
-            { name: 'old-world', isDirectory: true },
-            { name: 'old-broken-world', isDirectory: true },
-          ]);
-        }
-        return Promise.resolve([{ name: 'new-world', isDirectory: true }]);
-      }
-      if (path === `${server.path}/old-world` || path === `${server.path}/new-world`) {
-        return Promise.resolve([{ name: 'level.dat', isDirectory: false }]);
-      }
-      if (path === `${server.path}/old-broken-world`) {
-        return staleWorldCandidate.promise;
-      }
-      return Promise.resolve([]);
-    });
-    const view = renderStrictMode();
-    await waitFor(() =>
-      expect(fileCommands.listFiles).toHaveBeenCalledWith(`${server.path}/old-broken-world`),
-    );
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={{ ...server, id: 'server-b', path: '/managed/server-b' }} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(2));
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(3));
-
-    await waitFor(() => expect(screen.getByTestId('backup-row-new-a.zip')).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByText('🌍 new-world')).toBeInTheDocument());
-
-    await act(async () => {
-      staleWorldCandidate.reject(new Error('stale world candidate failed'));
-      for (let index = 0; index < 8; index += 1) {
-        await Promise.resolve();
-      }
-    });
-
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(screen.getByText('🌍 new-world')).toBeInTheDocument();
-    expect(screen.queryByText('🌍 old-world')).not.toBeInTheDocument();
-    expect(logErrorMock).not.toHaveBeenCalledWith(
-      'Failed to inspect world directory candidate',
-      expect.anything(),
-      expect.anything(),
-    );
-  });
-
-  it('logs current selector listener registration failures without an unhandled rejection', async () => {
-    const applyError = new Error('apply listener registration failed');
-    const closeError = new Error('close listener registration failed');
-    tauriListenMock.mockImplementation((event: string) => {
-      if (event === 'backup-selector:apply') {
-        return Promise.reject(applyError);
-      }
-      if (event === 'backup-selector:close-request') {
-        return Promise.reject(closeError);
-      }
-      return Promise.resolve(vi.fn());
-    });
-
-    renderStrictMode();
-
-    await waitFor(() => {
-      expect(logErrorMock).toHaveBeenCalledWith(
-        'Failed to register backup selector apply listener',
-        applyError,
-        { serverPath: server.path },
-      );
-      expect(logErrorMock).toHaveBeenCalledWith(
-        'Failed to register backup selector close-request listener',
-        closeError,
-        { serverPath: server.path },
-      );
-    });
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.loadFailed'));
   });
 
   it('does not refresh or toast from a stale backup deletion operation', async () => {
@@ -921,7 +591,7 @@ describe('BackupsView initialization', () => {
       .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockReturnValue(deletion.promise);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
@@ -960,12 +630,12 @@ describe('BackupsView initialization', () => {
     backupCommands.listBackupsWithMetadata.mockResolvedValue([
       { name: 'old-a.zip', date: new Date(), size: 1 },
     ]);
-    askMock.mockReturnValue(confirmation.promise);
+    confirmMock.mockReturnValue(confirmation.promise);
 
     const view = renderKeyedStrictMode('server-a', server);
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
 
     view.rerender(
       <StrictMode>
@@ -984,59 +654,11 @@ describe('BackupsView initialization', () => {
     expect(backupCommands.writeBackupCatalog).not.toHaveBeenCalled();
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
   });
-
-  it('does not refresh or toast from a stale world deletion operation', async () => {
-    const deletion = deferred<void>();
-    let worldRootCalls = 0;
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        worldRootCalls += 1;
-        return worldRootCalls === 1
-          ? Promise.resolve([{ name: 'world', isDirectory: true }])
-          : Promise.resolve([]);
-      }
-      if (path === `${server.path}/world`) {
-        return Promise.resolve([{ name: 'level.dat', isDirectory: false }]);
-      }
-      return Promise.resolve([]);
-    });
-    fileCommands.deleteItem.mockReturnValue(deletion.promise);
-    askMock.mockResolvedValue(true);
-
-    const view = renderStrictMode();
-    await waitFor(() => expect(screen.getByText('🌍 world')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'backups.world.deleteButton' }));
-    await waitFor(() => expect(fileCommands.deleteItem).toHaveBeenCalledOnce());
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={{ ...server, id: 'server-b', path: '/managed/server-b' }} />
-      </StrictMode>,
-    );
-    view.rerender(
-      <StrictMode>
-        <BackupsView server={server} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(worldRootCalls).toBe(2));
-    const listCallsBeforeStaleCompletion = fileCommands.listFiles.mock.calls.length;
-
-    await act(async () => {
-      deletion.resolve();
-      for (let index = 0; index < 6; index += 1) {
-        await Promise.resolve();
-      }
-    });
-
-    expect(fileCommands.listFiles).toHaveBeenCalledTimes(listCallsBeforeStaleCompletion);
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.world.deleted');
-  });
 });
 
 describe('BackupsView lifecycle', () => {
   it('asks before stopping a running server and retries creation only after consent', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
     backupCommands.createBackup
       .mockResolvedValueOnce({ status: 'confirmation_required' })
       .mockResolvedValueOnce({
@@ -1053,10 +675,10 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
     expect(backupCommands.createBackup).toHaveBeenNthCalledWith(
       1,
       server.id,
@@ -1064,10 +686,12 @@ describe('BackupsView lifecycle', () => {
       5,
       false,
     );
-    expect(askMock).toHaveBeenCalledWith('backups.confirmStopForBackup', {
-      title: 'backups.stopForBackupTitle',
-      kind: 'warning',
-    });
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'backups.stopForBackupTitle',
+        description: 'backups.confirmStopForBackup',
+      }),
+    );
     await waitFor(() => expect(backupCommands.createBackup).toHaveBeenCalledTimes(2));
     expect(backupCommands.createBackup).toHaveBeenNthCalledWith(
       2,
@@ -1079,23 +703,21 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('does not retry or show success when stopping a running server is declined', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({ status: 'confirmation_required' });
-    askMock.mockResolvedValue(false);
+    confirmMock.mockResolvedValue(false);
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
-    await waitFor(() => expect(askMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
     expect(backupCommands.createBackup).toHaveBeenCalledOnce();
     expect(toastSuccessMock).not.toHaveBeenCalled();
     expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   it('keeps a created backup successful and warns if restart or registry update failed', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({
       status: 'created',
       backupName: 'backup-name.zip',
@@ -1105,18 +727,17 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.created'));
     expect(toastWarningMock).toHaveBeenCalledWith('backups.toast.registryUpdateFailed');
     expect(toastWarningMock).toHaveBeenCalledWith('backups.toast.serverRestartFailed');
     expect(backupCommands.applyBackupRetention).not.toHaveBeenCalled();
-    expect(askMock).not.toHaveBeenCalled();
+    expect(confirmMock).not.toHaveBeenCalled();
   });
 
   it('reports stop failure without treating the attempt as a created backup', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({
       status: 'failed',
       stage: 'stop',
@@ -1126,7 +747,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -1137,7 +758,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('reports both missing backup and failed restart without using the created-backup warning', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     backupCommands.createBackup.mockResolvedValueOnce({
       status: 'failed',
       stage: 'backup',
@@ -1147,7 +767,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -1170,7 +790,6 @@ describe('BackupsView lifecycle', () => {
 
   it('continues a manual backup through create IPC after a keyed unmount', async () => {
     const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     const createPromise = deferred<{
       status: 'created';
       backupName: string;
@@ -1186,7 +805,7 @@ describe('BackupsView lifecycle', () => {
 
     const view = renderKeyedStrictMode('server-a', server);
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
@@ -1229,7 +848,6 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('shows a remounted server as creating and reloads after its manual operation completes', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'world', isDirectory: true }]);
     const createPromise = deferred<{
       status: 'created';
       backupName: string;
@@ -1245,7 +863,7 @@ describe('BackupsView lifecycle', () => {
 
     const view = renderKeyedStrictMode('server-a', server);
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
@@ -1294,15 +912,11 @@ describe('BackupsView lifecycle', () => {
   });
 
   it('finishes the manual operation when create backup fails', async () => {
-    fileCommands.listFiles.mockResolvedValue([{ name: 'server.properties', isDirectory: false }]);
-    fileCommands.listFilesWithMetadata.mockResolvedValue([
-      { name: 'server.properties', isDirectory: false, modified: 10, size: 100 },
-    ]);
     backupCommands.createBackup.mockRejectedValue(new Error('create failed'));
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('server.properties')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.createFailed'));
@@ -1337,36 +951,6 @@ describe('BackupsView lifecycle', () => {
     expect(logErrorMock).not.toHaveBeenCalled();
   });
 
-  it('ignores a world listing rejection after a keyed instance is unmounted', async () => {
-    const oldWorldListing = deferred<never[]>();
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    fileCommands.listFiles.mockImplementation((path: string) => {
-      if (path === server.path) {
-        return oldWorldListing.promise;
-      }
-      return Promise.resolve([]);
-    });
-
-    const view = renderKeyedStrictMode('server-a', server);
-    await waitFor(() => expect(fileCommands.listFiles).toHaveBeenCalledWith(server.path));
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-    await waitFor(() => expect(backupCommands.readBackupCatalog).toHaveBeenCalledTimes(2));
-
-    await act(async () => {
-      oldWorldListing.reject(new Error('old world listing rejected after unmount'));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(logErrorMock).not.toHaveBeenCalled();
-  });
-
   it('ignores a backup deletion completion after a keyed instance is unmounted', async () => {
     const deletion = deferred<void>();
     const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
@@ -1374,7 +958,7 @@ describe('BackupsView lifecycle', () => {
       .mockResolvedValueOnce([{ name: 'old-a.zip', date: new Date(), size: 1 }])
       .mockResolvedValue([]);
     backupCommands.deleteBackup.mockReturnValue(deletion.promise);
-    askMock.mockResolvedValue(true);
+    confirmMock.mockResolvedValue(true);
 
     const view = renderKeyedStrictMode('server-a', server);
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
@@ -1399,152 +983,45 @@ describe('BackupsView lifecycle', () => {
     expect(toastSuccessMock).not.toHaveBeenCalledWith('backups.toast.deleted');
     expect(logErrorMock).not.toHaveBeenCalled();
   });
+});
 
-  it('does not create a selector for a keyed instance after it is unmounted', async () => {
-    const pendingLookup = deferred<null>();
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    webviewWindowMock.getByLabel.mockReturnValue(pendingLookup.promise);
-
-    const view = renderKeyedStrictMode('server-a', server);
-    fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() =>
-      expect(screen.getByTestId('backups-open-selector-button')).toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByTestId('backups-open-selector-button'));
-    await waitFor(() => expect(webviewWindowMock.getByLabel).toHaveBeenCalledOnce());
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      pendingLookup.resolve(null);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(selectorWindowInstances).toHaveLength(0);
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(logErrorMock).not.toHaveBeenCalled();
+describe('backup folder sizes and the create estimate', () => {
+  beforeEach(() => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([]);
   });
 
-  it('ignores selector callbacks after a keyed instance is unmounted', async () => {
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    webviewWindowMock.getByLabel.mockResolvedValue(null);
+  it('shows the server folder size and an estimate when past backups recorded durations', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'old.zip', date: new Date(), size: 1_000_000, durationMs: 2000 },
+    ]);
+    fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 5_000_000, complete: true });
 
-    const view = renderKeyedStrictMode('server-a', server);
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-old.zip')).toBeInTheDocument());
+
     fireEvent.click(screen.getByTestId('backups-create-button'));
+
     await waitFor(() =>
-      expect(screen.getByTestId('backups-open-selector-button')).toBeInTheDocument(),
+      expect(screen.getByTestId('backups-target-size')).toHaveTextContent('4.8 MB'),
     );
-    fireEvent.click(screen.getByTestId('backups-open-selector-button'));
-    await waitFor(() => expect(selectorWindowInstances).toHaveLength(1));
-
-    const selectorWindow = selectorWindowInstances[0];
-    const createdCallback = selectorWindow.once.mock.calls.find(
-      ([event]) => event === 'tauri://created',
-    )?.[1] as (() => void) | undefined;
-    const errorCallback = selectorWindow.once.mock.calls.find(
-      ([event]) => event === 'tauri://error',
-    )?.[1] as ((error: unknown) => void) | undefined;
-    expect(selectorWindow.once).toHaveBeenCalledTimes(2);
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      createdCallback?.();
-      errorCallback?.(new Error('stale selector creation failed'));
-      await Promise.resolve();
-    });
-
-    expect(selectorWindow.emit).not.toHaveBeenCalled();
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(logErrorMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('backups-estimated-time')).toBeInTheDocument();
+    expect(fileCommands.getManagedDirectorySize).toHaveBeenCalledWith(server.path);
   });
 
-  it('handles selector once registration rejection and cleans up resolved listeners', async () => {
-    const createdRegistrationError = new Error('created listener registration failed');
-    const createdRegistration = deferred<() => void>();
-    const errorRegistration = deferred<() => void>();
-    const errorListenerUnlisten = vi.fn().mockRejectedValue(new Error('unlisten failed'));
-    onceRegistrationResults.push(createdRegistration.promise, errorRegistration.promise);
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
+  it('hides the estimate when no past backup has a recorded duration', async () => {
+    backupCommands.listBackupsWithMetadata.mockResolvedValue([
+      { name: 'legacy.zip', date: new Date(), size: 1_000_000 },
+    ]);
+    fileCommands.getManagedDirectorySize.mockResolvedValue({ bytes: 5_000_000, complete: true });
 
-    const view = renderKeyedStrictMode('server-a', server);
+    renderStrictMode();
+    await waitFor(() => expect(screen.getByTestId('backup-row-legacy.zip')).toBeInTheDocument());
+
     fireEvent.click(screen.getByTestId('backups-create-button'));
+
     await waitFor(() =>
-      expect(screen.getByTestId('backups-open-selector-button')).toBeInTheDocument(),
+      expect(screen.getByTestId('backups-target-size')).toHaveTextContent('4.8 MB'),
     );
-    fireEvent.click(screen.getByTestId('backups-open-selector-button'));
-
-    const selectorWindow = await waitFor(() => {
-      expect(selectorWindowInstances).toHaveLength(1);
-      return selectorWindowInstances[0];
-    });
-    await waitFor(() => {
-      expect(selectorWindow.once).toHaveBeenCalledTimes(2);
-    });
-
-    await act(async () => {
-      createdRegistration.reject(createdRegistrationError);
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(logErrorMock).toHaveBeenCalledWith(
-        'Failed to register backup selector created listener',
-        createdRegistrationError,
-        { serverPath: server.path },
-      );
-    });
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      errorRegistration.resolve(errorListenerUnlisten);
-      await Promise.resolve();
-    });
-
-    expect(errorListenerUnlisten).toHaveBeenCalledOnce();
-  });
-
-  it('suppresses a close-request error after the listener instance is unmounted', async () => {
-    const pendingLookup = deferred<null>();
-    const nextServer = { ...server, id: 'server-b', path: '/managed/server-b' };
-    let closeRequestHandler: ((payload: { serverPath: string }) => Promise<void>) | undefined;
-    tauriListenMock.mockImplementation((event: string, handler: unknown) => {
-      if (event === 'backup-selector:close-request') {
-        closeRequestHandler = handler as (payload: { serverPath: string }) => Promise<void>;
-      }
-      return Promise.resolve(vi.fn());
-    });
-    webviewWindowMock.getByLabel.mockReturnValue(pendingLookup.promise);
-
-    const view = renderKeyedStrictMode('server-a', server);
-    await waitFor(() => expect(closeRequestHandler).toBeDefined());
-    const closePromise = closeRequestHandler?.({ serverPath: server.path });
-
-    view.rerender(
-      <StrictMode>
-        <BackupsView key="server-b" server={nextServer} />
-      </StrictMode>,
-    );
-
-    await act(async () => {
-      pendingLookup.reject(new Error('stale close lookup failed'));
-      await closePromise;
-    });
-
-    expect(logErrorMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('backups-estimated-time')).not.toBeInTheDocument();
   });
 });

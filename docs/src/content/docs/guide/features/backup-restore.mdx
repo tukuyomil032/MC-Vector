@@ -1,6 +1,6 @@
 ---
 title: Backup & Restore
-description: Create full or differential server backups and restore them when needed.
+description: Create full server backups and restore them when needed.
 sidebar:
   order: 4
 ---
@@ -16,14 +16,9 @@ relative backup entry instead of providing arbitrary source or destination paths
 are checked for traversal, links, excessive nesting, entry count, expanded size, and compression
 ratio before extraction.
 
-## Backup Types
+## What Gets Backed Up
 
-| Type             | Description                                                            |
-| ---------------- | ---------------------------------------------------------------------- |
-| **Full**         | Archives the entire server directory (all worlds, configs, plugins)    |
-| **Differential** | Archives only files changed since the last backup — faster and smaller |
-
-Use differential backups for frequent snapshots and full backups before major changes (version upgrades, large plugin installs).
+Every backup is a full snapshot of the entire server directory (all worlds, configs, and plugins). MC-Vector does not offer partial or differential backups, so there is no per-folder selection. Take a backup before major changes such as version upgrades or large plugin installs.
 
 ## Backup Storage Location
 
@@ -38,10 +33,8 @@ Use differential backups for frequent snapshots and full backups before major ch
 1. Navigate to the **Backups** tab.
 2. Click **"Create Backup"**.
 3. Choose:
-   - **Mode** — Full or Differential
-   - **Compression** — Fast / Normal / Best
-   - **Name** — custom file name (optional)
-   - **Included paths** — select specific subdirectories (worlds, plugins, configs)
+   - **Compression** — level 1 (low) to 9 (high)
+   - **Name** — custom ZIP file name (optional)
 4. Optionally add a **tag** and **notes** for identification.
 5. Click **"Create"** — progress is shown in real-time.
 

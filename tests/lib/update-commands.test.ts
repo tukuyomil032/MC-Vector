@@ -216,20 +216,28 @@ describe('downloadAndInstallUpdate', () => {
     await expect(downloadAndInstallUpdate()).rejects.toThrow('No update available');
   });
 
-  it('downloads, installs, and relaunches on success', async () => {
+  it('downloads and installs without relaunching, so the restart waits for the user', async () => {
     const update = makeUpdate();
     checkMock.mockResolvedValue(update);
     tauriInvokeMock
       .mockResolvedValueOnce({ can_update: true }) // can_update_app
       .mockResolvedValueOnce('/Applications/MC-Vector.app'); // get_app_location (unused)
-    relaunchMock.mockResolvedValue(undefined);
 
     const { downloadAndInstallUpdate } = await import('@/lib/update-commands');
     await downloadAndInstallUpdate();
 
     expect(update.download).toHaveBeenCalled();
     expect(update.install).toHaveBeenCalled();
-    expect(relaunchMock).toHaveBeenCalled();
+    expect(relaunchMock).not.toHaveBeenCalled();
+  });
+
+  it('relaunches to apply an installed update when the user asks for the restart', async () => {
+    relaunchMock.mockResolvedValue(undefined);
+
+    const { restartToApplyUpdate } = await import('@/lib/update-commands');
+    await restartToApplyUpdate();
+
+    expect(relaunchMock).toHaveBeenCalledTimes(1);
   });
 
   it('throws read-only error when reason is read_only', async () => {

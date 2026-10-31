@@ -1,0 +1,88 @@
+.root {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: var(--space-6);
+}
+
+/* The card fills the content width. Settings sit beside the backend list from 1024px; below that they stack. */
+.inner {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.card {
+  min-width: 0;
+}
+
+.body {
+  display: grid;
+  margin-top: var(--space-4);
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.fields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (min-width: 1024px) {
+  .body {
+    grid-template-columns: minmax(16rem, 1fr) minmax(0, 1.6fr);
+  }
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.count {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.backendList {
+  display: flex;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+  .root {
+    padding: var(--space-4);
+  }
+}

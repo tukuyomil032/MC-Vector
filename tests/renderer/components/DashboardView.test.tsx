@@ -1,6 +1,4 @@
-import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import type { DotItemDotProps, TooltipContentProps } from 'recharts';
+import { render, screen, within } from '@testing-library/react';
 import DashboardView from '@/renderer/components/DashboardView';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import type { MetricHistorySnapshot } from '@/renderer/shared/server-metrics';
@@ -9,153 +7,56 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/i18n', () => ({
   useTranslation: () => ({
+    locale: 'en',
     t: (key: string, values?: Record<string, string | number>) => {
       if (key === 'dashboard.charts.elapsedSeconds') return `${values?.seconds}s`;
       if (key === 'dashboard.charts.heldSince') return `held since ${values?.time}`;
+      if (key === 'dashboard.units.megabytes') return 'MB';
       return key;
     },
   }),
 }));
 vi.mock('@/lib/tauri-api', () => ({ tauriListen: vi.fn().mockResolvedValue(() => {}) }));
 vi.mock('@/lib/notification-commands', () => ({ sendServerNotification: vi.fn() }));
-const rechartsMockState = vi.hoisted(() => ({
-  chartData: [] as unknown[],
-  tooltipTarget: 'latest' as 'latest' | 'window-anchor',
-}));
-vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children, minHeight }: { children: ReactNode; minHeight: number }) => (
-    <div data-testid="chart-container" data-min-height={minHeight}>
-      {children}
-    </div>
-  ),
-  AreaChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => {
-    rechartsMockState.chartData = data as any[];
-    return (
-      <div data-testid="area-chart" data-count={data.length} data-series={JSON.stringify(data)}>
-        {children}
-      </div>
-    );
-  },
-  Area: ({
-    dataKey,
-    dot,
-    type,
+vi.mock('@/components/arc/line-chart/line-chart', () => ({
+  LineChart: ({
+    label,
+    data,
+    emptyLabel,
+    series,
   }: {
-    dataKey: string;
-    dot: boolean | object | ((props: DotItemDotProps) => ReactNode);
-    type: string;
-  }) => {
-    const actualPayload = { elapsedMs: 70_000, cpu: 40, memory: 512, tps: 20 };
-    const endpointPayload = {
-      ...actualPayload,
-      elapsedMs: 72_000,
-      displayOnly: true,
-      measuredAtElapsedMs: 70_000,
-    };
-    const anchorPayload = {
-      ...actualPayload,
-      elapsedMs: 19_000,
-      displayOnly: true,
-      windowAnchor: true,
-      measuredAtElapsedMs: 19_000,
-    };
-    const renderDot = (payload: typeof actualPayload | typeof endpointPayload) =>
-      typeof dot === 'function'
-        ? dot({
-            cx: 0,
-            cy: 0,
-            payload,
-            points: [],
-            index: 0,
-            dataKey,
-            value: 0,
-          })
-        : null;
-    const actualDot = renderDot(actualPayload);
-    const endpointDot = renderDot(endpointPayload);
-    const anchorDot = renderDot(anchorPayload);
-    return (
-      <div
-        data-testid="chart-area"
-        data-key={dataKey}
-        data-type={type}
-        data-dot={
-          typeof dot === 'function' ? 'custom' : typeof dot === 'object' ? 'point' : String(dot)
-        }
-        data-actual-dot={
-          typeof dot === 'function' ? (actualDot === null ? 'hidden' : 'visible') : 'n/a'
-        }
-        data-endpoint-dot={
-          typeof dot === 'function' ? (endpointDot === null ? 'hidden' : 'visible') : 'n/a'
-        }
-        data-anchor-dot={
-          typeof dot === 'function' ? (anchorDot === null ? 'hidden' : 'visible') : 'n/a'
-        }
-      />
-    );
-  },
-  XAxis: ({
-    dataKey,
-    type,
-    domain,
-    tickFormatter,
-  }: {
-    dataKey: string;
-    type: string;
-    domain: number[];
-    tickFormatter: (value: number) => string;
+    label: string;
+    data: { key: string; label: string; values: Record<string, number | undefined> }[];
+    emptyLabel?: string;
+    series: { key: string }[];
   }) => (
-    <div
-      data-testid="chart-x-axis"
-      data-key={dataKey}
-      data-type={type}
-      data-domain={JSON.stringify(domain)}
+    <figure
+      aria-label={label}
+      data-testid="line-chart"
+      data-count={data.length}
+      data-series={series.map((item) => item.key).join(',')}
     >
-      {tickFormatter(60_000)}
-    </div>
+      {data.length === 0
+        ? emptyLabel
+        : data.map((datum) => (
+            <p key={datum.key} data-testid="line-chart-datum">
+              {`${datum.label} ${Object.values(datum.values).join(',')}`}
+            </p>
+          ))}
+    </figure>
   ),
-  YAxis: ({ domain, allowDataOverflow }: { domain?: unknown; allowDataOverflow?: boolean }) => (
-    <div
-      data-testid="chart-y-axis"
-      data-domain={JSON.stringify(domain ?? null)}
-      data-allow-data-overflow={String(allowDataOverflow ?? false)}
-    />
-  ),
-  Tooltip: ({ content }: { content: (props: TooltipContentProps) => ReactNode }) => {
-    const points = rechartsMockState.chartData as Array<{
-      elapsedMs: number;
-      windowAnchor?: boolean;
-      cpu?: number;
-      memory?: number;
-      tps?: number;
-    }>;
-    const point =
-      rechartsMockState.tooltipTarget === 'window-anchor'
-        ? points.find((candidate) => candidate.windowAnchor)
-        : points.at(-1);
-    if (!point) return null;
-    return (
-      <div data-testid="chart-tooltip">
-        {content({
-          active: true,
-          label: String(point.elapsedMs),
-          coordinate: undefined,
-          accessibilityLayer: false,
-          activeIndex: '0',
-          payload: [
-            {
-              graphicalItemId: 'metric',
-              name: 'metric',
-              value: point.cpu ?? point.memory ?? point.tps,
-              payload: point,
-            },
-          ],
-        })}
-      </div>
-    );
-  },
-  CartesianGrid: () => null,
 }));
+
+// The animated counter watches for scroll-into-view even when it never animates on view, and jsdom has no observer.
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
 
 const server: MinecraftServer = {
   id: 'server-a',
@@ -186,10 +87,20 @@ function snapshot(count: number, elapsedMs = 72_000): MetricHistorySnapshot {
   };
 }
 
+function chart(testId: string) {
+  return within(screen.getByTestId(testId)).getByTestId('line-chart');
+}
+
+/**
+ * The animated counter splits every digit into its own wheel, so the element's text holds all ten digits per column.
+ * The full readout lives in one visually hidden span, and that span is what a reader hears.
+ */
+function kpiReadout(valueTestId: string, text: string) {
+  return within(screen.getByTestId(valueTestId)).getByText(text);
+}
+
 describe('DashboardView metric charts', () => {
   beforeEach(() => {
-    rechartsMockState.chartData = [];
-    rechartsMockState.tooltipTarget = 'latest';
     useServerMetricHistoryStore.setState({
       snapshotsByServer: {},
       receivedAtByServer: {},
@@ -200,9 +111,21 @@ describe('DashboardView metric charts', () => {
   it('shows a waiting message for empty resource and TPS histories', () => {
     useServerMetricHistoryStore.getState().applySnapshot(snapshot(0));
     render(<DashboardView server={server} />);
-    expect(screen.getAllByText('dashboard.charts.metricsNoData')).toHaveLength(2);
-    expect(screen.getByText('dashboard.charts.tpsNoData')).toBeInTheDocument();
-    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId('dashboard-chart-cpu')).getByText('dashboard.charts.metricsNoData'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('dashboard-chart-memory')).getByText(
+        'dashboard.charts.metricsNoData',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('dashboard-chart-tps')).getByText('dashboard.charts.tpsNoData'),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByTestId('line-chart-datum')).toHaveLength(0);
+    // An empty chart draws no plot, so no gridlines or axis are rendered at all.
+    expect(screen.queryAllByTestId('line-chart')).toHaveLength(0);
   });
 
   it('keeps the waiting state and excludes an anchor-only snapshot from readouts', () => {
@@ -217,145 +140,67 @@ describe('DashboardView metric charts', () => {
         { elapsedMs: 19_000, tps: 6 },
       ],
     });
-    const { container } = render(<DashboardView server={server} />);
+    render(<DashboardView server={server} />);
 
-    expect(screen.getAllByText('dashboard.charts.metricsNoData')).toHaveLength(2);
-    expect(screen.getByText('dashboard.charts.tpsNoData')).toBeInTheDocument();
-    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--cpu .kpi-tile__value'),
-    ).toHaveTextContent('0%');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--memory .kpi-tile__value'),
-    ).toHaveTextContent('0 MB');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--tps .kpi-tile__value'),
-    ).toHaveTextContent('--');
+    expect(screen.queryAllByTestId('line-chart-datum')).toHaveLength(0);
+    expect(kpiReadout('dashboard-kpi-cpu-value', '0.0%')).toBeInTheDocument();
+    expect(kpiReadout('dashboard-kpi-memory-value', '0 MB')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveTextContent(/^--$/);
+    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveAttribute('data-tone', 'none');
   });
 
-  it('clips a tagged boundary anchor with one actual sample and excludes it from tooltip, dot, and readouts', () => {
-    rechartsMockState.tooltipTarget = 'window-anchor';
+  it('drops the boundary anchor and holds the latest sample up to now', () => {
     useServerMetricHistoryStore.getState().applySnapshot({
       ...snapshot(0, 80_000),
       resource: [
-        { elapsedMs: 0, cpu: 98, memory: 1024 * 1024 * 1024 },
-        { elapsedMs: 19_000, cpu: 97, memory: 900_000 * 1024 * 1024 },
-        { elapsedMs: 25_000, cpu: 35, memory: 512 * 1024 * 1024 },
+        { elapsedMs: 10_000, cpu: 10, memory: 100 * 1024 * 1024 },
+        { elapsedMs: 70_000, cpu: 40, memory: 512 * 1024 * 1024 },
       ],
       tps: [
-        { elapsedMs: 0, tps: 5 },
-        { elapsedMs: 19_000, tps: 6 },
-        { elapsedMs: 25_000, tps: 19.5 },
+        { elapsedMs: 10_000, tps: 5 },
+        { elapsedMs: 70_000, tps: 19.5 },
       ],
     });
-    const { container } = render(<DashboardView server={server} />);
-
-    for (const chart of screen.getAllByTestId('area-chart')) {
-      const data = JSON.parse(chart.getAttribute('data-series') ?? '[]');
-      expect(data[0]).toMatchObject({
-        elapsedMs: 19_000,
-        displayOnly: true,
-        windowAnchor: true,
-        measuredAtElapsedMs: 19_000,
-      });
-      expect(data[1].elapsedMs).toBe(25_000);
-      expect(data.at(-1)).toMatchObject({
-        displayOnly: true,
-        measuredAtElapsedMs: 25_000,
-      });
-    }
-    const memorySeries = JSON.parse(
-      screen.getAllByTestId('area-chart')[1].getAttribute('data-series') ?? '[]',
-    );
-    expect(memorySeries[0]).toMatchObject({ memory: 900_000, windowAnchor: true });
-    for (const area of screen.getAllByTestId('chart-area')) {
-      expect(area).toHaveAttribute('data-dot', 'custom');
-      expect(area).toHaveAttribute('data-actual-dot', 'visible');
-      expect(area).toHaveAttribute('data-anchor-dot', 'hidden');
-      expect(area).toHaveAttribute('data-endpoint-dot', 'hidden');
-    }
-    const yAxisDomains = screen
-      .getAllByTestId('chart-y-axis')
-      .map((axis) => JSON.parse(axis.getAttribute('data-domain') ?? 'null'));
-    expect(yAxisDomains).toEqual([
-      [0, 100],
-      [486.4, 537.6],
-      [0, 22],
-    ]);
-    for (const axis of screen.getAllByTestId('chart-y-axis')) {
-      expect(axis).toHaveAttribute('data-allow-data-overflow', 'true');
-    }
-    for (const tooltip of screen.getAllByTestId('chart-tooltip')) {
-      expect(tooltip).toBeEmptyDOMElement();
-    }
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--cpu .kpi-tile__value'),
-    ).toHaveTextContent('35%');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--memory .kpi-tile__value'),
-    ).toHaveTextContent('512 MB');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--tps .kpi-tile__value'),
-    ).toHaveTextContent('19.50');
-  });
-
-  it('keeps the first actual sample dot and marks the held endpoint as display-only', () => {
-    useServerMetricHistoryStore.getState().applySnapshot(snapshot(1));
     render(<DashboardView server={server} />);
-    expect(screen.getAllByTestId('chart-area')).toHaveLength(3);
-    for (const area of screen.getAllByTestId('chart-area')) {
-      expect(area).toHaveAttribute('data-dot', 'custom');
-      expect(area).toHaveAttribute('data-actual-dot', 'visible');
-      expect(area).toHaveAttribute('data-endpoint-dot', 'hidden');
-      expect(area).toHaveAttribute('data-type', 'monotone');
-    }
-    for (const chart of screen.getAllByTestId('area-chart')) {
-      const data = JSON.parse(chart.getAttribute('data-series') ?? '[]');
-      expect(data).toHaveLength(2);
-      expect(data[0]).not.toHaveProperty('displayOnly');
-      expect(data[1].elapsedMs).toBeGreaterThanOrEqual(72_000);
-      expect(data[1]).toMatchObject({
-        displayOnly: true,
-        measuredAtElapsedMs: 70_000,
-      });
-    }
-    for (const axis of screen.getAllByTestId('chart-x-axis')) {
-      expect(axis).toHaveAttribute('data-key', 'elapsedMs');
-      expect(axis).toHaveAttribute('data-type', 'number');
-      expect(axis).toHaveTextContent('60s');
-    }
-    for (const container of screen.getAllByTestId('chart-container'))
-      expect(container).toHaveAttribute('data-min-height', '200');
+
+    const cpuData = within(screen.getByTestId('dashboard-chart-cpu')).getAllByTestId(
+      'line-chart-datum',
+    );
+    expect(cpuData).toHaveLength(2);
+    expect(cpuData[0]).toHaveTextContent('70s 40');
+    expect(cpuData[1]).toHaveTextContent('80s · held since 70s 40');
+    expect(screen.queryByText(/^10s/)).not.toBeInTheDocument();
+    expect(kpiReadout('dashboard-kpi-tps-value', '19.50')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveAttribute('data-tone', 'good');
   });
 
-  it('shows the actual measurement time in the held tooltip', () => {
+  it('shows the measurement time in the held tooltip title for every chart', () => {
     useServerMetricHistoryStore.getState().applySnapshot(snapshot(1, 75_000));
     render(<DashboardView server={server} />);
 
-    expect(screen.getAllByText('held since 70s')).toHaveLength(3);
+    expect(screen.getAllByText(/held since 70s/)).toHaveLength(3);
   });
 
-  it('renders multiple samples immediately after remount and preserves server uptime', () => {
-    useServerMetricHistoryStore.getState().applySnapshot(snapshot(2));
-    const first = render(<DashboardView server={server} />);
-    expect(screen.getByText('00:01:12')).toBeInTheDocument();
-    first.unmount();
+  it('shows the software and address only in the server info card', () => {
     render(<DashboardView server={server} />);
-    expect(screen.getByText('00:01:12')).toBeInTheDocument();
-    for (const chart of screen.getAllByTestId('area-chart')) {
-      expect(chart).toHaveAttribute('data-count', '3');
-      const data = JSON.parse(chart.getAttribute('data-series') ?? '[]');
-      expect(data[2]).toMatchObject({
-        displayOnly: true,
-        measuredAtElapsedMs: 72_000,
-      });
+
+    const card = screen.getByTestId('dashboard-server-card');
+    expect(within(card).getByTestId('dashboard-software')).toHaveTextContent('Paper 1.21');
+    expect(within(card).getByTestId('dashboard-address')).toHaveTextContent('localhost:25565');
+    expect(within(card).getByRole('button', { name: 'dashboard.stats.copyAddress' })).toBeEnabled();
+    // The software name appears once on the whole screen, in the server info card.
+    expect(screen.getAllByText(/Paper/)).toHaveLength(1);
+  });
+
+  it('renders each sample as a datum and keeps the series key stable', () => {
+    useServerMetricHistoryStore.getState().applySnapshot(snapshot(2));
+    render(<DashboardView server={server} />);
+
+    for (const testId of ['dashboard-chart-cpu', 'dashboard-chart-memory', 'dashboard-chart-tps']) {
+      // Two samples plus the held point that carries the latest value up to now.
+      expect(chart(testId)).toHaveAttribute('data-count', '3');
+      expect(chart(testId)).toHaveAttribute('data-series', 'value');
     }
-    for (const area of screen.getAllByTestId('chart-area'))
-      expect(area).toHaveAttribute('data-dot', 'false');
-    for (const area of screen.getAllByTestId('chart-area'))
-      expect(area).toHaveAttribute('data-type', 'monotone');
-    expect(
-      screen.getAllByTestId('chart-area').map((area) => area.getAttribute('data-key')),
-    ).toEqual(['cpu', 'memory', 'tps']);
+    expect(screen.getByTestId('dashboard-kpi-uptime-value')).toHaveTextContent('00:01:12');
   });
 });

@@ -38,7 +38,7 @@ export const serverPropertiesList: PropertyDefinition[] = [
   {
     key: 'broadcast-console-to-ops',
     label: 'コンソールメッセージをOPに送信',
-    description: 'コンソールからのメッセージをOPに送るかどうか。',
+    description: 'コンソールからのメッセージをOPにも送ります。',
     type: 'boolean',
     category: 'General',
     default: true,
@@ -46,7 +46,7 @@ export const serverPropertiesList: PropertyDefinition[] = [
   {
     key: 'broadcast-rcon-to-ops',
     label: 'RCONメッセージをOPに送信',
-    description: 'RCONからのメッセージをOPに送るかどうか。',
+    description: 'RCONからのメッセージをOPにも送ります。',
     type: 'boolean',
     category: 'General',
     default: true,
@@ -585,3 +585,231 @@ export const serverPropertiesList: PropertyDefinition[] = [
     default: 'deflate',
   },
 ];
+
+/**
+ * English copy for serverPropertiesList, keyed by property key. The English UI reads these instead of
+ * falling back to the raw key. label and description above stay in Japanese, which the Japanese UI shows.
+ */
+export const serverPropertyEnglish: Record<string, { label: string; description: string }> = {
+  motd: {
+    label: 'MOTD',
+    description: 'Message shown in the server list. Color codes are allowed.',
+  },
+  'bug-report-link': {
+    label: 'Bug report link',
+    description: 'Bug report URL shown to clients. Leave blank to hide it.',
+  },
+  'broadcast-console-to-ops': {
+    label: 'Send console messages to ops',
+    description: 'Whether messages from the console are sent to operators.',
+  },
+  'broadcast-rcon-to-ops': {
+    label: 'Send RCON messages to ops',
+    description: 'Whether messages from RCON are sent to operators.',
+  },
+  'op-permission-level': {
+    label: 'Op permission level',
+    description: 'Permission level of operators (1-4).',
+  },
+  'spawn-protection': {
+    label: 'Spawn protection radius',
+    description: 'Radius of spawn protection in blocks. 0 disables it.',
+  },
+  'function-permission-level': {
+    label: 'Function permission level',
+    description: 'Permission level needed to run command functions.',
+  },
+  'allow-flight': { label: 'Allow flight', description: 'Whether flying is allowed in survival.' },
+  debug: { label: 'Debug mode', description: 'Whether to enable debug logging.' },
+  'accepts-transfers': {
+    label: 'Accept transfers',
+    description: 'Whether to accept players transferred from a proxy or another server.',
+  },
+  'pause-when-empty-seconds': {
+    label: 'Pause when empty (seconds)',
+    description: 'Seconds with no players before the server pauses. -1 disables it.',
+  },
+  'player-idle-timeout': {
+    label: 'Idle kick time (minutes)',
+    description: 'Minutes before idle players are kicked. 0 disables it.',
+  },
+  gamemode: { label: 'Game mode', description: 'Default game mode for new players.' },
+  'force-gamemode': {
+    label: 'Force game mode',
+    description: 'Whether players always join in the default game mode.',
+  },
+  difficulty: { label: 'Difficulty', description: 'World difficulty.' },
+  hardcore: { label: 'Hardcore', description: 'Whether hardcore mode is enabled.' },
+  pvp: { label: 'PvP', description: 'Whether players can attack each other.' },
+  'level-name': { label: 'World name', description: 'Name of the world folder.' },
+  'level-seed': { label: 'World seed', description: 'Seed used to generate the world.' },
+  'level-type': {
+    label: 'World type',
+    description: 'For example default, flat, large_biomes, amplified, or customized.',
+  },
+  'generator-settings': {
+    label: 'Generator settings',
+    description: 'JSON for a custom world generator.',
+  },
+  'initial-disabled-packs': {
+    label: 'Disabled data packs',
+    description: 'Data or resource packs disabled at first start, comma-separated.',
+  },
+  'initial-enabled-packs': {
+    label: 'Enabled data packs',
+    description: 'Data or resource packs enabled at first start, comma-separated.',
+  },
+  'generate-structures': {
+    label: 'Generate structures',
+    description: 'Whether villages, strongholds, and other structures are generated.',
+  },
+  'simulation-distance': {
+    label: 'Simulation distance',
+    description: 'Distance in chunks where entities and redstone are simulated.',
+  },
+  'view-distance': {
+    label: 'View distance',
+    description: 'Distance in chunks that is sent to players.',
+  },
+  'max-world-size': {
+    label: 'Max world size',
+    description: 'Radius of the world border in blocks.',
+  },
+  'sync-chunk-writes': {
+    label: 'Synchronous chunk writes',
+    description: 'Whether chunks are written synchronously.',
+  },
+  'text-filtering-config': {
+    label: 'Text filter config URL',
+    description: 'URL of the chat filter configuration.',
+  },
+  'text-filtering-version': {
+    label: 'Text filter version',
+    description: 'Version of the chat filter configuration.',
+  },
+  'server-port': { label: 'Server port', description: 'Port number the server uses.' },
+  'server-ip': {
+    label: 'Server IP',
+    description: 'IP address to bind to. Leave blank to listen on all interfaces.',
+  },
+  'network-compression-threshold': {
+    label: 'Compression threshold',
+    description: 'Packet size in bytes where compression starts. -1 disables it.',
+  },
+  'use-native-transport': {
+    label: 'Native transport',
+    description: 'Whether to use the OS-native network implementation.',
+  },
+  'enable-query': { label: 'Enable query', description: 'Whether the server query is enabled.' },
+  'query.port': { label: 'Query port', description: 'Port used by the query.' },
+  'rate-limit': {
+    label: 'Connection rate limit',
+    description: 'Maximum connection attempts per second. 0 means unlimited.',
+  },
+  'prevent-proxy-connections': {
+    label: 'Prevent proxy connections',
+    description: 'Whether connections through a proxy are refused.',
+  },
+  'enable-rcon': {
+    label: 'Enable RCON',
+    description: 'Whether the RCON remote console is enabled.',
+  },
+  'rcon.port': { label: 'RCON port', description: 'Port used by RCON.' },
+  'rcon.password': { label: 'RCON password', description: 'Password for RCON connections.' },
+  'enable-status': {
+    label: 'Server list status',
+    description: 'Whether the server answers server list status requests.',
+  },
+  'status-heartbeat-interval': {
+    label: 'Status heartbeat interval',
+    description: 'Heartbeat interval in milliseconds.',
+  },
+  'entity-broadcast-range-percentage': {
+    label: 'Entity broadcast range (%)',
+    description: 'Percentage multiplier for how far entities are visible.',
+  },
+  'online-mode': {
+    label: 'Online mode',
+    description: 'Whether to verify accounts with Mojang. false allows offline (cracked) clients.',
+  },
+  'enforce-secure-profile': {
+    label: 'Enforce secure profile',
+    description: 'Whether clients must have a secure profile.',
+  },
+  'enforce-whitelist': {
+    label: 'Enforce whitelist',
+    description: 'Whether players not on the whitelist are kicked.',
+  },
+  'white-list': { label: 'Whitelist', description: 'Whether the whitelist is enabled.' },
+  'resource-pack': { label: 'Resource pack URL', description: 'URL of the resource pack to send.' },
+  'resource-pack-id': { label: 'Resource pack ID', description: 'Optional resource pack ID.' },
+  'resource-pack-sha1': {
+    label: 'Resource pack SHA-1',
+    description: 'SHA-1 hash of the resource pack.',
+  },
+  'resource-pack-prompt': {
+    label: 'Resource pack prompt',
+    description: 'Message shown before the download.',
+  },
+  'require-resource-pack': {
+    label: 'Require resource pack',
+    description: 'Whether players must accept the resource pack.',
+  },
+  'management-server-enabled': {
+    label: 'Enable management server',
+    description: 'Whether the management server is enabled.',
+  },
+  'management-server-host': {
+    label: 'Management server host',
+    description: 'Host name of the management server.',
+  },
+  'management-server-port': {
+    label: 'Management server port',
+    description: 'Port number of the management server.',
+  },
+  'management-server-secret': {
+    label: 'Management server secret',
+    description: 'Secret used to authenticate to the management server.',
+  },
+  'management-server-tls-enabled': {
+    label: 'Management server TLS',
+    description: 'Whether TLS is enabled for the management server.',
+  },
+  'management-server-tls-keystore': {
+    label: 'Management server keystore',
+    description: 'Path to the TLS keystore.',
+  },
+  'management-server-tls-keystore-password': {
+    label: 'Management server keystore password',
+    description: 'Password for the keystore.',
+  },
+  'log-ips': {
+    label: 'Log IP addresses',
+    description: 'Whether connecting IP addresses are logged.',
+  },
+  'max-players': { label: 'Max players', description: 'Maximum number of players that can join.' },
+  'max-tick-time': {
+    label: 'Max tick time',
+    description: 'Maximum time per tick in microseconds. 0 means unlimited.',
+  },
+  'max-chained-neighbor-updates': {
+    label: 'Max chained neighbor updates',
+    description: 'Limit on chained block updates.',
+  },
+  'enable-jmx-monitoring': {
+    label: 'Enable JMX monitoring',
+    description: 'Whether JMX monitoring is enabled.',
+  },
+  'enable-code-of-conduct': {
+    label: 'Show code of conduct link',
+    description: 'Whether to show the code of conduct link to clients.',
+  },
+  'hide-online-players': {
+    label: 'Hide online players',
+    description: 'Hides the online player count in the server list.',
+  },
+  'region-file-compression': {
+    label: 'Region file compression',
+    description: 'Compression format for region files, such as deflate.',
+  },
+};

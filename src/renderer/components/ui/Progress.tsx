@@ -1,23 +1,14 @@
-import { cn } from '@/lib/ui';
-import * as ProgressPrimitive from '@radix-ui/react-progress';
+import {
+  Progress as ArcProgress,
+  type ProgressProps as ArcProgressProps,
+} from '@/components/arc/progress/progress';
 
-interface ProgressProps {
+export interface ProgressProps extends Omit<ArcProgressProps, 'value' | 'max'> {
+  /** Percent, 0 to 100. Out-of-range values are clamped. */
   value: number;
-  className?: string;
 }
 
-export function Progress({ value, className }: ProgressProps) {
+export function Progress({ value, ...props }: ProgressProps) {
   const clampedValue = Math.min(100, Math.max(0, value));
-
-  return (
-    <ProgressPrimitive.Root
-      className={cn('relative h-2 w-full overflow-hidden rounded-full bg-zinc-700', className)}
-      value={clampedValue}
-    >
-      <ProgressPrimitive.Indicator
-        className="h-full bg-[#5865F2]"
-        style={{ width: `${clampedValue}%` }}
-      />
-    </ProgressPrimitive.Root>
-  );
+  return <ArcProgress value={clampedValue} max={100} {...props} />;
 }

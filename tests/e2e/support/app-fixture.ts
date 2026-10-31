@@ -8,11 +8,10 @@ type E2eWindow = Window & {
     calls: E2eCall[];
     state: E2eState;
   };
-  __dialogConfirm?: boolean;
 };
 
 export interface AppFixture {
-  gotoApp(scenario?: E2eScenario): Promise<void>;
+  gotoApp(scenario?: E2eScenario, options?: { runningServerIds?: string[] }): Promise<void>;
   createServer(options?: {
     software?: 'Paper' | 'Fabric' | 'Forge';
     version?: string;
@@ -20,10 +19,9 @@ export interface AppFixture {
   }): Promise<string>;
   selectServer(serverId: string): Promise<void>;
   openView(view: string): Promise<void>;
-  setBackupSelection(paths: string[]): Promise<void>;
   runtimeFiles(): Promise<string[]>;
   runtimeState(): Promise<E2eState | undefined>;
-  confirmDialogs(): Promise<void>;
+  acceptConfirm(): Promise<void>;
   ipcCalls(name?: string): Promise<E2eCall[]>;
   clearCalls(): Promise<void>;
   expectNoIpcCall(name: string): Promise<void>;
@@ -44,8 +42,10 @@ export function createAppFixture(page: Page): AppFixture {
   };
 
   return {
-    async gotoApp(scenario = 'default') {
+    async gotoApp(scenario = 'default', options: { runningServerIds?: string[] } = {}) {
       const state = runtimeStateForScenario(scenario);
+      // Seed running servers before the first server list load, since the app reads status only at mount.
+      if (options.runningServerIds) state.runningServerIds = [...options.runningServerIds];
       await page.addInitScript(
         ({ scenario: initialScenario, state: initialState }) => {
           (window as E2eWindow).__MC_VECTOR_E2E__ = {
@@ -72,6 +72,7 @@ export function createAppFixture(page: Page): AppFixture {
       await ensureSidebarOpen();
       await page.locator('[data-testid="create-server-button"]').click();
       await page.locator('[data-testid="choice-new-server-button"]').click();
+      await page.locator('[data-testid="choice-next-button"]').click();
       const modal = page.locator('[data-testid="add-server-modal"]');
       await expect(modal).toBeVisible();
       const serverName = options.serverId ?? `e2e-${Date.now()}`;
@@ -79,12 +80,14 @@ export function createAppFixture(page: Page): AppFixture {
       await modal.locator('[data-testid="server-port-input"]').fill('25565');
       await modal.locator('[data-testid="server-memory-input"]').fill('2');
       if (options.software) {
-        await modal
-          .locator('[data-testid="server-software-select"]')
-          .selectOption(options.software);
+        await modal.locator('[data-testid="server-software-select"]').click();
+        const softwareName = new RegExp(`^${options.software}\\b`);
+        await page.getByRole('option', { name: softwareName }).click();
       }
       if (options.version) {
-        await modal.locator('[data-testid="server-version-select"]').selectOption(options.version);
+        const versionInput = modal.locator('[data-testid="server-version-select"]');
+        await versionInput.fill(options.version);
+        await page.getByRole('option', { name: options.version, exact: true }).click();
       }
       await modal.locator('[data-testid="save-server-button"]').click();
       await expect(modal).toHaveCount(0, { timeout: 15_000 });
@@ -109,13 +112,6 @@ export function createAppFixture(page: Page): AppFixture {
       await page.locator(`[data-testid="nav-item-${view}"]`).click();
     },
 
-    async setBackupSelection(paths: string[]) {
-      await page.evaluate((selectedPaths) => {
-        const runtime = (window as E2eWindow).__MC_VECTOR_E2E__;
-        if (runtime) runtime.state.selectedBackupPaths = selectedPaths;
-      }, paths);
-    },
-
     async runtimeFiles() {
       return page.evaluate(() => {
         const runtime = (window as E2eWindow).__MC_VECTOR_E2E__;
@@ -127,10 +123,11 @@ export function createAppFixture(page: Page): AppFixture {
       return page.evaluate(() => (window as E2eWindow).__MC_VECTOR_E2E__?.state);
     },
 
-    async confirmDialogs() {
-      await page.evaluate(() => {
-        (window as E2eWindow).__dialogConfirm = true;
-      });
+    /** Confirms the in-app dialog that is open now. Call it right after the action that opens the dialog. */
+    async acceptConfirm() {
+      const confirm = page.locator('[data-testid="feedback-confirm-confirm"]');
+      await expect(confirm).toBeVisible();
+      await confirm.click();
     },
 
     async ipcCalls(name?: string) {

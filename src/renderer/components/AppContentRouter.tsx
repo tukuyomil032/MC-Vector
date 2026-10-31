@@ -1,9 +1,13 @@
+import { Plus } from 'lucide-react';
 import { type JSX, lazy } from 'react';
+import { Button } from '@/components/arc/button/button';
 import type { Translate } from '../../i18n';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
+import { useUiStore } from '../../store/uiStore';
 import type { AppView, MinecraftServer } from '../shared/server declaration';
 import BackupsView from './BackupsView';
 import ConsoleView from './ConsoleView';
+import ContentState from './ContentState';
 import NgrokGuideView from './NgrokGuideView';
 import ProxyHelpView from './ProxyHelpView';
 import ProxySetupView, { type ProxyNetworkConfig } from './ProxySetupView';
@@ -15,6 +19,8 @@ const DashboardView = lazy(() => import('./DashboardView'));
 const FilesView = lazy(() => import('./FilesView'));
 const PluginBrowser = lazy(() => import('./PluginBrowser'));
 const SettingsWindow = lazy(() => import('./SettingsWindow'));
+// Dev-only: the conditional keeps the UI Lab chunk out of production builds.
+const UiLabView = import.meta.env.DEV ? lazy(() => import('./UiLabView')) : null;
 
 type SetCurrentView = (view: AppView) => void;
 
@@ -28,6 +34,7 @@ interface AppContentRouterProps {
   onUpdateServer: (server: MinecraftServer) => Promise<void>;
   onServerVersionChanged: (serverId: string, version: string) => void;
   onServerPortChanged: (serverId: string, port: number) => void;
+  onAddServer: () => void;
   updaterSettings: AppUpdaterSettings;
   t: Translate;
 }
@@ -42,15 +49,15 @@ export default function AppContentRouter({
   onUpdateServer,
   onServerVersionChanged,
   onServerPortChanged,
+  onAddServer,
   updaterSettings,
   t,
 }: AppContentRouterProps) {
   type ViewRenderer = () => JSX.Element;
+  const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
   const staticViewRenderers: Partial<Record<AppView, ViewRenderer>> = {
-    'app-settings': () => (
-      <SettingsWindow onClose={() => setCurrentView('dashboard')} {...updaterSettings} />
-    ),
+    'app-settings': () => <SettingsWindow onClose={returnToPreviousView} {...updaterSettings} />,
     'proxy-help': () => <ProxyHelpView />,
     'ngrok-guide': () => <NgrokGuideView />,
     proxy: () => (
@@ -60,6 +67,7 @@ export default function AppContentRouter({
         onOpenHelp={() => setCurrentView('proxy-help')}
       />
     ),
+    ...(UiLabView ? { 'ui-lab': () => <UiLabView /> } : {}),
   };
 
   const staticRenderer = staticViewRenderers[currentView];
@@ -68,10 +76,23 @@ export default function AppContentRouter({
   }
 
   if (!activeServer) {
+    const hasServers = servers.length > 0;
     return (
-      <div className="p-10 text-center text-zinc-500 text-xl">
-        {t('server.list.selectOrCreate')}
-      </div>
+      <ContentState
+        title={hasServers ? t('server.list.selectOrCreate') : t('server.list.emptyTitle')}
+        action={
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            data-testid={hasServers ? undefined : 'create-server-button'}
+            onClick={onAddServer}
+          >
+            <Plus size={14} strokeWidth={1.75} aria-hidden={true} />
+            {t('nav.addServer')}
+          </Button>
+        }
+      />
     );
   }
 
@@ -112,5 +133,5 @@ export default function AppContentRouter({
     return serverRenderer();
   }
 
-  return <div>{t('errors.notFound')}</div>;
+  return <ContentState title={t('errors.notFound')} />;
 }

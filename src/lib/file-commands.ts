@@ -112,6 +112,18 @@ export async function listFilesWithMetadata(dirPath: string): Promise<FileEntryW
   return listFiles(dirPath);
 }
 
+export interface ManagedDirectorySize {
+  bytes: number;
+  /** False when the scan ran out of time or part of the tree could not be read. */
+  complete: boolean;
+}
+
+/** Recursive size of a server folder. Symbolic links are not followed. The scan has a time budget on the Rust side. */
+export async function getManagedDirectorySize(dirPath: string): Promise<ManagedDirectorySize> {
+  const request = await assertAllowedPath(dirPath);
+  return tauriInvoke<ManagedDirectorySize>('get_managed_directory_size', { request });
+}
+
 export async function readFileContent(filePath: string): Promise<string> {
   const request = await assertAllowedPath(filePath);
   return tauriInvoke<string>('read_managed_text_file', {

@@ -7,11 +7,11 @@ test.describe('proxy, Java, and Ngrok flows', () => {
 
     const proxy = page.locator('[data-testid="proxy-view"]');
     await expect(proxy).toBeVisible();
-    await expect(proxy.locator('#proxy-setup-software')).toHaveValue('Velocity');
+    await expect(proxy.locator('#proxy-setup-software')).toContainText('Velocity');
     await proxy.locator('#proxy-backend-server-1').check();
 
-    await app.confirmDialogs();
     await proxy.getByRole('button', { name: /Build Network/i }).click();
+    await app.acceptConfirm();
     await expect(page.getByText(/Updated settings for 1 server/i)).toBeVisible({
       timeout: 15_000,
     });
@@ -37,6 +37,8 @@ test.describe('proxy, Java, and Ngrok flows', () => {
     await app.openView('general-settings');
 
     const settings = page.locator('[data-testid="server-settings-view"]');
+    // World management lives in the general settings, below the ngrok card.
+    await expect(settings.getByText('World Management', { exact: true })).toBeVisible();
     await settings.locator('[data-testid="server-settings-java-manage-button"]').click();
     const javaDialog = page.locator('[data-testid="java-manager-dialog"]');
     await expect(javaDialog).toBeVisible();
@@ -45,10 +47,10 @@ test.describe('proxy, Java, and Ngrok flows', () => {
       timeout: 15_000,
     });
     await expect.poll(async () => (await app.ipcCalls('download_java')).length).toBe(1);
-    await javaDialog.getByRole('button', { name: '×' }).click();
+    await javaDialog.locator('[data-testid="java-manager-close"]').click();
 
-    await settings.locator('.server-settings__ngrok-switch').click();
-    const tokenDialog = page.locator('.server-settings__token-panel');
+    await settings.locator('[data-testid="ngrok-toggle"]').click();
+    const tokenDialog = page.locator('[data-testid="ngrok-token-dialog"]');
     await expect(tokenDialog).toBeVisible();
     await tokenDialog.locator('[data-testid="ngrok-token-input"]').fill('e2e-token');
     await tokenDialog.locator('[data-testid="ngrok-token-save"]').click();

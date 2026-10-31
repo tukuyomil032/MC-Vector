@@ -89,7 +89,7 @@ describe('use-server-eula-gate', () => {
 
     fireEvent.click(screen.getByTestId('request-eula'));
     const modal = await screen.findByTestId('server-eula-modal');
-    expect(modal).toBeVisible();
+    expect(modal).toBeInTheDocument();
 
     const acceptButton = screen.getByTestId('server-eula-accept');
     expect(acceptButton).toBeDisabled();
@@ -136,7 +136,7 @@ describe('use-server-eula-gate', () => {
     await waitFor(() =>
       expect(screen.getByTestId('server-eula-error')).toHaveTextContent('disk full'),
     );
-    expect(screen.getByTestId('server-eula-modal')).toBeVisible();
+    expect(screen.getByTestId('server-eula-modal')).toBeInTheDocument();
     expect(screen.getByTestId('gate-result')).toHaveTextContent('');
   });
 

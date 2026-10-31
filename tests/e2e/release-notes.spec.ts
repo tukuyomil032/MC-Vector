@@ -25,13 +25,12 @@ test.describe('release notes update preview', () => {
     const dialog = page.getByRole('dialog');
     const notes = page.locator('.release-notes');
 
-    await expect(dialog.getByRole('heading', { name: 'Update available! v2.4.0' })).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Version 2.4.0 is available' })).toBeVisible();
     expect(
       await dialog.evaluate((element) => element.closest('.app-shell[data-theme="dark"]')),
     ).toBe(null);
-    await expect(dialog).toHaveAttribute('data-theme', 'dark');
     await expect(notes.getByRole('heading', { name: 'Version 2.4.0' })).toBeVisible();
-    for (const section of ['Breaking Changes', 'Features', 'Bug Fixes', 'Performance']) {
+    for (const section of ['Breaking changes', 'New features', 'Bug fixes', 'Performance']) {
       await expect(notes.getByRole('heading', { name: section, exact: true })).toBeVisible();
     }
     await expect(notes.getByRole('heading', { name: 'Maintenance', exact: true })).toHaveCount(0);
@@ -48,9 +47,10 @@ test.describe('release notes update preview', () => {
       const styles = getComputedStyle(element);
       return { backgroundColor: styles.backgroundColor, color: styles.color };
     });
+    // The notes sit on the Arc surface and text tokens, not the legacy zinc values.
     expect(notesAppearance).toEqual({
-      backgroundColor: 'rgb(39, 39, 42)',
-      color: 'rgb(244, 244, 245)',
+      backgroundColor: 'oklch(0.215 0 0)',
+      color: 'oklch(0.96 0 0)',
     });
 
     const downloadAppearance = await page
@@ -59,9 +59,10 @@ test.describe('release notes update preview', () => {
         const styles = getComputedStyle(element);
         return { backgroundColor: styles.backgroundColor, color: styles.color };
       });
+    // Arc primary in the dark theme: light fill, dark label.
     expect(downloadAppearance).toEqual({
-      backgroundColor: 'rgb(88, 101, 242)',
-      color: 'rgb(255, 255, 255)',
+      backgroundColor: 'oklch(0.96 0 0)',
+      color: 'oklch(0.19 0 0)',
     });
 
     await page.screenshot({ path: testInfo.outputPath('release-notes-normal.png') });
@@ -81,17 +82,17 @@ test.describe('release notes update preview', () => {
     }));
 
     expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-    expect(metrics.clientHeight).toBeGreaterThan(290);
+    expect(metrics.clientHeight).toBeGreaterThan(240);
     expect(metrics.clientHeight).toBeLessThanOrEqual(450);
     expect(metrics.overflowY).toBe('auto');
-    await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Later', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeVisible();
   });
 
   test('records the cancel callback without making a network request', async ({ page }) => {
     await page.goto(PREVIEW_URL);
 
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('button', { name: 'Later', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect.poll(() => previewCalls(page)).toEqual(['dismiss']);

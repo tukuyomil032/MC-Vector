@@ -106,6 +106,25 @@ export async function saveAppSettings(settings: Partial<AppSettings>): Promise<v
   await store.save();
 }
 
+/** What the user chose about update prompts: a version to skip for good, and a version to remind about later. */
+export interface UpdatePromptPreferences {
+  skippedVersion?: string;
+  remindLater?: { version: string; until: number };
+}
+
+export async function getUpdatePromptPreferences(): Promise<UpdatePromptPreferences> {
+  const store = await load(STORE_NAME);
+  return (await store.get<UpdatePromptPreferences>('updatePromptPreferences')) ?? {};
+}
+
+export async function saveUpdatePromptPreferences(
+  preferences: UpdatePromptPreferences,
+): Promise<void> {
+  const store = await load(STORE_NAME);
+  await store.set('updatePromptPreferences', preferences);
+  await store.save();
+}
+
 export async function getServerRoot(): Promise<string> {
   const dataDir = await appDataDir();
   return `${dataDir}/servers`;

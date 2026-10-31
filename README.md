@@ -292,6 +292,7 @@ MC-Vector/
 │       │   ├── ConsoleView.tsx
 │       │   ├── FilesView.tsx
 │       │   ├── PluginBrowser.tsx
+│       │   ├── plugin-browser/       # Plugin browser panels, cards, dialogs
 │       │   └── ...
 │       └── shared/                   # Shared utilities and types
 │
@@ -427,12 +428,13 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## Technology Stack
 
-- **Frontend:** React 19, TypeScript, Vite, CSS, TailwindCSS
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v3 (utility layer only)
 - **Desktop:** Tauri v2 (Rust backend)
 - **State Management:** Zustand
-- **UI Components:** Lucide React, Framer Motion
+- **UI Components:** Arc UI (vendored under `src/components/arc/`, owned by this repo) with Lucide icons and Motion
+- **Design Tokens:** Arc tokens and CSS variables in `src/components/arc/foundation.css` and `src/styles/`; dark theme only
 - **Code Editor:** Monaco Editor
-- **Charts:** Recharts
+- **Charts:** Arc `LineChart` (no chart library)
 - **Terminal:** xterm.js
 - **Package Manager:** Bun 1.4.2
 - **Build Tool:** Vite

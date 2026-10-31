@@ -206,6 +206,37 @@ describe('backup-commands', () => {
     expect(tauriInvokeMock).toHaveBeenCalledWith('list_managed_backups', { serverId: 'server-1' });
   });
 
+  it('carries the recorded duration and leaves it unset for older backups', async () => {
+    tauriInvokeMock.mockResolvedValueOnce([
+      {
+        backupId: 'backup-new',
+        archivePath: 'new.zip',
+        origin: 'manual',
+        consistency: 'quiesced',
+        createdAt: '200000',
+        totalBytes: 2048,
+        restoreEligible: true,
+        durationMs: 1500,
+      },
+      {
+        backupId: 'backup-old',
+        archivePath: 'old.zip',
+        origin: 'automatic',
+        consistency: 'quiesced',
+        createdAt: '100000',
+        totalBytes: 1024,
+        restoreEligible: true,
+        durationMs: null,
+      },
+    ]);
+    const { listBackupsWithMetadata } = await import('@/lib/backup-commands');
+    const backups = await listBackupsWithMetadata('server-1');
+
+    expect(backups[0]).toMatchObject({ name: 'new.zip', size: 2048, durationMs: 1500 });
+    expect(backups[1]).toMatchObject({ name: 'old.zip', size: 1024 });
+    expect(backups[1]).not.toHaveProperty('durationMs');
+  });
+
   it('returns an empty metadata list when the managed directory is missing', async () => {
     tauriInvokeMock
       .mockRejectedValueOnce(
@@ -353,39 +384,6 @@ describe('backup-commands', () => {
     }
     await expect(createBackup('server-1', 'backup:2024')).rejects.toThrow('Invalid backup name');
     expect(tauriInvokeMock).not.toHaveBeenCalled();
-  });
-
-  it('normalizes selected backup sources to minimal safe roots', async () => {
-    const { normalizeBackupSources } = await import('@/lib/backup-commands');
-
-    expect(
-      normalizeBackupSources([
-        'world/level.dat',
-        'world\\region\\r.0.0.mca',
-        'world',
-        'plugins',
-        'plugins',
-        'backups',
-        'backups/old.zip',
-        'Backups/new.zip',
-        'BACKUPS/archive.zip',
-        'Backups',
-      ]),
-    ).toEqual(['plugins', 'world']);
-  });
-
-  it('rejects absolute, UNC, and drive-style source paths before normalization', async () => {
-    const { normalizeBackupSources } = await import('@/lib/backup-commands');
-
-    expect(
-      normalizeBackupSources([
-        '/world/level.dat',
-        '\\\\server\\share\\world',
-        'C:\\server\\world',
-        'D:/server/world',
-        'world\\region\\r.0.0.mca',
-      ]),
-    ).toEqual(['world/region/r.0.0.mca']);
   });
 
   it('deletes a backup using a typed managed request', async () => {

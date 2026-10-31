@@ -67,6 +67,19 @@ export const useI18nStore = create<I18nStoreState>((set, get) => ({
   },
 }));
 
+/** Keeps <html lang> in step with the UI language, so assistive tech and font fallback follow the locale. */
+function applyDocumentLocale(locale: LocaleCode): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = locale;
+}
+
+applyDocumentLocale(useI18nStore.getState().currentLocale);
+useI18nStore.subscribe((state, previous) => {
+  if (state.currentLocale !== previous.currentLocale) {
+    applyDocumentLocale(state.currentLocale);
+  }
+});
+
 /**
  * Helper function to get the current locale synchronously.
  * Useful for non-React contexts.

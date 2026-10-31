@@ -1,10 +1,13 @@
+import '@fontsource-variable/inter';
+import './styles/fonts.css';
+import '@/components/arc/foundation.css';
+import './styles/arc-brand.css';
 import { loader } from '@monaco-editor/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { restoreStateCurrent } from '@tauri-apps/plugin-window-state';
 import * as monaco from 'monaco-editor';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import 'sonner/dist/styles.css';
 import App from './App';
 import { useI18nStore } from './i18n';
 import { AppFeedbackProvider } from './renderer/components/AppFeedbackProvider';
@@ -23,20 +26,13 @@ loader.config({ monaco });
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
-function isBackupSelectorWindow(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('backupSelector') === '1';
-}
-
 async function bootstrap() {
   try {
     await restoreStateCurrent();
   } catch {
     // window-state の復元失敗はアプリ起動を妨げない
   }
-  if (!isBackupSelectorWindow()) {
-    await useI18nStore.getState().initLocale();
-  }
+  await useI18nStore.getState().initLocale();
 
   root.render(
     <React.StrictMode>

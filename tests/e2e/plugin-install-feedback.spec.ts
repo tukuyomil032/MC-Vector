@@ -97,7 +97,7 @@ test.describe('plugin install and feedback flows', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveAttribute('role', 'dialog');
     await expect(dialog.getByRole('heading')).toBeVisible();
-    await expect(dialog.getByLabel('Close')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Close' })).toBeVisible();
     await expect(dialog).toContainText('WirelessRedstone');
     await expect(dialog).toContainText('Paper 1.21.10');
     await expect(dialog).toContainText('1.20.1');
@@ -222,8 +222,8 @@ test.describe('plugin install and feedback flows', () => {
     await page.getByRole('button', { name: 'Enable' }).click();
     await expect.poll(() => app.runtimeFiles()).toContain(enabledPath);
     await expect.poll(() => app.runtimeFiles()).not.toContain(disabledPath);
-    await app.confirmDialogs();
     await page.getByRole('button', { name: 'Uninstall' }).click();
+    await app.acceptConfirm();
     await expect.poll(() => app.runtimeFiles()).not.toContain(enabledPath);
     expect(await app.ipcCalls('uninstall_installed_plugin')).toHaveLength(1);
     await expectNoRendererOwnedArtifactData(app);

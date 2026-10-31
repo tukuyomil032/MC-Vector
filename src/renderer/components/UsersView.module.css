@@ -1,0 +1,143 @@
+.root {
+  box-sizing: border-box;
+  display: flex;
+  /* A fixed height (not min-height) gives the grid a definite size, so long lists scroll inside their card. */
+  height: 100%;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+/* The grid takes the height the view has left over, and its two rows share it, so short lists still fill the screen. */
+.grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  grid-auto-rows: minmax(16rem, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* The list card is a plain Arc surface: its heading is a SectionTitle, so it cannot use the Card title slot. */
+.card {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The body fills the card between its heading and the add form. The empty, loading, and list states all center or fill it. */
+.body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* The list scrolls inside its card once the card is full. */
+.list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.row:first-child {
+  border-top: 0;
+}
+
+.avatar {
+  display: grid;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0.625rem;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.avatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.rowText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.rowName {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The add row sits on the card's bottom edge, so the input rows line up across a row of cards. */
+.addForm {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.alertDetail {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.retry {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 46rem) {
+  .root {
+    padding: var(--space-4);
+  }
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

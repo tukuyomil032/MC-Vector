@@ -229,6 +229,7 @@ pub fn run() {
             commands::file_utils::create_managed_directory,
             commands::file_utils::delete_managed_path,
             commands::file_utils::move_managed_path,
+            commands::file_utils::get_managed_directory_size,
             // アップデートユーティリティ
             commands::updater_utils::can_update_app,
             commands::updater_utils::get_app_location,

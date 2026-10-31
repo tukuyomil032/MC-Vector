@@ -1,8 +1,15 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { Archive, Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { Alert } from '@/components/arc/alert/alert';
+import { Badge } from '@/components/arc/badge/badge';
+import { Button } from '@/components/arc/button/button';
+import { ChipGroup } from '@/components/arc/chip-group/chip-group';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
+import { Input } from '@/components/arc/input/input';
+import { Select } from '@/components/arc/select/select';
+import { Skeleton } from '@/components/arc/skeleton/skeleton';
+import { Textarea } from '@/components/arc/textarea/textarea';
 import { useTranslation } from '../../i18n';
 import {
   applyBackupRetention,
@@ -10,22 +17,27 @@ import {
   deleteBackup,
   getBackupNameValidationError,
   listBackupsWithMetadata,
-  normalizeBackupSources,
   readBackupCatalog,
   restoreBackup,
   writeBackupCatalog,
 } from '../../lib/backup-commands';
+import { ESTIMATE_SAMPLE_COUNT, estimateBackupDurationMs } from '../../lib/backup-estimate';
 import { logError } from '../../lib/error-utils';
-import { deleteItem, listFiles } from '../../lib/file-commands';
-import { tauriListen } from '../../lib/tauri-api';
+import { notify } from '../shared/notify';
+import { formatBytes } from '../shared/format-bytes';
+import { formatFolderSize, measureFolder, type FolderSize } from '../shared/folder-size';
+import { useArcMessages } from '../shared/arc-messages';
+import { useAppFeedback } from './AppFeedbackProvider';
+import { EmptyLine } from './ui/EmptyLine';
+import { HintIcon } from './ui/FieldLabel';
+import { SectionTitle } from './ui/IconTile';
 import {
   getManualBackupOperationId,
   useBackupOperationStore,
 } from '../../store/backupOperationStore';
 import { buildManualBackupName } from '../shared/auto-backup';
 import type { MinecraftServer } from '../shared/server declaration';
-import { Button } from './ui/Button';
-import { Input, NativeSelect, Textarea } from './ui/Field';
+import styles from './BackupsView.module.css';
 
 interface Props {
   server: MinecraftServer;
@@ -35,21 +47,19 @@ interface Backup {
   name: string;
   date: Date;
   size: number;
+  durationMs?: number;
 }
-
-type BackupMode = 'full' | 'differential';
 
 interface BackupSnapshotEntry {
   size: number;
   modified: number;
 }
 
+// Backups are always full snapshots of the whole server. Fields written by older
+// builds (mode, parent, sourceCount) are ignored when the catalog is read.
 interface BackupCatalogEntry {
-  mode: BackupMode;
-  parent: string | null;
   tags: string[];
   note: string;
-  sourceCount: number;
   createdAt: string;
 }
 
@@ -78,38 +88,12 @@ interface DataReloadToken {
   generation: number;
 }
 
-type MaybeAsyncUnlisten = () => void | Promise<void>;
-
-interface SelectorOnceRegistration {
-  cancelled: boolean;
-  unlistenFns: Set<MaybeAsyncUnlisten>;
-}
-
-function safeUnlisten(unlisten: MaybeAsyncUnlisten | undefined): void {
-  if (!unlisten) {
-    return;
-  }
-
-  try {
-    const result = unlisten();
-    if (result instanceof Promise) {
-      void result.catch(() => undefined);
-    }
-  } catch {
-    return;
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 function normalizeBackupName(backupName: string): string {
   return backupName.endsWith('.zip') ? backupName : `${backupName}.zip`;
-}
-
-function parseBackupMode(value: unknown): BackupMode {
-  return value === 'differential' ? 'differential' : 'full';
 }
 
 function createEmptyCatalog(): BackupCatalog {
@@ -156,14 +140,8 @@ function sanitizeCatalog(value: unknown): BackupCatalog {
       : [];
 
     entries[backupName] = {
-      mode: parseBackupMode(entry.mode),
-      parent: typeof entry.parent === 'string' ? entry.parent : null,
       tags,
       note: typeof entry.note === 'string' ? entry.note : '',
-      sourceCount:
-        typeof entry.sourceCount === 'number' && Number.isFinite(entry.sourceCount)
-          ? entry.sourceCount
-          : 0,
       createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : '',
     };
   }
@@ -175,12 +153,10 @@ function sanitizeCatalog(value: unknown): BackupCatalog {
   };
 }
 
-function parseTagsInput(value: string): string[] {
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0);
-}
+const COMPRESSION_OPTIONS = Array.from({ length: 9 }, (_, index) => ({
+  value: String(index + 1),
+  label: String(index + 1),
+}));
 
 export async function persistBackupCatalogBestEffort(
   persist: () => Promise<void>,
@@ -196,7 +172,9 @@ export async function persistBackupCatalogBestEffort(
 }
 
 export default function BackupsView({ server }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const arc = useArcMessages();
+  const { confirm } = useAppFeedback();
   const activeManualOperation = useBackupOperationStore(
     (state) => state.activeManualOperations[server.id],
   );
@@ -207,28 +185,28 @@ export default function BackupsView({ server }: Props) {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [customName, setCustomName] = useState('');
   const [compressionLevel, setCompressionLevel] = useState(5);
   const [backupCatalog, setBackupCatalog] = useState<BackupCatalog>(createEmptyCatalog());
   const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>('loading');
-  const [worlds, setWorlds] = useState<string[]>([]);
+  const [serverSize, setServerSize] = useState<FolderSize | null>(null);
+  const serverSizeGenerationRef = useRef(0);
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState('');
+  const [tagList, setTagList] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState('');
+  const [restoringName, setRestoringName] = useState<string | null>(null);
   const [noteInput, setNoteInput] = useState('');
   const catalogOperationInFlightRef = useRef(false);
   const initializationKey = `${server.id}\0${server.path}`;
   const initializationKeyRef = useRef<string | null>(null);
   const initializationGenerationRef = useRef(0);
   const dataReloadGenerationRef = useRef(0);
-  const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(false);
   const pendingUnmountRef = useRef<symbol | null>(null);
   const observedManualCompletionRef = useRef({
     key: initializationKey,
     revision: manualCompletionRevision,
   });
-  const selectorOnceRegistrationsRef = useRef(new Set<SelectorOnceRegistration>());
   const getCurrentInitializationToken = useCallback((fallbackKey: string): InitializationToken => {
     return {
       key: fallbackKey,
@@ -290,31 +268,9 @@ export default function BackupsView({ server }: Props) {
       pendingUnmountRef.current = null;
     });
   }, []);
-  const cleanupSelectorOnceRegistrations = useCallback(() => {
-    for (const registration of selectorOnceRegistrationsRef.current) {
-      registration.cancelled = true;
-      for (const unlisten of registration.unlistenFns) {
-        safeUnlisten(unlisten);
-      }
-      registration.unlistenFns.clear();
-    }
-    selectorOnceRegistrationsRef.current.clear();
-  }, []);
   const cleanupInitialization = useCallback(() => {
-    cleanupSelectorOnceRegistrations();
     scheduleUnmountInvalidation();
-  }, [cleanupSelectorOnceRegistrations, scheduleUnmountInvalidation]);
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    if (type === 'success') {
-      toast.success(msg);
-    } else if (type === 'error') {
-      toast.error(msg);
-    } else if (type === 'warning') {
-      toast.warning(msg);
-    } else {
-      toast(msg);
-    }
-  };
+  }, [scheduleUnmountInvalidation]);
   const isManualBackupCreating = activeManualOperation?.kind === 'create';
   const isProcessing = processing || isManualBackupCreating;
   const beginCatalogOperation = () => {
@@ -330,6 +286,7 @@ export default function BackupsView({ server }: Props) {
     setProcessing(false);
   };
   const listParentRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const backupVirtualizer = useVirtualizer({
     count: backups.length,
     getScrollElement: () => listParentRef.current,
@@ -366,10 +323,9 @@ export default function BackupsView({ server }: Props) {
     catalogOperationInFlightRef.current = false;
     setProcessing(false);
     setBackups([]);
-    setWorlds([]);
+    setServerSize(null);
     setCatalogLoadState('loading');
     setBackupCatalog(createEmptyCatalog());
-    setSelectedPaths(new Set());
     setShowCreateModal(false);
     setTagEditorTarget(null);
     const dataReloadToken = beginDataReload(initializationToken);
@@ -383,122 +339,10 @@ export default function BackupsView({ server }: Props) {
       }
 
       await loadBackupCatalog(dataReloadToken);
-      if (!isCurrentDataReload(dataReloadToken)) {
-        return;
-      }
-
-      await loadWorlds(initializationToken);
     })();
     return cleanupInitialization;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [beginDataReload, cleanupInitialization, initializationKey, isCurrentDataReload]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | undefined;
-
-    const registrationToken = getCurrentInitializationToken(initializationKey);
-
-    void tauriListen<{ serverPath: string; paths: string[] }>(
-      'backup-selector:apply',
-      (payload) => {
-        if (
-          cancelled ||
-          !isCurrentInitialization(registrationToken) ||
-          payload.serverPath !== server.path
-        ) {
-          return;
-        }
-
-        const normalizedPaths = normalizeBackupSources(payload.paths);
-        selectionGenerationRef.current += 1;
-        setSelectedPaths(new Set(normalizedPaths));
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        showToast(t('backups.toast.targetUpdated', { count: normalizedPaths.length }), 'success');
-      },
-    ).then(
-      (dispose) => {
-        if (cancelled) {
-          safeUnlisten(dispose);
-          return;
-        }
-        unlisten = dispose;
-      },
-      (error) => {
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        logError('Failed to register backup selector apply listener', error, {
-          serverPath: server.path,
-        });
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      safeUnlisten(unlisten);
-    };
-  }, [getCurrentInitializationToken, initializationKey, isCurrentInitialization, server.path, t]);
-
-  // The completion reload intentionally uses the lifecycle callbacks from this render.
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | undefined;
-    const registrationToken = getCurrentInitializationToken(initializationKey);
-
-    void tauriListen<{ serverPath: string }>('backup-selector:close-request', async (payload) => {
-      if (
-        cancelled ||
-        !isCurrentInitialization(registrationToken) ||
-        payload.serverPath !== server.path
-      ) {
-        return;
-      }
-      try {
-        const selectorWindow = await WebviewWindow.getByLabel('backup-selector');
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        if (!selectorWindow) {
-          return;
-        }
-        await selectorWindow.close();
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-      } catch (error) {
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        logError('Failed to close backup selector window', error, {
-          serverPath: server.path,
-        });
-      }
-    }).then(
-      (dispose) => {
-        if (cancelled) {
-          safeUnlisten(dispose);
-          return;
-        }
-        unlisten = dispose;
-      },
-      (error) => {
-        if (cancelled || !isCurrentInitialization(registrationToken)) {
-          return;
-        }
-        logError('Failed to register backup selector close-request listener', error, {
-          serverPath: server.path,
-        });
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      safeUnlisten(unlisten);
-    };
-  }, [getCurrentInitializationToken, initializationKey, isCurrentInitialization, server.path]);
 
   const persistBackupCatalog = async (catalog: BackupCatalog) => {
     await writeBackupCatalog(server.id, catalog);
@@ -521,8 +365,21 @@ export default function BackupsView({ server }: Props) {
       }
       logError('Failed to load backup catalog', error, { serverPath: server.path });
       setCatalogLoadState('error');
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
     }
+  };
+
+  const retryCatalogLoad = async () => {
+    const operationToken = getCurrentInitializationToken(initializationKey);
+    if (!isCurrentInitialization(operationToken)) {
+      return;
+    }
+    const dataReloadToken = beginDataReload(operationToken);
+    if (!dataReloadToken) {
+      return;
+    }
+    setCatalogLoadState('loading');
+    await loadBackupCatalog(dataReloadToken);
   };
 
   const loadBackups = async (expectedToken: DataReloadToken) => {
@@ -541,7 +398,7 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       logError('Failed to load backups', e, { serverPath: server.path });
-      showToast(t('backups.toast.loadFailed'), 'error');
+      notify.error(t('backups.toast.loadFailed'));
     } finally {
       if (isCurrentDataReload(expectedToken)) {
         setLoading(false);
@@ -553,99 +410,26 @@ export default function BackupsView({ server }: Props) {
     return buildManualBackupName(server);
   };
 
-  const openCreateModal = async () => {
+  // The create dialog shows the whole server folder's size, measured fresh each time it opens.
+  const loadServerSize = (expectedToken: InitializationToken) => {
+    const generation = ++serverSizeGenerationRef.current;
+    setServerSize({ status: 'loading' });
+    void measureFolder(server.path).then((size) => {
+      if (serverSizeGenerationRef.current !== generation) return;
+      if (!isCurrentInitialization(expectedToken)) return;
+      setServerSize(size);
+    });
+  };
+
+  const openCreateModal = () => {
     const operationToken = getCurrentInitializationToken(initializationKey);
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
-    const selectionGeneration = selectionGenerationRef.current + 1;
-    selectionGenerationRef.current = selectionGeneration;
     setShowCreateModal(true);
     setCustomName('');
     setCompressionLevel(5);
-    try {
-      const entries = await listFiles(server.path);
-      if (
-        !isCurrentInitialization(operationToken) ||
-        selectionGenerationRef.current !== selectionGeneration
-      ) {
-        return;
-      }
-      const initial = entries
-        .filter((entry) => entry.name.toLowerCase() !== 'backups')
-        .map((entry) => entry.name)
-        .sort((left, right) => left.localeCompare(right));
-      setSelectedPaths(new Set(initial));
-    } catch (error) {
-      if (
-        !isCurrentInitialization(operationToken) ||
-        selectionGenerationRef.current !== selectionGeneration
-      ) {
-        return;
-      }
-      logError('Failed to initialize backup target selection', error, {
-        serverPath: server.path,
-      });
-      setSelectedPaths(new Set());
-      showToast(t('backups.toast.targetInitFailed'), 'error');
-    }
-  };
-
-  const loadWorlds = async (expectedToken: InitializationToken) => {
-    if (!isCurrentInitialization(expectedToken)) {
-      return;
-    }
-    try {
-      const entries = await listFiles(server.path);
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      const candidates = entries.filter(
-        (entry) => entry.isDirectory && entry.name.toLowerCase() !== 'backups',
-      );
-
-      const worldNames: string[] = [];
-      await Promise.all(
-        candidates.map(async (candidate) => {
-          if (!isCurrentInitialization(expectedToken)) {
-            return;
-          }
-          try {
-            const children = await listFiles(`${server.path}/${candidate.name}`);
-            if (!isCurrentInitialization(expectedToken)) {
-              return;
-            }
-            const hasLevelDat = children.some(
-              (child) => !child.isDirectory && child.name === 'level.dat',
-            );
-            if (hasLevelDat || /^world($|[_-])/i.test(candidate.name)) {
-              worldNames.push(candidate.name);
-            }
-          } catch (error) {
-            if (!isCurrentInitialization(expectedToken)) {
-              return;
-            }
-            logError('Failed to inspect world directory candidate', error, {
-              serverPath: server.path,
-              candidate: candidate.name,
-            });
-          }
-        }),
-      );
-
-      const unique = Array.from(new Set(worldNames)).sort((a, b) => a.localeCompare(b));
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      setWorlds(unique);
-    } catch (error) {
-      if (!isCurrentInitialization(expectedToken)) {
-        return;
-      }
-      logError('Failed to load world candidates', error, { serverPath: server.path });
-      setWorlds([]);
-      showToast(t('backups.toast.worldLoadFailed'), 'error');
-    }
+    loadServerSize(operationToken);
   };
 
   useEffect(() => {
@@ -695,163 +479,14 @@ export default function BackupsView({ server }: Props) {
     manualCompletionRevision,
   ]);
 
-  const clearAll = () => {
-    selectionGenerationRef.current += 1;
-    setSelectedPaths(new Set());
-  };
-
-  const openSelectorWindow = async () => {
-    const operationToken = getCurrentInitializationToken(initializationKey);
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-
-    try {
-      const label = 'backup-selector';
-      const selected = Array.from(selectedPaths).sort((a, b) => a.localeCompare(b));
-
-      const existing = await WebviewWindow.getByLabel(label);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      if (existing) {
-        if (!isCurrentInitialization(operationToken)) {
-          return;
-        }
-        await existing.emit('backup-selector:load', {
-          serverPath: server.path,
-          selected,
-        });
-        if (!isCurrentInitialization(operationToken)) {
-          return;
-        }
-
-        try {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          await existing.setFocus();
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-        } catch (focusError) {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          logError('Failed to focus backup selector window', focusError, {
-            serverPath: server.path,
-          });
-        }
-        return;
-      }
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      const params = new URLSearchParams({
-        backupSelector: '1',
-        serverPath: server.path,
-        selected: JSON.stringify(selected),
-      });
-
-      const selectorWindow = new WebviewWindow(label, {
-        title: `Backup Target Selector - ${server.name}`,
-        url: `/?${params.toString()}`,
-        width: 980,
-        height: 760,
-        resizable: true,
-        center: true,
-        focus: true,
-      });
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-
-      const onceRegistration: SelectorOnceRegistration = {
-        cancelled: false,
-        unlistenFns: new Set(),
-      };
-      selectorOnceRegistrationsRef.current.add(onceRegistration);
-      const trackOnceRegistration = (
-        registrationPromise: Promise<() => void>,
-        errorMessage: string,
-      ) => {
-        void registrationPromise.then(
-          (unlisten) => {
-            if (onceRegistration.cancelled || !isCurrentInitialization(operationToken)) {
-              safeUnlisten(unlisten);
-              return;
-            }
-            onceRegistration.unlistenFns.add(unlisten);
-          },
-          (error) => {
-            if (onceRegistration.cancelled || !isCurrentInitialization(operationToken)) {
-              return;
-            }
-            logError(errorMessage, error, { serverPath: server.path });
-          },
-        );
-      };
-
-      trackOnceRegistration(
-        selectorWindow.once('tauri://created', () => {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          void selectorWindow
-            .emit('backup-selector:load', {
-              serverPath: server.path,
-              selected,
-            })
-            .catch((error) => {
-              if (!isCurrentInitialization(operationToken)) {
-                return;
-              }
-              logError('Failed to load backup selector window', error, {
-                serverPath: server.path,
-              });
-              showToast(t('backups.toast.selectorOpenError'), 'error');
-            });
-        }),
-        'Failed to register backup selector created listener',
-      );
-
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      trackOnceRegistration(
-        selectorWindow.once('tauri://error', (error) => {
-          if (!isCurrentInitialization(operationToken)) {
-            return;
-          }
-          logError('Backup selector window emitted tauri error event', error, {
-            serverPath: server.path,
-          });
-          showToast(t('backups.toast.selectorOpenError'), 'error');
-        }),
-        'Failed to register backup selector error listener',
-      );
-    } catch (error) {
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      logError('Failed to open backup selector window', error, { serverPath: server.path });
-      showToast(t('backups.toast.selectorOpenError'), 'error');
-    }
-  };
-
   const getBackupMeta = (backupName: string): BackupCatalogEntry => {
     const existing = backupCatalog.entries[backupName];
     if (existing) {
       return existing;
     }
     return {
-      mode: 'full',
-      parent: null,
       tags: [],
       note: '',
-      sourceCount: 0,
       createdAt: '',
     };
   };
@@ -899,23 +534,21 @@ export default function BackupsView({ server }: Props) {
     }
 
     if (catalogLoadState !== 'ready') {
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
       return;
     }
 
     const capturedServer = { ...server };
-    const capturedSelectedPaths = normalizeBackupSources(Array.from(selectedPaths));
     const capturedCatalog = backupCatalog;
     const capturedCompressionLevel = compressionLevel;
     const requestedName = customName.trim() || buildManualBackupName(capturedServer);
     const normalizedName = normalizeBackupName(requestedName);
     const nameValidationError = getBackupNameValidationError(normalizedName);
     if (nameValidationError) {
-      showToast(
+      notify.error(
         nameValidationError === 'empty'
           ? t('backups.toast.invalidNameEmpty')
           : t('backups.toast.invalidNameCharacters'),
-        'error',
       );
       return;
     }
@@ -943,10 +576,10 @@ export default function BackupsView({ server }: Props) {
         false,
       );
       if (backupOutcome.status === 'confirmation_required') {
-        const confirmed = await ask(
-          t('backups.confirmStopForBackup', { name: capturedServer.name }),
-          { title: t('backups.stopForBackupTitle'), kind: 'warning' },
-        );
+        const confirmed = await confirm({
+          title: t('backups.stopForBackupTitle'),
+          description: t('backups.confirmStopForBackup', { name: capturedServer.name }),
+        });
         if (!confirmed) {
           return;
         }
@@ -958,7 +591,7 @@ export default function BackupsView({ server }: Props) {
         );
       }
       if (backupOutcome.status === 'confirmation_required') {
-        showToast(t('backups.toast.serverStopFailed'), 'error');
+        notify.error(t('backups.toast.serverStopFailed'));
         return;
       }
       if (backupOutcome.status === 'failed') {
@@ -969,16 +602,14 @@ export default function BackupsView({ server }: Props) {
           restartError: backupOutcome.restartError,
         });
         if (backupOutcome.restartError) {
-          showToast(
+          notify.error(
             t('backups.toast.backupNotCreatedRestartFailed', { name: capturedServer.name }),
-            'error',
           );
         } else {
-          showToast(
+          notify.error(
             backupOutcome.stage === 'stop'
               ? t('backups.toast.serverStopFailed')
               : t('backups.toast.stoppedCreateFailed'),
-            'error',
           );
         }
         return;
@@ -998,11 +629,8 @@ export default function BackupsView({ server }: Props) {
       }
 
       const currentMeta = capturedCatalog.entries[normalizedName] ?? {
-        mode: 'full' as const,
-        parent: null,
         tags: [],
         note: '',
-        sourceCount: 0,
         createdAt: '',
       };
       const nextCatalog: BackupCatalog = {
@@ -1012,9 +640,6 @@ export default function BackupsView({ server }: Props) {
           ...capturedCatalog.entries,
           [normalizedName]: {
             ...currentMeta,
-            mode: 'full',
-            parent: null,
-            sourceCount: 0,
             createdAt: currentMeta.createdAt || new Date().toISOString(),
           },
         },
@@ -1051,7 +676,7 @@ export default function BackupsView({ server }: Props) {
 
       if (isCurrentInitialization(operationToken)) {
         setBackupCatalog(finalCatalog);
-        showToast(t('backups.toast.created'), 'success');
+        notify.success(t('backups.toast.created'));
         setShowCreateModal(false);
         if (backupOutcome.catalogError) {
           logError('Failed to update managed backup catalog', backupOutcome.catalogError, {
@@ -1059,10 +684,10 @@ export default function BackupsView({ server }: Props) {
             serverPath: capturedServer.path,
             backupName: backupOutcome.backupName,
           });
-          showToast(t('backups.toast.registryUpdateFailed'), 'warning');
+          notify.warning(t('backups.toast.registryUpdateFailed'));
         }
         if (refreshedBackups === null) {
-          showToast(t('backups.toast.loadFailed'), 'warning');
+          notify.warning(t('backups.toast.loadFailed'));
         }
         if (backupOutcome.restart.status === 'failed') {
           logError('Backup created but server restart failed', backupOutcome.restart.error, {
@@ -1070,25 +695,23 @@ export default function BackupsView({ server }: Props) {
             serverPath: capturedServer.path,
             backupName: backupOutcome.backupName,
           });
-          showToast(t('backups.toast.serverRestartFailed'), 'warning');
+          notify.warning(t('backups.toast.serverRestartFailed'));
         }
         if (retentionResult.failedDeleteCount > 0) {
-          showToast(
+          notify.warning(
             t('backups.toast.retentionDeleteFailed', {
               count: retentionResult.failedDeleteCount,
             }),
-            'warning',
           );
         }
         if (retentionResult.listingFailed) {
-          showToast(t('backups.toast.retentionListFailed'), 'warning');
+          notify.warning(t('backups.toast.retentionListFailed'));
         }
         if (!saved) {
-          showToast(
+          notify.warning(
             retentionResult.deletedCount > 0
               ? t('backups.toast.retentionMetadataSaveFailed')
               : t('backups.toast.createMetadataSaveFailed'),
-            'warning',
           );
         }
       }
@@ -1096,9 +719,8 @@ export default function BackupsView({ server }: Props) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to create backup', error, {
           serverPath: capturedServer.path,
-          selectedCount: capturedSelectedPaths.length,
         });
-        showToast(t('backups.toast.createFailed'), 'error');
+        notify.error(t('backups.toast.createFailed'));
       }
     } finally {
       if (manualOperationStarted) {
@@ -1115,24 +737,37 @@ export default function BackupsView({ server }: Props) {
     if (!isCurrentInitialization(operationToken)) {
       return;
     }
+    const confirmed = await confirm({
+      title: t('backups.restoreTitle'),
+      description: t('backups.confirmRestore', { name: backupName }),
+      confirmLabel: t('backups.actions.restore'),
+    });
+    if (!confirmed) {
+      return;
+    }
+    if (!isCurrentInitialization(operationToken)) {
+      return;
+    }
     setProcessing(true);
+    setRestoringName(backupName);
     try {
       await restoreBackup(server.id, backupName);
       if (!isCurrentInitialization(operationToken)) {
         return;
       }
-      showToast(t('backups.toast.restored'), 'success');
+      notify.success(t('backups.toast.restored'));
     } catch (error) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to restore backup', error, {
           serverPath: server.path,
           backupName,
         });
-        showToast(t('backups.toast.restoreFailed'), 'error');
+        notify.error(t('backups.toast.restoreFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {
         setProcessing(false);
+        setRestoringName(null);
       }
     }
   };
@@ -1143,7 +778,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     if (catalogLoadState !== 'ready') {
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
       return;
     }
     if (!beginCatalogOperation()) {
@@ -1151,9 +786,11 @@ export default function BackupsView({ server }: Props) {
     }
 
     try {
-      const confirmed = await ask(t('backups.confirmDelete', { name: backupName }), {
+      const confirmed = await confirm({
         title: t('backups.deleteTitle'),
-        kind: 'warning',
+        description: t('backups.confirmDelete', { name: backupName }),
+        confirmLabel: t('common.delete'),
+        tone: 'danger',
       });
       if (!confirmed) {
         return;
@@ -1176,7 +813,7 @@ export default function BackupsView({ server }: Props) {
       }
 
       if (catalogLoadState !== 'ready') {
-        showToast(t('backups.toast.deleteMetadataSaveFailed'), 'warning');
+        notify.warning(t('backups.toast.deleteMetadataSaveFailed'));
         return;
       }
 
@@ -1213,9 +850,9 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       if (!saved) {
-        showToast(t('backups.toast.deleteMetadataSaveFailed'), 'warning');
+        notify.warning(t('backups.toast.deleteMetadataSaveFailed'));
       } else {
-        showToast(t('backups.toast.deleted'), 'success');
+        notify.success(t('backups.toast.deleted'));
       }
     } catch (e) {
       if (isCurrentInitialization(operationToken)) {
@@ -1223,7 +860,7 @@ export default function BackupsView({ server }: Props) {
           serverPath: server.path,
           backupName,
         });
-        showToast(t('backups.toast.deleteFailed'), 'error');
+        notify.error(t('backups.toast.deleteFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {
@@ -1235,8 +872,18 @@ export default function BackupsView({ server }: Props) {
   const openTagEditor = (backupName: string) => {
     const meta = getBackupMeta(backupName);
     setTagEditorTarget(backupName);
-    setTagInput(meta.tags.join(', '));
+    setTagList(meta.tags);
+    setTagDraft('');
     setNoteInput(meta.note);
+  };
+
+  const addTagDraft = () => {
+    const nextTag = tagDraft.trim();
+    if (!nextTag) {
+      return;
+    }
+    setTagList((current) => (current.includes(nextTag) ? current : [...current, nextTag]));
+    setTagDraft('');
   };
 
   const handleSaveTagEditor = async () => {
@@ -1248,7 +895,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     if (catalogLoadState !== 'ready') {
-      showToast(t('backups.toast.catalogLoadFailed'), 'error');
+      notify.error(t('backups.toast.catalogLoadFailed'));
       return;
     }
 
@@ -1256,7 +903,7 @@ export default function BackupsView({ server }: Props) {
       return;
     }
     try {
-      const tags = parseTagsInput(tagInput);
+      const tags = tagList;
       const current = getBackupMeta(tagEditorTarget);
       const nextCatalog: BackupCatalog = {
         ...backupCatalog,
@@ -1280,14 +927,14 @@ export default function BackupsView({ server }: Props) {
       }
       setBackupCatalog(nextCatalog);
       setTagEditorTarget(null);
-      showToast(t('backups.toast.tagSaved'), 'success');
+      notify.success(t('backups.toast.tagSaved'));
     } catch (error) {
       if (isCurrentInitialization(operationToken)) {
         logError('Failed to save backup tags', error, {
           serverPath: server.path,
           backupName: tagEditorTarget,
         });
-        showToast(t('backups.toast.tagSaveFailed'), 'error');
+        notify.error(t('backups.toast.tagSaveFailed'));
       }
     } finally {
       if (isCurrentInitialization(operationToken)) {
@@ -1296,77 +943,77 @@ export default function BackupsView({ server }: Props) {
     }
   };
 
-  const handleDeleteWorld = async (worldName: string) => {
-    const operationToken = getCurrentInitializationToken(initializationKey);
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-    const confirmed = await ask(t('backups.world.confirmDelete', { name: worldName }), {
-      title: t('backups.world.deleteTitle'),
-      kind: 'warning',
-    });
-    if (!confirmed) {
-      return;
-    }
-
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-    const finalConfirm = await ask(t('backups.world.finalConfirm'), {
-      title: t('backups.world.finalConfirmTitle'),
-      kind: 'warning',
-    });
-    if (!finalConfirm) {
-      return;
-    }
-
-    if (!isCurrentInitialization(operationToken)) {
-      return;
-    }
-    setProcessing(true);
-    try {
-      await deleteItem(`${server.path}/${worldName}`);
-      if (!isCurrentInitialization(operationToken)) {
-        return;
-      }
-      showToast(t('backups.world.deleted', { name: worldName }), 'success');
-      await loadWorlds(operationToken);
-    } catch (error) {
-      if (isCurrentInitialization(operationToken)) {
-        logError('Failed to delete world data', error, {
-          serverPath: server.path,
-          worldName,
-        });
-        showToast(t('backups.world.deleteFailed'), 'error');
-      }
-    } finally {
-      if (isCurrentInitialization(operationToken)) {
-        setProcessing(false);
-      }
-    }
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) {
-      return '0 B';
-    }
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-  };
-
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString();
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(date),
+    );
   };
+
+  const blockDismiss = (event: Event) => event.preventDefault();
+
+  // Name rules are checked as the user types, with the same validator the create path uses.
+  const trimmedName = customName.trim();
+  const nameValidation = trimmedName
+    ? getBackupNameValidationError(normalizeBackupName(trimmedName))
+    : null;
+  const nameError = nameValidation
+    ? t(
+        nameValidation === 'empty'
+          ? 'backups.toast.invalidNameEmpty'
+          : 'backups.toast.invalidNameCharacters',
+      )
+    : null;
+
+  // Null until a server size and at least one past backup with a duration exist. The dialog hides the row then.
+  const estimatedDurationMs =
+    serverSize?.status === 'ready' ? estimateBackupDurationMs(serverSize.bytes, backups) : null;
+
+  const formatEstimate = (ms: number): string => {
+    const totalSeconds = Math.max(1, Math.ceil(ms / 1000));
+    if (totalSeconds < 60) {
+      return t('backups.duration.seconds', { count: totalSeconds });
+    }
+    const totalMinutes = Math.ceil(totalSeconds / 60);
+    if (totalMinutes < 60) {
+      return t('backups.duration.minutes', { count: totalMinutes });
+    }
+    return t('backups.duration.hoursMinutes', {
+      hours: Math.floor(totalMinutes / 60),
+      minutes: totalMinutes % 60,
+    });
+  };
+
+  const createFooter = (
+    <>
+      <Button variant="secondary" onClick={() => setShowCreateModal(false)} disabled={isProcessing}>
+        {t('common.cancel')}
+      </Button>
+      <Button
+        variant="primary"
+        data-testid="backups-create-submit"
+        onClick={() => void handleCreateBackup()}
+        disabled={isProcessing || nameError !== null}
+      >
+        {isProcessing ? t('backups.modal.creating') : t('backups.modal.create')}
+      </Button>
+    </>
+  );
+
+  const tagFooter = (
+    <>
+      <Button variant="secondary" onClick={() => setTagEditorTarget(null)} disabled={isProcessing}>
+        {t('common.cancel')}
+      </Button>
+      <Button variant="primary" onClick={() => void handleSaveTagEditor()} disabled={isProcessing}>
+        {t('common.save')}
+      </Button>
+    </>
+  );
 
   return (
-    <div
-      className="backups-view flex h-full flex-col gap-4 p-5 max-[900px]:p-4"
-      data-testid="backups-view"
-    >
-      <div className="backups-view__header">
-        <h3>{t('backups.title')}</h3>
+    <div className={styles.page} data-testid="backups-view">
+      <header className={styles.header}>
+        <SectionTitle icon={Archive} title={t('backups.title')} as="h2" />
         <Button
           variant="primary"
           data-testid="backups-create-button"
@@ -1375,90 +1022,104 @@ export default function BackupsView({ server }: Props) {
         >
           {isProcessing ? t('backups.processing') : t('backups.createButton')}
         </Button>
-      </div>
+      </header>
 
-      <div className="backups-view__list-panel" ref={listParentRef}>
-        {loading && <div className="p-5 text-center">{t('common.loading')}</div>}
+      {catalogLoadState === 'error' && (
+        <Alert
+          tone="danger"
+          title={t('backups.catalogUnavailable')}
+          data-testid="backups-catalog-alert"
+        >
+          <p className={styles.alertText}>{t('backups.catalogUnavailableDescription')}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            data-testid="backups-catalog-retry"
+            onClick={() => void retryCatalogLoad()}
+          >
+            {t('backups.catalogRetry')}
+          </Button>
+        </Alert>
+      )}
+
+      {restoringName !== null && (
+        <p className={styles.status} role="status" aria-live="polite">
+          {t('backups.restoring', { name: restoringName })}
+        </p>
+      )}
+
+      <div className={styles.list} ref={listParentRef} aria-busy={isProcessing || undefined}>
+        {loading && <Skeleton label={t('common.loading')} lines={3} />}
 
         {!loading && backups.length === 0 && (
-          <div className="backups-view__empty">{t('backups.empty')}</div>
+          <EmptyLine className={styles.listEmpty} title={t('backups.empty')} />
         )}
 
         {!loading && backups.length > 0 && (
-          <div style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+          <div
+            className={styles.virtualRows}
+            style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}
+          >
             {backupVirtualizer.getVirtualItems().map((virtualRow) => {
               const backup = backups[virtualRow.index];
+              const meta = getBackupMeta(backup.name);
               return (
                 <div
                   key={backup.name}
                   ref={backupVirtualizer.measureElement}
                   data-index={virtualRow.index}
                   data-testid={`backup-row-${backup.name}`}
-                  className="backups-view__item-row"
+                  className={styles.row}
                   style={{ position: 'absolute', top: virtualRow.start, left: 0, width: '100%' }}
                 >
-                  <div className="text-2xl">📦</div>
+                  <span className={styles.rowIcon} aria-hidden="true">
+                    <Package size={18} />
+                  </span>
 
-                  <div className="flex-1">
-                    <div className="font-bold text-base text-text-primary">{backup.name}</div>
-                    <div className="text-sm text-text-secondary mt-1">
-                      {formatDate(backup.date)}
-                    </div>
-                    <div className="backups-view__item-meta mt-2">
-                      <span
-                        className={`backups-view__mode-badge ${
-                          getBackupMeta(backup.name).mode === 'differential' ? 'is-diff' : ''
-                        }`}
-                      >
-                        {getBackupMeta(backup.name).mode === 'differential'
-                          ? t('backups.mode.differential')
-                          : t('backups.mode.full')}
-                      </span>
-
-                      {getBackupMeta(backup.name).parent && (
-                        <span className="backups-view__parent-label">
-                          {t('backups.parent')}: {getBackupMeta(backup.name).parent}
-                        </span>
-                      )}
-
-                      {getBackupMeta(backup.name).tags.map((tag) => (
-                        <span key={`${backup.name}-${tag}`} className="backups-view__tag-chip">
-                          {tag}
-                        </span>
-                      ))}
+                  <div className={styles.rowMain}>
+                    <div className={styles.rowHead}>
+                      <span className={styles.rowName}>{backup.name}</span>
                     </div>
 
-                    {getBackupMeta(backup.name).note && (
-                      <div className="backups-view__item-note mt-1.5">
-                        {getBackupMeta(backup.name).note}
+                    <div className={styles.rowMeta}>
+                      <span>{formatDate(backup.date)}</span>
+                      <span>{formatBytes(backup.size, locale)}</span>
+                    </div>
+
+                    {meta.tags.length > 0 && (
+                      <div className={styles.tags}>
+                        {meta.tags.map((tag) => (
+                          <Badge key={`${backup.name}-${tag}`} tone="neutral" size="sm">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
                     )}
+
+                    {meta.note && <p className={styles.rowNote}>{meta.note}</p>}
                   </div>
 
-                  <div className="text-text-secondary text-sm w-20 text-right">
-                    {formatSize(backup.size)}
-                  </div>
-
-                  <div className="flex gap-2.5">
+                  <div className={styles.rowActions}>
                     <Button
                       variant="secondary"
-                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                      size="sm"
                       onClick={() => handleRestore(backup.name)}
                       disabled={isProcessing}
                     >
                       {t('backups.actions.restore')}
                     </Button>
                     <Button
-                      variant="secondary"
-                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openTagEditor(backup.name)}
                       disabled={isProcessing}
                     >
                       {t('backups.actions.tag')}
                     </Button>
                     <Button
-                      variant="stop"
-                      className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
+                      variant="ghost"
+                      size="sm"
+                      className={styles.dangerAction}
                       onClick={() => handleDelete(backup.name)}
                       disabled={isProcessing || catalogLoadState !== 'ready'}
                     >
@@ -1472,198 +1133,142 @@ export default function BackupsView({ server }: Props) {
         )}
       </div>
 
-      <div className="backups-view__world-panel">
-        <div className="backups-view__world-header">
-          <h4 className="backups-view__world-title">{t('backups.world.title')}</h4>
-          <span className="backups-view__world-help">{t('backups.world.detected')}</span>
-        </div>
-
-        {worlds.length === 0 ? (
-          <div className="backups-view__world-empty">{t('backups.world.empty')}</div>
-        ) : (
-          worlds.map((worldName) => (
-            <div key={worldName} className="backups-view__world-row">
-              <div className="backups-view__world-name">🌍 {worldName}</div>
-              <Button
-                type="button"
-                variant="stop"
-                className="h-auto px-3 py-1.5 text-sm disabled:opacity-70"
-                onClick={() => void handleDeleteWorld(worldName)}
-                disabled={isProcessing}
-              >
-                {t('backups.world.deleteButton')}
-              </Button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {showCreateModal && (
-        <div
-          className="backups-view__create-overlay modal-backdrop"
-          onClick={() => setShowCreateModal(false)}
+      <Dialog
+        open={showCreateModal}
+        onOpenChange={(next) => {
+          if (!next && !isProcessing) setShowCreateModal(false);
+        }}
+      >
+        <DialogContent
+          aria-describedby={undefined}
+          data-testid="backups-create-dialog"
+          title={t('backups.modal.createTitle')}
+          width="min(560px, calc(100vw - var(--space-8)))"
+          footer={createFooter}
+          onEscapeKeyDown={isProcessing ? blockDismiss : undefined}
+          onPointerDownOutside={isProcessing ? blockDismiss : undefined}
+          // The first focusable control would otherwise be a hint icon, and focus would open its tooltip on load.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            nameInputRef.current?.focus();
+          }}
         >
-          <div
-            className="backups-view__create-panel modal-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="backups-view__create-header">
-              <div className="text-lg font-bold">{t('backups.modal.createTitle')}</div>
-              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
-                {t('common.close')}
-              </Button>
-            </div>
+          <div className={styles.form}>
+            <Input
+              ref={nameInputRef}
+              data-testid="backup-name-input"
+              label={t('backups.modal.fileName')}
+              placeholder={defaultName()}
+              value={customName}
+              onChange={(event) => setCustomName(event.target.value)}
+              hint={t('backups.modal.fileNameHelp', { default: defaultName() })}
+              error={nameError ?? undefined}
+              disabled={isProcessing}
+            />
 
-            <div className="backups-view__create-body">
-              <div className="backups-view__form-grid">
-                <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">{t('backups.modal.fileName')}</label>
-                  <Input
-                    data-testid="backup-name-input"
-                    placeholder={defaultName()}
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
+            <Select
+              testId="backups-compression-select"
+              label={t('backups.modal.compressionLevel')}
+              placeholder={arc.select.placeholder}
+              hint={t('backups.modal.compressionHelp')}
+              options={COMPRESSION_OPTIONS}
+              value={String(compressionLevel)}
+              onValueChange={(value) => setCompressionLevel(Number(value))}
+              disabled={isProcessing}
+            />
+
+            <dl className={styles.facts}>
+              <div className={styles.fact}>
+                <dt className={styles.factTerm}>
+                  <span>{t('backups.modal.targetSize')}</span>
+                  <HintIcon
+                    hint={t('backups.modal.wholeServerNote')}
+                    label={t('backups.modal.targetSize')}
                   />
-                  <div className="backups-view__form-help">
-                    {t('backups.modal.fileNameHelp', { default: defaultName() })}
-                  </div>
+                </dt>
+                <dd className={styles.factValue} data-testid="backups-target-size">
+                  {formatFolderSize(serverSize, locale, t)}
+                </dd>
+              </div>
+              {estimatedDurationMs !== null && (
+                <div className={styles.fact}>
+                  <dt className={styles.factTerm}>
+                    <span>{t('backups.modal.estimatedTime')}</span>
+                    <HintIcon
+                      hint={t('backups.modal.estimateHint', { count: ESTIMATE_SAMPLE_COUNT })}
+                      label={t('backups.modal.estimatedTime')}
+                    />
+                  </dt>
+                  <dd className={styles.factValue} data-testid="backups-estimated-time">
+                    {t('backups.modal.estimateValue', {
+                      duration: formatEstimate(estimatedDurationMs),
+                    })}
+                  </dd>
                 </div>
-
-                <div className="backups-view__form-group">
-                  <label className="backups-view__form-label">
-                    {t('backups.modal.compressionLevel')}
-                  </label>
-                  <NativeSelect
-                    className="w-[120px]"
-                    value={compressionLevel}
-                    onChange={(e) => setCompressionLevel(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
-                      <option key={level} value={level}>
-                        {level}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <div className="backups-view__form-help">
-                    {t('backups.modal.compressionHelp')}
-                  </div>
-                </div>
-              </div>
-
-              <div className="backups-view__selection-header">
-                <div className="font-semibold">{t('backups.modal.selectTarget')}</div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    className="text-sm"
-                    data-testid="backups-open-selector-button"
-                    onClick={() => void openSelectorWindow()}
-                  >
-                    {t('backups.modal.openSelector')}
-                  </Button>
-                  <Button variant="secondary" className="text-sm" onClick={clearAll}>
-                    {t('backups.modal.clearAll')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="backups-view__tree-panel">
-                {selectedPaths.size === 0 ? (
-                  <div className="backups-view__tree-loading">{t('backups.modal.noSelection')}</div>
-                ) : (
-                  <div className="backups-view__selected-summary">
-                    <div className="backups-view__selected-count">
-                      {t('backups.modal.selectedCount', { count: selectedPaths.size })}
-                    </div>
-                    <div className="backups-view__selected-list">
-                      {Array.from(selectedPaths)
-                        .sort((left, right) => left.localeCompare(right))
-                        .slice(0, 14)
-                        .map((path) => (
-                          <div key={path} className="backups-view__selected-item">
-                            {path}
-                          </div>
-                        ))}
-                      {selectedPaths.size > 14 && (
-                        <div className="backups-view__selected-item">
-                          {t('backups.modal.andMore', { count: selectedPaths.size - 14 })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="backups-view__create-actions">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowCreateModal(false)}
-                  disabled={isProcessing}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  variant="primary"
-                  data-testid="backups-create-submit"
-                  onClick={handleCreateBackup}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? t('backups.modal.creating') : t('backups.modal.create')}
-                </Button>
-              </div>
-            </div>
+              )}
+            </dl>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {tagEditorTarget && (
-        <div
-          className="backups-view__tag-overlay modal-backdrop"
-          onClick={() => setTagEditorTarget(null)}
+      <Dialog
+        open={tagEditorTarget !== null}
+        onOpenChange={(next) => {
+          if (!next && !isProcessing) setTagEditorTarget(null);
+        }}
+      >
+        <DialogContent
+          aria-describedby={undefined}
+          data-testid="backups-tag-dialog"
+          title={t('backups.tagEditor.title')}
+          description={tagEditorTarget ?? undefined}
+          width="min(520px, calc(100vw - var(--space-8)))"
+          footer={tagFooter}
+          onEscapeKeyDown={isProcessing ? blockDismiss : undefined}
+          onPointerDownOutside={isProcessing ? blockDismiss : undefined}
         >
-          <div
-            className="backups-view__tag-panel modal-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="backups-view__tag-header">
-              <h4 className="backups-view__tag-title">{t('backups.tagEditor.title')}</h4>
-              <div className="backups-view__tag-target">{tagEditorTarget}</div>
-            </div>
-
-            <div className="backups-view__tag-body">
-              <label className="backups-view__form-label">{t('backups.tagEditor.tagsLabel')}</label>
+          <div className={styles.form}>
+            <div className={styles.tagAdd}>
               <Input
-                value={tagInput}
-                onChange={(event) => setTagInput(event.target.value)}
+                label={t('backups.tagEditor.tagsLabel')}
                 placeholder={t('backups.tagEditor.tagsPlaceholder')}
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addTagDraft();
+                  }
+                }}
               />
-
-              <label className="backups-view__form-label mt-3">
-                {t('backups.tagEditor.noteLabel')}
-              </label>
-              <Textarea
-                className="backups-view__tag-note"
-                value={noteInput}
-                onChange={(event) => setNoteInput(event.target.value)}
-                placeholder={t('backups.tagEditor.notePlaceholder')}
-              />
-            </div>
-
-            <div className="backups-view__tag-actions">
-              <Button variant="secondary" onClick={() => setTagEditorTarget(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => void handleSaveTagEditor()}
-                disabled={isProcessing}
-              >
-                {t('common.save')}
+              <Button variant="secondary" disabled={!tagDraft.trim()} onClick={addTagDraft}>
+                {t('backups.tagEditor.addTag')}
               </Button>
             </div>
+
+            {tagList.length > 0 ? (
+              <div className={styles.tagChips}>
+                <ChipGroup
+                  label={t('backups.tagEditor.currentTags')}
+                  options={tagList.map((tag) => ({ value: tag, label: tag }))}
+                  value={tagList}
+                  onValueChange={setTagList}
+                />
+                <p className={styles.muted}>{t('backups.tagEditor.removeHint')}</p>
+              </div>
+            ) : (
+              <p className={styles.muted}>{t('backups.tagEditor.noTags')}</p>
+            )}
+
+            <Textarea
+              label={t('backups.tagEditor.noteLabel')}
+              placeholder={t('backups.tagEditor.notePlaceholder')}
+              value={noteInput}
+              onChange={(event) => setNoteInput(event.target.value)}
+            />
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

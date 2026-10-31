@@ -1,0 +1,44 @@
+/*
+ * Arc brand overrides. Loaded after the Arc foundation so these :root values win.
+ *
+ * Accent: the dark accent comes from data-accent="blue" on <html> (index.html),
+ * which is the foundation palette closest to the previous #5865F2 brand blue.
+ */
+
+:root {
+  --font-body:
+    'Inter Variable', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Noto Sans JP',
+    system-ui, sans-serif;
+  --font-display: 'Geist', var(--font-body);
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --radius-control: 10px;
+  --radius-panel: 14px;
+  --radius-surface: 18px;
+}
+
+html,
+body {
+  font-family: var(--font-body);
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Japanese copy breaks only at BudouX phrase boundaries (<wbr>, see
+ * renderer/shared/japanese-phrase.tsx) and falls back to overflow-wrap when a
+ * phrase is wider than the line. Safari has no word-break: auto-phrase.
+ */
+:lang(ja) {
+  line-break: strict;
+}
+
+:lang(ja) :is(p, h1, h2, h3, h4, h5, h6, li, label, figcaption, .mv-phrase) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:is(p, h1, h2, h3, h4, h5, h6, li, figcaption, blockquote) {
+  text-wrap: pretty;
+}

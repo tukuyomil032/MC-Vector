@@ -13,7 +13,9 @@ function renderUpdateModal(releaseNotes: string) {
     const { t } = useTranslation();
     return (
       <AppUpdateModal
+        open
         updatePrompt={{ version: '2.0.63', releaseNotes }}
+        onSkipVersion={vi.fn()}
         updateProgress={null}
         updateError={null}
         updateReady={false}
@@ -39,11 +41,12 @@ describe('AppUpdateModal', () => {
     renderUpdateModal('MC-Vector v2.0.63');
 
     const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Version 2.0.63 is available');
     expect(dialog).toHaveTextContent('MC-Vector v2.0.63');
-    expect(dialog).toHaveAttribute('data-theme', 'dark');
 
     const downloadButton = screen.getByTestId('update-modal-download-button');
-    expect(downloadButton).toHaveClass('bg-[#5865F2]', 'text-white');
+    // The legacy accent button is now the Arc primary variant (CSS module class names carry the variant).
+    expect(downloadButton.className).toMatch(/_primary_/);
     fireEvent.click(downloadButton);
 
     expect(updateNowMock).toHaveBeenCalledTimes(1);

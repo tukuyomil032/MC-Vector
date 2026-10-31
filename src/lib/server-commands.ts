@@ -132,7 +132,7 @@ export function onServerStatusChange(callback: {
 }
 
 export function onDownloadProgress(
-  callback: (data: { serverId: string; progress: number; status: string }) => void,
+  callback: (data: { serverId: string; progress: number }) => void,
 ): Promise<UnlistenFn> {
   return tauriListen('download-progress', callback);
 }

@@ -10,16 +10,18 @@ const {
   setServersMock,
   setSelectedServerIdMock,
   setShowAddServerModalMock,
-  setDownloadStatusMock,
-  showToastMock,
+  notifyMock,
 } = vi.hoisted(() => ({
   createServerProfileMock: vi.fn(),
   onServerCreationProgressMock: vi.fn(),
   setServersMock: vi.fn(),
   setSelectedServerIdMock: vi.fn(),
   setShowAddServerModalMock: vi.fn(),
-  setDownloadStatusMock: vi.fn(),
-  showToastMock: vi.fn(),
+  notifyMock: {
+    progress: vi.fn(),
+    done: vi.fn(),
+    info: vi.fn(),
+  },
 }));
 
 vi.mock('@/lib/server-creation-commands', () => ({
@@ -28,6 +30,8 @@ vi.mock('@/lib/server-creation-commands', () => ({
 }));
 
 vi.mock('@/lib/error-utils', () => ({ logError: vi.fn() }));
+
+vi.mock('@/renderer/shared/notify', () => ({ notify: notifyMock }));
 
 const translate = ((key: string) => key) as Translate;
 const server: MinecraftServer = {
@@ -46,8 +50,6 @@ function ServerCreateHarness({ data = { name: 'Survival' } }: { data?: unknown }
     setServers: setServersMock,
     setSelectedServerId: setSelectedServerIdMock,
     setShowAddServerModal: setShowAddServerModalMock,
-    setDownloadStatus: setDownloadStatusMock,
-    showToast: showToastMock,
     t: translate,
   });
 
@@ -65,8 +67,9 @@ describe('use-server-create-action', () => {
     setServersMock.mockReset();
     setSelectedServerIdMock.mockReset();
     setShowAddServerModalMock.mockReset();
-    setDownloadStatusMock.mockReset();
-    showToastMock.mockReset();
+    notifyMock.progress.mockReset();
+    notifyMock.done.mockReset();
+    notifyMock.info.mockReset();
     vi.stubGlobal('crypto', { randomUUID: () => 'correlation-id' });
     onServerCreationProgressMock.mockResolvedValue(vi.fn());
     createServerProfileMock.mockResolvedValue({ server, jarInstalled: true });
@@ -104,38 +107,60 @@ describe('use-server-create-action', () => {
     await waitFor(() => expect(setSelectedServerIdMock).toHaveBeenCalledWith('rust-server-id'));
     expect(setServersMock).toHaveBeenCalledWith(expect.any(Function));
     expect(setShowAddServerModalMock).toHaveBeenCalledWith(false);
-    expect(showToastMock).toHaveBeenCalledWith('server.toast.created', 'success');
-    expect(setDownloadStatusMock).toHaveBeenLastCalledWith(null);
+    expect(notifyMock.done).toHaveBeenCalledWith('server-create-correlation-id', {
+      type: 'success',
+      title: 'server.toast.created',
+    });
   });
 
-  it('filters progress by operation ID and unlistens after creation', async () => {
+  it('shows one progress toast per operation ID and unlistens after creation', async () => {
     const unlisten = vi.fn();
-    let receiveProgress:
-      | ((event: { operationId: string; progress: number; status: string }) => void)
+    let receiveProgress: ((event: { operationId: string; progress: number }) => void) | undefined;
+    let resolveCreation:
+      | ((value: { server: MinecraftServer; jarInstalled: boolean }) => void)
       | undefined;
     onServerCreationProgressMock.mockImplementation(async (callback) => {
       receiveProgress = callback;
       return unlisten;
     });
+    createServerProfileMock.mockImplementation(
+      () => new Promise((resolve) => (resolveCreation = resolve)),
+    );
     render(<ServerCreateHarness />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create server' }));
     await waitFor(() => expect(createServerProfileMock).toHaveBeenCalledTimes(1));
-    receiveProgress?.({ operationId: 'another-operation', progress: 80, status: 'other' });
-    receiveProgress?.({
-      operationId: 'correlation-id',
-      progress: 40,
-      status: 'Downloading... 40%',
-    });
+    receiveProgress?.({ operationId: 'another-operation', progress: 80 });
+    receiveProgress?.({ operationId: 'correlation-id', progress: 40 });
 
     await waitFor(() =>
-      expect(setDownloadStatusMock).toHaveBeenCalledWith({
-        id: 'correlation-id',
+      expect(notifyMock.progress).toHaveBeenCalledWith('server-create-correlation-id', {
+        title: 'server.toast.downloadingServer',
         progress: 40,
-        msg: 'Downloading... 40%',
       }),
     );
+    expect(notifyMock.progress).toHaveBeenCalledTimes(1);
+
+    resolveCreation?.({ server, jarInstalled: true });
     await waitFor(() => expect(unlisten).toHaveBeenCalledTimes(1));
+    // A late event after the result must not bring the progress toast back over the success toast.
+    receiveProgress?.({ operationId: 'correlation-id', progress: 90 });
+    expect(notifyMock.progress).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the progress toast with an error when Rust rejects the creation', async () => {
+    createServerProfileMock.mockRejectedValue(new Error('disk full'));
+    render(<ServerCreateHarness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create server' }));
+
+    await waitFor(() =>
+      expect(notifyMock.done).toHaveBeenCalledWith('server-create-correlation-id', {
+        type: 'error',
+        title: 'server.toast.createFailed',
+      }),
+    );
+    expect(setShowAddServerModalMock).not.toHaveBeenCalled();
   });
 
   it('does not submit twice while Rust is completing the first request', async () => {

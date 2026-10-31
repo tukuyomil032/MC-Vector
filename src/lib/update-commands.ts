@@ -225,8 +225,6 @@ export async function downloadAndInstallUpdate(
     await downloadWithProgress();
     await ensurePendingUpdateIsCurrent(pending);
     await pending.update.install();
-
-    await relaunch();
   } catch (error) {
     // Handle update errors with user-friendly details
     const errorMessage = String(error);
@@ -237,6 +235,14 @@ export async function downloadAndInstallUpdate(
 
     throw new Error(normalizeUpdaterError(error));
   }
+}
+
+/**
+ * Restarts the app so an update that downloadAndInstallUpdate already installed takes effect.
+ * Kept separate so the user can choose when to restart.
+ */
+export async function restartToApplyUpdate(): Promise<void> {
+  await relaunch();
 }
 
 export async function getAppVersion(): Promise<string> {

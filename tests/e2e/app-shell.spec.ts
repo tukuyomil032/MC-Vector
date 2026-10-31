@@ -92,4 +92,22 @@ test.describe('application shell', () => {
     await app.openView('plugins');
     await expect(page.locator('[data-testid="plugin-browser"]')).toBeVisible();
   });
+
+  test('settings back button returns to the view that opened settings', async ({ page, app }) => {
+    await app.gotoApp('paper-plugin-success');
+    await app.openView('properties');
+    await expect(page.locator('[data-testid="properties-view"]')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await app.openView('app-settings');
+    await expect(page.locator('[data-testid="app-settings-view"]')).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.locator('[data-testid="settings-back-button"]').click();
+
+    await expect(page.locator('[data-testid="properties-view"]')).toBeVisible({
+      timeout: 15_000,
+    });
+  });
 });
