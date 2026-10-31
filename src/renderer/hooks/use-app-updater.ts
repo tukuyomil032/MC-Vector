@@ -4,6 +4,7 @@ import {
   checkForUpdates,
   clearPendingUpdate,
   downloadAndInstallUpdate,
+  restartToApplyUpdate,
 } from '../../lib/update-commands';
 
 export interface UpdatePromptState {
@@ -31,7 +32,9 @@ export function useAppUpdater() {
   const isUpdatingRef = useRef(false);
   const checkPromiseRef = useRef<Promise<void> | null>(null);
   const queuedCheckRef = useRef(false);
-  const updateReady = false;
+  // True once the update is installed and only the restart remains. Progress is cleared at the same time,
+  // so the modal never sits at 100% waiting for a state that never arrives.
+  const [updateReady, setUpdateReady] = useState(false);
 
   const handleCheckForUpdates = useCallback(() => {
     if (checkPromiseRef.current) {
@@ -93,6 +96,7 @@ export function useAppUpdater() {
       setUpdateError(null);
       setUpdateCheckError(null);
       setUpdateModalOpen(false);
+      setUpdateReady(false);
       void handleCheckForUpdates();
     };
     window.addEventListener('mc-vector:update-channel-changed', handleChannelChanged);
@@ -112,6 +116,8 @@ export function useAppUpdater() {
         setUpdateProgress(percentage);
       });
       setUpdateError(null);
+      setUpdateProgress(null);
+      setUpdateReady(true);
     } catch (error) {
       logError('Update installation failed', error);
       setUpdateError(toErrorMessage(error));
@@ -122,7 +128,15 @@ export function useAppUpdater() {
     }
   }, []);
 
-  const handleInstallUpdate = handleUpdateNow;
+  const handleInstallUpdate = useCallback(async () => {
+    try {
+      await restartToApplyUpdate();
+    } catch (error) {
+      logError('Restart to apply update failed', error);
+      setUpdateError(toErrorMessage(error));
+      setUpdateModalOpen(true);
+    }
+  }, []);
 
   const handleDismissUpdate = useCallback(() => {
     setUpdateModalOpen(false);
