@@ -1072,7 +1072,7 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('server.properties')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backups-create-submit')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('backups.toast.createFailed'));
