@@ -110,10 +110,17 @@ function createDeferred<T>() {
   return { promise, resolve: resolvePromise };
 }
 
-function checkbox(path: string): HTMLInputElement {
-  return screen.getByRole('checkbox', {
-    name: `${path.split('/').at(-1)} (${path})`,
-  }) as HTMLInputElement;
+// Radix checkboxes are plain buttons with role=checkbox, so the lookup reads the aria-label directly.
+// A getByRole scan over the whole tree is too slow for the hierarchy cases.
+function checkbox(path: string): HTMLElement {
+  const name = `${path.split('/').at(-1)} (${path})`;
+  const match = Array.from(document.querySelectorAll<HTMLElement>('[role="checkbox"]')).find(
+    (node) => node.getAttribute('aria-label') === name,
+  );
+  if (!match) {
+    throw new Error(`Checkbox not found: ${name}`);
+  }
+  return match;
 }
 
 function expandDirectory(path: string) {
@@ -157,8 +164,7 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
 
     const worldCheckbox = checkbox('world');
     expect(worldCheckbox).not.toBeChecked();
-    await waitFor(() => expect(worldCheckbox.indeterminate).toBe(true));
-    expect(worldCheckbox).toHaveAttribute('aria-checked', 'mixed');
+    await waitFor(() => expect(worldCheckbox).toHaveAttribute('aria-checked', 'mixed'));
     expect(checkbox('world/level.dat')).not.toBeChecked();
   });
 
@@ -170,7 +176,7 @@ describe('BackupTargetSelectorWindow hierarchy selection', () => {
     fireEvent.click(levelDatCheckbox);
 
     await waitFor(() => expect(checkbox('world')).not.toBeChecked());
-    expect(checkbox('world')).toHaveProperty('indeterminate', true);
+    expect(checkbox('world')).toHaveAttribute('aria-checked', 'mixed');
     expect(checkbox('world/region')).toBeChecked();
     expect(levelDatCheckbox).not.toBeChecked();
 

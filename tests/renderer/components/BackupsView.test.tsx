@@ -761,7 +761,7 @@ describe('BackupsView initialization', () => {
       'plugins',
     ]);
     expect(screen.getByText(normalizedSentinel)).toBeInTheDocument();
-    expect(screen.queryByText('world')).not.toBeInTheDocument();
+    expect(screen.queryByText('world', { selector: 'span' })).not.toBeInTheDocument();
     expect(screen.queryByText('plugins')).not.toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.targetUpdated');
   });
@@ -856,7 +856,9 @@ describe('BackupsView initialization', () => {
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
 
     view.rerender(
       <StrictMode>
@@ -865,7 +867,7 @@ describe('BackupsView initialization', () => {
     );
 
     expect(screen.queryByTestId('backup-row-old-a.zip')).not.toBeInTheDocument();
-    expect(screen.queryByText('world')).not.toBeInTheDocument();
+    expect(screen.queryByText('world', { selector: 'span' })).not.toBeInTheDocument();
 
     await act(async () => {
       nextServerListing.reject(new Error('server B listing failed'));
@@ -1062,7 +1064,9 @@ describe('BackupsView initialization', () => {
     confirmMock.mockResolvedValue(true);
 
     const view = renderStrictMode();
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'backups.world.holdToDelete' }));
     await waitFor(() => expect(fileCommands.deleteItem).toHaveBeenCalledOnce());
 
@@ -1111,7 +1115,9 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
@@ -1145,7 +1151,9 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(confirmMock).toHaveBeenCalledOnce());
@@ -1165,7 +1173,9 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith('backups.toast.created'));
@@ -1186,7 +1196,9 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -1207,7 +1219,9 @@ describe('BackupsView lifecycle', () => {
 
     renderStrictMode();
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
 
     await waitFor(() =>
@@ -1246,7 +1260,9 @@ describe('BackupsView lifecycle', () => {
 
     const view = renderKeyedStrictMode('server-a', server);
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
       expect(backupCommands.createBackup).toHaveBeenCalledWith(
@@ -1305,7 +1321,9 @@ describe('BackupsView lifecycle', () => {
 
     const view = renderKeyedStrictMode('server-a', server);
     fireEvent.click(screen.getByTestId('backups-create-button'));
-    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('world', { selector: 'span' })).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId('backups-create-submit'));
     await waitFor(() =>
       expect(backupCommands.createBackup).toHaveBeenCalledWith(

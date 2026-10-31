@@ -184,7 +184,8 @@ describe('DashboardView metric charts', () => {
     render(<DashboardView server={server} />);
 
     for (const testId of ['dashboard-chart-cpu', 'dashboard-chart-memory', 'dashboard-chart-tps']) {
-      expect(chart(testId)).toHaveAttribute('data-count', '2');
+      // Two samples plus the held point that carries the latest value up to now.
+      expect(chart(testId)).toHaveAttribute('data-count', '3');
       expect(chart(testId)).toHaveAttribute('data-series', 'value');
     }
     expect(screen.getByTestId('dashboard-kpi-uptime-value')).toHaveTextContent('00:01:12');
