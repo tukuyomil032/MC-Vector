@@ -176,10 +176,12 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   }
 
   const basicVisible = ['motd', 'gamemode', 'difficulty'].some(matchesSearch);
-  const gameplayVisible = ['pvp', 'allow-flight', 'enable-command-block'].some(matchesSearch);
-  const networkVisible = ['max-players', 'server-port', 'online-mode', 'white-list'].some(
-    matchesSearch,
-  );
+  const gameplayVisible =
+    ['pvp', 'allow-flight', 'enable-command-block'].some(matchesSearch) ||
+    hasVisibleAdvancedProperties(props, BASIC_PROPERTY_KEYS, matchesSearch, ['Gameplay']);
+  const networkVisible =
+    ['max-players', 'server-port', 'online-mode', 'white-list'].some(matchesSearch) ||
+    hasVisibleAdvancedProperties(props, BASIC_PROPERTY_KEYS, matchesSearch, ['Network']);
   const advancedVisible = hasVisibleAdvancedProperties(props, BASIC_PROPERTY_KEYS, matchesSearch);
   const anyVisible = basicVisible || gameplayVisible || networkVisible || advancedVisible;
 
@@ -333,6 +335,13 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
                 onChange={(v) => handleChange('enable-command-block', v)}
               />
             )}
+            <AdvancedPropertyCards
+              inline="Gameplay"
+              values={props}
+              onChange={handleChange}
+              excludeKeys={BASIC_PROPERTY_KEYS}
+              matchesSearch={matchesSearch}
+            />
           </section>
         )}
 
@@ -382,6 +391,13 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
                 onChange={(v) => handleChange('white-list', v)}
               />
             )}
+            <AdvancedPropertyCards
+              inline="Network"
+              values={props}
+              onChange={handleChange}
+              excludeKeys={BASIC_PROPERTY_KEYS}
+              matchesSearch={matchesSearch}
+            />
           </section>
         )}
 

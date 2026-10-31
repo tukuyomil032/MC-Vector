@@ -7,7 +7,7 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { Input } from '@/components/arc/input/input';
 import { NumberField } from '@/components/arc/number-field/number-field';
 import { PasswordField } from '@/components/arc/password-field/password-field';
@@ -122,6 +122,7 @@ function getVisibleAdvancedGroups(
   values: Record<string, PropertyValue>,
   excludeKeys: readonly string[],
   matchesSearch: (key: string) => boolean,
+  categories: readonly PropertyCategory[] = CATEGORY_ORDER,
 ): AdvancedGroup[] {
   const excluded = new Set(excludeKeys);
   const known = new Set(serverPropertiesList.map((definition) => definition.key));
@@ -139,15 +140,17 @@ function getVisibleAdvancedGroups(
         value,
       })),
   ];
-  return CATEGORY_ORDER.map((category) => ({
-    category,
-    fields: fields.filter(
-      ({ definition }) =>
-        definition.category === category &&
-        !excluded.has(definition.key) &&
-        matchesSearch(definition.key),
-    ),
-  })).filter((group) => group.fields.length > 0);
+  return CATEGORY_ORDER.filter((category) => categories.includes(category))
+    .map((category) => ({
+      category,
+      fields: fields.filter(
+        ({ definition }) =>
+          definition.category === category &&
+          !excluded.has(definition.key) &&
+          matchesSearch(definition.key),
+      ),
+    }))
+    .filter((group) => group.fields.length > 0);
 }
 
 /** Whether any advanced field is visible, so the page can decide whether to show its empty line. */
@@ -155,9 +158,16 @@ export function hasVisibleAdvancedProperties(
   values: Record<string, PropertyValue>,
   excludeKeys: readonly string[],
   matchesSearch: (key: string) => boolean,
+  categories?: readonly PropertyCategory[],
 ): boolean {
-  return getVisibleAdvancedGroups(values, excludeKeys, matchesSearch).length > 0;
+  return getVisibleAdvancedGroups(values, excludeKeys, matchesSearch, categories).length > 0;
 }
+
+/** The categories whose fields join a basic card instead of getting a card of their own, so no heading appears twice. */
+export const MERGED_ADVANCED_CATEGORIES: readonly PropertyCategory[] = ['Gameplay', 'Network'];
+const STANDALONE_ADVANCED_CATEGORIES = CATEGORY_ORDER.filter(
+  (category) => !MERGED_ADVANCED_CATEGORIES.includes(category),
+);
 
 export interface AdvancedPropertyCardsProps {
   values: Record<string, PropertyValue>;
@@ -166,6 +176,11 @@ export interface AdvancedPropertyCardsProps {
   excludeKeys: readonly string[];
   /** Search filter by key. The caller matches the labels, since it knows the locale. */
   matchesSearch: (key: string) => boolean;
+  /**
+   * Render only this category's fields, with no card or heading, inside a basic card of the same name.
+   * Without it, every category outside MERGED_ADVANCED_CATEGORIES gets its own card.
+   */
+  inline?: PropertyCategory;
 }
 
 /** The advanced server properties as one card per category, placed after the basic cards on the same page. */
@@ -174,12 +189,19 @@ export function AdvancedPropertyCards({
   onChange,
   excludeKeys,
   matchesSearch,
+  inline,
 }: AdvancedPropertyCardsProps) {
   const { t, locale } = useTranslation();
   const arc = useArcMessages();
   const groups = useMemo(
-    () => getVisibleAdvancedGroups(values, excludeKeys, matchesSearch),
-    [values, excludeKeys, matchesSearch],
+    () =>
+      getVisibleAdvancedGroups(
+        values,
+        excludeKeys,
+        matchesSearch,
+        inline ? [inline] : STANDALONE_ADVANCED_CATEGORIES,
+      ),
+    [values, excludeKeys, matchesSearch, inline],
   );
 
   const getCategoryLabel = (category: PropertyCategory): string => {
@@ -283,14 +305,8 @@ export function AdvancedPropertyCards({
         const titleId = `properties-advanced-${category.toLowerCase()}-title`;
         const formFields = fields.filter((field) => field.definition.type !== 'boolean');
         const toggles = fields.filter((field) => field.definition.type === 'boolean');
-        return (
-          <section key={category} className={styles.card} aria-labelledby={titleId}>
-            <SectionTitle
-              icon={CATEGORY_ICONS[category]}
-              as="h3"
-              id={titleId}
-              title={getCategoryLabel(category)}
-            />
+        const body = (
+          <>
             {formFields.length > 0 && (
               <div className={styles.grid}>
                 {formFields.map((field) => (
@@ -318,6 +334,20 @@ export function AdvancedPropertyCards({
                 onChange={(checked) => onChange(field.definition.key, checked)}
               />
             ))}
+          </>
+        );
+        if (inline) {
+          return <Fragment key={category}>{body}</Fragment>;
+        }
+        return (
+          <section key={category} className={styles.card} aria-labelledby={titleId}>
+            <SectionTitle
+              icon={CATEGORY_ICONS[category]}
+              as="h3"
+              id={titleId}
+              title={getCategoryLabel(category)}
+            />
+            {body}
           </section>
         );
       })}
