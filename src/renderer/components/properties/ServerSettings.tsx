@@ -5,7 +5,6 @@ import { copyToClipboard } from '../../../lib/clipboard-commands';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
 import { notify } from '../../shared/notify';
 import {
-  clearNgrokToken,
   hasNgrokToken,
   onNgrokStatusChange,
   setNgrokToken,
@@ -246,8 +245,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
     }
   };
 
-  const handleResetToken = async () => {
-    await clearNgrokToken();
+  // Opening the change-token dialog must not clear the stored token: the old token stays
+  // until a new one is submitted, so cancelling the dialog leaves the tunnel setup intact.
+  const handleResetToken = () => {
     setInputToken('');
     setShowTokenModal(true);
   };
