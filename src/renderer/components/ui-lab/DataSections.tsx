@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Archive, Ban, Crown, ShieldCheck, TriangleAlert, UserX } from 'lucide-react';
 import { EmptyLine } from '../ui/EmptyLine';
+import { IconTile, SectionTitle } from '../ui/IconTile';
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
 import { Card } from '@/components/arc/card/card';
@@ -174,6 +176,31 @@ export function EmptyLineDemo() {
         title="サーバーがありません"
         action={<Button variant="secondary">サーバーを追加</Button>}
       />
+    </div>
+  );
+}
+
+export function IconTileDemo() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-4">
+        <IconTile icon={Archive} size="sm" />
+        <IconTile icon={Archive} />
+        <IconTile icon={Crown} tone="neutral" />
+        <IconTile icon={ShieldCheck} tone="success" />
+        <IconTile icon={TriangleAlert} tone="warning" />
+        <IconTile icon={Ban} tone="danger" />
+      </div>
+      <LabCaption>sm は 24px、md は 36px。状態の色は、状態が伝わる場面だけで使います。</LabCaption>
+    </div>
+  );
+}
+
+export function SectionTitleDemo() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <SectionTitle icon={Archive} title="バックアップ管理" trailing={<span>3 件</span>} />
+      <SectionTitle icon={UserX} title="BAN されたプレイヤー" tone="danger" as="h3" />
     </div>
   );
 }

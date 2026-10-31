@@ -41,7 +41,9 @@ import {
   CardDemo,
   CodeBlockDemo,
   EmptyLineDemo,
+  IconTileDemo,
   LineChartDemo,
+  SectionTitleDemo,
   MetricCardDemo,
   ScrollAreaDemo,
   SkeletonDemo,
@@ -178,6 +180,12 @@ export default function UiLabView() {
           </LabSection>
           <LabSection title="Empty line">
             <EmptyLineDemo />
+          </LabSection>
+          <LabSection title="Icon tile">
+            <IconTileDemo />
+          </LabSection>
+          <LabSection title="Section title">
+            <SectionTitleDemo />
           </LabSection>
           <LabSection title="Skeleton">
             <SkeletonDemo />
