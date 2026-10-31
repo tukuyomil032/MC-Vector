@@ -382,6 +382,13 @@ export interface TranslationDictionary {
       moveButton: string;
       renameTitle: string;
       renameButton: string;
+      renameLabel: string;
+      folderHint: string;
+      fileHint: string;
+      importHint: string;
+      nameInvalid: string;
+      moveDestLabel: string;
+      moveIntoItself: string;
     };
     toast: {
       uploadSuccess: string;

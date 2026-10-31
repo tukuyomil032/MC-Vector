@@ -18,14 +18,17 @@ import {
 } from 'lucide-react';
 import type * as React from 'react';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/arc/breadcrumb/breadcrumb';
+import { Button } from '@/components/arc/button/button';
 import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group';
 import { Checkbox } from '@/components/arc/checkbox/checkbox';
 import { ContextMenu, type ContextMenuItem } from '@/components/arc/context-menu/context-menu';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Input } from '@/components/arc/input/input';
+import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
-import { iconFile, iconFiles, iconImport } from '../../assets/icons';
 import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
@@ -45,9 +48,6 @@ import {
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import FileEditorWorkspace from './FileEditorWorkspace';
 import styles from './FilesView.module.css';
-import SvgMaskIcon from './SvgMaskIcon';
-import { Button } from './ui/Button';
-import { Input } from './ui/Field';
 
 interface Props {
   server: MinecraftServer;
@@ -58,6 +58,8 @@ interface FileEntry {
   isDirectory: boolean;
   size?: number;
 }
+
+type CreateMode = 'folder' | 'file' | 'import';
 
 interface EditingFileState {
   name: string;
@@ -132,7 +134,7 @@ export default function FilesView({ server }: Props) {
   const [modalType, setModalType] = useState<string | null>(null);
 
   const [newFileName, setNewFileName] = useState('');
-  const [createMode, setCreateMode] = useState<'folder' | 'file'>('folder');
+  const [createMode, setCreateMode] = useState<CreateMode>('folder');
 
   const [moveDestPath, setMoveDestPath] = useState('');
   const [renameFileName, setRenameFileName] = useState('');
@@ -516,18 +518,21 @@ export default function FilesView({ server }: Props) {
     }
   };
 
+  // Turns the typed destination into an absolute path. A leading "servers/" is relative to the servers root.
+  const resolveMoveDestination = (input: string): string => {
+    const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
+    let dest = input.trim().replace(/\\/g, '/');
+    if (dest.startsWith('servers/')) {
+      dest = dest.replace('servers', normalizedRoot);
+    }
+    return dest.replace(/\/+/g, '/');
+  };
+
   const handleMove = async () => {
-    if (!moveDestPath) {
+    const realDest = resolveMoveDestination(moveDestPath);
+    if (!realDest || moveDestinationError) {
       return;
     }
-
-    let realDest = moveDestPath.replace(/\\/g, '/');
-    const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
-
-    if (realDest.startsWith('servers/')) {
-      realDest = realDest.replace('servers', normalizedRoot);
-    }
-    realDest = realDest.replace(/\/+/g, '/');
 
     try {
       if (modalType === 'moveCurrent') {
@@ -738,6 +743,61 @@ export default function FilesView({ server }: Props) {
       onSelect: () => void handleDelete(),
     },
   ];
+
+  const createOptions: RadioCardOption[] = [
+    {
+      value: 'folder',
+      label: t('files.modal.folder'),
+      description: t('files.modal.folderHint'),
+      icon: <Folder aria-hidden="true" size={16} strokeWidth={1.75} />,
+      testId: 'files-create-folder-option',
+    },
+    {
+      value: 'file',
+      label: t('files.modal.file'),
+      description: t('files.modal.fileHint'),
+      icon: <File aria-hidden="true" size={16} strokeWidth={1.75} />,
+      testId: 'files-create-file-option',
+    },
+    {
+      value: 'import',
+      label: t('files.modal.import'),
+      description: t('files.modal.importHint'),
+      icon: <FolderInput aria-hidden="true" size={16} strokeWidth={1.75} />,
+      testId: 'files-import-button',
+    },
+  ];
+  const createNameError =
+    createMode !== 'import' && /[\\/]/.test(newFileName) ? t('files.modal.nameInvalid') : undefined;
+  const createDisabled =
+    createMode !== 'import' && (!newFileName.trim() || createNameError !== undefined);
+  const submitCreate = () => {
+    if (createMode === 'import') {
+      void handleImport();
+      return;
+    }
+    if (!createDisabled) {
+      void handleCreate();
+    }
+  };
+
+  // A folder cannot be moved into itself or into one of its own subfolders.
+  const moveSources =
+    modalType === 'moveCurrent'
+      ? [currentPath]
+      : selectedFiles.map((name) => `${currentPath}/${name}`);
+  const resolvedMoveDestination = resolveMoveDestination(moveDestPath);
+  const moveDestinationError = moveSources.some(
+    (source) =>
+      resolvedMoveDestination === source || resolvedMoveDestination.startsWith(`${source}/`),
+  )
+    ? t('files.modal.moveIntoItself')
+    : undefined;
+  const moveDisabled = !moveDestPath.trim() || moveDestinationError !== undefined;
+
+  const renameError = /[\\/]/.test(renameFileName) ? t('files.modal.nameInvalid') : undefined;
+  const renameDisabled =
+    !renameFileName.trim() || renameFileName.trim() === renameTarget || renameError !== undefined;
 
   const rowMenuItems = (file: FileEntry): ContextMenuItem[] => [
     {
@@ -1012,170 +1072,163 @@ export default function FilesView({ server }: Props) {
         />
       )}
 
-      {/* New Create / Import Modal */}
-      {modalType === 'create' && (
-        <div className="mc-modal-overlay modal-backdrop">
-          <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-              {t('files.modal.createImportTitle')}
-            </h3>
-
-            <div className="files-view__create-grid">
-              <div
-                className={`files-view__create-option ${createMode === 'folder' ? 'is-active' : ''}`}
-                onClick={() => setCreateMode('folder')}
-                role="button"
-                tabIndex={0}
-                aria-pressed={createMode === 'folder'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setCreateMode('folder');
-                  }
-                }}
+      {/* Create / Import: one choice card per action, and the name only when it is needed */}
+      <Dialog
+        open={modalType === 'create'}
+        onOpenChange={(open) => {
+          if (!open) setModalType(null);
+        }}
+      >
+        <DialogContent
+          title={t('files.modal.createImportTitle')}
+          width="min(520px, calc(100vw - 2rem))"
+          data-testid="files-create-modal"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setModalType(null)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                data-testid="files-create-submit"
+                disabled={createDisabled}
+                onClick={submitCreate}
               >
-                <SvgMaskIcon src={iconFiles} className="w-8 h-8" />
-                <span
-                  className={`files-view__create-option-label ${createMode === 'folder' ? 'is-active' : 'is-idle'}`}
-                >
-                  {t('files.modal.folder')}
-                </span>
-              </div>
-
-              <div
-                className={`files-view__create-option ${createMode === 'file' ? 'is-active' : ''}`}
-                data-testid="files-create-file-option"
-                onClick={() => setCreateMode('file')}
-                role="button"
-                tabIndex={0}
-                aria-pressed={createMode === 'file'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setCreateMode('file');
-                  }
-                }}
-              >
-                <SvgMaskIcon src={iconFile} className="w-8 h-8" />
-                <span
-                  className={`files-view__create-option-label ${createMode === 'file' ? 'is-active' : 'is-idle'}`}
-                >
-                  {t('files.modal.file')}
-                </span>
-              </div>
-
-              <div
-                className="files-view__create-option files-view__create-option--import"
-                data-testid="files-import-button"
-                onClick={handleImport}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    void handleImport();
-                  }
-                }}
-              >
-                <SvgMaskIcon src={iconImport} className="w-8 h-8" />
-                <span className="files-view__create-option-label is-idle">
-                  {t('files.modal.import')}
-                </span>
-              </div>
-            </div>
-
-            <label className="files-view__modal-label">{t('files.modal.nameLabel')}</label>
+                {createMode === 'import' ? t('files.modal.import') : t('common.create')}
+              </Button>
+            </>
+          }
+        >
+          <RadioCards
+            aria-label={t('files.modal.createImportTitle')}
+            layout="grid"
+            minColumnWidth={150}
+            options={createOptions}
+            value={createMode}
+            onValueChange={(value) => setCreateMode(value as CreateMode)}
+          />
+          {createMode !== 'import' && (
             <Input
-              type="text"
-              value={newFileName}
+              label={t('files.modal.nameLabel')}
               data-testid="files-name-input"
-              onChange={(e) => setNewFileName(e.target.value)}
+              value={newFileName}
               placeholder={
                 createMode === 'folder'
                   ? t('files.modal.newFolderPlaceholder')
                   : t('files.modal.newFilePlaceholder')
               }
-              variant="modal"
+              error={createNameError}
+              onChange={(e) => setNewFileName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreate();
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  submitCreate();
+                }
               }}
+              autoFocus
             />
+          )}
+        </DialogContent>
+      </Dialog>
 
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
+      {/* Move: the destination is checked before Move is enabled */}
+      <Dialog
+        open={modalType === 'move' || modalType === 'moveCurrent'}
+        onOpenChange={(open) => {
+          if (!open) setModalType(null);
+        }}
+      >
+        <DialogContent
+          title={
+            modalType === 'moveCurrent'
+              ? t('files.modal.moveDirectoryTitle')
+              : t('files.modal.moveTitle')
+          }
+          description={
+            modalType === 'moveCurrent'
+              ? t('files.modal.moveDirectoryDescription')
+              : t('files.modal.moveDescription', { count: selectedFiles.length })
+          }
+          data-testid="files-move-modal"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
               <Button
-                onClick={handleCreate}
-                variant="modalPrimary"
-                data-testid="files-create-submit"
-                disabled={!newFileName}
+                type="button"
+                variant="primary"
+                data-testid="files-move-submit"
+                disabled={moveDisabled}
+                onClick={() => void handleMove()}
               >
-                {t('common.create')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Move Modal */}
-      {(modalType === 'move' || modalType === 'moveCurrent') && (
-        <div className="mc-modal-overlay modal-backdrop">
-          <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-              {modalType === 'moveCurrent'
-                ? t('files.modal.moveDirectoryTitle')
-                : t('files.modal.moveTitle')}
-            </h3>
-            <p className="text-zinc-400 text-sm mb-2.5">
-              {modalType === 'moveCurrent'
-                ? t('files.modal.moveDirectoryDescription')
-                : t('files.modal.moveDescription', { count: selectedFiles.length })}
-            </p>
-            <Input
-              type="text"
-              value={moveDestPath}
-              data-testid="files-move-input"
-              onChange={(e) => setMoveDestPath(e.target.value)}
-              placeholder={t('files.modal.moveDestPlaceholder')}
-              variant="modal"
-            />
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button variant="modalPrimary" onClick={handleMove}>
                 {t('files.modal.moveButton')}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </>
+          }
+        >
+          <Input
+            label={t('files.modal.moveDestLabel')}
+            data-testid="files-move-input"
+            value={moveDestPath}
+            placeholder={t('files.modal.moveDestPlaceholder')}
+            error={moveDestinationError}
+            onChange={(e) => setMoveDestPath(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !moveDisabled) {
+                e.preventDefault();
+                void handleMove();
+              }
+            }}
+            autoFocus
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Rename Modal */}
-      {modalType === 'rename' && (
-        <div className="mc-modal-overlay modal-backdrop">
-          <div className="mc-modal-panel modal-panel files-view__modal-panel">
-            <h3 className="mt-0 mb-5 text-xl border-b border-zinc-700 pb-2.5">
-              {t('files.modal.renameTitle')}
-            </h3>
-            <Input
-              type="text"
-              value={renameFileName}
-              onChange={(e) => setRenameFileName(e.target.value)}
-              variant="modal"
-            />
-            <div className="flex justify-end gap-2.5 mt-2.5">
-              <Button variant="modalSecondary" onClick={() => setModalType(null)}>
+      {/* Rename: the name must differ from the current one and must not contain a slash */}
+      <Dialog
+        open={modalType === 'rename'}
+        onOpenChange={(open) => {
+          if (!open) setModalType(null);
+        }}
+      >
+        <DialogContent
+          title={t('files.modal.renameTitle')}
+          data-testid="files-rename-modal"
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setModalType(null)}>
                 {t('common.cancel')}
               </Button>
-              <Button variant="modalPrimary" onClick={handleRename}>
+              <Button
+                type="button"
+                variant="primary"
+                data-testid="files-rename-submit"
+                disabled={renameDisabled}
+                onClick={() => void handleRename()}
+              >
                 {t('files.modal.renameButton')}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </>
+          }
+        >
+          <Input
+            label={t('files.modal.renameLabel')}
+            data-testid="files-rename-input"
+            value={renameFileName}
+            error={renameError}
+            onChange={(e) => setRenameFileName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !renameDisabled) {
+                e.preventDefault();
+                void handleRename();
+              }
+            }}
+            autoFocus
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
