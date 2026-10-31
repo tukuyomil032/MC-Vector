@@ -3,30 +3,26 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
   Archive,
   ArrowUp,
+  File,
+  Folder,
   FolderOpen,
   FolderPlus,
   GitCompareArrows,
   Move,
   PackageOpen,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import type * as React from 'react';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/arc/breadcrumb/breadcrumb';
 import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
-import {
-  iconFile,
-  iconFiles,
-  iconFolder,
-  iconImport,
-  iconMove,
-  iconTrash,
-  iconUnzip,
-  iconZip,
-} from '../../assets/icons';
+import { iconFiles, iconImport, iconMove, iconTrash, iconUnzip, iconZip } from '../../assets/icons';
 import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
@@ -149,8 +145,12 @@ export default function FilesView({ server }: Props) {
   const editorRequestId = useRef(0);
   const filesRequestId = useRef(0);
 
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { confirm } = useAppFeedback();
+  const sizeFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+    [locale],
+  );
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -292,11 +292,6 @@ export default function FilesView({ server }: Props) {
     } else {
       setSelectedFiles([fileName]);
     }
-  };
-
-  const handleCheckboxClick = (fileName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleSelect(fileName);
   };
 
   const toggleSelect = (name: string) => {
@@ -771,85 +766,113 @@ export default function FilesView({ server }: Props) {
 
       {/* ファイルリスト表示エリア */}
       <div
-        className={`files-view__list-pane ${isExternalDropActive ? 'is-drop-active' : ''}`}
+        className={`${styles.pane}${isExternalDropActive ? ` ${styles.paneDropActive}` : ''}`}
         onContextMenu={(e) => handleContextMenu(e, null)}
       >
-        {isExternalDropActive && <div className="files-view__drop-hint">{t('files.dropHint')}</div>}
+        {isExternalDropActive && (
+          <div className={styles.dropOverlay} role="status">
+            <Upload aria-hidden="true" size={24} strokeWidth={1.75} />
+            <span>{t('files.dropHint')}</span>
+          </div>
+        )}
 
-        <div className="flex flex-col gap-0">
-          {files.map((file) => {
-            const filePath = joinManagedPath(currentPath, file.name);
-            return (
-              <div
-                key={file.name}
-                className={`files-view__row ${selectedFiles.includes(file.name) ? 'is-selected' : ''}${diffSelectStep && !file.isDirectory ? ' cursor-crosshair' : ''}`}
-                data-testid={`file-row-${file.name}`}
-                role="button"
-                tabIndex={0}
-                aria-label={file.name}
-                aria-pressed={selectedFiles.includes(file.name)}
-                onContextMenu={(e) => {
-                  e.stopPropagation();
-                  handleContextMenu(e, file);
-                }}
-                onClick={(e) => {
-                  if (diffSelectStep && !file.isDirectory) {
-                    void handleDiffSelect(file, filePath);
-                  } else {
-                    handleRowClick(file.name, e);
-                  }
-                }}
-                onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
+        {files.length === 0 ? (
+          <EmptyState
+            icon={<FolderOpen aria-hidden="true" size={22} strokeWidth={1.75} />}
+            title={t('files.emptyFolder')}
+            description={t('files.emptyFolderHint')}
+          />
+        ) : (
+          <div className={styles.list}>
+            {files.map((file) => {
+              const filePath = joinManagedPath(currentPath, file.name);
+              const selected = selectedFiles.includes(file.name);
+              const rowClass = [
+                styles.row,
+                selected ? styles.rowSelected : '',
+                diffSelectStep && !file.isDirectory ? styles.rowPick : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+              return (
+                <div
+                  key={file.name}
+                  className={rowClass}
+                  data-testid={`file-row-${file.name}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={file.name}
+                  aria-pressed={selected}
+                  onContextMenu={(e) => {
+                    e.stopPropagation();
+                    handleContextMenu(e, file);
+                  }}
+                  onClick={(e) => {
                     if (diffSelectStep && !file.isDirectory) {
                       void handleDiffSelect(file, filePath);
                     } else {
-                      void handleFileDoubleClick(file.name);
+                      handleRowClick(file.name, e);
                     }
-                  }
-                }}
-                draggable
-                onDragStart={(e) => handleDragStart(e, file.name)}
-                onDragOver={(e) => {
-                  if (file.isDirectory) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
-                onDrop={(e) => {
-                  if (file.isDirectory) handleDropOnFolder(e, file.name);
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedFiles.includes(file.name)}
-                  aria-label={file.name}
-                  onClick={(e) => handleCheckboxClick(file.name, e)}
-                  className="cursor-pointer mr-2.5 ml-2.5"
-                />
-                <SvgMaskIcon
-                  src={file.isDirectory ? iconFolder : iconFile}
-                  className={`files-view__row-icon ${file.isDirectory ? 'files-view__row-icon--dir' : 'files-view__row-icon--file'}`}
-                />
-                <span
-                  className={`files-view__name ${file.isDirectory ? 'files-view__name--dir' : 'files-view__name--file'}`}
+                  }}
+                  onDoubleClick={() => !diffSelectStep && handleFileDoubleClick(file.name)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      if (diffSelectStep && !file.isDirectory) {
+                        void handleDiffSelect(file, filePath);
+                      } else {
+                        void handleFileDoubleClick(file.name);
+                      }
+                    }
+                  }}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, file.name)}
+                  onDragOver={(e) => {
+                    if (file.isDirectory) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (file.isDirectory) handleDropOnFolder(e, file.name);
+                  }}
                 >
-                  {file.name}
-                </span>
-                <span className="text-text-secondary text-xs min-w-[80px] text-right mr-2.5">
-                  {file.isDirectory
-                    ? '-'
-                    : file.size
-                      ? `${(file.size / 1024).toFixed(1)} KB`
-                      : '0 KB'}
-                </span>
-              </div>
-            );
-          })}
-          {files.length === 0 && <div className="files-view__empty">{t('files.emptyFolder')}</div>}
-        </div>
+                  {/* The checkbox handles its own presses, so they do not also open or select the row. */}
+                  <span
+                    className={styles.checkCell}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      aria-label={file.name}
+                      checked={selected}
+                      onCheckedChange={() => toggleSelect(file.name)}
+                    />
+                  </span>
+                  {file.isDirectory ? (
+                    <Folder
+                      aria-hidden="true"
+                      className={`${styles.icon} ${styles.iconDirectory}`}
+                      size={16}
+                      strokeWidth={1.75}
+                    />
+                  ) : (
+                    <File aria-hidden="true" className={styles.icon} size={16} strokeWidth={1.75} />
+                  )}
+                  <span className={styles.name}>{file.name}</span>
+                  <span className={styles.size}>
+                    {file.isDirectory
+                      ? '-'
+                      : t('files.size.kb', {
+                          value: sizeFormatter.format((file.size ?? 0) / 1024),
+                        })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Diff View Overlay */}

@@ -341,6 +341,10 @@ export const en: TranslationDictionary = {
       loadFailed: 'Could not load file',
     },
     emptyFolder: 'Folder is empty',
+    emptyFolderHint: 'Drop files here, or create a new file or folder.',
+    size: {
+      kb: '{value} KB',
+    },
     loading: 'Loading...',
     modal: {
       createImportTitle: 'Create / Import',

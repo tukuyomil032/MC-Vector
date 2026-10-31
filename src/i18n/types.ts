@@ -360,6 +360,10 @@ export interface TranslationDictionary {
       loadFailed: string;
     };
     emptyFolder: string;
+    emptyFolderHint: string;
+    size: {
+      kb: string;
+    };
     loading: string;
     modal: {
       createImportTitle: string;
