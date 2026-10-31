@@ -55,6 +55,7 @@ export const en: TranslationDictionary = {
       downloadingLabel: 'Downloading',
       downloadHint: 'You can close this window. Progress continues in a notification.',
       later: 'Later',
+      skipVersion: 'Skip this version',
       retry: 'Try again',
       channelLabel: 'Update channel',
       channels: {

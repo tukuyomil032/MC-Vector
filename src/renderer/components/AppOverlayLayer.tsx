@@ -22,6 +22,7 @@ interface AppOverlayLayerProps {
   onDismissUpdate: () => void;
   onUpdateNow: () => void;
   onInstallUpdate: () => void;
+  onSkipUpdateVersion: () => void;
   pendingEula: PendingServerEula | null;
   onAcceptEula: () => Promise<boolean>;
   onCancelEula: () => void;
@@ -43,6 +44,7 @@ export default function AppOverlayLayer({
   onDismissUpdate,
   onUpdateNow,
   onInstallUpdate,
+  onSkipUpdateVersion,
   pendingEula,
   onAcceptEula,
   onCancelEula,
@@ -71,6 +73,7 @@ export default function AppOverlayLayer({
         onDismiss={onDismissUpdate}
         onUpdateNow={onUpdateNow}
         onInstall={onInstallUpdate}
+        onSkipVersion={onSkipUpdateVersion}
       />
       <ServerEulaModal pending={pendingEula} onAccept={onAcceptEula} onCancel={onCancelEula} />
     </>

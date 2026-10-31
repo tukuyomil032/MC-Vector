@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getTranslation } from '../../i18n';
+import {
+  getUpdatePromptPreferences,
+  saveUpdatePromptPreferences,
+  type UpdatePromptPreferences,
+} from '../../lib/config-commands';
 import { logError, toErrorMessage } from '../../lib/error-utils';
 import { notify } from '../shared/notify';
 import {
@@ -19,6 +24,33 @@ async function restartForUpdate(): Promise<void> {
   } catch (error) {
     logError('Restart to apply update failed', error);
     notify.error(getTranslation()('settings.update.errorTitle'), toErrorMessage(error));
+  }
+}
+
+const REMIND_LATER_MS = 24 * 60 * 60 * 1000;
+
+/** Whether the prompt for this version may open. A skipped version never opens; a postponed one waits out its 24 hours. */
+async function isUpdatePromptDue(version: string | undefined): Promise<boolean> {
+  if (!version) return true;
+  try {
+    const preferences = await getUpdatePromptPreferences();
+    if (preferences.skippedVersion === version) return false;
+    const reminder = preferences.remindLater;
+    return !(reminder && reminder.version === version && Date.now() < reminder.until);
+  } catch (error) {
+    logError('Failed to read update prompt preferences', error);
+    return true;
+  }
+}
+
+async function rememberUpdatePrompt(
+  change: (preferences: UpdatePromptPreferences) => UpdatePromptPreferences,
+): Promise<void> {
+  try {
+    const current = await getUpdatePromptPreferences();
+    await saveUpdatePromptPreferences(change(current));
+  } catch (error) {
+    logError('Failed to save update prompt preferences', error);
   }
 }
 
@@ -79,7 +111,7 @@ export function useAppUpdater() {
           setUpdatePrompt({ version: result.version, releaseNotes: result.body });
           setUpdateError(null);
           setUpdateCheckStatus('available');
-          setUpdateModalOpen(true);
+          setUpdateModalOpen(await isUpdatePromptDue(result.version));
           return;
         }
 
@@ -159,7 +191,22 @@ export function useAppUpdater() {
 
   const handleDismissUpdate = useCallback(() => {
     setUpdateModalOpen(false);
-  }, []);
+    // Closing an update that has not started yet means "later": this version waits 24 hours.
+    const version = updatePrompt?.version;
+    if (version && !isUpdatingRef.current && !updateReady && !updateError) {
+      void rememberUpdatePrompt((preferences) => ({
+        ...preferences,
+        remindLater: { version, until: Date.now() + REMIND_LATER_MS },
+      }));
+    }
+  }, [updatePrompt, updateReady, updateError]);
+
+  const handleSkipUpdateVersion = useCallback(() => {
+    const version = updatePrompt?.version;
+    setUpdateModalOpen(false);
+    if (!version) return;
+    void rememberUpdatePrompt(() => ({ skippedVersion: version }));
+  }, [updatePrompt]);
 
   return {
     updateModalOpen,
@@ -173,5 +220,6 @@ export function useAppUpdater() {
     handleUpdateNow,
     handleInstallUpdate,
     handleDismissUpdate,
+    handleSkipUpdateVersion,
   };
 }

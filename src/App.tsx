@@ -114,6 +114,7 @@ function MainApp() {
     handleInstallUpdate,
     handleDismissUpdate,
     updateModalOpen,
+    handleSkipUpdateVersion,
   } = useAppUpdater();
 
   useViewCycleShortcut({ currentView, setCurrentView });
@@ -586,6 +587,7 @@ function MainApp() {
         onDismissUpdate={handleDismissUpdate}
         onUpdateNow={handleUpdateNow}
         onInstallUpdate={handleInstallUpdate}
+        onSkipUpdateVersion={handleSkipUpdateVersion}
         pendingEula={pendingEula}
         onAcceptEula={acceptPendingEula}
         onCancelEula={cancelPendingEula}

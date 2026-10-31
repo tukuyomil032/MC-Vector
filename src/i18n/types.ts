@@ -77,6 +77,7 @@ export interface TranslationDictionary {
       downloadingLabel: string;
       downloadHint: string;
       later: string;
+      skipVersion: string;
       retry: string;
       channelLabel: string;
       channels: {

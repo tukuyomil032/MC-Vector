@@ -21,6 +21,7 @@ interface AppUpdateModalProps {
   onDismiss: () => void;
   onUpdateNow: () => void;
   onInstall: () => void;
+  onSkipVersion: () => void;
 }
 
 export default function AppUpdateModal({
@@ -33,6 +34,7 @@ export default function AppUpdateModal({
   onDismiss,
   onUpdateNow,
   onInstall,
+  onSkipVersion,
 }: AppUpdateModalProps) {
   // Each state is one screen: ready, downloading, failed, or an update waiting to be downloaded.
   const phase = updateReady
@@ -123,6 +125,19 @@ export default function AppUpdateModal({
               version={updatePrompt.version}
               label={t('settings.update.releaseNotes')}
             />
+          )}
+
+          {phase === 'available' && (
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                data-testid="update-modal-skip"
+                onClick={onSkipVersion}
+              >
+                {t('settings.update.skipVersion')}
+              </Button>
+            </div>
           )}
 
           {phase === 'downloading' && (

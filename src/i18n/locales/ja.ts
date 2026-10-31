@@ -55,6 +55,7 @@ export const ja: TranslationDictionary = {
       downloadingLabel: 'ダウンロード中',
       downloadHint: 'このウィンドウを閉じても、進行状況は通知で確認できます。',
       later: '後で',
+      skipVersion: 'このバージョンをスキップ',
       retry: '再試行',
       channelLabel: 'アップデートチャンネル',
       channels: {
