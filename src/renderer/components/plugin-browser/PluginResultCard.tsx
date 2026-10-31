@@ -46,10 +46,18 @@ export function CompatibilityBadge({ status }: { status: CompatibilityStatus }) 
   );
 }
 
-/** The plugin icon, or the first letter of its name when the provider has no icon. */
-export function PluginTile({ iconUrl, title }: { iconUrl?: string; title: string }) {
+/** The plugin icon, or the first letter of its name when the provider has no icon. md is 48px for cards, lg is 56px for the dialog header. */
+export function PluginTile({
+  iconUrl,
+  title,
+  size = 'md',
+}: {
+  iconUrl?: string;
+  title: string;
+  size?: 'md' | 'lg';
+}) {
   return (
-    <div className={styles.tile}>
+    <div className={[styles.tile, size === 'lg' ? styles.tileLg : styles.tileMd].join(' ')}>
       {iconUrl ? (
         <img className={styles.tileIcon} src={iconUrl} alt="" loading="lazy" />
       ) : (

@@ -696,6 +696,7 @@ export const ja: TranslationDictionary = {
       detailProjectPage: 'プロジェクトページ',
       detailInfo: '情報',
       detailReadme: 'README',
+      detailTabs: 'プラグインの詳細',
       localSource: 'ローカルファイル',
       installedFile: '導入ファイル',
       installedVersion: 'ファイルバージョン',

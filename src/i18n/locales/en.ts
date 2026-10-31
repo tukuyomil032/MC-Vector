@@ -699,6 +699,7 @@ export const en: TranslationDictionary = {
       detailProjectPage: 'Project Page',
       detailInfo: 'Info',
       detailReadme: 'README',
+      detailTabs: 'Plugin details',
       localSource: 'Local file',
       installedFile: 'Installed file',
       installedVersion: 'File version',
