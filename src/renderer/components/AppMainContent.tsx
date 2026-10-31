@@ -1,6 +1,17 @@
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Button } from '@/components/arc/button/button';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { motionTokens } from '@/components/arc/motion-tokens';
+
+// The view change uses the Arc tokens: the new view settles in, and the old one leaves a little faster.
+const enterTransition = {
+  duration: motionTokens.duration.standard,
+  ease: [...motionTokens.ease.enter],
+} as const;
+const exitTransition = {
+  duration: motionTokens.duration.exit,
+  ease: [...motionTokens.ease.exit],
+} as const;
 import { TriangleAlert } from 'lucide-react';
 import { Suspense } from 'react';
 import type { Translate } from '../../i18n';
@@ -56,9 +67,12 @@ export default function AppMainContent({
         <motion.div
           key={`${selectedServerId || 'none'}-${currentView}`}
           initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
-          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
+          animate={{ opacity: 1, y: 0, transition: enterTransition }}
+          exit={
+            prefersReducedMotion
+              ? { opacity: 1, y: 0, transition: { duration: 0 } }
+              : { opacity: 0, y: -8, transition: exitTransition }
+          }
           className={styles.viewFrame}
         >
           <ViewErrorBoundary
