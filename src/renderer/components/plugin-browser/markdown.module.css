@@ -237,7 +237,7 @@
   height: auto;
 }
 
-.markdown img[align='center'] {
+.markdown img[data-align='center'] {
   display: block;
   margin-inline: auto;
 }

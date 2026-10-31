@@ -133,14 +133,17 @@ export function PluginReadme({ markdown, onOpenLink }: PluginReadmeProps) {
         </Tooltip>
       );
     },
-    img({ src, alt, width, height, align }) {
+    img(props) {
+      const { src, alt, width, height } = props;
+      // align is a legacy img attribute that the React typings omit; it still arrives in props, so it is read here.
+      const { align } = props as { align?: string };
       return (
         <img
           src={src}
           alt={alt ?? ''}
           width={width}
           height={height}
-          align={align}
+          data-align={align}
           loading="lazy"
           referrerPolicy="no-referrer"
           className={styles.image}

@@ -79,7 +79,7 @@ describe('PluginReadme sanitizer policy', () => {
     expect(banner).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(banner).toHaveAttribute('width', '480');
     expect(banner).toHaveAttribute('height', '120');
-    expect(banner).toHaveAttribute('align', 'center');
+    expect(banner).toHaveAttribute('data-align', 'center');
 
     expect(queryByText('inline data')).toBeNull();
   });
