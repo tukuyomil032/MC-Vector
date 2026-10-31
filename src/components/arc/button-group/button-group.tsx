@@ -36,6 +36,8 @@ export interface ButtonGroupItem {
   /** Renders the segment as a link. */
   href?: string;
   disabled?: boolean;
+  /** Rendered as data-testid on the segment, so tests can reach a segment that has no visible text. */
+  testId?: string;
 }
 
 export interface ButtonGroupMenuItem {
@@ -447,6 +449,7 @@ export function ButtonGroup({
     const common = {
       className: [styles.segment, item.iconOnly ? styles.iconOnly : ''].filter(Boolean).join(' '),
       'data-key': item.id,
+      'data-testid': item.testId,
       'data-quiet': quiet(index),
       'data-collapsible':
         item.icon && !item.iconOnly && item.content === undefined ? '' : undefined,

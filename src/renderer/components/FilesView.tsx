@@ -741,6 +741,7 @@ export default function FilesView({ server }: Props) {
       label: t('files.toolbar.createImport'),
       icon: <FolderPlus aria-hidden="true" size={16} strokeWidth={1.75} />,
       iconOnly: true,
+      testId: 'files-create-button',
       onSelect: () => setModalType('create'),
     },
     {
