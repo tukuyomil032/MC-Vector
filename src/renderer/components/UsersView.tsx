@@ -1,6 +1,5 @@
 import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
-import { Input } from '@/components/arc/input/input';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Ban, Crown, Globe, ShieldCheck, User, UserX, type LucideIcon } from 'lucide-react';
 import {
@@ -13,6 +12,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from '../../i18n';
+import { Input } from './ui/Field';
 import { EmptyLine } from './ui/EmptyLine';
 import { SectionTitle } from './ui/IconTile';
 import {
@@ -258,6 +258,9 @@ function UserListCard({
   const inputRef = useRef<HTMLInputElement>(null);
   const headingId = useId();
   const isIpList = type === 'banned-ips';
+  const inputLabel = isIpList
+    ? t('users.placeholder.ipAddress')
+    : t('users.placeholder.playerName');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -313,9 +316,11 @@ function UserListCard({
       />
       {body}
       <form className={styles.addForm} onSubmit={handleSubmit} noValidate>
+        {/* The field has no visible label: the placeholder shows the hint and aria-label names it. */}
         <Input
           ref={inputRef}
-          label={isIpList ? t('users.placeholder.ipAddress') : t('users.placeholder.playerName')}
+          aria-label={inputLabel}
+          placeholder={inputLabel}
           data-testid={`users-input-${type}`}
           value={value}
           error={inputError}
@@ -329,7 +334,6 @@ function UserListCard({
         <Button
           type="submit"
           variant="secondary"
-          className={styles.addButton}
           data-testid={`users-add-${type}`}
           loading={pending}
         >
