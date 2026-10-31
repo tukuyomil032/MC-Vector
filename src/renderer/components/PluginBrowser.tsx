@@ -1088,7 +1088,6 @@ export default function PluginBrowser({ server }: Props) {
       await openDialog({
         severity: preview.requiresUnverifiedDownloads ? 'warning' : 'info',
         title: t('plugins.browser.installPlanConfirmTitle'),
-        description: '',
         body: (
           <div className={styles.confirmBody}>
             <PluginInstallList items={installItems} />

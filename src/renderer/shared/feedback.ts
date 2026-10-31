@@ -10,7 +10,8 @@ export interface FeedbackDialogAction {
 export interface FeedbackDialogRequest {
   severity: FeedbackSeverity;
   title: string;
-  description: string;
+  /** Optional body copy under the title. Leave it out when the body or the actions say enough. */
+  description?: string;
   primaryAction?: FeedbackDialogAction;
   secondaryAction?: FeedbackDialogAction;
   dismissible?: boolean;
