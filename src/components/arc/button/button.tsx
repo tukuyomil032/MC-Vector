@@ -17,6 +17,16 @@ import styles from './button.module.css';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
+function stripHtmlLikeTags(input: string): string {
+  let previous: string;
+  let current = input;
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, '');
+  } while (current !== previous);
+  return current;
+}
+
 export interface ButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   'onDrag' | 'onDragEnd' | 'onDragStart' | 'onAnimationStart'
@@ -224,7 +234,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           <AnimatePresence mode="popLayout" initial={false}>
             <LabelPhase
               key={key}
-              icon={!/\S/.test(key.replace(/<[^>]*>/g, ''))}
+              icon={!/\S/.test(stripHtmlLikeTags(key))}
               reduced={reduceMotion}
             >
               {children}
