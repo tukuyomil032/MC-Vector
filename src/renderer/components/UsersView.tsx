@@ -78,11 +78,18 @@ export default function UsersView({ server }: Props) {
     }
   }, [applyLists, server.id]);
 
+  // The reload scheduled after a live command; cleared when the view unmounts or the server changes.
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     currentServerId.current = server.id;
     void loadAllLists();
     return () => {
       loadRequestId.current += 1;
+      if (reloadTimer.current) {
+        clearTimeout(reloadTimer.current);
+        reloadTimer.current = null;
+      }
     };
   }, [loadAllLists, server.id]);
 
@@ -112,7 +119,11 @@ export default function UsersView({ server }: Props) {
       return `${action === 'add' ? 'ban-ip' : 'pardon-ip'} ${canonicalTarget}`;
     })();
     await sendCommand(server.id, command);
-    setTimeout(() => {
+    if (reloadTimer.current) {
+      clearTimeout(reloadTimer.current);
+    }
+    reloadTimer.current = setTimeout(() => {
+      reloadTimer.current = null;
       void loadAllLists();
     }, 500);
   };
