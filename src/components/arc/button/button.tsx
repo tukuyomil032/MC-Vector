@@ -232,11 +232,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       >
         <span ref={contentRef} className={styles.labelContent}>
           <AnimatePresence mode="popLayout" initial={false}>
-            <LabelPhase
-              key={key}
-              icon={!/\S/.test(stripHtmlLikeTags(key))}
-              reduced={reduceMotion}
-            >
+            <LabelPhase key={key} icon={!/\S/.test(stripHtmlLikeTags(key))} reduced={reduceMotion}>
               {children}
             </LabelPhase>
           </AnimatePresence>
