@@ -21,14 +21,16 @@
   gap: 8px;
 }
 
-/* The one moving part: a ring that springs from card to card. It sits over the card border so the card itself never changes size. */
+/* The one moving part: a ring that springs from card to card. It is drawn with an inset shadow over the card's own 1px border,
+   so no border width ever changes and the card never changes size. */
 .ring {
   position: absolute;
   z-index: 1;
   top: 0;
   left: 0;
-  border: 1.5px solid var(--control-on);
+  border: 0;
   border-radius: 20px;
+  box-shadow: inset 0 0 0 1px var(--control-on);
   pointer-events: none;
 }
 
