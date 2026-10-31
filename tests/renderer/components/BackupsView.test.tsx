@@ -83,6 +83,22 @@ vi.mock('@tanstack/react-virtual', () => ({
   }),
 }));
 
+vi.mock('@/components/arc/hold-to-confirm/hold-to-confirm', () => ({
+  HoldToConfirm: ({
+    label,
+    onConfirm,
+    disabled,
+  }: {
+    label: string;
+    onConfirm: () => void;
+    disabled?: boolean;
+  }) => (
+    <button type="button" disabled={disabled} onClick={onConfirm}>
+      {label}
+    </button>
+  ),
+}));
+
 vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: webviewWindowMock }));
 
 vi.mock('@/renderer/components/AppFeedbackProvider', () => ({
@@ -840,7 +856,7 @@ describe('BackupsView initialization', () => {
 
     const view = renderStrictMode();
     await waitFor(() => expect(screen.getByTestId('backup-row-old-a.zip')).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByText('🌍 world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
 
     view.rerender(
       <StrictMode>
@@ -849,7 +865,7 @@ describe('BackupsView initialization', () => {
     );
 
     expect(screen.queryByTestId('backup-row-old-a.zip')).not.toBeInTheDocument();
-    expect(screen.queryByText('🌍 world')).not.toBeInTheDocument();
+    expect(screen.queryByText('world')).not.toBeInTheDocument();
 
     await act(async () => {
       nextServerListing.reject(new Error('server B listing failed'));
@@ -909,7 +925,7 @@ describe('BackupsView initialization', () => {
     await waitFor(() => expect(backupCommands.listBackupsWithMetadata).toHaveBeenCalledTimes(3));
 
     await waitFor(() => expect(screen.getByTestId('backup-row-new-a.zip')).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByText('🌍 new-world')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('new-world')).toBeInTheDocument());
 
     await act(async () => {
       staleWorldCandidate.reject(new Error('stale world candidate failed'));
@@ -919,8 +935,8 @@ describe('BackupsView initialization', () => {
     });
 
     expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(screen.getByText('🌍 new-world')).toBeInTheDocument();
-    expect(screen.queryByText('🌍 old-world')).not.toBeInTheDocument();
+    expect(screen.getByText('new-world')).toBeInTheDocument();
+    expect(screen.queryByText('old-world')).not.toBeInTheDocument();
     expect(logErrorMock).not.toHaveBeenCalledWith(
       'Failed to inspect world directory candidate',
       expect.anything(),
@@ -1046,8 +1062,8 @@ describe('BackupsView initialization', () => {
     confirmMock.mockResolvedValue(true);
 
     const view = renderStrictMode();
-    await waitFor(() => expect(screen.getByText('🌍 world')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'backups.world.deleteButton' }));
+    await waitFor(() => expect(screen.getByText('world')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'backups.world.holdToDelete' }));
     await waitFor(() => expect(fileCommands.deleteItem).toHaveBeenCalledOnce());
 
     view.rerender(

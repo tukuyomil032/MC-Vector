@@ -1646,12 +1646,7 @@ export default function BackupsView({ server }: Props) {
                   >
                     {t('backups.modal.openSelector')}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAll}
-                    disabled={selectedPaths.size === 0}
-                  >
+                  <Button variant="ghost" size="sm" onClick={clearAll}>
                     {t('backups.modal.clearAll')}
                   </Button>
                 </div>
