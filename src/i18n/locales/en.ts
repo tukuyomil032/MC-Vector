@@ -393,6 +393,13 @@ export const en: TranslationDictionary = {
       delete: 'Delete',
       diffOpen: 'Diff View',
       diffClose: 'Close Diff',
+      diffCancel: 'Cancel Compare',
+      navigation: 'Folder navigation',
+      tools: 'File tools',
+      selection: 'Selected items',
+    },
+    breadcrumb: {
+      label: 'Path',
     },
   },
 

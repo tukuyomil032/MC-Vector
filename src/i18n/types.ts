@@ -412,6 +412,13 @@ export interface TranslationDictionary {
       delete: string;
       diffOpen: string;
       diffClose: string;
+      diffCancel: string;
+      navigation: string;
+      tools: string;
+      selection: string;
+    };
+    breadcrumb: {
+      label: string;
     };
   };
 

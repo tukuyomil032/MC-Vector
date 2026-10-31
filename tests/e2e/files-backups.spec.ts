@@ -15,7 +15,7 @@ test.describe('files and backups', () => {
     await page.getByRole('button', { name: 'server-1', exact: true }).click();
     await expect(page.locator('[data-testid="file-row-server.properties"]')).toBeVisible();
 
-    await page.locator('[data-testid="files-create-button"]').click();
+    await page.getByRole('button', { name: 'Create / Import', exact: true }).click();
     await page.getByRole('button', { name: 'File', exact: true }).click();
     await page.locator('[data-testid="files-name-input"]').fill('e2e-created.txt');
     await page.locator('[data-testid="files-create-submit"]').click();

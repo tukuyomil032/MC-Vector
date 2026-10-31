@@ -389,6 +389,13 @@ export const ja: TranslationDictionary = {
       delete: '削除',
       diffOpen: '差分表示',
       diffClose: '差分を閉じる',
+      diffCancel: '比較を取りやめる',
+      navigation: 'フォルダー移動',
+      tools: 'ファイルツール',
+      selection: '選択中の項目',
+    },
+    breadcrumb: {
+      label: 'パス',
     },
   },
 

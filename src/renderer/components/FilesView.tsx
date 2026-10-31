@@ -1,7 +1,19 @@
 import { DiffEditor } from '@monaco-editor/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { ArrowUp, FolderPlus, GitCompareArrows, X } from 'lucide-react';
+import {
+  Archive,
+  ArrowUp,
+  FolderOpen,
+  FolderPlus,
+  GitCompareArrows,
+  Move,
+  PackageOpen,
+  Trash2,
+  X,
+} from 'lucide-react';
 import type * as React from 'react';
+import { Breadcrumb, type BreadcrumbItem } from '@/components/arc/breadcrumb/breadcrumb';
+import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
@@ -11,7 +23,6 @@ import {
   iconFolder,
   iconImport,
   iconMove,
-  iconOpenFolder,
   iconTrash,
   iconUnzip,
   iconZip,
@@ -34,6 +45,7 @@ import {
 } from '../../lib/file-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import FileEditorWorkspace from './FileEditorWorkspace';
+import styles from './FilesView.module.css';
 import SvgMaskIcon from './SvgMaskIcon';
 import { Button } from './ui/Button';
 import { Input } from './ui/Field';
@@ -233,60 +245,35 @@ export default function FilesView({ server }: Props) {
 
   const renderBreadcrumbs = () => {
     if (!serversRootAbsPath) {
-      return <span className="font-mono">{t('files.loading')}</span>;
+      return <span className={styles.loading}>{t('files.loading')}</span>;
     }
 
     const normalizedCurrent = currentPath.replace(/\\/g, '/');
     const normalizedRoot = serversRootAbsPath.replace(/\\/g, '/');
 
-    let relativePath = '';
-    if (normalizedCurrent.startsWith(normalizedRoot)) {
-      relativePath = normalizedCurrent.substring(normalizedRoot.length);
-    } else {
-      return <span className="font-mono">{currentPath}</span>;
+    // A path outside the servers root has no crumbs to click, so the raw path is shown as-is.
+    if (!normalizedCurrent.startsWith(normalizedRoot)) {
+      return <code className={styles.rawPath}>{currentPath}</code>;
     }
 
-    const segments = relativePath.split('/').filter(Boolean);
-    const breadcrumbEntries: Array<{ segment: string; path: string }> = [];
+    const normalizedServerPath = server.path.replace(/\\/g, '/');
+    const segments = normalizedCurrent.substring(normalizedRoot.length).split('/').filter(Boolean);
+    const items: BreadcrumbItem[] = [
+      { label: t('nav.servers'), onClick: () => setCurrentPath(normalizedRoot) },
+    ];
     let path = normalizedRoot;
     for (const segment of segments) {
       path = `${path}/${segment}`;
-      breadcrumbEntries.push({ segment, path });
+      const target = path;
+      // Crumbs above the server folder stay as plain text, so the user cannot leave the server.
+      const isWithinServerPath = target.startsWith(normalizedServerPath);
+      items.push({
+        label: segment,
+        onClick: isWithinServerPath ? () => setCurrentPath(target) : undefined,
+      });
     }
 
-    return (
-      <div className="files-view__breadcrumbs">
-        <button
-          type="button"
-          className="files-view__breadcrumb-link"
-          onClick={() => setCurrentPath(normalizedRoot)}
-        >
-          {t('nav.servers')}
-        </button>
-
-        {breadcrumbEntries.map(({ segment, path: pathUpToHere }) => {
-          const normalizedServerPath = server.path.replace(/\\/g, '/');
-          const isWithinServerPath = pathUpToHere.startsWith(normalizedServerPath);
-
-          return (
-            <span key={pathUpToHere} className="flex items-center">
-              <span className="files-view__breadcrumb-separator">/</span>
-              <button
-                type="button"
-                className={`files-view__breadcrumb-link ${!isWithinServerPath ? 'files-view__breadcrumb-link--disabled' : ''}`}
-                onClick={() => {
-                  if (isWithinServerPath) {
-                    setCurrentPath(pathUpToHere);
-                  }
-                }}
-              >
-                {segment}
-              </button>
-            </span>
-          );
-        })}
-      </div>
-    );
+    return <Breadcrumb ariaLabel={t('files.breadcrumb.label')} items={items} />;
   };
 
   const getDisplayPath = (fullPath: string) => {
@@ -681,111 +668,105 @@ export default function FilesView({ server }: Props) {
     }
   };
 
+  // The diff button has three states: idle, picking the original, and a diff that is open.
+  const diffActive = diffMode || diffSelectStep !== null;
+  const diffToolbarLabel = diffMode
+    ? t('files.toolbar.diffClose')
+    : diffSelectStep
+      ? t('files.toolbar.diffCancel')
+      : t('files.toolbar.diffOpen');
+  const toggleDiff = () => {
+    if (diffMode) {
+      setDiffMode(false);
+      setDiffOriginal(null);
+      setDiffModified(null);
+    } else if (diffSelectStep) {
+      setDiffSelectStep(null);
+    } else {
+      setDiffSelectStep('original');
+      notify.info(t('files.toast.diffSelectOriginal'));
+    }
+  };
+
+  const upItems: ButtonGroupItem[] = [
+    {
+      id: 'up',
+      label: t('files.toolbar.goUp'),
+      icon: <ArrowUp aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      disabled: currentPath === server.path,
+      onSelect: handleGoUp,
+    },
+  ];
+  const toolItems: ButtonGroupItem[] = [
+    {
+      id: 'create',
+      label: t('files.toolbar.createImport'),
+      icon: <FolderPlus aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => setModalType('create'),
+    },
+    {
+      id: 'explorer',
+      label: t('files.toolbar.openExplorer'),
+      icon: <FolderOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: handleOpenExplorer,
+    },
+    {
+      id: 'diff',
+      label: diffToolbarLabel,
+      icon: diffActive ? (
+        <X aria-hidden="true" size={16} strokeWidth={1.75} />
+      ) : (
+        <GitCompareArrows aria-hidden="true" size={16} strokeWidth={1.75} />
+      ),
+      iconOnly: true,
+      onSelect: toggleDiff,
+    },
+  ];
+  const selectionItems: ButtonGroupItem[] = [
+    {
+      id: 'move',
+      label: t('files.toolbar.move'),
+      icon: <Move aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => openMoveModal(false),
+    },
+    {
+      id: 'compress',
+      label: t('files.toolbar.compress'),
+      icon: <Archive aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => void handleZip(),
+    },
+    {
+      id: 'extract',
+      label: t('files.toolbar.extract'),
+      icon: <PackageOpen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => void handleUnzip(),
+    },
+    {
+      id: 'delete',
+      label: t('files.toolbar.delete'),
+      icon: <Trash2 aria-hidden="true" size={16} strokeWidth={1.75} />,
+      iconOnly: true,
+      onSelect: () => void handleDelete(),
+    },
+  ];
+
   return (
-    <div
-      className="files-view flex h-full flex-col gap-4 p-5 max-[900px]:p-4"
-      data-testid="files-view"
-      onClick={() => setContextMenu(null)}
-    >
-      {/* ツールバー */}
-      <div className="files-view__toolbar">
-        <button
-          type="button"
-          className="files-view__toolbar-btn"
-          onClick={handleGoUp}
-          disabled={currentPath === server.path}
-          aria-label={t('files.toolbar.goUp')}
-          title={t('files.toolbar.goUp')}
-        >
-          <ArrowUp aria-hidden="true" className="files-view__toolbar-icon" size={16} />
-        </button>
-
-        {/* パンくずリスト */}
-        <div className="files-view__breadcrumb-shell">{renderBreadcrumbs()}</div>
-
-        <button
-          type="button"
-          className="files-view__toolbar-btn"
-          data-testid="files-create-button"
-          onClick={() => setModalType('create')}
-          aria-label={t('files.toolbar.createImport')}
-          title={t('files.toolbar.createImport')}
-        >
-          <FolderPlus aria-hidden="true" className="files-view__toolbar-icon" size={16} />
-        </button>
-        <button
-          type="button"
-          className="files-view__toolbar-btn"
-          onClick={handleOpenExplorer}
-          aria-label={t('files.toolbar.openExplorer')}
-          title={t('files.toolbar.openExplorer')}
-        >
-          <SvgMaskIcon src={iconOpenFolder} className="files-view__toolbar-icon" />
-        </button>
-        <button
-          type="button"
-          className={`files-view__toolbar-btn${diffSelectStep ? ' is-active' : ''}`}
-          onClick={() => {
-            if (diffMode) {
-              setDiffMode(false);
-              setDiffOriginal(null);
-              setDiffModified(null);
-            } else if (diffSelectStep) {
-              setDiffSelectStep(null);
-            } else {
-              setDiffSelectStep('original');
-              notify.info(t('files.toast.diffSelectOriginal'));
-            }
-          }}
-          aria-label={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
-          title={diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
-        >
-          <GitCompareArrows aria-hidden="true" className="files-view__toolbar-icon" size={16} />
-          <span className="sr-only">
-            {diffMode ? t('files.toolbar.diffClose') : t('files.toolbar.diffOpen')}
-          </span>
-        </button>
-        {selectedFiles.length > 0 && (
-          <>
-            <div className="files-view__toolbar-divider" />
-            <button
-              type="button"
-              className="files-view__toolbar-btn"
-              onClick={() => openMoveModal(false)}
-              aria-label={t('files.toolbar.move')}
-              title={t('files.toolbar.move')}
-            >
-              <SvgMaskIcon src={iconMove} className="files-view__toolbar-icon" />
-            </button>
-            <button
-              type="button"
-              className="files-view__toolbar-btn"
-              onClick={handleZip}
-              aria-label={t('files.toolbar.compress')}
-              title={t('files.toolbar.compress')}
-            >
-              <SvgMaskIcon src={iconZip} className="files-view__toolbar-icon" />
-            </button>
-            <button
-              type="button"
-              className="files-view__toolbar-btn"
-              onClick={handleUnzip}
-              aria-label={t('files.toolbar.extract')}
-              title={t('files.toolbar.extract')}
-            >
-              <SvgMaskIcon src={iconUnzip} className="files-view__toolbar-icon" />
-            </button>
-            <button
-              type="button"
-              className="files-view__toolbar-btn files-view__toolbar-btn--danger"
-              onClick={handleDelete}
-              aria-label={t('files.toolbar.delete')}
-              title={t('files.toolbar.delete')}
-            >
-              <SvgMaskIcon src={iconTrash} className="files-view__toolbar-icon" />
-            </button>
-          </>
-        )}
+    <div className={styles.view} data-testid="files-view" onClick={() => setContextMenu(null)}>
+      <div className={styles.toolbar}>
+        <ButtonGroup label={t('files.toolbar.navigation')} size="sm" items={upItems} />
+        <div className={styles.breadcrumbShell}>{renderBreadcrumbs()}</div>
+        <div className={styles.toolbarEnd}>
+          <ButtonGroup label={t('files.toolbar.tools')} size="sm" items={toolItems} />
+          {selectedFiles.length > 0 && (
+            <ButtonGroup label={t('files.toolbar.selection')} size="sm" items={selectionItems} />
+          )}
+        </div>
       </div>
 
       {/* ファイルリスト表示エリア */}
