@@ -1167,7 +1167,6 @@ export default function FilesView({ server }: Props) {
                   submitCreate();
                 }
               }}
-              autoFocus
             />
           )}
         </DialogContent>
@@ -1222,7 +1221,6 @@ export default function FilesView({ server }: Props) {
                 void handleMove();
               }
             }}
-            autoFocus
           />
         </DialogContent>
       </Dialog>
@@ -1266,7 +1264,6 @@ export default function FilesView({ server }: Props) {
                 void handleRename();
               }
             }}
-            autoFocus
           />
         </DialogContent>
       </Dialog>
