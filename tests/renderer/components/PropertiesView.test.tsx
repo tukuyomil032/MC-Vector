@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useI18nStore } from '@/i18n';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import PropertiesView from '@/renderer/components/properties/PropertiesView';
+import { hasUnsavedViewChanges } from '@/renderer/components/properties/use-unsaved-changes-guard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { getServerPropertiesMock, saveServerPropertiesMock, toastMock, logErrorMock } = vi.hoisted(
@@ -163,6 +164,25 @@ describe('PropertiesView search', () => {
 
     expect(screen.getByText('No matching properties')).toBeInTheDocument();
     expect(screen.queryByLabelText('MOTD')).not.toBeInTheDocument();
+  });
+});
+
+describe('PropertiesView unsaved changes', () => {
+  it('enables save only after an edit and reports the view as unsaved until it unmounts', async () => {
+    getServerPropertiesMock.mockResolvedValue({ motd: 'Hello', 'server-port': 25565 });
+    const { unmount } = render(<PropertiesView server={serverA} />);
+    await waitFor(() => expect(motdInput()).toHaveValue('Hello'));
+    const save = screen.getByRole('button', { name: 'Save Changes' });
+    expect(save).toBeDisabled();
+    expect(hasUnsavedViewChanges()).toBe(false);
+
+    fireEvent.change(motdInput(), { target: { value: 'Edited' } });
+
+    expect(save).toBeEnabled();
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(hasUnsavedViewChanges()).toBe(true);
+    unmount();
+    expect(hasUnsavedViewChanges()).toBe(false);
   });
 });
 

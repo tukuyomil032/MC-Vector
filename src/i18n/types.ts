@@ -940,6 +940,7 @@ export interface TranslationDictionary {
       saturday: string;
     };
     saveSettings: string;
+    unsavedChanges: string;
     jvmArgs: {
       label: string;
       placeholder: string;
@@ -1080,6 +1081,7 @@ export interface TranslationDictionary {
     loadFailed: string;
     loadFailedDescription: string;
     retry: string;
+    unsavedChanges: string;
     saveSuccess: string;
     saveFailed: string;
     advancedSaveSuccess: string;

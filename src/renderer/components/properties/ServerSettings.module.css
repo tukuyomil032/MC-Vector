@@ -101,7 +101,14 @@
 
 .saveBar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.unsaved {
+  color: var(--warning);
+  font-size: var(--text-sm);
 }
 
 .tunnelStatus {

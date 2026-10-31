@@ -27,6 +27,7 @@ import type { MinecraftServer } from '../../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
 import styles from './ServerSettings.module.css';
+import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
 interface ServerSettingsProps {
   server: MinecraftServer;
@@ -93,6 +94,27 @@ function toForm(server: MinecraftServer): GeneralForm {
   };
 }
 
+/** Clamps and trims the form the way it is saved. Dirty tracking compares normalized forms, so a value that saves as its clamped form is not reported as unsaved. */
+function normalizeForm(form: GeneralForm): GeneralForm {
+  return {
+    ...form,
+    profileName: form.profileName.trim(),
+    groupName: form.groupName.trim(),
+    jvmArgs: form.jvmArgs.trim(),
+    maxAutoRestarts: Math.min(20, Math.max(0, Math.floor(form.maxAutoRestarts || 0))),
+    autoRestartDelaySec: Math.min(300, Math.max(1, Math.floor(form.autoRestartDelaySec || 1))),
+    autoBackupIntervalMin: Math.min(1440, Math.max(1, Math.floor(form.autoBackupIntervalMin || 1))),
+    autoBackupScheduleType:
+      form.autoBackupScheduleType === 'daily' || form.autoBackupScheduleType === 'weekly'
+        ? form.autoBackupScheduleType
+        : 'interval',
+    autoBackupTime: /^([01]\d|2[0-3]):([0-5]\d)$/.test(form.autoBackupTime.trim())
+      ? form.autoBackupTime.trim()
+      : '03:00',
+    autoBackupWeekday: Math.min(6, Math.max(0, Math.floor(form.autoBackupWeekday || 0))),
+  };
+}
+
 /** Moves each field that still matches the previous server value onto the new one; edited fields are kept. */
 function rebaseForm(current: GeneralForm, previous: GeneralForm, next: GeneralForm): GeneralForm {
   const moved = (Object.keys(next) as Array<keyof GeneralForm>).filter(
@@ -143,20 +165,26 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
 
   // The form is reset only when a different server is shown. For the same server (status, port or other churn),
   // a field the user has not touched follows the new value, and a field the user edited keeps the edit.
-  const baselineRef = useRef<GeneralForm>(toForm(server));
+  // The baseline is the server's saved values as last seen. A form that differs from it has unsaved edits.
+  const [baseline, setBaseline] = useState<GeneralForm>(() => toForm(server));
+  const baselineRef = useRef<GeneralForm>(baseline);
   const shownServerIdRef = useRef(server.id);
+  const isDirty = JSON.stringify(normalizeForm(form)) !== JSON.stringify(normalizeForm(baseline));
+  useUnsavedChangesGuard(isDirty);
 
   useEffect(() => {
     const next = toForm(server);
     if (shownServerIdRef.current !== server.id) {
       shownServerIdRef.current = server.id;
       baselineRef.current = next;
+      setBaseline(next);
       setForm(next);
       void loadJavaList();
       return;
     }
     const previous = baselineRef.current;
     baselineRef.current = next;
+    setBaseline(next);
     setForm((current) => rebaseForm(current, previous, next));
   }, [server]);
 
@@ -249,55 +277,36 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
       return;
     }
 
-    const normalizedRestartLimit = Math.min(20, Math.max(0, Math.floor(form.maxAutoRestarts || 0)));
-    const normalizedRestartDelay = Math.min(
-      300,
-      Math.max(1, Math.floor(form.autoRestartDelaySec || 1)),
-    );
-    const normalizedBackupInterval = Math.min(
-      1440,
-      Math.max(1, Math.floor(form.autoBackupIntervalMin || 1)),
-    );
-    const normalizedScheduleType: ScheduleType =
-      form.autoBackupScheduleType === 'daily' || form.autoBackupScheduleType === 'weekly'
-        ? form.autoBackupScheduleType
-        : 'interval';
-    const normalizedBackupTime = /^([01]\d|2[0-3]):([0-5]\d)$/.test(form.autoBackupTime.trim())
-      ? form.autoBackupTime.trim()
-      : '03:00';
-    const normalizedBackupWeekday = Math.min(
-      6,
-      Math.max(0, Math.floor(form.autoBackupWeekday || 0)),
-    );
+    const normalized = normalizeForm(form);
 
     setIsSaving(true);
     try {
       await onSave({
         ...server,
-        name: form.name,
-        profileName: form.profileName.trim() || undefined,
-        groupName: form.groupName.trim() || undefined,
-        version: form.version,
-        memory: form.memory,
-        port: form.port,
+        name: normalized.name,
+        profileName: normalized.profileName || undefined,
+        groupName: normalized.groupName || undefined,
+        version: normalized.version,
+        memory: normalized.memory,
+        port: normalized.port,
         path: server.path,
-        software: form.software,
-        javaPath: form.javaPath === SYSTEM_JAVA ? undefined : form.javaPath,
-        autoRestartOnCrash: form.autoRestartOnCrash,
-        maxAutoRestarts: normalizedRestartLimit,
-        autoRestartDelaySec: normalizedRestartDelay,
-        autoBackupEnabled: form.autoBackupEnabled,
-        autoBackupIntervalMin: normalizedBackupInterval,
-        autoBackupScheduleType: normalizedScheduleType,
-        autoBackupTime: normalizedBackupTime,
-        autoBackupWeekday: normalizedBackupWeekday,
-        autoBackupRetainCount: form.autoBackupRetainCount,
-        autoBackupRetainDays: form.autoBackupRetainDays,
-        jvmArgs: form.jvmArgs.trim() || undefined,
-        notifyOnCrash: form.notifyOnCrash,
-        notifyOnStart: form.notifyOnStart,
-        notifyOnHighCpu: form.notifyOnHighCpu,
-        notifyHighCpuThreshold: form.notifyHighCpuThreshold,
+        software: normalized.software,
+        javaPath: normalized.javaPath === SYSTEM_JAVA ? undefined : normalized.javaPath,
+        autoRestartOnCrash: normalized.autoRestartOnCrash,
+        maxAutoRestarts: normalized.maxAutoRestarts,
+        autoRestartDelaySec: normalized.autoRestartDelaySec,
+        autoBackupEnabled: normalized.autoBackupEnabled,
+        autoBackupIntervalMin: normalized.autoBackupIntervalMin,
+        autoBackupScheduleType: normalized.autoBackupScheduleType,
+        autoBackupTime: normalized.autoBackupTime,
+        autoBackupWeekday: normalized.autoBackupWeekday,
+        autoBackupRetainCount: normalized.autoBackupRetainCount,
+        autoBackupRetainDays: normalized.autoBackupRetainDays,
+        jvmArgs: normalized.jvmArgs || undefined,
+        notifyOnCrash: normalized.notifyOnCrash,
+        notifyOnStart: normalized.notifyOnStart,
+        notifyOnHighCpu: normalized.notifyOnHighCpu,
+        notifyHighCpuThreshold: normalized.notifyHighCpuThreshold,
       });
     } finally {
       setIsSaving(false);
@@ -619,13 +628,18 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
       </section>
 
       <div className={styles.saveBar}>
+        {isDirty && (
+          <span className={styles.unsaved} role="status">
+            {t('serverSettings.unsavedChanges')}
+          </span>
+        )}
         <Button
           variant="primary"
           type="button"
           onClick={() => {
             void handleSubmit();
           }}
-          disabled={isSaving}
+          disabled={isSaving || !isDirty}
           data-testid="server-settings-save-button"
         >
           {t('serverSettings.saveSettings')}

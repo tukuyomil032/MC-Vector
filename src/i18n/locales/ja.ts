@@ -947,6 +947,7 @@ export const ja: TranslationDictionary = {
       saturday: '土曜',
     },
     saveSettings: '設定を保存',
+    unsavedChanges: '未保存の変更があります',
     jvmArgs: {
       label: 'JVM 引数',
       placeholder: '-XX:+UseG1GC ...',
@@ -1087,6 +1088,7 @@ export const ja: TranslationDictionary = {
     loadFailedDescription:
       '現在のファイルを読めなかったため、誤って上書きしないように編集と保存を無効にしています。再読み込みを試してください。',
     retry: '再試行',
+    unsavedChanges: '未保存の変更があります',
     saveSuccess: 'プロパティを保存しました',
     saveFailed: 'プロパティの保存に失敗しました',
     advancedSaveSuccess: '詳細設定を保存しました',

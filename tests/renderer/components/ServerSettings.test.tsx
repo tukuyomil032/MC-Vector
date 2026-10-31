@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import ServerSettings from '@/renderer/components/properties/ServerSettings';
+import { hasUnsavedViewChanges } from '@/renderer/components/properties/use-unsaved-changes-guard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -128,6 +129,26 @@ describe('ServerSettings edits across server updates', () => {
     rerender(settingsElement({ ...server, port: 25600 }));
 
     expect(screen.getByLabelText('serverSettings.port')).toHaveValue(25700);
+  });
+});
+
+describe('ServerSettings unsaved changes', () => {
+  it('enables save only after a field differs from the saved server, and guards the window', () => {
+    render(settingsElement(server));
+    const save = screen.getByTestId('server-settings-save-button');
+    expect(save).toBeDisabled();
+    expect(hasUnsavedViewChanges()).toBe(false);
+
+    fireEvent.change(screen.getByTestId('server-settings-name-input'), {
+      target: { value: 'Renamed' },
+    });
+
+    expect(save).toBeEnabled();
+    expect(screen.getByText('serverSettings.unsavedChanges')).toBeInTheDocument();
+    expect(hasUnsavedViewChanges()).toBe(true);
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
   });
 });
 

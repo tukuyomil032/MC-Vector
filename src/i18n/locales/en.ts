@@ -950,6 +950,7 @@ export const en: TranslationDictionary = {
       saturday: 'Saturday',
     },
     saveSettings: 'Save Settings',
+    unsavedChanges: 'Unsaved changes',
     jvmArgs: {
       label: 'JVM Arguments',
       placeholder: '-XX:+UseG1GC ...',
@@ -1090,6 +1091,7 @@ export const en: TranslationDictionary = {
     loadFailedDescription:
       'The current file could not be read, so editing and saving are disabled to keep it safe. Retry to load it again.',
     retry: 'Retry',
+    unsavedChanges: 'Unsaved changes',
     saveSuccess: 'Properties saved',
     saveFailed: 'Failed to save properties',
     advancedSaveSuccess: 'Advanced settings saved',

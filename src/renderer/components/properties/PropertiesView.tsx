@@ -20,6 +20,7 @@ import { serverPropertiesList } from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
 import styles from './PropertiesView.module.css';
+import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
 interface Props {
   server: MinecraftServer;
@@ -53,6 +54,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const [reloadToken, setReloadToken] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  useUnsavedChangesGuard(hasChanges);
   useLayoutEffect(() => {
     currentServerIdRef.current = server.id;
     const generation = ++serverViewGenerationRef.current;
@@ -101,7 +103,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
         propertiesLoadGenerationRef.current += 1;
       }
     };
-  }, [server.id, server.port, reloadToken, t]);
+  }, [server.id, reloadToken, t]);
 
   const definitions = useMemo(() => new Map(serverPropertiesList.map((d) => [d.key, d])), []);
 
@@ -208,6 +210,11 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     <header className={styles.header}>
       <h2 className={styles.title}>{t('properties.title')}</h2>
       <div className={styles.actions}>
+        {hasChanges && (
+          <span className={styles.unsaved} role="status">
+            {t('properties.unsavedChanges')}
+          </span>
+        )}
         <Button variant="secondary" onClick={openAdvancedWindow} disabled={loadError}>
           {t('properties.openAdvanced')}
         </Button>
