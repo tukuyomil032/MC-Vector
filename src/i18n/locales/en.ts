@@ -599,6 +599,7 @@ export const en: TranslationDictionary = {
       retry: 'Retry',
       searchError: 'Plugin search failed. Check your connection and try again.',
       sortLabel: 'Sort this page',
+      sortHint: 'Sorts only the results on this page.',
       sortRelevance: 'Relevance',
       sortDownloads: 'Downloads',
       sortName: 'Name',

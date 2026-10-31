@@ -595,6 +595,7 @@ export const ja: TranslationDictionary = {
       retry: '再試行',
       searchError: 'プラグイン検索に失敗しました。接続を確認して再試行してください。',
       sortLabel: 'このページを並び替え',
+      sortHint: 'このページの結果だけを並び替えます。',
       sortRelevance: '関連度',
       sortDownloads: 'ダウンロード数',
       sortName: '名前',

@@ -8,6 +8,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { useTranslation } from '../../../i18n';
 import { useArcMessages } from '../../shared/arc-messages';
 import { EmptyLine } from '../ui/EmptyLine';
+import { HintIcon } from '../ui/FieldLabel';
 import { PluginPager } from './PluginPager';
 import { PluginResultCard, type PluginResultCardState } from './PluginResultCard';
 import type { ProjectItem, SortMode } from './plugin-model';
@@ -154,37 +155,45 @@ export function PluginSearchPanel({
     <div className={styles.panel}>
       {isInAppSearch ? (
         <>
-          <form className={styles.searchRow} role="search" onSubmit={submitSearch}>
-            <div className={styles.searchField}>
-              <SearchField
-                label={t('plugins.browser.searchLabel')}
-                clearLabel={arc.search.clear}
-                placeholder={t('plugins.browser.searchOn', { platform: searchPlatformLabel })}
-                value={query}
-                onValueChange={onQueryChange}
-                data-testid="plugin-search-input"
-              />
-            </div>
-            <Button
-              type="submit"
-              variant="secondary"
-              loading={loading}
-              data-testid="plugin-search-submit"
-            >
-              {loading ? t('plugins.browser.searching') : t('common.search')}
-            </Button>
-          </form>
+          <div className={styles.toolbar}>
+            <form className={styles.searchForm} role="search" onSubmit={submitSearch}>
+              <div className={styles.searchField}>
+                {/* The label stays for screen readers; the placeholder carries the visible hint. */}
+                <SearchField
+                  label={t('plugins.browser.searchLabel')}
+                  clearLabel={arc.search.clear}
+                  placeholder={t('plugins.browser.searchOn', { platform: searchPlatformLabel })}
+                  value={query}
+                  onValueChange={onQueryChange}
+                  data-testid="plugin-search-input"
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="secondary"
+                loading={loading}
+                data-testid="plugin-search-submit"
+              >
+                {loading ? t('plugins.browser.searching') : t('common.search')}
+              </Button>
+            </form>
 
-          <div className={styles.sortRow}>
-            <Select
-              label={t('plugins.browser.sortLabel')}
-              placeholder={arc.select.placeholder}
-              className={styles.sortSelect}
-              testId="plugin-sort-select"
-              options={sortOptions}
-              value={sortMode}
-              onValueChange={(value) => onSortModeChange(value as SortMode)}
-            />
+            <div className={styles.sortControl}>
+              <HintIcon
+                hint={t('plugins.browser.sortHint')}
+                label={t('plugins.browser.sortLabel')}
+              />
+              <div className={styles.sortField}>
+                <Select
+                  label={t('plugins.browser.sortLabel')}
+                  placeholder={arc.select.placeholder}
+                  testId="plugin-sort-select"
+                  options={sortOptions}
+                  value={sortMode}
+                  onValueChange={(value) => onSortModeChange(value as SortMode)}
+                />
+              </div>
+            </div>
           </div>
 
           {searchFailed ? (
