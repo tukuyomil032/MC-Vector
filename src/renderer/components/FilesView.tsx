@@ -46,7 +46,12 @@ import {
   saveFileContent,
 } from '../../lib/file-commands';
 import type { MinecraftServer } from '../components/../shared/server declaration';
-import FileEditorWorkspace, { ARC_MONACO_THEME, defineArcMonacoTheme } from './FileEditorWorkspace';
+import FileEditorWorkspace, {
+  ARC_MONACO_THEME,
+  defineArcMonacoTheme,
+  MAX_EDITABLE_MEGABYTES,
+  type UnsupportedReason,
+} from './FileEditorWorkspace';
 import styles from './FilesView.module.css';
 
 interface Props {
@@ -116,6 +121,26 @@ function detectLanguage(fileName: string): string {
   return map[ext] ?? 'plaintext';
 }
 
+// Extensions that are never opened as text, in the editor or the diff viewer.
+const BINARY_EXTENSIONS = ['jar', 'zip', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'exe', 'dll', 'class'];
+
+const MAX_EDITABLE_BYTES = MAX_EDITABLE_MEGABYTES * 1024 * 1024;
+
+/** Says why a file cannot be opened in the editor, or returns null. It is checked before the file is read. */
+function getUnsupportedReason(
+  fileName: string,
+  size: number | undefined,
+): UnsupportedReason | null {
+  const ext = fileName.includes('.') ? (fileName.split('.').at(-1) ?? '').toLowerCase() : '';
+  if (BINARY_EXTENSIONS.includes(ext)) {
+    return 'binary';
+  }
+  if ((size ?? 0) > MAX_EDITABLE_BYTES) {
+    return 'large';
+  }
+  return null;
+}
+
 export default function FilesView({ server }: Props) {
   const [currentPath, setCurrentPath] = useState(server.path);
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -129,6 +154,7 @@ export default function FilesView({ server }: Props) {
   const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExternalDropActive, setIsExternalDropActive] = useState(false);
+  const [editorUnsupported, setEditorUnsupported] = useState<UnsupportedReason | null>(null);
 
   const [renameTarget, setRenameTarget] = useState<string | null>(null);
   const [modalType, setModalType] = useState<string | null>(null);
@@ -317,6 +343,16 @@ export default function FilesView({ server }: Props) {
         setSelectedFiles([]);
       }
     } else {
+      const unsupported = getUnsupportedReason(fileName, target.size);
+      if (unsupported) {
+        // The file is not read at all. The editor shows why instead of loading garbage text.
+        setEditingFile({ name: fileName, path: joinManagedPath(currentPath, fileName) });
+        setFileContent('');
+        setOriginalFileContent('');
+        setEditorUnsupported(unsupported);
+        setIsEditorOpen(true);
+        return;
+      }
       const requestId = editorRequestId.current + 1;
       editorRequestId.current = requestId;
       setIsEditorLoading(true);
@@ -327,6 +363,7 @@ export default function FilesView({ server }: Props) {
           return;
         }
         setEditingFile({ name: fileName, path: filePath });
+        setEditorUnsupported(null);
         setFileContent(content);
         setOriginalFileContent(content);
         setIsEditorOpen(true);
@@ -399,6 +436,7 @@ export default function FilesView({ server }: Props) {
 
     setIsEditorOpen(false);
     setEditingFile(null);
+    setEditorUnsupported(null);
     setFileContent('');
     setOriginalFileContent('');
   }, [confirm, editingFile, fileContent, isSaving, originalFileContent, t]);
@@ -418,19 +456,6 @@ export default function FilesView({ server }: Props) {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleSaveFile, isEditorOpen]);
-
-  const BINARY_EXTENSIONS = [
-    'jar',
-    'zip',
-    'png',
-    'jpg',
-    'jpeg',
-    'gif',
-    'ico',
-    'exe',
-    'dll',
-    'class',
-  ];
 
   const handleDiffSelect = async (file: FileEntry, filePath: string) => {
     if (!diffSelectStep) {
@@ -1083,6 +1108,7 @@ export default function FilesView({ server }: Props) {
           onChange={setFileContent}
           onSave={() => void handleSaveFile()}
           onClose={() => void handleCloseEditor()}
+          unsupported={editorUnsupported}
           t={t}
         />
       )}

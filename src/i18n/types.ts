@@ -361,6 +361,9 @@ export interface TranslationDictionary {
       loadFailed: string;
       plainText: string;
       saveShortcut: string;
+      unsupportedTitle: string;
+      binaryDescription: string;
+      largeDescription: string;
     };
     emptyFolder: string;
     emptyFolderHint: string;

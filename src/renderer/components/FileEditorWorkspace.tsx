@@ -1,10 +1,17 @@
 import { Editor, type Monaco } from '@monaco-editor/react';
-import { ArrowLeft, Check, Circle, FileText, Save } from 'lucide-react';
+import { ArrowLeft, Check, Circle, FileText, FileX, Save } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/arc/button/button';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
 import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import type { Translate } from '../../i18n';
 import styles from './FileEditorWorkspace.module.css';
+
+/** Why a file opens without an editor: binary files are not text, and large files are too slow to edit in Monaco. */
+export type UnsupportedReason = 'binary' | 'large';
+
+/** Files above this size are not read into the editor. */
+export const MAX_EDITABLE_MEGABYTES = 5;
 
 interface FileEditorWorkspaceProps {
   file: {
@@ -18,6 +25,8 @@ interface FileEditorWorkspaceProps {
   onChange: (content: string) => void;
   onSave: () => void;
   onClose: () => void;
+  /** Set when the file cannot be edited. The editor is replaced by an explanation and nothing is loaded. */
+  unsupported?: UnsupportedReason | null;
   t: Translate;
 }
 
@@ -105,6 +114,7 @@ export default function FileEditorWorkspace({
   onChange,
   onSave,
   onClose,
+  unsupported = null,
   t,
 }: FileEditorWorkspaceProps) {
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
@@ -112,11 +122,12 @@ export default function FileEditorWorkspace({
 
   const parentPath = file.path.split(/[\\/]/).slice(-2, -1)[0] ?? '';
   const shortcut = isMacPlatform() ? '⌘S' : 'Ctrl+S';
-  const saveState = isSaving ? 'saving' : isDirty ? 'unsaved' : 'saved';
+  const saveState = unsupported ? 'readonly' : isSaving ? 'saving' : isDirty ? 'unsaved' : 'saved';
   const saveStateLabel = {
     saving: t('files.editor.saving'),
     unsaved: t('files.editor.unsaved'),
     saved: t('files.editor.saved'),
+    readonly: t('files.editor.readOnly'),
   }[saveState];
 
   return (
@@ -173,81 +184,97 @@ export default function FileEditorWorkspace({
       </header>
 
       <div className={styles.canvas} aria-busy={!isEditorReady}>
-        {!isEditorReady && (
-          <div className={styles.loading} role="status">
-            {t('files.loading')}
+        {unsupported ? (
+          <div className={styles.unsupported}>
+            <EmptyState
+              icon={<FileX aria-hidden="true" size={22} strokeWidth={1.75} />}
+              title={t('files.editor.unsupportedTitle')}
+              description={
+                unsupported === 'binary'
+                  ? t('files.editor.binaryDescription')
+                  : t('files.editor.largeDescription', { megabytes: MAX_EDITABLE_MEGABYTES })
+              }
+            />
           </div>
+        ) : (
+          <>
+            {!isEditorReady && (
+              <div className={styles.loading} role="status">
+                {t('files.loading')}
+              </div>
+            )}
+            <Editor
+              key={file.path}
+              path={file.path}
+              height="100%"
+              language={language}
+              theme={ARC_MONACO_THEME}
+              value={content}
+              beforeMount={defineArcMonacoTheme}
+              onChange={(value) => onChange(value ?? '')}
+              onMount={(editor) => {
+                const updateCursorPosition = () => {
+                  const position = editor.getPosition();
+                  if (position) {
+                    setCursorPosition({ line: position.lineNumber, column: position.column });
+                  }
+                };
+                updateCursorPosition();
+                editor.onDidChangeCursorPosition(updateCursorPosition);
+                let isDisposed = false;
+                let renderFrame = 0;
+                const refreshEditor = () => {
+                  if (isDisposed) {
+                    return;
+                  }
+                  editor.layout();
+                  editor.render(true);
+                };
+                const scheduleRender = () => {
+                  if (isDisposed || renderFrame !== 0) {
+                    return;
+                  }
+                  renderFrame = requestAnimationFrame(() => {
+                    renderFrame = 0;
+                    refreshEditor();
+                    requestAnimationFrame(refreshEditor);
+                  });
+                };
+                refreshEditor();
+                editor.onDidScrollChange(scheduleRender);
+                editor.onDidLayoutChange(scheduleRender);
+                editor.onDidDispose(() => {
+                  isDisposed = true;
+                  if (renderFrame !== 0) {
+                    cancelAnimationFrame(renderFrame);
+                  }
+                });
+                requestAnimationFrame(() => {
+                  refreshEditor();
+                  setIsEditorReady(true);
+                  requestAnimationFrame(() => {
+                    refreshEditor();
+                    editor.focus();
+                  });
+                });
+              }}
+              options={{
+                automaticLayout: true,
+                cursorBlinking: 'smooth',
+                cursorStyle: 'line',
+                fontSize: 14,
+                lineHeight: 22,
+                minimap: { enabled: true },
+                overviewRulerBorder: false,
+                padding: { top: 16, bottom: 16 },
+                renderLineHighlight: 'all',
+                renderWhitespace: 'selection',
+                scrollBeyondLastLine: false,
+                smoothScrolling: false,
+              }}
+            />
+          </>
         )}
-        <Editor
-          key={file.path}
-          path={file.path}
-          height="100%"
-          language={language}
-          theme={ARC_MONACO_THEME}
-          value={content}
-          beforeMount={defineArcMonacoTheme}
-          onChange={(value) => onChange(value ?? '')}
-          onMount={(editor) => {
-            const updateCursorPosition = () => {
-              const position = editor.getPosition();
-              if (position) {
-                setCursorPosition({ line: position.lineNumber, column: position.column });
-              }
-            };
-            updateCursorPosition();
-            editor.onDidChangeCursorPosition(updateCursorPosition);
-            let isDisposed = false;
-            let renderFrame = 0;
-            const refreshEditor = () => {
-              if (isDisposed) {
-                return;
-              }
-              editor.layout();
-              editor.render(true);
-            };
-            const scheduleRender = () => {
-              if (isDisposed || renderFrame !== 0) {
-                return;
-              }
-              renderFrame = requestAnimationFrame(() => {
-                renderFrame = 0;
-                refreshEditor();
-                requestAnimationFrame(refreshEditor);
-              });
-            };
-            refreshEditor();
-            editor.onDidScrollChange(scheduleRender);
-            editor.onDidLayoutChange(scheduleRender);
-            editor.onDidDispose(() => {
-              isDisposed = true;
-              if (renderFrame !== 0) {
-                cancelAnimationFrame(renderFrame);
-              }
-            });
-            requestAnimationFrame(() => {
-              refreshEditor();
-              setIsEditorReady(true);
-              requestAnimationFrame(() => {
-                refreshEditor();
-                editor.focus();
-              });
-            });
-          }}
-          options={{
-            automaticLayout: true,
-            cursorBlinking: 'smooth',
-            cursorStyle: 'line',
-            fontSize: 14,
-            lineHeight: 22,
-            minimap: { enabled: true },
-            overviewRulerBorder: false,
-            padding: { top: 16, bottom: 16 },
-            renderLineHighlight: 'all',
-            renderWhitespace: 'selection',
-            scrollBeyondLastLine: false,
-            smoothScrolling: false,
-          }}
-        />
       </div>
 
       <footer className={styles.statusbar} aria-live="polite">
