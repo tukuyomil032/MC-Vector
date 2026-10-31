@@ -111,12 +111,14 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
               {t('server.eula.openLink')}
             </a>
 
-            <Checkbox
-              data-testid="server-eula-checkbox"
-              checked={checked}
-              onCheckedChange={(next) => setChecked(next === true)}
-              label={t('server.eula.consentLabel')}
-            />
+            <div className={styles.consent}>
+              <Checkbox
+                data-testid="server-eula-checkbox"
+                checked={checked}
+                onCheckedChange={(next) => setChecked(next === true)}
+                label={t('server.eula.consentLabel')}
+              />
+            </div>
 
             {view.error && (
               <Alert
