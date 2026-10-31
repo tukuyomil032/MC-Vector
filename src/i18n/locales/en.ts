@@ -305,7 +305,6 @@ export const en: TranslationDictionary = {
       largeDescription: 'Files larger than {megabytes} MB cannot be opened in the editor.',
     },
     emptyFolder: 'Folder is empty',
-    emptyFolderHint: 'Drop files here, or create a new file or folder.',
     loading: 'Loading...',
     modal: {
       createImportTitle: 'Create / Import',
