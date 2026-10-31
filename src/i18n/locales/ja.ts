@@ -1169,6 +1169,7 @@ export const ja: TranslationDictionary = {
     title: '詳細サーバー設定 (server.properties)',
     loading: '設定を読み込み中...',
     applyAndClose: '適用して閉じる',
+    categoriesLabel: 'プロパティのカテゴリ',
     inferredDescription: 'server.properties に存在する項目です。',
     propertyDescriptionFallback: 'プロパティキー: {key}',
     categories: {

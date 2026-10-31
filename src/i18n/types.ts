@@ -1164,6 +1164,7 @@ export interface TranslationDictionary {
     title: string;
     loading: string;
     applyAndClose: string;
+    categoriesLabel: string;
     inferredDescription: string;
     propertyDescriptionFallback: string;
     categories: {

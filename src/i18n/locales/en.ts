@@ -1172,6 +1172,7 @@ export const en: TranslationDictionary = {
     title: 'Advanced Server Settings (server.properties)',
     loading: 'Loading settings...',
     applyAndClose: 'Apply and Close',
+    categoriesLabel: 'Property categories',
     inferredDescription: 'Property found in server.properties.',
     propertyDescriptionFallback: 'Property key: {key}',
     categories: {
