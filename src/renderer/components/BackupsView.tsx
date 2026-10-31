@@ -745,7 +745,7 @@ export default function BackupsView({ server }: Props) {
       });
 
       const selectorWindow = new WebviewWindow(label, {
-        title: `Backup Target Selector - ${server.name}`,
+        title: t('backupSelector.windowTitle', { name: server.name }),
         url: `/?${params.toString()}`,
         width: 980,
         height: 760,

@@ -1,21 +1,17 @@
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ChevronRight, File, Folder, FolderOpen, HardDrive, SquareCheckBig } from 'lucide-react';
-import {
-  type InputHTMLAttributes,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { useTranslation } from '../../i18n';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/arc/button/button';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Skeleton } from '@/components/arc/skeleton/skeleton';
+import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { normalizeBackupSources } from '../../lib/backup-commands';
 import { logError } from '../../lib/error-utils';
 import { listFilesWithMetadata } from '../../lib/file-commands';
 import { tauriListen } from '../../lib/tauri-api';
-import { Button } from './ui/Button';
+import styles from './BackupTargetSelectorWindow.module.css';
 
 interface SelectorNode {
   name: string;
@@ -53,14 +49,26 @@ function parseInitialPayload(): IncomingPayload {
   }
 }
 
-const formatSize = (bytes: number) => {
+const SIZE_UNITS = ['b', 'kb', 'mb', 'gb', 'tb'] as const;
+const SIZE_UNIT_KEYS: Record<(typeof SIZE_UNITS)[number], TranslationKey> = {
+  b: 'backupSelector.units.b',
+  kb: 'backupSelector.units.kb',
+  mb: 'backupSelector.units.mb',
+  gb: 'backupSelector.units.gb',
+  tb: 'backupSelector.units.tb',
+};
+
+const formatSize = (bytes: number, t: Translate, locale: string): string => {
   if (bytes <= 0) {
-    return '0 B';
+    return `0 ${t(SIZE_UNIT_KEYS.b)}`;
   }
 
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+  const index = Math.min(SIZE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const value = bytes / 1024 ** index;
+  const formatted = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: index === 0 ? 0 : 2,
+  }).format(value);
+  return `${formatted} ${t(SIZE_UNIT_KEYS[SIZE_UNITS[index]])}`;
 };
 
 const sortNodes = (nodes: SelectorNode[]): SelectorNode[] => {
@@ -184,27 +192,8 @@ const expandSelectionForExclusion = (
   selectedAncestor.children?.forEach(addExceptExcluded);
 };
 
-function SelectionCheckbox({
-  checked,
-  mixed,
-  onChange,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & { mixed: boolean }) {
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  useLayoutEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = mixed;
-    }
-  }, [mixed]);
-
-  return (
-    <input ref={checkboxRef} {...props} checked={checked} onChange={onChange} type="checkbox" />
-  );
-}
-
 export default function BackupTargetSelectorWindow() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const currentWindow = getCurrentWindow();
   const initial = useMemo(parseInitialPayload, []);
 
@@ -435,25 +424,17 @@ export default function BackupTargetSelectorWindow() {
 
   const renderNode = (node: SelectorNode, depth: number) => {
     const selectionState = selectionStateMap.get(node.path) ?? 'unchecked';
-    const checked = selectionState === 'checked';
-    const mixed = selectionState === 'mixed';
     const isExpanded = expanded.has(node.path);
     const hasChildren = Boolean(node.children && node.children.length > 0);
 
     return (
-      <div
-        key={node.path}
-        className={`backup-selector-window__node ${selectionState !== 'unchecked' ? 'is-selected' : ''}`}
-        data-selection-state={selectionState}
-      >
-        <div
-          className="backup-selector-window__node-row"
-          style={{ paddingLeft: `${depth * 16 + 10}px` }}
-        >
+      <div key={node.path} className={styles.node} data-selection-state={selectionState}>
+        <div className={styles.row} style={{ paddingInlineStart: `${depth * 16 + 4}px` }}>
           {node.isDirectory ? (
             <button
               type="button"
-              className="backup-selector-window__expander"
+              className={styles.expander}
+              aria-expanded={isExpanded}
               onClick={() => toggleExpanded(node.path)}
               aria-label={
                 isExpanded
@@ -461,23 +442,19 @@ export default function BackupTargetSelectorWindow() {
                   : t('backupSelector.ariaExpandDirectory')
               }
             >
-              <ChevronRight className={isExpanded ? 'is-open' : ''} size={14} />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
           ) : (
-            <span className="backup-selector-window__expander-spacer" />
+            <span className={styles.expanderSpacer} aria-hidden="true" />
           )}
 
-          <SelectionCheckbox
-            type="checkbox"
-            className="backup-selector-window__node-checkbox"
-            checked={checked}
-            mixed={mixed}
-            onChange={(event) => handleToggleNode(node, event.target.checked)}
+          <Checkbox
             aria-label={`${node.name} (${node.path})`}
-            aria-checked={mixed ? 'mixed' : checked}
+            checked={selectionState === 'mixed' ? 'indeterminate' : selectionState === 'checked'}
+            onCheckedChange={(checked) => handleToggleNode(node, checked === true)}
           />
 
-          <span className="backup-selector-window__kind-icon">
+          <span className={styles.kindIcon} aria-hidden="true">
             {node.isDirectory ? (
               isExpanded ? (
                 <FolderOpen size={14} />
@@ -489,58 +466,69 @@ export default function BackupTargetSelectorWindow() {
             )}
           </span>
 
-          <span className="backup-selector-window__name">{node.name}</span>
-          <span className="backup-selector-window__size">{formatSize(node.size)}</span>
+          <span className={styles.name}>{node.name}</span>
+          <span className={styles.size}>{formatSize(node.size, t, locale)}</span>
         </div>
 
         {node.isDirectory && isExpanded && hasChildren && (
-          <div className="backup-selector-window__node-children">
-            {node.children?.map((child) => renderNode(child, depth + 1))}
-          </div>
+          <div role="group">{node.children?.map((child) => renderNode(child, depth + 1))}</div>
         )}
       </div>
     );
   };
 
   return (
-    <div className="backup-selector-window flex h-screen flex-col gap-3 p-4">
-      <header className="backup-selector-window__header">
+    <div className={styles.window} data-testid="backup-selector-window">
+      <header className={styles.header}>
         <div>
-          <h1 className="backup-selector-window__title">{t('backupSelector.title')}</h1>
-          <p className="backup-selector-window__subtitle">{t('backupSelector.subtitle')}</p>
+          <h1 className={styles.title}>{t('backupSelector.title')}</h1>
+          <p className={styles.subtitle}>{t('backupSelector.subtitle')}</p>
         </div>
-        <div className="backup-selector-window__server-path" title={serverPath}>
-          <HardDrive size={14} />
-          <span>{serverPath || t('backupSelector.serverPathNotSet')}</span>
+        <div className={styles.path}>
+          <HardDrive size={14} aria-hidden="true" />
+          <span className={styles.pathText}>
+            {serverPath || t('backupSelector.serverPathNotSet')}
+          </span>
         </div>
       </header>
 
-      <div className="backup-selector-window__toolbar">
-        <div className="backup-selector-window__selection-count">
-          <SquareCheckBig size={14} />
+      <div className={styles.toolbar}>
+        <p className={styles.count} aria-live="polite">
+          <SquareCheckBig size={14} aria-hidden="true" />
           <span>{t('backupSelector.selectionCount', { count: selected.size })}</span>
-        </div>
-        <div className="backup-selector-window__toolbar-actions">
-          <Button type="button" variant="secondary" onClick={handleSelectAll}>
+        </p>
+        <div className={styles.toolbarActions}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleSelectAll}
+            disabled={loading || tree.length === 0}
+          >
             {t('backupSelector.selectAll')}
           </Button>
-          <Button type="button" variant="secondary" onClick={handleClear}>
+          <Button type="button" variant="secondary" size="sm" onClick={handleClear}>
             {t('backupSelector.clearAll')}
           </Button>
         </div>
       </div>
 
-      <div className="backup-selector-window__tree-panel">
+      <div className={styles.treePanel}>
         {loading ? (
-          <div className="backup-selector-window__empty">{t('backupSelector.loading')}</div>
+          <Skeleton label={t('backupSelector.loading')} lines={6} />
         ) : tree.length === 0 ? (
-          <div className="backup-selector-window__empty">{t('backupSelector.empty')}</div>
+          <EmptyState
+            title={t('backupSelector.empty')}
+            description={t('backupSelector.emptyDescription')}
+          />
         ) : (
-          tree.map((node) => renderNode(node, 0))
+          <div role="tree" aria-label={t('backupSelector.treeLabel')}>
+            {tree.map((node) => renderNode(node, 0))}
+          </div>
         )}
       </div>
 
-      <footer className="backup-selector-window__footer">
+      <footer className={styles.footer}>
         <Button
           type="button"
           variant="secondary"

@@ -1162,6 +1162,16 @@ export const en: TranslationDictionary = {
     saving: 'Saving...',
     ariaCollapseDirectory: 'Collapse directory',
     ariaExpandDirectory: 'Expand directory',
+    treeLabel: 'Backup targets',
+    emptyDescription: 'The server folder has no files to choose from.',
+    windowTitle: 'Backup Target Selector - {name}',
+    units: {
+      b: 'B',
+      kb: 'KB',
+      mb: 'MB',
+      gb: 'GB',
+      tb: 'TB',
+    },
   },
 
   advancedSettings: {

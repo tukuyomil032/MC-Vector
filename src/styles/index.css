@@ -21,7 +21,6 @@
 @import './views/proxy-help-view.css';
 @import './views/proxy-setup-view.css';
 @import './views/ngrok-guide-view.css';
-@import './views/backup-selector-window.css';
 
 @tailwind base;
 @tailwind components;

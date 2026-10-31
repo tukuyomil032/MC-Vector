@@ -1159,6 +1159,16 @@ export const ja: TranslationDictionary = {
     saving: '保存中...',
     ariaCollapseDirectory: 'ディレクトリを折りたたむ',
     ariaExpandDirectory: 'ディレクトリを展開',
+    treeLabel: 'バックアップ対象',
+    emptyDescription: 'サーバーフォルダーに選択できるファイルがありません。',
+    windowTitle: 'バックアップ対象セレクター - {name}',
+    units: {
+      b: 'B',
+      kb: 'KB',
+      mb: 'MB',
+      gb: 'GB',
+      tb: 'TB',
+    },
   },
 
   advancedSettings: {

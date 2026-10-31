@@ -1154,6 +1154,16 @@ export interface TranslationDictionary {
     saving: string;
     ariaCollapseDirectory: string;
     ariaExpandDirectory: string;
+    treeLabel: string;
+    emptyDescription: string;
+    windowTitle: string;
+    units: {
+      b: string;
+      kb: string;
+      mb: string;
+      gb: string;
+      tb: string;
+    };
   };
 
   /** Advanced settings window translations */
