@@ -1072,7 +1072,10 @@ export const ja: TranslationDictionary = {
   properties: {
     title: 'プロパティ',
     search: {
+      label: 'プロパティを検索',
       placeholder: 'プロパティを検索...',
+      emptyTitle: '一致するプロパティがありません',
+      empty: 'キー名や項目名など、別の語句で探してください。',
     },
     openAdvanced: '詳細設定を開く',
     saveChanges: '変更を保存',

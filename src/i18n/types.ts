@@ -1066,7 +1066,10 @@ export interface TranslationDictionary {
   properties: {
     title: string;
     search: {
+      label: string;
       placeholder: string;
+      emptyTitle: string;
+      empty: string;
     };
     openAdvanced: string;
     saveChanges: string;

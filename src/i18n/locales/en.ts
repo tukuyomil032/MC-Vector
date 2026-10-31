@@ -1075,7 +1075,10 @@ export const en: TranslationDictionary = {
   properties: {
     title: 'Server Properties',
     search: {
+      label: 'Search properties',
       placeholder: 'Search properties...',
+      emptyTitle: 'No matching properties',
+      empty: 'Try another word, such as a property key or label.',
     },
     openAdvanced: 'Open Advanced',
     saveChanges: 'Save Changes',

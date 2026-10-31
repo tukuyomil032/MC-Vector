@@ -1,3 +1,11 @@
+import { Button } from '@/components/arc/button/button';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Input } from '@/components/arc/input/input';
+import { NumberField } from '@/components/arc/number-field/number-field';
+import { SearchField } from '@/components/arc/search-field/search-field';
+import { Select } from '@/components/arc/select/select';
+import { Switch } from '@/components/arc/switch/switch';
+import { SearchX } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import { logError } from '../../../lib/error-utils';
@@ -9,10 +17,8 @@ import {
 import { notify } from '../../shared/notify';
 import { serverPropertiesList } from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
-import { Button } from '../ui/Button';
-import { Input, NativeSelect } from '../ui/Field';
-import { Switch } from '../ui/Switch';
 import AdvancedSettingsWindow from './AdvancedSettingsWindow';
+import styles from './PropertiesView.module.css';
 
 interface Props {
   server: MinecraftServer;
@@ -90,19 +96,20 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     };
   }, [server.id, server.port, t]);
 
+  const definitions = useMemo(() => new Map(serverPropertiesList.map((d) => [d.key, d])), []);
+
   const matchesSearch = useMemo(() => {
     if (!searchQuery.trim()) return (_key: string) => true;
     const q = searchQuery.toLowerCase();
-    const defMap = new Map(serverPropertiesList.map((d) => [d.key, d]));
     return (key: string) => {
-      const def = defMap.get(key);
+      const def = definitions.get(key);
       return (
         key.toLowerCase().includes(q) ||
         (def?.label ?? '').toLowerCase().includes(q) ||
         (def?.description ?? '').toLowerCase().includes(q)
       );
     };
-  }, [searchQuery]);
+  }, [searchQuery, definitions]);
 
   const handleChange = (key: string, value: PropertyValue) => {
     setProps((prev) => ({ ...prev, [key]: value }));
@@ -164,7 +171,11 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   };
 
   if (loading) {
-    return <div className="properties-view__loading">{t('properties.loading')}</div>;
+    return (
+      <div className={styles.loading} role="status" data-testid="properties-loading">
+        {t('properties.loading')}
+      </div>
+    );
   }
 
   if (showAdvanced) {
@@ -177,192 +188,210 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     );
   }
 
+  const basicVisible = ['motd', 'gamemode', 'difficulty'].some(matchesSearch);
+  const gameplayVisible = ['pvp', 'allow-flight', 'enable-command-block'].some(matchesSearch);
+  const networkVisible = ['max-players', 'server-port', 'online-mode', 'white-list'].some(
+    matchesSearch,
+  );
+  const anyVisible = basicVisible || gameplayVisible || networkVisible;
+
   return (
-    <div className="properties-view relative h-full overflow-y-auto" data-testid="properties-view">
-      <div className="properties-view__container">
-        <div className="properties-view__header">
-          <h3>{t('properties.title')}</h3>
-          <div className="properties-view__actions">
-            <Button variant="secondary" onClick={openAdvancedWindow}>
-              {t('properties.openAdvanced')}
-            </Button>
-
-            <Button variant="primary" onClick={handleSave} disabled={!hasChanges}>
-              {t('properties.saveChanges')}
-            </Button>
-          </div>
+    <div className={styles.page} data-testid="properties-view">
+      <header className={styles.header}>
+        <h2 className={styles.title}>{t('properties.title')}</h2>
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={openAdvancedWindow}>
+            {t('properties.openAdvanced')}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            disabled={!hasChanges}
+            data-testid="properties-save-button"
+          >
+            {t('properties.saveChanges')}
+          </Button>
         </div>
+      </header>
 
-        <div className="properties-view__search-bar">
-          <Input
-            type="text"
-            className="properties-view__search-input"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('properties.search.placeholder')}
-          />
-        </div>
+      <div className={styles.toolbar}>
+        <SearchField
+          label={t('properties.search.label')}
+          placeholder={t('properties.search.placeholder')}
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
+      </div>
 
-        <div className="properties-view__section">
-          <div className="properties-view__section-title">{t('properties.sections.basic')}</div>
+      {!anyVisible && (
+        <EmptyState
+          className={styles.empty}
+          icon={<SearchX size={20} strokeWidth={1.75} aria-hidden={true} />}
+          title={t('properties.search.emptyTitle')}
+          description={t('properties.search.empty')}
+        />
+      )}
 
-          {matchesSearch('motd') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.motd.label')}</span>
-                <span
-                  className="properties-view__row-description"
-                  title={t('properties.motd.description')}
-                >
-                  {t('properties.motd.description')}
-                </span>
+      {basicVisible && (
+        <section className={styles.card} aria-labelledby="properties-basic-title">
+          <h3 id="properties-basic-title" className={styles.cardTitle}>
+            {t('properties.sections.basic')}
+          </h3>
+          <div className={styles.grid}>
+            {matchesSearch('motd') && (
+              <div className={styles.wide}>
+                <Input
+                  label={t('properties.motd.label')}
+                  description={t('properties.motd.description')}
+                  type="text"
+                  value={props.motd as string}
+                  onChange={(e) => handleChange('motd', e.target.value)}
+                />
               </div>
-              <Input
-                type="text"
-                className="properties-view__motd-input"
-                value={props.motd as string}
-                onChange={(e) => handleChange('motd', e.target.value)}
-              />
-            </div>
-          )}
-
-          {matchesSearch('gamemode') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.gameMode.label')}</span>
-              </div>
-              <NativeSelect
+            )}
+            {matchesSearch('gamemode') && (
+              <Select
+                label={t('properties.gameMode.label')}
                 value={props.gamemode as string}
-                onChange={(e) => handleChange('gamemode', e.target.value)}
-              >
-                <option value="survival">{t('properties.gameMode.options.survival')}</option>
-                <option value="creative">{t('properties.gameMode.options.creative')}</option>
-                <option value="adventure">{t('properties.gameMode.options.adventure')}</option>
-                <option value="spectator">{t('properties.gameMode.options.spectator')}</option>
-              </NativeSelect>
-            </div>
-          )}
-
-          {matchesSearch('difficulty') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.difficulty.label')}</span>
-              </div>
-              <NativeSelect
+                onValueChange={(value) => handleChange('gamemode', value)}
+                options={[
+                  { value: 'survival', label: t('properties.gameMode.options.survival') },
+                  { value: 'creative', label: t('properties.gameMode.options.creative') },
+                  { value: 'adventure', label: t('properties.gameMode.options.adventure') },
+                  { value: 'spectator', label: t('properties.gameMode.options.spectator') },
+                ]}
+              />
+            )}
+            {matchesSearch('difficulty') && (
+              <Select
+                label={t('properties.difficulty.label')}
                 value={props.difficulty as string}
-                onChange={(e) => handleChange('difficulty', e.target.value)}
-              >
-                <option value="peaceful">{t('properties.difficulty.options.peaceful')}</option>
-                <option value="easy">{t('properties.difficulty.options.easy')}</option>
-                <option value="normal">{t('properties.difficulty.options.normal')}</option>
-                <option value="hard">{t('properties.difficulty.options.hard')}</option>
-              </NativeSelect>
-            </div>
-          )}
-        </div>
+                onValueChange={(value) => handleChange('difficulty', value)}
+                options={[
+                  { value: 'peaceful', label: t('properties.difficulty.options.peaceful') },
+                  { value: 'easy', label: t('properties.difficulty.options.easy') },
+                  { value: 'normal', label: t('properties.difficulty.options.normal') },
+                  { value: 'hard', label: t('properties.difficulty.options.hard') },
+                ]}
+              />
+            )}
+          </div>
+        </section>
+      )}
 
-        <div className="properties-view__section">
-          <div className="properties-view__section-title">{t('properties.sections.gameplay')}</div>
+      {gameplayVisible && (
+        <section className={styles.card} aria-labelledby="properties-gameplay-title">
+          <h3 id="properties-gameplay-title" className={styles.cardTitle}>
+            {t('properties.sections.gameplay')}
+          </h3>
           {matchesSearch('pvp') && (
-            <ToggleItem
+            <ToggleRow
+              id="pvp"
               label={t('properties.toggles.pvp.label')}
-              desc={t('properties.toggles.pvp.description')}
+              description={t('properties.toggles.pvp.description')}
               checked={Boolean(props.pvp)}
               onChange={(v) => handleChange('pvp', v)}
             />
           )}
           {matchesSearch('allow-flight') && (
-            <ToggleItem
+            <ToggleRow
+              id="allow-flight"
               label={t('properties.toggles.allowFlight.label')}
-              desc={t('properties.toggles.allowFlight.description')}
+              description={t('properties.toggles.allowFlight.description')}
               checked={Boolean(props['allow-flight'])}
               onChange={(v) => handleChange('allow-flight', v)}
             />
           )}
           {matchesSearch('enable-command-block') && (
-            <ToggleItem
+            <ToggleRow
+              id="enable-command-block"
               label={t('properties.toggles.commandBlock.label')}
-              desc={t('properties.toggles.commandBlock.description')}
+              description={t('properties.toggles.commandBlock.description')}
               checked={Boolean(props['enable-command-block'])}
               onChange={(v) => handleChange('enable-command-block', v)}
             />
           )}
-        </div>
+        </section>
+      )}
 
-        <div className="properties-view__section">
-          <div className="properties-view__section-title">{t('properties.sections.network')}</div>
-
-          {matchesSearch('max-players') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.maxPlayers')}</span>
-              </div>
-              <Input
-                type="number"
-                className="properties-view__number-input properties-view__number-input--sm"
+      {networkVisible && (
+        <section className={styles.card} aria-labelledby="properties-network-title">
+          <h3 id="properties-network-title" className={styles.cardTitle}>
+            {t('properties.sections.network')}
+          </h3>
+          <div className={styles.grid}>
+            {matchesSearch('max-players') && (
+              <NumberField
+                label={t('properties.maxPlayers')}
+                min={0}
                 value={props['max-players'] as number}
-                onChange={(e) => handleChange('max-players', Number(e.target.value))}
+                onValueChange={(value) => handleChange('max-players', value)}
               />
-            </div>
-          )}
-
-          {matchesSearch('server-port') && (
-            <div className="properties-view__row">
-              <div className="properties-view__row-info">
-                <span>{t('properties.serverPort')}</span>
-              </div>
-              <Input
-                type="number"
-                className="properties-view__number-input properties-view__number-input--md"
+            )}
+            {matchesSearch('server-port') && (
+              <NumberField
+                label={t('properties.serverPort')}
+                min={1}
+                max={65535}
                 value={props['server-port'] as number}
-                onChange={(e) => handleChange('server-port', Number(e.target.value))}
+                onValueChange={(value) => handleChange('server-port', value)}
               />
-            </div>
-          )}
-
+            )}
+          </div>
           {matchesSearch('online-mode') && (
-            <ToggleItem
+            <ToggleRow
+              id="online-mode"
               label={t('properties.toggles.onlineMode.label')}
-              desc={t('properties.toggles.onlineMode.description')}
+              description={t('properties.toggles.onlineMode.description')}
               checked={Boolean(props['online-mode'])}
               onChange={(v) => handleChange('online-mode', v)}
             />
           )}
-
           {matchesSearch('white-list') && (
-            <ToggleItem
+            <ToggleRow
+              id="white-list"
               label={t('properties.toggles.whitelist.label')}
-              desc={t('properties.toggles.whitelist.description')}
+              description={t('properties.toggles.whitelist.description')}
               checked={Boolean(props['white-list'])}
               onChange={(v) => handleChange('white-list', v)}
             />
           )}
-        </div>
-      </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function ToggleItem({
+function ToggleRow({
+  id,
   label,
-  desc,
+  description,
   checked,
   onChange,
 }: {
+  id: string;
   label: string;
-  desc: string;
+  description: string;
   checked: boolean;
   onChange: (val: boolean) => void;
 }) {
   return (
-    <div className="properties-view__row">
-      <div className="properties-view__row-info">
-        <span>{label}</span>
-        <span className="properties-view__row-description" title={desc}>
-          {desc}
+    <div className={styles.toggleRow}>
+      <div className={styles.toggleText}>
+        <span className={styles.toggleLabel} id={`properties-${id}-label`}>
+          {label}
+        </span>
+        <span className={styles.toggleDescription} id={`properties-${id}-description`}>
+          {description}
         </span>
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <Switch
+        aria-labelledby={`properties-${id}-label`}
+        aria-describedby={`properties-${id}-description`}
+        checked={checked}
+        onCheckedChange={onChange}
+        data-testid={`properties-toggle-${id}`}
+      />
     </div>
   );
 }

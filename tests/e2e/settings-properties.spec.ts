@@ -43,7 +43,7 @@ test.describe('settings and properties', () => {
     await expect
       .poll(async () => (await app.ipcCalls('get_server_properties')).length)
       .toBeGreaterThan(0);
-    const motd = properties.locator('.properties-view__motd-input');
+    const motd = properties.getByLabel('MOTD', { exact: true });
     await motd.fill('E2E properties update');
     const save = properties.getByRole('button', { name: 'Save Changes', exact: true });
     await expect(save).toBeEnabled();
