@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Transition } from 'motion/react';
 import { X } from 'lucide-react';
@@ -46,6 +46,8 @@ export interface DialogContentProps extends ComponentPropsWithoutRef<
   showCloseButton?: boolean;
   /** Rendered after the body inside the footer row. */
   footer?: ReactNode;
+  /** Overrides the panel width, for example `min(520px, calc(100vw - 2rem))`. Defaults to 440px, capped by the viewport. */
+  width?: string;
   children: ReactNode;
 }
 
@@ -101,11 +103,14 @@ export function DialogContent({
   description,
   showCloseButton = false,
   footer,
+  width,
   children,
   className,
   onPointerDownOutside,
   ...props
 }: DialogContentProps) {
+  // Set inline so it beats the default width in dialog.module.css.
+  const sizeStyle = width ? ({ '--dialog-width': width } as CSSProperties) : undefined;
   const open = useContext(OpenContext);
   const reduced = useReducedMotion();
   // When the open state last changed. Radix waits for the click before treating a press as outside, and a press on the trigger
@@ -155,6 +160,7 @@ export function DialogContent({
           {...props}
           onPointerDownOutside={pressOutside}
           className={`${classes} ${styles.keyframes}`}
+          style={sizeStyle}
         >
           {inner}
         </DialogPrimitive.Content>
@@ -186,6 +192,7 @@ export function DialogContent({
           >
             <motion.div
               className={classes}
+              style={sizeStyle}
               initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={

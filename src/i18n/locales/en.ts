@@ -1000,7 +1000,7 @@ export const en: TranslationDictionary = {
   },
 
   addServer: {
-    title: 'Add New Server',
+    title: 'Create a new server',
     template: {
       label: 'Template',
       none: 'No template',
@@ -1008,9 +1008,11 @@ export const en: TranslationDictionary = {
     name: {
       label: 'Server Name',
       placeholder: 'e.g. Survival Server',
+      required: 'Enter a server name.',
       invalid: 'Only letters, numbers, hyphens, and underscores are allowed.',
     },
     savePath: 'Save to:',
+    pathPlaceholder: 'server-name',
     profileName: {
       label: 'Profile Name',
       placeholder: 'e.g. Survival / Creative',
@@ -1046,7 +1048,7 @@ export const en: TranslationDictionary = {
       invalid: 'Port must be between 1 and 65535.',
     },
     memory: {
-      label: 'Memory (GB)',
+      label: 'Memory',
       invalid: 'Memory must be at least 1 GB.',
     },
     choice: {

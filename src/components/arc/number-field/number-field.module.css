@@ -298,6 +298,13 @@
   display: block;
   overflow: hidden;
 }
+.error {
+  display: block;
+  padding-top: var(--space-2);
+  color: var(--danger);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
 .hint {
   display: block;
   padding-top: var(--space-2);

@@ -997,7 +997,7 @@ export const ja: TranslationDictionary = {
   },
 
   addServer: {
-    title: '新しいサーバーを追加',
+    title: '新しいサーバーを作成',
     template: {
       label: 'テンプレート',
       none: 'テンプレートを選択しない',
@@ -1005,9 +1005,11 @@ export const ja: TranslationDictionary = {
     name: {
       label: 'サーバー名',
       placeholder: '例: Survival Server',
+      required: 'サーバー名を入力してください。',
       invalid: '英数字・ハイフン・アンダースコアのみ使用できます。',
     },
     savePath: '保存先:',
+    pathPlaceholder: 'サーバー名',
     profileName: {
       label: 'プロファイル名',
       placeholder: '例: Survival / Creative',
@@ -1043,7 +1045,7 @@ export const ja: TranslationDictionary = {
       invalid: 'ポートは1〜65535の範囲で入力してください。',
     },
     memory: {
-      label: 'メモリ(GB)',
+      label: 'メモリ',
       invalid: 'メモリは1GB以上を指定してください。',
     },
     choice: {

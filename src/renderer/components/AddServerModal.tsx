@@ -1,15 +1,23 @@
-import { cn } from '@/lib/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as Dialog from '@radix-ui/react-dialog';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Button } from '@/components/arc/button/button';
+import { Combobox } from '@/components/arc/combobox/combobox';
+import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
+import { Input } from '@/components/arc/input/input';
+import { NumberField } from '@/components/arc/number-field/number-field';
+import { Select, type SelectOption } from '@/components/arc/select/select';
 import { useTranslation } from '../../i18n';
 import { getServerRoot } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import type { ServerTemplate } from '../../lib/server-commands';
 import { VERSION_OPTIONS } from '../constants/versionOptions';
+import styles from './AddServerModal.module.css';
+
+/** Radix Select cannot take an empty string as an item value, so "no template" gets a sentinel. */
+const NO_TEMPLATE = '__none__';
 
 const addServerSchema = z.object({
   name: z
@@ -20,8 +28,8 @@ const addServerSchema = z.object({
   groupName: z.string().optional(),
   software: z.string().min(1),
   version: z.string().min(1),
-  port: z.coerce.number().int().min(1).max(65535),
-  memory: z.coerce.number().int().min(1),
+  port: z.number().int().min(1).max(65535),
+  memory: z.number().int().min(1),
   selectedTemplateId: z.string().optional(),
 });
 
@@ -39,6 +47,7 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
   const [rootPath, setRootPath] = useState<string>('');
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors },
@@ -93,8 +102,39 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
   }, [selectedTemplateId, templates, setValue]);
 
   const previewPath = rootPath
-    ? `${rootPath}/${nameValue || 'server-id'}`.replace(/\\/g, '/')
-    : 'Loading...';
+    ? `${rootPath}/${nameValue || t('addServer.pathPlaceholder')}`.replace(/\\/g, '/')
+    : t('common.loading');
+
+  const templateOptions: SelectOption[] = [
+    { value: NO_TEMPLATE, label: t('addServer.template.none') },
+    ...templates.map((template) => ({ value: template.id, label: template.name })),
+  ];
+
+  const softwareStandard = t('addServer.software.groups.standard');
+  const softwareModded = t('addServer.software.groups.modded');
+  const softwareProxy = t('addServer.software.groups.proxy');
+  const softwareOptions: SelectOption[] = [
+    { value: 'Vanilla', label: t('addServer.software.options.vanilla'), group: softwareStandard },
+    { value: 'Paper', label: t('addServer.software.options.paper'), group: softwareStandard },
+    { value: 'LeafMC', label: t('addServer.software.options.leafmc'), group: softwareStandard },
+    { value: 'Spigot', label: t('addServer.software.options.spigot'), group: softwareStandard },
+    { value: 'Fabric', label: t('addServer.software.options.fabric'), group: softwareModded },
+    { value: 'Forge', label: t('addServer.software.options.forge'), group: softwareModded },
+    { value: 'Velocity', label: t('addServer.software.options.velocity'), group: softwareProxy },
+    { value: 'Waterfall', label: t('addServer.software.options.waterfall'), group: softwareProxy },
+    {
+      value: 'BungeeCord',
+      label: t('addServer.software.options.bungeecord'),
+      group: softwareProxy,
+    },
+  ];
+
+  const versionOptions = VERSION_OPTIONS.map((version) => ({ value: version, label: version }));
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
 
   const onSubmit = (values: AddServerFormValues) => {
     const template = templates.find((item) => item.id === values.selectedTemplateId);
@@ -121,175 +161,160 @@ const AddServerModal: FC<AddServerModalProps> = ({ open: isOpen, onClose, onAdd,
     });
   };
 
+  const nameError = errors.name
+    ? nameValue.trim()
+      ? t('addServer.name.invalid')
+      : t('addServer.name.required')
+    : undefined;
+
+  const footer = (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        data-testid="cancel-server-button"
+        onClick={handleClose}
+      >
+        {t('common.cancel')}
+      </Button>
+      <Button
+        type="submit"
+        form="add-server-form"
+        variant="primary"
+        data-testid="save-server-button"
+      >
+        {t('common.create')}
+      </Button>
+    </>
+  );
+
   return (
-    <Dialog.Root
+    <Dialog
       open={isOpen}
-      onOpenChange={(o) => {
-        if (!o) {
-          reset();
-          onClose();
-        }
+      onOpenChange={(next) => {
+        if (!next) handleClose();
       }}
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="add-server-modal-backdrop" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          data-testid="add-server-modal"
-          className={cn(
-            'add-server-modal-panel',
-            'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]',
-          )}
+      <DialogContent
+        aria-describedby={undefined}
+        data-testid="add-server-modal"
+        title={t('addServer.title')}
+        width="min(520px, calc(100vw - var(--space-8)))"
+        footer={footer}
+      >
+        <form
+          id="add-server-form"
+          className={styles.form}
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
         >
-          <Dialog.Title className="add-server-modal__title">{t('addServer.title')}</Dialog.Title>
-
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {templates.length > 0 && (
-              <div className="add-server-modal__section">
-                <label className="add-server-modal__label">{t('addServer.template.label')}</label>
-                <select {...register('selectedTemplateId')} className="add-server-modal__field">
-                  <option value="">{t('addServer.template.none')}</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="add-server-modal__section">
-              <label className="add-server-modal__label">{t('addServer.name.label')}</label>
-              <input
-                type="text"
-                {...register('name')}
-                data-testid="server-name-input"
-                placeholder={t('addServer.name.placeholder')}
-                className="add-server-modal__field add-server-modal__field--text"
-              />
-              {errors.name && (
-                <div className="add-server-modal__error">{t('addServer.name.invalid')}</div>
+          {templates.length > 0 && (
+            <Controller
+              name="selectedTemplateId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label={t('addServer.template.label')}
+                  testId="server-template-select"
+                  options={templateOptions}
+                  value={field.value || NO_TEMPLATE}
+                  onValueChange={(next) => field.onChange(next === NO_TEMPLATE ? '' : next)}
+                />
               )}
-              <div className="add-server-modal__path-preview">
-                {t('addServer.savePath')} {previewPath}
-              </div>
-            </div>
+            />
+          )}
 
-            <div className="add-server-modal__row">
-              <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">
-                  {t('addServer.profileName.label')}
-                </label>
-                <input
-                  type="text"
-                  {...register('profileName')}
-                  placeholder={t('addServer.profileName.placeholder')}
-                  className="add-server-modal__field"
+          <div>
+            <Input
+              label={t('addServer.name.label')}
+              {...register('name')}
+              data-testid="server-name-input"
+              placeholder={t('addServer.name.placeholder')}
+              error={nameError}
+            />
+            <p className={styles.pathPreview} data-testid="server-path-preview">
+              {t('addServer.savePath')} {previewPath}
+            </p>
+          </div>
+
+          <div className={styles.row}>
+            <Input
+              label={t('addServer.profileName.label')}
+              {...register('profileName')}
+              placeholder={t('addServer.profileName.placeholder')}
+            />
+            <Input
+              label={t('addServer.groupName.label')}
+              {...register('groupName')}
+              placeholder={t('addServer.groupName.placeholder')}
+            />
+          </div>
+
+          <div className={styles.row}>
+            <Controller
+              name="software"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label={t('addServer.software.label')}
+                  testId="server-software-select"
+                  options={softwareOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
                 />
-              </div>
-
-              <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">{t('addServer.groupName.label')}</label>
-                <input
-                  type="text"
-                  {...register('groupName')}
-                  placeholder={t('addServer.groupName.placeholder')}
-                  className="add-server-modal__field"
-                />
-              </div>
-            </div>
-
-            <div className="add-server-modal__row">
-              <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">{t('addServer.software.label')}</label>
-                <select
-                  {...register('software')}
-                  data-testid="server-software-select"
-                  className="add-server-modal__field"
-                >
-                  <optgroup label={t('addServer.software.groups.standard')}>
-                    <option value="Vanilla">{t('addServer.software.options.vanilla')}</option>
-                    <option value="Paper">{t('addServer.software.options.paper')}</option>
-                    <option value="LeafMC">{t('addServer.software.options.leafmc')}</option>
-                    <option value="Spigot">{t('addServer.software.options.spigot')}</option>
-                  </optgroup>
-                  <optgroup label={t('addServer.software.groups.modded')}>
-                    <option value="Fabric">{t('addServer.software.options.fabric')}</option>
-                    <option value="Forge">{t('addServer.software.options.forge')}</option>
-                  </optgroup>
-                  <optgroup label={t('addServer.software.groups.proxy')}>
-                    <option value="Velocity">{t('addServer.software.options.velocity')}</option>
-                    <option value="Waterfall">{t('addServer.software.options.waterfall')}</option>
-                    <option value="BungeeCord">{t('addServer.software.options.bungeecord')}</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">{t('addServer.version.label')}</label>
-                <select
-                  {...register('version')}
+              )}
+            />
+            <Controller
+              name="version"
+              control={control}
+              render={({ field }) => (
+                <Combobox
+                  label={t('addServer.version.label')}
                   data-testid="server-version-select"
-                  className="add-server-modal__field"
-                >
-                  {VERSION_OPTIONS.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="add-server-modal__row add-server-modal__row--spaced">
-              <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">{t('addServer.port.label')}</label>
-                <input
-                  type="number"
-                  {...register('port')}
-                  data-testid="server-port-input"
-                  className="add-server-modal__field"
+                  options={versionOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
                 />
-                {errors.port && (
-                  <div className="add-server-modal__error">{t('addServer.port.invalid')}</div>
-                )}
-              </div>
-              <div className="add-server-modal__field-group">
-                <label className="add-server-modal__label">{t('addServer.memory.label')}</label>
-                <input
-                  type="number"
-                  {...register('memory')}
-                  data-testid="server-memory-input"
-                  className="add-server-modal__field"
-                />
-                {errors.memory && (
-                  <div className="add-server-modal__error">{t('addServer.memory.invalid')}</div>
-                )}
-              </div>
-            </div>
+              )}
+            />
+          </div>
 
-            <div className="add-server-modal__footer">
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  data-testid="cancel-server-button"
-                  className="add-server-modal__cancel-btn"
-                >
-                  {t('common.cancel')}
-                </button>
-              </Dialog.Close>
-              <button
-                type="submit"
-                data-testid="save-server-button"
-                className="add-server-modal__submit-btn"
-              >
-                {t('common.create')}
-              </button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <div className={styles.row}>
+            <Controller
+              name="port"
+              control={control}
+              render={({ field }) => (
+                <NumberField
+                  label={t('addServer.port.label')}
+                  testId="server-port-input"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  min={1}
+                  max={65535}
+                  formatOptions={{ useGrouping: false }}
+                  error={errors.port ? t('addServer.port.invalid') : undefined}
+                />
+              )}
+            />
+            <Controller
+              name="memory"
+              control={control}
+              render={({ field }) => (
+                <NumberField
+                  label={t('addServer.memory.label')}
+                  testId="server-memory-input"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  min={1}
+                  suffix="GB"
+                  error={errors.memory ? t('addServer.memory.invalid') : undefined}
+                />
+              )}
+            />
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

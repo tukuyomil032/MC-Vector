@@ -11,7 +11,7 @@
   position: fixed;
   z-index: 51;
   inset: 0;
-  width: min(calc(100vw - var(--space-8)), 440px);
+  width: var(--dialog-width, min(calc(100vw - var(--space-8)), 440px));
   height: fit-content;
   max-height: calc(100vh - var(--space-8));
   max-height: calc(100dvh - var(--space-8));

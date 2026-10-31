@@ -79,12 +79,14 @@ export function createAppFixture(page: Page): AppFixture {
       await modal.locator('[data-testid="server-port-input"]').fill('25565');
       await modal.locator('[data-testid="server-memory-input"]').fill('2');
       if (options.software) {
-        await modal
-          .locator('[data-testid="server-software-select"]')
-          .selectOption(options.software);
+        await modal.locator('[data-testid="server-software-select"]').click();
+        const softwareName = new RegExp(`^${options.software}\\b`);
+        await page.getByRole('option', { name: softwareName }).click();
       }
       if (options.version) {
-        await modal.locator('[data-testid="server-version-select"]').selectOption(options.version);
+        const versionInput = modal.locator('[data-testid="server-version-select"]');
+        await versionInput.fill(options.version);
+        await page.getByRole('option', { name: options.version, exact: true }).click();
       }
       await modal.locator('[data-testid="save-server-button"]').click();
       await expect(modal).toHaveCount(0, { timeout: 15_000 });

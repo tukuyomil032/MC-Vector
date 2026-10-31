@@ -9,6 +9,14 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { motionTokens } from '../lib/motion-tokens';
 import styles from './select.module.css';
 
+export interface SelectOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+  /** Options with the same group name, listed next to each other, sit under one heading. */
+  group?: string;
+}
+
 export interface SelectProps extends Omit<
   ComponentPropsWithoutRef<typeof SelectPrimitive.Root>,
   'children'
@@ -18,7 +26,25 @@ export interface SelectProps extends Omit<
   placeholder?: string;
   id?: string;
   className?: string;
-  options: { value: string; label: string; disabled?: boolean }[];
+  options: SelectOption[];
+  /** Sets data-testid on the trigger button. */
+  testId?: string;
+}
+
+interface OptionGroup {
+  label?: string;
+  items: SelectOption[];
+}
+
+/** Splits options into runs of the same group, keeping the order the caller gave. */
+function groupOptions(options: SelectOption[]): OptionGroup[] {
+  const groups: OptionGroup[] = [];
+  for (const option of options) {
+    const last = groups[groups.length - 1];
+    if (last && last.label === option.group) last.items.push(option);
+    else groups.push({ label: option.group, items: [option] });
+  }
+  return groups;
 }
 
 /** The shown value rolls in the direction of the list: a later option rises from below, an earlier one drops from above. */
@@ -63,6 +89,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
     className,
     disabled,
     onValueChange,
+    testId,
     ...rootProps
   },
   ref,
@@ -96,6 +123,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
         <SelectPrimitive.Trigger
           ref={ref}
           id={controlId}
+          data-testid={testId}
           aria-describedby={hintId}
           className={[styles.trigger, className].filter(Boolean).join(' ')}
         >
@@ -133,18 +161,27 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
               <ChevronUp size={16} strokeWidth={1.75} aria-hidden="true" />
             </SelectPrimitive.ScrollUpButton>
             <SelectPrimitive.Viewport className={styles.viewport}>
-              {options.map((option) => (
-                <SelectPrimitive.Item
-                  key={option.value}
-                  value={option.value}
-                  disabled={option.disabled}
-                  className={styles.item}
-                >
-                  <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
-                  <SelectPrimitive.ItemIndicator className={styles.indicator}>
-                    <Check size={16} strokeWidth={1.75} aria-hidden="true" />
-                  </SelectPrimitive.ItemIndicator>
-                </SelectPrimitive.Item>
+              {groupOptions(options).map((group) => (
+                <SelectPrimitive.Group key={group.label ?? 'ungrouped'}>
+                  {group.label && (
+                    <SelectPrimitive.Label className={styles.groupLabel}>
+                      {group.label}
+                    </SelectPrimitive.Label>
+                  )}
+                  {group.items.map((option) => (
+                    <SelectPrimitive.Item
+                      key={option.value}
+                      value={option.value}
+                      disabled={option.disabled}
+                      className={styles.item}
+                    >
+                      <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                      <SelectPrimitive.ItemIndicator className={styles.indicator}>
+                        <Check size={16} strokeWidth={1.75} aria-hidden="true" />
+                      </SelectPrimitive.ItemIndicator>
+                    </SelectPrimitive.Item>
+                  ))}
+                </SelectPrimitive.Group>
               ))}
             </SelectPrimitive.Viewport>
             <SelectPrimitive.ScrollDownButton className={styles.scrollButton}>

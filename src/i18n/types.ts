@@ -999,9 +999,11 @@ export interface TranslationDictionary {
     name: {
       label: string;
       placeholder: string;
+      required: string;
       invalid: string;
     };
     savePath: string;
+    pathPlaceholder: string;
     profileName: {
       label: string;
       placeholder: string;

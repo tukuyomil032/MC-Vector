@@ -60,6 +60,10 @@ export interface NumberFieldProps {
   size?: NumberFieldSize;
   /** A short note beside the label when a press meets a limit or a typed value passes one. `false` hides it; a function writes the copy. */
   limitHint?: boolean | ((edge: 'min' | 'max', limit: number) => string);
+  /** Validation message under the field, for example from a form schema. Also marks the input invalid. */
+  error?: string;
+  /** Sets data-testid on the editable input. */
+  testId?: string;
 }
 
 export type NumberFieldSize = 'sm' | 'md' | 'lg';
@@ -589,6 +593,8 @@ export function NumberField({
   formatOptions,
   size = 'md',
   limitHint = true,
+  error,
+  testId,
 }: NumberFieldProps) {
   const reduced = useReducedMotion();
   const generatedId = useId();
@@ -926,8 +932,10 @@ export function NumberField({
     : typeof limitHint === 'function'
       ? limitHint(noteEdge > 0 ? 'max' : 'min', noteLimit)
       : `${noteEdge > 0 ? 'Max' : 'Min'} ${spoken(noteLimit)}`;
+  const errorId = error ? `${inputId}-error` : undefined;
   const describedBy =
-    [hintId, outside && limitHint ? limitId : undefined].filter(Boolean).join(' ') || undefined;
+    [hintId, outside && limitHint ? limitId : undefined, errorId].filter(Boolean).join(' ') ||
+    undefined;
 
   return (
     <div className={styles.field} data-size={size}>
@@ -1011,7 +1019,8 @@ export function NumberField({
                 value={editing ? draft : format.format(current)}
                 disabled={disabled}
                 aria-describedby={describedBy}
-                aria-invalid={outside ? true : undefined}
+                aria-invalid={outside || error ? true : undefined}
+                data-testid={testId}
                 aria-valuenow={current}
                 aria-valuetext={spoken(current)}
                 aria-valuemin={Number.isFinite(min) ? min : undefined}
@@ -1046,6 +1055,7 @@ export function NumberField({
         />
       </div>
       <FieldMessage id={hintId} text={description} className={styles.hint} />
+      <FieldMessage id={errorId} text={error} className={styles.error} />
       <span className={styles.srOnly} aria-live="polite" aria-atomic="true">
         {announcement}
       </span>
