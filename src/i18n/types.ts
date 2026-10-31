@@ -379,10 +379,6 @@ export interface TranslationDictionary {
       extractFailed: string;
       extractNotZip: string;
       extractSkipped: string;
-      binaryNoDiff: string;
-      diffReadFailed: string;
-      diffSelectOriginal: string;
-      diffSelectModified: string;
     };
     toolbar: {
       goUp: string;
@@ -392,9 +388,6 @@ export interface TranslationDictionary {
       compress: string;
       extract: string;
       delete: string;
-      diffOpen: string;
-      diffClose: string;
-      diffCancel: string;
       navigation: string;
       tools: string;
       selection: string;
