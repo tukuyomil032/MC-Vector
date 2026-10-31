@@ -295,6 +295,10 @@ export const ja: TranslationDictionary = {
       status: '状態',
       memory: 'メモリ',
     },
+    memory: {
+      value: '{used} / {total} {unit}',
+      unit: 'MB',
+    },
     toast: {
       noLogsToSave: '保存対象のログがありません',
       logsSaved: 'ログを保存しました',

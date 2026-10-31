@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { useTranslation } from '../../i18n';
 import { copyToClipboard } from '../../lib/clipboard-commands';
 import { loadCommandHistory, saveCommandHistory } from '../../lib/console-history-commands';
@@ -13,6 +14,17 @@ import { notify } from '../shared/notify';
 import { tauriInvoke, tauriListen } from '../../lib/tauri-api';
 import { useConsoleStore } from '../../store/consoleStore';
 import type { MinecraftServer } from '../components/../shared/server declaration';
+import styles from './ConsoleView.module.css';
+
+/** Status labels come from the server namespace, so the console and the rest of the app show the same words. */
+const STATUS_LABEL_KEYS = {
+  online: 'server.status.online',
+  offline: 'server.status.offline',
+  starting: 'server.status.starting',
+  stopping: 'server.status.stopping',
+  restarting: 'server.status.restarting',
+  crashed: 'server.status.crashed',
+} as const;
 
 type AnsiStyle = {
   color?: string;
@@ -275,7 +287,11 @@ const findLogOverlapLength = (previousLogs: string[], nextLogs: string[]): numbe
 };
 
 const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const memoryFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+    [locale],
+  );
   const logs = useConsoleStore((state) => state.serverLogs[server.id] ?? EMPTY_LOGS);
   const [command, setCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -642,45 +658,43 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     }
   };
 
-  const formatMemoryDetailed = (usageBytes: number, allocatedMb: number) => {
-    const usageMb = (usageBytes / 1024 / 1024).toFixed(0);
-    return `${usageMb} / ${allocatedMb} MB`;
-  };
+  // Memory is shown in megabytes; the numbers follow the app language and the unit comes from the locale.
+  const memoryUnit = t('console.memory.unit');
+  const memoryLabel =
+    server.status === 'online'
+      ? t('console.memory.value', {
+          used: memoryFormatter.format(memoryUsage / 1024 / 1024),
+          total: memoryFormatter.format(server.memory),
+          unit: memoryUnit,
+        })
+      : t('console.memory.value', { used: '-', total: '-', unit: memoryUnit });
 
   return (
-    <div
-      className="console-view flex h-full min-h-0 flex-col gap-3 p-5 max-[1080px]:p-4"
-      data-testid="console-view"
-    >
-      <section className="console-view__status-strip surface-card rounded-2xl">
-        <div className="console-view__status-col console-view__status-col--with-divider">
-          <div className="console-view__status-label">{t('console.status.address')}</div>
-          <button
-            type="button"
-            onClick={handleCopyAddress}
-            title={t('console.status.clickToCopy')}
-            className={`console-view__address ${ngrokUrl && currentAddressIndex === 1 ? 'is-public' : 'is-local'}`}
-          >
-            {displayAddress}
-          </button>
+    <div className={styles.view} data-testid="console-view">
+      <section className={styles.statusStrip}>
+        <div className={`${styles.statusCol} ${styles.statusColDivider}`}>
+          <div className={styles.statusLabel}>{t('console.status.address')}</div>
+          <Tooltip content={t('console.status.clickToCopy')} side="bottom">
+            <button
+              type="button"
+              onClick={handleCopyAddress}
+              className={`${styles.address} ${ngrokUrl && currentAddressIndex === 1 ? styles.addressPublic : styles.addressLocal}`}
+            >
+              {displayAddress}
+            </button>
+          </Tooltip>
         </div>
 
-        <div className="console-view__status-col console-view__status-col--with-divider">
-          <div className="console-view__status-label">{t('console.status.status')}</div>
-          <div
-            className={`console-view__status-value console-view__status-value--${server.status}`}
-          >
-            {server.status.toUpperCase()}
+        <div className={`${styles.statusCol} ${styles.statusColDivider}`}>
+          <div className={styles.statusLabel}>{t('console.status.status')}</div>
+          <div className={styles.statusValue} data-status={server.status}>
+            {t(STATUS_LABEL_KEYS[server.status])}
           </div>
         </div>
 
-        <div className="console-view__status-col">
-          <div className="console-view__status-label">{t('console.status.memory')}</div>
-          <div className="console-view__memory-value">
-            {server.status === 'online'
-              ? formatMemoryDetailed(memoryUsage, server.memory)
-              : '- / - MB'}
-          </div>
+        <div className={styles.statusCol}>
+          <div className={styles.statusLabel}>{t('console.status.memory')}</div>
+          <div className={styles.memoryValue}>{memoryLabel}</div>
         </div>
       </section>
 

@@ -1,0 +1,99 @@
+/* ANSI colors. Each one is a token, so the log palette follows the active theme. */
+.view {
+  --ansi-black: oklch(40% 0 0);
+  --ansi-red: var(--danger);
+  --ansi-green: var(--success);
+  --ansi-yellow: var(--warning);
+  --ansi-blue: oklch(70% 0.13 255);
+  --ansi-magenta: oklch(70% 0.15 320);
+  --ansi-cyan: oklch(78% 0.1 205);
+  --ansi-white: var(--foreground);
+  --ansi-bright-black: var(--text-muted);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  min-height: 0;
+  padding: var(--space-5);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+.statusStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+}
+
+.statusCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-right: var(--space-4);
+}
+
+.statusColDivider {
+  border-right: 1px solid var(--border-subtle);
+}
+
+.statusLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.address {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.address:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.addressLocal {
+  color: var(--foreground);
+}
+
+.addressPublic {
+  color: var(--success);
+}
+
+.statusValue {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.statusValue[data-status='online'] {
+  color: var(--success);
+}
+
+.statusValue[data-status='crashed'] {
+  color: var(--danger);
+}
+
+.statusValue[data-status='starting'],
+.statusValue[data-status='stopping'],
+.statusValue[data-status='restarting'] {
+  color: var(--warning);
+}
+
+.memoryValue {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}

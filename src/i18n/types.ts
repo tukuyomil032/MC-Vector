@@ -317,6 +317,10 @@ export interface TranslationDictionary {
       status: string;
       memory: string;
     };
+    memory: {
+      value: string;
+      unit: string;
+    };
     toast: {
       noLogsToSave: string;
       logsSaved: string;

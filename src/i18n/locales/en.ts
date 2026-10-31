@@ -299,6 +299,10 @@ export const en: TranslationDictionary = {
       status: 'STATUS',
       memory: 'MEMORY',
     },
+    memory: {
+      value: '{used} / {total} {unit}',
+      unit: 'MB',
+    },
     toast: {
       noLogsToSave: 'No logs to save',
       logsSaved: 'Logs saved',
