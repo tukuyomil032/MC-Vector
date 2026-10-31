@@ -1152,6 +1152,9 @@ export const en: TranslationDictionary = {
       network: 'Network',
       security: 'Security',
       advanced: 'Advanced',
+      remote: 'RCON & Query',
+      resourcePack: 'Resource Pack',
+      management: 'Management Server',
     },
   },
 

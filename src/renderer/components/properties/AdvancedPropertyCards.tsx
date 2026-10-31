@@ -2,8 +2,11 @@ import {
   Gamepad2,
   Globe,
   Network,
+  Package,
+  ServerCog,
   Settings,
   ShieldCheck,
+  SquareTerminal,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -26,23 +29,52 @@ import { SectionTitle } from '../ui/IconTile';
 import { PropertyToggleRow } from './PropertyToggleRow';
 import styles from './PropertyCards.module.css';
 
-const CATEGORY_ORDER: PropertyCategory[] = [
+/**
+ * A card group. Most groups are a property category. The RCON and Query, resource pack and management
+ * server properties are pulled out of their categories, so each of those gets a card of its own.
+ */
+export type PropertyGroupId = PropertyCategory | 'Remote' | 'ResourcePack' | 'Management';
+
+const GROUP_ORDER: readonly PropertyGroupId[] = [
   'General',
   'Gameplay',
   'World',
   'Network',
+  'Remote',
   'Security',
+  'ResourcePack',
+  'Management',
   'Advanced',
 ];
 
-const CATEGORY_ICONS: Record<PropertyCategory, LucideIcon> = {
+const GROUP_ICONS: Record<PropertyGroupId, LucideIcon> = {
   General: Settings,
   Gameplay: Gamepad2,
   World: Globe,
   Network,
+  Remote: SquareTerminal,
   Security: ShieldCheck,
+  ResourcePack: Package,
+  Management: ServerCog,
   Advanced: Wrench,
 };
+
+const REMOTE_KEYS = new Set([
+  'enable-rcon',
+  'rcon.port',
+  'rcon.password',
+  'enable-query',
+  'query.port',
+]);
+
+/** The card group a property belongs to. Anything not pulled out keeps its category. */
+function groupOf(definition: PropertyDefinition): PropertyGroupId {
+  const { key } = definition;
+  if (REMOTE_KEYS.has(key)) return 'Remote';
+  if (key.startsWith('resource-pack') || key === 'require-resource-pack') return 'ResourcePack';
+  if (key.startsWith('management-server')) return 'Management';
+  return definition.category;
+}
 
 /** Properties whose values are secrets. They use a masked field with a reveal toggle. */
 const SECRET_KEYS = new Set([
@@ -110,19 +142,19 @@ interface AdvancedField {
 }
 
 interface AdvancedGroup {
-  category: PropertyCategory;
+  id: PropertyGroupId;
   fields: AdvancedField[];
 }
 
 /**
  * The advanced fields to show: every known property outside excludeKeys that matches the search, plus
- * the unknown keys from the file. Categories with no visible field are left out.
+ * the unknown keys from the file. Groups with no visible field are left out.
  */
 function getVisibleAdvancedGroups(
   values: Record<string, PropertyValue>,
   excludeKeys: readonly string[],
   matchesSearch: (key: string) => boolean,
-  categories: readonly PropertyCategory[] = CATEGORY_ORDER,
+  groupIds: readonly PropertyGroupId[] = GROUP_ORDER,
 ): AdvancedGroup[] {
   const excluded = new Set(excludeKeys);
   const known = new Set(serverPropertiesList.map((definition) => definition.key));
@@ -140,12 +172,12 @@ function getVisibleAdvancedGroups(
         value,
       })),
   ];
-  return CATEGORY_ORDER.filter((category) => categories.includes(category))
-    .map((category) => ({
-      category,
+  return GROUP_ORDER.filter((id) => groupIds.includes(id))
+    .map((id) => ({
+      id,
       fields: fields.filter(
         ({ definition }) =>
-          definition.category === category &&
+          groupOf(definition) === id &&
           !excluded.has(definition.key) &&
           matchesSearch(definition.key),
       ),
@@ -158,15 +190,15 @@ export function hasVisibleAdvancedProperties(
   values: Record<string, PropertyValue>,
   excludeKeys: readonly string[],
   matchesSearch: (key: string) => boolean,
-  categories?: readonly PropertyCategory[],
+  groupIds?: readonly PropertyGroupId[],
 ): boolean {
-  return getVisibleAdvancedGroups(values, excludeKeys, matchesSearch, categories).length > 0;
+  return getVisibleAdvancedGroups(values, excludeKeys, matchesSearch, groupIds).length > 0;
 }
 
-/** The categories whose fields join a basic card instead of getting a card of their own, so no heading appears twice. */
-export const MERGED_ADVANCED_CATEGORIES: readonly PropertyCategory[] = ['Gameplay', 'Network'];
-const STANDALONE_ADVANCED_CATEGORIES = CATEGORY_ORDER.filter(
-  (category) => !MERGED_ADVANCED_CATEGORIES.includes(category),
+/** The groups whose fields join a basic card instead of getting a card of their own, so no heading appears twice. */
+export const MERGED_ADVANCED_CATEGORIES: readonly PropertyGroupId[] = ['Gameplay', 'Network'];
+const STANDALONE_ADVANCED_CATEGORIES = GROUP_ORDER.filter(
+  (group) => !MERGED_ADVANCED_CATEGORIES.includes(group),
 );
 
 export interface AdvancedPropertyCardsProps {
@@ -177,13 +209,13 @@ export interface AdvancedPropertyCardsProps {
   /** Search filter by key. The caller matches the labels, since it knows the locale. */
   matchesSearch: (key: string) => boolean;
   /**
-   * Render only this category's fields, with no card or heading, inside a basic card of the same name.
-   * Without it, every category outside MERGED_ADVANCED_CATEGORIES gets its own card.
+   * Render only this group's fields, with no card or heading, inside a basic card of the same name.
+   * Without it, every group outside MERGED_ADVANCED_CATEGORIES gets its own card.
    */
-  inline?: PropertyCategory;
+  inline?: PropertyGroupId;
 }
 
-/** The advanced server properties as one card per category, placed after the basic cards on the same page. */
+/** The advanced server properties as one card per group, placed after the basic cards on the same page. */
 export function AdvancedPropertyCards({
   values,
   onChange,
@@ -204,8 +236,8 @@ export function AdvancedPropertyCards({
     [values, excludeKeys, matchesSearch, inline],
   );
 
-  const getCategoryLabel = (category: PropertyCategory): string => {
-    switch (category) {
+  const getGroupLabel = (group: PropertyGroupId): string => {
+    switch (group) {
       case 'General':
         return t('advancedSettings.categories.general');
       case 'Gameplay':
@@ -214,8 +246,14 @@ export function AdvancedPropertyCards({
         return t('advancedSettings.categories.world');
       case 'Network':
         return t('advancedSettings.categories.network');
+      case 'Remote':
+        return t('advancedSettings.categories.remote');
       case 'Security':
         return t('advancedSettings.categories.security');
+      case 'ResourcePack':
+        return t('advancedSettings.categories.resourcePack');
+      case 'Management':
+        return t('advancedSettings.categories.management');
       case 'Advanced':
         return t('advancedSettings.categories.advanced');
     }
@@ -301,8 +339,8 @@ export function AdvancedPropertyCards({
 
   return (
     <>
-      {groups.map(({ category, fields }) => {
-        const titleId = `properties-advanced-${category.toLowerCase()}-title`;
+      {groups.map(({ id, fields }) => {
+        const titleId = `properties-advanced-${id.toLowerCase()}-title`;
         const formFields = fields.filter((field) => field.definition.type !== 'boolean');
         const toggles = fields.filter((field) => field.definition.type === 'boolean');
         const body = (
@@ -337,16 +375,11 @@ export function AdvancedPropertyCards({
           </>
         );
         if (inline) {
-          return <Fragment key={category}>{body}</Fragment>;
+          return <Fragment key={id}>{body}</Fragment>;
         }
         return (
-          <section key={category} className={styles.card} aria-labelledby={titleId}>
-            <SectionTitle
-              icon={CATEGORY_ICONS[category]}
-              as="h3"
-              id={titleId}
-              title={getCategoryLabel(category)}
-            />
+          <section key={id} className={styles.card} aria-labelledby={titleId}>
+            <SectionTitle icon={GROUP_ICONS[id]} as="h3" id={titleId} title={getGroupLabel(id)} />
             {body}
           </section>
         );

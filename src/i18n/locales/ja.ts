@@ -1152,6 +1152,9 @@ export const ja: TranslationDictionary = {
       network: 'ネットワーク',
       security: 'セキュリティ',
       advanced: '詳細',
+      remote: 'RCON・Query',
+      resourcePack: 'リソースパック',
+      management: '管理サーバー',
     },
   },
 

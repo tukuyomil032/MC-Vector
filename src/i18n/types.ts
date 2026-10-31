@@ -1152,6 +1152,9 @@ export interface TranslationDictionary {
       network: string;
       security: string;
       advanced: string;
+      remote: string;
+      resourcePack: string;
+      management: string;
     };
   };
 
