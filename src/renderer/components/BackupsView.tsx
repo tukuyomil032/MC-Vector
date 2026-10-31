@@ -307,6 +307,7 @@ export default function BackupsView({ server }: Props) {
     setProcessing(false);
   };
   const listParentRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const backupVirtualizer = useVirtualizer({
     count: backups.length,
     getScrollElement: () => listParentRef.current,
@@ -1314,9 +1315,15 @@ export default function BackupsView({ server }: Props) {
           footer={createFooter}
           onEscapeKeyDown={isProcessing ? blockDismiss : undefined}
           onPointerDownOutside={isProcessing ? blockDismiss : undefined}
+          // The first focusable control would otherwise be a hint icon, and focus would open its tooltip on load.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            nameInputRef.current?.focus();
+          }}
         >
           <div className={styles.form}>
             <Input
+              ref={nameInputRef}
               data-testid="backup-name-input"
               label={t('backups.modal.fileName')}
               placeholder={defaultName()}
