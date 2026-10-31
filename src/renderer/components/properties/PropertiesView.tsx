@@ -4,12 +4,10 @@ import { Input } from '@/components/arc/input/input';
 import { NumberField } from '@/components/arc/number-field/number-field';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import { Select } from '@/components/arc/select/select';
-import { Switch } from '@/components/arc/switch/switch';
 import { Gamepad2, Network, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import { EmptyLine } from '../ui/EmptyLine';
-import { HintIcon } from '../ui/FieldLabel';
 import { SectionTitle } from '../ui/IconTile';
 import { useArcMessages } from '../../shared/arc-messages';
 import { logError } from '../../../lib/error-utils';
@@ -19,9 +17,11 @@ import {
   type PropertyValue,
 } from '../../../lib/properties-commands';
 import { notify } from '../../shared/notify';
-import { serverPropertiesList } from '../../shared/propertiesData';
+import { serverPropertiesList, serverPropertyEnglish } from '../../shared/propertiesData';
 import type { MinecraftServer } from '../../shared/server declaration';
-import AdvancedSettingsWindow from './AdvancedSettingsWindow';
+import { AdvancedPropertyCards, hasVisibleAdvancedProperties } from './AdvancedPropertyCards';
+import cardStyles from './PropertyCards.module.css';
+import { PropertyToggleRow } from './PropertyToggleRow';
 import styles from './PropertiesView.module.css';
 import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 
@@ -31,6 +31,20 @@ interface Props {
 }
 
 type ServerProperties = Record<string, PropertyValue>;
+
+/** The keys the basic, gameplay and network cards show. The advanced cards skip them so nothing appears twice. */
+const BASIC_PROPERTY_KEYS: readonly string[] = [
+  'motd',
+  'gamemode',
+  'difficulty',
+  'pvp',
+  'allow-flight',
+  'enable-command-block',
+  'max-players',
+  'server-port',
+  'online-mode',
+  'white-list',
+];
 
 export default function PropertiesView({ server, onServerPortChanged }: Props) {
   const { t } = useTranslation();
@@ -56,7 +70,6 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   // so the defaults can never overwrite the real server.properties file.
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   useUnsavedChangesGuard(hasChanges);
   useLayoutEffect(() => {
@@ -116,9 +129,11 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     const q = searchQuery.toLowerCase();
     return (key: string) => {
       const def = definitions.get(key);
+      const english = serverPropertyEnglish[key];
       return (
         key.toLowerCase().includes(q) ||
         (def?.label ?? '').toLowerCase().includes(q) ||
+        (english?.label ?? '').toLowerCase().includes(q) ||
         (def?.description ?? '').toLowerCase().includes(q)
       );
     };
@@ -137,6 +152,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     const isCurrentServerView = () =>
       currentServerIdRef.current === serverId && serverViewGenerationRef.current === viewGeneration;
     try {
+      // The whole map goes to the backend, so basic and advanced changes are saved together.
       const savedPort = await saveServerProperties(serverId, props);
       if (savedPort !== null) {
         onServerPortChanged?.(serverId, savedPort);
@@ -151,40 +167,6 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     }
   };
 
-  const openAdvancedWindow = () => {
-    setShowAdvanced(true);
-  };
-
-  const handleAdvancedSave = async (data: Record<string, unknown>) => {
-    const serverId = server.id;
-    const viewGeneration = serverViewGenerationRef.current;
-    const isCurrentServerView = () =>
-      currentServerIdRef.current === serverId && serverViewGenerationRef.current === viewGeneration;
-    try {
-      const safeData: ServerProperties = {};
-      Object.entries(data).forEach(([key, value]) => {
-        safeData[key] =
-          typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string'
-            ? value
-            : String(value);
-      });
-      const savedPort = await saveServerProperties(serverId, safeData);
-      if (savedPort !== null) {
-        onServerPortChanged?.(serverId, savedPort);
-      }
-      if (!isCurrentServerView()) return;
-      // Sync local props state with advanced changes
-      setProps((prev) => ({ ...prev, ...safeData }));
-      setShowAdvanced(false);
-      setHasChanges(false);
-      notify.success(t('properties.advancedSaveSuccess'));
-    } catch (e) {
-      if (!isCurrentServerView()) return;
-      logError('Failed to save advanced server properties', e, { serverId });
-      notify.error(t('properties.saveFailed'));
-    }
-  };
-
   if (loading) {
     return (
       <div className={styles.loading} role="status" data-testid="properties-loading">
@@ -193,35 +175,36 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     );
   }
 
-  if (showAdvanced) {
-    return (
-      <AdvancedSettingsWindow
-        initialData={props as Record<string, unknown>}
-        onSave={handleAdvancedSave}
-        onCancel={() => setShowAdvanced(false)}
-      />
-    );
-  }
-
   const basicVisible = ['motd', 'gamemode', 'difficulty'].some(matchesSearch);
   const gameplayVisible = ['pvp', 'allow-flight', 'enable-command-block'].some(matchesSearch);
   const networkVisible = ['max-players', 'server-port', 'online-mode', 'white-list'].some(
     matchesSearch,
   );
-  const anyVisible = basicVisible || gameplayVisible || networkVisible;
+  const advancedVisible = hasVisibleAdvancedProperties(props, BASIC_PROPERTY_KEYS, matchesSearch);
+  const anyVisible = basicVisible || gameplayVisible || networkVisible || advancedVisible;
 
   const header = (
     <header className={styles.header}>
-      <h2 className={styles.title}>{t('properties.title')}</h2>
+      <div className={styles.titleGroup}>
+        <h2 className={styles.title}>{t('properties.title')}</h2>
+        {!loadError && (
+          <div className={styles.search}>
+            <SearchField
+              label={t('properties.search.label')}
+              clearLabel={arc.search.clear}
+              placeholder={t('properties.search.placeholder')}
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+          </div>
+        )}
+      </div>
       <div className={styles.actions}>
         {hasChanges && (
           <span className={styles.unsaved} role="status">
             {t('properties.unsavedChanges')}
           </span>
         )}
-        <Button variant="secondary" onClick={openAdvancedWindow} disabled={loadError}>
-          {t('properties.openAdvanced')}
-        </Button>
         <Button
           variant="primary"
           onClick={handleSave}
@@ -258,190 +241,157 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
     <div className={styles.page} data-testid="properties-view">
       {header}
 
-      <div className={styles.toolbar}>
-        <SearchField
-          label={t('properties.search.label')}
-          clearLabel={arc.search.clear}
-          placeholder={t('properties.search.placeholder')}
-          value={searchQuery}
-          onValueChange={setSearchQuery}
-        />
-      </div>
-
       {!anyVisible && (
         <EmptyLine className={styles.empty} title={t('properties.search.emptyTitle')} />
       )}
 
-      {basicVisible && (
-        <section className={styles.card} aria-labelledby="properties-basic-title">
-          <SectionTitle
-            icon={SlidersHorizontal}
-            as="h3"
-            id="properties-basic-title"
-            title={t('properties.sections.basic')}
-          />
-          <div className={styles.grid}>
-            {matchesSearch('motd') && (
-              <div className={styles.wide}>
-                <Input
-                  label={t('properties.motd.label')}
-                  hint={t('properties.motd.description')}
-                  type="text"
-                  value={props.motd as string}
-                  onChange={(e) => handleChange('motd', e.target.value)}
+      <div className={styles.cards}>
+        {basicVisible && (
+          <section className={cardStyles.card} aria-labelledby="properties-basic-title">
+            <SectionTitle
+              icon={SlidersHorizontal}
+              as="h3"
+              id="properties-basic-title"
+              title={t('properties.sections.basic')}
+            />
+            <div className={cardStyles.grid}>
+              {matchesSearch('motd') && (
+                <div className={cardStyles.wide}>
+                  <Input
+                    label={t('properties.motd.label')}
+                    hint={t('properties.motd.description')}
+                    type="text"
+                    value={props.motd as string}
+                    onChange={(e) => handleChange('motd', e.target.value)}
+                  />
+                </div>
+              )}
+              {matchesSearch('gamemode') && (
+                <Select
+                  label={t('properties.gameMode.label')}
+                  placeholder={arc.select.placeholder}
+                  value={props.gamemode as string}
+                  onValueChange={(value) => handleChange('gamemode', value)}
+                  options={[
+                    { value: 'survival', label: t('properties.gameMode.options.survival') },
+                    { value: 'creative', label: t('properties.gameMode.options.creative') },
+                    { value: 'adventure', label: t('properties.gameMode.options.adventure') },
+                    { value: 'spectator', label: t('properties.gameMode.options.spectator') },
+                  ]}
                 />
-              </div>
-            )}
-            {matchesSearch('gamemode') && (
-              <Select
-                label={t('properties.gameMode.label')}
-                placeholder={arc.select.placeholder}
-                value={props.gamemode as string}
-                onValueChange={(value) => handleChange('gamemode', value)}
-                options={[
-                  { value: 'survival', label: t('properties.gameMode.options.survival') },
-                  { value: 'creative', label: t('properties.gameMode.options.creative') },
-                  { value: 'adventure', label: t('properties.gameMode.options.adventure') },
-                  { value: 'spectator', label: t('properties.gameMode.options.spectator') },
-                ]}
-              />
-            )}
-            {matchesSearch('difficulty') && (
-              <Select
-                label={t('properties.difficulty.label')}
-                placeholder={arc.select.placeholder}
-                value={props.difficulty as string}
-                onValueChange={(value) => handleChange('difficulty', value)}
-                options={[
-                  { value: 'peaceful', label: t('properties.difficulty.options.peaceful') },
-                  { value: 'easy', label: t('properties.difficulty.options.easy') },
-                  { value: 'normal', label: t('properties.difficulty.options.normal') },
-                  { value: 'hard', label: t('properties.difficulty.options.hard') },
-                ]}
-              />
-            )}
-          </div>
-        </section>
-      )}
+              )}
+              {matchesSearch('difficulty') && (
+                <Select
+                  label={t('properties.difficulty.label')}
+                  placeholder={arc.select.placeholder}
+                  value={props.difficulty as string}
+                  onValueChange={(value) => handleChange('difficulty', value)}
+                  options={[
+                    { value: 'peaceful', label: t('properties.difficulty.options.peaceful') },
+                    { value: 'easy', label: t('properties.difficulty.options.easy') },
+                    { value: 'normal', label: t('properties.difficulty.options.normal') },
+                    { value: 'hard', label: t('properties.difficulty.options.hard') },
+                  ]}
+                />
+              )}
+            </div>
+          </section>
+        )}
 
-      {gameplayVisible && (
-        <section className={styles.card} aria-labelledby="properties-gameplay-title">
-          <SectionTitle
-            icon={Gamepad2}
-            as="h3"
-            id="properties-gameplay-title"
-            title={t('properties.sections.gameplay')}
-          />
-          {matchesSearch('pvp') && (
-            <ToggleRow
-              id="pvp"
-              label={t('properties.toggles.pvp.label')}
-              description={t('properties.toggles.pvp.description')}
-              checked={Boolean(props.pvp)}
-              onChange={(v) => handleChange('pvp', v)}
+        {gameplayVisible && (
+          <section className={cardStyles.card} aria-labelledby="properties-gameplay-title">
+            <SectionTitle
+              icon={Gamepad2}
+              as="h3"
+              id="properties-gameplay-title"
+              title={t('properties.sections.gameplay')}
             />
-          )}
-          {matchesSearch('allow-flight') && (
-            <ToggleRow
-              id="allow-flight"
-              label={t('properties.toggles.allowFlight.label')}
-              description={t('properties.toggles.allowFlight.description')}
-              checked={Boolean(props['allow-flight'])}
-              onChange={(v) => handleChange('allow-flight', v)}
-            />
-          )}
-          {matchesSearch('enable-command-block') && (
-            <ToggleRow
-              id="enable-command-block"
-              label={t('properties.toggles.commandBlock.label')}
-              description={t('properties.toggles.commandBlock.description')}
-              checked={Boolean(props['enable-command-block'])}
-              onChange={(v) => handleChange('enable-command-block', v)}
-            />
-          )}
-        </section>
-      )}
-
-      {networkVisible && (
-        <section className={styles.card} aria-labelledby="properties-network-title">
-          <SectionTitle
-            icon={Network}
-            as="h3"
-            id="properties-network-title"
-            title={t('properties.sections.network')}
-          />
-          <div className={styles.grid}>
-            {matchesSearch('max-players') && (
-              <NumberField
-                label={t('properties.maxPlayers')}
-                min={0}
-                value={props['max-players'] as number}
-                onValueChange={(value) => handleChange('max-players', value)}
+            {matchesSearch('pvp') && (
+              <PropertyToggleRow
+                id="pvp"
+                label={t('properties.toggles.pvp.label')}
+                description={t('properties.toggles.pvp.description')}
+                checked={Boolean(props.pvp)}
+                onChange={(v) => handleChange('pvp', v)}
               />
             )}
-            {matchesSearch('server-port') && (
-              <NumberField
-                label={t('properties.serverPort')}
-                min={1}
-                max={65535}
-                formatOptions={{ useGrouping: false }}
-                value={props['server-port'] as number}
-                onValueChange={(value) => handleChange('server-port', value)}
+            {matchesSearch('allow-flight') && (
+              <PropertyToggleRow
+                id="allow-flight"
+                label={t('properties.toggles.allowFlight.label')}
+                description={t('properties.toggles.allowFlight.description')}
+                checked={Boolean(props['allow-flight'])}
+                onChange={(v) => handleChange('allow-flight', v)}
               />
             )}
-          </div>
-          {matchesSearch('online-mode') && (
-            <ToggleRow
-              id="online-mode"
-              label={t('properties.toggles.onlineMode.label')}
-              description={t('properties.toggles.onlineMode.description')}
-              checked={Boolean(props['online-mode'])}
-              onChange={(v) => handleChange('online-mode', v)}
-            />
-          )}
-          {matchesSearch('white-list') && (
-            <ToggleRow
-              id="white-list"
-              label={t('properties.toggles.whitelist.label')}
-              description={t('properties.toggles.whitelist.description')}
-              checked={Boolean(props['white-list'])}
-              onChange={(v) => handleChange('white-list', v)}
-            />
-          )}
-        </section>
-      )}
-    </div>
-  );
-}
+            {matchesSearch('enable-command-block') && (
+              <PropertyToggleRow
+                id="enable-command-block"
+                label={t('properties.toggles.commandBlock.label')}
+                description={t('properties.toggles.commandBlock.description')}
+                checked={Boolean(props['enable-command-block'])}
+                onChange={(v) => handleChange('enable-command-block', v)}
+              />
+            )}
+          </section>
+        )}
 
-/** A switch row: the label with its hint icon on the left, the switch at the far right. The hint is a tooltip, so it takes no row height. */
-function ToggleRow({
-  id,
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-}) {
-  return (
-    <div className={styles.toggleRow}>
-      <span className={styles.toggleLabelGroup}>
-        <span className={styles.toggleLabel} id={`properties-${id}-label`}>
-          {label}
-        </span>
-        <HintIcon hint={description} label={label} />
-      </span>
-      <Switch
-        aria-labelledby={`properties-${id}-label`}
-        checked={checked}
-        onCheckedChange={onChange}
-        data-testid={`properties-toggle-${id}`}
-      />
+        {networkVisible && (
+          <section className={cardStyles.card} aria-labelledby="properties-network-title">
+            <SectionTitle
+              icon={Network}
+              as="h3"
+              id="properties-network-title"
+              title={t('properties.sections.network')}
+            />
+            <div className={cardStyles.grid}>
+              {matchesSearch('max-players') && (
+                <NumberField
+                  label={t('properties.maxPlayers')}
+                  min={0}
+                  value={props['max-players'] as number}
+                  onValueChange={(value) => handleChange('max-players', value)}
+                />
+              )}
+              {matchesSearch('server-port') && (
+                <NumberField
+                  label={t('properties.serverPort')}
+                  min={1}
+                  max={65535}
+                  formatOptions={{ useGrouping: false }}
+                  value={props['server-port'] as number}
+                  onValueChange={(value) => handleChange('server-port', value)}
+                />
+              )}
+            </div>
+            {matchesSearch('online-mode') && (
+              <PropertyToggleRow
+                id="online-mode"
+                label={t('properties.toggles.onlineMode.label')}
+                description={t('properties.toggles.onlineMode.description')}
+                checked={Boolean(props['online-mode'])}
+                onChange={(v) => handleChange('online-mode', v)}
+              />
+            )}
+            {matchesSearch('white-list') && (
+              <PropertyToggleRow
+                id="white-list"
+                label={t('properties.toggles.whitelist.label')}
+                description={t('properties.toggles.whitelist.description')}
+                checked={Boolean(props['white-list'])}
+                onChange={(v) => handleChange('white-list', v)}
+              />
+            )}
+          </section>
+        )}
+
+        <AdvancedPropertyCards
+          values={props}
+          onChange={handleChange}
+          excludeKeys={BASIC_PROPERTY_KEYS}
+          matchesSearch={matchesSearch}
+        />
+      </div>
     </div>
   );
 }

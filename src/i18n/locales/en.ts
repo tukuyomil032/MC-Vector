@@ -1079,7 +1079,6 @@ export const en: TranslationDictionary = {
       emptyTitle: 'No matching properties',
       empty: 'Try another word, such as a property key or label.',
     },
-    openAdvanced: 'Open Advanced',
     saveChanges: 'Save Changes',
     loadFailed: 'Failed to load server properties',
     loadFailedDescription:
@@ -1088,7 +1087,6 @@ export const en: TranslationDictionary = {
     unsavedChanges: 'Unsaved changes',
     saveSuccess: 'Properties saved',
     saveFailed: 'Failed to save properties',
-    advancedSaveSuccess: 'Advanced settings saved',
     loading: 'Loading properties...',
     sections: {
       basic: 'Basic Settings',
@@ -1144,10 +1142,6 @@ export const en: TranslationDictionary = {
   },
 
   advancedSettings: {
-    title: 'Advanced Server Settings (server.properties)',
-    loading: 'Loading settings...',
-    applyAndClose: 'Apply and Close',
-    categoriesLabel: 'Property categories',
     inferredDescription: 'Property found in server.properties.',
     propertyDescriptionFallback: 'Property key: {key}',
     categories: {

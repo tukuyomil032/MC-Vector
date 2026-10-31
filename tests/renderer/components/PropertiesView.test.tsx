@@ -25,9 +25,9 @@ vi.mock('@/lib/error-utils', () => ({ logError: logErrorMock }));
 vi.mock('@/renderer/shared/notify', () => ({
   notify: { error: toastMock.error, success: toastMock.success, info: vi.fn(), warning: vi.fn() },
 }));
-vi.mock('@/renderer/components/properties/AdvancedSettingsWindow', () => ({
-  default: () => null,
-}));
+// Every test here mounts the whole page, which now includes every advanced field. In jsdom that mount
+// takes about a second, so under a parallel suite run the 5s default is too tight.
+vi.setConfig({ testTimeout: 15_000 });
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -203,5 +203,72 @@ describe('PropertiesView load failure', () => {
     await waitFor(() => expect(motdInput()).toHaveValue('Real value'));
     expect(getServerPropertiesMock).toHaveBeenCalledTimes(2);
     expect(saveServerPropertiesMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('PropertiesView advanced cards', () => {
+  it('shows advanced properties on the same page, including keys the app does not define', async () => {
+    getServerPropertiesMock.mockResolvedValue({
+      motd: 'Hello',
+      'server-port': 25565,
+      'view-distance': 12,
+      'enable-rcon': false,
+      'custom-key': 'kept',
+    });
+    render(<PropertiesView server={serverA} />);
+    await waitFor(() => expect(motdInput()).toHaveValue('Hello'));
+
+    expect(screen.queryByRole('button', { name: 'Open Advanced' })).not.toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'View distance' })).toHaveValue('12');
+    expect(screen.getByRole('switch', { name: 'Enable RCON' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    // An unknown key from the file keeps its raw name as the label and lands under Advanced.
+    expect(screen.getByLabelText('custom-key')).toHaveValue('kept');
+    expect(screen.getByRole('heading', { name: 'World' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Advanced' })).toBeInTheDocument();
+  });
+
+  it('saves an advanced change together with the basic values', async () => {
+    getServerPropertiesMock.mockResolvedValue({
+      motd: 'Hello',
+      'server-port': 25565,
+      'enable-rcon': false,
+    });
+    saveServerPropertiesMock.mockResolvedValue(null);
+    render(<PropertiesView server={serverA} />);
+    await waitFor(() => expect(motdInput()).toHaveValue('Hello'));
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable RCON' }));
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(saveServerPropertiesMock).toHaveBeenCalledOnce());
+    expect(saveServerPropertiesMock).toHaveBeenCalledWith(
+      serverA.id,
+      expect.objectContaining({ motd: 'Hello', 'server-port': 25565, 'enable-rcon': true }),
+    );
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('Properties saved'));
+  });
+
+  it('finds an advanced property by its English label and leaves out cards with no match', async () => {
+    getServerPropertiesMock.mockResolvedValue({
+      motd: 'Hello',
+      'server-port': 25565,
+      'view-distance': 12,
+      'custom-key': 'kept',
+    });
+    render(<PropertiesView server={serverA} />);
+    await waitFor(() => expect(motdInput()).toHaveValue('Hello'));
+
+    fireEvent.change(screen.getByLabelText('Search properties'), {
+      target: { value: 'view distance' },
+    });
+
+    expect(screen.getByRole('spinbutton', { name: 'View distance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'World' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Advanced' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('MOTD')).not.toBeInTheDocument();
   });
 });

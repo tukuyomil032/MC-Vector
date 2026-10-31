@@ -1,0 +1,51 @@
+/* Shared by the basic cards and the advanced cards, so every card and switch row looks the same. */
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 14px);
+  background: var(--surface-raised);
+}
+
+/* Fields sit in a grid of at least 16rem columns, each with its label above the control, so labels never wrap beside a select. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-4);
+}
+
+.field {
+  min-width: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+/* Label and hint icon on the left, the switch aligned to the far right edge of the row. */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 2.25rem;
+}
+
+.toggleRow + .toggleRow {
+  border-top: 1px solid var(--border-subtle, var(--border));
+}
+
+.toggleLabelGroup {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.toggleLabel {
+  font-size: var(--text-base);
+  font-weight: 500;
+}

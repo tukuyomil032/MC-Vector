@@ -1079,7 +1079,6 @@ export interface TranslationDictionary {
       emptyTitle: string;
       empty: string;
     };
-    openAdvanced: string;
     saveChanges: string;
     loadFailed: string;
     loadFailedDescription: string;
@@ -1087,7 +1086,6 @@ export interface TranslationDictionary {
     unsavedChanges: string;
     saveSuccess: string;
     saveFailed: string;
-    advancedSaveSuccess: string;
     loading: string;
     sections: {
       basic: string;
@@ -1142,12 +1140,8 @@ export interface TranslationDictionary {
     };
   };
 
-  /** Advanced settings window translations */
+  /** Advanced server property card translations */
   advancedSettings: {
-    title: string;
-    loading: string;
-    applyAndClose: string;
-    categoriesLabel: string;
     inferredDescription: string;
     propertyDescriptionFallback: string;
     categories: {

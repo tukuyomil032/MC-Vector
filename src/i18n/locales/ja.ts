@@ -1079,7 +1079,6 @@ export const ja: TranslationDictionary = {
       emptyTitle: '一致するプロパティがありません',
       empty: 'キー名や項目名など、別の語句で探してください。',
     },
-    openAdvanced: '詳細設定を開く',
     saveChanges: '変更を保存',
     loadFailed: 'サーバープロパティの読み込みに失敗しました',
     loadFailedDescription:
@@ -1088,7 +1087,6 @@ export const ja: TranslationDictionary = {
     unsavedChanges: '未保存の変更があります',
     saveSuccess: 'プロパティを保存しました',
     saveFailed: 'プロパティの保存に失敗しました',
-    advancedSaveSuccess: '詳細設定を保存しました',
     loading: 'プロパティを読み込み中…',
     sections: {
       basic: '基本設定',
@@ -1144,10 +1142,6 @@ export const ja: TranslationDictionary = {
   },
 
   advancedSettings: {
-    title: '詳細サーバー設定 (server.properties)',
-    loading: '設定を読み込み中…',
-    applyAndClose: '適用して閉じる',
-    categoriesLabel: 'プロパティのカテゴリ',
     inferredDescription: 'server.properties に存在する項目です。',
     propertyDescriptionFallback: 'プロパティキー: {key}',
     categories: {

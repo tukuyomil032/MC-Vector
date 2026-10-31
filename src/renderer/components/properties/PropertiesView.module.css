@@ -1,28 +1,12 @@
 /* Full width of the content card. The card scrolls the page, so this only grows with its content.
-   The header, toolbar and any one-line empty state span the page; from 1024px the section cards flow into two columns. */
+   The header and any one-line empty state span the page; the section cards flow in a masonry (see .cards). */
 .page {
-  display: grid;
+  display: flex;
   box-sizing: border-box;
   min-height: 100%;
   padding: var(--space-6);
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
+  flex-direction: column;
   gap: var(--space-5);
-}
-
-.page > * {
-  grid-column: 1 / -1;
-  min-width: 0;
-}
-
-@media (min-width: 1024px) {
-  .page {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .page > .card {
-    grid-column: auto;
-  }
 }
 
 .loading {
@@ -31,12 +15,22 @@
   font-size: var(--text-sm);
 }
 
+/* One row: the title and search on the left, the unsaved note and the save button at the right edge. It wraps only when narrow. */
 .header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-3) var(--space-5);
+}
+
+.titleGroup {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
 }
 
 .title {
@@ -44,6 +38,12 @@
   font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: var(--tracking-body);
+}
+
+/* Capped at 24rem so the search stays a search box and does not stretch across a wide header. */
+.search {
+  flex: 0 1 24rem;
+  min-width: min(100%, 14rem);
 }
 
 .actions {
@@ -59,59 +59,26 @@
   font-size: var(--text-sm);
 }
 
-.toolbar {
-  max-width: 24rem;
-}
-
 .empty {
   margin-top: var(--space-4);
 }
 
-.card {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card, 14px);
-  background: var(--surface-raised);
+/* Cards flow as a masonry: two columns from 1024px, one below. A card never splits across columns. */
+.cards {
+  columns: 1;
+  column-gap: var(--space-5);
 }
 
-/* Fields sit in a grid of at least 16rem columns, each with its label above the control, so labels never wrap beside a select. */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-  gap: var(--space-4);
+@media (min-width: 1024px) {
+  .cards {
+    columns: 2;
+  }
 }
 
-.wide {
-  grid-column: 1 / -1;
-}
-
-/* Label and hint icon on the left, the switch aligned to the far right edge of the row. */
-.toggleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  min-height: 2.25rem;
-}
-
-.toggleRow + .toggleRow {
-  border-top: 1px solid var(--border-subtle, var(--border));
-}
-
-.toggleLabelGroup {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.toggleLabel {
-  font-size: var(--text-base);
-  font-weight: 500;
+.cards > * {
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: var(--space-5);
 }
 
 @media (max-width: 40rem) {
