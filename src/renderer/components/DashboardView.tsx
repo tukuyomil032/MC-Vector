@@ -392,7 +392,7 @@ export default function DashboardView({ server }: Props) {
           context={tpsSamplingLabel}
         />
 
-        <div data-testid="dashboard-kpi-cpu">
+        <div className={styles.metricSlot} data-testid="dashboard-kpi-cpu">
           <MetricCard
             label={t('dashboard.stats.currentCpu')}
             value={currentCpu}
@@ -401,7 +401,7 @@ export default function DashboardView({ server }: Props) {
           />
         </div>
 
-        <div data-testid="dashboard-kpi-memory">
+        <div className={styles.metricSlot} data-testid="dashboard-kpi-memory">
           <MetricCard
             label={t('dashboard.stats.currentMemory')}
             value={currentMem}

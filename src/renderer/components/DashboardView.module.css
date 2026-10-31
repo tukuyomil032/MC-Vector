@@ -96,6 +96,17 @@
   }
 }
 
+/* The Arc MetricCard sits in a wrapper for its test id; stretch it so its edges line up with the row. */
+.metricSlot {
+  display: flex;
+  min-width: 0;
+}
+
+.metricSlot > * {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Mirrors the anatomy of the Arc MetricCard: a label, a large value, and a quiet context line. */
 .kpi {
   min-width: 0;
