@@ -1,11 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getTranslation } from '../../i18n';
 import { logError, toErrorMessage } from '../../lib/error-utils';
+import { notify } from '../shared/notify';
 import {
   checkForUpdates,
   clearPendingUpdate,
   downloadAndInstallUpdate,
   restartToApplyUpdate,
 } from '../../lib/update-commands';
+
+/** One toast id for the whole download, so progress updates in place and finishes as a single result. */
+const UPDATE_TOAST_ID = 'app-update';
+
+/** Relaunches for an installed update. Failures become a toast, because the modal may already be closed. */
+async function restartForUpdate(): Promise<void> {
+  try {
+    await restartToApplyUpdate();
+  } catch (error) {
+    logError('Restart to apply update failed', error);
+    notify.error(getTranslation()('settings.update.errorTitle'), toErrorMessage(error));
+  }
+}
 
 export interface UpdatePromptState {
   version?: string;
@@ -110,16 +125,28 @@ export function useAppUpdater() {
     }
     isUpdatingRef.current = true;
     setUpdateProgress(0);
+    const tr = getTranslation();
+    const downloadingTitle = tr('settings.update.downloadingTitle');
+    notify.progress(UPDATE_TOAST_ID, { title: downloadingTitle, progress: 0 });
     try {
       await downloadAndInstallUpdate((downloaded, total) => {
         const percentage = total > 0 ? (downloaded / total) * 100 : 0;
         setUpdateProgress(percentage);
+        notify.progress(UPDATE_TOAST_ID, { title: downloadingTitle, progress: percentage });
       });
       setUpdateError(null);
       setUpdateProgress(null);
       setUpdateReady(true);
+      // The finished toast carries the restart, so the update can be applied after the modal has closed.
+      notify.done(UPDATE_TOAST_ID, {
+        type: 'success',
+        title: tr('settings.update.readyTitle'),
+        description: tr('settings.update.downloaded'),
+        action: { label: tr('settings.update.restart'), onClick: () => void restartForUpdate() },
+      });
     } catch (error) {
       logError('Update installation failed', error);
+      notify.dismiss(UPDATE_TOAST_ID);
       setUpdateError(toErrorMessage(error));
       setUpdateProgress(null);
       setUpdateModalOpen(true);
@@ -128,15 +155,7 @@ export function useAppUpdater() {
     }
   }, []);
 
-  const handleInstallUpdate = useCallback(async () => {
-    try {
-      await restartToApplyUpdate();
-    } catch (error) {
-      logError('Restart to apply update failed', error);
-      setUpdateError(toErrorMessage(error));
-      setUpdateModalOpen(true);
-    }
-  }, []);
+  const handleInstallUpdate = useCallback(() => restartForUpdate(), []);
 
   const handleDismissUpdate = useCallback(() => {
     setUpdateModalOpen(false);

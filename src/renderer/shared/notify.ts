@@ -1,4 +1,4 @@
-import type { ToastStackApi } from '@/components/arc/toast-stack/toast-stack';
+import type { ToastAction, ToastStackApi } from '@/components/arc/toast-stack/toast-stack';
 
 /**
  * Module-level bridge to the toast stack. `NotifyBridge` registers the stack on mount, so code outside React
@@ -25,6 +25,8 @@ export interface NotifyDoneOptions {
   type: NotifyDoneType;
   title: string;
   description?: string;
+  /** Optional button on the finished toast, such as restart after an update finishes downloading. */
+  action?: ToastAction;
 }
 
 const clampPercent = (value: number) =>
@@ -56,9 +58,9 @@ export const notify = {
   },
 
   /** Replaces the progress toast for `key` with its final result. The bar goes away because the type is no longer loading. */
-  done(key: string, { type, title, description }: NotifyDoneOptions): string | undefined {
+  done(key: string, { type, title, description, action }: NotifyDoneOptions): string | undefined {
     lastProgress.delete(key);
-    return bridge?.toast({ id: key, type, title, description, progress: undefined });
+    return bridge?.toast({ id: key, type, title, description, action, progress: undefined });
   },
 
   dismiss(key: string): void {

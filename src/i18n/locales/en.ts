@@ -53,7 +53,7 @@ export const en: TranslationDictionary = {
       downloadingTitle: 'Downloading the update',
       errorTitle: 'The update could not be applied',
       downloadingLabel: 'Downloading',
-      downloadHint: 'Keep the app open until the download finishes.',
+      downloadHint: 'You can close this window. Progress continues in a notification.',
       later: 'Later',
       retry: 'Try again',
       channelLabel: 'Update channel',

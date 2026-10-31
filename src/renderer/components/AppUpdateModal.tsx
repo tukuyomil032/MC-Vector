@@ -53,9 +53,6 @@ export default function AppUpdateModal({
           ? t('settings.update.title')
           : t('settings.update.availableTitle', { version: updatePrompt?.version || '?' });
 
-  // Closing while a download runs is blocked here; the Close button is disabled to match.
-  const blockDismiss = (event: Event) => event.preventDefault();
-
   const footer =
     phase === 'ready' ? (
       <>
@@ -72,7 +69,7 @@ export default function AppUpdateModal({
         </Button>
       </>
     ) : phase === 'downloading' ? (
-      <Button type="button" variant="secondary" disabled>
+      <Button type="button" variant="secondary" onClick={onDismiss}>
         {t('common.close')}
       </Button>
     ) : phase === 'error' ? (
@@ -109,7 +106,7 @@ export default function AppUpdateModal({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && phase !== 'downloading') onDismiss();
+        if (!next) onDismiss();
       }}
     >
       <DialogContent
@@ -118,8 +115,6 @@ export default function AppUpdateModal({
         title={title}
         width="min(520px, calc(100vw - var(--space-8)))"
         footer={footer}
-        onEscapeKeyDown={phase === 'downloading' ? blockDismiss : undefined}
-        onPointerDownOutside={phase === 'downloading' ? blockDismiss : undefined}
       >
         <div className={styles.body}>
           {phase === 'available' && updatePrompt && (
