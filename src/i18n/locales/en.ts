@@ -170,17 +170,18 @@ export const en: TranslationDictionary = {
   },
 
   dashboard: {
-    title: 'Dashboard: {name}',
     stats: {
       status: 'Status',
       software: 'Software',
+      serverInfo: 'Server info',
+      address: 'Address',
+      copyAddress: 'Copy address',
+      allocatedMemory: 'Allocated memory',
+      javaRuntime: 'Java runtime',
       currentCpu: 'Current CPU',
       currentMemory: 'Current Memory',
       currentTps: 'Current TPS',
-      tpsAutoSampled: 'Paper / LeafMC: auto sampled',
-      tpsLogBased: 'Log-based detection',
       uptime: 'Uptime',
-      latestSample: 'Latest sample, last 60s',
       kpiLabel: 'Key metrics',
       statusValues: {
         online: 'ONLINE',
@@ -196,8 +197,8 @@ export const en: TranslationDictionary = {
       cpuLast60s: 'CPU Usage (%) - Last 60s',
       memoryLast60s: 'Memory Usage (MB) - Last 60s',
       tpsLast60s: 'TPS - Last 60s',
-      tpsNoData: 'TPS data is not available yet. Keep the server online and wait for log sampling.',
-      metricsNoData: 'Waiting for the first measurement.',
+      tpsNoData: 'Waiting for TPS',
+      metricsNoData: 'Waiting for measurement',
       elapsedSeconds: '{seconds}s',
       elapsedTime: 'Time since startup (seconds)',
       heldSince: 'Held since {{time}} (last measured)',
@@ -219,21 +220,17 @@ export const en: TranslationDictionary = {
     },
     command: {
       label: 'Command',
-      placeholder: 'Type a command...',
+      placeholder: 'Type a command (↑ ↓ for history)',
       offlineHint: 'Start the server to send commands.',
     },
     emptyLog: {
       waiting: 'Waiting for logs...',
       notFound: '{level} logs not found.',
-      waitingHint: 'Logs appear here once the server starts.',
-      notFoundHint: 'Choose another level to see more lines.',
     },
     filter: {
-      label: 'Level',
       ariaLabel: 'Log level filter',
       all: 'All',
     },
-    historyHint: '↑ / ↓ History',
     search: {
       label: 'Find',
       placeholder: 'Search logs...',
@@ -250,10 +247,8 @@ export const en: TranslationDictionary = {
       unpin: 'Unpin',
     },
     status: {
-      address: 'ADDRESS',
       clickToCopy: 'Click to Copy',
       copied: 'Copied',
-      status: 'STATUS',
       memory: 'MEMORY',
     },
     memory: {

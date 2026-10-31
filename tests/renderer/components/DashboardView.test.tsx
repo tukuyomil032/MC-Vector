@@ -18,25 +18,6 @@ vi.mock('@/i18n', () => ({
 }));
 vi.mock('@/lib/tauri-api', () => ({ tauriListen: vi.fn().mockResolvedValue(() => {}) }));
 vi.mock('@/lib/notification-commands', () => ({ sendServerNotification: vi.fn() }));
-vi.mock('@/components/arc/metric-card/metric-card', () => ({
-  MetricCard: ({
-    label,
-    value,
-    suffix,
-    context,
-  }: {
-    label: string;
-    value: number;
-    suffix?: string;
-    context?: string;
-  }) => (
-    <article>
-      <p>{label}</p>
-      <p>{`${value}${suffix ?? ''}`}</p>
-      {context && <p>{context}</p>}
-    </article>
-  ),
-}));
 vi.mock('@/components/arc/line-chart/line-chart', () => ({
   LineChart: ({
     label,
@@ -124,6 +105,8 @@ describe('DashboardView metric charts', () => {
       within(screen.getByTestId('dashboard-chart-tps')).getByText('dashboard.charts.tpsNoData'),
     ).toBeInTheDocument();
     expect(screen.queryAllByTestId('line-chart-datum')).toHaveLength(0);
+    // An empty chart draws no plot, so no gridlines or axis are rendered at all.
+    expect(screen.queryAllByTestId('line-chart')).toHaveLength(0);
   });
 
   it('keeps the waiting state and excludes an anchor-only snapshot from readouts', () => {
@@ -177,6 +160,17 @@ describe('DashboardView metric charts', () => {
     render(<DashboardView server={server} />);
 
     expect(screen.getAllByText(/held since 70s/)).toHaveLength(3);
+  });
+
+  it('shows the software and address only in the server info card', () => {
+    render(<DashboardView server={server} />);
+
+    const card = screen.getByTestId('dashboard-server-card');
+    expect(within(card).getByTestId('dashboard-software')).toHaveTextContent('Paper 1.21');
+    expect(within(card).getByTestId('dashboard-address')).toHaveTextContent('localhost:25565');
+    expect(within(card).getByRole('button', { name: 'dashboard.stats.copyAddress' })).toBeEnabled();
+    // The software name appears once on the whole screen, in the server info card.
+    expect(screen.getAllByText(/Paper/)).toHaveLength(1);
   });
 
   it('renders each sample as a datum and keeps the series key stable', () => {

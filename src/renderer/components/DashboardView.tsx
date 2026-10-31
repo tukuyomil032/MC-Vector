@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { Activity, Cpu, Gauge, MemoryStick, Server, type LucideIcon } from 'lucide-react';
+import { CopyButton } from '@/components/arc/copy-button/copy-button';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
-import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
+import { formatBytes } from '../shared/format-bytes';
 import { Phrase } from '../shared/japanese-phrase';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { tauriListen } from '../../lib/tauri-api';
@@ -20,6 +21,8 @@ import {
   normalizeMetric,
 } from '../shared/server-metrics';
 import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
+import { EmptyLine } from './ui/EmptyLine';
+import { IconTile, SectionTitle } from './ui/IconTile';
 import styles from './DashboardView.module.css';
 
 interface Props {
@@ -77,29 +80,27 @@ const getTpsTone = (tps: number | null): TpsTone => {
   return 'poor';
 };
 
-interface KpiTileProps {
+interface StatCardProps {
   testId: string;
+  icon: LucideIcon;
   label: string;
-  value: ReactNode;
-  context?: string;
+  value: string;
   tone?: TpsTone;
 }
 
-/** Same anatomy as the Arc MetricCard, for values MetricCard cannot show: text, a missing sample, or a threshold color. */
-function KpiTile({ testId, label, value, context, tone }: KpiTileProps) {
+/** One measure at a glance: an icon tile, its label, and the value. Nothing else sits in the card. */
+function StatCard({ testId, icon, label, value, tone }: StatCardProps) {
   return (
-    <article className={styles.kpi} data-testid={testId}>
-      <p className={styles.kpiLabel}>
-        <Phrase text={label} />
-      </p>
-      <p className={styles.kpiValue} data-tone={tone} data-testid={`${testId}-value`}>
+    <article className={styles.stat} data-testid={testId}>
+      <div className={styles.statHead}>
+        <IconTile icon={icon} size="md" />
+        <p className={styles.statLabel}>
+          <Phrase text={label} />
+        </p>
+      </div>
+      <p className={styles.statValue} data-tone={tone} data-testid={`${testId}-value`}>
         {value}
       </p>
-      {context && (
-        <p className={styles.kpiContext}>
-          <Phrase text={context} />
-        </p>
-      )}
     </article>
   );
 }
@@ -167,26 +168,32 @@ function MetricChartCard({
   return (
     <article className={styles.chartCard} data-testid={testId}>
       <h3 className={styles.chartTitle}>{title}</h3>
-      <LineChart
-        label={title}
-        data={data}
-        series={[{ key: SERIES_KEY, label: seriesLabel }]}
-        height={CHART_HEIGHT}
-        formatValue={formatValue}
-        formatTick={formatTick}
-        emptyLabel={emptyLabel}
-        categoryLabel={elapsedAxisLabel}
-        legend={false}
-        yDomain={yDomain}
-        messages={arc.lineChart}
-      />
-      <p className={styles.chartAxis}>{elapsedAxisLabel}</p>
+      {data.length === 0 ? (
+        // Without data there is no plot, so no gridlines or axis: one centered line in the plot's place.
+        <div className={styles.chartEmpty}>
+          <EmptyLine title={emptyLabel} />
+        </div>
+      ) : (
+        <LineChart
+          label={title}
+          data={data}
+          series={[{ key: SERIES_KEY, label: seriesLabel }]}
+          height={CHART_HEIGHT}
+          formatValue={formatValue}
+          formatTick={formatTick}
+          categoryLabel={elapsedAxisLabel}
+          legend={false}
+          yDomain={yDomain}
+          messages={arc.lineChart}
+        />
+      )}
     </article>
   );
 }
 
 export default function DashboardView({ server }: Props) {
   const { t, locale } = useTranslation();
+  const arc = useArcMessages();
   const snapshot = useServerMetricHistoryStore((state) => state.snapshotsByServer[server.id]);
   const receivedAt = useServerMetricHistoryStore(
     (state) => state.receivedAtByServer[server.id] ?? 0,
@@ -240,10 +247,6 @@ export default function DashboardView({ server }: Props) {
       t('dashboard.charts.heldSince', { time: formatElapsed(sampleElapsedMs) }),
     [formatElapsed, t],
   );
-
-  const supportsTpsPolling = useMemo(() => {
-    return server.software === 'Paper' || server.software === 'LeafMC';
-  }, [server.software]);
 
   const currentCpu = useMemo(() => {
     return resourceWindowStats[resourceWindowStats.length - 1]?.cpu ?? 0;
@@ -306,12 +309,6 @@ export default function DashboardView({ server }: Props) {
     [formatElapsed, heldSinceLabel, tpsChartStats],
   );
 
-  const tpsSamplingLabel = useMemo(() => {
-    return supportsTpsPolling
-      ? t('dashboard.stats.tpsAutoSampled')
-      : t('dashboard.stats.tpsLogBased');
-  }, [supportsTpsPolling, t]);
-
   useEffect(() => {
     let cancelled = false;
     let unlisten: (() => void) | undefined;
@@ -351,73 +348,87 @@ export default function DashboardView({ server }: Props) {
     };
   }, [server.id, server.notifyOnHighCpu, server.notifyHighCpuThreshold, server.name, t]);
 
-  const statusDot = <span className={styles.dot} data-status={server.status} aria-hidden="true" />;
+  const address = `localhost:${server.port}`;
 
   return (
     <div className={styles.page} data-testid="dashboard-view">
-      <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>{t('dashboard.title', { name: server.name })}</h2>
-          <p className={styles.meta}>
-            {t('dashboard.stats.software')}: {server.software} {server.version}
-          </p>
-        </div>
-        <div className={styles.headerStatus}>
-          <span>{t('dashboard.stats.status')}</span>
-          <span className={styles.statusValue} data-testid="dashboard-status">
-            {statusDot}
-            {statusLabel}
-          </span>
-        </div>
-      </header>
+      <div className={styles.overview}>
+        <article className={styles.card} data-testid="dashboard-status-card">
+          <SectionTitle as="h3" icon={Activity} title={t('dashboard.stats.status')} />
+          <div className={styles.statusBody}>
+            <p className={styles.statusValue} data-testid="dashboard-status">
+              <span className={styles.dot} data-status={server.status} aria-hidden="true" />
+              {statusLabel}
+            </p>
+            <p className={styles.uptime} data-testid="dashboard-kpi-uptime">
+              <span>{t('dashboard.stats.uptime')}</span>
+              <span className={styles.uptimeValue} data-testid="dashboard-kpi-uptime-value">
+                {uptime}
+              </span>
+            </p>
+          </div>
+        </article>
+
+        <article className={styles.card} data-testid="dashboard-server-card">
+          <SectionTitle as="h3" icon={Server} title={t('dashboard.stats.serverInfo')} />
+          <dl className={styles.facts}>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.software')}</dt>
+              <dd className={styles.factValue} data-testid="dashboard-software">
+                {server.software} {server.version}
+              </dd>
+            </div>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.address')}</dt>
+              <dd className={styles.addressRow}>
+                <code className={styles.address} data-testid="dashboard-address">
+                  {address}
+                </code>
+                <CopyButton
+                  value={address}
+                  label={t('dashboard.stats.copyAddress')}
+                  messages={arc.copy}
+                  iconOnly
+                  variant="plain"
+                />
+              </dd>
+            </div>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.allocatedMemory')}</dt>
+              <dd className={styles.factValue}>
+                {formatBytes(server.memory * 1024 * 1024, locale)}
+              </dd>
+            </div>
+            <div>
+              <dt className={styles.factLabel}>{t('dashboard.stats.javaRuntime')}</dt>
+              <dd className={styles.factValue}>
+                {server.javaPath || t('serverSettings.javaSystemDefault')}
+              </dd>
+            </div>
+          </dl>
+        </article>
+      </div>
 
       <section className={styles.kpiGrid} aria-label={t('dashboard.stats.kpiLabel')}>
-        <KpiTile
-          testId="dashboard-kpi-status"
-          label={t('dashboard.stats.status')}
-          value={
-            <span className={styles.statusValue}>
-              {statusDot}
-              {statusLabel}
-            </span>
-          }
-          context={`${t('dashboard.stats.software')}: ${server.software}`}
+        <StatCard
+          testId="dashboard-kpi-cpu"
+          icon={Cpu}
+          label={t('dashboard.stats.currentCpu')}
+          value={`${formatters.decimal.format(currentCpu)}%`}
         />
-
-        <KpiTile
+        <StatCard
+          testId="dashboard-kpi-memory"
+          icon={MemoryStick}
+          label={t('dashboard.stats.currentMemory')}
+          value={`${formatters.whole.format(currentMem)} ${megabytesLabel}`}
+        />
+        <StatCard
           testId="dashboard-kpi-tps"
+          icon={Gauge}
           label={t('dashboard.stats.currentTps')}
           value={currentTps === null ? '--' : formatters.tps.format(currentTps)}
           tone={tpsTone}
-          context={tpsSamplingLabel}
         />
-
-        <div className={styles.metricSlot} data-testid="dashboard-kpi-cpu">
-          <MetricCard
-            label={t('dashboard.stats.currentCpu')}
-            value={currentCpu}
-            suffix="%"
-            context={t('dashboard.stats.latestSample')}
-          />
-        </div>
-
-        <div className={styles.metricSlot} data-testid="dashboard-kpi-memory">
-          <MetricCard
-            label={t('dashboard.stats.currentMemory')}
-            value={currentMem}
-            suffix={` ${megabytesLabel}`}
-            context={t('dashboard.stats.latestSample')}
-          />
-        </div>
-
-        <KpiTile
-          testId="dashboard-kpi-software"
-          label={t('dashboard.stats.software')}
-          value={server.software}
-          context={server.version}
-        />
-
-        <KpiTile testId="dashboard-kpi-uptime" label={t('dashboard.stats.uptime')} value={uptime} />
       </section>
 
       <section className={styles.chartGrid}>

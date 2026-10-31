@@ -714,11 +714,23 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         })
       : t('console.memory.value', { used: '-', total: '-', unit: memoryUnit });
 
+  const sendButton = (
+    <Button
+      type="button"
+      variant="primary"
+      data-testid="console-send-button"
+      disabled={!canSendCommand}
+      onClick={handleSend}
+    >
+      <Send aria-hidden="true" size={14} strokeWidth={1.75} />
+      {t('console.actions.send')}
+    </Button>
+  );
+
   return (
     <div className={styles.view} data-testid="console-view">
-      <section className={styles.statusStrip}>
-        <div className={`${styles.statusCol} ${styles.statusColDivider}`}>
-          <div className={styles.statusLabel}>{t('console.status.address')}</div>
+      <section className={styles.toolbar}>
+        <div className={styles.toolbarGroup}>
           <Tooltip content={t('console.status.clickToCopy')} side="bottom">
             <button
               type="button"
@@ -738,123 +750,159 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               </span>
             </button>
           </Tooltip>
-        </div>
 
-        <div className={`${styles.statusCol} ${styles.statusColDivider}`}>
-          <div className={styles.statusLabel}>{t('console.status.status')}</div>
-          <div className={styles.statusValue} data-status={server.status}>
-            {t(STATUS_LABEL_KEYS[server.status])}
-          </div>
-        </div>
+          <span className={styles.divider} aria-hidden="true" />
 
-        <div className={styles.statusCol}>
-          <div className={styles.statusLabel}>{t('console.status.memory')}</div>
-          <div className={styles.memoryValue}>{memoryLabel}</div>
-        </div>
-      </section>
-
-      <section className={styles.searchStrip} data-open={isSearchOpen}>
-        {isSearchOpen ? (
-          <>
-            <SearchField
-              ref={searchInputRef}
-              label={t('console.search.label')}
-              clearLabel={arc.search.clear}
-              value={searchQuery}
-              onValueChange={(value) => {
-                setSearchQuery(value);
-                setActiveMatchIndex(0);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  jumpToMatch(event.shiftKey ? -1 : 1);
-                }
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  closeSearch();
-                }
-              }}
-              placeholder={t('console.search.placeholder')}
-              className={styles.searchField}
-              data-testid="console-search-input"
-            />
-
-            <span
-              className={styles.matchCount}
-              data-testid="console-search-count"
-              aria-live="polite"
-            >
-              {t('console.search.count', {
-                current: totalMatches === 0 ? 0 : activeMatchIndex + 1,
-                total: totalMatches,
-              })}
+          <span className={styles.statusItem}>
+            <span className={styles.statusDot} data-status={server.status} aria-hidden="true" />
+            <span className={styles.statusValue} data-testid="console-status">
+              {t(STATUS_LABEL_KEYS[server.status])}
             </span>
+          </span>
 
-            <Button
-              type="button"
-              size="sm"
-              variant={isRegexSearchMode ? 'primary' : 'secondary'}
-              aria-pressed={isRegexSearchMode}
-              onClick={() => {
-                setIsRegexSearchMode((prev) => !prev);
-                setActiveMatchIndex(0);
-              }}
-            >
-              {t('console.search.regex')}
-            </Button>
+          <span className={styles.divider} aria-hidden="true" />
 
-            <ButtonGroup
-              label={t('console.search.navigate')}
-              size="sm"
-              items={[
-                {
-                  id: 'prev',
-                  label: t('console.search.prev'),
-                  icon: <ChevronUp aria-hidden="true" size={14} strokeWidth={1.75} />,
-                  iconOnly: true,
-                  disabled: totalMatches === 0,
-                  onSelect: () => jumpToMatch(-1),
-                },
-                {
-                  id: 'next',
-                  label: t('console.search.next'),
-                  icon: <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} />,
-                  iconOnly: true,
-                  disabled: totalMatches === 0,
-                  onSelect: () => jumpToMatch(1),
-                },
-              ]}
-            />
+          <span className={styles.memoryItem}>
+            <span className={styles.itemLabel}>{t('console.status.memory')}</span>
+            <span className={styles.memoryValue}>{memoryLabel}</span>
+          </span>
+        </div>
 
-            <Button type="button" size="sm" variant="ghost" onClick={closeSearch}>
-              <X aria-hidden="true" size={14} strokeWidth={1.75} />
-              {t('common.close')}
-            </Button>
+        <div className={styles.toolbarGroup}>
+          {isSearchOpen ? (
+            <div className={styles.searchOpen} data-testid="console-search-bar">
+              <div className={styles.searchWrap}>
+                <SearchField
+                  ref={searchInputRef}
+                  label={t('console.search.label')}
+                  clearLabel={arc.search.clear}
+                  value={searchQuery}
+                  onValueChange={(value) => {
+                    setSearchQuery(value);
+                    setActiveMatchIndex(0);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      jumpToMatch(event.shiftKey ? -1 : 1);
+                    }
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      closeSearch();
+                    }
+                  }}
+                  placeholder={t('console.search.placeholder')}
+                  data-testid="console-search-input"
+                />
+              </div>
 
-            {isRegexInvalid && (
-              <span role="alert" className={styles.searchError}>
-                {t('console.search.invalidRegex')}
+              <span
+                className={styles.matchCount}
+                data-testid="console-search-count"
+                aria-live="polite"
+              >
+                {t('console.search.count', {
+                  current: totalMatches === 0 ? 0 : activeMatchIndex + 1,
+                  total: totalMatches,
+                })}
               </span>
-            )}
-          </>
-        ) : (
-          <>
-            <span className={styles.searchPlaceholder}>
-              <Search aria-hidden="true" size={14} strokeWidth={1.75} />
-              {t('console.search.placeholder')}
-            </span>
+
+              <Button
+                type="button"
+                size="sm"
+                variant={isRegexSearchMode ? 'primary' : 'secondary'}
+                aria-pressed={isRegexSearchMode}
+                onClick={() => {
+                  setIsRegexSearchMode((prev) => !prev);
+                  setActiveMatchIndex(0);
+                }}
+              >
+                {t('console.search.regex')}
+              </Button>
+
+              <ButtonGroup
+                label={t('console.search.navigate')}
+                size="sm"
+                items={[
+                  {
+                    id: 'prev',
+                    label: t('console.search.prev'),
+                    icon: <ChevronUp aria-hidden="true" size={14} strokeWidth={1.75} />,
+                    iconOnly: true,
+                    disabled: totalMatches === 0,
+                    onSelect: () => jumpToMatch(-1),
+                  },
+                  {
+                    id: 'next',
+                    label: t('console.search.next'),
+                    icon: <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} />,
+                    iconOnly: true,
+                    disabled: totalMatches === 0,
+                    onSelect: () => jumpToMatch(1),
+                  },
+                ]}
+              />
+
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={styles.iconButton}
+                aria-label={t('common.close')}
+                onClick={closeSearch}
+              >
+                <X aria-hidden="true" size={16} strokeWidth={1.75} />
+              </Button>
+
+              {isRegexInvalid && (
+                <span role="alert" className={styles.searchError}>
+                  {t('console.search.invalidRegex')}
+                </span>
+              )}
+            </div>
+          ) : (
+            <Tooltip content={t('console.actions.find')} side="bottom">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={styles.iconButton}
+                aria-label={t('console.actions.find')}
+                data-testid="console-search-open-button"
+                onClick={openSearch}
+              >
+                <Search aria-hidden="true" size={16} strokeWidth={1.75} />
+              </Button>
+            </Tooltip>
+          )}
+
+          <SegmentedControl
+            label={t('console.filter.ariaLabel')}
+            value={logFilter}
+            options={LOG_FILTER_OPTIONS.map((level) => ({
+              value: level,
+              label: level === 'ALL' ? t('console.filter.all') : level,
+            }))}
+            onValueChange={(value) => {
+              setLogFilter(value as LogLevelFilter);
+              setActiveMatchIndex(0);
+            }}
+          />
+
+          <Tooltip content={t('console.actions.saveLogs')} side="bottom">
             <Button
               type="button"
               size="sm"
-              variant="secondary"
-              data-testid="console-search-open-button"
-              onClick={openSearch}
+              variant="ghost"
+              className={styles.iconButton}
+              aria-label={t('console.actions.saveLogs')}
+              data-testid="console-save-button"
+              onClick={() => void handleExportLogs()}
             >
-              {t('console.actions.find')}
+              <Download aria-hidden="true" size={16} strokeWidth={1.75} />
             </Button>
-          </>
-        )}
+          </Tooltip>
+        </div>
       </section>
 
       <section className={styles.logViewport}>
@@ -1023,18 +1071,19 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
           })()}
 
           <div ref={logEndRef} />
-
-          {visibleLogs.length === 0 && (
-            <EmptyLine
-              className={styles.emptyLog}
-              title={
-                logFilter === 'ALL'
-                  ? t('console.emptyLog.waiting')
-                  : t('console.emptyLog.notFound', { level: logFilter })
-              }
-            />
-          )}
         </div>
+
+        {/* Outside the scrolling pane, so the one line stays centered over the whole log area. */}
+        {visibleLogs.length === 0 && (
+          <EmptyLine
+            className={styles.emptyLog}
+            title={
+              logFilter === 'ALL'
+                ? t('console.emptyLog.waiting')
+                : t('console.emptyLog.notFound', { level: logFilter })
+            }
+          />
+        )}
 
         {!autoScroll && visibleLogs.length > 0 && (
           <div className={styles.jumpLatest}>
@@ -1054,71 +1103,35 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
         )}
       </section>
 
-      <section className={styles.commandStrip}>
-        <div className={styles.commandActions}>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            data-testid="console-save-button"
-            onClick={() => void handleExportLogs()}
-          >
-            <Download aria-hidden="true" size={14} strokeWidth={1.75} />
-            {t('console.actions.saveLogs')}
-          </Button>
-
-          <div className={styles.filter}>
-            <span className={styles.filterLabel}>{t('console.filter.label')}</span>
-            <SegmentedControl
-              label={t('console.filter.ariaLabel')}
-              value={logFilter}
-              options={LOG_FILTER_OPTIONS.map((level) => ({
-                value: level,
-                label: level === 'ALL' ? t('console.filter.all') : level,
-              }))}
-              onValueChange={(value) => {
-                setLogFilter(value as LogLevelFilter);
-                setActiveMatchIndex(0);
-              }}
-            />
-          </div>
-        </div>
-
-        <div className={styles.commandEntry}>
-          <span className={styles.commandPrefix} aria-hidden="true">
-            &gt;
-          </span>
-          <div className={styles.commandField}>
-            <Input
-              label={t('console.command.label')}
-              value={command}
-              onChange={(e) => {
-                setCommand(e.target.value);
-                if (historyCursor !== -1) {
-                  setHistoryCursor(-1);
-                }
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder={t('console.command.placeholder')}
-              description={canSendCommand ? undefined : t('console.command.offlineHint')}
-              disabled={!canSendCommand}
-              data-testid="console-command-input"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="primary"
-            data-testid="console-send-button"
+      <div className={styles.commandRow}>
+        <span className={styles.commandPrefix} aria-hidden="true">
+          &gt;
+        </span>
+        <div className={styles.commandField}>
+          <Input
+            label={t('console.command.label')}
+            value={command}
+            onChange={(e) => {
+              setCommand(e.target.value);
+              if (historyCursor !== -1) {
+                setHistoryCursor(-1);
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={t('console.command.placeholder')}
             disabled={!canSendCommand}
-            onClick={handleSend}
-          >
-            <Send aria-hidden="true" size={14} strokeWidth={1.75} />
-            {t('console.actions.send')}
-          </Button>
+            data-testid="console-command-input"
+          />
         </div>
-
-        <div className={styles.historyHint}>{t('console.historyHint')}</div>
-      </section>
+        {canSendCommand ? (
+          sendButton
+        ) : (
+          // A disabled button takes no pointer events, so the wrapper carries the hover that opens the reason.
+          <Tooltip content={t('console.command.offlineHint')} side="top">
+            <span className={styles.sendTrigger}>{sendButton}</span>
+          </Tooltip>
+        )}
+      </div>
     </div>
   );
 };

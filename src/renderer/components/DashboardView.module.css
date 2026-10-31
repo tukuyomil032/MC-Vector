@@ -7,12 +7,17 @@
   padding: var(--space-5);
 }
 
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
+/* Top row: the status card and the server info card, one surface each. */
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
@@ -21,44 +26,32 @@
   box-shadow: var(--shadow-resting);
 }
 
-.title {
-  margin: 0;
-  color: var(--foreground);
-  font-size: var(--text-xl);
-  font-weight: 600;
-  line-height: var(--leading-display);
-  letter-spacing: var(--tracking-display);
+.statusBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
-.meta {
-  margin: var(--space-1) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.headerStatus {
+/* The dot and the status name share one flex row, so the dot centers on the text line. */
+.statusValue {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.statusValue {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  margin: 0;
   color: var(--foreground);
+  font-size: var(--text-2xl);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
 }
 
 /* A quiet status dot: the color comes from the token for each server state. */
 .dot {
   --dot-color: var(--text-muted);
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: var(--radius-pill);
   background: var(--dot-color);
 }
@@ -76,54 +69,104 @@
   --dot-color: var(--danger);
 }
 
-/* Six tiles split evenly at every width: 3 x 2, then 2 x 3, then 1 x 6, so no tile sits alone on a row. */
-.kpiGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-
-@media (max-width: 1023px) {
-  .kpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 639px) {
-  .kpiGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* The Arc MetricCard sits in a wrapper for its test id; stretch it so its edges line up with the row. */
-.metricSlot {
+.uptime {
   display: flex;
-  min-width: 0;
-}
-
-.metricSlot > * {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Mirrors the anatomy of the Arc MetricCard: a label, a large value, and a quiet context line. */
-.kpi {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-surface);
-  padding: var(--space-6);
-  background: var(--surface);
-  box-shadow: var(--shadow-resting);
-}
-
-.kpiLabel {
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
-.kpiValue {
-  margin: var(--space-8) 0 0;
+.uptimeValue {
+  color: var(--foreground);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two columns of label over value. The dl's default margins are cleared so the grid owns the spacing. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-6);
+  margin: 0;
+}
+
+.factLabel {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
+
+.factValue {
+  margin: var(--space-1) 0 0;
+  min-width: 0;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.addressRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: var(--space-1) 0 0;
+}
+
+/* Never truncated: when the column is narrow, the copy button wraps under the address so the port stays visible. */
+.address {
+  min-width: 0;
+  color: var(--foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/* Below 1024px every row stacks, one card per row. From 1024px the top row is two across and the other rows are three. */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+/* Stat cards: an icon tile with the label, then the big value. No caption lines. */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.statHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.statLabel {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-body);
+}
+
+.statValue {
+  min-width: 0;
+  margin: 0;
   color: var(--foreground);
   font-size: var(--text-3xl);
   font-weight: 600;
@@ -131,29 +174,22 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.kpiValue[data-tone='good'] {
+.statValue[data-tone='good'] {
   color: var(--success);
 }
-.kpiValue[data-tone='fair'] {
+.statValue[data-tone='fair'] {
   color: var(--warning);
 }
-.kpiValue[data-tone='poor'] {
+.statValue[data-tone='poor'] {
   color: var(--danger);
 }
-.kpiValue[data-tone='none'] {
+.statValue[data-tone='none'] {
   color: var(--text-muted);
-}
-
-.kpiContext {
-  margin: var(--space-4) 0 0;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  line-height: var(--leading-body);
 }
 
 .chartGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
@@ -176,11 +212,24 @@
   font-weight: 600;
 }
 
-.chartAxis {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  text-align: right;
+/* Same box as a plot without a legend: the 200px plot plus its 26px axis row, so the card does not jump when data arrives. */
+.chartEmpty {
+  display: grid;
+  place-items: center;
+  height: 226px;
+  min-width: 0;
+}
+
+/* Declared after every base grid rule, so the wide layout wins over the stacked defaults above. */
+@media (min-width: 1024px) {
+  .overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpiGrid,
+  .chartGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 920px) {
@@ -190,10 +239,11 @@
 }
 
 @media (max-width: 380px) {
-  .kpi {
+  .stat,
+  .card {
     padding: var(--space-4);
   }
-  .kpiValue {
-    margin-top: var(--space-6);
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

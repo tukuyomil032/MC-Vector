@@ -191,17 +191,18 @@ export interface TranslationDictionary {
 
   /** Dashboard view translations */
   dashboard: {
-    title: string;
     stats: {
       status: string;
       software: string;
+      serverInfo: string;
+      address: string;
+      copyAddress: string;
+      allocatedMemory: string;
+      javaRuntime: string;
       currentCpu: string;
       currentMemory: string;
       currentTps: string;
-      tpsAutoSampled: string;
-      tpsLogBased: string;
       uptime: string;
-      latestSample: string;
       kpiLabel: string;
       statusValues: {
         online: string;
@@ -247,15 +248,11 @@ export interface TranslationDictionary {
     emptyLog: {
       waiting: string;
       notFound: string;
-      waitingHint: string;
-      notFoundHint: string;
     };
     filter: {
-      label: string;
       ariaLabel: string;
       all: string;
     };
-    historyHint: string;
     search: {
       label: string;
       placeholder: string;
@@ -272,10 +269,8 @@ export interface TranslationDictionary {
       unpin: string;
     };
     status: {
-      address: string;
       clickToCopy: string;
       copied: string;
-      status: string;
       memory: string;
     };
     memory: {

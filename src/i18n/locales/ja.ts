@@ -167,17 +167,18 @@ export const ja: TranslationDictionary = {
   },
 
   dashboard: {
-    title: 'ダッシュボード: {name}',
     stats: {
       status: 'ステータス',
       software: 'ソフトウェア',
+      serverInfo: 'サーバー情報',
+      address: 'アドレス',
+      copyAddress: 'アドレスをコピー',
+      allocatedMemory: '割り当てメモリ',
+      javaRuntime: 'Javaランタイム',
       currentCpu: '現在のCPU',
       currentMemory: '現在のメモリ',
       currentTps: '現在のTPS',
-      tpsAutoSampled: 'Paper / LeafMC: 自動計測',
-      tpsLogBased: 'ログベース検出',
       uptime: '稼働時間',
-      latestSample: '直近60秒の最新値',
       kpiLabel: '主要な指標',
       statusValues: {
         online: '稼働中',
@@ -193,7 +194,7 @@ export const ja: TranslationDictionary = {
       cpuLast60s: 'CPU使用率（%） - 直近60秒',
       memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
       tpsLast60s: 'TPS - 直近60秒',
-      tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
+      tpsNoData: 'TPSは計測待ち',
       metricsNoData: '計測待ち',
       elapsedSeconds: '{seconds}秒',
       elapsedTime: '起動からの経過時間（秒）',
@@ -216,21 +217,17 @@ export const ja: TranslationDictionary = {
     },
     command: {
       label: 'コマンド',
-      placeholder: 'コマンドを入力…',
+      placeholder: 'コマンドを入力（↑ ↓で履歴）',
       offlineHint: 'コマンドを送るには、サーバーを起動してください。',
     },
     emptyLog: {
       waiting: 'ログを待機中…',
       notFound: '{level} レベルのログが見つかりません。',
-      waitingHint: 'サーバーを起動すると、ここにログが表示されます。',
-      notFoundHint: '別のレベルを選ぶと、ほかのログを表示できます。',
     },
     filter: {
-      label: 'レベル',
       ariaLabel: 'ログレベルフィルター',
       all: 'すべて',
     },
-    historyHint: '↑ / ↓ 履歴',
     search: {
       label: '検索',
       placeholder: 'ログを検索…',
@@ -247,10 +244,8 @@ export const ja: TranslationDictionary = {
       unpin: '解除',
     },
     status: {
-      address: 'アドレス',
       clickToCopy: 'クリックしてコピー',
       copied: 'コピーしました',
-      status: '状態',
       memory: 'メモリ',
     },
     memory: {
