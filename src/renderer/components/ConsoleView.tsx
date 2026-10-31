@@ -576,9 +576,12 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
     return () => clearInterval(interval);
   }, [server.id]);
 
+  // Commands only reach a running server. Other states show the hint and refuse the send.
+  const canSendCommand = server.status === 'online';
+
   const handleSend = () => {
     const normalizedCommand = command.trim();
-    if (!normalizedCommand) {
+    if (!canSendCommand || !normalizedCommand) {
       return;
     }
 
@@ -1101,6 +1104,8 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               }}
               onKeyDown={handleKeyDown}
               placeholder={t('console.command.placeholder')}
+              description={canSendCommand ? undefined : t('console.command.offlineHint')}
+              disabled={!canSendCommand}
               data-testid="console-command-input"
             />
           </div>
@@ -1108,6 +1113,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
             type="button"
             variant="primary"
             data-testid="console-send-button"
+            disabled={!canSendCommand}
             onClick={handleSend}
           >
             <Send aria-hidden="true" size={14} strokeWidth={1.75} />

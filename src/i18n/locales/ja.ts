@@ -267,6 +267,7 @@ export const ja: TranslationDictionary = {
     command: {
       label: 'コマンド',
       placeholder: 'コマンドを入力...',
+      offlineHint: 'コマンドを送るには、サーバーを起動してください。',
     },
     emptyLog: {
       waiting: 'ログを待機中...',

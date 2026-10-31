@@ -271,6 +271,7 @@ export const en: TranslationDictionary = {
     command: {
       label: 'Command',
       placeholder: 'Type a command...',
+      offlineHint: 'Start the server to send commands.',
     },
     emptyLog: {
       waiting: 'Waiting for logs...',

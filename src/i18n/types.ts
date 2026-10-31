@@ -289,6 +289,7 @@ export interface TranslationDictionary {
     command: {
       label: string;
       placeholder: string;
+      offlineHint: string;
     };
     emptyLog: {
       waiting: string;
