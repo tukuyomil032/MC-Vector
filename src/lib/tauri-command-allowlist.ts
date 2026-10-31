@@ -68,6 +68,7 @@ const CORE_COMMANDS = [
   'create_managed_directory',
   'delete_managed_path',
   'move_managed_path',
+  'get_managed_directory_size',
   'import_managed_files',
   'pick_server_import',
   'cancel_server_import',

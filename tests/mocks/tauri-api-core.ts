@@ -368,6 +368,10 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
     case 'list_dir_with_metadata':
       return listRuntimeChildren(requestPath(payload.request));
 
+    // A fixed 50 MB keeps the e2e folder sizes deterministic.
+    case 'get_managed_directory_size':
+      return { bytes: 52_428_800, complete: true };
+
     case 'read_managed_text_file':
       return readRuntimeFile(requestPath(payload.request));
 

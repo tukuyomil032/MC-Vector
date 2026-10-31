@@ -1417,6 +1417,92 @@ pub async fn read_managed_text_file(
         .map_err(|error| format!("Failed to read file: {error}"))
 }
 
+/// Longest a folder-size walk may run. A walk that runs out of time reports the bytes it counted, marked incomplete.
+const DIRECTORY_SIZE_BUDGET: Duration = Duration::from_secs(3);
+
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedDirectorySize {
+    pub bytes: u64,
+    /// False when the time budget ran out or part of the tree could not be read.
+    pub complete: bool,
+}
+
+/// Sums the regular files under a server folder. Symbolic links and reparse points are skipped, never followed,
+/// so a link cannot pull in data from outside the managed root.
+#[tauri::command]
+pub async fn get_managed_directory_size(
+    app: AppHandle,
+    request: ManagedPathRequest,
+) -> Result<ManagedDirectorySize, String> {
+    if request.root != ManagedRoot::Servers {
+        return Err("Directory size is only available for server folders".to_string());
+    }
+    let app_data_dir = app_data_dir(&app)?;
+    let target = resolve_managed_request(&app_data_dir, &request, false)?;
+    tokio::task::spawn_blocking(move || directory_size_within(&target, DIRECTORY_SIZE_BUDGET))
+        .await
+        .map_err(|error| format!("Failed to measure managed directory: {error}"))?
+}
+
+fn directory_size_within(root: &Path, budget: Duration) -> Result<ManagedDirectorySize, String> {
+    let metadata =
+        std::fs::symlink_metadata(root).map_err(|error| directory_metadata_error(&error))?;
+    if is_link_or_reparse_point(&metadata) {
+        return Err("Refusing to measure a symbolic link or reparse point".to_string());
+    }
+    if !metadata.is_dir() {
+        return Err("Path is not a directory".to_string());
+    }
+
+    let deadline = Instant::now() + budget;
+    let mut bytes = 0_u64;
+    let mut complete = true;
+    let mut pending = vec![root.to_path_buf()];
+    'walk: while let Some(directory) = pending.pop() {
+        let entries = match std::fs::read_dir(&directory) {
+            Ok(entries) => entries,
+            Err(error) if directory.as_path() == root => {
+                return Err(format!("Failed to read directory: {error}"));
+            }
+            Err(_) => {
+                complete = false;
+                continue;
+            }
+        };
+        for entry in entries {
+            if Instant::now() >= deadline {
+                complete = false;
+                break 'walk;
+            }
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => {
+                    complete = false;
+                    continue;
+                }
+            };
+            let metadata = match entry.path().symlink_metadata() {
+                Ok(metadata) => metadata,
+                Err(_) => {
+                    complete = false;
+                    continue;
+                }
+            };
+            if is_link_or_reparse_point(&metadata) {
+                continue;
+            }
+            if metadata.is_dir() {
+                pending.push(entry.path());
+            } else if metadata.is_file() {
+                bytes = bytes.saturating_add(metadata.len());
+            }
+        }
+    }
+
+    Ok(ManagedDirectorySize { bytes, complete })
+}
+
 fn resolve_managed_copy_path(
     path: &Path,
     managed_root: &Path,
@@ -1768,14 +1854,15 @@ mod tests {
     use super::super::recovery_journal::{self, DirectoryMigrationStage};
     use super::super::server_registry::ServerRegistry;
     use super::{
-        atomic_write_managed_text_file, directory_metadata_error, list_directory_entries,
-        migrate_managed_server_directory_with, migrate_managed_server_directory_with_fault,
-        move_managed_entry, resolve_managed_request, validated_relative_path, ImportBudget,
-        ManagedPathRequest, ManagedRoot, MAX_IMPORT_FILES, MAX_IMPORT_SINGLE_FILE_BYTES,
-        MAX_IMPORT_TOTAL_BYTES,
+        atomic_write_managed_text_file, directory_metadata_error, directory_size_within,
+        list_directory_entries, migrate_managed_server_directory_with,
+        migrate_managed_server_directory_with_fault, move_managed_entry, resolve_managed_request,
+        validated_relative_path, ImportBudget, ManagedDirectorySize, ManagedPathRequest,
+        ManagedRoot, MAX_IMPORT_FILES, MAX_IMPORT_SINGLE_FILE_BYTES, MAX_IMPORT_TOTAL_BYTES,
     };
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::Duration;
 
     static NEXT_TEST_DIRECTORY: AtomicU64 = AtomicU64::new(0);
 
@@ -1800,6 +1887,73 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn directory_size_sums_regular_files_recursively() {
+        let dir = TestDirectory::new();
+        std::fs::create_dir_all(dir.path().join("world").join("region"))
+            .expect("nested directory should be created");
+        std::fs::write(dir.path().join("server.properties"), vec![0_u8; 10])
+            .expect("file should be written");
+        std::fs::write(
+            dir.path().join("world").join("region").join("r.0.0.mca"),
+            vec![0_u8; 100],
+        )
+        .expect("nested file should be written");
+
+        let size = directory_size_within(dir.path(), Duration::from_secs(30))
+            .expect("size should be measured");
+        assert_eq!(
+            size,
+            ManagedDirectorySize {
+                bytes: 110,
+                complete: true,
+            }
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_size_does_not_follow_symbolic_links() {
+        let dir = TestDirectory::new();
+        let outside = TestDirectory::new();
+        std::fs::write(outside.path().join("secret.bin"), vec![0_u8; 500])
+            .expect("outside file should be written");
+        std::fs::write(dir.path().join("own.txt"), vec![0_u8; 7]).expect("file should be written");
+        std::os::unix::fs::symlink(outside.path(), dir.path().join("link"))
+            .expect("symlink should be created");
+
+        let size = directory_size_within(dir.path(), Duration::from_secs(30))
+            .expect("size should be measured");
+        assert_eq!(
+            size,
+            ManagedDirectorySize {
+                bytes: 7,
+                complete: true,
+            }
+        );
+    }
+
+    #[test]
+    fn directory_size_reports_incomplete_when_the_budget_is_spent() {
+        let dir = TestDirectory::new();
+        std::fs::write(dir.path().join("a.bin"), vec![0_u8; 5]).expect("file should be written");
+
+        let size = directory_size_within(dir.path(), Duration::ZERO)
+            .expect("an exhausted budget is not an error");
+        assert!(!size.complete);
+    }
+
+    #[test]
+    fn directory_size_rejects_a_file_path() {
+        let dir = TestDirectory::new();
+        let file = dir.path().join("file.txt");
+        std::fs::write(&file, b"x").expect("file should be written");
+
+        let error = directory_size_within(&file, Duration::from_secs(1))
+            .expect_err("a file is not a directory");
+        assert_eq!(error, "Path is not a directory");
     }
 
     fn server_request(server_id: &str, relative_path: &str) -> ManagedPathRequest {
