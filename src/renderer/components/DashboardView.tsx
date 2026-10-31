@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { Activity, Server } from 'lucide-react';
+import { Activity, Cpu, Gauge, MemoryStick, Server, type LucideIcon } from 'lucide-react';
 import { CopyButton } from '@/components/arc/copy-button/copy-button';
 import { LineChart, type LineChartDatum } from '@/components/arc/line-chart/line-chart';
-import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
 import { formatBytes } from '../shared/format-bytes';
@@ -23,7 +21,7 @@ import {
   normalizeMetric,
 } from '../shared/server-metrics';
 import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
-import { SectionTitle } from './ui/IconTile';
+import { IconTile, SectionTitle } from './ui/IconTile';
 import styles from './DashboardView.module.css';
 
 interface Props {
@@ -81,29 +79,27 @@ const getTpsTone = (tps: number | null): TpsTone => {
   return 'poor';
 };
 
-interface KpiTileProps {
+interface StatCardProps {
   testId: string;
+  icon: LucideIcon;
   label: string;
-  value: ReactNode;
-  context?: string;
+  value: string;
   tone?: TpsTone;
 }
 
-/** Same anatomy as the Arc MetricCard, for values MetricCard cannot show: text, a missing sample, or a threshold color. */
-function KpiTile({ testId, label, value, context, tone }: KpiTileProps) {
+/** One measure at a glance: an icon tile, its label, and the value. Nothing else sits in the card. */
+function StatCard({ testId, icon, label, value, tone }: StatCardProps) {
   return (
-    <article className={styles.kpi} data-testid={testId}>
-      <p className={styles.kpiLabel}>
-        <Phrase text={label} />
-      </p>
-      <p className={styles.kpiValue} data-tone={tone} data-testid={`${testId}-value`}>
+    <article className={styles.stat} data-testid={testId}>
+      <div className={styles.statHead}>
+        <IconTile icon={icon} size="md" />
+        <p className={styles.statLabel}>
+          <Phrase text={label} />
+        </p>
+      </div>
+      <p className={styles.statValue} data-tone={tone} data-testid={`${testId}-value`}>
         {value}
       </p>
-      {context && (
-        <p className={styles.kpiContext}>
-          <Phrase text={context} />
-        </p>
-      )}
     </article>
   );
 }
@@ -246,10 +242,6 @@ export default function DashboardView({ server }: Props) {
     [formatElapsed, t],
   );
 
-  const supportsTpsPolling = useMemo(() => {
-    return server.software === 'Paper' || server.software === 'LeafMC';
-  }, [server.software]);
-
   const currentCpu = useMemo(() => {
     return resourceWindowStats[resourceWindowStats.length - 1]?.cpu ?? 0;
   }, [resourceWindowStats]);
@@ -310,12 +302,6 @@ export default function DashboardView({ server }: Props) {
       ),
     [formatElapsed, heldSinceLabel, tpsChartStats],
   );
-
-  const tpsSamplingLabel = useMemo(() => {
-    return supportsTpsPolling
-      ? t('dashboard.stats.tpsAutoSampled')
-      : t('dashboard.stats.tpsLogBased');
-  }, [supportsTpsPolling, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -418,31 +404,25 @@ export default function DashboardView({ server }: Props) {
       </div>
 
       <section className={styles.kpiGrid} aria-label={t('dashboard.stats.kpiLabel')}>
-        <KpiTile
+        <StatCard
+          testId="dashboard-kpi-cpu"
+          icon={Cpu}
+          label={t('dashboard.stats.currentCpu')}
+          value={`${formatters.decimal.format(currentCpu)}%`}
+        />
+        <StatCard
+          testId="dashboard-kpi-memory"
+          icon={MemoryStick}
+          label={t('dashboard.stats.currentMemory')}
+          value={`${formatters.whole.format(currentMem)} ${megabytesLabel}`}
+        />
+        <StatCard
           testId="dashboard-kpi-tps"
+          icon={Gauge}
           label={t('dashboard.stats.currentTps')}
           value={currentTps === null ? '--' : formatters.tps.format(currentTps)}
           tone={tpsTone}
-          context={tpsSamplingLabel}
         />
-
-        <div className={styles.metricSlot} data-testid="dashboard-kpi-cpu">
-          <MetricCard
-            label={t('dashboard.stats.currentCpu')}
-            value={currentCpu}
-            suffix="%"
-            context={t('dashboard.stats.latestSample')}
-          />
-        </div>
-
-        <div className={styles.metricSlot} data-testid="dashboard-kpi-memory">
-          <MetricCard
-            label={t('dashboard.stats.currentMemory')}
-            value={currentMem}
-            suffix={` ${megabytesLabel}`}
-            context={t('dashboard.stats.latestSample')}
-          />
-        </div>
       </section>
 
       <section className={styles.chartGrid}>

@@ -186,10 +186,7 @@ export const en: TranslationDictionary = {
       currentCpu: 'Current CPU',
       currentMemory: 'Current Memory',
       currentTps: 'Current TPS',
-      tpsAutoSampled: 'Paper / LeafMC: auto sampled',
-      tpsLogBased: 'Log-based detection',
       uptime: 'Uptime',
-      latestSample: 'Latest sample, last 60s',
       kpiLabel: 'Key metrics',
       statusValues: {
         online: 'ONLINE',

@@ -206,10 +206,7 @@ export interface TranslationDictionary {
       currentCpu: string;
       currentMemory: string;
       currentTps: string;
-      tpsAutoSampled: string;
-      tpsLogBased: string;
       uptime: string;
-      latestSample: string;
       kpiLabel: string;
       statusValues: {
         online: string;

@@ -182,10 +182,7 @@ export const ja: TranslationDictionary = {
       currentCpu: '現在のCPU',
       currentMemory: '現在のメモリ',
       currentTps: '現在のTPS',
-      tpsAutoSampled: 'Paper / LeafMC: 自動計測',
-      tpsLogBased: 'ログベース検出',
       uptime: '稼働時間',
-      latestSample: '直近60秒の最新値',
       kpiLabel: '主要な指標',
       statusValues: {
         online: '稼働中',

@@ -18,25 +18,6 @@ vi.mock('@/i18n', () => ({
 }));
 vi.mock('@/lib/tauri-api', () => ({ tauriListen: vi.fn().mockResolvedValue(() => {}) }));
 vi.mock('@/lib/notification-commands', () => ({ sendServerNotification: vi.fn() }));
-vi.mock('@/components/arc/metric-card/metric-card', () => ({
-  MetricCard: ({
-    label,
-    value,
-    suffix,
-    context,
-  }: {
-    label: string;
-    value: number;
-    suffix?: string;
-    context?: string;
-  }) => (
-    <article>
-      <p>{label}</p>
-      <p>{`${value}${suffix ?? ''}`}</p>
-      {context && <p>{context}</p>}
-    </article>
-  ),
-}));
 vi.mock('@/components/arc/line-chart/line-chart', () => ({
   LineChart: ({
     label,

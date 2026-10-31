@@ -128,7 +128,7 @@
   white-space: nowrap;
 }
 
-/* Six tiles split evenly at every width: 3 x 2, then 2 x 3, then 1 x 6, so no tile sits alone on a row. */
+/* Three stat cards in one row, the same width each. */
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -147,35 +147,38 @@
   }
 }
 
-/* The Arc MetricCard sits in a wrapper for its test id; stretch it so its edges line up with the row. */
-.metricSlot {
+/* Stat cards: an icon tile with the label, then the big value. No caption lines. */
+.stat {
   display: flex;
-  min-width: 0;
-}
-
-.metricSlot > * {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Mirrors the anatomy of the Arc MetricCard: a label, a large value, and a quiet context line. */
-.kpi {
+  flex-direction: column;
+  gap: var(--space-5);
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
-  padding: var(--space-6);
+  padding: var(--space-5) var(--space-6);
   background: var(--surface);
   box-shadow: var(--shadow-resting);
 }
 
-.kpiLabel {
+.statHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.statLabel {
+  min-width: 0;
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-body);
 }
 
-.kpiValue {
-  margin: var(--space-8) 0 0;
+.statValue {
+  min-width: 0;
+  margin: 0;
   color: var(--foreground);
   font-size: var(--text-3xl);
   font-weight: 600;
@@ -183,24 +186,17 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.kpiValue[data-tone='good'] {
+.statValue[data-tone='good'] {
   color: var(--success);
 }
-.kpiValue[data-tone='fair'] {
+.statValue[data-tone='fair'] {
   color: var(--warning);
 }
-.kpiValue[data-tone='poor'] {
+.statValue[data-tone='poor'] {
   color: var(--danger);
 }
-.kpiValue[data-tone='none'] {
+.statValue[data-tone='none'] {
   color: var(--text-muted);
-}
-
-.kpiContext {
-  margin: var(--space-4) 0 0;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  line-height: var(--leading-body);
 }
 
 .chartGrid {
@@ -242,11 +238,9 @@
 }
 
 @media (max-width: 380px) {
-  .kpi {
+  .stat,
+  .card {
     padding: var(--space-4);
-  }
-  .kpiValue {
-    margin-top: var(--space-6);
   }
   .facts {
     grid-template-columns: minmax(0, 1fr);
