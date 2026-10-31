@@ -2,17 +2,10 @@
 @import './base/base.css';
 
 @import './components/ui-components.css';
-@import './components/surface-primitives.css';
-@import './components/animations.css';
-@import './components/modal-primitives.css';
 
 @import './layout/app-layout.css';
 
-@import './views/java-manager-modal.css';
 @import './views/settings-window.css';
-@import './views/advanced-settings-window.css';
-@import './views/properties-view.css';
-@import './views/server-settings.css';
 
 @tailwind base;
 @tailwind components;
