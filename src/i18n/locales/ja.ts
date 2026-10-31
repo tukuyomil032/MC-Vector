@@ -482,13 +482,16 @@ export const ja: TranslationDictionary = {
   },
 
   javaManager: {
-    title: 'Javaランタイム管理',
+    title: 'Javaランタイムを管理',
     availableVersions: '利用可能なバージョン (Adoptium)',
+    versionTitle: 'Java {version}',
     download: 'ダウンロード',
-    downloading: 'ダウンロード中... {progress}',
-    downloadingStatus: 'ダウンロード中...',
+    downloadingLabel: 'ダウンロード中',
+    downloadStatus:
+      'Java {version} をダウンロードしています。完了するまでこの画面は閉じられません。',
     installed: 'インストール済み',
     installedRuntimes: 'インストール済みランタイム',
+    emptyTitle: 'インストール済みの Java はありません',
     noRuntimes: 'MC-Vectorで管理されているランタイムはありません。',
     confirm: {
       uninstall: 'Java {version} をアンインストールしますか？',

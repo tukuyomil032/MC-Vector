@@ -485,13 +485,16 @@ export const en: TranslationDictionary = {
   },
 
   javaManager: {
-    title: 'Java Runtime Manager',
+    title: 'Manage Java runtimes',
     availableVersions: 'Available Versions (Adoptium)',
+    versionTitle: 'Java {version}',
     download: 'Download',
-    downloading: 'Downloading... {progress}',
-    downloadingStatus: 'Downloading...',
+    downloadingLabel: 'Downloading',
+    downloadStatus:
+      'Downloading Java {version}. This window stays open until the download finishes.',
     installed: 'Installed',
     installedRuntimes: 'Installed Runtimes',
+    emptyTitle: 'No Java runtimes installed',
     noRuntimes: 'No runtimes managed by MC-Vector.',
     confirm: {
       uninstall: 'Uninstall Java {version}?',

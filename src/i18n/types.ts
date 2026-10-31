@@ -503,8 +503,10 @@ export interface TranslationDictionary {
     title: string;
     availableVersions: string;
     download: string;
-    downloading: string;
-    downloadingStatus: string;
+    versionTitle: string;
+    downloadingLabel: string;
+    downloadStatus: string;
+    emptyTitle: string;
     installed: string;
     installedRuntimes: string;
     noRuntimes: string;

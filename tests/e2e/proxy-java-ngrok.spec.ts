@@ -45,7 +45,7 @@ test.describe('proxy, Java, and Ngrok flows', () => {
       timeout: 15_000,
     });
     await expect.poll(async () => (await app.ipcCalls('download_java')).length).toBe(1);
-    await javaDialog.getByRole('button', { name: '×' }).click();
+    await javaDialog.locator('[data-testid="java-manager-close"]').click();
 
     await settings.locator('.server-settings__ngrok-switch').click();
     const tokenDialog = page.locator('.server-settings__token-panel');
