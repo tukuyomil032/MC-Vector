@@ -126,7 +126,11 @@ export default function ServerEulaModal({ pending, onAccept, onCancel }: ServerE
             />
 
             {view.error && (
-              <Alert tone="danger" title={t('server.eula.writeError')}>
+              <Alert
+                tone="danger"
+                title={t('server.eula.writeError')}
+                data-testid="server-eula-error"
+              >
                 {view.error}
               </Alert>
             )}
