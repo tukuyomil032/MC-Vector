@@ -981,6 +981,7 @@ export interface TranslationDictionary {
       latestVersion: string;
       alreadyLatest: string;
       stepCheck: string;
+      blockedWhileRunning: string;
       stepsLabel: string;
       backupProgressLabel: string;
       downloadProgressLabel: string;

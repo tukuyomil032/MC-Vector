@@ -992,6 +992,8 @@ export const en: TranslationDictionary = {
       latestVersion: 'Latest Version',
       alreadyLatest: 'Already up to date',
       stepCheck: 'Check',
+      blockedWhileRunning:
+        'A backup or download is running. This window stays open until it finishes, so the server files are not left half-written.',
       stepsLabel: 'Upgrade steps',
       backupProgressLabel: 'Backup progress',
       downloadProgressLabel: 'Download progress',

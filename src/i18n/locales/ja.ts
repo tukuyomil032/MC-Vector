@@ -989,6 +989,8 @@ export const ja: TranslationDictionary = {
       latestVersion: '最新バージョン',
       alreadyLatest: '最新バージョンです',
       stepCheck: '確認',
+      blockedWhileRunning:
+        'バックアップまたはダウンロードの実行中です。サーバーのファイルを書きかけで残さないよう、完了するまでこの画面は閉じられません。',
       stepsLabel: 'アップグレードの手順',
       backupProgressLabel: 'バックアップの進捗',
       downloadProgressLabel: 'ダウンロードの進捗',

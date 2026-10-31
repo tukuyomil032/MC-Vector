@@ -222,6 +222,9 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
     );
   }
 
+  // A backup or download writes into the server folder, so Escape and outside presses are ignored until it settles.
+  const blockDismiss = (event: Event) => event.preventDefault();
+
   return (
     <Dialog
       open
@@ -233,8 +236,17 @@ export default function VersionUpgradeWizard({ server, onClose, onServerVersionC
         title={t('serverSettings.versionUpgrade.title')}
         width="min(560px, calc(100vw - var(--space-8)))"
         footer={footer}
+        onEscapeKeyDown={processing ? blockDismiss : undefined}
+        onPointerDownOutside={processing ? blockDismiss : undefined}
         data-testid="version-upgrade-wizard"
       >
+        <Alert
+          tone="warning"
+          open={processing}
+          title={t('serverSettings.versionUpgrade.blockedWhileRunning')}
+          data-testid="version-upgrade-busy-notice"
+        />
+
         <Stepper
           steps={steps}
           current={STEP_INDEX[step]}

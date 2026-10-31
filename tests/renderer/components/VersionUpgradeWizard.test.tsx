@@ -187,6 +187,44 @@ describe('VersionUpgradeWizard Rust-owned install flow', () => {
     finishBackup?.({ status: 'created', backupName: 'pre-upgrade.zip', catalogError: null });
   });
 
+  it('keeps the wizard open while a backup runs and explains why', async () => {
+    let finishBackup: ((value: unknown) => void) | undefined;
+    createBackupMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishBackup = resolve;
+      }),
+    );
+    const onClose = vi.fn();
+    render(
+      <VersionUpgradeWizard server={server} onClose={onClose} onServerVersionChanged={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(prepareServerJarInstallMock).toHaveBeenCalledOnce());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.startUpgrade' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runBackup' }),
+    );
+    await waitFor(() => expect(createBackupMock).toHaveBeenCalledOnce());
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByText('serverSettings.versionUpgrade.blockedWhileRunning'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.close' }),
+    ).toBeDisabled();
+    finishBackup?.({
+      status: 'created',
+      backupName: 'pre-upgrade.zip',
+      catalogError: null,
+      restart: { status: 'not_needed' },
+    });
+  });
+
   it('reports backup and restart failure together without claiming the backup was created', async () => {
     createBackupMock.mockResolvedValueOnce({
       status: 'failed',
