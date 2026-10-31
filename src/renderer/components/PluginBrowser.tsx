@@ -1824,6 +1824,23 @@ export default function PluginBrowser({ server }: Props) {
     };
   }, [detailItem]);
 
+  useEffect(() => {
+    if (!dupDialog) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDupDialog(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [dupDialog]);
+
   const jumpToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
     if (!Number.isFinite(parsed) || parsed < 1) {
@@ -2534,8 +2551,14 @@ export default function PluginBrowser({ server }: Props) {
       )}
 
       {dupDialog && (
-        <div className="plugin-browser__dup-overlay modal-backdrop">
-          <div className="plugin-browser__dup-panel modal-panel">
+        <div
+          className="plugin-browser__dup-overlay modal-backdrop"
+          onClick={() => setDupDialog(null)}
+        >
+          <div
+            className="plugin-browser__dup-panel modal-panel"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="plugin-browser__dup-title">{t('plugins.browser.dupTitle')}</h3>
             <p className="plugin-browser__dup-description">
               {t('plugins.browser.dupDescription', {
