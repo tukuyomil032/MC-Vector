@@ -1,5 +1,262 @@
 # Changelog
 
+## v2.1.0
+
+### Features
+- show advanced server properties inline as cards
+- lay out app settings cards in two columns
+- move proxy port hint into a tooltip and use the full width
+- move advanced setting descriptions into hint tooltips
+- lay out general settings as two-column cards
+- lay out properties sections in two columns with hint tooltips
+- show folder sizes and estimated time on the backups screen
+- match installed plugin cards to the browse layout
+- merge the console status strip, search, and filters into one toolbar
+- lay out plugin result cards horizontally
+- estimate backup time from past throughput
+- put the plugin search, button and sort on one row
+- simplify the files create dialog to three equal choice cards
+- move the plugin provider switch into the header row
+- record backup duration in the archive manifest
+- measure folder sizes in the background in the files list
+- redesign the plugin detail dialog
+- dashboard stat cards show an icon, label, and value
+- show file sizes in B, KB, MB, GB, or TB
+- style plugin READMEs to match the provider page
+- separate file list rows with a subtle rule
+- show status and server info cards on the dashboard
+- render plugin READMEs through a sanitized HTML pipeline
+- add hint prop to Arc input fields
+- add icons and quiet counts to the user list cards
+- add leading and trailing slots to the dialog header
+- allow HTTPS images in the CSP img-src
+- add formatBytes and a managed folder size command
+- add the accent icon tile and section title
+- make empty states a single quiet line
+- add FieldLabel with hover hints
+- break Japanese text at phrase boundaries
+- add English names for every advanced property
+- drive the app view change with Arc motion tokens
+- LineChart one-sample marker, fixed yDomain, and translatable copy
+- localize Arc CodeBlock, CopyButton, SearchField, Select, and Checkbox labels
+- remove backup target selection
+- confirm plugin installs and failures in app dialogs
+- rebuild the plugin details dialog on Arc
+- show restoring state and lock backup list while busy
+- rebuild the installed plugins tab on Arc
+- hold to delete worlds instead of confirming twice
+- rebuild backup create dialog on Arc
+- rebuild the plugin browse tab on Arc
+- rebuild backup tag editor on Arc dialog
+- rebuild the version upgrade wizard on Arc
+- show a retry alert when backup details fail to load
+- rebuild the advanced server settings on Arc
+- rebuild backup list and header on Arc
+- rebuild backup target selector on Arc
+- rebuild general server settings on Arc
+- replace dashboard Recharts with Arc line charts
+- validate the users add input inline
+- rebuild dashboard header and KPIs on Arc
+- rebuild the server properties view on Arc
+- rebuild the app settings view on Arc
+- rebuild the app update modal and release notes on Arc
+- rebuild the Java runtime manager on Arc
+- rebuild the EULA modal on Arc
+- rebuild the import-server modal on Arc
+- rebuild the add-server form on Arc
+- rebuild the add-server choice modal on Arc
+- rebuild the command palette on the Arc block
+- add responsive shell with rail and drawer
+- rebuild the main header
+- rebuild the sidebar on Arc tokens
+- show server download progress in the toast stack
+- add notify bridge on the Arc toast stack
+- add progress bar to Arc toast stack
+- rebuild AppFeedbackProvider on Arc dialog
+- showcase new Arc components in UI Lab
+- refine plugin install confirm in UI Lab
+- add dev-only UI Lab view
+- bundle Geist and Inter and add Arc brand overrides
+
+### Bug Fixes
+- read directory entry metadata without rebuilding the path
+- update the real Tauri E2E for the Arc UI controls
+- restore the files create button test id for the real E2E
+- adress feedback forfix for Incomplete multi-character sanitization'
+- drop the properties page title and visible search label
+- give the backup lifecycle tests more time to settle
+- balance property columns by measured card heights
+- drop the advanced property card and level the column bottoms
+- space the sidebar nav like the original layout
+- give the sidebar nav the spare height and shrink the server panel
+- lay out property cards in two balanced columns
+- split the large property cards into smaller groups
+- align the EULA checkbox with the dialog text
+- line the properties save button up with the search field
+- keep the space between the memory value and its unit
+- merge advanced gameplay and network properties into the basic cards
+- scroll long player lists inside their card
+- keep the console toolbar in place while logs stream
+- let the backup list fill the view
+- let the user list cards fill the view
+- roll the dashboard KPI values with the Arc animated counter
+- stretch the dashboard charts and server panel to the window bottom
+- cancel the pending user list reload when the view unmounts
+- focus the file name field when the backup dialog opens
+- keep the dashboard chart row three across from 1024px
+- remove the fixed description height from plugin cards
+- let the dashboard address wrap its copy button when narrow
+- pin the files create choices to three equal columns
+- widen the files create dialog so Japanese labels fit
+- line up the user add rows along the card bottoms
+- type-check README image align handling
+- console command row on one line with the offline reason in a tooltip
+- center the empty console log as one line over the log area
+- lay out dashboard cards in 2/3/3 columns from 1024px
+- dashboard charts show one waiting line instead of an empty plot
+- drop the offline alert from the users view
+- tidy the sidebar toggle, server panel, and brand alignment
+- keep radio card selection from shifting layout
+- let every view scroll inside the content card
+- fade the command palette list edge when more rows are below
+- keep Japanese phrases intact inside span-based copy
+- stretch dashboard metric cards to their grid row
+- register the get\_server\_metric\_history E2E mock
+- translate leftover English copy and ASCII ellipses in ja
+- keep the command palette list scrollable and active row visible
+- show the app update error once in settings
+- align Java manage button and memory/port row in server settings
+- keep dashboard KPI tiles on one balanced grid
+- offer NeoForge in the add-server and import software lists
+- confirm before leaving a view with unsaved edits
+- drop autoFocus from the files dialogs
+- disable console commands while the server is not online
+- show the singular entry count for one user
+- show server ports and numeric properties without thousands separators
+- give the console address copy visible feedback
+- explain why the upgrade download is disabled when unverified
+- keep the upgrade wizard open during a backup or download
+- check the users input state instead of a fading message
+- show a cannot-edit state for binary and large files
+- open setup guide links through the opener plugin
+- show an error toast when a diff file cannot be read
+- report extract when no zip archive is selected
+- detect unsaved edits in server properties and general settings
+- surface a failed backup target apply
+- send only the proxy backends that are still listed
+- offer NeoForge in the general settings software list
+- show a read error instead of an empty backup target list
+- lock in disabled restart and backup fields while their switch is off
+- keep general settings edits when the server status changes
+- show a users load failure with a retry instead of empty lists
+- block saving server properties after a failed read
+- let Escape and a backdrop press close the already-installed dialog
+- label plugin sort and update count as this page only
+- keep the ngrok token when the change-token dialog is cancelled
+- show installing only after the install is confirmed
+- show upgrade wizard backup progress on the 0-100 scale
+- drop previous provider results while a new provider loads
+- keep the EULA write-error testid on its alert
+- remember postponed and skipped update versions
+- let the update download continue after the modal closes
+- show the restart prompt once the update is installed
+- show the Java download status line
+- keep the Java manager open while a download runs
+- restore the create-server testid on the no-servers button
+- keep one empty-state message when no servers exist
+- tidy the narrow-window navigation drawer
+- confirm before quitting while servers are running
+- make the settings back button return to the previous view
+- keep settings and server actions reachable when the sidebar is collapsed
+- align the start condition across header, palette and shortcut
+- confirm before removing a whitelist, OP, or ban entry
+- confirm before restoring a backup
+- stop sending English progress text from Rust
+
+### Maintenance
+- format button.tsx
+- move world management from backups to server settings
+- record the HTTPS image exception in the CSP decision
+- sync plugin i18n key types with the locales
+- cover the dashboard server info card
+- drop the unused files empty-folder hint
+- remove the file diff view
+- trim the EULA dialog to the link and the consent
+- drop the unused user empty-state descriptions
+- put the user add fields on one row with placeholders
+- add rehype-raw for plugin README HTML
+- note the shared UI rules in the surface inventory
+- remove unused tauri-plugin-shell dependency
+- remove unused i18n keys
+- remove unused npm dependencies
+- remove unused tailwind colors, z-index and animations
+- remove unused legacy --mv-\* tokens
+- remove dead global CSS rules and stylesheets
+- remove i18n keys left unused by the Arc migration
+- remove unused plugins.browser i18n keys
+- seed the running server before the console e2e loads
+- wait for the create dialog instead of the removed target list
+- describe the Arc UI stack and tick the Phase 6 items
+- remove the unused recharts dependency
+- remove the unused settings.theme i18n keys
+- remove the unused SvgMaskIcon component
+- make the feedback dialog description optional
+- add the plugin-browser folder to the component trees
+- cover the cannot-edit editor state with a unit test
+- start the mock server before the console e2e commands
+- switch to the installed tab with a pointer press
+- remove the plugin browser stylesheet
+- point the files e2e at the current breadcrumb crumb
+- match Arc checkbox and dashboard datum assertions
+- remove the legacy console view stylesheet
+- allow more time for Arc dialog suites in the parallel run
+- rebuild the console filter and command bar on Arc
+- rebuild the console log list and pinned panel on Arc
+- adapt backup view tests to the Arc dialogs
+- rebuild the console search on Arc
+- space the proxy setup fields below the card title
+- point backup e2e selectors at the create dialog
+- remove the legacy backups view stylesheet
+- rebuild the console status strip on Arc
+- remove the legacy files view stylesheet
+- rebuild the proxy and ngrok guides on Arc
+- frame the diff viewer and loading state with Arc
+- rebuild the file editor workspace on Arc
+- rebuild the proxy setup view on Arc
+- rebuild the files create, move and rename dialogs on Arc
+- move plugin browser helpers into plugin-model.ts
+- move files context menus onto Arc ContextMenu
+- localize the users toasts and show raw errors as details
+- list plugin browser surfaces missing from the inventory
+- rebuild the files list on Arc rows
+- rebuild the users view on Arc cards
+- rebuild the files toolbar and breadcrumb on Arc
+- add files and console surfaces missed by the inventory
+- update the release-notes preview e2e for the Arc update modal
+- update renderer tests for the Arc components
+- tick inventory items for phase 4
+- tick inventory items for phase 3
+- polish the content frame
+- confirm the whitelist removal in the user e2e spec
+- tick inventory items for phase 2
+- confirm Java and plugin uninstall in app dialogs
+- merge proxy build confirmations into one dialog
+- confirm file discard and delete in app dialogs
+- confirm backup actions in app dialogs
+- confirm server delete and clone in app dialogs
+- remove sonner and dead toast CSS
+- send component toasts through notify
+- tick inventory items covered by this phase
+- back ui primitives with Arc components
+- vendor remaining Arc components
+- add UI surface inventory spec
+- rework Arc dialog chrome
+- replace framer-motion with motion
+- alias legacy tokens to Arc foundation tokens
+- apply theme on the document root
+- set up shadcn registry for Arc UI
+- update Homebrew Cask to 2.0.64
+
 ## v2.0.64
 
 ### Features
