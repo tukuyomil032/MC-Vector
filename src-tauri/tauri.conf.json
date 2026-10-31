@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset:; script-src 'self'; style-src 'self'; img-src 'self' asset: data: blob: https://modrinth.com https://cdn.modrinth.com https://api.modrinth.com https://hangar.papermc.io https://www.spigotmc.org https://www.curseforge.com; connect-src 'self'; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none';"
+      "csp": "default-src 'self' asset:; script-src 'self'; style-src 'self'; img-src 'self' asset: data: blob: https: https://modrinth.com https://cdn.modrinth.com https://api.modrinth.com https://hangar.papermc.io https://www.spigotmc.org https://www.curseforge.com; connect-src 'self'; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none';"
     }
   },
   "bundle": {
