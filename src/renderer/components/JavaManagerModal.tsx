@@ -115,8 +115,17 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
     }
   };
 
+  // A download writes into the app data folder, so the window stays until it settles.
+  const blockDismiss = (event: Event) => event.preventDefault();
+
   const footer = (
-    <Button type="button" variant="secondary" data-testid="java-manager-close" onClick={onClose}>
+    <Button
+      type="button"
+      variant="secondary"
+      data-testid="java-manager-close"
+      disabled={isDownloading}
+      onClick={onClose}
+    >
       {t('common.close')}
     </Button>
   );
@@ -125,7 +134,7 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
     <Dialog
       open={isOpen}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next && !isDownloading) onClose();
       }}
     >
       <DialogContent
@@ -134,6 +143,8 @@ export default function JavaManagerModal({ open: isOpen, onClose }: Props) {
         title={t('javaManager.title')}
         width="min(560px, calc(100vw - var(--space-8)))"
         footer={footer}
+        onEscapeKeyDown={isDownloading ? blockDismiss : undefined}
+        onPointerDownOutside={isDownloading ? blockDismiss : undefined}
       >
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>{t('javaManager.availableVersions')}</h3>
