@@ -907,6 +907,7 @@ export const en: TranslationDictionary = {
       spigot: 'Spigot',
       fabric: 'Fabric',
       forge: 'Forge',
+      neoforge: 'NeoForge',
       velocity: 'Velocity',
       waterfall: 'Waterfall',
       bungeecord: 'BungeeCord',

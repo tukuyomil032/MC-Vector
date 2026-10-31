@@ -904,6 +904,7 @@ export const ja: TranslationDictionary = {
       spigot: 'Spigot',
       fabric: 'Fabric',
       forge: 'Forge',
+      neoforge: 'NeoForge',
       velocity: 'Velocity',
       waterfall: 'Waterfall',
       bungeecord: 'BungeeCord',

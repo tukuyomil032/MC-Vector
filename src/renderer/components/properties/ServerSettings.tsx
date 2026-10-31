@@ -219,6 +219,11 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
     { value: 'Spigot', label: t('serverSettings.softwareOptions.spigot'), group: standardGroup },
     { value: 'Fabric', label: t('serverSettings.softwareOptions.fabric'), group: moddedGroup },
     { value: 'Forge', label: t('serverSettings.softwareOptions.forge'), group: moddedGroup },
+    {
+      value: 'NeoForge',
+      label: t('serverSettings.softwareOptions.neoforge'),
+      group: moddedGroup,
+    },
     { value: 'Velocity', label: t('serverSettings.softwareOptions.velocity'), group: proxyGroup },
     {
       value: 'Waterfall',
