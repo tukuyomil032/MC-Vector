@@ -548,7 +548,7 @@
 
 - [x] プロパティの読み込みに失敗した後で保存すると、初期値で上書きされる
 - [x] 全般設定の編集中にサーバーの状態が変わると、編集内容が消える
-- [ ] プロパティと全般設定に、未保存の確認と変更検知が無い（変更検知と保存ボタンの無効化、window 閉じ時の beforeunload は済み。画面遷移時の confirm は `src/store/uiStore.ts` 側の呼び出し待ち。`hasUnsavedViewChanges()` を使う）
+- [x] プロパティと全般設定に、未保存の確認と変更検知が無い（変更検知と保存ボタンの無効化、window 閉じ時の beforeunload に加え、画面遷移時に `requestViewChange` が `hasUnsavedViewChanges()` を見て確認を出すようにした）
 - [x] トークン変更をキャンセルすると、トークンが消える
 
 ### 確認が無い

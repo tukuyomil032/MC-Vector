@@ -829,6 +829,12 @@ export const en: TranslationDictionary = {
     },
   },
 
+  unsavedChanges: {
+    title: 'Discard unsaved changes?',
+    description: 'Changes you have not saved in this view will be lost.',
+    confirm: 'Discard and leave',
+  },
+
   arcUi: {
     copy: {
       copied: 'Copied',

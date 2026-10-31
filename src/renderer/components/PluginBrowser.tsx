@@ -31,7 +31,7 @@ import {
   type PluginInstallFailureCode,
   classifyPluginInstallFailure,
 } from '../../lib/plugin-install-errors';
-import { useUiStore } from '../../store/uiStore';
+import { useGuardedViewNavigation } from '../hooks/use-guarded-view-navigation';
 import type { MinecraftServer } from '../components/../shared/server declaration';
 import {
   pluginInstallFailurePresentation,
@@ -119,7 +119,7 @@ export default function PluginBrowser({ server }: Props) {
   const [platform, setPlatform] = useState<BrowserPlatform>('Modrinth');
   const isPaper = ['Paper', 'LeafMC', 'Waterfall', 'Velocity'].includes(server.software || '');
   const { confirm, openDialog } = useAppFeedback();
-  const setCurrentView = useUiStore((state) => state.setCurrentView);
+  const setCurrentView = useGuardedViewNavigation();
   const folderName = isModServer ? 'mods' : 'plugins';
 
   const platformOptions = useMemo<PlatformOption[]>(() => {

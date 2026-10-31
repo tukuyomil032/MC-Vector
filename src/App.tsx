@@ -37,6 +37,7 @@ import { runExclusiveServerStart, useServerEulaGate } from '@/renderer/hooks/use
 import { useServerProcessActions } from '@/renderer/hooks/use-server-process-actions';
 import { useServerRuntimeListeners } from '@/renderer/hooks/use-server-runtime-listeners';
 import { useServerMetricHistorySync } from '@/renderer/hooks/use-server-metric-history-sync';
+import { useGuardedViewNavigation } from '@/renderer/hooks/use-guarded-view-navigation';
 import { useViewCycleShortcut } from '@/renderer/hooks/use-view-cycle-shortcut';
 import { buildAppShellStyle, resolveAppTheme } from '@/renderer/shared/app-shell-theme';
 import { buildAutoBackupName } from '@/renderer/shared/auto-backup';
@@ -63,7 +64,7 @@ function App() {
   const setSelectedServerId = useServerStore((state) => state.setSelectedServerId);
 
   const currentView = useUiStore((state) => state.currentView);
-  const setCurrentView = useUiStore((state) => state.setCurrentView);
+  const setCurrentView = useGuardedViewNavigation();
   const showAddServerModal = useUiStore((state) => state.showAddServerModal);
   const setShowAddServerModal = useUiStore((state) => state.setShowAddServerModal);
   const [showImportServerModal, setShowImportServerModal] = useState(false);

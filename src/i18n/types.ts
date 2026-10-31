@@ -814,6 +814,13 @@ export interface TranslationDictionary {
   };
 
   /** Navigation translations */
+  /** Confirmation shown before leaving a view that has unsaved edits */
+  unsavedChanges: {
+    title: string;
+    description: string;
+    confirm: string;
+  };
+
   /** Labels the app supplies to shared Arc UI parts, such as CodeBlock and LineChart */
   arcUi: {
     copy: {

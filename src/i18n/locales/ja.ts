@@ -826,6 +826,12 @@ export const ja: TranslationDictionary = {
     },
   },
 
+  unsavedChanges: {
+    title: '保存していない変更を破棄しますか？',
+    description: 'この画面で保存していない変更は失われます。',
+    confirm: '破棄して移動',
+  },
+
   arcUi: {
     copy: {
       copied: 'コピーしました',
