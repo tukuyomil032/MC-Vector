@@ -247,6 +247,8 @@ export interface TranslationDictionary {
       tpsAutoSampled: string;
       tpsLogBased: string;
       uptime: string;
+      latestSample: string;
+      kpiLabel: string;
       statusValues: {
         online: string;
         offline: string;
@@ -256,6 +258,9 @@ export interface TranslationDictionary {
         crashed: string;
         unknown: string;
       };
+    };
+    units: {
+      megabytes: string;
     };
     charts: {
       cpuLast60s: string;

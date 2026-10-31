@@ -230,6 +230,8 @@ export const en: TranslationDictionary = {
       tpsAutoSampled: 'Paper / LeafMC: auto sampled',
       tpsLogBased: 'Log-based detection',
       uptime: 'Uptime',
+      latestSample: 'Latest sample, last 60s',
+      kpiLabel: 'Key metrics',
       statusValues: {
         online: 'ONLINE',
         offline: 'OFFLINE',
@@ -249,6 +251,9 @@ export const en: TranslationDictionary = {
       elapsedSeconds: '{seconds}s',
       elapsedTime: 'Time since startup (seconds)',
       heldSince: 'Held since {{time}} (last measured)',
+    },
+    units: {
+      megabytes: 'MB',
     },
     healthCheck: {
       title: 'Server Health (SLP Ping)',

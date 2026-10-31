@@ -161,13 +161,13 @@
 
 ## E. ダッシュボード
 
-- [ ] ヘッダーカード
-- [ ] KPI: ステータス
-- [ ] KPI: TPS（色3段階）
-- [ ] KPI: CPU
-- [ ] KPI: メモリ
-- [ ] KPI: ソフトウェア
-- [ ] KPI: 稼働時間
+- [x] ヘッダーカード
+- [x] KPI: ステータス
+- [x] KPI: TPS（色3段階）
+- [x] KPI: CPU
+- [x] KPI: メモリ
+- [x] KPI: ソフトウェア
+- [x] KPI: 稼働時間
 - [ ] グラフ: CPU（Recharts を Arc の line-chart に置き換える）
 - [ ] グラフ: メモリ（Recharts を Arc の line-chart に置き換える）
 - [ ] グラフ: TPS（Recharts を Arc の line-chart に置き換える）

@@ -11,6 +11,7 @@ import {
   type TooltipContentProps,
 } from 'recharts';
 import type { ReactNode } from 'react';
+import { MetricCard } from '@/components/arc/metric-card/metric-card';
 import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { tauriListen } from '../../lib/tauri-api';
@@ -29,6 +30,7 @@ import {
   normalizeMetric,
 } from '../shared/server-metrics';
 import { useServerMetricHistoryStore } from '../../store/serverMetricHistoryStore';
+import styles from './DashboardView.module.css';
 
 interface Props {
   server: MinecraftServer;
@@ -71,15 +73,6 @@ const TICK_STYLE = { fontSize: 10 };
 const CPU_Y_DOMAIN: [number, number] = [0, 100];
 const TPS_Y_DOMAIN: [number, number] = [0, 22];
 
-const STATUS_COLORS: Record<ServerStatus, string> = {
-  online: '#10b981',
-  offline: '#ef4444',
-  starting: '#eab308',
-  stopping: '#f97316',
-  restarting: '#3b82f6',
-  crashed: '#f43f5e',
-};
-
 const STATUS_LABEL_KEYS: Record<ServerStatus, TranslationKey> = {
   online: 'dashboard.stats.statusValues.online',
   offline: 'dashboard.stats.statusValues.offline',
@@ -87,10 +80,6 @@ const STATUS_LABEL_KEYS: Record<ServerStatus, TranslationKey> = {
   stopping: 'dashboard.stats.statusValues.stopping',
   restarting: 'dashboard.stats.statusValues.restarting',
   crashed: 'dashboard.stats.statusValues.crashed',
-};
-
-const getStatusColor = (status: ServerStatus): string => {
-  return STATUS_COLORS[status] ?? '#aaa';
 };
 
 const isDisplayOnlyMetricPoint = (point: unknown): point is DisplayOnlyMetricPoint => {
@@ -165,18 +154,41 @@ const getStatusLabel = (status: ServerStatus, t: Translate): string => {
   return t(translationKey);
 };
 
-const getTpsColor = (tps: number | null): string => {
+type TpsTone = 'good' | 'fair' | 'poor' | 'none';
+
+const getTpsTone = (tps: number | null): TpsTone => {
   if (tps === null) {
-    return '#a1a1aa';
+    return 'none';
   }
   if (tps >= 18) {
-    return '#22c55e';
+    return 'good';
   }
   if (tps >= 15) {
-    return '#eab308';
+    return 'fair';
   }
-  return '#ef4444';
+  return 'poor';
 };
+
+interface KpiTileProps {
+  testId: string;
+  label: string;
+  value: ReactNode;
+  context?: string;
+  tone?: TpsTone;
+}
+
+/** Same anatomy as the Arc MetricCard, for values MetricCard cannot show: text, a missing sample, or a threshold color. */
+function KpiTile({ testId, label, value, context, tone }: KpiTileProps) {
+  return (
+    <article className={styles.kpi} data-testid={testId}>
+      <p className={styles.kpiLabel}>{label}</p>
+      <p className={styles.kpiValue} data-tone={tone} data-testid={`${testId}-value`}>
+        {value}
+      </p>
+      {context && <p className={styles.kpiContext}>{context}</p>}
+    </article>
+  );
+}
 
 const getMetricAxisDomain = (values: readonly number[]): [number, number] | undefined => {
   if (values.length === 0) {
@@ -345,7 +357,7 @@ const TpsChartCard = memo(function TpsChartCard({
 });
 
 export default function DashboardView({ server }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const snapshot = useServerMetricHistoryStore((state) => state.snapshotsByServer[server.id]);
   const receivedAt = useServerMetricHistoryStore(
     (state) => state.receivedAtByServer[server.id] ?? 0,
@@ -418,17 +430,19 @@ export default function DashboardView({ server }: Props) {
     return tpsWindowStats[tpsWindowStats.length - 1]?.tps ?? null;
   }, [tpsWindowStats]);
 
-  const statusColor = useMemo(() => {
-    return getStatusColor(server.status);
-  }, [server.status]);
-
   const statusLabel = useMemo(() => {
     return getStatusLabel(server.status, t);
   }, [server.status, t]);
 
-  const tpsColor = useMemo(() => {
-    return getTpsColor(currentTps);
+  const tpsTone = useMemo(() => {
+    return getTpsTone(currentTps);
   }, [currentTps]);
+
+  const tpsFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    [locale],
+  );
+  const megabytesLabel = t('dashboard.units.megabytes');
 
   const tpsSamplingLabel = useMemo(() => {
     return supportsTpsPolling
@@ -475,65 +489,73 @@ export default function DashboardView({ server }: Props) {
     };
   }, [server.id, server.notifyOnHighCpu, server.notifyHighCpuThreshold, server.name, t]);
 
+  const statusDot = <span className={styles.dot} data-status={server.status} aria-hidden="true" />;
+
   return (
-    <div
-      className="dashboard-view flex h-full flex-col gap-4 overflow-y-auto p-5 max-[920px]:p-4"
-      data-testid="dashboard-view"
-    >
-      <header className="dashboard-view__header surface-card rounded-2xl">
-        <div className="dashboard-view__header-main">
-          <h2 className="dashboard-view__title">{t('dashboard.title', { name: server.name })}</h2>
-          <p className="dashboard-view__header-meta section-title">
+    <div className={styles.page} data-testid="dashboard-view">
+      <header className={styles.header}>
+        <div>
+          <h2 className={styles.title}>{t('dashboard.title', { name: server.name })}</h2>
+          <p className={styles.meta}>
             {t('dashboard.stats.software')}: {server.software} {server.version}
           </p>
         </div>
-        <div className="dashboard-view__header-status">
-          <span className="section-title">{t('dashboard.stats.status')}</span>
-          <span className="dashboard-view__header-status-value" style={{ color: statusColor }}>
+        <div className={styles.headerStatus}>
+          <span>{t('dashboard.stats.status')}</span>
+          <span className={styles.statusValue} data-testid="dashboard-status">
+            {statusDot}
             {statusLabel}
           </span>
         </div>
       </header>
 
-      <section className="dashboard-view__kpi-grid">
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--status kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
-          <div className="kpi-tile__label">{t('dashboard.stats.status')}</div>
-          <div className="kpi-tile__value" style={{ color: statusColor }}>
-            {statusLabel}
-          </div>
-          <div className="kpi-tile__meta">
-            {t('dashboard.stats.software')}: {server.software}
-          </div>
-        </article>
+      <section className={styles.kpiGrid} aria-label={t('dashboard.stats.kpiLabel')}>
+        <KpiTile
+          testId="dashboard-kpi-status"
+          label={t('dashboard.stats.status')}
+          value={
+            <span className={styles.statusValue}>
+              {statusDot}
+              {statusLabel}
+            </span>
+          }
+          context={`${t('dashboard.stats.software')}: ${server.software}`}
+        />
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--tps kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
-          <div className="kpi-tile__label">{t('dashboard.stats.currentTps')}</div>
-          <div className="kpi-tile__value" style={{ color: tpsColor }}>
-            {currentTps === null ? '--' : currentTps.toFixed(2)}
-          </div>
-          <div className="kpi-tile__meta">{tpsSamplingLabel}</div>
-        </article>
+        <KpiTile
+          testId="dashboard-kpi-tps"
+          label={t('dashboard.stats.currentTps')}
+          value={currentTps === null ? '--' : tpsFormatter.format(currentTps)}
+          tone={tpsTone}
+          context={tpsSamplingLabel}
+        />
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--cpu kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
-          <div className="kpi-tile__label">{t('dashboard.stats.currentCpu')}</div>
-          <div className="kpi-tile__value">{currentCpu}%</div>
-        </article>
+        <div data-testid="dashboard-kpi-cpu">
+          <MetricCard
+            label={t('dashboard.stats.currentCpu')}
+            value={currentCpu}
+            suffix="%"
+            context={t('dashboard.stats.latestSample')}
+          />
+        </div>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--memory kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
-          <div className="kpi-tile__label">{t('dashboard.stats.currentMemory')}</div>
-          <div className="kpi-tile__value">{currentMem} MB</div>
-        </article>
+        <div data-testid="dashboard-kpi-memory">
+          <MetricCard
+            label={t('dashboard.stats.currentMemory')}
+            value={currentMem}
+            suffix={` ${megabytesLabel}`}
+            context={t('dashboard.stats.latestSample')}
+          />
+        </div>
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--software kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
-          <div className="kpi-tile__label">{t('dashboard.stats.software')}</div>
-          <div className="kpi-tile__value dashboard-view__software-value">{server.software}</div>
-          <div className="kpi-tile__meta">{server.version}</div>
-        </article>
+        <KpiTile
+          testId="dashboard-kpi-software"
+          label={t('dashboard.stats.software')}
+          value={server.software}
+          context={server.version}
+        />
 
-        <article className="dashboard-view__kpi-card dashboard-view__kpi-card--uptime kpi-tile flex flex-col gap-1.5 rounded-xl p-4">
-          <div className="kpi-tile__label">{t('dashboard.stats.uptime')}</div>
-          <div className="kpi-tile__value dashboard-view__uptime-value">{uptime}</div>
-        </article>
+        <KpiTile testId="dashboard-kpi-uptime" label={t('dashboard.stats.uptime')} value={uptime} />
       </section>
 
       <section className="dashboard-view__chart-grid">

@@ -1,0 +1,144 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+.meta {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.headerStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.statusValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--foreground);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A quiet status dot: the color comes from the token for each server state. */
+.dot {
+  --dot-color: var(--text-muted);
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--dot-color);
+}
+.dot[data-status='online'] {
+  --dot-color: var(--success);
+}
+.dot[data-status='starting'],
+.dot[data-status='stopping'] {
+  --dot-color: var(--warning);
+}
+.dot[data-status='restarting'] {
+  --dot-color: var(--accent);
+}
+.dot[data-status='crashed'] {
+  --dot-color: var(--danger);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Mirrors the anatomy of the Arc MetricCard: a label, a large value, and a quiet context line. */
+.kpi {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-6);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.kpiLabel {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.kpiValue {
+  margin: var(--space-8) 0 0;
+  color: var(--foreground);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.kpiValue[data-tone='good'] {
+  color: var(--success);
+}
+.kpiValue[data-tone='fair'] {
+  color: var(--warning);
+}
+.kpiValue[data-tone='poor'] {
+  color: var(--danger);
+}
+.kpiValue[data-tone='none'] {
+  color: var(--text-muted);
+}
+
+.kpiContext {
+  margin: var(--space-4) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+@media (max-width: 920px) {
+  .page {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 380px) {
+  .kpi {
+    padding: var(--space-4);
+  }
+  .kpiValue {
+    margin-top: var(--space-6);
+  }
+}

@@ -12,9 +12,30 @@ vi.mock('@/i18n', () => ({
     t: (key: string, values?: Record<string, string | number>) => {
       if (key === 'dashboard.charts.elapsedSeconds') return `${values?.seconds}s`;
       if (key === 'dashboard.charts.heldSince') return `held since ${values?.time}`;
+      if (key === 'dashboard.units.megabytes') return 'MB';
       return key;
     },
+    locale: 'en',
   }),
+}));
+vi.mock('@/components/arc/metric-card/metric-card', () => ({
+  MetricCard: ({
+    label,
+    value,
+    suffix,
+    context,
+  }: {
+    label: string;
+    value: number;
+    suffix?: string;
+    context?: string;
+  }) => (
+    <article>
+      <p>{label}</p>
+      <p data-testid="metric-value">{`${value}${suffix ?? ''}`}</p>
+      {context && <p>{context}</p>}
+    </article>
+  ),
 }));
 vi.mock('@/lib/tauri-api', () => ({ tauriListen: vi.fn().mockResolvedValue(() => {}) }));
 vi.mock('@/lib/notification-commands', () => ({ sendServerNotification: vi.fn() }));
@@ -222,15 +243,9 @@ describe('DashboardView metric charts', () => {
     expect(screen.getAllByText('dashboard.charts.metricsNoData')).toHaveLength(2);
     expect(screen.getByText('dashboard.charts.tpsNoData')).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--cpu .kpi-tile__value'),
-    ).toHaveTextContent('0%');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--memory .kpi-tile__value'),
-    ).toHaveTextContent('0 MB');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--tps .kpi-tile__value'),
-    ).toHaveTextContent('--');
+    expect(screen.getByTestId('dashboard-kpi-cpu')).toHaveTextContent('0%');
+    expect(screen.getByTestId('dashboard-kpi-memory')).toHaveTextContent('0 MB');
+    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveTextContent('--');
   });
 
   it('clips a tagged boundary anchor with one actual sample and excludes it from tooltip, dot, and readouts', () => {
@@ -288,15 +303,9 @@ describe('DashboardView metric charts', () => {
     for (const tooltip of screen.getAllByTestId('chart-tooltip')) {
       expect(tooltip).toBeEmptyDOMElement();
     }
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--cpu .kpi-tile__value'),
-    ).toHaveTextContent('35%');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--memory .kpi-tile__value'),
-    ).toHaveTextContent('512 MB');
-    expect(
-      container.querySelector('.dashboard-view__kpi-card--tps .kpi-tile__value'),
-    ).toHaveTextContent('19.50');
+    expect(screen.getByTestId('dashboard-kpi-cpu')).toHaveTextContent('35%');
+    expect(screen.getByTestId('dashboard-kpi-memory')).toHaveTextContent('512 MB');
+    expect(screen.getByTestId('dashboard-kpi-tps-value')).toHaveTextContent('19.50');
   });
 
   it('keeps the first actual sample dot and marks the held endpoint as display-only', () => {

@@ -226,6 +226,8 @@ export const ja: TranslationDictionary = {
       tpsAutoSampled: 'Paper / LeafMC: 自動計測',
       tpsLogBased: 'ログベース検出',
       uptime: '稼働時間',
+      latestSample: '直近60秒の最新値',
+      kpiLabel: '主要な指標',
       statusValues: {
         online: '稼働中',
         offline: '停止中',
@@ -241,10 +243,13 @@ export const ja: TranslationDictionary = {
       memoryLast60s: 'メモリ使用量（MB） - 直近60秒',
       tpsLast60s: 'TPS - 直近60秒',
       tpsNoData: 'TPSデータはまだありません。サーバーを起動したまま、ログ収集をお待ちください。',
-      metricsNoData: '初回の計測を待っています。',
+      metricsNoData: '計測待ち',
       elapsedSeconds: '{seconds}秒',
       elapsedTime: '起動からの経過時間（秒）',
       heldSince: '{{time}}の実測値を保持中',
+    },
+    units: {
+      megabytes: 'MB',
     },
     healthCheck: {
       title: 'サーバーヘルス（SLP Ping）',
