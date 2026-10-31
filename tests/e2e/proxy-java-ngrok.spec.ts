@@ -7,7 +7,7 @@ test.describe('proxy, Java, and Ngrok flows', () => {
 
     const proxy = page.locator('[data-testid="proxy-view"]');
     await expect(proxy).toBeVisible();
-    await expect(proxy.locator('#proxy-setup-software')).toHaveValue('Velocity');
+    await expect(proxy.locator('#proxy-setup-software')).toContainText('Velocity');
     await proxy.locator('#proxy-backend-server-1').check();
 
     await proxy.getByRole('button', { name: /Build Network/i }).click();

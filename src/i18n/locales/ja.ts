@@ -808,6 +808,10 @@ export const ja: TranslationDictionary = {
     portHint: 'プレイヤーが最初に接続するポートです (デフォルト: 25577)',
     backendServers: 'バックエンドサーバー (接続先)',
     noBackendServers: '接続可能なサーバーがありません',
+    noBackendServersHint:
+      'プロキシ自体は接続先にできません。先に接続するサーバーを作成してください。',
+    selectAll: 'すべて選択',
+    selectedCount: '{total} 台中 {selected} 台を選択',
     backendDetail: '{software} {version} (ポート: {port})',
     building: '実行中...',
     buildNetwork: 'ネットワーク構築を実行',

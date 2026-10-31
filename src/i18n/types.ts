@@ -800,6 +800,9 @@ export interface TranslationDictionary {
     portHint: string;
     backendServers: string;
     noBackendServers: string;
+    noBackendServersHint: string;
+    selectAll: string;
+    selectedCount: string;
     backendDetail: string;
     building: string;
     buildNetwork: string;
