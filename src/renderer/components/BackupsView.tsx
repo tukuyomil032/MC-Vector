@@ -1051,10 +1051,15 @@ export default function BackupsView({ server }: Props) {
       <div className={styles.list} ref={listParentRef} aria-busy={isProcessing || undefined}>
         {loading && <Skeleton label={t('common.loading')} lines={3} />}
 
-        {!loading && backups.length === 0 && <EmptyLine title={t('backups.empty')} />}
+        {!loading && backups.length === 0 && (
+          <EmptyLine className={styles.listEmpty} title={t('backups.empty')} />
+        )}
 
         {!loading && backups.length > 0 && (
-          <div style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+          <div
+            className={styles.virtualRows}
+            style={{ height: `${backupVirtualizer.getTotalSize()}px`, position: 'relative' }}
+          >
             {backupVirtualizer.getVirtualItems().map((virtualRow) => {
               const backup = backups[virtualRow.index];
               const meta = getBackupMeta(backup.name);
