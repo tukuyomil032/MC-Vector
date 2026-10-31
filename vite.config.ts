@@ -83,12 +83,6 @@ export default defineConfig({
           if (id.includes('monaco-editor') || id.includes('@monaco-editor')) {
             return 'vendor-monaco';
           }
-          if (id.includes('recharts')) {
-            return 'vendor-charts';
-          }
-          if (id.includes('xterm') || id.includes('xterm-addon-')) {
-            return 'vendor-terminal';
-          }
           if (
             id.includes('node_modules/motion/') ||
             id.includes('framer-motion') ||
