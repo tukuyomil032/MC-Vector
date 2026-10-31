@@ -558,6 +558,15 @@ export interface TranslationDictionary {
       ban: string;
     };
     offlineNotice: string;
+    notOnline: string;
+    notOnlineHint: string;
+    count: string;
+    emptyList: {
+      whitelist: { title: string; description: string };
+      ops: { title: string; description: string };
+      bannedPlayers: { title: string; description: string };
+      bannedIps: { title: string; description: string };
+    };
     placeholder: {
       playerName: string;
       ipAddress: string;

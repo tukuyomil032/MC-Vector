@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Card } from '@/components/arc/card/card';
+import { EmptyState } from '@/components/arc/empty-state/empty-state';
+import { Input } from '@/components/arc/input/input';
+import { Skeleton } from '@/components/arc/skeleton/skeleton';
+import { Globe, User } from 'lucide-react';
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../i18n';
 import {
   getPlayerLists,
@@ -7,11 +14,10 @@ import {
   type PlayerListType,
 } from '../../lib/player-commands';
 import { sendCommand } from '../../lib/server-commands';
-import type { MinecraftServer } from '../components/../shared/server declaration';
 import { notify } from '../shared/notify';
+import type { MinecraftServer } from '../shared/server declaration';
 import { useAppFeedback } from './AppFeedbackProvider';
-import { Button } from './ui/Button';
-import { Input } from './ui/Field';
+import styles from './UsersView.module.css';
 
 interface Props {
   server: MinecraftServer;
@@ -24,6 +30,7 @@ export default function UsersView({ server }: Props) {
   const [ops, setOps] = useState<PlayerEntry[]>([]);
   const [bannedPlayers, setBannedPlayers] = useState<PlayerEntry[]>([]);
   const [bannedIps, setBannedIps] = useState<PlayerEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const loadRequestId = useRef(0);
   const currentServerId = useRef(server.id);
 
@@ -32,6 +39,7 @@ export default function UsersView({ server }: Props) {
     setOps(lists.ops);
     setBannedPlayers(lists.bannedPlayers);
     setBannedIps(lists.bannedIps);
+    setLoaded(true);
   }, []);
 
   const loadAllLists = useCallback(async () => {
@@ -138,175 +146,213 @@ export default function UsersView({ server }: Props) {
   };
 
   return (
-    <div
-      className="users-view flex h-full flex-col gap-4 p-5 max-[980px]:p-4"
-      data-testid="users-view"
-    >
-      <div className="users-view__grid">
+    <div className={styles.root} data-testid="users-view">
+      {server.status !== 'online' && (
+        <Alert tone="info" title={t('users.notOnline')}>
+          {t('users.notOnlineHint')}
+        </Alert>
+      )}
+      <div className={styles.grid}>
         <UserListCard
-          title={t('users.lists.whitelist')}
-          data={whitelist}
           type="whitelist"
+          title={t('users.lists.whitelist')}
+          entries={whitelist}
+          loaded={loaded}
+          emptyTitle={t('users.emptyList.whitelist.title')}
+          emptyDescription={t('users.emptyList.whitelist.description')}
           onAdd={(val) => handleAdd('whitelist', val)}
           onRemove={(val) => handleRemove('whitelist', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
         />
         <UserListCard
-          title={t('users.lists.operators')}
-          data={ops}
           type="ops"
+          title={t('users.lists.operators')}
+          entries={ops}
+          loaded={loaded}
+          emptyTitle={t('users.emptyList.ops.title')}
+          emptyDescription={t('users.emptyList.ops.description')}
           onAdd={(val) => handleAdd('ops', val)}
           onRemove={(val) => handleRemove('ops', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
         />
         <UserListCard
-          title={t('users.lists.bannedPlayers')}
-          data={bannedPlayers}
           type="banned-players"
+          title={t('users.lists.bannedPlayers')}
+          entries={bannedPlayers}
+          loaded={loaded}
+          emptyTitle={t('users.emptyList.bannedPlayers.title')}
+          emptyDescription={t('users.emptyList.bannedPlayers.description')}
           onAdd={(val) => handleAdd('banned-players', val)}
           onRemove={(val) => handleRemove('banned-players', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
         />
         <UserListCard
-          title={t('users.lists.bannedIps')}
-          data={bannedIps}
           type="banned-ips"
+          title={t('users.lists.bannedIps')}
+          entries={bannedIps}
+          loaded={loaded}
+          emptyTitle={t('users.emptyList.bannedIps.title')}
+          emptyDescription={t('users.emptyList.bannedIps.description')}
           onAdd={(val) => handleAdd('banned-ips', val)}
           onRemove={(val) => handleRemove('banned-ips', val)}
-          entriesLabel={t('users.entriesCount')}
-          emptyLabel={t('users.empty')}
-          removeLabel={t('users.actions.remove')}
-          addLabel={t('users.actions.add')}
-          placeholderPlayer={t('users.placeholder.playerName')}
-          placeholderIp={t('users.placeholder.ipAddress')}
         />
       </div>
     </div>
   );
 }
 
+interface UserListCardProps {
+  type: PlayerListType;
+  title: string;
+  entries: PlayerEntry[];
+  loaded: boolean;
+  emptyTitle: string;
+  emptyDescription: string;
+  onAdd: (value: string) => Promise<boolean>;
+  onRemove: (identifier: string) => Promise<void>;
+}
+
 function UserListCard({
-  title,
-  data,
   type,
+  title,
+  entries,
+  loaded,
+  emptyTitle,
+  emptyDescription,
   onAdd,
   onRemove,
-  entriesLabel,
-  emptyLabel,
-  removeLabel,
-  addLabel,
-  placeholderPlayer,
-  placeholderIp,
-}: {
-  title: string;
-  data: PlayerEntry[];
-  type: PlayerListType;
-  onAdd: (val: string) => Promise<boolean>;
-  onRemove: (val: string) => Promise<void>;
-  entriesLabel: string;
-  emptyLabel: string;
-  removeLabel: string;
-  addLabel: string;
-  placeholderPlayer: string;
-  placeholderIp: string;
-}) {
-  const [input, setInput] = useState('');
+}: UserListCardProps) {
   const { t } = useTranslation();
+  const [value, setValue] = useState('');
+  const [pending, setPending] = useState(false);
+  const isIpList = type === 'banned-ips';
 
-  const handleAddClick = async () => {
-    if (!input) {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!value.trim() || pending) {
       return;
     }
-    if (await onAdd(input)) {
-      setInput('');
+    setPending(true);
+    try {
+      if (await onAdd(value)) {
+        setValue('');
+      }
+    } finally {
+      setPending(false);
     }
   };
 
+  let body: ReactNode;
+  if (!loaded) {
+    body = <Skeleton label={t('common.loading')} lines={3} />;
+  } else if (entries.length === 0) {
+    body = (
+      <div className={styles.emptyWrap}>
+        <EmptyState title={emptyTitle} description={emptyDescription} />
+      </div>
+    );
+  } else {
+    body = (
+      <ul className={styles.list}>
+        {entries.map((entry) => (
+          <UserRow
+            key={`${type}:${entry.uuid ?? entry.ip ?? entry.name}`}
+            type={type}
+            entry={entry}
+            onRemove={onRemove}
+          />
+        ))}
+      </ul>
+    );
+  }
+
   return (
-    <div className="users-view__card" data-testid={`users-list-${type}`}>
-      <div className="users-view__card-header">
-        {title}
-        <span className="users-view__count">
-          {data.length} {entriesLabel}
-        </span>
-      </div>
-
-      <div className="users-view__list">
-        {data.length === 0 ? (
-          <div className="users-view__empty">{emptyLabel}</div>
-        ) : (
-          data.map((item) => (
-            <div key={`${type}:${item.uuid ?? item.ip ?? item.name}`} className="users-view__item">
-              <div className="users-view__item-main">
-                {type !== 'banned-ips' && (
-                  <img
-                    src={`https://minotar.net/avatar/${encodeURIComponent(item.name ?? '')}/24`}
-                    alt=""
-                    className="users-view__avatar"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://minotar.net/avatar/MHF_Steve/24';
-                    }}
-                  />
-                )}
-                <div className="users-view__item-meta">
-                  <div className="users-view__item-name">
-                    {type === 'banned-ips' ? item.ip : item.name}
-                  </div>
-                  {item.reason && <div className="text-xs text-red-500">{item.reason}</div>}
-                  {item.level && (
-                    <div className="text-xs text-yellow-500">
-                      {t('users.level', { level: item.level })}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="stop"
-                className="users-view__remove-btn"
-                onClick={() => onRemove(type === 'banned-ips' ? item.ip || '' : item.name)}
-              >
-                {removeLabel}
-              </Button>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="users-view__form">
+    <Card
+      title={title}
+      description={loaded ? t('users.count', { count: entries.length }) : undefined}
+      className={styles.card}
+      data-testid={`users-list-${type}`}
+    >
+      {body}
+      <form className={styles.addForm} onSubmit={handleSubmit} noValidate>
         <Input
-          type="text"
-          className="users-view__input"
+          label={isIpList ? t('users.placeholder.ipAddress') : t('users.placeholder.playerName')}
           data-testid={`users-input-${type}`}
-          placeholder={type === 'banned-ips' ? placeholderIp : placeholderPlayer}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAddClick()}
+          value={value}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => setValue(event.target.value)}
         />
         <Button
-          variant="primary"
-          className="users-view__add-btn"
+          type="submit"
+          variant="secondary"
+          className={styles.addButton}
           data-testid={`users-add-${type}`}
-          onClick={handleAddClick}
+          loading={pending}
         >
-          {addLabel}
+          {t('users.actions.add')}
         </Button>
+      </form>
+    </Card>
+  );
+}
+
+interface UserRowProps {
+  type: PlayerListType;
+  entry: PlayerEntry;
+  onRemove: (identifier: string) => Promise<void>;
+}
+
+function UserRow({ type, entry, onRemove }: UserRowProps) {
+  const { t } = useTranslation();
+  const isIpList = type === 'banned-ips';
+  const identifier = isIpList ? (entry.ip ?? '') : entry.name;
+  const details = [
+    entry.reason,
+    typeof entry.level === 'number' ? t('users.level', { level: entry.level }) : undefined,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <li className={styles.row}>
+      <UserAvatar name={entry.name} isIpList={isIpList} />
+      <div className={styles.rowText}>
+        <span className={styles.rowName}>{isIpList ? entry.ip : entry.name}</span>
+        {details && <span className={styles.rowMeta}>{details}</span>}
       </div>
-    </div>
+      <Button type="button" variant="ghost" size="sm" onClick={() => void onRemove(identifier)}>
+        {t('users.actions.remove')}
+      </Button>
+    </li>
+  );
+}
+
+function UserAvatar({ name, isIpList }: { name: string; isIpList: boolean }) {
+  const [failed, setFailed] = useState(false);
+
+  if (isIpList) {
+    return (
+      <span className={styles.avatar} aria-hidden="true">
+        <Globe size={16} strokeWidth={1.75} />
+      </span>
+    );
+  }
+  if (failed || !name) {
+    return (
+      <span className={styles.avatar} aria-hidden="true">
+        <User size={16} strokeWidth={1.75} />
+      </span>
+    );
+  }
+  return (
+    <span className={styles.avatar} aria-hidden="true">
+      <img
+        className={styles.avatarImage}
+        src={`https://minotar.net/avatar/${encodeURIComponent(name)}/32`}
+        alt=""
+        width={32}
+        height={32}
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    </span>
   );
 }

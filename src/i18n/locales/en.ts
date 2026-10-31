@@ -544,6 +544,27 @@ export const en: TranslationDictionary = {
       ban: 'Ban',
     },
     offlineNotice: 'Server is offline',
+    notOnline: 'The server is not online',
+    notOnlineHint: 'Changes are saved to the list and take effect the next time the server starts.',
+    count: '{count} entries',
+    emptyList: {
+      whitelist: {
+        title: 'No whitelisted players',
+        description: 'While the whitelist is on, only players on this list can join.',
+      },
+      ops: {
+        title: 'No operators',
+        description: 'Operators can run commands in the game and manage other players.',
+      },
+      bannedPlayers: {
+        title: 'No banned players',
+        description: 'Banned players cannot join this server.',
+      },
+      bannedIps: {
+        title: 'No banned IP addresses',
+        description: 'Connections from banned addresses are refused.',
+      },
+    },
     placeholder: {
       playerName: 'Player Name',
       ipAddress: 'IP Address',

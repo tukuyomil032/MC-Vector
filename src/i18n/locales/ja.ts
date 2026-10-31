@@ -540,6 +540,27 @@ export const ja: TranslationDictionary = {
       ban: 'BAN',
     },
     offlineNotice: 'サーバーがオフラインです',
+    notOnline: 'サーバーはオンラインではありません',
+    notOnlineHint: '変更はリストに保存され、次回サーバーが起動したときに反映されます。',
+    count: '{count} 件',
+    emptyList: {
+      whitelist: {
+        title: 'ホワイトリストのプレイヤーはいません',
+        description: 'ホワイトリストが有効な間は、このリストのプレイヤーだけが参加できます。',
+      },
+      ops: {
+        title: 'OPはいません',
+        description: 'OPはゲーム内でコマンドを実行し、他のプレイヤーを管理できます。',
+      },
+      bannedPlayers: {
+        title: 'BANされたプレイヤーはいません',
+        description: 'BANされたプレイヤーは、このサーバーに参加できません。',
+      },
+      bannedIps: {
+        title: 'BANされたIPアドレスはありません',
+        description: 'BANされたアドレスからの接続は拒否されます。',
+      },
+    },
     placeholder: {
       playerName: 'プレイヤー名',
       ipAddress: 'IPアドレス',
