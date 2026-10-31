@@ -191,7 +191,8 @@ describe('UsersView', () => {
 
     const input = screen.getByTestId('users-input-whitelist');
     fireEvent.change(input, { target: { value: 'alex' } });
-    expect(screen.queryByText('Enter a player name to add.')).not.toBeInTheDocument();
+    // The message fades out with an exit animation that jsdom never finishes, so check the field state.
+    expect(input).not.toHaveAttribute('aria-invalid', 'true');
     fireEvent.submit(input.closest('form') as HTMLFormElement);
 
     await waitFor(() =>
