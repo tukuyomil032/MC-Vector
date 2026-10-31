@@ -13,9 +13,13 @@
   background: var(--surface);
 }
 
+/* The one scroll region for every view: the content card is clipped, and this frame fills it and scrolls. */
 .viewFrame {
+  flex: 1;
   height: 100%;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .loading {

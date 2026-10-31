@@ -2,8 +2,7 @@
 
 .root {
   box-sizing: border-box;
-  height: 100%;
-  overflow-y: auto;
+  min-height: 100%;
   padding: var(--space-6);
 }
 
