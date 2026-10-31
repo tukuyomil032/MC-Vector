@@ -1,14 +1,18 @@
-import * as Tabs from '@radix-ui/react-tabs';
-import { useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/arc/button/button';
+import { Input } from '@/components/arc/input/input';
+import { NumberField } from '@/components/arc/number-field/number-field';
+import { PasswordField } from '@/components/arc/password-field/password-field';
+import { Select } from '@/components/arc/select/select';
+import { Switch } from '@/components/arc/switch/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '../../../i18n';
 import {
   type PropertyCategory,
   type PropertyDefinition,
   serverPropertiesList,
 } from '../../shared/propertiesData';
-import { Button } from '../ui/Button';
-import { Input, NativeSelect } from '../ui/Field';
-import { Switch } from '../ui/Switch';
+import styles from './AdvancedSettingsWindow.module.css';
 
 const CATEGORY_ORDER: PropertyCategory[] = [
   'General',
@@ -18,6 +22,28 @@ const CATEGORY_ORDER: PropertyCategory[] = [
   'Security',
   'Advanced',
 ];
+
+/** Properties whose values are secrets. They use a masked field with a reveal toggle. */
+const SECRET_KEYS = new Set([
+  'rcon.password',
+  'management-server-secret',
+  'management-server-tls-keystore-password',
+]);
+
+/** Known bounds for numeric properties, so the field clamps values the server would reject. */
+const NUMBER_LIMITS: Record<string, { min?: number; max?: number }> = {
+  'server-port': { min: 1, max: 65535 },
+  'rcon.port': { min: 1, max: 65535 },
+  'query.port': { min: 1, max: 65535 },
+  'max-players': { min: 0 },
+  'view-distance': { min: 3, max: 32 },
+  'simulation-distance': { min: 3, max: 32 },
+  'spawn-protection': { min: 0 },
+  'player-idle-timeout': { min: 0 },
+  'function-permission-level': { min: 1, max: 4 },
+  'op-permission-level': { min: 1, max: 4 },
+  'entity-broadcast-range-percentage': { min: 10, max: 1000 },
+};
 
 const JAPANESE_TEXT_PATTERN = /[ぁ-んァ-ン一-龯]/;
 const ACRONYM_SEGMENTS: Record<string, string> = {
@@ -146,61 +172,93 @@ export default function AdvancedSettingsWindow({
     return t('advancedSettings.propertyDescriptionFallback', { key: prop.key });
   };
 
-  const renderInput = (prop: PropertyDefinition, currentValue: unknown) => {
-    if (prop.type === 'boolean') {
-      return (
-        <Switch
-          checked={Boolean(currentValue)}
-          onCheckedChange={(checked) => handleChange(prop.key, checked)}
-        />
-      );
-    }
+  /** The key sits in the description so the visible text stays a plain sentence with the real property name. */
+  const fieldDescription = (prop: PropertyDefinition): string =>
+    `${getPropertyDescription(prop)} (${prop.key})`;
+
+  const renderField = (prop: PropertyDefinition, currentValue: unknown) => {
+    const label = getPropertyLabel(prop);
     if (prop.type === 'number') {
+      const limits = NUMBER_LIMITS[prop.key] ?? {};
       return (
-        <Input
-          type="number"
-          className="advanced-settings-window__input"
+        <NumberField
+          label={label}
+          description={fieldDescription(prop)}
+          min={limits.min}
+          max={limits.max}
+          // Server properties are plain integers, so digits are shown without thousands separators.
+          formatOptions={{ useGrouping: false }}
           value={Number(currentValue ?? 0)}
-          onChange={(e) => handleChange(prop.key, Number(e.target.value))}
+          onValueChange={(value) => handleChange(prop.key, value)}
         />
       );
     }
     if (prop.type === 'select' && prop.options) {
       return (
-        <NativeSelect
-          className="advanced-settings-window__input"
+        <Select
+          label={label}
+          description={fieldDescription(prop)}
+          value={String(currentValue ?? '')}
+          onValueChange={(value) => handleChange(prop.key, value)}
+          options={prop.options.map((option) => ({ value: option, label: option }))}
+        />
+      );
+    }
+    if (SECRET_KEYS.has(prop.key)) {
+      return (
+        <PasswordField
+          label={label}
+          description={fieldDescription(prop)}
+          autoComplete="new-password"
           value={String(currentValue ?? '')}
           onChange={(e) => handleChange(prop.key, e.target.value)}
-        >
-          {prop.options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </NativeSelect>
+        />
       );
     }
     return (
       <Input
+        label={label}
+        description={fieldDescription(prop)}
         type="text"
-        className="advanced-settings-window__input"
         value={String(currentValue ?? '')}
         onChange={(e) => handleChange(prop.key, e.target.value)}
       />
     );
   };
 
+  const renderToggle = (prop: PropertyDefinition, currentValue: unknown) => {
+    const labelId = `advanced-${prop.key}-label`;
+    return (
+      <div className={styles.toggleCard}>
+        <div className={styles.toggleText}>
+          <span id={labelId} className={styles.toggleLabel}>
+            {getPropertyLabel(prop)}
+          </span>
+          <span className={styles.key}>{prop.key}</span>
+          <span className={styles.toggleDescription}>{getPropertyDescription(prop)}</span>
+        </div>
+        <Switch
+          aria-labelledby={labelId}
+          checked={Boolean(currentValue)}
+          onCheckedChange={(checked) => handleChange(prop.key, checked)}
+        />
+      </div>
+    );
+  };
+
   if (!isLoaded) {
-    return <div className="advanced-settings-window__loading">{t('advancedSettings.loading')}</div>;
+    return (
+      <div className={styles.loading} role="status">
+        {t('advancedSettings.loading')}
+      </div>
+    );
   }
 
   return (
-    <div className="advanced-settings-window">
-      <header className="advanced-settings-window__header">
-        <div className="advanced-settings-window__title">
-          <span>🛠️ {t('advancedSettings.title')}</span>
-        </div>
-        <div className="advanced-settings-window__header-actions">
+    <div className={styles.page} data-testid="advanced-settings-window">
+      <header className={styles.header}>
+        <h2 className={styles.title}>{t('advancedSettings.title')}</h2>
+        <div className={styles.actions}>
           <Button variant="secondary" onClick={handleCancel}>
             {t('common.cancel')}
           </Button>
@@ -210,72 +268,42 @@ export default function AdvancedSettingsWindow({
         </div>
       </header>
 
-      <Tabs.Root
+      <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as PropertyCategory)}
-        orientation="vertical"
-        className="advanced-settings-window__body"
+        className={styles.body}
       >
-        <Tabs.List asChild>
-          <aside className="advanced-settings-window__sidebar">
-            {categories.map((cat) => (
-              <Tabs.Trigger
-                key={cat}
-                value={cat}
-                className={`advanced-settings-window__tab ${activeTab === cat ? 'is-active' : 'is-idle'}`}
-              >
-                {getCategoryLabel(cat)}
-              </Tabs.Trigger>
-            ))}
-          </aside>
-        </Tabs.List>
+        <TabsList className={styles.categories} aria-label={t('advancedSettings.categoriesLabel')}>
+          {categories.map((cat) => (
+            <TabsTrigger key={cat} value={cat}>
+              {getCategoryLabel(cat)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-        {categories.map((cat) => {
-          const catProps = allDefinitions.filter((p) => p.category === cat);
-          return (
-            <Tabs.Content key={cat} value={cat} className="advanced-settings-window__content">
-              <h3 className="advanced-settings-window__section-title">{getCategoryLabel(cat)}</h3>
-
-              <div className="advanced-settings-window__grid">
-                {catProps.map((prop) => {
-                  const currentValue = formData[prop.key] ?? prop.default;
-                  const label = getPropertyLabel(prop);
-                  const description = getPropertyDescription(prop);
-
-                  return (
-                    <div key={prop.key} className="advanced-settings-window__card">
-                      <div className="advanced-settings-window__card-head">
-                        <div className="advanced-settings-window__card-info group">
-                          <div className="advanced-settings-window__card-label">
-                            <span>{label}</span>
-                            <span className="advanced-settings-window__card-key">({prop.key})</span>
-                          </div>
-                          <div className="advanced-settings-window__card-description">
-                            {description}
-                          </div>
-                          <div className="advanced-settings-window__tooltip">{description}</div>
-                        </div>
-
-                        {prop.type === 'boolean' && (
-                          <div className="advanced-settings-window__toggle-wrap">
-                            {renderInput(prop, currentValue)}
-                          </div>
-                        )}
+        <div className={styles.panel}>
+          {categories.map((cat) => {
+            const catProps = allDefinitions.filter((p) => p.category === cat);
+            return (
+              <TabsContent key={cat} value={cat} className={styles.content}>
+                <h3 className={styles.sectionTitle}>{getCategoryLabel(cat)}</h3>
+                <div className={styles.grid}>
+                  {catProps.map((prop) => {
+                    const currentValue = formData[prop.key] ?? prop.default;
+                    return (
+                      <div key={prop.key} className={styles.cell}>
+                        {prop.type === 'boolean'
+                          ? renderToggle(prop, currentValue)
+                          : renderField(prop, currentValue)}
                       </div>
-
-                      {prop.type !== 'boolean' && (
-                        <div className="advanced-settings-window__input-wrap">
-                          {renderInput(prop, currentValue)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Tabs.Content>
-          );
-        })}
-      </Tabs.Root>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+            );
+          })}
+        </div>
+      </Tabs>
     </div>
   );
 }

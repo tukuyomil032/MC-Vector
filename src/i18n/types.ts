@@ -920,6 +920,7 @@ export interface TranslationDictionary {
       spigot: string;
       fabric: string;
       forge: string;
+      neoforge: string;
       velocity: string;
       waterfall: string;
       bungeecord: string;
@@ -962,11 +963,14 @@ export interface TranslationDictionary {
       saturday: string;
     };
     saveSettings: string;
+    unsavedChanges: string;
     jvmArgs: {
       label: string;
       placeholder: string;
       help: string;
       clear: string;
+      presetsLabel: string;
+      customLabel: string;
       presets: {
         aikar: string;
         zgc: string;
@@ -987,6 +991,7 @@ export interface TranslationDictionary {
       tokenRequired: {
         title: string;
         description: string;
+        label: string;
         placeholder: string;
         cancel: string;
         saveAndConnect: string;
@@ -998,6 +1003,12 @@ export interface TranslationDictionary {
       currentVersion: string;
       latestVersion: string;
       alreadyLatest: string;
+      stepCheck: string;
+      blockedWhileRunning: string;
+      unverifiedReason: string;
+      stepsLabel: string;
+      backupProgressLabel: string;
+      downloadProgressLabel: string;
       serverMustBeOffline: string;
       startUpgrade: string;
       stepBackup: string;
@@ -1089,11 +1100,17 @@ export interface TranslationDictionary {
   properties: {
     title: string;
     search: {
+      label: string;
       placeholder: string;
+      emptyTitle: string;
+      empty: string;
     };
     openAdvanced: string;
     saveChanges: string;
     loadFailed: string;
+    loadFailedDescription: string;
+    retry: string;
+    unsavedChanges: string;
     saveSuccess: string;
     saveFailed: string;
     advancedSaveSuccess: string;
@@ -1176,6 +1193,7 @@ export interface TranslationDictionary {
     title: string;
     loading: string;
     applyAndClose: string;
+    categoriesLabel: string;
     inferredDescription: string;
     propertyDescriptionFallback: string;
     categories: {

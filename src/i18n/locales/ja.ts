@@ -940,6 +940,7 @@ export const ja: TranslationDictionary = {
       spigot: 'Spigot',
       fabric: 'Fabric',
       forge: 'Forge',
+      neoforge: 'NeoForge',
       velocity: 'Velocity',
       waterfall: 'Waterfall',
       bungeecord: 'BungeeCord',
@@ -982,11 +983,14 @@ export const ja: TranslationDictionary = {
       saturday: '土曜',
     },
     saveSettings: '設定を保存',
+    unsavedChanges: '未保存の変更があります',
     jvmArgs: {
       label: 'JVM 引数',
       placeholder: '-XX:+UseG1GC ...',
       help: '-jar の前に挿入される追加JVMフラグです。各フラグは「-」で始まる必要があります。',
       clear: 'クリア',
+      presetsLabel: 'プリセット',
+      customLabel: 'カスタム引数',
       presets: {
         aikar: "Aikar's Flags",
         zgc: 'ZGC',
@@ -1008,6 +1012,7 @@ export const ja: TranslationDictionary = {
         title: 'ngrok の認証トークンが必要です',
         description:
           'ngrokを使用するには認証トークンが必要です。公式サイト (dashboard.ngrok.com) からトークンを取得して貼り付けてください。',
+        label: '認証トークン',
         placeholder: 'Ex: 2A...',
         cancel: 'キャンセル',
         saveAndConnect: '保存して接続',
@@ -1018,7 +1023,15 @@ export const ja: TranslationDictionary = {
       title: 'バージョンアップウィザード',
       currentVersion: '現在のバージョン',
       latestVersion: '最新バージョン',
-      alreadyLatest: '✅ 最新バージョンです',
+      alreadyLatest: '最新バージョンです',
+      stepCheck: '確認',
+      unverifiedReason:
+        'この版はチェックサムが公開されていないため、サーバーの JAR を差し替える前に検証できません。そのためダウンロードは無効です。',
+      blockedWhileRunning:
+        'バックアップまたはダウンロードの実行中です。サーバーのファイルを書きかけで残さないよう、完了するまでこの画面は閉じられません。',
+      stepsLabel: 'アップグレードの手順',
+      backupProgressLabel: 'バックアップの進捗',
+      downloadProgressLabel: 'ダウンロードの進捗',
       serverMustBeOffline: 'アップグレードを開始するにはサーバーを停止してください',
       startUpgrade: 'アップグレード開始',
       stepBackup: 'バックアップ',
@@ -1108,11 +1121,18 @@ export const ja: TranslationDictionary = {
   properties: {
     title: 'プロパティ',
     search: {
+      label: 'プロパティを検索',
       placeholder: 'プロパティを検索...',
+      emptyTitle: '一致するプロパティがありません',
+      empty: 'キー名や項目名など、別の語句で探してください。',
     },
     openAdvanced: '詳細設定を開く',
     saveChanges: '変更を保存',
     loadFailed: 'サーバープロパティの読み込みに失敗しました',
+    loadFailedDescription:
+      '現在のファイルを読めなかったため、誤って上書きしないように編集と保存を無効にしています。再読み込みを試してください。',
+    retry: '再試行',
+    unsavedChanges: '未保存の変更があります',
     saveSuccess: 'プロパティを保存しました',
     saveFailed: 'プロパティの保存に失敗しました',
     advancedSaveSuccess: '詳細設定を保存しました',
@@ -1193,6 +1213,7 @@ export const ja: TranslationDictionary = {
     title: '詳細サーバー設定 (server.properties)',
     loading: '設定を読み込み中...',
     applyAndClose: '適用して閉じる',
+    categoriesLabel: 'プロパティのカテゴリ',
     inferredDescription: 'server.properties に存在する項目です。',
     propertyDescriptionFallback: 'プロパティキー: {key}',
     categories: {

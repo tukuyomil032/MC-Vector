@@ -942,6 +942,7 @@ export const en: TranslationDictionary = {
       spigot: 'Spigot',
       fabric: 'Fabric',
       forge: 'Forge',
+      neoforge: 'NeoForge',
       velocity: 'Velocity',
       waterfall: 'Waterfall',
       bungeecord: 'BungeeCord',
@@ -984,11 +985,14 @@ export const en: TranslationDictionary = {
       saturday: 'Saturday',
     },
     saveSettings: 'Save Settings',
+    unsavedChanges: 'Unsaved changes',
     jvmArgs: {
       label: 'JVM Arguments',
       placeholder: '-XX:+UseG1GC ...',
       help: 'Extra JVM flags inserted before -jar. Each flag must start with "-".',
       clear: 'Clear',
+      presetsLabel: 'Presets',
+      customLabel: 'Custom arguments',
       presets: {
         aikar: "Aikar's Flags",
         zgc: 'ZGC',
@@ -1010,6 +1014,7 @@ export const en: TranslationDictionary = {
         title: 'ngrok AuthToken Required',
         description:
           'An authentication token is required to use ngrok. Please obtain a token from the official site (dashboard.ngrok.com) and paste it below.',
+        label: 'AuthToken',
         placeholder: 'Ex: 2A...',
         cancel: 'Cancel',
         saveAndConnect: 'Save and Connect',
@@ -1020,7 +1025,15 @@ export const en: TranslationDictionary = {
       title: 'Version Upgrade Wizard',
       currentVersion: 'Current Version',
       latestVersion: 'Latest Version',
-      alreadyLatest: '✅ Already up to date',
+      alreadyLatest: 'Already up to date',
+      stepCheck: 'Check',
+      unverifiedReason:
+        'The download is disabled because this release publishes no checksum, so the file cannot be verified before it replaces the server JAR.',
+      blockedWhileRunning:
+        'A backup or download is running. This window stays open until it finishes, so the server files are not left half-written.',
+      stepsLabel: 'Upgrade steps',
+      backupProgressLabel: 'Backup progress',
+      downloadProgressLabel: 'Download progress',
       serverMustBeOffline: 'Please stop the server before upgrading',
       startUpgrade: 'Start Upgrade',
       stepBackup: 'Backup',
@@ -1110,11 +1123,18 @@ export const en: TranslationDictionary = {
   properties: {
     title: 'Server Properties',
     search: {
+      label: 'Search properties',
       placeholder: 'Search properties...',
+      emptyTitle: 'No matching properties',
+      empty: 'Try another word, such as a property key or label.',
     },
     openAdvanced: 'Open Advanced',
     saveChanges: 'Save Changes',
     loadFailed: 'Failed to load server properties',
+    loadFailedDescription:
+      'The current file could not be read, so editing and saving are disabled to keep it safe. Retry to load it again.',
+    retry: 'Retry',
+    unsavedChanges: 'Unsaved changes',
     saveSuccess: 'Properties saved',
     saveFailed: 'Failed to save properties',
     advancedSaveSuccess: 'Advanced settings saved',
@@ -1195,6 +1215,7 @@ export const en: TranslationDictionary = {
     title: 'Advanced Server Settings (server.properties)',
     loading: 'Loading settings...',
     applyAndClose: 'Apply and Close',
+    categoriesLabel: 'Property categories',
     inferredDescription: 'Property found in server.properties.',
     propertyDescriptionFallback: 'Property key: {key}',
     categories: {

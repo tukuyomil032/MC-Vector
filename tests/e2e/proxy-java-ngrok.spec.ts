@@ -47,8 +47,8 @@ test.describe('proxy, Java, and Ngrok flows', () => {
     await expect.poll(async () => (await app.ipcCalls('download_java')).length).toBe(1);
     await javaDialog.locator('[data-testid="java-manager-close"]').click();
 
-    await settings.locator('.server-settings__ngrok-switch').click();
-    const tokenDialog = page.locator('.server-settings__token-panel');
+    await settings.locator('[data-testid="ngrok-toggle"]').click();
+    const tokenDialog = page.locator('[data-testid="ngrok-token-dialog"]');
     await expect(tokenDialog).toBeVisible();
     await tokenDialog.locator('[data-testid="ngrok-token-input"]').fill('e2e-token');
     await tokenDialog.locator('[data-testid="ngrok-token-save"]').click();

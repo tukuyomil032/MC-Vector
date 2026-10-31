@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
 import VersionUpgradeWizard from '@/renderer/components/VersionUpgradeWizard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -50,6 +50,9 @@ const server = {
   path: '/servers/server-a',
   status: 'offline',
 } as MinecraftServer;
+
+// Arc dialogs and motion mount slowly in jsdom, and the full suite runs in parallel, so allow more time per test.
+vi.setConfig({ testTimeout: 20_000 });
 
 beforeEach(() => {
   createBackupMock.mockReset().mockResolvedValue({
@@ -122,6 +125,7 @@ describe('VersionUpgradeWizard Rust-owned install flow', () => {
     expect(
       screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runDownload' }),
     ).toBeDisabled();
+    expect(screen.getByText('serverSettings.versionUpgrade.unverifiedReason')).toBeInTheDocument();
     expect(executeServerJarInstallMock).not.toHaveBeenCalled();
   });
 
@@ -150,6 +154,79 @@ describe('VersionUpgradeWizard Rust-owned install flow', () => {
       screen.queryByRole('button', { name: 'serverSettings.versionUpgrade.runDownload' }),
     ).not.toBeInTheDocument();
     expect(executeServerJarInstallMock).not.toHaveBeenCalled();
+  });
+
+  it('shows backup progress on the 0-100 scale the backend reports', async () => {
+    let emitBackupProgress: ((data: { serverId: string; progress: number }) => void) | undefined;
+    onBackupProgressMock.mockImplementationOnce(async (callback) => {
+      emitBackupProgress = callback;
+      return () => {};
+    });
+    let finishBackup: ((value: unknown) => void) | undefined;
+    createBackupMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishBackup = resolve;
+      }),
+    );
+    render(
+      <VersionUpgradeWizard server={server} onClose={vi.fn()} onServerVersionChanged={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(prepareServerJarInstallMock).toHaveBeenCalledOnce());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.startUpgrade' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runBackup' }),
+    );
+    await waitFor(() => expect(emitBackupProgress).toBeDefined());
+
+    act(() => emitBackupProgress?.({ serverId: server.id, progress: 42 }));
+
+    const bar = screen.getByRole('progressbar', {
+      name: 'serverSettings.versionUpgrade.backupProgressLabel',
+    });
+    expect(bar).toHaveAttribute('aria-valuemax', '100');
+    expect(bar).toHaveAttribute('aria-valuenow', '42');
+    finishBackup?.({ status: 'created', backupName: 'pre-upgrade.zip', catalogError: null });
+  });
+
+  it('keeps the wizard open while a backup runs and explains why', async () => {
+    let finishBackup: ((value: unknown) => void) | undefined;
+    createBackupMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishBackup = resolve;
+      }),
+    );
+    const onClose = vi.fn();
+    render(
+      <VersionUpgradeWizard server={server} onClose={onClose} onServerVersionChanged={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(prepareServerJarInstallMock).toHaveBeenCalledOnce());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.startUpgrade' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.runBackup' }),
+    );
+    await waitFor(() => expect(createBackupMock).toHaveBeenCalledOnce());
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByText('serverSettings.versionUpgrade.blockedWhileRunning'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'serverSettings.versionUpgrade.close' }),
+    ).toBeDisabled();
+    finishBackup?.({
+      status: 'created',
+      backupName: 'pre-upgrade.zip',
+      catalogError: null,
+      restart: { status: 'not_needed' },
+    });
   });
 
   it('reports backup and restart failure together without claiming the backup was created', async () => {
