@@ -18,6 +18,7 @@
   --ansi-bg-cyan: color-mix(in oklab, var(--ansi-cyan) 30%, transparent);
   --ansi-bg-white: color-mix(in oklab, var(--foreground) 20%, transparent);
 
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -28,9 +29,11 @@
   font-family: var(--font-body);
 }
 
-/* One toolbar: address, status, and memory on the left; search, level, and save on the right. It wraps when narrow. */
+/* One toolbar: address, status, and memory on the left; search, level, and save on the right. It wraps when narrow.
+   It keeps its height when the logs fill the view, so it stays put above the log pane. */
 .toolbar {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
@@ -352,9 +355,10 @@
   transform: translateX(-50%);
 }
 
-/* The command line is one row: a prompt, the input, and the send button, centered on one axis. */
+/* The command line is one row: a prompt, the input, and the send button, centered on one axis. It never shrinks under the log pane. */
 .commandRow {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: var(--space-2);
 }

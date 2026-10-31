@@ -58,6 +58,29 @@ type AnsiSegment = {
 
 type LogLevelFilter = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 
+/**
+ * Scrolls only the log pane to its last line. scrollIntoView would also scroll the view's own scroll frame, which pushed
+ * the toolbar and the command row out of place every time a log line arrived.
+ */
+function scrollPaneToEnd(pane: HTMLElement | null, behavior: ScrollBehavior) {
+  pane?.scrollTo({ top: pane.scrollHeight, behavior });
+}
+
+/**
+ * Centers an element inside the log pane and leaves the ancestors alone. The offset comes from bounding rects, so it
+ * holds whatever element the pane's offsetParent is.
+ */
+function centerInPane(pane: HTMLElement, element: HTMLElement, behavior: ScrollBehavior) {
+  const paneRect = pane.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  const top =
+    pane.scrollTop +
+    (elementRect.top - paneRect.top) +
+    elementRect.height / 2 -
+    pane.clientHeight / 2;
+  pane.scrollTo({ top, behavior });
+}
+
 const LOG_FILTER_OPTIONS: LogLevelFilter[] = ['ALL', 'INFO', 'WARN', 'ERROR', 'FATAL'];
 const MAX_PINNED_LOGS = 5;
 
@@ -323,7 +346,6 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyCursor, setHistoryCursor] = useState(-1);
   const [historyDraft, setHistoryDraft] = useState('');
-  const logEndRef = useRef<HTMLDivElement>(null);
   const [currentAddressIndex, setCurrentAddressIndex] = useState(0);
   const [addressCopied, setAddressCopied] = useState(false);
   const [memoryUsage, setMemoryUsage] = useState(0);
@@ -492,7 +514,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
 
   useEffect(() => {
     if (autoScroll && !(isSearchOpen && normalizedSearchQuery)) {
-      logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      scrollPaneToEnd(logContainerRef.current, 'smooth');
     }
   }, [visibleLogs, autoScroll, isSearchOpen, normalizedSearchQuery]);
 
@@ -528,8 +550,11 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
       return;
     }
 
+    const pane = logContainerRef.current;
     const activeElement = matchRefs.current[`m-${activeMatchIndex}`];
-    activeElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (pane && activeElement) {
+      centerInPane(pane, activeElement, 'smooth');
+    }
   }, [activeMatchIndex, totalMatches, isSearchOpen, normalizedSearchQuery, visibleLogs.length]);
 
   useEffect(() => {
@@ -1069,8 +1094,6 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               </div>
             ));
           })()}
-
-          <div ref={logEndRef} />
         </div>
 
         {/* Outside the scrolling pane, so the one line stays centered over the whole log area. */}
@@ -1093,7 +1116,7 @@ const ConsoleView: FC<ConsoleViewProps> = ({ server, ngrokUrl }) => {
               variant="secondary"
               onClick={() => {
                 setAutoScroll(true);
-                logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                scrollPaneToEnd(logContainerRef.current, 'smooth');
               }}
             >
               <ArrowDown aria-hidden="true" size={14} strokeWidth={1.75} />
