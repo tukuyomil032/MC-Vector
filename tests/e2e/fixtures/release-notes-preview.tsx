@@ -82,6 +82,8 @@ function ReleaseNotesPreview() {
     <div className="app-shell flex h-screen w-screen theme-dark" data-theme="dark">
       <div data-testid="release-notes-preview" data-action-message={actionMessage} />
       <AppUpdateModal
+        open={isOpen}
+        onSkipVersion={() => undefined}
         updatePrompt={
           isOpen
             ? {
