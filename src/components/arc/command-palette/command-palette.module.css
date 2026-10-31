@@ -124,11 +124,25 @@
 .resultsFrame {
   overflow: hidden;
 }
+/* Long lists scroll inside the frame, with a visible thin bar so the hidden rows are discoverable. */
 .results {
   position: relative;
   max-height: 342px;
-  overflow: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+.results::-webkit-scrollbar {
+  width: 6px;
+}
+.results::-webkit-scrollbar-track {
+  background: transparent;
+}
+.results::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background-color: var(--text-muted);
 }
 .highlight {
   position: absolute;

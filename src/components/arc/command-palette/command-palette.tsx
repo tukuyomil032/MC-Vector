@@ -163,6 +163,18 @@ function Highlighted({ text, ranges }: { text: string; ranges: Range[] }) {
 /** "⌘ K" or "Shift+D" becomes one keycap per key. */
 const keysOf = (shortcut: string) => shortcut.split(/\s+|\+(?=.)/).filter(Boolean);
 
+/** Top edge of `node` inside `container`'s scrollable content, summed up the offsetParent chain (layout transforms stay out of it). */
+function offsetWithin(node: HTMLElement, container: HTMLElement | null): number {
+  let top = 0;
+  for (
+    let element: HTMLElement | null = node;
+    element && element !== container;
+    element = element.offsetParent as HTMLElement | null
+  )
+    top += element.offsetTop + (element === node ? 0 : element.clientTop);
+  return top;
+}
+
 export function CommandPalette({
   items,
   placeholder = 'Search commands',
@@ -257,23 +269,22 @@ export function CommandPalette({
     }
     const move: ValueAnimationTransition<number> =
       !highlightShown.current || reduced ? { duration: 0 } : motionTokens.spring.snappy;
-    // Rows sit inside positioned groups, so their offset is summed up to the list (layout transforms stay out of it).
-    let top = 0;
-    for (
-      let element: HTMLElement | null = node;
-      element && element !== listRef.current;
-      element = element.offsetParent as HTMLElement | null
-    )
-      top += element.offsetTop + (element === node ? 0 : element.clientTop);
-    animate(highlightY, top, move);
+    animate(highlightY, offsetWithin(node, listRef.current), move);
     animate(highlightHeight, node.offsetHeight, move);
     animate(highlightOpacity, 1, { duration: reduced ? 0 : 0.08 });
     highlightShown.current = true;
   }, [activeId, filtered, inputId, reduced, highlightY, highlightHeight, highlightOpacity]);
 
+  // Arrow keys scroll only the results list, so the palette itself never shifts; the active row is kept fully visible.
   useEffect(() => {
-    if (!activeId) return;
-    document.getElementById(`${inputId}-${activeId}`)?.scrollIntoView({ block: 'nearest' });
+    const list = listRef.current;
+    const node = activeId ? document.getElementById(`${inputId}-${activeId}`) : null;
+    if (!list || !node) return;
+    const top = offsetWithin(node, list);
+    const bottom = top + node.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight)
+      list.scrollTop = bottom - list.clientHeight;
   }, [activeId, inputId]);
 
   function choose(item: CommandItem) {
