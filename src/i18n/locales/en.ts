@@ -954,6 +954,8 @@ export const en: TranslationDictionary = {
       placeholder: '-XX:+UseG1GC ...',
       help: 'Extra JVM flags inserted before -jar. Each flag must start with "-".',
       clear: 'Clear',
+      presetsLabel: 'Presets',
+      customLabel: 'Custom arguments',
       presets: {
         aikar: "Aikar's Flags",
         zgc: 'ZGC',
@@ -975,6 +977,7 @@ export const en: TranslationDictionary = {
         title: 'ngrok AuthToken Required',
         description:
           'An authentication token is required to use ngrok. Please obtain a token from the official site (dashboard.ngrok.com) and paste it below.',
+        label: 'AuthToken',
         placeholder: 'Ex: 2A...',
         cancel: 'Cancel',
         saveAndConnect: 'Save and Connect',

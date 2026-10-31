@@ -951,6 +951,8 @@ export const ja: TranslationDictionary = {
       placeholder: '-XX:+UseG1GC ...',
       help: '-jar の前に挿入される追加JVMフラグです。各フラグは「-」で始まる必要があります。',
       clear: 'クリア',
+      presetsLabel: 'プリセット',
+      customLabel: 'カスタム引数',
       presets: {
         aikar: "Aikar's Flags",
         zgc: 'ZGC',
@@ -972,6 +974,7 @@ export const ja: TranslationDictionary = {
         title: 'ngrok の認証トークンが必要です',
         description:
           'ngrokを使用するには認証トークンが必要です。公式サイト (dashboard.ngrok.com) からトークンを取得して貼り付けてください。',
+        label: '認証トークン',
         placeholder: 'Ex: 2A...',
         cancel: 'キャンセル',
         saveAndConnect: '保存して接続',

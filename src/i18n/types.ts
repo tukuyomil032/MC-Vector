@@ -944,6 +944,8 @@ export interface TranslationDictionary {
       placeholder: string;
       help: string;
       clear: string;
+      presetsLabel: string;
+      customLabel: string;
       presets: {
         aikar: string;
         zgc: string;
@@ -964,6 +966,7 @@ export interface TranslationDictionary {
       tokenRequired: {
         title: string;
         description: string;
+        label: string;
         placeholder: string;
         cancel: string;
         saveAndConnect: string;
