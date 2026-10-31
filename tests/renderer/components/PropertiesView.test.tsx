@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useI18nStore } from '@/i18n';
 import type { MinecraftServer } from '@/renderer/shared/server declaration';
-import PropertiesView from '@/renderer/components/properties/PropertiesView';
+import PropertiesView, { splitIntoColumns } from '@/renderer/components/properties/PropertiesView';
 import { hasUnsavedViewChanges } from '@/renderer/components/properties/use-unsaved-changes-guard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -270,5 +270,20 @@ describe('PropertiesView advanced cards', () => {
     expect(screen.getByRole('heading', { name: 'World' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Advanced' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('MOTD')).not.toBeInTheDocument();
+  });
+});
+
+describe('splitIntoColumns', () => {
+  it('gives each card to the column that is shorter so far, with ties going left', () => {
+    // 300 goes left, the next three go right until right catches up, then 50 goes left on the tie.
+    expect(splitIntoColumns([300, 100, 100, 100, 50], 2)).toEqual([
+      [0, 4],
+      [1, 2, 3],
+    ]);
+  });
+
+  it('keeps the placement order inside each column', () => {
+    expect(splitIntoColumns([50, 50], 2)).toEqual([[0], [1]]);
+    expect(splitIntoColumns([10, 20, 30], 1)).toEqual([[0, 1, 2]]);
   });
 });

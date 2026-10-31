@@ -10,18 +10,18 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import { Fragment, useMemo } from 'react';
+import { type Translate, useTranslation } from '../../../i18n';
+import type { PropertyValue } from '../../../lib/properties-commands';
+import { useArcMessages } from '../../shared/arc-messages';
 import { Input } from '@/components/arc/input/input';
 import { NumberField } from '@/components/arc/number-field/number-field';
 import { PasswordField } from '@/components/arc/password-field/password-field';
 import { Select } from '@/components/arc/select/select';
-import { useTranslation } from '../../../i18n';
-import type { PropertyValue } from '../../../lib/properties-commands';
-import { useArcMessages } from '../../shared/arc-messages';
 import { Phrase } from '../../shared/japanese-phrase';
 import {
   type PropertyCategory,
   type PropertyDefinition,
+  type PropertyType,
   serverPropertiesList,
   serverPropertyEnglish,
 } from '../../shared/propertiesData';
@@ -135,13 +135,13 @@ function inferDefinition(key: string, value: PropertyValue): PropertyDefinition 
   return { key, label: key, description: '', type, category: 'Advanced', default: value };
 }
 
-interface AdvancedField {
+export interface AdvancedField {
   definition: PropertyDefinition;
   inferred: boolean;
   value: PropertyValue;
 }
 
-interface AdvancedGroup {
+export interface AdvancedGroup {
   id: PropertyGroupId;
   fields: AdvancedField[];
 }
@@ -150,7 +150,7 @@ interface AdvancedGroup {
  * The advanced fields to show: every known property outside excludeKeys that matches the search, plus
  * the unknown keys from the file. Groups with no visible field are left out.
  */
-function getVisibleAdvancedGroups(
+export function getVisibleAdvancedGroups(
   values: Record<string, PropertyValue>,
   excludeKeys: readonly string[],
   matchesSearch: (key: string) => boolean,
@@ -185,79 +185,76 @@ function getVisibleAdvancedGroups(
     .filter((group) => group.fields.length > 0);
 }
 
-/** Whether any advanced field is visible, so the page can decide whether to show its empty line. */
-export function hasVisibleAdvancedProperties(
-  values: Record<string, PropertyValue>,
-  excludeKeys: readonly string[],
-  matchesSearch: (key: string) => boolean,
-  groupIds?: readonly PropertyGroupId[],
-): boolean {
-  return getVisibleAdvancedGroups(values, excludeKeys, matchesSearch, groupIds).length > 0;
+/** How many fields a card lays out in each shape. */
+export interface FieldCounts {
+  /** Text fields, each on a full row. */
+  fullWidth: number;
+  /** Number and select fields, two to a row. */
+  paired: number;
+  /** Switch rows, one per line. */
+  toggles: number;
 }
 
-/** The groups whose fields join a basic card instead of getting a card of their own, so no heading appears twice. */
-export const MERGED_ADVANCED_CATEGORIES: readonly PropertyGroupId[] = ['Gameplay', 'Network'];
-const STANDALONE_ADVANCED_CATEGORIES = GROUP_ORDER.filter(
-  (group) => !MERGED_ADVANCED_CATEGORIES.includes(group),
-);
+/** Counts fields by layout: strings take a full row, numbers and selects pair up, booleans are switch rows. */
+export function countFieldTypes(types: readonly PropertyType[]): FieldCounts {
+  const counts: FieldCounts = { fullWidth: 0, paired: 0, toggles: 0 };
+  for (const type of types) {
+    if (type === 'string') {
+      counts.fullWidth += 1;
+    } else if (type === 'boolean') {
+      counts.toggles += 1;
+    } else {
+      counts.paired += 1;
+    }
+  }
+  return counts;
+}
 
-export interface AdvancedPropertyCardsProps {
-  values: Record<string, PropertyValue>;
+/** The layout counts of one group's fields. */
+export function countGroupFields(fields: readonly AdvancedField[]): FieldCounts {
+  return countFieldTypes(fields.map(({ definition }) => definition.type));
+}
+
+/** Rough card height in px: the header, then the rows the counts lay out. Used to balance the columns. */
+export function estimateCardHeight(counts: FieldCounts): number {
+  return 60 + counts.fullWidth * 88 + Math.ceil(counts.paired / 2) * 88 + counts.toggles * 64;
+}
+
+function groupLabel(group: PropertyGroupId, t: Translate): string {
+  switch (group) {
+    case 'General':
+      return t('advancedSettings.categories.general');
+    case 'Gameplay':
+      return t('advancedSettings.categories.gameplay');
+    case 'World':
+      return t('advancedSettings.categories.world');
+    case 'Network':
+      return t('advancedSettings.categories.network');
+    case 'Remote':
+      return t('advancedSettings.categories.remote');
+    case 'Security':
+      return t('advancedSettings.categories.security');
+    case 'ResourcePack':
+      return t('advancedSettings.categories.resourcePack');
+    case 'Management':
+      return t('advancedSettings.categories.management');
+    case 'Advanced':
+      return t('advancedSettings.categories.advanced');
+  }
+}
+
+interface AdvancedInlineFieldsProps {
+  fields: readonly AdvancedField[];
   onChange: (key: string, value: PropertyValue) => void;
-  /** Keys the page already shows in its basic cards. They are skipped here so nothing appears twice. */
-  excludeKeys: readonly string[];
-  /** Search filter by key. The caller matches the labels, since it knows the locale. */
-  matchesSearch: (key: string) => boolean;
-  /**
-   * Render only this group's fields, with no card or heading, inside a basic card of the same name.
-   * Without it, every group outside MERGED_ADVANCED_CATEGORIES gets its own card.
-   */
-  inline?: PropertyGroupId;
 }
 
-/** The advanced server properties as one card per group, placed after the basic cards on the same page. */
-export function AdvancedPropertyCards({
-  values,
-  onChange,
-  excludeKeys,
-  matchesSearch,
-  inline,
-}: AdvancedPropertyCardsProps) {
+/**
+ * The fields of one group with no card or heading, so they can sit inside a basic card of the same name.
+ * Text and number fields come first in a grid, then the switch rows.
+ */
+export function AdvancedInlineFields({ fields, onChange }: AdvancedInlineFieldsProps) {
   const { t, locale } = useTranslation();
   const arc = useArcMessages();
-  const groups = useMemo(
-    () =>
-      getVisibleAdvancedGroups(
-        values,
-        excludeKeys,
-        matchesSearch,
-        inline ? [inline] : STANDALONE_ADVANCED_CATEGORIES,
-      ),
-    [values, excludeKeys, matchesSearch, inline],
-  );
-
-  const getGroupLabel = (group: PropertyGroupId): string => {
-    switch (group) {
-      case 'General':
-        return t('advancedSettings.categories.general');
-      case 'Gameplay':
-        return t('advancedSettings.categories.gameplay');
-      case 'World':
-        return t('advancedSettings.categories.world');
-      case 'Network':
-        return t('advancedSettings.categories.network');
-      case 'Remote':
-        return t('advancedSettings.categories.remote');
-      case 'Security':
-        return t('advancedSettings.categories.security');
-      case 'ResourcePack':
-        return t('advancedSettings.categories.resourcePack');
-      case 'Management':
-        return t('advancedSettings.categories.management');
-      case 'Advanced':
-        return t('advancedSettings.categories.advanced');
-    }
-  };
 
   const getPropertyLabel = (definition: PropertyDefinition): string => {
     if (locale === 'ja' || !JAPANESE_TEXT_PATTERN.test(definition.label)) {
@@ -337,53 +334,58 @@ export function AdvancedPropertyCards({
     );
   };
 
+  const formFields = fields.filter((field) => field.definition.type !== 'boolean');
+  const toggles = fields.filter((field) => field.definition.type === 'boolean');
+
   return (
     <>
-      {groups.map(({ id, fields }) => {
-        const titleId = `properties-advanced-${id.toLowerCase()}-title`;
-        const formFields = fields.filter((field) => field.definition.type !== 'boolean');
-        const toggles = fields.filter((field) => field.definition.type === 'boolean');
-        const body = (
-          <>
-            {formFields.length > 0 && (
-              <div className={styles.grid}>
-                {formFields.map((field) => (
-                  <div
-                    key={field.definition.key}
-                    // Text fields take a full row, since URLs and lists run long.
-                    className={
-                      field.definition.type === 'string'
-                        ? `${styles.field} ${styles.wide}`
-                        : styles.field
-                    }
-                  >
-                    {renderField(field)}
-                  </div>
-                ))}
-              </div>
-            )}
-            {toggles.map((field) => (
-              <PropertyToggleRow
-                key={field.definition.key}
-                id={field.definition.key}
-                label={getPropertyLabel(field.definition)}
-                description={<Phrase text={fieldDescription(field)} />}
-                checked={Boolean(field.value)}
-                onChange={(checked) => onChange(field.definition.key, checked)}
-              />
-            ))}
-          </>
-        );
-        if (inline) {
-          return <Fragment key={id}>{body}</Fragment>;
-        }
-        return (
-          <section key={id} className={styles.card} aria-labelledby={titleId}>
-            <SectionTitle icon={GROUP_ICONS[id]} as="h3" id={titleId} title={getGroupLabel(id)} />
-            {body}
-          </section>
-        );
-      })}
+      {formFields.length > 0 && (
+        <div className={styles.grid}>
+          {formFields.map((field) => (
+            <div
+              key={field.definition.key}
+              // Text fields take a full row, since URLs and lists run long.
+              className={
+                field.definition.type === 'string' ? `${styles.field} ${styles.wide}` : styles.field
+              }
+            >
+              {renderField(field)}
+            </div>
+          ))}
+        </div>
+      )}
+      {toggles.map((field) => (
+        <PropertyToggleRow
+          key={field.definition.key}
+          id={field.definition.key}
+          label={getPropertyLabel(field.definition)}
+          description={<Phrase text={fieldDescription(field)} />}
+          checked={Boolean(field.value)}
+          onChange={(checked) => onChange(field.definition.key, checked)}
+        />
+      ))}
     </>
+  );
+}
+
+interface AdvancedPropertyCardProps {
+  group: AdvancedGroup;
+  onChange: (key: string, value: PropertyValue) => void;
+}
+
+/** One advanced group as a card: its title, then its fields. */
+export function AdvancedPropertyCard({ group, onChange }: AdvancedPropertyCardProps) {
+  const { t } = useTranslation();
+  const titleId = `properties-advanced-${group.id.toLowerCase()}-title`;
+  return (
+    <section className={styles.card} aria-labelledby={titleId}>
+      <SectionTitle
+        icon={GROUP_ICONS[group.id]}
+        as="h3"
+        id={titleId}
+        title={groupLabel(group.id, t)}
+      />
+      <AdvancedInlineFields fields={group.fields} onChange={onChange} />
+    </section>
   );
 }

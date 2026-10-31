@@ -1,5 +1,5 @@
 /* Full width of the content card. The card scrolls the page, so this only grows with its content.
-   The header and any one-line empty state span the page; the section cards flow in a masonry (see .cards). */
+   The header and any one-line empty state span the page; the section cards sit in two columns (see .columns). */
 .page {
   display: flex;
   box-sizing: border-box;
@@ -64,22 +64,27 @@
   margin-top: var(--space-4);
 }
 
-/* Cards flow as a masonry: two columns from 1024px, one below. A card never splits across columns. */
-.cards {
-  columns: 1;
-  column-gap: var(--space-5);
+/* Two balanced columns from 1024px. PropertiesView assigns each card to a column by its estimated height, so the
+   column tops line up and neither column runs far longer than the other. */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: start;
 }
 
-@media (min-width: 1024px) {
-  .cards {
-    columns: 2;
-  }
+/* Below 1024px the cards stack in one column, in placement order. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
-.cards > * {
-  width: 100%;
-  break-inside: avoid;
-  margin-bottom: var(--space-5);
+.column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
 @media (max-width: 40rem) {
