@@ -303,9 +303,6 @@ export const ja: TranslationDictionary = {
     },
     emptyFolder: 'フォルダは空です',
     emptyFolderHint: 'ここにファイルをドロップするか、新規作成してください。',
-    size: {
-      kb: '{value} KB',
-    },
     loading: '読み込み中…',
     modal: {
       createImportTitle: '新規作成 / インポート',

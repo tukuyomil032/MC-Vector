@@ -329,9 +329,6 @@ export interface TranslationDictionary {
     };
     emptyFolder: string;
     emptyFolderHint: string;
-    size: {
-      kb: string;
-    };
     loading: string;
     modal: {
       createImportTitle: string;

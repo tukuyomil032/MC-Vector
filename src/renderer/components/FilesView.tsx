@@ -23,7 +23,8 @@ import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { EmptyLine } from './ui/EmptyLine';
 import { Input } from '@/components/arc/input/input';
 import { RadioCards, type RadioCardOption } from '@/components/arc/radio-cards/radio-cards';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatBytes } from '../shared/format-bytes';
 import { notify } from '../shared/notify';
 import { useAppFeedback } from './AppFeedbackProvider';
 import { useTranslation } from '../../i18n';
@@ -165,10 +166,6 @@ export default function FilesView({ server }: Props) {
 
   const { t, locale } = useTranslation();
   const { confirm } = useAppFeedback();
-  const sizeFormatter = useMemo(
-    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-    [locale],
-  );
 
   useEffect(() => {
     const loadRoot = async () => {
@@ -929,11 +926,7 @@ export default function FilesView({ server }: Props) {
                     )}
                     <span className={styles.name}>{file.name}</span>
                     <span className={styles.size}>
-                      {file.isDirectory
-                        ? '-'
-                        : t('files.size.kb', {
-                            value: sizeFormatter.format((file.size ?? 0) / 1024),
-                          })}
+                      {file.isDirectory ? '-' : formatBytes(file.size ?? 0, locale)}
                     </span>
                   </div>
                 </ContextMenu>
