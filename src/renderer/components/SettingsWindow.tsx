@@ -13,6 +13,9 @@ import type { AppUpdaterSettings } from '../hooks/use-app-updater';
 import { useSettingsStore, type UpdateChannel } from '../../store/settingsStore';
 import styles from './SettingsWindow.module.css';
 
+/** `String(error)` prefixes the raw updater message with "Error: "; the alert title already names the failure. */
+const stripErrorPrefix = (message: string): string => message.replace(/^Error:\s*/, '');
+
 const SettingsWindow = ({
   onClose,
   onCheckForUpdates,
@@ -161,10 +164,9 @@ const SettingsWindow = ({
               <span className={styles.success}>{t('settings.update.notAvailable')}</span>
             )}
             {updateCheckStatus === 'error' && (
-              <Alert
-                tone="danger"
-                title={t('settings.update.error', { message: updateCheckError || '' })}
-              />
+              <Alert tone="danger" title={t('settings.update.checkErrorTitle')}>
+                {stripErrorPrefix(updateCheckError ?? '')}
+              </Alert>
             )}
           </div>
 

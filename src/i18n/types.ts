@@ -74,6 +74,8 @@ export interface TranslationDictionary {
       readyTitle: string;
       downloadingTitle: string;
       errorTitle: string;
+      /** Title of the alert shown when the update check itself fails. */
+      checkErrorTitle: string;
       downloadingLabel: string;
       downloadHint: string;
       later: string;

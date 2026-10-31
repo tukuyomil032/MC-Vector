@@ -52,6 +52,7 @@ export const ja: TranslationDictionary = {
       readyTitle: '再起動してアップデートを適用しますか？',
       downloadingTitle: 'アップデートをダウンロードしています',
       errorTitle: 'アップデートを適用できませんでした',
+      checkErrorTitle: 'アップデートを確認できませんでした',
       downloadingLabel: 'ダウンロード中',
       downloadHint: 'このウィンドウを閉じても、進行状況は通知で確認できます。',
       later: '後で',

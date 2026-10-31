@@ -87,11 +87,14 @@ describe('SettingsWindow plugin download security setting', () => {
       <SettingsWindow
         {...defaultProps}
         updateCheckStatus="error"
-        updateCheckError="Feed unavailable"
+        updateCheckError="Error: Feed unavailable"
       />,
     );
 
-    expect(screen.getByText('Error: Feed unavailable')).toBeInTheDocument();
+    // The translated title names the failure once; the raw message is the detail, without the "Error: " prefix.
+    expect(screen.getByText('Could not check for updates')).toBeInTheDocument();
+    expect(screen.getByText('Feed unavailable')).toBeInTheDocument();
+    expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
   });
 
   it('persists the selected update channel and dispatches one shared check event', async () => {

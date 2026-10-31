@@ -52,6 +52,7 @@ export const en: TranslationDictionary = {
       readyTitle: 'Restart to apply the update?',
       downloadingTitle: 'Downloading the update',
       errorTitle: 'The update could not be applied',
+      checkErrorTitle: 'Could not check for updates',
       downloadingLabel: 'Downloading',
       downloadHint: 'You can close this window. Progress continues in a notification.',
       later: 'Later',
