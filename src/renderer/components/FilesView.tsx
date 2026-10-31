@@ -441,7 +441,15 @@ export default function FilesView({ server }: Props) {
       notify.error(t('files.toast.binaryNoDiff'));
       return;
     }
-    const content = await readFileContent(filePath);
+    let content: string;
+    try {
+      content = await readFileContent(filePath);
+    } catch (e) {
+      // The selection stays on the same step, so the user can pick another file.
+      logError('Failed to read file for diff', e, { filePath, step: diffSelectStep });
+      notify.error(t('files.toast.diffReadFailed'));
+      return;
+    }
     if (diffSelectStep === 'original') {
       setDiffOriginal({ path: filePath, content });
       setDiffSelectStep('modified');

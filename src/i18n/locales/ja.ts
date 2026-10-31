@@ -392,6 +392,7 @@ export const ja: TranslationDictionary = {
       extractNotZip: '解凍できるのは .zip ファイルだけです。',
       extractSkipped: '.zip 以外の{count}件は解凍せずに飛ばしました。',
       binaryNoDiff: 'バイナリファイルは差分表示できません',
+      diffReadFailed: '比較のためにファイルを読み込めませんでした',
       diffSelectOriginal: '比較元ファイルをクリックしてください',
       diffSelectModified: '比較先ファイルをクリックしてください',
     },
