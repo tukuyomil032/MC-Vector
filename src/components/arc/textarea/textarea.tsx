@@ -1,13 +1,16 @@
 'use client';
 import { forwardRef, useEffect, useId, useRef, useState } from 'react';
-import type { TextareaHTMLAttributes } from 'react';
+import type { ReactNode, TextareaHTMLAttributes } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { motionTokens } from '../lib/motion-tokens';
 import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
+import { HintIcon } from '../../../renderer/components/ui/FieldLabel';
 import styles from './textarea.module.css';
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
   description?: string;
+  /** Help that shows in a tooltip from an info icon beside the label, so it takes no space under the field. */
+  hint?: ReactNode;
   error?: string;
 }
 /* Digits roll up when a number grows and down when it shrinks; `custom` hands the latest direction to digits already leaving. */
@@ -212,16 +215,24 @@ function MessageRow({
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { label, description, error, id, className, ...props },
+  { label, description, hint, error, id, className, ...props },
   ref,
 ) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
   const hintId = description ? `${controlId}-description` : undefined;
   const errorId = error ? `${controlId}-error` : undefined;
+  const labelNode = <label htmlFor={controlId}>{label}</label>;
   return (
     <div className={styles.field}>
-      <label htmlFor={controlId}>{label}</label>
+      {hint ? (
+        <span className={styles.labelRow}>
+          {labelNode}
+          <HintIcon hint={hint} label={label} />
+        </span>
+      ) : (
+        labelNode
+      )}
       <textarea
         {...props}
         id={controlId}

@@ -390,16 +390,17 @@ export interface TranslationDictionary {
     title: string;
     createButton: string;
     empty: string;
-    emptyDescription: string;
     catalogUnavailable: string;
     catalogUnavailableDescription: string;
     restoring: string;
     catalogRetry: string;
-    units: {
-      b: string;
-      kb: string;
-      mb: string;
-      gb: string;
+    size: {
+      atLeast: string;
+    };
+    duration: {
+      seconds: string;
+      minutes: string;
+      hoursMinutes: string;
     };
     processing: string;
     confirmDelete: string;
@@ -419,6 +420,10 @@ export interface TranslationDictionary {
       compressionLevel: string;
       compressionHelp: string;
       wholeServerNote: string;
+      targetSize: string;
+      estimatedTime: string;
+      estimateHint: string;
+      estimateValue: string;
       create: string;
       creating: string;
     };
@@ -464,7 +469,6 @@ export interface TranslationDictionary {
       empty: string;
       holdToDelete: string;
       holdDone: string;
-      emptyDescription: string;
       deleted: string;
       deleteFailed: string;
     };

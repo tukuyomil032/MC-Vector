@@ -2,11 +2,13 @@ import { Alert } from '@/components/arc/alert/alert';
 import { Button } from '@/components/arc/button/button';
 import { Select } from '@/components/arc/select/select';
 import { Switch } from '@/components/arc/switch/switch';
+import { Download, Languages, ShieldAlert, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import type { LocaleCode } from '../../i18n';
 import { useArcMessages } from '../shared/arc-messages';
 import { Phrase } from '../shared/japanese-phrase';
+import { SectionTitle } from './ui/IconTile';
 import { saveAppSettings } from '../../lib/config-commands';
 import { logError } from '../../lib/error-utils';
 import type { AppUpdaterSettings } from '../hooks/use-app-updater';
@@ -115,28 +117,29 @@ const SettingsWindow = ({
         </header>
 
         <section className={styles.card} aria-labelledby="settings-update-title">
-          <div className={styles.cardHead}>
-            <div>
-              <h2 id="settings-update-title" className={styles.cardTitle}>
-                {t('settings.update.title')}
-              </h2>
-              <p className={styles.cardDescription}>
-                <Phrase text={t('settings.update.description')} />
-              </p>
-            </div>
-            {updateCheckStatus !== 'checking' && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                data-testid="update-check-button"
-                onClick={() => void onCheckForUpdates()}
-                disabled={updateProgress !== null}
-              >
-                {t('settings.update.checkButton')}
-              </Button>
-            )}
-          </div>
+          <SectionTitle
+            icon={Download}
+            as="h2"
+            id="settings-update-title"
+            title={t('settings.update.title')}
+            trailing={
+              updateCheckStatus !== 'checking' && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  data-testid="update-check-button"
+                  onClick={() => void onCheckForUpdates()}
+                  disabled={updateProgress !== null}
+                >
+                  {t('settings.update.checkButton')}
+                </Button>
+              )
+            }
+          />
+          <p className={styles.cardDescription}>
+            <Phrase text={t('settings.update.description')} />
+          </p>
 
           <div
             className={styles.status}
@@ -177,7 +180,7 @@ const SettingsWindow = ({
             options={channelOptions}
             value={updateChannel}
             disabled={updateProgress !== null}
-            description={
+            hint={
               updateChannel === 'beta'
                 ? t('settings.update.betaDescription')
                 : t('settings.update.stableDescription')
@@ -188,14 +191,15 @@ const SettingsWindow = ({
         </section>
 
         <section className={styles.card} aria-labelledby="settings-language-title">
-          <div>
-            <h2 id="settings-language-title" className={styles.cardTitle}>
-              {t('settings.language.title')}
-            </h2>
-            <p className={styles.cardDescription}>
-              <Phrase text={t('settings.language.description')} />
-            </p>
-          </div>
+          <SectionTitle
+            icon={Languages}
+            as="h2"
+            id="settings-language-title"
+            title={t('settings.language.title')}
+          />
+          <p className={styles.cardDescription}>
+            <Phrase text={t('settings.language.description')} />
+          </p>
           <Select
             id="language-select"
             label={t('settings.language.label')}
@@ -207,14 +211,16 @@ const SettingsWindow = ({
         </section>
 
         <section className={styles.card} aria-labelledby="settings-security-title">
-          <div>
-            <h2 id="settings-security-title" className={styles.cardTitle}>
-              {t('settings.security.title')}
-            </h2>
-            <p className={styles.cardDescription}>
-              <Phrase text={t('settings.security.description')} />
-            </p>
-          </div>
+          <SectionTitle
+            icon={ShieldAlert}
+            tone="warning"
+            as="h2"
+            id="settings-security-title"
+            title={t('settings.security.title')}
+          />
+          <p className={styles.cardDescription}>
+            <Phrase text={t('settings.security.description')} />
+          </p>
           <Switch
             id="allow-unverified-plugin-downloads"
             label={t('settings.security.label')}
@@ -237,14 +243,15 @@ const SettingsWindow = ({
         </section>
 
         <section className={styles.card} aria-labelledby="settings-glass-title">
-          <div>
-            <h2 id="settings-glass-title" className={styles.cardTitle}>
-              {t('settings.liquidGlass.title')}
-            </h2>
-            <p className={styles.cardDescription}>
-              <Phrase text={t('settings.liquidGlass.description')} />
-            </p>
-          </div>
+          <SectionTitle
+            icon={Sparkles}
+            as="h2"
+            id="settings-glass-title"
+            title={t('settings.liquidGlass.title')}
+          />
+          <p className={styles.cardDescription}>
+            <Phrase text={t('settings.liquidGlass.description')} />
+          </p>
           <Switch
             id="liquid-glass-toggle"
             label={t('settings.liquidGlass.label')}

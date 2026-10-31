@@ -7,6 +7,7 @@ import { Switch } from '@/components/arc/switch/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs';
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '../../../i18n';
+import { HintIcon } from '../ui/FieldLabel';
 import { useArcMessages } from '../../shared/arc-messages';
 import { Phrase } from '../../shared/japanese-phrase';
 import {
@@ -190,7 +191,7 @@ export default function AdvancedSettingsWindow({
       return (
         <NumberField
           label={label}
-          description={fieldDescription(prop)}
+          hint={fieldDescription(prop)}
           min={limits.min}
           max={limits.max}
           // Server properties are plain integers, so digits are shown without thousands separators.
@@ -205,7 +206,7 @@ export default function AdvancedSettingsWindow({
         <Select
           label={label}
           placeholder={arc.select.placeholder}
-          description={fieldDescription(prop)}
+          hint={fieldDescription(prop)}
           value={String(currentValue ?? '')}
           onValueChange={(value) => handleChange(prop.key, value)}
           options={prop.options.map((option) => ({ value: option, label: option }))}
@@ -216,7 +217,7 @@ export default function AdvancedSettingsWindow({
       return (
         <PasswordField
           label={label}
-          description={fieldDescription(prop)}
+          hint={fieldDescription(prop)}
           autoComplete="new-password"
           value={String(currentValue ?? '')}
           onChange={(e) => handleChange(prop.key, e.target.value)}
@@ -226,7 +227,7 @@ export default function AdvancedSettingsWindow({
     return (
       <Input
         label={label}
-        description={fieldDescription(prop)}
+        hint={fieldDescription(prop)}
         type="text"
         value={String(currentValue ?? '')}
         onChange={(e) => handleChange(prop.key, e.target.value)}
@@ -234,18 +235,20 @@ export default function AdvancedSettingsWindow({
     );
   };
 
+  /** Label and key on the left, the description in a hint tooltip, and the switch at the far right. */
   const renderToggle = (prop: PropertyDefinition, currentValue: unknown) => {
     const labelId = `advanced-${prop.key}-label`;
+    const label = getPropertyLabel(prop);
     return (
       <div className={styles.toggleCard}>
         <div className={styles.toggleText}>
-          <span id={labelId} className={styles.toggleLabel}>
-            {getPropertyLabel(prop)}
+          <span className={styles.toggleLabelRow}>
+            <span id={labelId} className={styles.toggleLabel}>
+              {label}
+            </span>
+            <HintIcon hint={<Phrase text={getPropertyDescription(prop)} />} label={label} />
           </span>
           <span className={styles.key}>{prop.key}</span>
-          <span className={styles.toggleDescription}>
-            <Phrase text={getPropertyDescription(prop)} />
-          </span>
         </div>
         <Switch
           aria-labelledby={labelId}

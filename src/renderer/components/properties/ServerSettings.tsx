@@ -10,9 +10,12 @@ import { PasswordField } from '@/components/arc/password-field/password-field';
 import { Select, type SelectOption } from '@/components/arc/select/select';
 import { Switch } from '@/components/arc/switch/switch';
 import { Textarea } from '@/components/arc/textarea/textarea';
+import { Archive, Bell, Cpu, Globe, RotateCw, Server } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
+import { HintIcon } from '../ui/FieldLabel';
+import { SectionTitle } from '../ui/IconTile';
 import { useArcMessages } from '../../shared/arc-messages';
 import { type JavaVersion, getJavaVersions } from '../../../lib/java-commands';
 import {
@@ -375,12 +378,38 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
 
   return (
     <div className={styles.page} data-testid="server-settings-view">
-      <h2 className={styles.title}>{t('serverSettings.title')}</h2>
+      <header className={styles.header}>
+        <h2 className={styles.title}>{t('serverSettings.title')}</h2>
+        <div className={styles.saveBar}>
+          {isDirty && (
+            <span className={styles.unsaved} role="status">
+              {t('serverSettings.unsavedChanges')}
+            </span>
+          )}
+          <Button
+            variant="primary"
+            type="button"
+            onClick={() => {
+              void handleSubmit();
+            }}
+            disabled={isSaving || !isDirty}
+            data-testid="server-settings-save-button"
+          >
+            {t('serverSettings.saveSettings')}
+          </Button>
+        </div>
+      </header>
 
-      <section className={styles.card} aria-labelledby="server-settings-basic">
-        <h3 id="server-settings-basic" className={styles.cardTitle}>
-          {t('serverSettings.basicConfig')}
-        </h3>
+      <section
+        className={`${styles.card} ${styles.cardFull}`}
+        aria-labelledby="server-settings-basic"
+      >
+        <SectionTitle
+          icon={Server}
+          as="h3"
+          id="server-settings-basic"
+          title={t('serverSettings.basicConfig')}
+        />
         <div className={styles.grid}>
           <div className={styles.wide}>
             <Input
@@ -468,9 +497,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
       </section>
 
       <section className={styles.card} aria-labelledby="server-settings-jvm">
-        <h3 id="server-settings-jvm" className={styles.cardTitle}>
-          {t('serverSettings.jvmArgs.label')}
-        </h3>
+        <SectionTitle
+          icon={Cpu}
+          as="h3"
+          id="server-settings-jvm"
+          title={t('serverSettings.jvmArgs.label')}
+        />
         <ChipGroup
           label={t('serverSettings.jvmArgs.presetsLabel')}
           options={JVM_PRESETS.map((preset) => ({ value: preset.id, label: t(preset.labelKey) }))}
@@ -483,7 +515,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
         />
         <Textarea
           label={t('serverSettings.jvmArgs.customLabel')}
-          description={t('serverSettings.jvmArgs.help')}
+          hint={t('serverSettings.jvmArgs.help')}
           value={form.jvmArgs}
           onChange={(e) => setField('jvmArgs', e.target.value)}
           placeholder={t('serverSettings.jvmArgs.placeholder')}
@@ -499,20 +531,26 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
       </section>
 
       <section className={styles.card} aria-labelledby="server-settings-restart">
-        <div className={styles.toggleRow}>
-          <div className={styles.toggleText}>
-            <h3 id="server-settings-restart" className={styles.cardTitle}>
-              {t('serverSettings.autoRestart.title')}
-            </h3>
-            <p className={styles.helpText}>{t('serverSettings.autoRestart.enableDescription')}</p>
-          </div>
-          <Switch
-            aria-labelledby="server-settings-restart"
-            checked={form.autoRestartOnCrash}
-            onCheckedChange={(value) => setField('autoRestartOnCrash', value)}
-            data-testid="auto-restart-toggle"
-          />
-        </div>
+        <SectionTitle
+          icon={RotateCw}
+          as="h3"
+          id="server-settings-restart"
+          title={t('serverSettings.autoRestart.title')}
+          trailing={
+            <>
+              <HintIcon
+                hint={t('serverSettings.autoRestart.enableDescription')}
+                label={t('serverSettings.autoRestart.title')}
+              />
+              <Switch
+                aria-labelledby="server-settings-restart"
+                checked={form.autoRestartOnCrash}
+                onCheckedChange={(value) => setField('autoRestartOnCrash', value)}
+                data-testid="auto-restart-toggle"
+              />
+            </>
+          }
+        />
         <div className={styles.grid}>
           <NumberField
             label={t('serverSettings.autoRestart.maxRetries')}
@@ -534,20 +572,26 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
       </section>
 
       <section className={styles.card} aria-labelledby="server-settings-backup">
-        <div className={styles.toggleRow}>
-          <div className={styles.toggleText}>
-            <h3 id="server-settings-backup" className={styles.cardTitle}>
-              {t('serverSettings.autoBackup.title')}
-            </h3>
-            <p className={styles.helpText}>{t('serverSettings.autoBackup.enableDescription')}</p>
-          </div>
-          <Switch
-            aria-labelledby="server-settings-backup"
-            checked={form.autoBackupEnabled}
-            onCheckedChange={(value) => setField('autoBackupEnabled', value)}
-            data-testid="auto-backup-toggle"
-          />
-        </div>
+        <SectionTitle
+          icon={Archive}
+          as="h3"
+          id="server-settings-backup"
+          title={t('serverSettings.autoBackup.title')}
+          trailing={
+            <>
+              <HintIcon
+                hint={t('serverSettings.autoBackup.enableDescription')}
+                label={t('serverSettings.autoBackup.title')}
+              />
+              <Switch
+                aria-labelledby="server-settings-backup"
+                checked={form.autoBackupEnabled}
+                onCheckedChange={(value) => setField('autoBackupEnabled', value)}
+                data-testid="auto-backup-toggle"
+              />
+            </>
+          }
+        />
         <div className={styles.grid}>
           <Select
             label={t('serverSettings.autoBackup.scheduleType')}
@@ -609,9 +653,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
       </section>
 
       <section className={styles.card} aria-labelledby="server-settings-notifications">
-        <h3 id="server-settings-notifications" className={styles.cardTitle}>
-          {t('serverSettings.notifications.title')}
-        </h3>
+        <SectionTitle
+          icon={Bell}
+          as="h3"
+          id="server-settings-notifications"
+          title={t('serverSettings.notifications.title')}
+        />
         <NotificationRow
           label={t('serverSettings.notifications.onCrash')}
           checked={form.notifyOnCrash}
@@ -638,51 +685,42 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
         )}
       </section>
 
-      <div className={styles.saveBar}>
-        {isDirty && (
-          <span className={styles.unsaved} role="status">
-            {t('serverSettings.unsavedChanges')}
-          </span>
-        )}
-        <Button
-          variant="primary"
-          type="button"
-          onClick={() => {
-            void handleSubmit();
-          }}
-          disabled={isSaving || !isDirty}
-          data-testid="server-settings-save-button"
-        >
-          {t('serverSettings.saveSettings')}
-        </Button>
-      </div>
-
       <section
-        className={styles.card}
+        className={`${styles.card} ${styles.cardFull}`}
         aria-labelledby="server-settings-ngrok"
         data-active={isTunneling || undefined}
       >
-        <div className={styles.toggleRow}>
-          <div className={styles.toggleText}>
-            <h3 id="server-settings-ngrok" className={styles.cardTitle}>
+        <SectionTitle
+          icon={Globe}
+          as="h3"
+          id="server-settings-ngrok"
+          title={
+            <>
               {t('serverSettings.ngrok.title')}
               {isTunneling && (
                 <Badge tone="success" data-testid="ngrok-online-badge">
                   {t('serverSettings.ngrok.onlineBadge')}
                 </Badge>
               )}
-            </h3>
-            <p className={styles.helpText}>{t('serverSettings.ngrok.description')}</p>
-          </div>
-          <Switch
-            aria-labelledby="server-settings-ngrok"
-            checked={isTunneling}
-            onCheckedChange={() => {
-              void handleToggleTunnel();
-            }}
-            data-testid="ngrok-toggle"
-          />
-        </div>
+            </>
+          }
+          trailing={
+            <>
+              <HintIcon
+                hint={t('serverSettings.ngrok.description')}
+                label={t('serverSettings.ngrok.title')}
+              />
+              <Switch
+                aria-labelledby="server-settings-ngrok"
+                checked={isTunneling}
+                onCheckedChange={() => {
+                  void handleToggleTunnel();
+                }}
+                data-testid="ngrok-toggle"
+              />
+            </>
+          }
+        />
 
         <div className={styles.actionRow}>
           <Button

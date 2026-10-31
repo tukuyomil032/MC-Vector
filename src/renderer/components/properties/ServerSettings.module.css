@@ -1,12 +1,40 @@
+/* Full width of the content card. The card scrolls the page, so this only grows with its content.
+   The header spans the page; from 1024px the section cards flow into two columns. */
 .page {
-  display: flex;
+  display: grid;
   box-sizing: border-box;
   min-height: 100%;
-  max-width: 760px;
-  margin: 0 auto;
   padding: var(--space-6);
-  flex-direction: column;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: var(--space-5);
+}
+
+.page > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page > .card {
+    grid-column: auto;
+  }
+
+  .page > .cardFull {
+    grid-column: 1 / -1;
+  }
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .title {
@@ -20,8 +48,8 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius-card, 14px);
   background: var(--surface-raised);
@@ -29,18 +57,6 @@
 
 .card[data-active] {
   border-color: var(--control-on, var(--accent));
-}
-
-.cardTitle {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  line-height: var(--leading-body);
 }
 
 .helpText {
@@ -92,20 +108,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.toggleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.toggleText {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--space-1);
 }
 
 .toggleLabel {

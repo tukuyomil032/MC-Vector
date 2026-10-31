@@ -5,9 +5,12 @@ import { NumberField } from '@/components/arc/number-field/number-field';
 import { SearchField } from '@/components/arc/search-field/search-field';
 import { Select } from '@/components/arc/select/select';
 import { Switch } from '@/components/arc/switch/switch';
+import { Gamepad2, Network, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../../i18n';
 import { EmptyLine } from '../ui/EmptyLine';
+import { HintIcon } from '../ui/FieldLabel';
+import { SectionTitle } from '../ui/IconTile';
 import { useArcMessages } from '../../shared/arc-messages';
 import { logError } from '../../../lib/error-utils';
 import {
@@ -271,15 +274,18 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
 
       {basicVisible && (
         <section className={styles.card} aria-labelledby="properties-basic-title">
-          <h3 id="properties-basic-title" className={styles.cardTitle}>
-            {t('properties.sections.basic')}
-          </h3>
+          <SectionTitle
+            icon={SlidersHorizontal}
+            as="h3"
+            id="properties-basic-title"
+            title={t('properties.sections.basic')}
+          />
           <div className={styles.grid}>
             {matchesSearch('motd') && (
               <div className={styles.wide}>
                 <Input
                   label={t('properties.motd.label')}
-                  description={t('properties.motd.description')}
+                  hint={t('properties.motd.description')}
                   type="text"
                   value={props.motd as string}
                   onChange={(e) => handleChange('motd', e.target.value)}
@@ -320,9 +326,12 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
 
       {gameplayVisible && (
         <section className={styles.card} aria-labelledby="properties-gameplay-title">
-          <h3 id="properties-gameplay-title" className={styles.cardTitle}>
-            {t('properties.sections.gameplay')}
-          </h3>
+          <SectionTitle
+            icon={Gamepad2}
+            as="h3"
+            id="properties-gameplay-title"
+            title={t('properties.sections.gameplay')}
+          />
           {matchesSearch('pvp') && (
             <ToggleRow
               id="pvp"
@@ -355,9 +364,12 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
 
       {networkVisible && (
         <section className={styles.card} aria-labelledby="properties-network-title">
-          <h3 id="properties-network-title" className={styles.cardTitle}>
-            {t('properties.sections.network')}
-          </h3>
+          <SectionTitle
+            icon={Network}
+            as="h3"
+            id="properties-network-title"
+            title={t('properties.sections.network')}
+          />
           <div className={styles.grid}>
             {matchesSearch('max-players') && (
               <NumberField
@@ -402,6 +414,7 @@ export default function PropertiesView({ server, onServerPortChanged }: Props) {
   );
 }
 
+/** A switch row: the label with its hint icon on the left, the switch at the far right. The hint is a tooltip, so it takes no row height. */
 function ToggleRow({
   id,
   label,
@@ -417,17 +430,14 @@ function ToggleRow({
 }) {
   return (
     <div className={styles.toggleRow}>
-      <div className={styles.toggleText}>
+      <span className={styles.toggleLabelGroup}>
         <span className={styles.toggleLabel} id={`properties-${id}-label`}>
           {label}
         </span>
-        <span className={styles.toggleDescription} id={`properties-${id}-description`}>
-          {description}
-        </span>
-      </div>
+        <HintIcon hint={description} label={label} />
+      </span>
       <Switch
         aria-labelledby={`properties-${id}-label`}
-        aria-describedby={`properties-${id}-description`}
         checked={checked}
         onCheckedChange={onChange}
         data-testid={`properties-toggle-${id}`}

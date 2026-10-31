@@ -7,6 +7,13 @@
   font-size: var(--text-sm);
   font-weight: 500;
 }
+/* A label with a hint: the info icon sits on the label's line. */
+.labelRow {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+}
 /* The trigger anchors the floating menu. Radix opens on pointerdown and measures this box, so it never scales: press feedback is color only. */
 .trigger {
   position: relative;

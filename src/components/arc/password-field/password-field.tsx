@@ -1,9 +1,10 @@
 'use client';
 import { forwardRef, useEffect, useId, useRef, useState } from 'react';
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { motionTokens } from '../lib/motion-tokens';
 import { copyUnits, useCopyLocale } from '../../../renderer/shared/japanese-phrase';
+import { HintIcon } from '../../../renderer/components/ui/FieldLabel';
 import styles from './password-field.module.css';
 /** The toggle's names. Both have English defaults; pass the ones you translate. */
 export interface PasswordFieldMessages {
@@ -17,6 +18,8 @@ export const defaultPasswordFieldMessages: PasswordFieldMessages = {
 export interface PasswordFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
   description?: string;
+  /** Help that shows in a tooltip from an info icon beside the label, so it takes no space under the field. */
+  hint?: ReactNode;
   /** Translated or reworded toggle names. */
   messages?: Partial<PasswordFieldMessages>;
 }
@@ -209,7 +212,7 @@ function MessageRow({
 
 export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   function PasswordField(
-    { label, description, messages: messagesProp, id, className, ...props },
+    { label, description, hint, messages: messagesProp, id, className, ...props },
     ref,
   ) {
     const messages = { ...defaultPasswordFieldMessages, ...messagesProp };
@@ -218,10 +221,18 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
     const [visible, setVisible] = useState(false);
     const [toggled, setToggled] = useState(false);
     const hintId = description ? `${controlId}-description` : undefined;
+    const labelNode = <label htmlFor={controlId}>{label}</label>;
     // data-reveal only appears after the first toggle, so the value resolves on each change but never on mount.
     return (
       <div className={styles.field}>
-        <label htmlFor={controlId}>{label}</label>
+        {hint ? (
+          <span className={styles.labelRow}>
+            {labelNode}
+            <HintIcon hint={hint} label={label} />
+          </span>
+        ) : (
+          labelNode
+        )}
         <div className={styles.shell}>
           <input
             {...props}

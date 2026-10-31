@@ -1,13 +1,14 @@
 'use client';
 
 import { forwardRef, useId, useState } from 'react';
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Variants } from 'motion/react';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { motionTokens } from '../lib/motion-tokens';
 import { Phrase } from '../../../renderer/shared/japanese-phrase';
+import { HintIcon } from '../../../renderer/components/ui/FieldLabel';
 import styles from './select.module.css';
 
 export interface SelectOption {
@@ -24,6 +25,8 @@ export interface SelectProps extends Omit<
 > {
   label: string;
   description?: string;
+  /** Help that shows in a tooltip from an info icon beside the label, so it takes no space under the field. */
+  hint?: ReactNode;
   placeholder?: string;
   id?: string;
   className?: string;
@@ -84,6 +87,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
   {
     label,
     description,
+    hint,
     placeholder = 'Select an option',
     options,
     id,
@@ -112,7 +116,14 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
 
   return (
     <div className={styles.field}>
-      <label htmlFor={controlId}>{label}</label>
+      {hint ? (
+        <span className={styles.labelRow}>
+          <label htmlFor={controlId}>{label}</label>
+          <HintIcon hint={hint} label={label} />
+        </span>
+      ) : (
+        <label htmlFor={controlId}>{label}</label>
+      )}
       <SelectPrimitive.Root
         {...rootProps}
         disabled={disabled}

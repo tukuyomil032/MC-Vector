@@ -96,72 +96,74 @@ export default function ProxySetupView({
     <div className={styles.root} data-testid="proxy-view">
       <div className={styles.inner}>
         <Card title={t('proxySetup.dialogTitle')} className={styles.card}>
-          <div className={styles.fields}>
-            <Select
-              id="proxy-setup-software"
-              label={t('proxySetup.proxySoftware')}
-              placeholder={arc.select.placeholder}
-              options={softwareOptions}
-              value={proxySoftware}
-              onValueChange={setProxySoftware}
-              disabled={isBuilding}
-            />
-            <NumberField
-              id="proxy-setup-port"
-              label={t('proxySetup.proxyPort')}
-              description={t('proxySetup.portHint')}
-              value={proxyPort}
-              min={1}
-              max={65535}
-              formatOptions={{ useGrouping: false }}
-              onValueChange={setProxyPort}
-              disabled={isBuilding}
-            />
-          </div>
-
-          <section className={styles.section} aria-labelledby="proxy-setup-backends">
-            <div className={styles.sectionHead}>
-              <h3 id="proxy-setup-backends" className={styles.sectionTitle}>
-                {t('proxySetup.backendServers')}
-              </h3>
-              {backendCandidates.length > 0 && (
-                <span className={styles.count}>
-                  {t('proxySetup.selectedCount', {
-                    selected: selectedCount,
-                    total: backendCandidates.length,
-                  })}
-                </span>
-              )}
+          <div className={styles.body}>
+            <div className={styles.fields}>
+              <Select
+                id="proxy-setup-software"
+                label={t('proxySetup.proxySoftware')}
+                placeholder={arc.select.placeholder}
+                options={softwareOptions}
+                value={proxySoftware}
+                onValueChange={setProxySoftware}
+                disabled={isBuilding}
+              />
+              <NumberField
+                id="proxy-setup-port"
+                label={t('proxySetup.proxyPort')}
+                hint={t('proxySetup.portHint')}
+                value={proxyPort}
+                min={1}
+                max={65535}
+                formatOptions={{ useGrouping: false }}
+                onValueChange={setProxyPort}
+                disabled={isBuilding}
+              />
             </div>
 
-            {backendCandidates.length === 0 ? (
-              <EmptyLine title={t('proxySetup.noBackendServers')} />
-            ) : (
-              <div className={styles.backendList}>
-                <Checkbox
-                  checked={selectAllState}
-                  onCheckedChange={toggleAllBackends}
-                  disabled={isBuilding}
-                  label={t('proxySetup.selectAll')}
-                />
-                {backendCandidates.map((server) => (
-                  <Checkbox
-                    key={server.id}
-                    id={`proxy-backend-${server.id}`}
-                    checked={selectedBackendIds.includes(server.id)}
-                    onCheckedChange={() => toggleBackend(server.id)}
-                    disabled={isBuilding}
-                    label={server.name}
-                    description={t('proxySetup.backendDetail', {
-                      software: server.software,
-                      version: server.version,
-                      port: server.port,
+            <section className={styles.section} aria-labelledby="proxy-setup-backends">
+              <div className={styles.sectionHead}>
+                <h3 id="proxy-setup-backends" className={styles.sectionTitle}>
+                  {t('proxySetup.backendServers')}
+                </h3>
+                {backendCandidates.length > 0 && (
+                  <span className={styles.count}>
+                    {t('proxySetup.selectedCount', {
+                      selected: selectedCount,
+                      total: backendCandidates.length,
                     })}
-                  />
-                ))}
+                  </span>
+                )}
               </div>
-            )}
-          </section>
+
+              {backendCandidates.length === 0 ? (
+                <EmptyLine title={t('proxySetup.noBackendServers')} />
+              ) : (
+                <div className={styles.backendList}>
+                  <Checkbox
+                    checked={selectAllState}
+                    onCheckedChange={toggleAllBackends}
+                    disabled={isBuilding}
+                    label={t('proxySetup.selectAll')}
+                  />
+                  {backendCandidates.map((server) => (
+                    <Checkbox
+                      key={server.id}
+                      id={`proxy-backend-${server.id}`}
+                      checked={selectedBackendIds.includes(server.id)}
+                      onCheckedChange={() => toggleBackend(server.id)}
+                      disabled={isBuilding}
+                      label={server.name}
+                      description={t('proxySetup.backendDetail', {
+                        software: server.software,
+                        version: server.version,
+                        port: server.port,
+                      })}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
 
           <div className={styles.actions}>
             <Button

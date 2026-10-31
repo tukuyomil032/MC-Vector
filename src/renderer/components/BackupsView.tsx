@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Globe, Package } from 'lucide-react';
+import { Archive, Globe, Package } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/arc/alert/alert';
 import { Badge } from '@/components/arc/badge/badge';
@@ -11,7 +11,7 @@ import { Input } from '@/components/arc/input/input';
 import { Select } from '@/components/arc/select/select';
 import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { Textarea } from '@/components/arc/textarea/textarea';
-import { type Translate, type TranslationKey, useTranslation } from '../../i18n';
+import { useTranslation } from '../../i18n';
 import {
   applyBackupRetention,
   createBackup,
@@ -22,12 +22,16 @@ import {
   restoreBackup,
   writeBackupCatalog,
 } from '../../lib/backup-commands';
+import { ESTIMATE_SAMPLE_COUNT, estimateBackupDurationMs } from '../../lib/backup-estimate';
 import { logError } from '../../lib/error-utils';
-import { deleteItem, listFiles } from '../../lib/file-commands';
+import { deleteItem, getManagedDirectorySize, listFiles } from '../../lib/file-commands';
 import { notify } from '../shared/notify';
+import { formatBytes } from '../shared/format-bytes';
 import { useArcMessages } from '../shared/arc-messages';
 import { useAppFeedback } from './AppFeedbackProvider';
 import { EmptyLine } from './ui/EmptyLine';
+import { HintIcon } from './ui/FieldLabel';
+import { SectionTitle } from './ui/IconTile';
 import {
   getManualBackupOperationId,
   useBackupOperationStore,
@@ -44,7 +48,14 @@ interface Backup {
   name: string;
   date: Date;
   size: number;
+  durationMs?: number;
 }
+
+/** A folder size as the UI shows it. `failed` means the measurement itself did not succeed. */
+type FolderSize =
+  | { status: 'loading' }
+  | { status: 'ready'; bytes: number; complete: boolean }
+  | { status: 'failed' };
 
 interface BackupSnapshotEntry {
   size: number;
@@ -149,24 +160,15 @@ function sanitizeCatalog(value: unknown): BackupCatalog {
   };
 }
 
-const SIZE_UNITS = ['b', 'kb', 'mb', 'gb'] as const;
-const SIZE_UNIT_KEYS: Record<(typeof SIZE_UNITS)[number], TranslationKey> = {
-  b: 'backups.units.b',
-  kb: 'backups.units.kb',
-  mb: 'backups.units.mb',
-  gb: 'backups.units.gb',
-};
-
-function formatBackupSize(bytes: number, t: Translate, locale: string): string {
-  if (bytes <= 0) {
-    return `0 ${t(SIZE_UNIT_KEYS.b)}`;
+/** Measures a server or world folder. A failed walk comes back as `failed`, so one folder cannot break the view. */
+async function measureFolder(path: string): Promise<FolderSize> {
+  try {
+    const result = await getManagedDirectorySize(path);
+    return { status: 'ready', bytes: result.bytes, complete: result.complete };
+  } catch (error) {
+    logError('Failed to measure folder size', error, { path });
+    return { status: 'failed' };
   }
-  const index = Math.min(SIZE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  const value = bytes / 1024 ** index;
-  const formatted = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: index === 0 ? 0 : 2,
-  }).format(value);
-  return `${formatted} ${t(SIZE_UNIT_KEYS[SIZE_UNITS[index]])}`;
 }
 
 const COMPRESSION_OPTIONS = Array.from({ length: 9 }, (_, index) => ({
@@ -206,6 +208,10 @@ export default function BackupsView({ server }: Props) {
   const [backupCatalog, setBackupCatalog] = useState<BackupCatalog>(createEmptyCatalog());
   const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>('loading');
   const [worlds, setWorlds] = useState<string[]>([]);
+  const [worldSizes, setWorldSizes] = useState<Record<string, FolderSize>>({});
+  const [serverSize, setServerSize] = useState<FolderSize | null>(null);
+  const worldSizeGenerationRef = useRef(0);
+  const serverSizeGenerationRef = useRef(0);
   const [tagEditorTarget, setTagEditorTarget] = useState<string | null>(null);
   const [tagList, setTagList] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState('');
@@ -301,6 +307,7 @@ export default function BackupsView({ server }: Props) {
     setProcessing(false);
   };
   const listParentRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const backupVirtualizer = useVirtualizer({
     count: backups.length,
     getScrollElement: () => listParentRef.current,
@@ -338,6 +345,8 @@ export default function BackupsView({ server }: Props) {
     setProcessing(false);
     setBackups([]);
     setWorlds([]);
+    setWorldSizes({});
+    setServerSize(null);
     setCatalogLoadState('loading');
     setBackupCatalog(createEmptyCatalog());
     setShowCreateModal(false);
@@ -429,6 +438,17 @@ export default function BackupsView({ server }: Props) {
     return buildManualBackupName(server);
   };
 
+  // The create dialog shows the whole server folder's size, measured fresh each time it opens.
+  const loadServerSize = (expectedToken: InitializationToken) => {
+    const generation = ++serverSizeGenerationRef.current;
+    setServerSize({ status: 'loading' });
+    void measureFolder(server.path).then((size) => {
+      if (serverSizeGenerationRef.current !== generation) return;
+      if (!isCurrentInitialization(expectedToken)) return;
+      setServerSize(size);
+    });
+  };
+
   const openCreateModal = () => {
     const operationToken = getCurrentInitializationToken(initializationKey);
     if (!isCurrentInitialization(operationToken)) {
@@ -437,6 +457,7 @@ export default function BackupsView({ server }: Props) {
     setShowCreateModal(true);
     setCustomName('');
     setCompressionLevel(5);
+    loadServerSize(operationToken);
   };
 
   const loadWorlds = async (expectedToken: InitializationToken) => {
@@ -486,6 +507,20 @@ export default function BackupsView({ server }: Props) {
         return;
       }
       setWorlds(unique);
+      // Sizes fill in after the list is shown. Each one is dropped if a newer listing has started since.
+      const generation = ++worldSizeGenerationRef.current;
+      setWorldSizes(
+        Object.fromEntries(
+          unique.map((name): [string, FolderSize] => [name, { status: 'loading' }]),
+        ),
+      );
+      for (const name of unique) {
+        void measureFolder(`${server.path}/${name}`).then((size) => {
+          if (worldSizeGenerationRef.current !== generation) return;
+          if (!isCurrentInitialization(expectedToken)) return;
+          setWorldSizes((current) => (name in current ? { ...current, [name]: size } : current));
+        });
+      }
     } catch (error) {
       if (!isCurrentInitialization(expectedToken)) {
         return;
@@ -1059,6 +1094,32 @@ export default function BackupsView({ server }: Props) {
       )
     : null;
 
+  // Null until a server size and at least one past backup with a duration exist. The dialog hides the row then.
+  const estimatedDurationMs =
+    serverSize?.status === 'ready' ? estimateBackupDurationMs(serverSize.bytes, backups) : null;
+
+  const formatFolderSize = (size: FolderSize | null): string => {
+    if (!size || size.status === 'loading') return '…';
+    if (size.status === 'failed') return '—';
+    const formatted = formatBytes(size.bytes, locale);
+    return size.complete ? formatted : t('backups.size.atLeast', { size: formatted });
+  };
+
+  const formatEstimate = (ms: number): string => {
+    const totalSeconds = Math.max(1, Math.ceil(ms / 1000));
+    if (totalSeconds < 60) {
+      return t('backups.duration.seconds', { count: totalSeconds });
+    }
+    const totalMinutes = Math.ceil(totalSeconds / 60);
+    if (totalMinutes < 60) {
+      return t('backups.duration.minutes', { count: totalMinutes });
+    }
+    return t('backups.duration.hoursMinutes', {
+      hours: Math.floor(totalMinutes / 60),
+      minutes: totalMinutes % 60,
+    });
+  };
+
   const createFooter = (
     <>
       <Button variant="secondary" onClick={() => setShowCreateModal(false)} disabled={isProcessing}>
@@ -1089,7 +1150,7 @@ export default function BackupsView({ server }: Props) {
   return (
     <div className={styles.page} data-testid="backups-view">
       <header className={styles.header}>
-        <h2 className={styles.title}>{t('backups.title')}</h2>
+        <SectionTitle icon={Archive} title={t('backups.title')} as="h2" />
         <Button
           variant="primary"
           data-testid="backups-create-button"
@@ -1154,7 +1215,7 @@ export default function BackupsView({ server }: Props) {
 
                     <div className={styles.rowMeta}>
                       <span>{formatDate(backup.date)}</span>
-                      <span>{formatBackupSize(backup.size, t, locale)}</span>
+                      <span>{formatBytes(backup.size, locale)}</span>
                     </div>
 
                     {meta.tags.length > 0 && (
@@ -1219,9 +1280,12 @@ export default function BackupsView({ server }: Props) {
             {worlds.map((worldName) => (
               <li key={worldName} className={styles.worldRow}>
                 <span className={styles.worldIcon} aria-hidden="true">
-                  <Globe size={16} />
+                  <Globe size={14} />
                 </span>
                 <span className={styles.worldName}>{worldName}</span>
+                <span className={styles.worldSize} data-testid={`backup-world-size-${worldName}`}>
+                  {formatFolderSize(worldSizes[worldName] ?? { status: 'loading' })}
+                </span>
                 {/* One hold is the confirmation. The row is removed on success, and confirmed={false} resets the hold after a failed delete. */}
                 <HoldToConfirm
                   label={t('backups.world.holdToDelete')}
@@ -1251,15 +1315,21 @@ export default function BackupsView({ server }: Props) {
           footer={createFooter}
           onEscapeKeyDown={isProcessing ? blockDismiss : undefined}
           onPointerDownOutside={isProcessing ? blockDismiss : undefined}
+          // The first focusable control would otherwise be a hint icon, and focus would open its tooltip on load.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            nameInputRef.current?.focus();
+          }}
         >
           <div className={styles.form}>
             <Input
+              ref={nameInputRef}
               data-testid="backup-name-input"
               label={t('backups.modal.fileName')}
               placeholder={defaultName()}
               value={customName}
               onChange={(event) => setCustomName(event.target.value)}
-              description={t('backups.modal.fileNameHelp', { default: defaultName() })}
+              hint={t('backups.modal.fileNameHelp', { default: defaultName() })}
               error={nameError ?? undefined}
               disabled={isProcessing}
             />
@@ -1268,16 +1338,43 @@ export default function BackupsView({ server }: Props) {
               testId="backups-compression-select"
               label={t('backups.modal.compressionLevel')}
               placeholder={arc.select.placeholder}
-              description={t('backups.modal.compressionHelp')}
+              hint={t('backups.modal.compressionHelp')}
               options={COMPRESSION_OPTIONS}
               value={String(compressionLevel)}
               onValueChange={(value) => setCompressionLevel(Number(value))}
               disabled={isProcessing}
             />
 
-            <p className={styles.muted} data-testid="backups-whole-server-note">
-              {t('backups.modal.wholeServerNote')}
-            </p>
+            <dl className={styles.facts}>
+              <div className={styles.fact}>
+                <dt className={styles.factTerm}>
+                  <span>{t('backups.modal.targetSize')}</span>
+                  <HintIcon
+                    hint={t('backups.modal.wholeServerNote')}
+                    label={t('backups.modal.targetSize')}
+                  />
+                </dt>
+                <dd className={styles.factValue} data-testid="backups-target-size">
+                  {formatFolderSize(serverSize)}
+                </dd>
+              </div>
+              {estimatedDurationMs !== null && (
+                <div className={styles.fact}>
+                  <dt className={styles.factTerm}>
+                    <span>{t('backups.modal.estimatedTime')}</span>
+                    <HintIcon
+                      hint={t('backups.modal.estimateHint', { count: ESTIMATE_SAMPLE_COUNT })}
+                      label={t('backups.modal.estimatedTime')}
+                    />
+                  </dt>
+                  <dd className={styles.factValue} data-testid="backups-estimated-time">
+                    {t('backups.modal.estimateValue', {
+                      duration: formatEstimate(estimatedDurationMs),
+                    })}
+                  </dd>
+                </div>
+              )}
+            </dl>
           </div>
         </DialogContent>
       </Dialog>

@@ -115,9 +115,8 @@ describe('SettingsWindow plugin download security setting', () => {
       ).toHaveLength(1);
     });
     expect(onCheckForUpdatesMock).not.toHaveBeenCalled();
-    expect(
-      screen.getByText('Receive prerelease builds for early access to upcoming changes.'),
-    ).toBeInTheDocument();
+    // The channel description is a hint now: it sits in a tooltip behind the info icon beside the label.
+    expect(screen.getByRole('button', { name: 'Update channel: More info' })).toBeInTheDocument();
     dispatchSpy.mockRestore();
   });
 

@@ -9,6 +9,17 @@
   font-weight: 500;
   line-height: var(--leading-body);
 }
+/* A label with a hint: the info icon sits on the label's line, and the row keeps the label's bottom gap. */
+.labelRow {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.labelRow > .label {
+  margin-bottom: 0;
+}
 /* Focus answers with the border colour alone (no rings or halos); the field itself never changes size. */
 .input {
   width: 100%;

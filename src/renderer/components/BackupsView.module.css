@@ -1,10 +1,12 @@
+/* The content card scrolls the page; this grows with its content and never sets its own height. */
 .page {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  height: 100%;
+  min-height: 100%;
   min-width: 0;
   padding: var(--space-5);
+  box-sizing: border-box;
 }
 
 .header {
@@ -12,14 +14,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-}
-
-.title {
-  margin: 0;
-  color: var(--foreground);
-  font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: var(--tracking-display);
 }
 
 .alertText {
@@ -64,10 +58,10 @@
 .worlds {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   background: var(--surface);
 }
 
@@ -82,17 +76,23 @@
 .worldList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* One compact line per world: icon, name, folder size, and the hold-to-delete control at the end. */
 .worldRow {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
+  padding-block: var(--space-1);
+  border-top: 1px solid var(--border-subtle, var(--border));
+}
+
+.worldRow:first-child {
+  border-top: 0;
 }
 
 .worldIcon {
@@ -111,6 +111,16 @@
   white-space: nowrap;
 }
 
+.worldSize {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .sectionTitle {
   margin: 0;
   color: var(--foreground);
@@ -118,13 +128,46 @@
   font-weight: 600;
 }
 
+/* Grows with its rows up to a cap, then scrolls inside itself, so the world card stays in view below a long list. */
 .list {
   display: flex;
-  flex: 1;
   flex-direction: column;
+  max-height: min(60vh, 40rem);
   min-height: 0;
   overflow-y: auto;
   position: relative;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.factTerm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.factValue {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .row {
