@@ -402,6 +402,8 @@ export default function PluginBrowser({ server }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('relevance');
   const [logoLoadFailed, setLogoLoadFailed] = useState<Record<string, boolean>>({});
   const [installingId, setInstallingId] = useState<string | null>(null);
+  // Set while the install preview is fetched. It is not "installing": the user has not confirmed anything yet.
+  const [preparingId, setPreparingId] = useState<string | null>(null);
   const [installFailureByItemId, setInstallFailureByItemId] = useState<
     Record<string, PluginInstallFailureCode>
   >({});
@@ -1343,8 +1345,7 @@ export default function PluginBrowser({ server }: Props) {
       delete next[item.id];
       return next;
     });
-    setInstallingId(item.id);
-    setInstallProgressByItemId((previous) => ({ ...previous, [item.id]: 0 }));
+    setPreparingId(item.id);
     try {
       let project: PluginProjectRef;
       if (item.platform === 'Modrinth') {
@@ -1427,6 +1428,8 @@ export default function PluginBrowser({ server }: Props) {
           warnings: [unknownCompatibilityWarning, unverifiedWarning].filter(Boolean).join('\n'),
         },
       );
+      // The confirm dialog is open from here on, so the card must not read as installing yet.
+      setPreparingId(null);
       let accepted = false;
       await openDialog({
         severity: preview.requiresUnverifiedDownloads ? 'warning' : 'info',
@@ -1444,6 +1447,8 @@ export default function PluginBrowser({ server }: Props) {
         return;
       }
 
+      setInstallingId(item.id);
+      setInstallProgressByItemId((previous) => ({ ...previous, [item.id]: 0 }));
       const stopListening = await onPluginInstallProgress(
         preview.token,
         ({ downloaded, total }) => {
@@ -1478,6 +1483,7 @@ export default function PluginBrowser({ server }: Props) {
       handleInstallFailure(item, error);
     } finally {
       await refreshInstalled();
+      setPreparingId(null);
       setInstallingId(null);
       setInstallProgressByItemId((previous) => {
         const next = { ...previous };
@@ -2037,12 +2043,12 @@ export default function PluginBrowser({ server }: Props) {
                         type="button"
                         data-testid={`plugin-install-${item.id}`}
                         onClick={() => void handleInstall(item)}
-                        disabled={installingId === item.id}
+                        disabled={installingId === item.id || preparingId === item.id}
                         className={`plugin-browser__install-btn ${
                           requiresBrowser ? 'plugin-browser__install-btn--external' : ''
                         }`}
                       >
-                        {installingId === item.id ? (
+                        {installingId === item.id || preparingId === item.id ? (
                           <Loader2 size={14} className="animate-spin" />
                         ) : requiresBrowser ? (
                           <ExternalLink size={14} />

@@ -400,6 +400,27 @@ describe('PluginBrowser feedback integration', () => {
     expect(useUiStore.getState().currentView).toBe('dashboard');
   });
 
+  it('does not show the card as installing while the confirm dialog is still open', async () => {
+    queryState.useQuery.mockReturnValue({
+      data: { items: [compatibleModrinthItem], hasNextPage: false, totalPages: 1 },
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: queryState.refetch,
+    });
+    render(
+      <AppFeedbackProvider>
+        <PluginBrowser server={server} />
+      </AppFeedbackProvider>,
+    );
+
+    fireEvent.click(await screen.findByTestId('plugin-install-modrinth-plugin'));
+    expect(await screen.findByTestId('feedback-dialog-primary-action')).toBeInTheDocument();
+    expect(installerCommands.executePluginInstall).not.toHaveBeenCalled();
+    expect(screen.queryByText('Installing...')).not.toBeInTheDocument();
+    expect(screen.getByTestId('plugin-install-modrinth-plugin')).not.toBeDisabled();
+  });
+
   it('routes installed-file toggle and uninstall through Rust commands', async () => {
     fileCommands.listFiles.mockResolvedValue([{ name: 'plugin.jar', isDirectory: false }]);
     render(
