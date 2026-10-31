@@ -1,158 +1,153 @@
+import { Alert } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
+import { Card } from '@/components/arc/card/card';
+import { CodeBlock } from '@/components/arc/code-block/code-block';
+import { ArrowLeft, Check, ExternalLink } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from '../../i18n';
-import { Button } from './ui/Button';
+import { useUiStore } from '../../store/uiStore';
+import { GuideStep } from './GuideStep';
+import styles from './GuideView.module.css';
 
 const ProxyHelpView: FC = () => {
   const { t } = useTranslation();
+  const returnToPreviousView = useUiStore((state) => state.returnToPreviousView);
 
   const openLink = (url: string) => {
     window.open(url, '_blank');
   };
 
+  const checklistItems = [
+    t('proxyHelp.checklistItem1'),
+    t('proxyHelp.checklistItem2'),
+    t('proxyHelp.checklistItem3'),
+  ];
+
   return (
-    <div
-      className="proxy-help-view box-border h-full overflow-y-auto p-8 max-[900px]:p-4"
-      data-testid="proxy-help-view"
-    >
-      <h1 className="proxy-help-view__title">🌐 {t('proxyHelp.title')}</h1>
+    <div className={styles.root} data-testid="proxy-help-view">
+      <div className={styles.inner}>
+        <div className={styles.topbar}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="guide-back-button"
+            onClick={returnToPreviousView}
+          >
+            <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+            {t('common.back')}
+          </Button>
+        </div>
 
-      <div className="proxy-help-view__intro">
-        <p className="proxy-help-view__intro-text">
-          {t('proxyHelp.introLine1')}
-          <br />
-          {t('proxyHelp.introLine2')}
+        <p className={styles.intro}>
+          {t('proxyHelp.introLine1')} {t('proxyHelp.introLine2')}
         </p>
-      </div>
 
-      <div className="proxy-help-view__summary-grid">
-        <div className="proxy-help-view__summary-card">
-          <div className="proxy-help-view__summary-label">{t('proxyHelp.recommendedSoftware')}</div>
-          <div className="proxy-help-view__summary-value">Velocity</div>
-          <div className="proxy-help-view__summary-note">
-            {t('proxyHelp.recommendedSoftwareNote')}
+        <div className={styles.summary}>
+          <Card title={t('proxyHelp.recommendedSoftware')} className={styles.card}>
+            <p className={styles.value}>Velocity</p>
+            <p className={styles.note}>{t('proxyHelp.recommendedSoftwareNote')}</p>
+          </Card>
+          <Card title={t('proxyHelp.recommendedPort')} className={styles.card}>
+            <p className={styles.value}>25577</p>
+            <p className={styles.note}>{t('proxyHelp.recommendedPortNote')}</p>
+          </Card>
+          <Card title={t('proxyHelp.minConfig')} className={styles.card}>
+            <p className={styles.value}>{t('proxyHelp.minConfigValue')}</p>
+            <p className={styles.note}>{t('proxyHelp.minConfigNote')}</p>
+          </Card>
+        </div>
+
+        <Card title={t('proxyHelp.checklistTitle')} className={styles.card}>
+          <ul className={styles.checklist}>
+            {checklistItems.map((item) => (
+              <li key={item}>
+                <Check
+                  size={16}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  className={styles.checkIcon}
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <GuideStep badge={t('proxyHelp.step1Badge')} title={t('proxyHelp.step1Title')}>
+          <p>{t('proxyHelp.step1Desc')}</p>
+          <ul className={styles.list}>
+            <li className={styles.stack}>
+              <span className={styles.listTitle}>{t('proxyHelp.step1Software')}</span>
+              <span className={styles.listNote}>{t('proxyHelp.step1SoftwareDesc')}</span>
+            </li>
+            <li className={styles.stack}>
+              <span className={styles.listTitle}>{t('proxyHelp.step1Port')}</span>
+              <span className={styles.listNote}>{t('proxyHelp.step1PortDesc1')}</span>
+              <span className={styles.listNote}>{t('proxyHelp.step1PortDesc2')}</span>
+            </li>
+            <li className={styles.stack}>
+              <span className={styles.listTitle}>{t('proxyHelp.step1Backend')}</span>
+              <span className={styles.listNote}>{t('proxyHelp.step1BackendDesc')}</span>
+            </li>
+          </ul>
+          <p>{t('proxyHelp.step1Action')}</p>
+          <Alert tone="info" title={t('proxyHelp.step1Tip')} />
+        </GuideStep>
+
+        <GuideStep badge={t('proxyHelp.step2Badge')} title={t('proxyHelp.step2Title')}>
+          <p>{t('proxyHelp.step2Desc')}</p>
+          <div className={styles.stack}>
+            <span className={styles.listTitle}>{t('proxyHelp.step2Navigate')}</span>
+            <span className={styles.listNote}>{t('proxyHelp.step2NavigateDesc')}</span>
+            <CodeBlock code="servers/Proxy-Server" filename="Proxy-Server" language="text" />
           </div>
-        </div>
-        <div className="proxy-help-view__summary-card">
-          <div className="proxy-help-view__summary-label">{t('proxyHelp.recommendedPort')}</div>
-          <div className="proxy-help-view__summary-value">25577</div>
-          <div className="proxy-help-view__summary-note">{t('proxyHelp.recommendedPortNote')}</div>
-        </div>
-        <div className="proxy-help-view__summary-card">
-          <div className="proxy-help-view__summary-label">{t('proxyHelp.minConfig')}</div>
-          <div className="proxy-help-view__summary-value">{t('proxyHelp.minConfigValue')}</div>
-          <div className="proxy-help-view__summary-note">{t('proxyHelp.minConfigNote')}</div>
-        </div>
-      </div>
-
-      <div className="proxy-help-view__checklist-panel">
-        <h2 className="proxy-help-view__checklist-title">{t('proxyHelp.checklistTitle')}</h2>
-        <ul className="proxy-help-view__checklist">
-          <li>{t('proxyHelp.checklistItem1')}</li>
-          <li>{t('proxyHelp.checklistItem2')}</li>
-          <li>{t('proxyHelp.checklistItem3')}</li>
-        </ul>
-      </div>
-
-      {/* --- Step 1 --- */}
-      <div className="proxy-help-view__step">
-        <div className="proxy-help-view__step-badge">{t('proxyHelp.step1Badge')}</div>
-        <h3>{t('proxyHelp.step1Title')}</h3>
-        <p>{t('proxyHelp.step1Desc')}</p>
-
-        <ul className="proxy-help-view__list">
-          <li>
-            <strong>{t('proxyHelp.step1Software')}</strong>
-            <br />
-            <span className="proxy-help-view__muted">{t('proxyHelp.step1SoftwareDesc')}</span>
-          </li>
-          <li>
-            <strong>{t('proxyHelp.step1Port')}</strong>
-            <br />
-            <span className="proxy-help-view__muted">
-              {t('proxyHelp.step1PortDesc1')}
-              <br />
-              {t('proxyHelp.step1PortDesc2')}
-            </span>
-          </li>
-          <li>
-            <strong>{t('proxyHelp.step1Backend')}</strong>
-            <br />
-            <span className="proxy-help-view__muted">{t('proxyHelp.step1BackendDesc')}</span>
-          </li>
-        </ul>
-        <p>{t('proxyHelp.step1Action')}</p>
-        <div className="proxy-help-view__tip-box">{t('proxyHelp.step1Tip')}</div>
-      </div>
-
-      {/* --- Step 2 --- */}
-      <div className="proxy-help-view__step">
-        <div className="proxy-help-view__step-badge">{t('proxyHelp.step2Badge')}</div>
-        <h3>{t('proxyHelp.step2Title')}</h3>
-        <p>{t('proxyHelp.step2Desc')}</p>
-
-        <div className="mb-4">
-          <strong>{t('proxyHelp.step2Navigate')}</strong>
-          <br />
-          <span className="proxy-help-view__muted">{t('proxyHelp.step2NavigateDesc')}</span>
-          <div className="proxy-help-view__code">servers/Proxy-Server</div>
-        </div>
-
-        <div>
-          <strong>{t('proxyHelp.step2Download')}</strong>
-          <br />
-          <span className="proxy-help-view__muted">{t('proxyHelp.step2DownloadDesc')}</span>
-          <div className="proxy-help-view__cta-row">
-            <Button
-              variant="primary"
-              className="proxy-help-view__cta-btn"
-              onClick={() => openLink('https://papermc.io/downloads/velocity')}
-            >
-              {t('proxyHelp.openPaperVelocity')}
-            </Button>
-            <Button
-              variant="secondary"
-              className="proxy-help-view__cta-btn-secondary"
-              onClick={() => openLink('https://docs.papermc.io/velocity/')}
-            >
-              {t('proxyHelp.openVelocityDocs')}
-            </Button>
+          <div className={styles.stack}>
+            <span className={styles.listTitle}>{t('proxyHelp.step2Download')}</span>
+            <span className={styles.listNote}>{t('proxyHelp.step2DownloadDesc')}</span>
+            <div className={styles.ctaRow}>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => openLink('https://papermc.io/downloads/velocity')}
+              >
+                {t('proxyHelp.openPaperVelocity')}
+                <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => openLink('https://docs.papermc.io/velocity/')}
+              >
+                {t('proxyHelp.openVelocityDocs')}
+                <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </GuideStep>
 
-      {/* --- Step 3 --- */}
-      <div className="proxy-help-view__step">
-        <div className="proxy-help-view__step-badge">{t('proxyHelp.step3Badge')}</div>
-        <h3>{t('proxyHelp.step3Title')}</h3>
-
-        <div className="mb-4">
-          <strong>{t('proxyHelp.step3Edit')}</strong>
-          <br />
-          <span className="proxy-help-view__muted">
-            {t('proxyHelp.step3EditDesc1')}
-            <br />
-            {t('proxyHelp.step3EditDesc2')}
-          </span>
-          <div className="proxy-help-view__code">
-            velocity.toml{' '}
-            <span className="text-zinc-600 text-xs">{t('proxyHelp.autoGenerated')}</span>
+        <GuideStep badge={t('proxyHelp.step3Badge')} title={t('proxyHelp.step3Title')}>
+          <div className={styles.stack}>
+            <span className={styles.listTitle}>{t('proxyHelp.step3Edit')}</span>
+            <span className={styles.listNote}>{t('proxyHelp.step3EditDesc1')}</span>
+            <span className={styles.listNote}>{t('proxyHelp.step3EditDesc2')}</span>
+            <CodeBlock
+              code="servers/Proxy-Server/velocity.toml"
+              filename="velocity.toml"
+              language="toml"
+            />
+            <span className={styles.listNote}>{t('proxyHelp.autoGenerated')}</span>
           </div>
-        </div>
+          <div className={styles.stack}>
+            <span className={styles.listTitle}>{t('proxyHelp.step3Save')}</span>
+            <span className={styles.listNote}>{t('proxyHelp.step3SaveDesc1')}</span>
+            <span className={styles.listNote}>{t('proxyHelp.step3SaveDesc2')}</span>
+          </div>
+          <Alert tone="info" title={t('proxyHelp.step3Tip')} />
+        </GuideStep>
 
-        <div>
-          <strong>{t('proxyHelp.step3Save')}</strong>
-          <br />
-          <span className="proxy-help-view__muted">
-            {t('proxyHelp.step3SaveDesc1')}
-            <br />
-            {t('proxyHelp.step3SaveDesc2')}
-          </span>
-        </div>
-
-        <div className="proxy-help-view__tip-box">{t('proxyHelp.step3Tip')}</div>
+        <Alert tone="success" title={t('proxyHelp.done')} />
       </div>
-
-      <div className="proxy-help-view__done">🎉 {t('proxyHelp.done')}</div>
     </div>
   );
 };
