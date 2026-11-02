@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Tauri swaps the token for a per-load nonce and adds it to style-src, so runtime <style> tags (motion's popLayout) pass the CSP. -->
+    <meta name="mcv-style-nonce" content="__TAURI_STYLE_NONCE__" />
     <title>MC-Vector</title>
   </head>
   <body>

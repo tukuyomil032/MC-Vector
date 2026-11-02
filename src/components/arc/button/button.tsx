@@ -85,16 +85,45 @@ function labelKey(node: ReactNode): string {
 }
 
 /** Springs the slot to the natural width of the incoming label when it changes, so a new label never snaps the button's size.
- *  The outgoing label is popped out of flow at once, so it never holds the old width. Other resizes (a late web font, a parent reflow) jump straight to the new width, so nothing wobbles on first paint. */
-function useMorphWidth(content: RefObject<HTMLElement | null>, key: string, reduced: boolean) {
+ *  The outgoing label is popped out of flow at once, so it never holds the old width. Other resizes (a late web font, a parent reflow) jump straight to the new width, so nothing wobbles on first paint.
+ *  While frozen (loading) the label is hidden under the spinner, so the slot keeps the width it had and ignores label changes; on release it morphs once to whatever label is there then. */
+function useMorphWidth(
+  content: RefObject<HTMLElement | null>,
+  key: string,
+  reduced: boolean,
+  frozen: boolean,
+) {
   const width = useMotionValue<number | 'auto'>('auto');
   const lastKey = useRef(key),
-    armedUntil = useRef(0);
+    armedUntil = useRef(0),
+    frozenRef = useRef(frozen);
   useLayoutEffect(() => {
     if (lastKey.current === key) return;
     lastKey.current = key;
     armedUntil.current = performance.now() + 700;
   }, [key]);
+  useLayoutEffect(() => {
+    const wasFrozen = frozenRef.current;
+    frozenRef.current = frozen;
+    if (frozen || !wasFrozen) return;
+    const node = content.current,
+      slot = node?.parentElement;
+    if (!node || !slot) return;
+    const next = node.getBoundingClientRect().width;
+    const current = width.get();
+    if (!next || reduced || typeof current !== 'number') {
+      width.jump(next || 'auto');
+      return;
+    }
+    if (Math.abs(current - next) < 0.5) return;
+    slot.dataset.morphing = '';
+    animate(width, next, {
+      ...motionTokens.spring.morph,
+      onComplete: () => {
+        delete slot.dataset.morphing;
+      },
+    });
+  }, [content, frozen, reduced, width]);
   useEffect(() => {
     const node = content.current,
       slot = node?.parentElement;
@@ -103,6 +132,7 @@ function useMorphWidth(content: RefObject<HTMLElement | null>, key: string, redu
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return;
       const next = entry.contentRect.width;
+      if (measured && frozenRef.current) return;
       if (!next || !measured || reduced || performance.now() > armedUntil.current) {
         measured = next > 0;
         width.jump(next || 'auto');
@@ -173,7 +203,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const contentRef = useRef<HTMLSpanElement>(null);
   const key = labelKey(children);
-  const width = useMorphWidth(contentRef, key, reduceMotion);
+  const width = useMorphWidth(contentRef, key, reduceMotion, loading);
   const setRefs = useCallback(
     (node: HTMLButtonElement | null) => {
       buttonRef.current = node;

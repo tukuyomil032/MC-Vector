@@ -8,6 +8,7 @@ export type E2eScenario =
   | 'hashless-plugin'
   | 'checksum-mismatch'
   | 'network-retry'
+  | 'streamed-plugin-progress'
   | 'backup-flow'
   | 'file-flow'
   | 'proxy-flow';
@@ -115,6 +116,7 @@ export function createE2eState(scenario: E2eScenario): E2eState {
     'hashless-plugin',
     'checksum-mismatch',
     'network-retry',
+    'streamed-plugin-progress',
     'backup-flow',
     'file-flow',
     'proxy-flow',

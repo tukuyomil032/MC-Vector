@@ -592,6 +592,13 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
         serverId: plan.serverId,
         relativePath,
       });
+      if (scenario === 'streamed-plugin-progress') {
+        // Unthrottled chunk events off the frame clock, as the Rust installer sends them.
+        for (let downloaded = 1; downloaded < 100; downloaded += 1) {
+          void emit(`download-progress-${token}`, { downloaded, total: 100 });
+          await new Promise((resolve) => setTimeout(resolve, 4));
+        }
+      }
       setRuntimeFile(destination, 'e2e-plugin-jar');
       void emit(`download-progress-${token}`, {
         downloaded: 100,
