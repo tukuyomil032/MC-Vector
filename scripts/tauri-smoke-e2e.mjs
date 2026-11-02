@@ -895,6 +895,23 @@ function readZipEntry(archivePath, entryName) {
   return result.stdout;
 }
 
+// Toasts carry most backend errors, so keep the visible text and a screenshot of the
+// renderer at the moment a step fails.
+async function captureRendererState(driver, artifactDirectory) {
+  if (!driver) {
+    return;
+  }
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    const text = await driver.executeScript('return document.body?.innerText ?? "";');
+    writeFileSync(path.join(artifactDirectory, 'renderer-text.txt'), String(text));
+    const screenshot = await driver.takeScreenshot();
+    writeFileSync(path.join(artifactDirectory, 'renderer.png'), screenshot, 'base64');
+  } catch (error) {
+    console.error(`Could not capture renderer state: ${describeError(error)}`);
+  }
+}
+
 async function main() {
   const testRoot = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'mc-vector-tauri-e2e-'));
   const artifactDirectory = path.join(projectRoot, 'test-results', 'tauri-e2e');
@@ -1044,6 +1061,7 @@ async function main() {
     succeeded = true;
   } catch (error) {
     failure = error;
+    await captureRendererState(failureWebDriver ?? normalWebDriver, artifactDirectory);
     throw error;
   } finally {
     await failureWebDriver?.quit().catch(() => undefined);
