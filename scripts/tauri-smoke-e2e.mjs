@@ -475,7 +475,17 @@ async function visibleElement(driver, selector, timeoutMs = 30_000) {
 async function click(driver, selector) {
   const element = await visibleElement(driver, selector);
   await waitFor(() => element.isEnabled(), `${selector} is not enabled`);
-  await element.click();
+  // Toasts stack over controls near the bottom of a small window (the Windows runner),
+  // so center the element and retry intercepted clicks until the overlay moves away.
+  // tauri-wd cannot pass elements into scripts, so the script looks it up by selector.
+  const selectorJson = JSON.stringify(selector);
+  await waitFor(async () => {
+    await driver.executeScript(
+      `document.querySelector(${selectorJson})?.scrollIntoView({ block: 'center' });`,
+    );
+    await element.click();
+    return true;
+  }, `${selector} could not be clicked`);
 }
 
 async function setReactInputValue(driver, selector, value) {
