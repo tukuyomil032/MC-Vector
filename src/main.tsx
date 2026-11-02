@@ -6,11 +6,13 @@ import { loader } from '@monaco-editor/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { restoreStateCurrent } from '@tauri-apps/plugin-window-state';
 import * as monaco from 'monaco-editor';
+import { MotionConfig } from 'motion/react';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { useI18nStore } from './i18n';
 import { AppFeedbackProvider } from './renderer/components/AppFeedbackProvider';
+import { readStyleNonce } from './renderer/shared/style-nonce';
 import './styles/index.css';
 
 const queryClient = new QueryClient({
@@ -36,11 +38,14 @@ async function bootstrap() {
 
   root.render(
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AppFeedbackProvider>
-          <App />
-        </AppFeedbackProvider>
-      </QueryClientProvider>
+      {/* popLayout pops exiting elements out of flow with a runtime <style>; without the nonce the CSP drops it and they stay in flow. */}
+      <MotionConfig nonce={readStyleNonce()}>
+        <QueryClientProvider client={queryClient}>
+          <AppFeedbackProvider>
+            <App />
+          </AppFeedbackProvider>
+        </QueryClientProvider>
+      </MotionConfig>
     </React.StrictMode>,
   );
 }
