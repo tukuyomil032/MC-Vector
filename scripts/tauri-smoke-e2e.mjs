@@ -913,7 +913,9 @@ async function captureRendererState(driver, artifactDirectory) {
 }
 
 async function main() {
-  const testRoot = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'mc-vector-tauri-e2e-'));
+  // The native realpath expands Windows 8.3 names such as RUNNER~1, so fixture paths
+  // match what canonicalize returns in the backend.
+  const testRoot = mkdtempSync(path.join(realpathSync.native(os.tmpdir()), 'mc-vector-tauri-e2e-'));
   const artifactDirectory = path.join(projectRoot, 'test-results', 'tauri-e2e');
   let succeeded = false;
   let failure;
