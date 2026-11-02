@@ -414,7 +414,9 @@ async function startWebDriver(environment, port) {
   } catch (error) {
     await stopProcess(child);
     const recentOutput = output.join('').trim();
-    throw new Error(`${error.message}${recentOutput ? `\n${recentOutput}` : ''}`);
+    const startupError = new Error(`${error.message}${recentOutput ? `\n${recentOutput}` : ''}`);
+    startupError.driverOutput = output;
+    throw startupError;
   }
   return { child, url, output };
 }
@@ -865,6 +867,8 @@ async function main() {
   const testRoot = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'mc-vector-tauri-e2e-'));
   const artifactDirectory = path.join(projectRoot, 'test-results', 'tauri-e2e');
   let succeeded = false;
+  let failure;
+  let failureDriverStarting = false;
   let normalDriver;
   let normalWebDriver;
   let failureDriver;
@@ -980,6 +984,7 @@ async function main() {
     await stopProcess(normalDriver.child);
     normalDriver = undefined;
 
+    failureDriverStarting = true;
     failureDriver = await startWebDriver(failureEnvironment, await reservePort());
     failureWebDriver = await createWebDriver(failureDriver.url, binary);
     await openBackups(failureWebDriver);
@@ -1008,6 +1013,9 @@ async function main() {
 
     console.log(`Real Tauri smoke E2E passed on ${platform}`);
     succeeded = true;
+  } catch (error) {
+    failure = error;
+    throw error;
   } finally {
     await failureWebDriver?.quit().catch(() => undefined);
     await normalWebDriver?.quit().catch(() => undefined);
@@ -1022,6 +1030,11 @@ async function main() {
         const destination = path.join(artifactDirectory, path.basename(testRoot));
         mkdirSync(artifactDirectory, { recursive: true });
         cpSync(testRoot, destination, { recursive: true });
+        if (failure) {
+          // The full error stays out of the public job log and only lands in the artifact.
+          writeFileSync(path.join(artifactDirectory, 'failure.log'), describeError(failure));
+        }
+        const startupOutput = failure?.driverOutput;
         for (const [name, driver] of [
           ['normal-driver.log', normalDriver],
           ['failure-driver.log', failureDriver],
@@ -1029,6 +1042,10 @@ async function main() {
           if (driver?.output) {
             writeFileSync(path.join(artifactDirectory, name), driver.output.join(''));
           }
+        }
+        if (startupOutput) {
+          const startupLog = failureDriverStarting ? 'failure-driver.log' : 'normal-driver.log';
+          writeFileSync(path.join(artifactDirectory, startupLog), startupOutput.join(''));
         }
         console.error(`CI diagnostics copied to ${artifactDirectory}`);
       }
