@@ -703,12 +703,15 @@ pub async fn download_java(
         let client = java_client()?;
         resolve_adoptium_package(&client, major_version, os, arch).await?
     };
+    // Download, staging, and install paths are spelled below the canonical root
+    // because the containment checks compare against it; on Windows the plain
+    // app-data spelling never starts with the verbatim (`\\?\`) canonical form.
     let managed_root = java_root
         .canonicalize()
         .map_err(|error| format!("Failed to resolve managed Java root: {error}"))?;
     let verified = download_verified_artifact(
         download_url.as_str(),
-        &java_root.join(format!("jdk-{major_version}.{archive_type}")),
+        &managed_root.join(format!("jdk-{major_version}.{archive_type}")),
         &managed_root,
         &checksum,
         Some(expected_size),
@@ -731,7 +734,7 @@ pub async fn download_java(
     debug_assert_eq!(verified.sha256, checksum.to_ascii_lowercase());
     debug_assert!(verified.size > 0);
     let mut archive_guard = DownloadTempGuard::new(verified.path.clone());
-    let staging_dir = java_root.join(format!(".jdk-{major_version}.staging-{}", Uuid::new_v4()));
+    let staging_dir = managed_root.join(format!(".jdk-{major_version}.staging-{}", Uuid::new_v4()));
     tokio::fs::create_dir_all(&staging_dir)
         .await
         .map_err(|error| format!("Failed to create Java staging directory: {error}"))?;
@@ -761,7 +764,9 @@ pub async fn download_java(
         .await
         .map_err(|error| format!("Failed to remove verified Java archive: {error}"))?;
     archive_guard.disarm();
-    let previous_install = install_java_with_rollback(&staging_dir, &install_path, &managed_root)?;
+    let install_destination = managed_root.join(format!("jdk-{major_version}"));
+    let previous_install =
+        install_java_with_rollback(&staging_dir, &install_destination, &managed_root)?;
     staging_guard.disarm();
     let java_home = install_path
         .join(relative_java_home)
