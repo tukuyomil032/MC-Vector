@@ -146,6 +146,29 @@ jobs:
         run: bun ci
       - name: Install Windows Tauri driver
         run: cargo install tauri-driver --locked
+      - name: Install WebView2-matched msedgedriver
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $client = 'Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $version = foreach ($root in 'HKLM:\SOFTWARE\WOW6432Node', 'HKLM:\SOFTWARE', 'HKCU:\SOFTWARE') {
+            $props = Get-ItemProperty -Path "$root\$client" -ErrorAction SilentlyContinue
+            if ($props.pv -match '^\d+\.\d+\.\d+\.\d+$') { $props.pv; break }
+          }
+          if (-not $version) { throw 'No WebView2 runtime version found in the registry' }
+          Write-Host "WebView2 runtime $version"
+
+          $dir = Join-Path $env:RUNNER_TEMP 'msedgedriver'
+          $zip = Join-Path $env:RUNNER_TEMP 'edgedriver_win64.zip'
+          Invoke-WebRequest -Uri "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $driver = Join-Path $dir 'msedgedriver.exe'
+          $signature = Get-AuthenticodeSignature -FilePath $driver
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw "msedgedriver.exe is not signed by Microsoft ($($signature.Status))"
+          }
+          & $driver --version
+          "$dir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Run unsigned real Tauri E2E
         run: bun run test:tauri:e2e
       - name: Upload real Tauri diagnostics
