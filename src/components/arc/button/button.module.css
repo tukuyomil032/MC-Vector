@@ -155,8 +155,10 @@
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+/* The slot holds its width while loading, so a longer hidden label is clipped instead of overflowing the button. */
 .loadingLabel {
   opacity: 0;
+  overflow: hidden;
 }
 @keyframes spin {
   to {

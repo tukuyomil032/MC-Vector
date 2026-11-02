@@ -203,6 +203,46 @@ test.describe('plugin install and feedback flows', () => {
     expect(await app.ipcCalls('execute_plugin_install')).toHaveLength(2);
   });
 
+  test('keeps the install button at its idle width while progress streams in', async ({
+    page,
+    app,
+  }) => {
+    // The suite forces reduced motion; this bug lives in the full-motion width morph.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await openPluginBrowser(page, app, 'streamed-plugin-progress');
+    const result = page.locator('[data-testid="plugin-result-veinminer-project"]');
+    const install = result.locator('[data-testid="plugin-install-veinminer-project"]');
+    const idleWidth = await install.evaluate((button) => button.getBoundingClientRect().width);
+    await install.click();
+    const dialog = page.locator('[data-testid="feedback-dialog"]');
+    await expect(dialog.getByTestId('feedback-dialog-primary-action')).toBeVisible();
+
+    // Sample the button every frame from before the confirm until the install settles.
+    await page.evaluate(() => {
+      const samples: number[] = [];
+      (window as unknown as { __installWidths: number[] }).__installWidths = samples;
+      const tick = () => {
+        const button = document.querySelector('[data-testid="plugin-install-veinminer-project"]');
+        if (button) samples.push(button.getBoundingClientRect().width);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await dialog.getByTestId('feedback-dialog-primary-action').click();
+    await expect(page.getByText('Installed: VeinMiner', { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.waitForTimeout(800);
+
+    const widths = await page.evaluate(
+      () => (window as unknown as { __installWidths: number[] }).__installWidths,
+    );
+    expect(widths.length).toBeGreaterThan(60);
+    expect(idleWidth).toBeGreaterThan(0);
+    // The busy label sits hidden under the spinner, so the button keeps the width it had when pressed.
+    expect(Math.max(...widths)).toBeLessThanOrEqual(idleWidth + 2);
+  });
+
   test('toggles and uninstalls installed files only through Rust commands', async ({
     page,
     app,
