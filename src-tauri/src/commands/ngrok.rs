@@ -812,6 +812,9 @@ pub async fn download_ngrok(
     tokio::fs::create_dir_all(&managed_dir)
         .await
         .map_err(|error| format!("Failed to create directory: {error}"))?;
+    // Download, staging, and binary paths are spelled below the canonical root
+    // because the containment checks compare against it; on Windows the plain
+    // app-data spelling never starts with the verbatim (`\\?\`) canonical form.
     let managed_root = managed_dir
         .canonicalize()
         .map_err(|error| format!("Failed to resolve managed ngrok root: {error}"))?;
@@ -828,7 +831,7 @@ pub async fn download_ngrok(
     );
     let verified = download_verified_artifact(
         &url,
-        &managed_dir.join(&file_name),
+        &managed_root.join(&file_name),
         &managed_root,
         &checksum,
         None,
@@ -851,7 +854,7 @@ pub async fn download_ngrok(
     debug_assert_eq!(verified.sha256, checksum);
     debug_assert!(verified.size > 0);
     let mut archive_guard = DownloadTempGuard::new(verified.path.clone());
-    let staging_dir = managed_dir.join(format!(".staging-{}", Uuid::new_v4()));
+    let staging_dir = managed_root.join(format!(".staging-{}", Uuid::new_v4()));
     tokio::fs::create_dir_all(&staging_dir)
         .await
         .map_err(|error| format!("Failed to create ngrok staging directory: {error}"))?;
@@ -946,7 +949,7 @@ pub async fn download_ngrok(
         .map_err(|error| format!("Failed to remove verified ngrok archive: {error}"))?;
     archive_guard.disarm();
 
-    let ngrok_binary = managed_dir.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
+    let ngrok_binary = managed_root.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
     let staged_binary = staging_dir.join(if cfg!(windows) { "ngrok.exe" } else { "ngrok" });
     #[cfg(unix)]
     {
