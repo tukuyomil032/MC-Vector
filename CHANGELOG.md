@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.1.1-beta.1
+
+### Bug Fixes
+- stop the plugin install button from stretching during install (#258)
+- make the Windows real Tauri E2E pass and fix Windows path containment (#257)
+
+### Maintenance
+- update Homebrew Cask to 2.1.0
+
 ## v2.1.0
 
 ### Features
