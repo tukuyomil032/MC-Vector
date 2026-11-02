@@ -368,6 +368,32 @@ async function createFixture(environment, identifier, testRoot) {
   return { appDataDir, serverPath, server, commandLog, importSource };
 }
 
+function e2eConfigOverlay(identifier) {
+  const overlay = { identifier, productName: 'MC-Vector E2E' };
+  if (!isWindows) {
+    return overlay;
+  }
+  // wry always sets WebView2 AdditionalBrowserArguments, which wins over the
+  // WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS msedgedriver uses to request a DevTools port.
+  // Keep wry's defaults and add the port for the E2E build only. The config merge
+  // replaces arrays, so every window from the base config is copied.
+  const baseConfig = JSON.parse(
+    readFileSync(path.join(projectRoot, 'src-tauri', 'tauri.conf.json'), 'utf8'),
+  );
+  const browserArgs = [
+    '--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection',
+    '--autoplay-policy=no-user-gesture-required',
+    '--remote-debugging-port=0',
+  ].join(' ');
+  overlay.app = {
+    windows: baseConfig.app.windows.map((window) => ({
+      ...window,
+      additionalBrowserArgs: browserArgs,
+    })),
+  };
+  return overlay;
+}
+
 async function buildDebugBinary(identifier, configPath) {
   if (process.env.MC_VECTOR_TAURI_E2E_SKIP_BUILD !== '1') {
     const bun = isWindows ? 'bun.exe' : 'bun';
@@ -884,10 +910,7 @@ async function main() {
     const identifier = 'com.tukuyomi032.mcvector.e2e';
     const environment = createTestEnvironment(testRoot);
     const configPath = path.join(testRoot, 'tauri.e2e.conf.json');
-    writeFileSync(
-      configPath,
-      JSON.stringify({ identifier, productName: 'MC-Vector E2E' }, null, 2),
-    );
+    writeFileSync(configPath, JSON.stringify(e2eConfigOverlay(identifier), null, 2));
     const fixture = await createFixture(environment, identifier, testRoot);
     logStep(`fixture ready (${identifier})`);
     artifactFixture = await startArtifactFixture(await createJavaFixtureArchive(testRoot));
