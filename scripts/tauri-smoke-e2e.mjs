@@ -390,7 +390,9 @@ async function buildDebugBinary(identifier, configPath) {
 async function startWebDriver(environment, port) {
   const command = isMac ? 'tauri-wd' : 'tauri-driver';
   assertCommandAvailable(command);
-  const child = spawn(command, ['--port', String(port), '--log-level', 'debug'], {
+  // tauri-driver rejects unknown flags, and only tauri-wd accepts --log-level.
+  const args = ['--port', String(port), ...(isMac ? ['--log-level', 'debug'] : [])];
+  const child = spawn(command, args, {
     cwd: projectRoot,
     env: environment,
     stdio: ['ignore', 'pipe', 'pipe'],
