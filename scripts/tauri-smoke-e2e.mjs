@@ -239,10 +239,14 @@ function assertCommandAvailable(command) {
 
 function createTestEnvironment(testRoot) {
   const home = path.join(testRoot, 'home');
-  const appData = path.join(testRoot, 'app-data');
+  // Windows resolves known folders from %USERPROFILE%\AppData and fails when they are missing.
+  const appData = isWindows
+    ? path.join(home, 'AppData', 'Roaming')
+    : path.join(testRoot, 'app-data');
+  const localAppData = isWindows ? path.join(home, 'AppData', 'Local') : appData;
   const config = path.join(testRoot, 'config');
   const temp = path.join(testRoot, 'tmp');
-  for (const directory of [home, appData, config, temp]) {
+  for (const directory of [home, appData, localAppData, config, temp]) {
     mkdirSync(directory, { recursive: true });
   }
 
@@ -251,7 +255,7 @@ function createTestEnvironment(testRoot) {
     HOME: home,
     USERPROFILE: home,
     APPDATA: appData,
-    LOCALAPPDATA: appData,
+    LOCALAPPDATA: localAppData,
     XDG_DATA_HOME: appData,
     XDG_CONFIG_HOME: config,
     TMPDIR: temp,
