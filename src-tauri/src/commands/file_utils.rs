@@ -89,6 +89,39 @@ pub(crate) fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     false
 }
 
+/// Removes the verbatim prefix that `canonicalize` adds on Windows, so the result
+/// can be compared with a path spelled the usual way (`\\?\UNC\host` → `\\host`).
+#[cfg_attr(not(windows), allow(dead_code))]
+fn strip_verbatim_prefix(path: &str) -> std::borrow::Cow<'_, str> {
+    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        std::borrow::Cow::Owned(format!(r"\\{rest}"))
+    } else if let Some(rest) = path.strip_prefix(r"\\?\") {
+        std::borrow::Cow::Borrowed(rest)
+    } else {
+        std::borrow::Cow::Borrowed(path)
+    }
+}
+
+/// Reports whether `canonicalize(original)` produced the same path as `original`,
+/// meaning no component was a link. Windows paths are compared without the
+/// verbatim prefix and case-insensitively; non-Unicode paths never match.
+fn canonical_path_matches(canonical: &Path, original: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        match (canonical.to_str(), original.to_str()) {
+            (Some(canonical), Some(original)) => {
+                strip_verbatim_prefix(canonical).eq_ignore_ascii_case(original)
+            }
+            _ => false,
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        canonical == original
+    }
+}
+
 fn validate_server_id(server_id: &str) -> Result<String, String> {
     let normalized = server_id.trim();
     if normalized.is_empty() {
@@ -866,7 +899,8 @@ fn resolve_picker_entry(source: &Path) -> Result<ResolvedPickerEntry, String> {
         .ok_or_else(|| "Selected source has no parent".to_string())?;
     let canonical_parent = std::fs::canonicalize(source_parent)
         .map_err(|error| format!("Failed to resolve selected source parent: {error}"))?;
-    if canonical_parent != source_parent || !canonical_parent.is_absolute() {
+    if !canonical_path_matches(&canonical_parent, source_parent) || !canonical_parent.is_absolute()
+    {
         return Err("Selected source parent must not be a symbolic link".to_string());
     }
 
@@ -1855,17 +1889,41 @@ mod tests {
     use super::super::recovery_journal::{self, DirectoryMigrationStage};
     use super::super::server_registry::ServerRegistry;
     use super::{
-        atomic_write_managed_text_file, directory_metadata_error, directory_size_within,
-        list_directory_entries, migrate_managed_server_directory_with,
+        atomic_write_managed_text_file, canonical_path_matches, directory_metadata_error,
+        directory_size_within, list_directory_entries, migrate_managed_server_directory_with,
         migrate_managed_server_directory_with_fault, move_managed_entry, resolve_managed_request,
-        validated_relative_path, ImportBudget, ManagedDirectorySize, ManagedPathRequest,
-        ManagedRoot, MAX_IMPORT_FILES, MAX_IMPORT_SINGLE_FILE_BYTES, MAX_IMPORT_TOTAL_BYTES,
+        strip_verbatim_prefix, validated_relative_path, ImportBudget, ManagedDirectorySize,
+        ManagedPathRequest, ManagedRoot, MAX_IMPORT_FILES, MAX_IMPORT_SINGLE_FILE_BYTES,
+        MAX_IMPORT_TOTAL_BYTES,
     };
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::Duration;
 
     static NEXT_TEST_DIRECTORY: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn strip_verbatim_prefix_handles_disk_unc_and_plain_paths() {
+        assert_eq!(strip_verbatim_prefix(r"\\?\C:\Users\me"), r"C:\Users\me");
+        assert_eq!(
+            strip_verbatim_prefix(r"\\?\UNC\host\share\dir"),
+            r"\\host\share\dir"
+        );
+        assert_eq!(strip_verbatim_prefix(r"C:\Users\me"), r"C:\Users\me");
+        assert_eq!(strip_verbatim_prefix("/tmp/me"), "/tmp/me");
+    }
+
+    #[test]
+    fn canonical_path_matches_accepts_the_canonical_form_of_a_real_directory() {
+        let directory = TestDirectory::new();
+        let absolute = std::fs::canonicalize(directory.path()).expect("directory should resolve");
+        #[cfg(windows)]
+        let original = PathBuf::from(strip_verbatim_prefix(absolute.to_str().unwrap()).as_ref());
+        #[cfg(not(windows))]
+        let original = absolute.clone();
+        assert!(canonical_path_matches(&absolute, &original));
+        assert!(!canonical_path_matches(&absolute, &original.join("child")));
+    }
 
     struct TestDirectory(PathBuf);
 

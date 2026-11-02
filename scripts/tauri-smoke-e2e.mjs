@@ -239,10 +239,14 @@ function assertCommandAvailable(command) {
 
 function createTestEnvironment(testRoot) {
   const home = path.join(testRoot, 'home');
-  const appData = path.join(testRoot, 'app-data');
+  // Windows resolves known folders from %USERPROFILE%\AppData and fails when they are missing.
+  const appData = isWindows
+    ? path.join(home, 'AppData', 'Roaming')
+    : path.join(testRoot, 'app-data');
+  const localAppData = isWindows ? path.join(home, 'AppData', 'Local') : appData;
   const config = path.join(testRoot, 'config');
   const temp = path.join(testRoot, 'tmp');
-  for (const directory of [home, appData, config, temp]) {
+  for (const directory of [home, appData, localAppData, config, temp]) {
     mkdirSync(directory, { recursive: true });
   }
 
@@ -251,7 +255,7 @@ function createTestEnvironment(testRoot) {
     HOME: home,
     USERPROFILE: home,
     APPDATA: appData,
-    LOCALAPPDATA: appData,
+    LOCALAPPDATA: localAppData,
     XDG_DATA_HOME: appData,
     XDG_CONFIG_HOME: config,
     TMPDIR: temp,
@@ -364,6 +368,32 @@ async function createFixture(environment, identifier, testRoot) {
   return { appDataDir, serverPath, server, commandLog, importSource };
 }
 
+function e2eConfigOverlay(identifier) {
+  const overlay = { identifier, productName: 'MC-Vector E2E' };
+  if (!isWindows) {
+    return overlay;
+  }
+  // wry always sets WebView2 AdditionalBrowserArguments, which wins over the
+  // WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS msedgedriver uses to request a DevTools port.
+  // Keep wry's defaults and add the port for the E2E build only. The config merge
+  // replaces arrays, so every window from the base config is copied.
+  const baseConfig = JSON.parse(
+    readFileSync(path.join(projectRoot, 'src-tauri', 'tauri.conf.json'), 'utf8'),
+  );
+  const browserArgs = [
+    '--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection',
+    '--autoplay-policy=no-user-gesture-required',
+    '--remote-debugging-port=0',
+  ].join(' ');
+  overlay.app = {
+    windows: baseConfig.app.windows.map((window) => ({
+      ...window,
+      additionalBrowserArgs: browserArgs,
+    })),
+  };
+  return overlay;
+}
+
 async function buildDebugBinary(identifier, configPath) {
   if (process.env.MC_VECTOR_TAURI_E2E_SKIP_BUILD !== '1') {
     const bun = isWindows ? 'bun.exe' : 'bun';
@@ -390,7 +420,9 @@ async function buildDebugBinary(identifier, configPath) {
 async function startWebDriver(environment, port) {
   const command = isMac ? 'tauri-wd' : 'tauri-driver';
   assertCommandAvailable(command);
-  const child = spawn(command, ['--port', String(port), '--log-level', 'debug'], {
+  // tauri-driver rejects unknown flags, and only tauri-wd accepts --log-level.
+  const args = ['--port', String(port), ...(isMac ? ['--log-level', 'debug'] : [])];
+  const child = spawn(command, args, {
     cwd: projectRoot,
     env: environment,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -414,7 +446,9 @@ async function startWebDriver(environment, port) {
   } catch (error) {
     await stopProcess(child);
     const recentOutput = output.join('').trim();
-    throw new Error(`${error.message}${recentOutput ? `\n${recentOutput}` : ''}`);
+    const startupError = new Error(`${error.message}${recentOutput ? `\n${recentOutput}` : ''}`);
+    startupError.driverOutput = output;
+    throw startupError;
   }
   return { child, url, output };
 }
@@ -441,7 +475,17 @@ async function visibleElement(driver, selector, timeoutMs = 30_000) {
 async function click(driver, selector) {
   const element = await visibleElement(driver, selector);
   await waitFor(() => element.isEnabled(), `${selector} is not enabled`);
-  await element.click();
+  // Toasts stack over controls near the bottom of a small window (the Windows runner),
+  // so center the element and retry intercepted clicks until the overlay moves away.
+  // tauri-wd cannot pass elements into scripts, so the script looks it up by selector.
+  const selectorJson = JSON.stringify(selector);
+  await waitFor(async () => {
+    await driver.executeScript(
+      `document.querySelector(${selectorJson})?.scrollIntoView({ block: 'center' });`,
+    );
+    await element.click();
+    return true;
+  }, `${selector} could not be clicked`);
 }
 
 async function setReactInputValue(driver, selector, value) {
@@ -861,10 +905,31 @@ function readZipEntry(archivePath, entryName) {
   return result.stdout;
 }
 
+// Toasts carry most backend errors, so keep the visible text and a screenshot of the
+// renderer at the moment a step fails.
+async function captureRendererState(driver, artifactDirectory) {
+  if (!driver) {
+    return;
+  }
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    const text = await driver.executeScript('return document.body?.innerText ?? "";');
+    writeFileSync(path.join(artifactDirectory, 'renderer-text.txt'), String(text));
+    const screenshot = await driver.takeScreenshot();
+    writeFileSync(path.join(artifactDirectory, 'renderer.png'), screenshot, 'base64');
+  } catch (error) {
+    console.error(`Could not capture renderer state: ${describeError(error)}`);
+  }
+}
+
 async function main() {
-  const testRoot = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'mc-vector-tauri-e2e-'));
+  // The native realpath expands Windows 8.3 names such as RUNNER~1, so fixture paths
+  // match what canonicalize returns in the backend.
+  const testRoot = mkdtempSync(path.join(realpathSync.native(os.tmpdir()), 'mc-vector-tauri-e2e-'));
   const artifactDirectory = path.join(projectRoot, 'test-results', 'tauri-e2e');
   let succeeded = false;
+  let failure;
+  let failureDriverStarting = false;
   let normalDriver;
   let normalWebDriver;
   let failureDriver;
@@ -874,10 +939,7 @@ async function main() {
     const identifier = 'com.tukuyomi032.mcvector.e2e';
     const environment = createTestEnvironment(testRoot);
     const configPath = path.join(testRoot, 'tauri.e2e.conf.json');
-    writeFileSync(
-      configPath,
-      JSON.stringify({ identifier, productName: 'MC-Vector E2E' }, null, 2),
-    );
+    writeFileSync(configPath, JSON.stringify(e2eConfigOverlay(identifier), null, 2));
     const fixture = await createFixture(environment, identifier, testRoot);
     logStep(`fixture ready (${identifier})`);
     artifactFixture = await startArtifactFixture(await createJavaFixtureArchive(testRoot));
@@ -980,6 +1042,7 @@ async function main() {
     await stopProcess(normalDriver.child);
     normalDriver = undefined;
 
+    failureDriverStarting = true;
     failureDriver = await startWebDriver(failureEnvironment, await reservePort());
     failureWebDriver = await createWebDriver(failureDriver.url, binary);
     await openBackups(failureWebDriver);
@@ -1008,6 +1071,10 @@ async function main() {
 
     console.log(`Real Tauri smoke E2E passed on ${platform}`);
     succeeded = true;
+  } catch (error) {
+    failure = error;
+    await captureRendererState(failureWebDriver ?? normalWebDriver, artifactDirectory);
+    throw error;
   } finally {
     await failureWebDriver?.quit().catch(() => undefined);
     await normalWebDriver?.quit().catch(() => undefined);
@@ -1022,6 +1089,11 @@ async function main() {
         const destination = path.join(artifactDirectory, path.basename(testRoot));
         mkdirSync(artifactDirectory, { recursive: true });
         cpSync(testRoot, destination, { recursive: true });
+        if (failure) {
+          // The full error stays out of the public job log and only lands in the artifact.
+          writeFileSync(path.join(artifactDirectory, 'failure.log'), describeError(failure));
+        }
+        const startupOutput = failure?.driverOutput;
         for (const [name, driver] of [
           ['normal-driver.log', normalDriver],
           ['failure-driver.log', failureDriver],
@@ -1029,6 +1101,10 @@ async function main() {
           if (driver?.output) {
             writeFileSync(path.join(artifactDirectory, name), driver.output.join(''));
           }
+        }
+        if (startupOutput) {
+          const startupLog = failureDriverStarting ? 'failure-driver.log' : 'normal-driver.log';
+          writeFileSync(path.join(artifactDirectory, startupLog), startupOutput.join(''));
         }
         console.error(`CI diagnostics copied to ${artifactDirectory}`);
       }
