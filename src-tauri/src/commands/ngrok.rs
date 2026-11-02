@@ -226,7 +226,17 @@ fn validate_ngrok_path(
         return Err("ngrok path is not a file".to_string());
     }
 
-    if !canonical.starts_with(allowed_dir) {
+    // Compare canonical forms: on Windows `canonicalize` returns a verbatim
+    // (`\\?\`) path that never starts with the plain app-data spelling.
+    let allowed_metadata = std::fs::symlink_metadata(allowed_dir)
+        .map_err(|_| "Managed ngrok directory is unavailable".to_string())?;
+    if is_link_or_reparse_point(&allowed_metadata) || !allowed_metadata.is_dir() {
+        return Err("Managed ngrok directory is not a real directory".to_string());
+    }
+    let allowed_dir = allowed_dir
+        .canonicalize()
+        .map_err(|_| "Managed ngrok directory is unavailable".to_string())?;
+    if !canonical.starts_with(&allowed_dir) {
         return Err("ngrok binary must be located in the app-managed ngrok directory.".to_string());
     }
 
@@ -991,13 +1001,44 @@ fn validate_ngrok_download_url(url: &str) -> Result<reqwest::Url, String> {
 mod tests {
     use super::{
         extract_ngrok_url, parse_ngrok_archive_index, remove_ngrok_generation,
-        supervise_ngrok_child, NgrokManager, NgrokProcessControl, NgrokProcessHandle,
-        MAX_NGROK_ARCHIVE_BYTES,
+        supervise_ngrok_child, validate_ngrok_path, NgrokManager, NgrokProcessControl,
+        NgrokProcessHandle, MAX_NGROK_ARCHIVE_BYTES,
     };
     use std::sync::Arc;
     use tokio::process::Command;
     use tokio::sync::{mpsc, watch};
     use tokio::time::{timeout, Duration};
+
+    #[test]
+    fn validate_ngrok_path_accepts_a_non_canonical_managed_directory_spelling() {
+        let root = std::fs::canonicalize("target")
+            .expect("cargo should provide target")
+            .join(format!("mc-vector-ngrok-path-{}", std::process::id()));
+        let managed = root.join("ngrok");
+        let outside = root.join("outside");
+        std::fs::create_dir_all(&managed).expect("managed dir should be created");
+        std::fs::create_dir_all(&outside).expect("outside dir should be created");
+        let binary_name = if cfg!(windows) { "ngrok.exe" } else { "ngrok" };
+        for directory in [&managed, &outside] {
+            let binary = directory.join(binary_name);
+            std::fs::write(&binary, b"fake").expect("binary should be written");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755))
+                    .expect("binary should be executable");
+            }
+        }
+
+        // `..` keeps the spelling different from what canonicalize returns
+        // (Path::starts_with does not normalize it), like the plain app-data
+        // path versus a Windows verbatim path.
+        let spelled = root.join("outside").join("..").join("ngrok");
+        assert!(validate_ngrok_path(&spelled.join(binary_name), &spelled).is_ok());
+        assert!(validate_ngrok_path(&outside.join(binary_name), &spelled).is_err());
+
+        std::fs::remove_dir_all(&root).expect("test directory should be removed");
+    }
 
     #[test]
     fn extract_ngrok_url_accepts_tcp_url() {
