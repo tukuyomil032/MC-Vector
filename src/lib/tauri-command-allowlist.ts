@@ -59,6 +59,8 @@ const CORE_COMMANDS = [
   'create_managed_backup',
   'list_managed_backups',
   'restore_managed_backup',
+  'delete_managed_backup',
+  'apply_managed_backup_retention',
   'compress_managed_items',
   'extract_managed_item',
   'list_dir_with_metadata',
@@ -72,8 +74,10 @@ const CORE_COMMANDS = [
   'import_managed_files',
   'pick_server_import',
   'cancel_server_import',
+  'export_text_file',
   'can_update_app',
   'get_app_location',
+  'ping_server',
 ] as const;
 
 const PERFORMANCE_COMMANDS = ['parse_ansi_lines'] as const;
