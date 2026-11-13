@@ -12,7 +12,7 @@ const RELEASE_FILE_ORDER = [
   'package.json',
   'README.md',
   'src-tauri/Cargo.toml',
-  'src-tauri/Cargo.lock',
+  'Cargo.lock',
   'src-tauri/tauri.conf.json',
   'src-tauri/src/commands/download.rs',
 ];
@@ -135,7 +135,7 @@ function updateCargoLock(text, currentVersion, nextVersion) {
 
   if (matchingBlocks.length !== 1) {
     fail(
-      `src-tauri/Cargo.lock: expected exactly one mc-vector package block, found ${matchingBlocks.length}.`,
+      `Cargo.lock: expected exactly one mc-vector package block, found ${matchingBlocks.length}.`,
     );
   }
 
@@ -144,7 +144,7 @@ function updateCargoLock(text, currentVersion, nextVersion) {
     block,
     new RegExp(`(^version = )"${escapeRegExp(currentVersion)}"(?=\\r?$)`, 'gm'),
     (_match, prefix) => `${prefix}"${nextVersion}"`,
-    'src-tauri/Cargo.lock mc-vector package version',
+    'Cargo.lock mc-vector package version',
   );
 
   return `${text.slice(0, blockStart)}${updatedBlock}${text.slice(blockEnd)}`;
@@ -205,17 +205,17 @@ function getVersions(files) {
     fail('src-tauri/Cargo.toml: package version is missing.');
   }
 
-  const cargoLockMatches = getCargoLockPackageBlocks(files.get('src-tauri/Cargo.lock').text).filter(
+  const cargoLockMatches = getCargoLockPackageBlocks(files.get('Cargo.lock').text).filter(
     ({ block }) => /^name = "mc-vector"\r?$/m.test(block),
   );
   if (cargoLockMatches.length !== 1) {
     fail(
-      `src-tauri/Cargo.lock: expected exactly one mc-vector package block, found ${cargoLockMatches.length}.`,
+      `Cargo.lock: expected exactly one mc-vector package block, found ${cargoLockMatches.length}.`,
     );
   }
   const cargoLockVersion = /^version = "([^"]+)"\r?$/m.exec(cargoLockMatches[0].block)?.[1];
   if (!cargoLockVersion) {
-    fail('src-tauri/Cargo.lock: mc-vector package version is missing.');
+    fail('Cargo.lock: mc-vector package version is missing.');
   }
 
   const tauriJson = parseJson(
@@ -229,7 +229,7 @@ function getVersions(files) {
   const versions = new Map([
     ['package.json', packageJson.version],
     ['src-tauri/Cargo.toml', cargoTomlVersion],
-    ['src-tauri/Cargo.lock', cargoLockVersion],
+    ['Cargo.lock', cargoLockVersion],
     ['src-tauri/tauri.conf.json', tauriJson.version],
   ]);
   const uniqueVersions = new Set(versions.values());
@@ -285,8 +285,8 @@ function computeUpdates(files, currentVersion, nextVersion) {
     updateCargoToml(files.get('src-tauri/Cargo.toml').text, currentVersion, nextVersion),
   );
   updates.set(
-    'src-tauri/Cargo.lock',
-    updateCargoLock(files.get('src-tauri/Cargo.lock').text, currentVersion, nextVersion),
+    'Cargo.lock',
+    updateCargoLock(files.get('Cargo.lock').text, currentVersion, nextVersion),
   );
   updates.set(
     'src-tauri/tauri.conf.json',

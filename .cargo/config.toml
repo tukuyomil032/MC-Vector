@@ -1,0 +1,5 @@
+# Keep the Tauri build output where the existing CI, release workflow and
+# scripts expect it, even though the workspace root is the repository root.
+# native/ scripts override this with CARGO_TARGET_DIR=native/.build/cargo.
+[build]
+target-dir = "src-tauri/target"

@@ -30,7 +30,7 @@ updates:
 
   # Rust / Cargo dependencies
   - package-ecosystem: 'cargo'
-    directory: '/src-tauri'
+    directory: '/'
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 10
