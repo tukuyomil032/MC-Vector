@@ -1,0 +1,13 @@
+[
+  {
+    "id": "server-1",
+    "name": "E2E Server",
+    "version": "1.21.10",
+    "software": "Paper",
+    "port": 25565,
+    "memory": 2048,
+    "path": "__DATA_DIR__/servers/server-1",
+    "status": "offline",
+    "createdDate": "2026-01-01T00:00:00.000Z"
+  }
+]

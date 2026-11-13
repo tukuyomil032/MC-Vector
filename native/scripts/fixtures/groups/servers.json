@@ -1,0 +1,49 @@
+[
+  {
+    "id": "server-1",
+    "name": "E2E Server",
+    "groupName": "Survival",
+    "version": "1.21.10",
+    "software": "Paper",
+    "port": 25565,
+    "memory": 2048,
+    "path": "__DATA_DIR__/servers/server-1",
+    "status": "offline",
+    "createdDate": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "server-2",
+    "name": "Creative Hub",
+    "groupName": "Survival",
+    "version": "1.21.4",
+    "software": "Purpur",
+    "port": 25566,
+    "memory": 4096,
+    "path": "__DATA_DIR__/servers/server-2",
+    "status": "offline",
+    "createdDate": "2026-01-02T00:00:00.000Z"
+  },
+  {
+    "id": "server-3",
+    "name": "Modded",
+    "groupName": "Testing",
+    "version": "1.20.1",
+    "software": "Fabric",
+    "port": 25567,
+    "memory": 6144,
+    "path": "__DATA_DIR__/servers/server-3",
+    "status": "offline",
+    "createdDate": "2026-01-03T00:00:00.000Z"
+  },
+  {
+    "id": "server-4",
+    "name": "Lobby",
+    "version": "1.21.10",
+    "software": "Velocity",
+    "port": 25577,
+    "memory": 1024,
+    "path": "__DATA_DIR__/servers/server-4",
+    "status": "offline",
+    "createdDate": "2026-01-04T00:00:00.000Z"
+  }
+]
