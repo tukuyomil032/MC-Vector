@@ -1,0 +1,26 @@
+[package]
+name = "mcvector-ffi"
+version = "0.1.0"
+description = "UniFFI bindings that expose mcvector-core to the MC-Vector Native (SwiftUI) edition"
+authors = ["tukuyomi032"]
+license = "MIT"
+repository = "https://github.com/tukuyomil032/MC-Vector"
+edition = "2021"
+rust-version = "1.89"
+publish = false
+
+[lib]
+name = "mcvector_ffi"
+# staticlib: linked into the Swift app. cdylib: read by uniffi-bindgen in library mode.
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+mcvector-core = { path = "../mcvector-core" }
+uniffi = { version = "0.32.2", features = ["cli"] }
+
+[dev-dependencies]
+tempfile = "3"

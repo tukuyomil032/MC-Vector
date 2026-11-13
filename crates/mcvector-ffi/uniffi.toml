@@ -1,0 +1,7 @@
+# Swift binding layout (REPO-001 / REPO-007). native/build.sh copies the
+# generated Swift file into native/Sources/MCVectorCore/Generated/ and the C
+# header into native/Sources/MCVectorFFI/, whose module.modulemap is hand-written.
+[bindings.swift]
+module_name = "MCVectorCore"
+ffi_module_name = "MCVectorFFI"
+ffi_module_filename = "MCVectorFFI"

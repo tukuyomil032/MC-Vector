@@ -30,6 +30,12 @@ pub enum CoreErrorCode {
     OperationCancelled,
     /// An unexpected failure with no more specific code.
     InternalUnknown,
+    /// Data was requested before the core took the instance lock and opened the registry.
+    CoreNotStarted,
+    /// The server registry database could not be opened or migrated.
+    RegistryOpenFailed,
+    /// The server registry could not be read.
+    RegistryReadFailed,
 }
 
 impl CoreErrorCode {
@@ -40,6 +46,9 @@ impl CoreErrorCode {
         CoreErrorCode::PathAppDataUnavailable,
         CoreErrorCode::OperationCancelled,
         CoreErrorCode::InternalUnknown,
+        CoreErrorCode::CoreNotStarted,
+        CoreErrorCode::RegistryOpenFailed,
+        CoreErrorCode::RegistryReadFailed,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -50,6 +59,9 @@ impl CoreErrorCode {
             Self::PathAppDataUnavailable => "path.app_data_unavailable",
             Self::OperationCancelled => "operation.cancelled",
             Self::InternalUnknown => "internal.unknown",
+            Self::CoreNotStarted => "core.not_started",
+            Self::RegistryOpenFailed => "registry.open_failed",
+            Self::RegistryReadFailed => "registry.read_failed",
         }
     }
 
@@ -64,11 +76,12 @@ impl CoreErrorCode {
     /// Whether a failure with this code is worth retrying without changes.
     pub const fn default_retryable(self) -> bool {
         match self {
-            Self::LockHeldByOther => true,
+            Self::LockHeldByOther | Self::CoreNotStarted | Self::RegistryReadFailed => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
-            | Self::InternalUnknown => false,
+            | Self::InternalUnknown
+            | Self::RegistryOpenFailed => false,
         }
     }
 
@@ -140,10 +153,13 @@ mod tests {
             CoreErrorCode::PathAppDataUnavailable => 2,
             CoreErrorCode::OperationCancelled => 3,
             CoreErrorCode::InternalUnknown => 4,
+            CoreErrorCode::CoreNotStarted => 5,
+            CoreErrorCode::RegistryOpenFailed => 6,
+            CoreErrorCode::RegistryReadFailed => 7,
         }
     }
 
-    const VARIANT_COUNT: usize = 5;
+    const VARIANT_COUNT: usize = 8;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -188,6 +204,9 @@ mod tests {
                 false,
             ),
             (CoreErrorCode::InternalUnknown, "internal.unknown", false),
+            (CoreErrorCode::CoreNotStarted, "core.not_started", true),
+            (CoreErrorCode::RegistryOpenFailed, "registry.open_failed", false),
+            (CoreErrorCode::RegistryReadFailed, "registry.read_failed", true),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);
