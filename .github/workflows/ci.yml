@@ -85,7 +85,8 @@ jobs:
       - name: Run Vitest
         run: bun run test
       - name: Run cargo test
-        run: cargo test
+        # --workspace also runs the shared mcvector-core tests.
+        run: cargo test --workspace
         working-directory: src-tauri
       - name: Build (debug mode)
         run: bun run tauri build --debug --no-bundle

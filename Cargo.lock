@@ -2748,6 +2748,7 @@ dependencies = [
  "glib 0.20.12",
  "keyring",
  "log",
+ "mcvector-core",
  "regex",
  "reqwest 0.12.28",
  "rusqlite",
@@ -2775,6 +2776,16 @@ dependencies = [
  "tokio",
  "uuid",
  "zip 9.1.2",
+]
+
+[[package]]
+name = "mcvector-core"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

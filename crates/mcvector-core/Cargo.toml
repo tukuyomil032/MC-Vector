@@ -1,0 +1,19 @@
+[package]
+name = "mcvector-core"
+version = "0.1.0"
+description = "Shared domain core for the MC-Vector Tauri and Native editions"
+authors = ["tukuyomi032"]
+license = "MIT"
+repository = "https://github.com/tukuyomil032/MC-Vector"
+edition = "2021"
+# std::fs::File::try_lock (used by instance_lock) is stable since 1.89.
+rust-version = "1.89"
+publish = false
+
+[dependencies]
+dirs = "6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"

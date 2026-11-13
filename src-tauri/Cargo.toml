@@ -20,6 +20,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5.4", features = [] }
 
 [dependencies]
+mcvector-core = { path = "../crates/mcvector-core" }
 serde_json = { version = "1", features = ["arbitrary_precision", "preserve_order"] }
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", features = ["clock"] }
