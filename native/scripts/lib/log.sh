@@ -238,6 +238,9 @@ setup_build_env() {
   mkdir -p "$BUILD_DIR/tmp"
   export CARGO_TARGET_DIR="$BUILD_DIR/cargo"
   export TMPDIR="$BUILD_DIR/tmp/"
+  # The app targets macOS 15 (LSMinimumSystemVersion); build the Rust core and
+  # its bundled C code for the same floor so the linker does not warn.
+  export MACOSX_DEPLOYMENT_TARGET="15.0"
 }
 
 # host_triple_setup
