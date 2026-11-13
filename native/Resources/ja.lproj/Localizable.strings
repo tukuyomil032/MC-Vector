@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* 起動・排他ロック (NAT-010) */
+"lock.tauri_running" = "MC-Vector（Tauri 版）が起動中です。\n両方の版は同じサーバーとデータを使うため、同時には起動できません。";
+"lock.other_running" = "別の MC-Vector が起動中です。\n両方の版は同じサーバーとデータを使うため、同時には起動できません。";
+"lock.show_tauri" = "Tauri 版を表示";
+"lock.show_running" = "起動中の MC-Vector を表示";
+"lock.quit" = "終了";
+"startup.failed" = "MC-Vector を起動できませんでした";
+
+/* サーバー一覧 */
+"servers.reload" = "再読み込み";
+"servers.loading" = "サーバーを読み込み中…";
+"servers.load_failed" = "サーバーを読み込めませんでした";
+"servers.retry" = "再試行";
+"servers.empty_title" = "サーバーがありません";
+"servers.empty_description" = "作成または取り込んだサーバーがここに表示されます。";
+"servers.select_prompt" = "サーバーを選択してください";
+"servers.unavailable" = "利用できません";
+"status.online" = "オンライン";
+"status.offline" = "オフライン";
+"server.software" = "ソフトウェア";
+"server.port" = "ポート";
+"server.memory" = "メモリ";
+"server.group" = "グループ";
+
+/* コアのエラー (error.<code>, NAT-005) */
+"error.unknown" = "問題が発生しました。もう一度お試しください。";
+"error.lock.held_by_other" = "別の MC-Vector が起動中です。";
+"error.lock.unavailable" = "ほかの版が起動していないことを確認できませんでした。データフォルダーの権限を確認してください。";
+"error.path.app_data_unavailable" = "アプリのデータフォルダーが見つかりませんでした。";
+"error.operation.cancelled" = "操作はキャンセルされました。";
+"error.internal.unknown" = "予期しないエラーが発生しました。";
+"error.core.not_started" = "MC-Vector の起動処理が完了していません。";
+"error.registry.open_failed" = "サーバー一覧を開けませんでした。データは変更されていません。";
+"error.registry.read_failed" = "サーバー一覧を読み込めませんでした。";
