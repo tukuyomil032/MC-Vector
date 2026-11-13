@@ -1,4 +1,5 @@
 mod commands;
+mod instance_guard;
 pub mod metric_history;
 mod plugin_catalog;
 mod plugin_installer;
@@ -16,6 +17,13 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+
+    // NAT-010: take the cross-edition lock before any plugin or the Tauri
+    // runtime touches shared data. Held until the process exits. The debug
+    // build has its own identifier and data directory, so it locks that one.
+    let _instance_lock = instance_guard::acquire_or_exit(&context.config().identifier);
+
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -47,6 +55,7 @@ pub fn run() {
     let app = builder
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;
+            instance_guard::verify_shared_data_dir(&app.config().identifier, &app_data_dir);
             let app_data_dir_for_registry = app_data_dir.clone();
             let registry_worker = std::thread::Builder::new()
                 .name("server-registry-init".to_string())
@@ -238,7 +247,7 @@ pub fn run() {
             // ヘルスチェック
             commands::health_check::ping_server,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while running tauri application");
 
     let exit_cleanup_phase_for_run = exit_cleanup_phase.clone();

@@ -63,3 +63,6 @@ glib = "0.20"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-plugin-webdriver-automation = "0.1.3"
+# Native-edition lock dialog shown before the Tauri runtime starts (NAT-010).
+# Same version and features tauri-plugin-dialog already pulls in, so no new crates.
+rfd = { version = "0.16", default-features = false, features = ["common-controls-v6"] }
