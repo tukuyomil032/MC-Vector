@@ -7,4 +7,6 @@
 pub mod error;
 pub mod instance_lock;
 pub mod paths;
+pub mod recovery_record;
+pub mod registry;
 pub mod shutdown;
