@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/cctrace/hooks/precompact-manual.sh --host claude",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/cctrace/hooks/precompact-auto.sh --host claude",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/cctrace/hooks/postcompact.sh --host claude",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/cctrace/hooks/session-start.sh --host claude",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/cctrace/hooks/user-prompt-submit.sh --host claude",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

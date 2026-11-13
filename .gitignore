@@ -190,3 +190,6 @@ apps/native-macos/*.trace/
 
 # Local planning specifications and implementation evidence
 /spec/
+
+# cctrace context snapshots
+.cctrace/
