@@ -877,6 +877,13 @@ async function invokeCommand(cmd: string, args: unknown): Promise<unknown> {
 
 export async function invoke<T>(cmd: string, args?: unknown): Promise<T> {
   recordE2eCall('ipc', cmd, args);
+  // Opt-in overrides from the UI reference captures. No E2E scenario seeds them, so this is a no-op there.
+  const override = getE2eState().commandOverrides?.[cmd];
+  if (override) {
+    if (override.delayMs) await new Promise((resolve) => setTimeout(resolve, override.delayMs));
+    if (override.error !== undefined) throw new Error(override.error);
+    if (override.response !== undefined) return override.response as T;
+  }
   return (await invokeCommand(cmd, args)) as T;
 }
 

@@ -1,4 +1,4 @@
-import { recordE2eCall } from '../e2e/support/e2e-runtime';
+import { getE2eRuntime, recordE2eCall } from '../e2e/support/e2e-runtime';
 
 export type UnlistenFn = () => void;
 
@@ -54,3 +54,8 @@ export async function emitTo(target: string, event: string, payload?: unknown): 
   recordE2eCall('ipc', 'emitTo', { target, event, payload });
   await emit(event, payload);
 }
+
+// The UI reference captures push the events the Rust side would emit (metrics, stats, ngrok) through this hook.
+// The E2E suite never calls it.
+const captureRuntime = getE2eRuntime();
+if (captureRuntime) captureRuntime.emit = emit;

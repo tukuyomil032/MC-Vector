@@ -14,7 +14,14 @@ export default defineConfig({
       'tests/**/*.spec.ts',
       'tests/**/*.spec.tsx',
     ],
-    exclude: ['node_modules', 'dist', 'src-tauri', 'tests/e2e/**', 'tests/live/**'],
+    exclude: [
+      'node_modules',
+      'dist',
+      'src-tauri',
+      'tests/e2e/**',
+      'tests/live/**',
+      'tests/ui-reference/**',
+    ],
   },
   resolve: {
     alias: {

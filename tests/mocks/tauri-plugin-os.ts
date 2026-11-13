@@ -1,5 +1,8 @@
+import { getE2eRuntime } from '../e2e/support/e2e-runtime';
+
 export async function platform(): Promise<string> {
-  return 'linux';
+  // The UI reference captures can name another platform (for example "macos") for the update check.
+  return getE2eRuntime()?.state.platform ?? 'linux';
 }
 
 export async function arch(): Promise<string> {

@@ -27,6 +27,38 @@ export type E2eFileNode = {
   modified?: number;
 };
 
+/**
+ * Opt-in answer for one IPC command, used by the UI reference captures to reach failure and transient states.
+ * Absent in every E2E scenario, so the mock behaves as before unless a capture sets one.
+ */
+export type E2eCommandOverride = {
+  /** Reject the call with this message instead of running the mock. */
+  error?: string;
+  /** Resolve the call with this value instead of running the mock. */
+  response?: unknown;
+  /** Wait this long before answering, so a transient UI state stays on screen. */
+  delayMs?: number;
+};
+
+/**
+ * Opt-in updater behaviour for the UI reference captures. Absent in every E2E scenario, so check() keeps returning null.
+ */
+export type E2eUpdaterOption = {
+  /** When set, check() reports an update with this version. */
+  version?: string;
+  /** Release notes returned with the update. null or absent means no notes. */
+  body?: string | null;
+  /** Holds check() for this long, so the checking state stays on screen. */
+  checkDelayMs?: number;
+  /** Makes check() reject with this message. */
+  checkError?: string;
+  /** download(): 'hold' never finishes, 'finish' completes, 'fail' rejects with downloadError. */
+  download?: 'hold' | 'finish' | 'fail';
+  downloadError?: string;
+  /** Makes relaunch() reject with this message. */
+  relaunchError?: string;
+};
+
 export type E2eState = {
   servers: MinecraftServer[];
   serverTemplates: Record<string, unknown>[];
@@ -46,6 +78,11 @@ export type E2eState = {
     }
   >;
   ngrokStatus: 'offline' | 'online';
+  commandOverrides?: Record<string, E2eCommandOverride>;
+  /** Opt-in platform name for the os plugin mock. Absent in E2E scenarios, which keep "linux". */
+  platform?: string;
+  /** Opt-in updater behaviour for the UI reference captures. */
+  updater?: E2eUpdaterOption;
 };
 
 export type E2eRuntime = {
@@ -53,6 +90,8 @@ export type E2eRuntime = {
   scenario: E2eScenario;
   calls: E2eCall[];
   state: E2eState;
+  /** Set by the event mock; pushes an event to the app's listeners. Used by the UI reference captures only. */
+  emit?: (event: string, payload?: unknown) => Promise<void>;
 };
 
 export const E2E_RUNTIME_KEY = '__MC_VECTOR_E2E__';
