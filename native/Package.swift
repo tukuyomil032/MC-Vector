@@ -34,8 +34,8 @@ let package = Package(
                 .linkedLibrary("iconv"),
             ]
         ),
-        // Localized strings live in native/Resources/*.lproj and are copied into
-        // the .app's Contents/Resources by build.sh, so the app uses Bundle.main.
+        // Localized strings come from native/Resources/Localizable.xcstrings. build.sh compiles
+        // it into the .app's Contents/Resources (en.lproj, ja.lproj), so the app uses Bundle.main.
         .executableTarget(
             name: "MCVector",
             dependencies: ["MCVectorCore"],

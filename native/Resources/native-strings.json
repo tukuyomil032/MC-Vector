@@ -1,0 +1,82 @@
+{
+  "error.core.not_started": {
+    "en": "MC-Vector has not finished starting.",
+    "ja": "MC-Vector の起動処理が完了していません。"
+  },
+  "error.internal.unknown": {
+    "en": "An unexpected error occurred.",
+    "ja": "予期しないエラーが発生しました。"
+  },
+  "error.lock.held_by_other": {
+    "en": "Another MC-Vector is already running.",
+    "ja": "別の MC-Vector が起動中です。"
+  },
+  "error.lock.unavailable": {
+    "en": "MC-Vector could not confirm that no other edition is running. Check the permissions of the data folder.",
+    "ja": "ほかの版が起動していないことを確認できませんでした。データフォルダーの権限を確認してください。"
+  },
+  "error.operation.cancelled": {
+    "en": "The operation was cancelled.",
+    "ja": "操作はキャンセルされました。"
+  },
+  "error.path.app_data_unavailable": {
+    "en": "The application data folder could not be found.",
+    "ja": "アプリのデータフォルダーが見つかりませんでした。"
+  },
+  "error.registry.open_failed": {
+    "en": "The server list could not be opened. Your data has not been changed.",
+    "ja": "サーバー一覧を開けませんでした。データは変更されていません。"
+  },
+  "error.registry.read_failed": {
+    "en": "The server list could not be read.",
+    "ja": "サーバー一覧を読み込めませんでした。"
+  },
+  "error.unknown": {
+    "en": "Something went wrong. Try again.",
+    "ja": "問題が発生しました。もう一度お試しください。"
+  },
+  "feedback.toast.dismiss": {
+    "en": "Dismiss notification",
+    "ja": "通知を閉じる"
+  },
+  "feedback.toast.region": {
+    "en": "Notifications",
+    "ja": "通知"
+  },
+  "lock.other_running": {
+    "en": "Another MC-Vector is already running.\nBoth editions use the same servers and data, so only one can run at a time.",
+    "ja": "別の MC-Vector が起動中です。\n両方の版は同じサーバーとデータを使うため、同時には起動できません。"
+  },
+  "lock.quit": {
+    "en": "Quit",
+    "ja": "終了"
+  },
+  "lock.show_running": {
+    "en": "Show Running MC-Vector",
+    "ja": "起動中の MC-Vector を表示"
+  },
+  "lock.show_tauri": {
+    "en": "Show Tauri Edition",
+    "ja": "Tauri 版を表示"
+  },
+  "lock.tauri_running": {
+    "en": "MC-Vector (Tauri edition) is already running.\nBoth editions use the same servers and data, so only one can run at a time.",
+    "ja": "MC-Vector（Tauri 版）が起動中です。\n両方の版は同じサーバーとデータを使うため、同時には起動できません。"
+  },
+  "native.menu.nextView": {
+    "en": "Next View",
+    "ja": "次の画面"
+  },
+  "native.menu.previousView": {
+    "en": "Previous View",
+    "ja": "前の画面"
+  },
+  "native.notPorted": {
+    "en": "This screen is not available in the Native edition yet.",
+    "ja": "この画面は Native 版ではまだ使えません。"
+  },
+  "startup.failed": {
+    "en": "MC-Vector could not start",
+    "ja": "MC-Vector を起動できませんでした"
+  }
+}

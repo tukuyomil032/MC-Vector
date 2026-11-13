@@ -237,12 +237,13 @@ build_swift() {
 # The bundle is written to native/.build/app/.staging first, then moved into
 # place, so an interrupted build never leaves a half-made app behind.
 assemble_app() {
-  local t0 version build_number template crate_toml stamp app staging staged_app lproj
+  local t0 version build_number template crate_toml catalog stamp app staging staged_app
   t0="$(timer_start)"
   log_step 5 5 "Assemble app"
 
   template="$NATIVE_DIR/Resources/Info.plist"
   crate_toml="$ROOT_DIR/crates/mcvector-ffi/Cargo.toml"
+  catalog="$NATIVE_DIR/Resources/Localizable.xcstrings"
   stamp="$BUILD_DIR/stamps/app.stamp"
   app="$BUILD_DIR/app/MC-Vector Native.app"
   staging="$BUILD_DIR/app/.staging"
@@ -254,7 +255,7 @@ assemble_app() {
     return 1
   fi
   if stamp_is_fresh "$stamp" "$app/Contents/MacOS/MCVector" \
-    "$APP_BINARY" "$template" "$crate_toml" "$NATIVE_DIR/Resources"; then
+    "$APP_BINARY" "$template" "$crate_toml" "$catalog" "$NATIVE_DIR/Resources"; then
     log_skip "Up to date"
     return 0
   fi
@@ -286,11 +287,14 @@ assemble_app() {
   if [ -f "$NATIVE_DIR/Resources/AppIcon.icns" ]; then
     cp "$NATIVE_DIR/Resources/AppIcon.icns" "$staged_app/Contents/Resources/" || return 1
   fi
-  for lproj in "$NATIVE_DIR"/Resources/*.lproj; do
-    if [ -d "$lproj" ]; then
-      cp -R "$lproj" "$staged_app/Contents/Resources/" || return 1
-    fi
-  done
+  # The String Catalog is compiled into en.lproj and ja.lproj inside the bundle.
+  run_logged "xcstrings-compile" xcrun xcstringstool compile "$catalog" \
+    --output-directory "$staged_app/Contents/Resources" || return 1
+  if [ ! -f "$staged_app/Contents/Resources/en.lproj/Localizable.strings" ] \
+    || [ ! -f "$staged_app/Contents/Resources/ja.lproj/Localizable.strings" ]; then
+    log_fail "xcstringstool did not produce en.lproj and ja.lproj Localizable.strings"
+    return 1
+  fi
   run_logged "codesign" codesign --force --deep --sign - "$staged_app" || return 1
 
   ensure_inside_build "$app"

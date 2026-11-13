@@ -5,12 +5,13 @@
 #   Rust      cargo test -p mcvector-core -p mcvector-ffi
 #   Swift     swift test for native/ (needs the Rust static library)
 #   Bindings  regenerates the UniFFI bindings and fails if git sees a change
+#   Strings   regenerates Localizable.xcstrings and fails if git sees a change
 #
 # Every selected part runs even when an earlier one fails. Exit 0 when all pass,
 # 1 when any part fails, 2 on a usage error.
 #
 # Usage: native/test.sh [--rust-only] [--swift-only] [--check-bindings]
-#                       [--filter <pattern>] [-h|--help]
+#                       [--check-strings] [--filter <pattern>] [-h|--help]
 set -euo pipefail
 
 NATIVE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -20,20 +21,23 @@ BUILD_DIR="$NATIVE_DIR/.build"
 source "$NATIVE_DIR/scripts/lib/log.sh"
 source "$NATIVE_DIR/scripts/lib/bindings.sh"
 
-# Paths the drift check compares, relative to ROOT_DIR (for git).
+# Paths the drift checks compare, relative to ROOT_DIR (for git).
 BINDING_GIT_PATHS=(native/Sources/MCVectorCore/Generated native/Sources/MCVectorFFI)
+STRINGS_GIT_PATHS=(native/Resources/Localizable.xcstrings)
 
 usage() {
   cat <<'EOF'
 Usage: native/test.sh [options]
 
-Runs the Rust tests, the Swift tests and the generated-bindings drift check.
-With no selection option all three run. Selection options may be combined.
+Runs the Rust tests, the Swift tests, the generated-bindings drift check and the
+String Catalog drift check. With no selection option all four run. Selection
+options may be combined.
 
 Options:
   --rust-only         Run only: cargo test -p mcvector-core -p mcvector-ffi
   --swift-only        Run only: swift test for native/ (builds the Rust core first if needed)
   --check-bindings    Run only the generated-bindings drift check
+  --check-strings     Run only the String Catalog drift check
   --filter <pattern>  Run only the tests matching <pattern> (Rust and Swift)
   -h, --help          Show this help and exit
 
@@ -44,6 +48,7 @@ EOF
 RUN_RUST=0
 RUN_SWIFT=0
 RUN_BINDINGS=0
+RUN_STRINGS=0
 FILTER=""
 
 # Per-part results. PART_* hold the outcome of the part that just ran.
@@ -61,6 +66,7 @@ parse_args() {
       --rust-only) RUN_RUST=1 ;;
       --swift-only) RUN_SWIFT=1 ;;
       --check-bindings) RUN_BINDINGS=1 ;;
+      --check-strings) RUN_STRINGS=1 ;;
       --filter)
         if [ $# -lt 2 ] || [ -z "$2" ]; then
           log_fail "--filter needs a pattern"
@@ -184,6 +190,36 @@ run_bindings_part() {
   PART_TIME="$(timer_elapsed "$t0")"
 }
 
+# Strings: regenerate Localizable.xcstrings with the sync script, then fail on any
+# difference from git (tracked changes, staged changes or untracked files).
+run_strings_part() {
+  local t0 rc=0
+  t0="$(timer_start)"
+  PART_TESTS="-"
+
+  if ! command -v bun >/dev/null 2>&1; then
+    log_fail "bun not found: install it from https://bun.sh to run the strings drift check"
+    rc=1
+  fi
+  if [ "$rc" -eq 0 ]; then
+    run_logged "sync-strings" bun "$NATIVE_DIR/scripts/sync-strings.ts" || rc=$?
+  fi
+  if [ "$rc" -eq 0 ]; then
+    if ! git -C "$ROOT_DIR" diff --quiet -- "${STRINGS_GIT_PATHS[@]}" \
+      || [ -n "$(git -C "$ROOT_DIR" status --porcelain -- "${STRINGS_GIT_PATHS[@]}")" ]; then
+      log_fail "Localizable.xcstrings is out of date: run bun native/scripts/sync-strings.ts and commit native/Resources/Localizable.xcstrings"
+      rc=1
+    fi
+  fi
+
+  if [ "$rc" -eq 0 ]; then
+    PART_STATUS="PASS"
+  else
+    PART_STATUS="FAIL"
+  fi
+  PART_TIME="$(timer_elapsed "$t0")"
+}
+
 record_result() {
   RESULT_NAMES+=("$1")
   RESULT_STATUS+=("$PART_STATUS")
@@ -215,12 +251,14 @@ summarize() {
 main() {
   local step=0 total=0
 
-  if [ "$RUN_RUST" -eq 0 ] && [ "$RUN_SWIFT" -eq 0 ] && [ "$RUN_BINDINGS" -eq 0 ]; then
+  if [ "$RUN_RUST" -eq 0 ] && [ "$RUN_SWIFT" -eq 0 ] && [ "$RUN_BINDINGS" -eq 0 ] \
+    && [ "$RUN_STRINGS" -eq 0 ]; then
     RUN_RUST=1
     RUN_SWIFT=1
     RUN_BINDINGS=1
+    RUN_STRINGS=1
   fi
-  total=$(( RUN_RUST + RUN_SWIFT + RUN_BINDINGS ))
+  total=$(( RUN_RUST + RUN_SWIFT + RUN_BINDINGS + RUN_STRINGS ))
 
   cd "$ROOT_DIR"
   setup_build_env
@@ -243,6 +281,12 @@ main() {
     log_step "$step" "$total" "Bindings drift check"
     run_bindings_part
     record_result "Bindings"
+  fi
+  if [ "$RUN_STRINGS" -eq 1 ]; then
+    step=$((step + 1))
+    log_step "$step" "$total" "Strings drift check"
+    run_strings_part
+    record_result "Strings"
   fi
 
   summarize || exit 1
