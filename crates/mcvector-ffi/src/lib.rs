@@ -109,6 +109,7 @@ pub enum StartOutcome {
 struct Session {
     // Held only to keep the lock until the process exits.
     _lock: InstanceLock,
+    data_dir: PathBuf,
     registry: ServerRegistry,
 }
 
@@ -118,22 +119,52 @@ static SESSION: Mutex<Option<Session>> = Mutex::new(None);
 /// registry. Debug builds use the `.debug` data root shared with the Tauri
 /// debug build, so development never touches release data (DATA-001).
 ///
+/// `debug_data_dir_override` is honored only when `debug_build` is true. The
+/// Native capture tooling uses it to point the app at fixture data inside
+/// native/.build; release builds always use the shared root.
+///
 /// Calling it again after it returned `Ready` returns `Ready` without
 /// reopening anything.
 #[uniffi::export]
-pub fn start(debug_build: bool, bundle_path: String) -> Result<StartOutcome, FfiError> {
-    let identifier = if debug_build {
-        paths::DEBUG_DATA_IDENTIFIER
-    } else {
-        paths::SHARED_DATA_IDENTIFIER
+pub fn start(
+    debug_build: bool,
+    bundle_path: String,
+    debug_data_dir_override: Option<String>,
+) -> Result<StartOutcome, FfiError> {
+    let override_dir = debug_data_dir_override
+        .filter(|dir| debug_build && !dir.is_empty())
+        .map(PathBuf::from);
+    let data_dir = match override_dir {
+        Some(dir) => dir,
+        None => {
+            let identifier = if debug_build {
+                paths::DEBUG_DATA_IDENTIFIER
+            } else {
+                paths::SHARED_DATA_IDENTIFIER
+            };
+            paths::data_dir_for(identifier).ok_or_else(|| {
+                core_error(
+                    CoreErrorCode::PathAppDataUnavailable,
+                    "The application data folder could not be determined.",
+                )
+            })?
+        }
     };
-    let data_dir = paths::data_dir_for(identifier).ok_or_else(|| {
+    start_in(data_dir, bundle_path)
+}
+
+/// The UI locale saved in config.json by either edition (`"en"` or `"ja"`),
+/// or None to follow the system language (NAT-008). Requires `start`.
+#[uniffi::export]
+pub fn config_locale() -> Result<Option<String>, FfiError> {
+    let session = lock_session()?;
+    let session = session.as_ref().ok_or_else(|| {
         core_error(
-            CoreErrorCode::PathAppDataUnavailable,
-            "The application data folder could not be determined.",
+            CoreErrorCode::CoreNotStarted,
+            "The core has not been started.",
         )
     })?;
-    start_in(data_dir, bundle_path)
+    Ok(mcvector_core::config::locale(&session.data_dir))
 }
 
 fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiError> {
@@ -169,6 +200,7 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
 
     *session = Some(Session {
         _lock: lock,
+        data_dir: data_dir.clone(),
         registry,
     });
     Ok(StartOutcome::Ready {

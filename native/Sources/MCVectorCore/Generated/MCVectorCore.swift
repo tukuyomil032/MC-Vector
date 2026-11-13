@@ -1095,6 +1095,17 @@ fileprivate struct FfiConverterSequenceTypeServerProfile: FfiConverterRustBuffer
     }
 }
 /**
+ * The UI locale saved in config.json by either edition (`"en"` or `"ja"`),
+ * or None to follow the system language (NAT-008). Requires `start`.
+ */
+public func configLocale()throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_config_locale(uniffiCallStatus
+    )
+})
+}
+/**
  * Lists registered servers. Requires a successful `start`.
  */
 public func getServers()throws  -> [ServerProfile]  {
@@ -1109,15 +1120,20 @@ public func getServers()throws  -> [ServerProfile]  {
  * registry. Debug builds use the `.debug` data root shared with the Tauri
  * debug build, so development never touches release data (DATA-001).
  *
+ * `debug_data_dir_override` is honored only when `debug_build` is true. The
+ * Native capture tooling uses it to point the app at fixture data inside
+ * native/.build; release builds always use the shared root.
+ *
  * Calling it again after it returned `Ready` returns `Ready` without
  * reopening anything.
  */
-public func start(debugBuild: Bool, bundlePath: String)throws  -> StartOutcome  {
+public func start(debugBuild: Bool, bundlePath: String, debugDataDirOverride: String?)throws  -> StartOutcome  {
     return try  FfiConverterTypeStartOutcome_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
         uniffiCallStatus in
     uniffi_mcvector_ffi_fn_func_start(
         FfiConverterBool.lower(debugBuild),
-        FfiConverterString.lower(bundlePath),uniffiCallStatus
+        FfiConverterString.lower(bundlePath),
+        FfiConverterOptionString.lower(debugDataDirOverride),uniffiCallStatus
     )
 })
 }
@@ -1137,10 +1153,13 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_config_locale() != 3848) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mcvector_ffi_checksum_func_start() != 40495) {
+    if (uniffi_mcvector_ffi_checksum_func_start() != 17440) {
         return InitializationResult.apiChecksumMismatch
     }
 

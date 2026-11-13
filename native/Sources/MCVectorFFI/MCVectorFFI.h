@@ -243,6 +243,12 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureRes
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CONFIG_LOCALE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CONFIG_LOCALE
+RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_status
@@ -251,7 +257,7 @@ RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_START
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_START
-RustBuffer uniffi_mcvector_ffi_fn_func_start(int8_t debug_build, RustBuffer bundle_path, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mcvector_ffi_fn_func_start(int8_t debug_build, RustBuffer bundle_path, RustBuffer debug_data_dir_override, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_MCVECTOR_FFI_RUSTBUFFER_ALLOC
@@ -512,6 +518,12 @@ void ffi_mcvector_ffi_rust_future_free_void(uint64_t handle
 #ifndef UNIFFI_FFIDEF_FFI_MCVECTOR_FFI_RUST_FUTURE_COMPLETE_VOID
 #define UNIFFI_FFIDEF_FFI_MCVECTOR_FFI_RUST_FUTURE_COMPLETE_VOID
 void ffi_mcvector_ffi_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CONFIG_LOCALE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CONFIG_LOCALE
+uint16_t uniffi_mcvector_ffi_checksum_func_config_locale(void
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS

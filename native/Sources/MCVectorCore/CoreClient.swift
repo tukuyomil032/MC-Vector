@@ -27,8 +27,15 @@ public enum CoreClient {
     /// Takes the cross-edition lock and opens the registry (NAT-010).
     /// Synchronous on purpose: the app calls it before any window exists.
     public static func start(bundlePath: String = Bundle.main.bundlePath) throws(CoreError) -> StartResult {
+        // Debug builds only: the capture tooling points the app at fixture data
+        // (native/.build/fixtures). The core ignores this in release builds.
+        let dataDirOverride = isDebugBuild ? ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] : nil
         do {
-            switch try MCVectorCore.start(debugBuild: isDebugBuild, bundlePath: bundlePath) {
+            switch try MCVectorCore.start(
+                debugBuild: isDebugBuild,
+                bundlePath: bundlePath,
+                debugDataDirOverride: dataDirOverride
+            ) {
             case let .ready(dataDir):
                 return .ready(dataDirectory: dataDir)
             case let .heldByOther(owner):
@@ -37,6 +44,11 @@ public enum CoreClient {
         } catch {
             throw CoreError.unexpected(error)
         }
+    }
+
+    /// The language saved in config.json (`"en"` / `"ja"`), or nil to follow the system.
+    public static func configLocale() -> String? {
+        (try? MCVectorCore.configLocale()) ?? nil
     }
 
     /// Lists registered servers (OP-SRV-001).
