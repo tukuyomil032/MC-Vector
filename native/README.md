@@ -25,7 +25,7 @@ All three scripts work from any directory.
 |---|---|---|
 | `native/build.sh` | Builds the Rust core, regenerates the Swift bindings, builds the Swift app and assembles `MC-Vector Native.app` (ad-hoc signed) | `--release`, `--universal`, `--clean`, `--verbose` |
 | `native/run.sh` | Builds if needed, then launches the app in the foreground with its logs in the terminal | `--release`, `--no-build` |
-| `native/test.sh` | Runs the Rust core tests, the Swift tests and the bindings drift check, then prints a summary | `--rust-only`, `--swift-only`, `--check-bindings`, `--filter <pattern>` |
+| `native/test.sh` | Runs the Rust core tests, the Swift tests, the bindings drift check and the strings drift check, then prints a summary | `--rust-only`, `--swift-only`, `--check-bindings`, `--check-strings`, `--filter <pattern>` |
 
 Logs use symbols and colors; set `NO_COLOR=1` (or pipe the output) for plain text.
 
@@ -41,14 +41,49 @@ Do not build with plain `swift build` or Xcode: the Swift package links the Rust
 
 When you change the public API in `crates/mcvector-ffi`, run `native/build.sh` and commit the regenerated files together with the Rust change. `native/test.sh --check-bindings` (also run in CI) fails if they are out of date.
 
+## Strings
+
+The texts come from two sources, and `native/Resources/Localizable.xcstrings` (a String Catalog) holds both:
+
+- The React dictionaries `src/i18n/locales/en.ts` and `ja.ts`. They are the source of truth for every text the Native edition shares with the React UI.
+- `native/Resources/native-strings.json`, for texts only the Native edition uses. Each key has `en` and `ja` values, and its keys must not exist in the React dictionaries.
+
+After changing either source, regenerate the catalog and commit it:
+
+```sh
+bun native/scripts/sync-strings.ts
+```
+
+The output is deterministic. `native/test.sh --check-strings` fails while the committed catalog is out of date. `build.sh` compiles the catalog with `xcstringstool` into `en.lproj` and `ja.lproj` inside the app bundle.
+
+In Swift, look texts up with `L10n.t("react.key", ["name": value])`. React's `{name}` placeholders are kept and filled by name. The language follows `locale` in the shared `config.json`, otherwise the system language.
+
+## UI approach
+
+The Native edition keeps the Tauri edition's screens and features, but it is a Mac app: it follows Apple's Human Interface Guidelines and uses the standard SwiftUI and macOS components (sidebar list, system sidebar toggle, toolbar items, toolbar search, `Form`, `Table`, sheets, alerts, context menus, `ContentUnavailableView`). Do not recreate web widgets or the web color theme.
+
+## Screenshots of the app
+
+`native/scripts/capture.sh` launches the debug app in a known state and saves a screenshot of its window, for reviews and for checking features against the React UI reference:
+
+```sh
+native/scripts/capture.sh --fixture groups --locale ja SHELL-ROOT TOAST-stack-3
+```
+
+- States are defined in `Sources/MCVector/Capture/CaptureState.swift` (debug builds only).
+- `--fixture` picks the server data in `scripts/fixtures/<name>/` (`e2e`, `groups`, or `empty`); each launch gets a fresh copy in `native/.build/fixtures/`, so your real data is never touched.
+- Output: `native/.build/captures/<locale>/<ID>.png`. The terminal needs the Screen Recording permission.
+
 ## Layout
 
 ```
 native/
 ├─ Package.swift
 ├─ build.sh  run.sh  test.sh
-├─ scripts/lib/       shared shell helpers (logging, bindings)
-├─ Resources/         Info.plist template, en/ja Localizable.strings
+├─ scripts/
+│  ├─ lib/            shared shell helpers (logging, bindings)
+│  └─ sync-strings.ts generates Resources/Localizable.xcstrings
+├─ Resources/         Info.plist template, Localizable.xcstrings, native-strings.json
 ├─ Sources/
 │  ├─ MCVector/       SwiftUI app
 │  ├─ MCVectorCore/   typed Swift API over the Rust core (+ Generated/)
