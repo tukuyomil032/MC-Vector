@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#if DEBUG
+import AppKit
+import SwiftUI
+
+/// Debug-only states for `native/scripts/capture.sh`. IDs follow the UI inventory
+/// (spec/idea/native-swiftui-edition/ui-reference) where a feature matches, so a
+/// capture can be checked against the React feature list. Launch with
+/// `--capture-state <ID>`; the state is applied once the server list has loaded.
+@MainActor
+enum CaptureState {
+    static var requestedID: String? {
+        let arguments = CommandLine.arguments
+        guard let index = arguments.firstIndex(of: "--capture-state"), index + 1 < arguments.count else {
+            return nil
+        }
+        return arguments[index + 1]
+    }
+
+    static func apply(_ id: String, app: AppState, feedback: FeedbackCenter) async {
+        resizeMainWindow(to: CGSize(width: 1200, height: 800))
+        // Captures show the active window, the way people see it while using the app.
+        NSApp.activate()
+        NSApp.windows.first(where: { $0.canBecomeMain })?.makeKeyAndOrderFront(nil)
+        try? await Task.sleep(for: .milliseconds(300))
+        switch id {
+        case "SHELL-ROOT":
+            app.navigate(to: .dashboard)
+        case "CONTENT-noserver-empty", "CONTENT-noserver-select":
+            app.selectedServerID = nil
+        case "SETTINGS-root":
+            app.navigate(to: .appSettings)
+        case "SEARCH-open":
+            app.isSearchFocused = true
+        case "SEARCH-filtered":
+            app.isSearchFocused = true
+            app.searchText = "con"
+        case "TOAST-stack-3":
+            feedback.error(L10n.t("server.toast.autoBackupFailed", ["name": "E2E Server"]))
+            feedback.info(L10n.t(
+                "server.toast.autoRestartScheduled",
+                ["name": "E2E Server", "seconds": 10, "attempt": 1, "max": 3]
+            ))
+            feedback.success(L10n.t("server.toast.autoBackupCreated", ["name": "E2E Server"]))
+            feedback.isStackExpanded = true
+        case "CONFIRM-delete-server":
+            Task {
+                _ = await feedback.confirm(
+                    title: L10n.t("common.delete"),
+                    description: L10n.t(
+                        "server.confirm.deleteManaged",
+                        ["name": "E2E Server", "path": "<data>/servers/server-1"]
+                    ),
+                    confirmLabel: L10n.t("common.delete"),
+                    isDanger: true
+                )
+            }
+        case "PROMPT-save-template":
+            Task {
+                _ = await feedback.prompt(
+                    title: L10n.t("server.create.templateNamePrompt"),
+                    label: L10n.t("server.create.templateNameLabel"),
+                    defaultValue: L10n.t("server.create.templateDefaultName", ["name": "E2E Server"])
+                )
+            }
+        default:
+            if let route = AppRoute.allCases.first(where: { id == "ROUTE-\($0.rawValue)" }) {
+                app.navigate(to: route)
+            } else {
+                signal("[capture] unknown capture state: \(id)")
+            }
+        }
+        signal("[capture] ready: \(id)")
+    }
+
+    /// Writes the line to stderr and, when `MCVECTOR_CAPTURE_SIGNAL` names a file,
+    /// appends it there. capture.sh launches the app through `open`, which cannot
+    /// redirect the app's output, so it watches that file instead.
+    private static func signal(_ line: String) {
+        let data = Data((line + "\n").utf8)
+        FileHandle.standardError.write(data)
+        guard let path = ProcessInfo.processInfo.environment["MCVECTOR_CAPTURE_SIGNAL"], !path.isEmpty else {
+            return
+        }
+        if let handle = FileHandle(forWritingAtPath: path) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            FileManager.default.createFile(atPath: path, contents: data)
+        }
+    }
+
+    private static func resizeMainWindow(to size: CGSize) {
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) else { return }
+        window.setContentSize(size)
+        window.center()
+    }
+}
+#endif

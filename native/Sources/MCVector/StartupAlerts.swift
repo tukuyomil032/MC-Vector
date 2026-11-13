@@ -12,11 +12,9 @@ enum OtherEditionAlert {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "MC-Vector"
-        alert.informativeText = String(
-            localized: tauriRunning ? "lock.tauri_running" : "lock.other_running"
-        )
-        alert.addButton(withTitle: String(localized: tauriRunning ? "lock.show_tauri" : "lock.show_running"))
-        alert.addButton(withTitle: String(localized: "lock.quit"))
+        alert.informativeText = L10n.t(tauriRunning ? "lock.tauri_running" : "lock.other_running")
+        alert.addButton(withTitle: L10n.t(tauriRunning ? "lock.show_tauri" : "lock.show_running"))
+        alert.addButton(withTitle: L10n.t("lock.quit"))
 
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn, let owner else { return }
@@ -34,10 +32,18 @@ enum StartupFailureAlert {
     static func run(error: CoreError) {
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = String(localized: "startup.failed")
-        alert.informativeText = error.localizedText()
-        alert.addButton(withTitle: String(localized: "lock.quit"))
+        alert.messageText = L10n.t("startup.failed")
+        alert.informativeText = error.uiText
+        alert.addButton(withTitle: L10n.t("lock.quit"))
         NSApp.activate()
         alert.runModal()
+    }
+}
+
+extension CoreError {
+    /// Text in the app's chosen language: `error.<code>`, else `error.unknown` (NAT-005).
+    var uiText: String {
+        let text = L10n.t(localizationKey)
+        return text == localizationKey ? L10n.t("error.unknown") : text
     }
 }
