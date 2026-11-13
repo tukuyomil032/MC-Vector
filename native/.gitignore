@@ -1,0 +1,11 @@
+# Every build output, cache and temp file of the Native edition (REPO-002).
+.build/
+
+# SwiftPM / Xcode local state. The package is built with native/build.sh only.
+.swiftpm/
+*.xcodeproj
+xcuserdata/
+.DS_Store
+
+# Committed on purpose (REPO-007): Package.resolved, Sources/MCVectorCore/Generated/,
+# Sources/MCVectorFFI/ (generated header + hand-written module.modulemap).
