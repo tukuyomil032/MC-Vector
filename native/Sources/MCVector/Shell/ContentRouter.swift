@@ -38,8 +38,13 @@ struct ContentRouter: View {
     @ViewBuilder
     private func serverView(serverID: String) -> some View {
         // One identity per server + route, like React's `${server.id}-${view}` key.
-        NotPortedView(route: app.route)
-            .id("\(serverID)-\(app.route.rawValue)")
+        Group {
+            switch app.route {
+            case .console: ConsoleView(serverID: serverID)
+            default: NotPortedView(route: app.route)
+            }
+        }
+        .id("\(serverID)-\(app.route.rawValue)")
     }
 
     /// No server yet, or none selected (React CONTENT-noserver-*), as the standard

@@ -7211,6 +7211,23 @@
         }
       }
     },
+    "native.console.sendFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The command could not be sent"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドを送信できませんでした"
+          }
+        }
+      }
+    },
     "native.import.chooseAnother": {
       "extractionState": "manual",
       "localizations": {

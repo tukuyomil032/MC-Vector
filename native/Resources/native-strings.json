@@ -167,6 +167,10 @@
     "en": "Saved in a new folder inside MC-Vector's servers folder. The folder name is chosen automatically.",
     "ja": "MC-Vector のサーバー用フォルダーの中に、新しいフォルダーを作って保存します。フォルダー名は自動で決まります。"
   },
+  "native.console.sendFailed": {
+    "en": "The command could not be sent",
+    "ja": "コマンドを送信できませんでした"
+  },
   "native.import.chooseAnother": {
     "en": "Choose Another…",
     "ja": "別のフォルダーを選ぶ…"
