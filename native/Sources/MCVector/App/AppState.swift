@@ -40,7 +40,7 @@ final class AppState {
     /// React `returnToPreviousView`: back to the previous view, or the dashboard
     /// when there is none or it would be the settings screen itself.
     func returnToPreviousView() {
-        let target = previousRoute.flatMap { $0 == .appSettings ? nil : $0 } ?? .dashboard
+        let target = previousRoute ?? .dashboard
         previousRoute = route
         route = target
     }

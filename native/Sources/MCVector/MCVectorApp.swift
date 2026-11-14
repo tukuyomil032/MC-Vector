@@ -64,6 +64,12 @@ struct MCVectorApp: App {
         }
         .defaultSize(width: 1200, height: 800)
         .commands { ShellCommands(app: app) }
+
+        // The standard Settings window: ⌘, and "Settings…" in the app menu.
+        Settings {
+            SettingsView()
+                .environment(feedback)
+        }
     }
 }
 
@@ -72,10 +78,6 @@ struct ShellCommands: Commands {
     let app: AppState
 
     var body: some Commands {
-        CommandGroup(replacing: .appSettings) {
-            Button(L10n.t("nav.settings")) { app.navigate(to: .appSettings) }
-                .keyboardShortcut(",", modifiers: .command)
-        }
         CommandGroup(after: .sidebar) {
             // React's ⌘K palette is the toolbar search field here.
             Button(L10n.t("commandPalette.label")) { app.isSearchFocused = true }

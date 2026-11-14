@@ -30,7 +30,6 @@ struct ContentRouter: View {
 
     private var staticRoute: AnyView? {
         switch app.route {
-        case .appSettings: AnyView(AppSettingsPlaceholder())
         case .proxy, .proxyHelp, .ngrokGuide: AnyView(NotPortedView(route: app.route))
         default: nil
         }
@@ -95,13 +94,5 @@ struct NotPortedView: View {
             systemImage: route.symbol,
             description: Text(L10n.t("native.notPorted"))
         )
-    }
-}
-
-/// Settings is opened from the toolbar gear or ⌘, and left by picking a view in the
-/// sidebar. Its body is ported in phase 12.
-private struct AppSettingsPlaceholder: View {
-    var body: some View {
-        NotPortedView(route: .appSettings)
     }
 }

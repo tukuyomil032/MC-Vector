@@ -42,9 +42,8 @@ private struct ServerToolbar: ViewModifier {
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        app.navigate(to: .appSettings)
-                    } label: {
+                    // Opens the Settings window, the same one as ⌘, and the app menu.
+                    SettingsLink {
                         Label(L10n.t("nav.settings"), systemImage: "gearshape")
                     }
                     .help(L10n.t("nav.openSettings"))

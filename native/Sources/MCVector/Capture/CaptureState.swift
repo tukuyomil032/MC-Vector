@@ -19,7 +19,12 @@ enum CaptureState {
         return arguments[index + 1]
     }
 
-    static func apply(_ id: String, app: AppState, feedback: FeedbackCenter) async {
+    static func apply(
+        _ id: String,
+        app: AppState,
+        feedback: FeedbackCenter,
+        openSettings: OpenSettingsAction
+    ) async {
         resizeMainWindow(to: CGSize(width: 1200, height: 800))
         // Captures show the active window, the way people see it while using the app.
         NSApp.activate()
@@ -30,8 +35,21 @@ enum CaptureState {
             app.navigate(to: .dashboard)
         case "CONTENT-noserver-empty", "CONTENT-noserver-select":
             app.selectedServerID = nil
-        case "SETTINGS-root":
-            app.navigate(to: .appSettings)
+        case "SETTINGS-root", "SETTINGS-general", "SETTINGS-updates", "SETTINGS-security", "SETTINGS-about":
+            // SettingsView picks the pane from the ID. capture.sh takes the first
+            // window of the app, so hide the main window once Settings is open.
+            let main = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
+            openSettings()
+            try? await Task.sleep(for: .milliseconds(800))
+            if let settings = NSApp.windows.first(where: { $0.isVisible && $0 !== main && $0.frame.width > 300 }) {
+                main?.orderOut(nil)
+                NSApp.activate()
+                settings.makeKeyAndOrderFront(nil)
+            } else {
+                signal("[capture] Settings window did not open")
+            }
+            // Give the pane time to draw before capture.sh takes the picture.
+            try? await Task.sleep(for: .milliseconds(1000))
         case "SEARCH-open":
             app.isSearchFocused = true
         case "SEARCH-filtered":

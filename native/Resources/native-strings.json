@@ -79,6 +79,42 @@
     "en": "This screen is not available in the Native edition yet.",
     "ja": "この画面は Native 版ではまだ使えません。"
   },
+  "native.settings.about": {
+    "en": "About",
+    "ja": "情報"
+  },
+  "native.settings.author": {
+    "en": "Author",
+    "ja": "作成者"
+  },
+  "native.settings.general": {
+    "en": "General",
+    "ja": "一般"
+  },
+  "native.settings.license": {
+    "en": "License",
+    "ja": "ライセンス"
+  },
+  "native.settings.reportIssue": {
+    "en": "Report an Issue",
+    "ja": "問題を報告"
+  },
+  "native.settings.saveFailed": {
+    "en": "The setting could not be saved",
+    "ja": "設定を保存できませんでした"
+  },
+  "native.settings.search": {
+    "en": "Search Settings",
+    "ja": "設定を検索"
+  },
+  "native.settings.status": {
+    "en": "Status",
+    "ja": "状態"
+  },
+  "native.settings.tagline": {
+    "en": "Minecraft server manager for macOS",
+    "ja": "macOS 向けの Minecraft サーバー管理アプリ"
+  },
   "startup.failed": {
     "en": "MC-Vector could not start",
     "ja": "MC-Vector を起動できませんでした"

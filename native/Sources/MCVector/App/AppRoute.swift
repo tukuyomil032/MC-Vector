@@ -15,7 +15,7 @@ enum AppRoute: String, CaseIterable, Hashable, Sendable {
     case proxy
     case proxyHelp = "proxy-help"
     case ngrokGuide = "ngrok-guide"
-    case appSettings = "app-settings"
+    // React's in-window "app-settings" view is the Settings window (⌘,) here.
 
     /// Sidebar order (React `NAV_ITEMS`): the eight per-server views, then Proxy Network after a divider.
     static let serverViews: [AppRoute] = [
@@ -38,7 +38,6 @@ enum AppRoute: String, CaseIterable, Hashable, Sendable {
         case .generalSettings: "nav.generalSettings"
         case .proxy, .proxyHelp: "nav.proxyNetwork"
         case .ngrokGuide: "nav.generalSettings"
-        case .appSettings: "nav.settings"
         }
     }
 
@@ -55,7 +54,6 @@ enum AppRoute: String, CaseIterable, Hashable, Sendable {
         case .generalSettings: "gearshape"
         case .proxy, .proxyHelp: "network"
         case .ngrokGuide: "globe"
-        case .appSettings: "gearshape.2"
         }
     }
 }
