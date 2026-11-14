@@ -14,4 +14,5 @@ pub mod operations;
 pub mod paths;
 pub mod recovery_record;
 pub mod registry;
+pub mod server_jar;
 pub mod shutdown;
