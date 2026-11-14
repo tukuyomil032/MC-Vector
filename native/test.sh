@@ -6,12 +6,14 @@
 #   Swift     swift test for native/ (needs the Rust static library)
 #   Bindings  regenerates the UniFFI bindings and fails if git sees a change
 #   Strings   regenerates Localizable.xcstrings and fails if git sees a change
+#   Versions  regenerates minecraft-versions.json and fails if git sees a change
 #
 # Every selected part runs even when an earlier one fails. Exit 0 when all pass,
 # 1 when any part fails, 2 on a usage error.
 #
 # Usage: native/test.sh [--rust-only] [--swift-only] [--check-bindings]
-#                       [--check-strings] [--filter <pattern>] [-h|--help]
+#                       [--check-strings] [--check-versions]
+#                       [--filter <pattern>] [-h|--help]
 set -euo pipefail
 
 NATIVE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -24,20 +26,22 @@ source "$NATIVE_DIR/scripts/lib/bindings.sh"
 # Paths the drift checks compare, relative to ROOT_DIR (for git).
 BINDING_GIT_PATHS=(native/Sources/MCVectorCore/Generated native/Sources/MCVectorFFI)
 STRINGS_GIT_PATHS=(native/Resources/Localizable.xcstrings)
+VERSIONS_GIT_PATHS=(native/Resources/minecraft-versions.json)
 
 usage() {
   cat <<'EOF'
 Usage: native/test.sh [options]
 
 Runs the Rust tests, the Swift tests, the generated-bindings drift check and the
-String Catalog drift check. With no selection option all four run. Selection
-options may be combined.
+String Catalog drift check and the Minecraft version list drift check. With no
+selection option all five run. Selection options may be combined.
 
 Options:
   --rust-only         Run only: cargo test -p mcvector-core -p mcvector-ffi
   --swift-only        Run only: swift test for native/ (builds the Rust core first if needed)
   --check-bindings    Run only the generated-bindings drift check
   --check-strings     Run only the String Catalog drift check
+  --check-versions    Run only the Minecraft version list drift check
   --filter <pattern>  Run only the tests matching <pattern> (Rust and Swift)
   -h, --help          Show this help and exit
 
@@ -49,6 +53,7 @@ RUN_RUST=0
 RUN_SWIFT=0
 RUN_BINDINGS=0
 RUN_STRINGS=0
+RUN_VERSIONS=0
 FILTER=""
 
 # Per-part results. PART_* hold the outcome of the part that just ran.
@@ -67,6 +72,7 @@ parse_args() {
       --swift-only) RUN_SWIFT=1 ;;
       --check-bindings) RUN_BINDINGS=1 ;;
       --check-strings) RUN_STRINGS=1 ;;
+      --check-versions) RUN_VERSIONS=1 ;;
       --filter)
         if [ $# -lt 2 ] || [ -z "$2" ]; then
           log_fail "--filter needs a pattern"
@@ -220,6 +226,36 @@ run_strings_part() {
   PART_TIME="$(timer_elapsed "$t0")"
 }
 
+# Versions: regenerate minecraft-versions.json with the sync script, then fail on any
+# difference from git (tracked changes, staged changes or untracked files).
+run_versions_part() {
+  local t0 rc=0
+  t0="$(timer_start)"
+  PART_TESTS="-"
+
+  if ! command -v bun >/dev/null 2>&1; then
+    log_fail "bun not found: install it from https://bun.sh to run the versions drift check"
+    rc=1
+  fi
+  if [ "$rc" -eq 0 ]; then
+    run_logged "sync-versions" bun "$NATIVE_DIR/scripts/sync-versions.ts" || rc=$?
+  fi
+  if [ "$rc" -eq 0 ]; then
+    if ! git -C "$ROOT_DIR" diff --quiet -- "${VERSIONS_GIT_PATHS[@]}" \
+      || [ -n "$(git -C "$ROOT_DIR" status --porcelain -- "${VERSIONS_GIT_PATHS[@]}")" ]; then
+      log_fail "minecraft-versions.json is out of date: run bun native/scripts/sync-versions.ts and commit native/Resources/minecraft-versions.json"
+      rc=1
+    fi
+  fi
+
+  if [ "$rc" -eq 0 ]; then
+    PART_STATUS="PASS"
+  else
+    PART_STATUS="FAIL"
+  fi
+  PART_TIME="$(timer_elapsed "$t0")"
+}
+
 record_result() {
   RESULT_NAMES+=("$1")
   RESULT_STATUS+=("$PART_STATUS")
@@ -252,13 +288,14 @@ main() {
   local step=0 total=0
 
   if [ "$RUN_RUST" -eq 0 ] && [ "$RUN_SWIFT" -eq 0 ] && [ "$RUN_BINDINGS" -eq 0 ] \
-    && [ "$RUN_STRINGS" -eq 0 ]; then
+    && [ "$RUN_STRINGS" -eq 0 ] && [ "$RUN_VERSIONS" -eq 0 ]; then
     RUN_RUST=1
     RUN_SWIFT=1
     RUN_BINDINGS=1
     RUN_STRINGS=1
+    RUN_VERSIONS=1
   fi
-  total=$(( RUN_RUST + RUN_SWIFT + RUN_BINDINGS + RUN_STRINGS ))
+  total=$(( RUN_RUST + RUN_SWIFT + RUN_BINDINGS + RUN_STRINGS + RUN_VERSIONS ))
 
   cd "$ROOT_DIR"
   setup_build_env
@@ -287,6 +324,12 @@ main() {
     log_step "$step" "$total" "Strings drift check"
     run_strings_part
     record_result "Strings"
+  fi
+  if [ "$RUN_VERSIONS" -eq 1 ]; then
+    step=$((step + 1))
+    log_step "$step" "$total" "Versions drift check"
+    run_versions_part
+    record_result "Versions"
   fi
 
   summarize || exit 1

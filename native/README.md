@@ -82,7 +82,8 @@ native/
 ├─ build.sh  run.sh  test.sh
 ├─ scripts/
 │  ├─ lib/            shared shell helpers (logging, bindings)
-│  └─ sync-strings.ts generates Resources/Localizable.xcstrings
+│  ├─ sync-strings.ts generates Resources/Localizable.xcstrings
+│  └─ sync-versions.ts generates Resources/minecraft-versions.json
 ├─ Resources/         Info.plist template, Localizable.xcstrings, native-strings.json
 ├─ Sources/
 │  ├─ MCVector/       SwiftUI app
