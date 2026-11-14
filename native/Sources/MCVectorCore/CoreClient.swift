@@ -201,6 +201,11 @@ public enum CoreClient {
         }
     }
 
+    /// The current 60-second metric window of a running server.
+    public static func serverMetricHistory(id: String) async -> MetricSnapshot? {
+        await MCVectorCore.serverMetricHistory(serverId: id)
+    }
+
     public static func runningServerIDs() async -> [String] {
         await MCVectorCore.runningServerIds()
     }

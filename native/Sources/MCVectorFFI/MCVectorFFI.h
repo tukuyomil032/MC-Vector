@@ -271,6 +271,13 @@ typedef void (*UniffiCallbackInterfaceServerEventObserverMethod2)(uint64_t, Rust
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_SERVER_EVENT_OBSERVER_METHOD3
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_SERVER_EVENT_OBSERVER_METHOD3
+typedef void (*UniffiCallbackInterfaceServerEventObserverMethod3)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_CREATION_OBSERVER
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_CREATION_OBSERVER
 typedef struct UniffiVTableCallbackInterfaceCreationObserver {
@@ -288,6 +295,7 @@ typedef struct UniffiVTableCallbackInterfaceServerEventObserver {
     UniffiCallbackInterfaceServerEventObserverMethod0 _Nonnull onConsole;
     UniffiCallbackInterfaceServerEventObserverMethod1 _Nonnull onStatus;
     UniffiCallbackInterfaceServerEventObserverMethod2 _Nonnull onStats;
+    UniffiCallbackInterfaceServerEventObserverMethod3 _Nonnull onMetrics;
 } UniffiVTableCallbackInterfaceServerEventObserver;
 
 #endif
@@ -339,6 +347,11 @@ void uniffi_mcvector_ffi_fn_method_servereventobserver_on_status(uint64_t ptr, R
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_STATS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_STATS
 void uniffi_mcvector_ffi_fn_method_servereventobserver_on_stats(uint64_t ptr, RustBuffer sample, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_METRICS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_METRICS
+void uniffi_mcvector_ffi_fn_method_servereventobserver_on_metrics(uint64_t ptr, RustBuffer snapshot, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ACCEPT_SERVER_EULA
@@ -423,6 +436,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_send_command(RustBuffer server_id, RustBuff
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_EULA_STATUS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_EULA_STATUS
 RustBuffer uniffi_mcvector_ffi_fn_func_server_eula_status(RustBuffer server_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_METRIC_HISTORY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_METRIC_HISTORY
+uint64_t uniffi_mcvector_ffi_fn_func_server_metric_history(RustBuffer server_id
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_TEMPLATES
@@ -839,6 +857,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_server_eula_status(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_METRIC_HISTORY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_METRIC_HISTORY
+uint16_t uniffi_mcvector_ffi_checksum_func_server_metric_history(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_TEMPLATES
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_TEMPLATES
 uint16_t uniffi_mcvector_ffi_checksum_func_server_templates(void
@@ -926,6 +950,12 @@ uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_status(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_STATS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_STATS
 uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_stats(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_METRICS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_METRICS
+uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_metrics(void
     
 );
 #endif

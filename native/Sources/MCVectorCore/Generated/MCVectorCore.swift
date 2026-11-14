@@ -535,6 +535,22 @@ fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
+    typealias FfiType = Double
+    typealias SwiftType = Double
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
+        return try lift(readDouble(&buf))
+    }
+
+    public static func write(_ value: Double, into buf: inout [UInt8]) {
+        writeDouble(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -820,6 +836,8 @@ public protocol ServerEventObserver: AnyObject, Sendable {
     
     func onStats(sample: StatsSample) 
     
+    func onMetrics(snapshot: MetricSnapshot) 
+    
 }
 /**
  * Receives running-server events. Called from background threads.
@@ -900,6 +918,15 @@ open func onStats(sample: StatsSample)  {try! rustCall() {
     uniffi_mcvector_ffi_fn_method_servereventobserver_on_stats(
             self.uniffiCloneHandle(),
         FfiConverterTypeStatsSample_lower(sample),uniffiCallStatus
+    )
+}
+}
+    
+open func onMetrics(snapshot: MetricSnapshot)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_servereventobserver_on_metrics(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeMetricSnapshot_lower(snapshot),uniffiCallStatus
     )
 }
 }
@@ -993,6 +1020,30 @@ fileprivate struct UniffiCallbackInterfaceServerEventObserver {
                 }
                 return uniffiObj.onStats(
                      sample: try FfiConverterTypeStatsSample_lift(sample)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onMetrics: { (
+            uniffiHandle: UInt64,
+            snapshot: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeServerEventObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onMetrics(
+                     snapshot: try FfiConverterTypeMetricSnapshot_lift(snapshot)
                 )
             }
 
@@ -1496,6 +1547,91 @@ public func FfiConverterTypeLockOwnerInfo_lower(_ value: LockOwnerInfo) -> RustB
 
 
 /**
+ * The last 60 seconds of a running server's metrics (dashboard charts).
+ */
+public struct MetricSnapshot: Equatable, Hashable {
+    public var serverId: String
+    public var generation: UInt64
+    /**
+     * Increases with every change; drop snapshots older than the one shown.
+     */
+    public var sequence: UInt64
+    /**
+     * Milliseconds since the process started, when the snapshot was taken.
+     */
+    public var elapsedMs: UInt64
+    public var resource: [ResourcePoint]
+    public var tps: [TpsPoint]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, generation: UInt64, 
+        /**
+         * Increases with every change; drop snapshots older than the one shown.
+         */sequence: UInt64, 
+        /**
+         * Milliseconds since the process started, when the snapshot was taken.
+         */elapsedMs: UInt64, resource: [ResourcePoint], tps: [TpsPoint]) {
+        self.serverId = serverId
+        self.generation = generation
+        self.sequence = sequence
+        self.elapsedMs = elapsedMs
+        self.resource = resource
+        self.tps = tps
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MetricSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMetricSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MetricSnapshot {
+        return
+            try MetricSnapshot(
+                serverId: FfiConverterString.read(from: &buf), 
+                generation: FfiConverterUInt64.read(from: &buf), 
+                sequence: FfiConverterUInt64.read(from: &buf), 
+                elapsedMs: FfiConverterUInt64.read(from: &buf), 
+                resource: FfiConverterSequenceTypeResourcePoint.read(from: &buf), 
+                tps: FfiConverterSequenceTypeTpsPoint.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MetricSnapshot, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterUInt64.write(value.generation, into: &buf)
+        FfiConverterUInt64.write(value.sequence, into: &buf)
+        FfiConverterUInt64.write(value.elapsedMs, into: &buf)
+        FfiConverterSequenceTypeResourcePoint.write(value.resource, into: &buf)
+        FfiConverterSequenceTypeTpsPoint.write(value.tps, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMetricSnapshot_lift(_ buf: RustBuffer) throws -> MetricSnapshot {
+    return try FfiConverterTypeMetricSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMetricSnapshot_lower(_ value: MetricSnapshot) -> RustBuffer {
+    return FfiConverterTypeMetricSnapshot.lower(value)
+}
+
+
+/**
  * What the add-server form sends.
  */
 public struct NewServerInput: Equatable, Hashable {
@@ -1608,6 +1744,76 @@ public func FfiConverterTypeNewServerInput_lower(_ value: NewServerInput) -> Rus
 }
 
 
+public struct ResourcePoint: Equatable, Hashable {
+    /**
+     * Milliseconds since the server process started.
+     */
+    public var elapsedMs: UInt64
+    /**
+     * Percent, 0–100.
+     */
+    public var cpu: Float
+    public var memoryBytes: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Milliseconds since the server process started.
+         */elapsedMs: UInt64, 
+        /**
+         * Percent, 0–100.
+         */cpu: Float, memoryBytes: UInt64) {
+        self.elapsedMs = elapsedMs
+        self.cpu = cpu
+        self.memoryBytes = memoryBytes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ResourcePoint: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeResourcePoint: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResourcePoint {
+        return
+            try ResourcePoint(
+                elapsedMs: FfiConverterUInt64.read(from: &buf), 
+                cpu: FfiConverterFloat.read(from: &buf), 
+                memoryBytes: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ResourcePoint, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.elapsedMs, into: &buf)
+        FfiConverterFloat.write(value.cpu, into: &buf)
+        FfiConverterUInt64.write(value.memoryBytes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeResourcePoint_lift(_ buf: RustBuffer) throws -> ResourcePoint {
+    return try FfiConverterTypeResourcePoint.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeResourcePoint_lower(_ value: ResourcePoint) -> RustBuffer {
+    return FfiConverterTypeResourcePoint.lower(value)
+}
+
+
 /**
  * What the Native UI needs to list servers. Numeric JSON fields are converted
  * here so Swift never sees raw JSON (API-001).
@@ -1631,6 +1837,14 @@ public struct ServerProfile: Equatable, Hashable {
     public var status: String
     public var javaPath: String?
     public var unavailableReason: String?
+    /**
+     * OS notification when CPU stays high (React `notifyOnHighCpu`).
+     */
+    public var notifyOnHighCpu: Bool
+    /**
+     * Percent; React's default is 90.
+     */
+    public var notifyHighCpuThreshold: Double?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -1640,7 +1854,13 @@ public struct ServerProfile: Equatable, Hashable {
          */memoryMb: UInt64?, 
         /**
          * The managed server folder. Shown in the delete confirmation, as in React.
-         */path: String, status: String, javaPath: String?, unavailableReason: String?) {
+         */path: String, status: String, javaPath: String?, unavailableReason: String?, 
+        /**
+         * OS notification when CPU stays high (React `notifyOnHighCpu`).
+         */notifyOnHighCpu: Bool, 
+        /**
+         * Percent; React's default is 90.
+         */notifyHighCpuThreshold: Double?) {
         self.id = id
         self.name = name
         self.profileName = profileName
@@ -1653,6 +1873,8 @@ public struct ServerProfile: Equatable, Hashable {
         self.status = status
         self.javaPath = javaPath
         self.unavailableReason = unavailableReason
+        self.notifyOnHighCpu = notifyOnHighCpu
+        self.notifyHighCpuThreshold = notifyHighCpuThreshold
     }
 
     
@@ -1682,7 +1904,9 @@ public struct FfiConverterTypeServerProfile: FfiConverterRustBuffer {
                 path: FfiConverterString.read(from: &buf), 
                 status: FfiConverterString.read(from: &buf), 
                 javaPath: FfiConverterOptionString.read(from: &buf), 
-                unavailableReason: FfiConverterOptionString.read(from: &buf)
+                unavailableReason: FfiConverterOptionString.read(from: &buf), 
+                notifyOnHighCpu: FfiConverterBool.read(from: &buf), 
+                notifyHighCpuThreshold: FfiConverterOptionDouble.read(from: &buf)
         )
     }
 
@@ -1699,6 +1923,8 @@ public struct FfiConverterTypeServerProfile: FfiConverterRustBuffer {
         FfiConverterString.write(value.status, into: &buf)
         FfiConverterOptionString.write(value.javaPath, into: &buf)
         FfiConverterOptionString.write(value.unavailableReason, into: &buf)
+        FfiConverterBool.write(value.notifyOnHighCpu, into: &buf)
+        FfiConverterOptionDouble.write(value.notifyHighCpuThreshold, into: &buf)
     }
 }
 
@@ -1993,6 +2219,60 @@ public func FfiConverterTypeStatusChange_lift(_ buf: RustBuffer) throws -> Statu
 #endif
 public func FfiConverterTypeStatusChange_lower(_ value: StatusChange) -> RustBuffer {
     return FfiConverterTypeStatusChange.lower(value)
+}
+
+
+public struct TpsPoint: Equatable, Hashable {
+    public var elapsedMs: UInt64
+    public var tps: Float
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(elapsedMs: UInt64, tps: Float) {
+        self.elapsedMs = elapsedMs
+        self.tps = tps
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TpsPoint: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTpsPoint: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TpsPoint {
+        return
+            try TpsPoint(
+                elapsedMs: FfiConverterUInt64.read(from: &buf), 
+                tps: FfiConverterFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TpsPoint, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.elapsedMs, into: &buf)
+        FfiConverterFloat.write(value.tps, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTpsPoint_lift(_ buf: RustBuffer) throws -> TpsPoint {
+    return try FfiConverterTypeTpsPoint.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTpsPoint_lower(_ value: TpsPoint) -> RustBuffer {
+    return FfiConverterTypeTpsPoint.lower(value)
 }
 
 
@@ -2609,6 +2889,30 @@ fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
+    typealias SwiftType = Double?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDouble.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDouble.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -2657,6 +2961,30 @@ fileprivate struct FfiConverterOptionTypeLockOwnerInfo: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeMetricSnapshot: FfiConverterRustBuffer {
+    typealias SwiftType = MetricSnapshot?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeMetricSnapshot.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeMetricSnapshot.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -2674,6 +3002,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeResourcePoint: FfiConverterRustBuffer {
+    typealias SwiftType = [ResourcePoint]
+
+    public static func write(_ value: [ResourcePoint], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeResourcePoint.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ResourcePoint] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ResourcePoint]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeResourcePoint.read(from: &buf))
         }
         return seq
     }
@@ -2749,6 +3102,31 @@ fileprivate struct FfiConverterSequenceTypeSoftwareOption: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeSoftwareOption.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeTpsPoint: FfiConverterRustBuffer {
+    typealias SwiftType = [TpsPoint]
+
+    public static func write(_ value: [TpsPoint], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTpsPoint.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TpsPoint] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TpsPoint]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTpsPoint.read(from: &buf))
         }
         return seq
     }
@@ -3026,6 +3404,24 @@ public func serverEulaStatus(serverId: String)throws  -> EulaStatus  {
 })
 }
 /**
+ * The current 60-second metric window of a running server, or None.
+ */
+public func serverMetricHistory(serverId: String)async  -> MetricSnapshot?  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_server_metric_history(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionTypeMetricSnapshot.lift,
+            errorHandler: nil
+            
+        )
+}
+/**
  * Saved server templates.
  */
 public func serverTemplates()throws  -> [ServerTemplateInfo]  {
@@ -3224,6 +3620,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_server_eula_status() != 21143) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_server_metric_history() != 45041) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_server_templates() != 15954) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3267,6 +3666,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_stats() != 59414) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_metrics() != 47854) {
         return InitializationResult.apiChecksumMismatch
     }
 

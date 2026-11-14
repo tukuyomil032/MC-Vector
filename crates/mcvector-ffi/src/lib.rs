@@ -331,6 +331,10 @@ pub struct ServerProfile {
     pub status: String,
     pub java_path: Option<String>,
     pub unavailable_reason: Option<String>,
+    /// OS notification when CPU stays high (React `notifyOnHighCpu`).
+    pub notify_on_high_cpu: bool,
+    /// Percent; React's default is 90.
+    pub notify_high_cpu_threshold: Option<f64>,
 }
 
 impl From<MinecraftServer> for ServerProfile {
@@ -348,6 +352,11 @@ impl From<MinecraftServer> for ServerProfile {
             status: server.status,
             java_path: server.java_path,
             unavailable_reason: server.unavailable_reason,
+            notify_on_high_cpu: server.notify_on_high_cpu.unwrap_or(false),
+            notify_high_cpu_threshold: server
+                .notify_high_cpu_threshold
+                .as_ref()
+                .and_then(|value| value.as_f64()),
         }
     }
 }
@@ -810,12 +819,69 @@ pub struct StatsSample {
     pub memory_bytes: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct ResourcePoint {
+    /// Milliseconds since the server process started.
+    pub elapsed_ms: u64,
+    /// Percent, 0–100.
+    pub cpu: f32,
+    pub memory_bytes: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct TpsPoint {
+    pub elapsed_ms: u64,
+    pub tps: f32,
+}
+
+/// The last 60 seconds of a running server's metrics (dashboard charts).
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct MetricSnapshot {
+    pub server_id: String,
+    pub generation: u64,
+    /// Increases with every change; drop snapshots older than the one shown.
+    pub sequence: u64,
+    /// Milliseconds since the process started, when the snapshot was taken.
+    pub elapsed_ms: u64,
+    pub resource: Vec<ResourcePoint>,
+    pub tps: Vec<TpsPoint>,
+}
+
+impl From<&MetricHistorySnapshot> for MetricSnapshot {
+    fn from(snapshot: &MetricHistorySnapshot) -> Self {
+        Self {
+            server_id: snapshot.server_id.clone(),
+            generation: snapshot.generation,
+            sequence: snapshot.sequence,
+            elapsed_ms: snapshot.elapsed_ms,
+            resource: snapshot
+                .resource
+                .iter()
+                .map(|point| ResourcePoint {
+                    elapsed_ms: point.elapsed_ms,
+                    cpu: point.cpu,
+                    memory_bytes: point.memory,
+                })
+                .collect(),
+            tps: snapshot
+                .tps
+                .iter()
+                .map(|point| TpsPoint {
+                    elapsed_ms: point.elapsed_ms,
+                    tps: point.tps,
+                })
+                .collect(),
+        }
+    }
+}
+
 /// Receives running-server events. Called from background threads.
 #[uniffi::export(with_foreign)]
 pub trait ServerEventObserver: Send + Sync {
     fn on_console(&self, line: ConsoleLine);
     fn on_status(&self, change: StatusChange);
     fn on_stats(&self, sample: StatsSample);
+    fn on_metrics(&self, snapshot: MetricSnapshot);
 }
 
 /// Sets the one observer of running-server events (replacing any earlier one).
@@ -875,8 +941,9 @@ impl ServerEvents for FfiServerEvents {
         });
     }
 
-    fn metrics(&self, _snapshot: &MetricHistorySnapshot) {
-        // The dashboard phase reads metric history; nothing listens yet.
+    fn metrics(&self, snapshot: &MetricHistorySnapshot) {
+        let Some(observer) = observer() else { return };
+        observer.on_metrics(snapshot.into());
     }
 }
 
@@ -955,6 +1022,18 @@ pub async fn send_command(server_id: String, command: String) -> Result<(), FfiE
     server_process::send_command(&SERVERS, &LIMITER, &server_id, &command)
         .await
         .map_err(|error| run_error(error, &data_dir))
+}
+
+/// The current 60-second metric window of a running server, or None.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn server_metric_history(server_id: String) -> Option<MetricSnapshot> {
+    SERVERS
+        .metric_history(&server_id)
+        .await
+        .ok()
+        .flatten()
+        .as_ref()
+        .map(Into::into)
 }
 
 /// IDs of the servers this process is running.
