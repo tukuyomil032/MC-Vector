@@ -157,6 +157,23 @@ public enum CoreClient {
         }
     }
 
+    // MARK: Server import (OP-SRV-003)
+
+    /// Analyzes a picked server folder without copying it. Keep the token and
+    /// pass it as `NewServerInput.importToken`, or cancel it.
+    public static func beginServerImport(folder: URL) async throws(CoreError) -> ImportAnalysisInfo {
+        do {
+            return try await MCVectorCore.beginServerImport(path: folder.path(percentEncoded: false))
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
+    /// Forgets a picked folder.
+    public static func cancelServerImport(token: String) {
+        MCVectorCore.cancelServerImport(token: token)
+    }
+
     /// Asks a running creation to stop. False when it already finished.
     @discardableResult
     public static func cancelServerCreation(operationID: String) -> Bool {

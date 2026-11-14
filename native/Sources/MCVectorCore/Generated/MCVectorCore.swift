@@ -921,6 +921,101 @@ public func FfiConverterTypeCreatedServerInfo_lower(_ value: CreatedServerInfo) 
 }
 
 
+/**
+ * What MC-Vector found in a picked server folder.
+ */
+public struct ImportAnalysisInfo: Equatable, Hashable {
+    /**
+     * Pass to `create_server` as `import_token`, or to `cancel_server_import`.
+     */
+    public var token: String
+    public var folderName: String
+    public var jarName: String?
+    /**
+     * None when the jar name does not name a known software.
+     */
+    public var detectedSoftware: String?
+    public var detectedVersion: String?
+    /**
+     * `server-port` from `server.properties`.
+     */
+    public var detectedPort: UInt32?
+    public var eulaAccepted: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Pass to `create_server` as `import_token`, or to `cancel_server_import`.
+         */token: String, folderName: String, jarName: String?, 
+        /**
+         * None when the jar name does not name a known software.
+         */detectedSoftware: String?, detectedVersion: String?, 
+        /**
+         * `server-port` from `server.properties`.
+         */detectedPort: UInt32?, eulaAccepted: Bool) {
+        self.token = token
+        self.folderName = folderName
+        self.jarName = jarName
+        self.detectedSoftware = detectedSoftware
+        self.detectedVersion = detectedVersion
+        self.detectedPort = detectedPort
+        self.eulaAccepted = eulaAccepted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ImportAnalysisInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeImportAnalysisInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ImportAnalysisInfo {
+        return
+            try ImportAnalysisInfo(
+                token: FfiConverterString.read(from: &buf), 
+                folderName: FfiConverterString.read(from: &buf), 
+                jarName: FfiConverterOptionString.read(from: &buf), 
+                detectedSoftware: FfiConverterOptionString.read(from: &buf), 
+                detectedVersion: FfiConverterOptionString.read(from: &buf), 
+                detectedPort: FfiConverterOptionUInt32.read(from: &buf), 
+                eulaAccepted: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ImportAnalysisInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.token, into: &buf)
+        FfiConverterString.write(value.folderName, into: &buf)
+        FfiConverterOptionString.write(value.jarName, into: &buf)
+        FfiConverterOptionString.write(value.detectedSoftware, into: &buf)
+        FfiConverterOptionString.write(value.detectedVersion, into: &buf)
+        FfiConverterOptionUInt32.write(value.detectedPort, into: &buf)
+        FfiConverterBool.write(value.eulaAccepted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImportAnalysisInfo_lift(_ buf: RustBuffer) throws -> ImportAnalysisInfo {
+    return try FfiConverterTypeImportAnalysisInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImportAnalysisInfo_lower(_ value: ImportAnalysisInfo) -> RustBuffer {
+    return FfiConverterTypeImportAnalysisInfo.lower(value)
+}
+
+
 public struct LockOwnerInfo: Equatable, Hashable {
     public var edition: Edition
     public var pid: UInt32
@@ -1007,6 +1102,12 @@ public struct NewServerInput: Equatable, Hashable {
      * auto-backup settings are copied too, as React does.
      */
     public var templateId: String?
+    /**
+     * From `begin_server_import`: copy that folder instead of downloading a jar.
+     * The name may then use any characters except path separators, and the
+     * version may be empty.
+     */
+    public var importToken: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -1017,7 +1118,12 @@ public struct NewServerInput: Equatable, Hashable {
         /**
          * The template the form was filled from. Its Java path, auto-restart and
          * auto-backup settings are copied too, as React does.
-         */templateId: String?) {
+         */templateId: String?, 
+        /**
+         * From `begin_server_import`: copy that folder instead of downloading a jar.
+         * The name may then use any characters except path separators, and the
+         * version may be empty.
+         */importToken: String?) {
         self.operationId = operationId
         self.name = name
         self.profileName = profileName
@@ -1027,6 +1133,7 @@ public struct NewServerInput: Equatable, Hashable {
         self.port = port
         self.memoryGb = memoryGb
         self.templateId = templateId
+        self.importToken = importToken
     }
 
     
@@ -1053,7 +1160,8 @@ public struct FfiConverterTypeNewServerInput: FfiConverterRustBuffer {
                 version: FfiConverterString.read(from: &buf), 
                 port: FfiConverterUInt32.read(from: &buf), 
                 memoryGb: FfiConverterUInt32.read(from: &buf), 
-                templateId: FfiConverterOptionString.read(from: &buf)
+                templateId: FfiConverterOptionString.read(from: &buf), 
+                importToken: FfiConverterOptionString.read(from: &buf)
         )
     }
 
@@ -1067,6 +1175,7 @@ public struct FfiConverterTypeNewServerInput: FfiConverterRustBuffer {
         FfiConverterUInt32.write(value.port, into: &buf)
         FfiConverterUInt32.write(value.memoryGb, into: &buf)
         FfiConverterOptionString.write(value.templateId, into: &buf)
+        FfiConverterOptionString.write(value.importToken, into: &buf)
     }
 }
 
@@ -1972,6 +2081,24 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
     }
 }
 /**
+ * Analyzes a folder the user picked (it is not copied yet). The folder path
+ * stays in the core; the returned token refers to it for 30 minutes.
+ */
+public func beginServerImport(path: String)async throws  -> ImportAnalysisInfo  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_begin_server_import(FfiConverterString.lower(path)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeImportAnalysisInfo_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Cancels a running `create_server`. Returns false when no creation with
  * that ID is running (for example, it already finished).
  */
@@ -1982,6 +2109,16 @@ public func cancelServerCreation(operationId: String) -> Bool  {
         FfiConverterString.lower(operationId),uniffiCallStatus
     )
 })
+}
+/**
+ * Forgets a picked folder. Unknown tokens are ignored.
+ */
+public func cancelServerImport(token: String)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_cancel_server_import(
+        FfiConverterString.lower(token),uniffiCallStatus
+    )
+}
 }
 /**
  * Copies a stopped server's managed folder and registers the copy as `name`.
@@ -2184,7 +2321,13 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_begin_server_import() != 47583) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_cancel_server_creation() != 36497) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_cancel_server_import() != 35232) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_clone_server() != 45594) {

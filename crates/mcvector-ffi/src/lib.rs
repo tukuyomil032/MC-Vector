@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use mcvector_core::download::CancelFlag;
 use mcvector_core::error::{CoreError, CoreErrorCode};
@@ -22,6 +22,7 @@ use mcvector_core::registry::{
     template_from_server, MinecraftServer, ServerRegistry, ServerTemplate,
 };
 use mcvector_core::server_creation::{self, CreationEvent, NewServerRequest};
+use mcvector_core::server_import::ImportManager;
 use mcvector_core::server_jar;
 
 uniffi::setup_scaffolding!();
@@ -550,6 +551,10 @@ pub struct NewServerInput {
     /// The template the form was filled from. Its Java path, auto-restart and
     /// auto-backup settings are copied too, as React does.
     pub template_id: Option<String>,
+    /// From `begin_server_import`: copy that folder instead of downloading a jar.
+    /// The name may then use any characters except path separators, and the
+    /// version may be empty.
+    pub import_token: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -624,6 +629,7 @@ pub async fn create_server(
         software: input.software,
         port: input.port,
         memory_gb: input.memory_gb,
+        import_token: input.import_token.clone(),
         ..NewServerRequest::default()
     };
     if let Some(template_id) = input.template_id {
@@ -638,6 +644,10 @@ pub async fn create_server(
     }
 
     let cancel = CancelFlag::new();
+    let import_step = input
+        .import_token
+        .filter(|token| !token.trim().is_empty())
+        .map(|token| IMPORTS.import_step(token, Some(cancel.clone())));
     with_creations(|creations| creations.insert(operation_id.clone(), cancel.clone()));
     let progress = move |event: CreationEvent| {
         observer.on_stage(match event {
@@ -651,7 +661,7 @@ pub async fn create_server(
         &registry,
         &operations,
         request,
-        None,
+        import_step,
         &progress,
         Some(&cancel),
     )
@@ -681,6 +691,59 @@ pub fn cancel_server_creation(operation_id: String) -> bool {
             .map(CancelFlag::cancel)
             .is_some()
     })
+}
+
+// ---------------------------------------------------------------------------
+// Server import (OP-SRV-003)
+
+/// Picked folders waiting to be imported. Process-wide, like the Tauri state.
+static IMPORTS: LazyLock<ImportManager> = LazyLock::new(ImportManager::default);
+
+/// What MC-Vector found in a picked server folder.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ImportAnalysisInfo {
+    /// Pass to `create_server` as `import_token`, or to `cancel_server_import`.
+    pub token: String,
+    pub folder_name: String,
+    pub jar_name: Option<String>,
+    /// None when the jar name does not name a known software.
+    pub detected_software: Option<String>,
+    pub detected_version: Option<String>,
+    /// `server-port` from `server.properties`.
+    pub detected_port: Option<u32>,
+    pub eula_accepted: bool,
+}
+
+/// Analyzes a folder the user picked (it is not copied yet). The folder path
+/// stays in the core; the returned token refers to it for 30 minutes.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn begin_server_import(path: String) -> Result<ImportAnalysisInfo, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    let source = PathBuf::from(path);
+    let analysis = tokio::task::spawn_blocking(move || IMPORTS.begin(&source))
+        .await
+        .map_err(|error| core_error(CoreErrorCode::InternalUnknown, error.to_string()))?
+        .map_err(|error| {
+            FfiError::from(CoreError {
+                message: redact(&error.message, &data_dir),
+                ..error
+            })
+        })?;
+    Ok(ImportAnalysisInfo {
+        token: analysis.token,
+        folder_name: analysis.folder_name,
+        jar_name: analysis.jar_name,
+        detected_software: analysis.detected_software,
+        detected_version: analysis.detected_version,
+        detected_port: analysis.detected_port,
+        eula_accepted: analysis.eula_accepted,
+    })
+}
+
+/// Forgets a picked folder. Unknown tokens are ignored.
+#[uniffi::export]
+pub fn cancel_server_import(token: String) {
+    IMPORTS.cancel(&token);
 }
 
 #[cfg(test)]

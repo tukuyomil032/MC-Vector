@@ -23,6 +23,22 @@
     "en": "The download information could not be read from the official site. Try again later.",
     "ja": "公式サイトからダウンロード情報を取得できませんでした。時間をおいてもう一度お試しください。"
   },
+  "error.import.invalid_folder": {
+    "en": "The folder cannot be imported. It must be a real folder without symbolic links, and must not change while importing.",
+    "ja": "このフォルダーは取り込めません。シンボリックリンクを含まない実体のフォルダーで、取り込み中に変更されないようにしてください。"
+  },
+  "error.import.session_expired": {
+    "en": "The selected folder is no longer available. Choose it again.",
+    "ja": "選んだフォルダーの情報の有効期限が切れました。もう一度選んでください。"
+  },
+  "error.import.timed_out": {
+    "en": "Importing took too long and was stopped. Try again.",
+    "ja": "取り込みに時間がかかりすぎたため中止しました。もう一度お試しください。"
+  },
+  "error.import.too_large": {
+    "en": "The folder is too large to import (too many files, too much data, or nested too deeply).",
+    "ja": "フォルダーが大きすぎるため取り込めません（ファイル数、容量、階層の深さのいずれかが上限を超えています）。"
+  },
   "error.internal.unknown": {
     "en": "An unexpected error occurred.",
     "ja": "予期しないエラーが発生しました。"

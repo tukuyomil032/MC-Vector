@@ -279,9 +279,19 @@ void uniffi_mcvector_ffi_fn_init_callback_vtable_creationobserver(const UniffiVT
 void uniffi_mcvector_ffi_fn_method_creationobserver_on_stage(uint64_t ptr, RustBuffer stage, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BEGIN_SERVER_IMPORT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BEGIN_SERVER_IMPORT
+uint64_t uniffi_mcvector_ffi_fn_func_begin_server_import(RustBuffer path
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_CREATION
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_CREATION
 int8_t uniffi_mcvector_ffi_fn_func_cancel_server_creation(RustBuffer operation_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_IMPORT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_IMPORT
+void uniffi_mcvector_ffi_fn_func_cancel_server_import(RustBuffer token, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CLONE_SERVER
@@ -624,9 +634,21 @@ void ffi_mcvector_ffi_rust_future_free_void(uint64_t handle
 void ffi_mcvector_ffi_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BEGIN_SERVER_IMPORT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BEGIN_SERVER_IMPORT
+uint16_t uniffi_mcvector_ffi_checksum_func_begin_server_import(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_SERVER_CREATION
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_SERVER_CREATION
 uint16_t uniffi_mcvector_ffi_checksum_func_cancel_server_creation(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_SERVER_IMPORT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_SERVER_IMPORT
+uint16_t uniffi_mcvector_ffi_checksum_func_cancel_server_import(void
     
 );
 #endif

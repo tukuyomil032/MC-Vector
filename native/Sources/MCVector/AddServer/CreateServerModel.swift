@@ -137,9 +137,10 @@ final class CreateServerModel {
             version: version,
             port: port,
             memoryGb: memoryGB,
-            templateId: templateID
+            templateId: templateID,
+            importToken: nil
         )
-        do {
+        do throws(CoreError) {
             let created = try await CoreClient.createServer(input) { stage in
                 Task { @MainActor [weak self] in self?.show(stage) }
             }

@@ -132,7 +132,8 @@ enum CaptureState {
                 version: "1.21.10",
                 port: 25_570,
                 memoryGb: 2,
-                templateId: nil
+                templateId: nil,
+                importToken: nil
             )
             do {
                 let created = try await CoreClient.createServer(input) { _ in }
@@ -155,7 +156,8 @@ enum CaptureState {
                 version: "1.21.10",
                 port: 25_580,
                 memoryGb: 2,
-                templateId: nil
+                templateId: nil,
+                importToken: nil
             )
             let cancelOnDownload = id == "VERIFY-create-cancel"
             do {
