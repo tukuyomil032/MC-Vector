@@ -111,18 +111,23 @@ private struct ServerRow: View {
     }
 }
 
-/// The React server context menu (clone, save as template, delete). The actions
-/// are wired in phase 5; until then they are shown disabled.
+/// The React server context menu: clone, save as template, delete.
 private struct ServerContextMenu: View {
     let server: ServerProfile
+    @Environment(AppState.self) private var app
+    @Environment(FeedbackCenter.self) private var feedback
 
     var body: some View {
-        Group {
-            Button(L10n.t("server.actions.clone"), systemImage: "doc.on.doc") {}
-            Button(L10n.t("server.actions.saveTemplate"), systemImage: "rectangle.stack") {}
-            Divider()
-            Button(L10n.t("common.delete"), systemImage: "trash", role: .destructive) {}
+        let actions = ServerActions(app: app, feedback: feedback)
+        Button(L10n.t("server.actions.clone"), systemImage: "doc.on.doc") {
+            Task { await actions.clone(server) }
         }
-        .disabled(true)
+        Button(L10n.t("server.actions.saveTemplate"), systemImage: "rectangle.stack") {
+            Task { await actions.saveAsTemplate(server) }
+        }
+        Divider()
+        Button(L10n.t("common.delete"), systemImage: "trash", role: .destructive) {
+            Task { await actions.delete(server) }
+        }
     }
 }

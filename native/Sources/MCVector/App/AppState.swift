@@ -66,14 +66,15 @@ final class AppState {
 
     // MARK: Loading
 
-    /// Loads the server list and selects the first server when none is selected
-    /// (React `use-server-runtime-listeners`).
-    func reloadServers() async {
+    /// Loads the server list. When the selected server no longer exists (or none is
+    /// selected), the first server becomes selected (React
+    /// `use-server-runtime-listeners` and the delete flow).
+    func reloadServers(selectFirstIfMissing: Bool = true) async {
         do {
             let loaded = try await CoreClient.servers()
             servers = loaded
             serversLoad = .loaded
-            if selectedServer == nil {
+            if selectFirstIfMissing, selectedServer == nil {
                 selectedServerID = loaded.first?.id
             }
         } catch {

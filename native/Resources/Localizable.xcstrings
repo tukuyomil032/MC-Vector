@@ -4115,6 +4115,40 @@
         }
       }
     },
+    "error.server.operation_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server operation failed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの操作に失敗しました。"
+          }
+        }
+      }
+    },
+    "error.server.running": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop the server first."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先にサーバーを停止してください。"
+          }
+        }
+      }
+    },
     "error.unknown": {
       "extractionState": "manual",
       "localizations": {

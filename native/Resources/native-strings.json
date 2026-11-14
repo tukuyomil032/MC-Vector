@@ -31,6 +31,14 @@
     "en": "The server list could not be read.",
     "ja": "サーバー一覧を読み込めませんでした。"
   },
+  "error.server.operation_failed": {
+    "en": "The server operation failed.",
+    "ja": "サーバーの操作に失敗しました。"
+  },
+  "error.server.running": {
+    "en": "Stop the server first.",
+    "ja": "先にサーバーを停止してください。"
+  },
   "error.unknown": {
     "en": "Something went wrong. Try again.",
     "ja": "問題が発生しました。もう一度お試しください。"

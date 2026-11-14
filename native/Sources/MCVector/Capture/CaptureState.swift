@@ -2,6 +2,7 @@
 
 #if DEBUG
 import AppKit
+import MCVectorCore
 import SwiftUI
 
 /// Debug-only states for `native/scripts/capture.sh`. IDs follow the UI inventory
@@ -63,6 +64,31 @@ enum CaptureState {
                     label: L10n.t("server.create.templateNameLabel"),
                     defaultValue: L10n.t("server.create.templateDefaultName", ["name": "E2E Server"])
                 )
+            }
+        // Verification states: run a core action without its confirmation, then
+        // show the result, so the FFI path can be checked end to end.
+        case "VERIFY-clone":
+            if let copy = try? await CoreClient.cloneServer(id: "server-1", name: "E2E Server Copy") {
+                await app.reloadServers()
+                app.selectedServerID = copy.id
+                feedback.success(L10n.t("server.toast.cloned"))
+            } else {
+                feedback.error(L10n.t("server.toast.cloneFailed"))
+            }
+        case "VERIFY-delete":
+            let deleted = (try? await CoreClient.deleteServer(id: "server-1")) ?? false
+            await app.reloadServers()
+            if deleted {
+                feedback.success(L10n.t("server.toast.deleted"))
+            } else {
+                feedback.error(L10n.t("server.toast.deleteFailed"))
+            }
+        case "VERIFY-template":
+            do {
+                try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")
+                feedback.success(L10n.t("server.toast.templateSaved"))
+            } catch {
+                feedback.error(L10n.t("server.toast.templateSaveFailed"))
             }
         default:
             if let route = AppRoute.allCases.first(where: { id == "ROUTE-\($0.rawValue)" }) {
