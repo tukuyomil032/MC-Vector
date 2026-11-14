@@ -1,9 +1,12 @@
-use mcvector_core::managed_path::{canonical_path_matches, validate_server_id};
-use std::collections::HashMap;
-use std::io::{Read, Write};
+use mcvector_core::managed_path::validate_server_id;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use mcvector_core::external_copy::{
+    copy_external_entry, preflight_import_tree, ImportBudget, StagingGuard, MAX_IMPORT_DURATION,
+    MAX_IMPORT_TEXT_BYTES,
+};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use uuid::Uuid;
@@ -38,10 +41,7 @@ pub struct ImportedManagedFile {
     pub size: u64,
 }
 
-#[derive(Clone, Default)]
-pub struct ServerImportManager {
-    pending: Arc<Mutex<HashMap<String, PathBuf>>>,
-}
+pub use mcvector_core::server_import::ImportManager as ServerImportManager;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,89 +60,7 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|_| "Failed to resolve app data directory".to_string())
 }
 
-const MAX_IMPORT_TEXT_BYTES: u64 = 1024 * 1024;
 const MAX_IMPORT_TOP_LEVEL_ENTRIES: usize = 1024;
-const MAX_IMPORT_FILES: u64 = 100_000;
-const MAX_IMPORT_TOTAL_BYTES: u64 = 8 * 1024 * 1024 * 1024;
-const MAX_IMPORT_SINGLE_FILE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
-const MAX_IMPORT_DEPTH: usize = 32;
-const MAX_IMPORT_DURATION: Duration = Duration::from_secs(5 * 60);
-
-struct ImportBudget {
-    file_count: u64,
-    byte_size: u64,
-    deadline: Instant,
-}
-
-struct ImportDirectoryGuard {
-    path: PathBuf,
-    armed: bool,
-}
-
-impl ImportDirectoryGuard {
-    fn new(path: PathBuf) -> Self {
-        Self { path, armed: true }
-    }
-
-    fn disarm(&mut self) {
-        self.armed = false;
-    }
-}
-
-impl Drop for ImportDirectoryGuard {
-    fn drop(&mut self) {
-        if self.armed {
-            let _ = std::fs::remove_dir_all(&self.path);
-        }
-    }
-}
-
-impl ImportBudget {
-    #[cfg(test)]
-    fn new() -> Self {
-        Self::with_deadline(Instant::now() + MAX_IMPORT_DURATION)
-    }
-
-    fn with_deadline(deadline: Instant) -> Self {
-        Self {
-            file_count: 0,
-            byte_size: 0,
-            deadline,
-        }
-    }
-
-    fn check_deadline(&self) -> Result<(), String> {
-        if Instant::now() > self.deadline {
-            Err("Import exceeded the time limit".to_string())
-        } else {
-            Ok(())
-        }
-    }
-
-    fn reserve_file(&mut self, size: u64) -> Result<(), String> {
-        self.check_deadline()?;
-        if size > MAX_IMPORT_SINGLE_FILE_BYTES {
-            return Err("Import file exceeds the single-file size limit".to_string());
-        }
-        let next_count = self
-            .file_count
-            .checked_add(1)
-            .ok_or_else(|| "Import file count overflowed".to_string())?;
-        if next_count > MAX_IMPORT_FILES {
-            return Err("Import exceeds the file count limit".to_string());
-        }
-        let next_bytes = self
-            .byte_size
-            .checked_add(size)
-            .ok_or_else(|| "Import byte count overflowed".to_string())?;
-        if next_bytes > MAX_IMPORT_TOTAL_BYTES {
-            return Err("Import exceeds the aggregate size limit".to_string());
-        }
-        self.file_count = next_count;
-        self.byte_size = next_bytes;
-        Ok(())
-    }
-}
 
 pub(crate) fn managed_operation_scope(
     request: &ManagedPathRequest,
@@ -253,205 +171,9 @@ pub(crate) fn atomic_write_managed_text_file(
     }
 }
 
-fn read_import_text(path: &Path) -> Option<String> {
-    let metadata = std::fs::symlink_metadata(path).ok()?;
-    if is_link_or_reparse_point(&metadata)
-        || !metadata.is_file()
-        || metadata.len() > MAX_IMPORT_TEXT_BYTES
-    {
-        return None;
-    }
-    std::fs::read_to_string(path).ok()
-}
-
-fn preflight_import_entry(
-    source: &Path,
-    source_root: &Path,
-    metadata: std::fs::Metadata,
-    depth: usize,
-    budget: &mut ImportBudget,
-) -> Result<(), String> {
-    budget.check_deadline()?;
-    if depth > MAX_IMPORT_DEPTH {
-        return Err("Import directory depth exceeds the limit".to_string());
-    }
-    if is_link_or_reparse_point(&metadata) {
-        return Err(
-            "Selected source must not contain a symbolic link or reparse point".to_string(),
-        );
-    }
-    let canonical_source = source
-        .canonicalize()
-        .map_err(|error| format!("Failed to resolve selected directory: {error}"))?;
-    if !canonical_source.starts_with(source_root) {
-        return Err("Selected source escaped its import root".to_string());
-    }
-    if metadata.is_dir() {
-        for entry in std::fs::read_dir(&canonical_source)
-            .map_err(|error| format!("Failed to read selected directory: {error}"))?
-        {
-            let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
-            let child_path = entry.path();
-            let file_type = entry
-                .file_type()
-                .map_err(|error| format!("Failed to inspect selected entry type: {error}"))?;
-            if file_type.is_symlink() {
-                return Err(
-                    "Selected source must not contain a symbolic link or reparse point".to_string(),
-                );
-            }
-            let child_metadata = entry
-                .metadata()
-                .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
-            preflight_import_entry(&child_path, source_root, child_metadata, depth + 1, budget)?;
-        }
-        Ok(())
-    } else if metadata.is_file() {
-        budget.reserve_file(metadata.len())
-    } else {
-        Err("Selected source must be a regular file or directory".to_string())
-    }
-}
-
-fn preflight_import_tree(source: &Path) -> Result<(), String> {
-    preflight_import_tree_with_deadline(source, Instant::now() + MAX_IMPORT_DURATION)
-}
-
-fn preflight_import_tree_with_deadline(source: &Path, deadline: Instant) -> Result<(), String> {
-    let resolved = resolve_picker_entry(source)?;
-    let source_root = resolved
-        .path
-        .canonicalize()
-        .map_err(|error| format!("Failed to resolve selected source root: {error}"))?;
-    let mut budget = ImportBudget::with_deadline(deadline);
-    preflight_import_entry(
-        &resolved.path,
-        &source_root,
-        resolved.metadata,
-        0,
-        &mut budget,
-    )
-}
-
-fn detect_import_software(jar_name: &str) -> &'static str {
-    [
-        ("paper", "Paper"),
-        ("purpur", "Purpur"),
-        ("spigot", "Spigot"),
-        ("craftbukkit", "CraftBukkit"),
-        ("neoforge", "NeoForge"),
-        ("fabric", "Fabric"),
-        ("forge", "Forge"),
-        ("velocity", "Velocity"),
-        ("waterfall", "Waterfall"),
-        ("vanilla", "Vanilla"),
-        ("minecraft_server", "Vanilla"),
-    ]
-    .iter()
-    .find(|(pattern, _)| jar_name.to_ascii_lowercase().contains(pattern))
-    .map(|(_, software)| *software)
-    .unwrap_or("Paper")
-}
-
-fn detect_import_version(value: &str) -> String {
-    let bytes = value.as_bytes();
-    for start in 0..bytes.len().saturating_sub(2) {
-        if bytes[start] != b'1' || bytes[start + 1] != b'.' {
-            continue;
-        }
-        let mut end = start + 2;
-        while end < bytes.len() && bytes[end].is_ascii_digit() {
-            end += 1;
-        }
-        if end > start + 2 {
-            if end < bytes.len() && bytes[end] == b'.' {
-                let second_start = end + 1;
-                let mut second_end = second_start;
-                while second_end < bytes.len() && bytes[second_end].is_ascii_digit() {
-                    second_end += 1;
-                }
-                if second_end > second_start {
-                    end = second_end;
-                }
-            }
-            return value[start..end].to_string();
-        }
-    }
-    String::new()
-}
-
-fn analyze_import_folder(source: &Path, token: String) -> Result<ServerImportAnalysis, String> {
-    preflight_import_tree(source)?;
-    let source_metadata = std::fs::symlink_metadata(source)
-        .map_err(|error| format!("Failed to inspect selected server folder: {error}"))?;
-    if is_link_or_reparse_point(&source_metadata) || !source_metadata.is_dir() {
-        return Err("Selected server folder must be a real directory".to_string());
-    }
-
-    let folder_name = source
-        .file_name()
-        .filter(|name| !name.is_empty())
-        .map(|name| name.to_string_lossy().to_string())
-        .ok_or_else(|| "Selected server folder has no usable name".to_string())?;
-
-    let mut jar_name = None;
-    for entry in std::fs::read_dir(source)
-        .map_err(|error| format!("Failed to read selected server folder: {error}"))?
-    {
-        let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
-        let metadata = entry
-            .metadata()
-            .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
-        if is_link_or_reparse_point(&metadata) {
-            return Err(
-                "Selected server folder contains a symbolic link or reparse point".to_string(),
-            );
-        }
-        let name = entry.file_name().to_string_lossy().to_string();
-        if metadata.is_file()
-            && name.to_ascii_lowercase().ends_with(".jar")
-            && name != "bundler.jar"
-        {
-            jar_name = Some(name);
-        }
-    }
-
-    let mut detected_version = jar_name
-        .as_deref()
-        .map(detect_import_version)
-        .unwrap_or_default();
-    if detected_version.is_empty() {
-        if let Some(content) = read_import_text(&source.join("server.properties")) {
-            detected_version = detect_import_version(&content);
-        }
-    }
-
-    let eula_accepted = read_import_text(&source.join("eula.txt"))
-        .map(|content| {
-            content.lines().any(|line| {
-                let mut fields = line.splitn(2, '=');
-                matches!(fields.next().map(str::trim), Some("eula"))
-                    && matches!(fields.next().map(str::trim), Some(value) if value.eq_ignore_ascii_case("true"))
-            })
-        })
-        .unwrap_or(false);
-
-    Ok(ServerImportAnalysis {
-        token,
-        folder_name,
-        detected_version,
-        detected_software: jar_name
-            .as_deref()
-            .map(detect_import_software)
-            .unwrap_or("Paper")
-            .to_string(),
-        eula_accepted,
-        has_server_jar: jar_name.is_some(),
-    })
-}
-
 /// Selects and analyzes an external server folder without exposing its path to
 /// the renderer. The opaque token is the only value the renderer can retain.
+/// The analysis and the token live in `mcvector_core::server_import`.
 #[tauri::command]
 pub async fn pick_server_import(
     app: AppHandle,
@@ -469,111 +191,22 @@ pub async fn pick_server_import(
     let source = selected
         .into_path()
         .map_err(|error| format!("Failed to resolve selected server folder: {error}"))?;
-    let token = Uuid::new_v4().to_string();
-    let analysis = tokio::task::spawn_blocking({
-        let source_for_analysis = source.clone();
-        let token = token.clone();
-        move || analyze_import_folder(&source_for_analysis, token)
-    })
-    .await
-    .map_err(|error| format!("Server folder analysis task failed: {error}"))??;
-
-    state
-        .pending
-        .lock()
-        .map_err(|_| "Server import state is unavailable".to_string())?
-        .insert(analysis.token.clone(), source);
-    Ok(Some(analysis))
-}
-
-/// Consume an import token and stage its contents into an already-created
-/// managed server directory. This stays Rust-only so creation can commit the
-/// file copy and SQLite profile as one application operation.
-pub(crate) fn complete_server_import_for_creation(
-    app_data_dir: &Path,
-    state: &ServerImportManager,
-    token: &str,
-    server_id: &str,
-) -> Result<(), String> {
-    let server_id = validate_server_id(&server_id)?;
-    let source = state
-        .pending
-        .lock()
-        .map_err(|_| "Server import state is unavailable".to_string())?
-        .remove(token.trim())
-        .ok_or_else(|| "Server import session is missing or expired".to_string())?;
-
-    let destination_request = ManagedPathRequest {
-        root: ManagedRoot::Servers,
-        server_id: Some(server_id.clone()),
-        relative_path: String::new(),
-    };
-    let destination = resolve_managed_request(app_data_dir, &destination_request, false)?;
-    let managed_root = std::fs::canonicalize(app_data_dir.join("servers"))
-        .map_err(|error| format!("Failed to resolve managed servers root: {error}"))?;
-    let destination_metadata = std::fs::symlink_metadata(&destination)
-        .map_err(|error| format!("Failed to inspect managed import destination: {error}"))?;
-    if is_link_or_reparse_point(&destination_metadata) || !destination_metadata.is_dir() {
-        return Err("Managed import destination must be a real directory".to_string());
-    }
-    if std::fs::read_dir(&destination)
-        .map_err(|error| format!("Failed to inspect managed import destination: {error}"))?
-        .next()
-        .is_some()
-    {
-        return Err("Managed import destination must be empty".to_string());
-    }
-
-    let import_deadline = Instant::now() + MAX_IMPORT_DURATION;
-    preflight_import_tree_with_deadline(&source, import_deadline)?;
-    let staging = destination.with_file_name(format!(".{server_id}.import-{}", Uuid::new_v4()));
-    std::fs::create_dir(&staging)
-        .map_err(|error| format!("Failed to create import staging directory: {error}"))?;
-    let mut staging_guard = ImportDirectoryGuard::new(staging.clone());
-    let mut budget = ImportBudget::with_deadline(import_deadline);
-    for entry in std::fs::read_dir(&source)
-        .map_err(|error| format!("Failed to read selected server folder: {error}"))?
-    {
-        budget.check_deadline()?;
-        let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
-        let destination_entry = staging.join(entry.file_name());
-        copy_external_entry_with_budget(
-            &entry.path(),
-            &destination_entry,
-            &managed_root,
-            &mut budget,
-        )?;
-    }
-
-    if std::fs::read_dir(&destination)
-        .map_err(|error| format!("Failed to recheck managed import destination: {error}"))?
-        .next()
-        .is_some()
-    {
-        return Err("Managed import destination changed during import".to_string());
-    }
-
-    let rollback =
-        destination.with_file_name(format!(".{server_id}.import-rollback-{}", Uuid::new_v4()));
-    std::fs::rename(&destination, &rollback)
-        .map_err(|error| format!("Failed to stage empty import destination: {error}"))?;
-    match std::fs::rename(&staging, &destination) {
-        Ok(()) => {
-            staging_guard.disarm();
-            let _ = std::fs::remove_dir_all(rollback);
-        }
-        Err(error) => {
-            if std::fs::rename(&rollback, &destination).is_err() {
-                staging_guard.disarm();
-                return Err(format!(
-                    "Import commit failed and destination recovery also failed; manual recovery required: {error}"
-                ));
-            }
-            return Err(format!("Failed to commit server import: {error}"));
-        }
-    }
-
-    Ok(())
+    let manager = state.inner().clone();
+    let analysis = tokio::task::spawn_blocking(move || manager.begin(&source))
+        .await
+        .map_err(|error| format!("Server folder analysis task failed: {error}"))?
+        .map_err(|error| error.message)?;
+    Ok(Some(ServerImportAnalysis {
+        token: analysis.token,
+        folder_name: analysis.folder_name,
+        detected_version: analysis.detected_version.unwrap_or_default(),
+        // The React form expects a software; it has always defaulted to Paper.
+        detected_software: analysis
+            .detected_software
+            .unwrap_or_else(|| "Paper".to_string()),
+        eula_accepted: analysis.eula_accepted,
+        has_server_jar: analysis.jar_name.is_some(),
+    }))
 }
 
 #[tauri::command]
@@ -581,11 +214,7 @@ pub async fn cancel_server_import(
     state: State<'_, ServerImportManager>,
     token: String,
 ) -> Result<(), String> {
-    state
-        .pending
-        .lock()
-        .map_err(|_| "Server import state is unavailable".to_string())?
-        .remove(token.trim());
+    state.cancel(&token);
     Ok(())
 }
 
@@ -619,141 +248,6 @@ pub async fn write_managed_text_file(
     atomic_write_managed_text_file(&resolved, &content)
 }
 
-struct ResolvedPickerEntry {
-    path: PathBuf,
-    metadata: std::fs::Metadata,
-}
-
-fn resolve_picker_entry(source: &Path) -> Result<ResolvedPickerEntry, String> {
-    if !source.is_absolute()
-        || source.components().any(|component| {
-            matches!(
-                component,
-                std::path::Component::CurDir | std::path::Component::ParentDir
-            )
-        })
-    {
-        return Err("Selected source must be an absolute, normalized path".to_string());
-    }
-    let source_name = source
-        .file_name()
-        .ok_or_else(|| "Selected source has no file name".to_string())?;
-    if source_name.is_empty()
-        || source_name == "."
-        || source_name == ".."
-        || source_name.to_string_lossy().chars().any(char::is_control)
-    {
-        return Err("Selected source has an unsafe file name".to_string());
-    }
-    let source_parent = source
-        .parent()
-        .ok_or_else(|| "Selected source has no parent".to_string())?;
-    let canonical_parent = std::fs::canonicalize(source_parent)
-        .map_err(|error| format!("Failed to resolve selected source parent: {error}"))?;
-    if !canonical_path_matches(&canonical_parent, source_parent) || !canonical_parent.is_absolute()
-    {
-        return Err("Selected source parent must not be a symbolic link".to_string());
-    }
-
-    let entry = std::fs::read_dir(&canonical_parent)
-        .map_err(|error| format!("Failed to inspect selected source parent: {error}"))?
-        .find_map(|entry| {
-            let entry = entry.ok()?;
-            (entry.file_name() == source_name).then_some(entry)
-        })
-        .ok_or_else(|| "Selected source no longer exists".to_string())?;
-    let file_type = entry
-        .file_type()
-        .map_err(|error| format!("Failed to inspect selected source type: {error}"))?;
-    let metadata = entry
-        .metadata()
-        .map_err(|error| format!("Failed to inspect selected source: {error}"))?;
-    if file_type.is_symlink() {
-        return Err("Selected source must not be a symbolic link or reparse point".to_string());
-    }
-    if is_link_or_reparse_point(&metadata) {
-        return Err("Selected source must not be a symbolic link or reparse point".to_string());
-    }
-    if !metadata.is_file() && !metadata.is_dir() {
-        return Err("Selected source must be a file or directory".to_string());
-    }
-    Ok(ResolvedPickerEntry {
-        path: entry.path(),
-        metadata,
-    })
-}
-
-fn resolve_managed_destination(destination: &Path, managed_root: &Path) -> Result<PathBuf, String> {
-    if !destination.is_absolute() || !destination.starts_with(managed_root) {
-        return Err("Import destination is outside the managed root".to_string());
-    }
-    let destination_parent = destination
-        .parent()
-        .ok_or_else(|| "Import destination has no parent".to_string())?;
-    let canonical_parent = std::fs::canonicalize(destination_parent)
-        .map_err(|error| format!("Failed to resolve import destination parent: {error}"))?;
-    if canonical_parent != destination_parent
-        || !canonical_parent.is_absolute()
-        || !canonical_parent.starts_with(managed_root)
-    {
-        return Err("Import destination parent is outside the managed root".to_string());
-    }
-    let destination_name = destination
-        .file_name()
-        .ok_or_else(|| "Import destination has no file name".to_string())?;
-    if destination_name.is_empty()
-        || destination_name == "."
-        || destination_name == ".."
-        || destination_name
-            .to_string_lossy()
-            .chars()
-            .any(char::is_control)
-    {
-        return Err("Import destination has an unsafe file name".to_string());
-    }
-    if std::fs::read_dir(&canonical_parent)
-        .map_err(|error| format!("Failed to inspect import destination parent: {error}"))?
-        .find_map(|entry| {
-            let entry = entry.ok()?;
-            (entry.file_name() == destination_name).then_some(entry)
-        })
-        .is_some()
-    {
-        return Err(format!(
-            "An item with the same name already exists: {}",
-            destination.display()
-        ));
-    }
-    let resolved = canonical_parent.join(destination_name);
-    if !resolved.starts_with(managed_root) {
-        return Err("Import destination is outside the managed root".to_string());
-    }
-    Ok(resolved)
-}
-
-fn copy_external_entry_with_budget(
-    source: &Path,
-    destination: &Path,
-    managed_root: &Path,
-    budget: &mut ImportBudget,
-) -> Result<(bool, u64, u64), String> {
-    let source = resolve_picker_entry(source)?;
-    let source_root = source
-        .path
-        .canonicalize()
-        .map_err(|error| format!("Failed to resolve selected source root: {error}"))?;
-    let destination = resolve_managed_destination(destination, managed_root)?;
-    copy_external_entry_resolved_with_budget(
-        source.path,
-        source.metadata,
-        destination,
-        managed_root,
-        source_root,
-        budget,
-        0,
-    )
-}
-
 fn rollback_import_entries(committed: &[(PathBuf, PathBuf)]) -> bool {
     let mut success = true;
     for (destination, staged) in committed.iter().rev() {
@@ -762,151 +256,6 @@ fn rollback_import_entries(committed: &[(PathBuf, PathBuf)]) -> bool {
         }
     }
     success
-}
-
-fn copy_external_entry_resolved_with_budget(
-    source: PathBuf,
-    metadata: std::fs::Metadata,
-    destination: PathBuf,
-    managed_root: &Path,
-    source_root: PathBuf,
-    budget: &mut ImportBudget,
-    depth: usize,
-) -> Result<(bool, u64, u64), String> {
-    budget.check_deadline()?;
-    if depth > MAX_IMPORT_DEPTH {
-        return Err("Import directory depth exceeds the limit".to_string());
-    }
-    let canonical_source = source
-        .canonicalize()
-        .map_err(|error| format!("Failed to resolve selected source: {error}"))?;
-    if !canonical_source.is_absolute() {
-        return Err("Selected source resolved to a non-absolute path".to_string());
-    }
-    if !canonical_source.starts_with(&source_root) {
-        return Err("Selected source escaped its import root".to_string());
-    }
-
-    let current_metadata = std::fs::symlink_metadata(&canonical_source)
-        .map_err(|error| format!("Failed to recheck selected source: {error}"))?;
-    if is_link_or_reparse_point(&current_metadata)
-        || current_metadata.is_dir() != metadata.is_dir()
-        || current_metadata.is_file() != metadata.is_file()
-    {
-        return Err("Selected source changed during import".to_string());
-    }
-
-    if metadata.is_dir() {
-        std::fs::create_dir(&destination)
-            .map_err(|error| format!("Failed to create imported directory: {error}"))?;
-        let mut byte_size = 0_u64;
-        let mut file_count = 0_u64;
-        for entry in std::fs::read_dir(&canonical_source)
-            .map_err(|error| format!("Failed to read selected directory: {error}"))?
-        {
-            budget.check_deadline()?;
-            let entry = entry.map_err(|error| format!("Failed to read selected entry: {error}"))?;
-            let file_type = entry
-                .file_type()
-                .map_err(|error| format!("Failed to inspect selected entry type: {error}"))?;
-            if file_type.is_symlink() {
-                return Err(
-                    "Selected source must not contain a symbolic link or reparse point".to_string(),
-                );
-            }
-            let child_metadata = entry
-                .metadata()
-                .map_err(|error| format!("Failed to inspect selected entry: {error}"))?;
-            if is_link_or_reparse_point(&child_metadata) {
-                return Err(
-                    "Selected source must not contain a symbolic link or reparse point".to_string(),
-                );
-            }
-            let name = entry.file_name();
-            let child_destination =
-                resolve_managed_destination(&destination.join(&name), managed_root)?;
-            let (_, child_size, child_count) = copy_external_entry_resolved_with_budget(
-                entry.path(),
-                child_metadata,
-                child_destination,
-                managed_root,
-                source_root.clone(),
-                budget,
-                depth + 1,
-            )?;
-            byte_size = byte_size
-                .checked_add(child_size)
-                .ok_or_else(|| "Import byte count overflowed".to_string())?;
-            file_count = file_count
-                .checked_add(child_count)
-                .ok_or_else(|| "Import file count overflowed".to_string())?;
-        }
-        Ok((true, byte_size, file_count))
-    } else {
-        let expected_size = metadata.len();
-        budget.reserve_file(expected_size)?;
-        let mut input = std::fs::File::open(&canonical_source)
-            .map_err(|error| format!("Failed to open selected file: {error}"))?;
-        let mut output = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&destination)
-            .map_err(|error| format!("Failed to create imported file: {error}"))?;
-        let copy_result = copy_import_file(&mut input, &mut output, expected_size);
-        if let Err(error) = copy_result {
-            drop(output);
-            let _ = std::fs::remove_file(&destination);
-            return Err(error);
-        }
-        output
-            .flush()
-            .map_err(|error| format!("Failed to flush imported file: {error}"))?;
-        output
-            .sync_all()
-            .map_err(|error| format!("Failed to sync imported file: {error}"))?;
-        drop(output);
-        let destination_metadata = std::fs::symlink_metadata(&destination)
-            .map_err(|error| format!("Failed to verify imported file: {error}"))?;
-        if is_link_or_reparse_point(&destination_metadata) || !destination_metadata.is_file() {
-            let _ = std::fs::remove_file(&destination);
-            return Err("Imported file is not a regular file".to_string());
-        }
-        if destination_metadata.len() != expected_size {
-            let _ = std::fs::remove_file(&destination);
-            return Err("Selected file changed during import".to_string());
-        }
-        Ok((false, expected_size, 1))
-    }
-}
-
-fn copy_import_file(
-    input: &mut std::fs::File,
-    output: &mut std::fs::File,
-    expected_size: u64,
-) -> Result<(), String> {
-    let mut buffer = [0_u8; 64 * 1024];
-    let mut copied = 0_u64;
-    loop {
-        let read = input
-            .read(&mut buffer)
-            .map_err(|error| format!("Failed to read selected file: {error}"))?;
-        if read == 0 {
-            break;
-        }
-        copied = copied
-            .checked_add(read as u64)
-            .ok_or_else(|| "Import byte count overflowed".to_string())?;
-        if copied > MAX_IMPORT_SINGLE_FILE_BYTES || copied > expected_size {
-            return Err("Selected file changed during import".to_string());
-        }
-        output
-            .write_all(&buffer[..read])
-            .map_err(|error| format!("Failed to copy selected file: {error}"))?;
-    }
-    if copied != expected_size {
-        return Err("Selected file changed during import".to_string());
-    }
-    Ok(())
 }
 
 fn e2e_import_sources() -> Result<Option<Vec<PathBuf>>, String> {
@@ -986,7 +335,7 @@ pub async fn import_managed_files(
         let staging = destination.with_file_name(format!(".import-{}", Uuid::new_v4()));
         std::fs::create_dir(&staging)
             .map_err(|error| format!("Failed to create import staging directory: {error}"))?;
-        let mut staging_guard = ImportDirectoryGuard::new(staging.clone());
+        let mut staging_guard = StagingGuard::new(staging.clone());
         let mut imported = Vec::with_capacity(selected.len());
         let import_deadline = Instant::now() + MAX_IMPORT_DURATION;
         let mut budget = ImportBudget::with_deadline(import_deadline);
@@ -996,10 +345,10 @@ pub async fn import_managed_files(
             let name = source
                 .file_name()
                 .ok_or_else(|| "Selected source has no file name".to_string())?;
-            preflight_import_tree_with_deadline(&source, import_deadline)?;
+            preflight_import_tree(&source, &mut ImportBudget::with_deadline(import_deadline))?;
             let name = name.to_os_string();
             let staged_path = staging.join(&name);
-            let (is_directory, size, _) = copy_external_entry_with_budget(
+            let (is_directory, size, _) = copy_external_entry(
                 &source,
                 &staged_path,
                 &managed_root,
@@ -1536,8 +885,7 @@ mod tests {
         atomic_write_managed_text_file, directory_metadata_error, directory_size_within,
         list_directory_entries, migrate_managed_server_directory_with,
         migrate_managed_server_directory_with_fault, move_managed_entry, resolve_managed_request,
-        ImportBudget, ManagedDirectorySize, ManagedPathRequest, ManagedRoot, MAX_IMPORT_FILES,
-        MAX_IMPORT_SINGLE_FILE_BYTES, MAX_IMPORT_TOTAL_BYTES,
+        ManagedDirectorySize, ManagedPathRequest, ManagedRoot,
     };
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -1823,21 +1171,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn import_budget_enforces_file_count_and_size_limits() {
-        let mut budget = ImportBudget::new();
-        assert!(budget
-            .reserve_file(MAX_IMPORT_SINGLE_FILE_BYTES + 1)
-            .is_err());
-
-        budget.file_count = MAX_IMPORT_FILES;
-        assert!(budget.reserve_file(1).is_err());
-
-        let mut budget = ImportBudget::new();
-        budget.byte_size = MAX_IMPORT_TOTAL_BYTES;
-        assert!(budget.reserve_file(1).is_err());
     }
 
     #[test]

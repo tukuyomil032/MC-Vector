@@ -6,7 +6,7 @@
 use mcvector_core::server_creation::{self, CreationEvent, ImportStep};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use super::file_utils::{complete_server_import_for_creation, ServerImportManager};
+use super::file_utils::ServerImportManager;
 use super::server_registry::ServerRegistry;
 use crate::state::operation_manager::ServerOperationManager;
 
@@ -33,12 +33,7 @@ pub async fn create_server_profile(
         .import_token
         .clone()
         .filter(|token| !token.trim().is_empty())
-        .map(|token| {
-            let imports = imports.inner().clone();
-            Box::new(move |data_dir: &std::path::Path, server_id: &str| {
-                complete_server_import_for_creation(data_dir, &imports, &token, server_id)
-            }) as ImportStep
-        });
+        .map(|token| imports.import_step(token, None));
 
     let progress = move |event: CreationEvent| {
         if let CreationEvent::Downloading { percent } = event {
