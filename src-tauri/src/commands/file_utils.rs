@@ -1,12 +1,7 @@
 use mcvector_core::managed_path::validate_server_id;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use mcvector_core::external_copy::{
-    copy_external_entry, preflight_import_tree, ImportBudget, StagingGuard, MAX_IMPORT_DURATION,
-    MAX_IMPORT_TEXT_BYTES,
-};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use uuid::Uuid;
@@ -17,20 +12,13 @@ use crate::state::operation_manager::{
     GlobalOperation, OperationKind, OperationScope, ServerOperationManager,
 };
 
+use mcvector_core::managed_files;
 pub(crate) use mcvector_core::managed_path::{
     copy_managed_tree, is_link_or_reparse_point, resolve_managed_request,
 };
 pub use mcvector_core::managed_path::{ManagedPathRequest, ManagedRoot};
 
-#[derive(serde::Serialize)]
-pub struct FileEntryInfo {
-    pub name: String,
-    #[serde(rename = "isDirectory")]
-    pub is_directory: bool,
-    pub size: u64,
-    /// Unix timestamp in seconds (modification time)
-    pub modified: u64,
-}
+pub use mcvector_core::managed_files::FileEntry as FileEntryInfo;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,8 +48,6 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|_| "Failed to resolve app data directory".to_string())
 }
 
-const MAX_IMPORT_TOP_LEVEL_ENTRIES: usize = 1024;
-
 pub(crate) fn managed_operation_scope(
     request: &ManagedPathRequest,
 ) -> Result<OperationScope, String> {
@@ -78,97 +64,11 @@ pub(crate) fn managed_operation_scope(
     }
 }
 
-fn managed_text_temp_path(destination: &Path) -> PathBuf {
-    let name = destination
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or("managed-file");
-    destination.with_file_name(format!(".{name}.write-{}", Uuid::new_v4()))
-}
-
 pub(crate) fn atomic_write_managed_text_file(
     destination: &Path,
     content: &str,
 ) -> Result<(), String> {
-    if content.len() as u64 > MAX_IMPORT_TEXT_BYTES * 16 {
-        return Err("Managed text file exceeds the write size limit".to_string());
-    }
-    let parent = destination
-        .parent()
-        .ok_or_else(|| "Managed file has no parent".to_string())?;
-    let parent_metadata = std::fs::symlink_metadata(parent)
-        .map_err(|error| format!("Failed to inspect managed file parent: {error}"))?;
-    if is_link_or_reparse_point(&parent_metadata) || !parent_metadata.is_dir() {
-        return Err("Managed file parent is not a real directory".to_string());
-    }
-
-    let temp = managed_text_temp_path(destination);
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temp)
-        .map_err(|error| format!("Failed to create managed file staging path: {error}"))?;
-    let write_result = (|| {
-        file.write_all(content.as_bytes())
-            .map_err(|error| format!("Failed to write managed file: {error}"))?;
-        file.flush()
-            .map_err(|error| format!("Failed to flush managed file: {error}"))?;
-        file.sync_all()
-            .map_err(|error| format!("Failed to sync managed file: {error}"))?;
-        Ok::<(), String>(())
-    })();
-    drop(file);
-    if let Err(error) = write_result {
-        let _ = std::fs::remove_file(&temp);
-        return Err(error);
-    }
-
-    let rollback = destination.with_file_name(format!(
-        ".{}rollback-{}",
-        destination
-            .file_name()
-            .and_then(|value| value.to_str())
-            .unwrap_or("managed-file"),
-        Uuid::new_v4()
-    ));
-    let existing = match std::fs::symlink_metadata(destination) {
-        Ok(metadata) => {
-            if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
-                let _ = std::fs::remove_file(&temp);
-                return Err("Managed destination is not a regular file".to_string());
-            }
-            true
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
-        Err(error) => {
-            let _ = std::fs::remove_file(&temp);
-            return Err(format!("Failed to inspect managed destination: {error}"));
-        }
-    };
-
-    if existing {
-        std::fs::rename(destination, &rollback).map_err(|error| {
-            let _ = std::fs::remove_file(&temp);
-            format!("Failed to stage existing managed file: {error}")
-        })?;
-    }
-    match std::fs::rename(&temp, destination) {
-        Ok(()) => {
-            if existing {
-                let _ = std::fs::remove_file(rollback);
-            }
-            Ok(())
-        }
-        Err(error) => {
-            let _ = std::fs::remove_file(&temp);
-            if existing && std::fs::rename(&rollback, destination).is_err() {
-                return Err(format!(
-                    "Failed to write managed file and restore the previous file; manual recovery required: {error}"
-                ));
-            }
-            Err(format!("Failed to commit managed file: {error}"))
-        }
-    }
+    managed_files::atomic_write(destination, content.as_bytes()).map_err(String::from)
 }
 
 /// Selects and analyzes an external server folder without exposing its path to
@@ -248,16 +148,6 @@ pub async fn write_managed_text_file(
     atomic_write_managed_text_file(&resolved, &content)
 }
 
-fn rollback_import_entries(committed: &[(PathBuf, PathBuf)]) -> bool {
-    let mut success = true;
-    for (destination, staged) in committed.iter().rev() {
-        if std::fs::rename(destination, staged).is_err() {
-            success = false;
-        }
-    }
-    success
-}
-
 fn e2e_import_sources() -> Result<Option<Vec<PathBuf>>, String> {
     // This bypass exists solely for real debug E2E: it keeps the source path in
     // the backend while exercising the same preflight, staging, and commit path
@@ -327,81 +217,26 @@ pub async fn import_managed_files(
                 .collect::<Result<Vec<_>, _>>()?
         }
     };
-    if selected.len() > MAX_IMPORT_TOP_LEVEL_ENTRIES {
-        return Err("Import exceeds the selected-entry limit".to_string());
-    }
-
-    tokio::task::spawn_blocking(move || {
-        let staging = destination.with_file_name(format!(".import-{}", Uuid::new_v4()));
-        std::fs::create_dir(&staging)
-            .map_err(|error| format!("Failed to create import staging directory: {error}"))?;
-        let mut staging_guard = StagingGuard::new(staging.clone());
-        let mut imported = Vec::with_capacity(selected.len());
-        let import_deadline = Instant::now() + MAX_IMPORT_DURATION;
-        let mut budget = ImportBudget::with_deadline(import_deadline);
-        let mut staged_entries = Vec::with_capacity(selected.len());
-        for source in selected {
-            budget.check_deadline()?;
-            let name = source
-                .file_name()
-                .ok_or_else(|| "Selected source has no file name".to_string())?;
-            preflight_import_tree(&source, &mut ImportBudget::with_deadline(import_deadline))?;
-            let name = name.to_os_string();
-            let staged_path = staging.join(&name);
-            let (is_directory, size, _) = copy_external_entry(
-                &source,
-                &staged_path,
-                &managed_root,
-                &mut budget,
-            )?;
-            let name = name.to_string_lossy().to_string();
-            let relative_path = if request.relative_path.is_empty() {
-                name.clone()
-            } else {
-                format!("{}/{}", request.relative_path, name)
-            };
-            imported.push(ImportedManagedFile {
-                server_id: request.server_id.clone(),
-                relative_path,
-                is_directory,
-                size,
-            });
-            staged_entries.push((name, staged_path));
-        }
-
-        let mut committed = Vec::with_capacity(staged_entries.len());
-        for (name, staged_path) in staged_entries {
-            budget.check_deadline()?;
-            let destination_path = destination.join(&name);
-            if std::fs::symlink_metadata(&destination_path).is_ok() {
-                if !rollback_import_entries(&committed) {
-                    staging_guard.disarm();
-                    return Err(
-                        "Import destination changed and rollback failed; manual recovery required"
-                            .to_string(),
-                    );
-                }
-                return Err(format!(
-                    "An item with the same name already exists: {}",
-                    destination_path.display()
-                ));
-            }
-            if let Err(error) = std::fs::rename(&staged_path, &destination_path) {
-                let rollback_ok = rollback_import_entries(&committed);
-                if !rollback_ok {
-                    staging_guard.disarm();
-                    return Err(format!(
-                        "Import commit failed and rollback also failed; manual recovery required: {error}"
-                    ));
-                }
-                return Err(format!("Failed to commit imported entry: {error}"));
-            }
-            committed.push((destination_path, staged_path));
-        }
-        Ok(imported)
+    let relative_base = request.relative_path.clone();
+    let server_id = request.server_id.clone();
+    let imported = tokio::task::spawn_blocking(move || {
+        managed_files::import_entries(&destination, &managed_root, selected)
     })
     .await
-    .map_err(|error| format!("Import task failed: {error}"))?
+    .map_err(|error| format!("Import task failed: {error}"))??;
+    Ok(imported
+        .into_iter()
+        .map(|entry| ImportedManagedFile {
+            server_id: server_id.clone(),
+            relative_path: if relative_base.is_empty() {
+                entry.name
+            } else {
+                format!("{relative_base}/{}", entry.name)
+            },
+            is_directory: entry.is_directory,
+            size: entry.size,
+        })
+        .collect())
 }
 
 #[tauri::command]
@@ -442,16 +277,7 @@ fn reject_managed_root_target(
     request: &ManagedPathRequest,
     target: &Path,
 ) -> Result<(), String> {
-    let root = match request.root {
-        ManagedRoot::Servers => app_data_dir.join("servers"),
-        ManagedRoot::Java => app_data_dir.join("java"),
-        ManagedRoot::Ngrok => app_data_dir.join("ngrok"),
-        ManagedRoot::Backups => app_data_dir.join("backups"),
-    };
-    if target == root {
-        return Err("Managed path must identify a child entry".to_string());
-    }
-    Ok(())
+    managed_files::reject_managed_root_target(app_data_dir, request, target).map_err(String::from)
 }
 
 #[tauri::command]
@@ -467,9 +293,10 @@ pub async fn create_managed_directory(
     let app_data_dir = app_data_dir(&app)?;
     let target = resolve_managed_request(&app_data_dir, &request, true)?;
     reject_managed_root_target(&app_data_dir, &request, &target)?;
-    tokio::fs::create_dir_all(&target)
+    tokio::task::spawn_blocking(move || managed_files::create_directory(&target, false))
         .await
-        .map_err(|error| format!("Failed to create managed directory: {error}"))
+        .map_err(|error| format!("Directory task failed: {error}"))?
+        .map_err(String::from)
 }
 
 #[tauri::command]
@@ -485,20 +312,10 @@ pub async fn delete_managed_path(
     let app_data_dir = app_data_dir(&app)?;
     let target = resolve_managed_request(&app_data_dir, &request, false)?;
     reject_managed_root_target(&app_data_dir, &request, &target)?;
-    let metadata = std::fs::symlink_metadata(&target)
-        .map_err(|error| format!("Failed to inspect managed path: {error}"))?;
-    if is_link_or_reparse_point(&metadata) {
-        return Err("Refusing to delete a symbolic link or reparse point".to_string());
-    }
-    if metadata.is_dir() {
-        tokio::fs::remove_dir_all(&target)
-            .await
-            .map_err(|error| format!("Failed to delete managed directory: {error}"))
-    } else {
-        tokio::fs::remove_file(&target)
-            .await
-            .map_err(|error| format!("Failed to delete managed file: {error}"))
-    }
+    tokio::task::spawn_blocking(move || managed_files::delete_entry(&target))
+        .await
+        .map_err(|error| format!("Delete task failed: {error}"))?
+        .map_err(String::from)
 }
 
 #[tauri::command]
@@ -522,21 +339,9 @@ pub async fn move_managed_path(
     move_managed_entry(&source, &destination).await
 }
 
+/// Never replaces an existing destination (see `managed_files::move_entry`).
 async fn move_managed_entry(source: &Path, destination: &Path) -> Result<(), String> {
-    let source_metadata = std::fs::symlink_metadata(source)
-        .map_err(|error| format!("Failed to inspect managed source: {error}"))?;
-    if is_link_or_reparse_point(&source_metadata) {
-        return Err("Refusing to move a symbolic link or reparse point".to_string());
-    }
-    if let Ok(destination_metadata) = std::fs::symlink_metadata(destination) {
-        if is_link_or_reparse_point(&destination_metadata) {
-            return Err("Refusing to replace a symbolic link or reparse point".to_string());
-        }
-    }
-
-    tokio::fs::rename(source, destination)
-        .await
-        .map_err(|error| format!("Failed to move managed path: {error}"))
+    managed_files::move_entry(source, destination).map_err(String::from)
 }
 
 #[tauri::command]
@@ -546,21 +351,14 @@ pub async fn read_managed_text_file(
 ) -> Result<String, String> {
     let app_data_dir = app_data_dir(&app)?;
     let resolved = resolve_managed_request(&app_data_dir, &request, false)?;
-    tokio::fs::read_to_string(&resolved)
+    tokio::task::spawn_blocking(move || managed_files::read_text_file(&resolved))
         .await
-        .map_err(|error| format!("Failed to read file: {error}"))
+        .map_err(|error| format!("Read task failed: {error}"))?
+        .map_err(String::from)
 }
 
-/// Longest a folder-size walk may run. A walk that runs out of time reports the bytes it counted, marked incomplete.
-const DIRECTORY_SIZE_BUDGET: Duration = Duration::from_secs(3);
-
-#[derive(serde::Serialize, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ManagedDirectorySize {
-    pub bytes: u64,
-    /// False when the time budget ran out or part of the tree could not be read.
-    pub complete: bool,
-}
+pub use mcvector_core::managed_files::DirectorySize as ManagedDirectorySize;
+use mcvector_core::managed_files::DIRECTORY_SIZE_BUDGET;
 
 /// Sums the regular files under a server folder. Symbolic links and reparse points are skipped, never followed,
 /// so a link cannot pull in data from outside the managed root.
@@ -580,62 +378,7 @@ pub async fn get_managed_directory_size(
 }
 
 fn directory_size_within(root: &Path, budget: Duration) -> Result<ManagedDirectorySize, String> {
-    let metadata =
-        std::fs::symlink_metadata(root).map_err(|error| directory_metadata_error(&error))?;
-    if is_link_or_reparse_point(&metadata) {
-        return Err("Refusing to measure a symbolic link or reparse point".to_string());
-    }
-    if !metadata.is_dir() {
-        return Err("Path is not a directory".to_string());
-    }
-
-    let deadline = Instant::now() + budget;
-    let mut bytes = 0_u64;
-    let mut complete = true;
-    let mut pending = vec![root.to_path_buf()];
-    'walk: while let Some(directory) = pending.pop() {
-        let entries = match std::fs::read_dir(&directory) {
-            Ok(entries) => entries,
-            Err(error) if directory.as_path() == root => {
-                return Err(format!("Failed to read directory: {error}"));
-            }
-            Err(_) => {
-                complete = false;
-                continue;
-            }
-        };
-        for entry in entries {
-            if Instant::now() >= deadline {
-                complete = false;
-                break 'walk;
-            }
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(_) => {
-                    complete = false;
-                    continue;
-                }
-            };
-            // DirEntry::metadata never follows a symbolic link, the same as symlink_metadata, and needs no path.
-            let metadata = match entry.metadata() {
-                Ok(metadata) => metadata,
-                Err(_) => {
-                    complete = false;
-                    continue;
-                }
-            };
-            if is_link_or_reparse_point(&metadata) {
-                continue;
-            }
-            if metadata.is_dir() {
-                pending.push(entry.path());
-            } else if metadata.is_file() {
-                bytes = bytes.saturating_add(metadata.len());
-            }
-        }
-    }
-
-    Ok(ManagedDirectorySize { bytes, complete })
+    managed_files::directory_size_within(root, budget).map_err(String::from)
 }
 
 /// Safely migrates a legacy `servers/<name>` directory to `servers/<id>` and
@@ -823,52 +566,10 @@ pub async fn list_dir_with_metadata(
 }
 
 fn list_directory_entries(dir_path: &Path) -> Result<Vec<FileEntryInfo>, String> {
-    let metadata =
-        std::fs::symlink_metadata(&dir_path).map_err(|error| directory_metadata_error(&error))?;
-    if is_link_or_reparse_point(&metadata) {
-        return Err("Refusing to list a symbolic link or reparse point".to_string());
-    }
-    if !metadata.is_dir() {
-        return Err("Path is not a directory".to_string());
-    }
-
-    let mut entries = Vec::new();
-    let read_dir = std::fs::read_dir(&dir_path)
-        .map_err(|error| format!("Failed to read directory: {error}"))?;
-
-    for entry in read_dir {
-        let entry = entry.map_err(|error| format!("Failed to read entry: {error}"))?;
-        let metadata = entry
-            .path()
-            .symlink_metadata()
-            .map_err(|error| format!("Failed to get metadata: {error}"))?;
-        let name = entry.file_name().to_string_lossy().to_string();
-        let is_directory = metadata.is_dir() && !is_link_or_reparse_point(&metadata);
-        let modified = metadata
-            .modified()
-            .ok()
-            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|duration| duration.as_secs())
-            .unwrap_or(0);
-
-        entries.push(FileEntryInfo {
-            name,
-            is_directory,
-            size: if is_directory { 0 } else { metadata.len() },
-            modified,
-        });
-    }
-
-    entries.sort_by(|left, right| {
-        right
-            .is_directory
-            .cmp(&left.is_directory)
-            .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
-    });
-
-    Ok(entries)
+    managed_files::list_directory(dir_path).map_err(String::from)
 }
 
+#[cfg(test)]
 fn directory_metadata_error(error: &std::io::Error) -> String {
     if error.kind() == std::io::ErrorKind::NotFound {
         "Directory does not exist".to_string()
