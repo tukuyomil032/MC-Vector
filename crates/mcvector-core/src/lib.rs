@@ -13,6 +13,7 @@ pub mod external_copy;
 pub mod instance_lock;
 pub mod java_policy;
 pub mod lifecycle;
+pub mod managed_files;
 pub mod managed_path;
 pub mod metric_history;
 pub mod operations;

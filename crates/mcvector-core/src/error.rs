@@ -76,6 +76,14 @@ pub enum CoreErrorCode {
     ServerNotRunning,
     /// The console command is empty, too long, multi-line, or sent too quickly.
     ServerCommandRejected,
+    /// An item with the same name already exists.
+    FilesAlreadyExists,
+    /// The file is too large to open or save.
+    FilesTooLarge,
+    /// The file is not UTF-8 text.
+    FilesNotText,
+    /// The name is empty or uses unsupported characters.
+    FilesInvalidName,
 }
 
 impl CoreErrorCode {
@@ -109,6 +117,10 @@ impl CoreErrorCode {
         CoreErrorCode::ServerLimitReached,
         CoreErrorCode::ServerNotRunning,
         CoreErrorCode::ServerCommandRejected,
+        CoreErrorCode::FilesAlreadyExists,
+        CoreErrorCode::FilesTooLarge,
+        CoreErrorCode::FilesNotText,
+        CoreErrorCode::FilesInvalidName,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -142,6 +154,10 @@ impl CoreErrorCode {
             Self::ServerLimitReached => "server.limit_reached",
             Self::ServerNotRunning => "server.not_running",
             Self::ServerCommandRejected => "server.command_rejected",
+            Self::FilesAlreadyExists => "files.already_exists",
+            Self::FilesTooLarge => "files.too_large",
+            Self::FilesNotText => "files.not_text",
+            Self::FilesInvalidName => "files.invalid_name",
         }
     }
 
@@ -183,7 +199,11 @@ impl CoreErrorCode {
             | Self::ImportTooLarge
             | Self::ImportInvalidFolder
             | Self::ServerJavaInvalid
-            | Self::ServerNotRunning => false,
+            | Self::ServerNotRunning
+            | Self::FilesAlreadyExists
+            | Self::FilesTooLarge
+            | Self::FilesNotText
+            | Self::FilesInvalidName => false,
         }
     }
 
@@ -278,10 +298,14 @@ mod tests {
             CoreErrorCode::ServerLimitReached => 25,
             CoreErrorCode::ServerNotRunning => 26,
             CoreErrorCode::ServerCommandRejected => 27,
+            CoreErrorCode::FilesAlreadyExists => 28,
+            CoreErrorCode::FilesTooLarge => 29,
+            CoreErrorCode::FilesNotText => 30,
+            CoreErrorCode::FilesInvalidName => 31,
         }
     }
 
-    const VARIANT_COUNT: usize = 28;
+    const VARIANT_COUNT: usize = 32;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -417,6 +441,14 @@ mod tests {
                 "server.command_rejected",
                 true,
             ),
+            (
+                CoreErrorCode::FilesAlreadyExists,
+                "files.already_exists",
+                false,
+            ),
+            (CoreErrorCode::FilesTooLarge, "files.too_large", false),
+            (CoreErrorCode::FilesNotText, "files.not_text", false),
+            (CoreErrorCode::FilesInvalidName, "files.invalid_name", false),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);
