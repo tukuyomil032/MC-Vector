@@ -18,7 +18,10 @@ use mcvector_core::error::{CoreError, CoreErrorCode};
 use mcvector_core::eula::{self, EULA_REQUIRED_ERROR};
 use mcvector_core::instance_lock::{self, InstanceLock, LockOutcome, LockOwner};
 use mcvector_core::lifecycle;
+use mcvector_core::managed_files::{self, FilesErrorKind};
+use mcvector_core::managed_path::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use mcvector_core::metric_history::MetricHistorySnapshot;
+use mcvector_core::operations::OperationKind;
 use mcvector_core::operations::ServerOperationManager;
 use mcvector_core::paths;
 use mcvector_core::registry::{
@@ -1074,6 +1077,335 @@ pub fn server_eula_status(server_id: String) -> Result<EulaStatus, FfiError> {
 pub fn accept_server_eula(server_id: String) -> Result<(), FfiError> {
     let (data_dir, _, _) = session_handles()?;
     eula::accept_eula(&data_dir, &server_id).map_err(|error| run_error(error, &data_dir))
+}
+
+// ---------------------------------------------------------------------------
+// Files (OP-FILE-001..009)
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FileItem {
+    pub name: String,
+    pub is_directory: bool,
+    pub size: u64,
+    /// Seconds since the Unix epoch.
+    pub modified: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct FolderSize {
+    pub bytes: u64,
+    /// False when the 3-second walk ran out of time or skipped unreadable parts.
+    pub complete: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum LineEnding {
+    Lf,
+    Crlf,
+    Mixed,
+}
+
+/// A text file for the editor: no BOM, `\n` line breaks, and what it takes to
+/// write it back the same way.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct TextDocumentInfo {
+    pub text: String,
+    pub has_bom: bool,
+    pub line_ending: LineEnding,
+}
+
+fn files_error(error: managed_files::FilesError, data_dir: &std::path::Path) -> FfiError {
+    let code = match error.kind {
+        FilesErrorKind::AlreadyExists => CoreErrorCode::FilesAlreadyExists,
+        FilesErrorKind::TooLarge => CoreErrorCode::FilesTooLarge,
+        FilesErrorKind::NotText => CoreErrorCode::FilesNotText,
+        FilesErrorKind::InvalidName => CoreErrorCode::FilesInvalidName,
+        FilesErrorKind::Io => CoreErrorCode::ServerOperationFailed,
+    };
+    core_error(code, redact(&error.message, data_dir))
+}
+
+fn path_error(error: String, data_dir: &std::path::Path) -> FfiError {
+    core_error(
+        CoreErrorCode::ServerOperationFailed,
+        redact(&error, data_dir),
+    )
+}
+
+/// `servers/<serverId>/<relative>`, resolved without following links.
+fn server_path(
+    data_dir: &std::path::Path,
+    server_id: &str,
+    relative: &str,
+    create_root: bool,
+) -> Result<PathBuf, FfiError> {
+    let request = ManagedPathRequest {
+        root: ManagedRoot::Servers,
+        server_id: Some(server_id.to_string()),
+        relative_path: relative.to_string(),
+    };
+    resolve_managed_request(data_dir, &request, create_root)
+        .map_err(|error| path_error(error, data_dir))
+}
+
+fn join_relative(parent: &str, name: &str) -> String {
+    let parent = parent.trim_matches('/');
+    if parent.is_empty() {
+        name.to_string()
+    } else {
+        format!("{parent}/{name}")
+    }
+}
+
+/// Runs blocking file work off the async runtime's worker threads.
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, FfiError> + Send + 'static,
+) -> Result<T, FfiError> {
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|error| core_error(CoreErrorCode::InternalUnknown, error.to_string()))?
+}
+
+/// Lists `relative` inside a server folder (folders first, then by name).
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn list_files(server_id: String, relative: String) -> Result<Vec<FileItem>, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    blocking(move || {
+        let dir = server_path(&data_dir, &server_id, &relative, false)?;
+        let entries =
+            managed_files::list_directory(&dir).map_err(|error| files_error(error, &data_dir))?;
+        Ok(entries
+            .into_iter()
+            .map(|entry| FileItem {
+                name: entry.name,
+                is_directory: entry.is_directory,
+                size: entry.size,
+                modified: entry.modified,
+            })
+            .collect())
+    })
+    .await
+}
+
+/// Creates a folder or an empty file named `name` in `parent`; never replaces
+/// an existing entry.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn create_file_entry(
+    server_id: String,
+    parent: String,
+    name: String,
+    is_directory: bool,
+) -> Result<(), FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || {
+        let name = managed_files::validate_entry_name(&name)
+            .map_err(|error| files_error(error, &data_dir))?;
+        let target = server_path(&data_dir, &server_id, &join_relative(&parent, &name), true)?;
+        let result = if is_directory {
+            managed_files::create_directory(&target, true)
+        } else {
+            managed_files::create_file(&target)
+        };
+        result.map_err(|error| files_error(error, &data_dir))
+    })
+    .await
+}
+
+/// Renames an entry within its folder.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn rename_file_entry(
+    server_id: String,
+    relative: String,
+    new_name: String,
+) -> Result<(), FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || {
+        let new_name = managed_files::validate_entry_name(&new_name)
+            .map_err(|error| files_error(error, &data_dir))?;
+        let parent = relative
+            .rsplit_once('/')
+            .map(|(parent, _)| parent)
+            .unwrap_or("");
+        let source = server_path(&data_dir, &server_id, &relative, false)?;
+        let destination = server_path(
+            &data_dir,
+            &server_id,
+            &join_relative(parent, &new_name),
+            true,
+        )?;
+        managed_files::move_entry(&source, &destination)
+            .map_err(|error| files_error(error, &data_dir))
+    })
+    .await
+}
+
+/// Moves entries into the folder `destination` ("" is the server folder).
+/// Stops at the first failure; earlier moves stay done.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn move_file_entries(
+    server_id: String,
+    entries: Vec<String>,
+    destination: String,
+) -> Result<(), FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || {
+        for relative in entries {
+            let name = relative.rsplit('/').next().unwrap_or(&relative).to_string();
+            let source = server_path(&data_dir, &server_id, &relative, false)?;
+            let target = server_path(
+                &data_dir,
+                &server_id,
+                &join_relative(&destination, &name),
+                true,
+            )?;
+            managed_files::move_entry(&source, &target)
+                .map_err(|error| files_error(error, &data_dir))?;
+        }
+        Ok(())
+    })
+    .await
+}
+
+/// Deletes entries (folders recursively). Stops at the first failure.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn delete_file_entries(server_id: String, entries: Vec<String>) -> Result<(), FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || {
+        for relative in entries {
+            if relative.trim_matches('/').is_empty() {
+                return Err(core_error(
+                    CoreErrorCode::FilesInvalidName,
+                    "The server folder itself cannot be deleted",
+                ));
+            }
+            let target = server_path(&data_dir, &server_id, &relative, false)?;
+            managed_files::delete_entry(&target).map_err(|error| files_error(error, &data_dir))?;
+        }
+        Ok(())
+    })
+    .await
+}
+
+/// Total size of a folder, measured for at most 3 seconds.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn folder_size(server_id: String, relative: String) -> Result<FolderSize, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    blocking(move || {
+        let dir = server_path(&data_dir, &server_id, &relative, false)?;
+        let size = managed_files::directory_size_within(&dir, managed_files::DIRECTORY_SIZE_BUDGET)
+            .map_err(|error| files_error(error, &data_dir))?;
+        Ok(FolderSize {
+            bytes: size.bytes,
+            complete: size.complete,
+        })
+    })
+    .await
+}
+
+/// Copies files and folders the user picked (absolute paths) into `destination`.
+/// Returns how many top-level entries were imported.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn import_file_entries(
+    server_id: String,
+    destination: String,
+    sources: Vec<String>,
+) -> Result<u32, FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || {
+        let target = server_path(&data_dir, &server_id, &destination, true)?;
+        let managed_root = std::fs::canonicalize(data_dir.join("servers"))
+            .map_err(|error| path_error(error.to_string(), &data_dir))?;
+        let imported = managed_files::import_entries(
+            &target,
+            &managed_root,
+            sources.into_iter().map(PathBuf::from).collect(),
+        )
+        .map_err(|error| files_error(error, &data_dir))?;
+        Ok(imported.len() as u32)
+    })
+    .await
+}
+
+/// The absolute path of an entry, for revealing it in Finder.
+#[uniffi::export]
+pub fn file_entry_path(server_id: String, relative: String) -> Result<String, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    Ok(server_path(&data_dir, &server_id, &relative, false)?
+        .to_string_lossy()
+        .into_owned())
+}
+
+/// Reads a text file for the editor (at most 16 MiB of UTF-8).
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn read_text_document(
+    server_id: String,
+    relative: String,
+) -> Result<TextDocumentInfo, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    blocking(move || {
+        let path = server_path(&data_dir, &server_id, &relative, false)?;
+        let document = managed_files::read_text_document(&path)
+            .map_err(|error| files_error(error, &data_dir))?;
+        Ok(TextDocumentInfo {
+            text: document.text,
+            has_bom: document.has_bom,
+            line_ending: match document.line_ending {
+                managed_files::LineEnding::Lf => LineEnding::Lf,
+                managed_files::LineEnding::Crlf => LineEnding::Crlf,
+                managed_files::LineEnding::Mixed => LineEnding::Mixed,
+            },
+        })
+    })
+    .await
+}
+
+/// Saves an edited document with its original BOM and line endings.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn write_text_document(
+    server_id: String,
+    relative: String,
+    document: TextDocumentInfo,
+) -> Result<(), FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || {
+        let path = server_path(&data_dir, &server_id, &relative, true)?;
+        let document = managed_files::TextDocument {
+            text: document.text,
+            has_bom: document.has_bom,
+            line_ending: match document.line_ending {
+                LineEnding::Lf => managed_files::LineEnding::Lf,
+                LineEnding::Crlf => managed_files::LineEnding::Crlf,
+                LineEnding::Mixed => managed_files::LineEnding::Mixed,
+            },
+        };
+        managed_files::write_text_document(&path, &document)
+            .map_err(|error| files_error(error, &data_dir))
+    })
+    .await
 }
 
 #[cfg(test)]

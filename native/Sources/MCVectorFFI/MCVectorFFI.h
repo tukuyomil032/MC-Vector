@@ -385,14 +385,34 @@ RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull ou
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_FILE_ENTRY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_FILE_ENTRY
+uint64_t uniffi_mcvector_ffi_fn_func_create_file_entry(RustBuffer server_id, RustBuffer parent, RustBuffer name, int8_t is_directory
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_SERVER
 uint64_t uniffi_mcvector_ffi_fn_func_create_server(RustBuffer input, uint64_t observer
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_FILE_ENTRIES
+uint64_t uniffi_mcvector_ffi_fn_func_delete_file_entries(RustBuffer server_id, RustBuffer entries
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_SERVER
 uint64_t uniffi_mcvector_ffi_fn_func_delete_server(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_FILE_ENTRY_PATH
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_FILE_ENTRY_PATH
+RustBuffer uniffi_mcvector_ffi_fn_func_file_entry_path(RustBuffer server_id, RustBuffer relative, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_FOLDER_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_FOLDER_SIZE
+uint64_t uniffi_mcvector_ffi_fn_func_folder_size(RustBuffer server_id, RustBuffer relative
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_APP_SETTINGS
@@ -407,9 +427,34 @@ RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_IMPORT_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_IMPORT_FILE_ENTRIES
+uint64_t uniffi_mcvector_ffi_fn_func_import_file_entries(RustBuffer server_id, RustBuffer destination, RustBuffer sources
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_IS_VALID_SERVER_NAME
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_IS_VALID_SERVER_NAME
 int8_t uniffi_mcvector_ffi_fn_func_is_valid_server_name(RustBuffer name, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_LIST_FILES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_LIST_FILES
+uint64_t uniffi_mcvector_ffi_fn_func_list_files(RustBuffer server_id, RustBuffer relative
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_MOVE_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_MOVE_FILE_ENTRIES
+uint64_t uniffi_mcvector_ffi_fn_func_move_file_entries(RustBuffer server_id, RustBuffer entries, RustBuffer destination
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_TEXT_DOCUMENT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_TEXT_DOCUMENT
+uint64_t uniffi_mcvector_ffi_fn_func_read_text_document(RustBuffer server_id, RustBuffer relative
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RENAME_FILE_ENTRY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RENAME_FILE_ENTRY
+uint64_t uniffi_mcvector_ffi_fn_func_rename_file_entry(RustBuffer server_id, RustBuffer relative, RustBuffer new_name
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTART_SERVER
@@ -499,6 +544,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_stop_server(RustBuffer server_id
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SUBSCRIBE_SERVER_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SUBSCRIBE_SERVER_EVENTS
 void uniffi_mcvector_ffi_fn_func_subscribe_server_events(uint64_t observer, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
+uint64_t uniffi_mcvector_ffi_fn_func_write_text_document(RustBuffer server_id, RustBuffer relative, RustBuffer document
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_MCVECTOR_FFI_RUSTBUFFER_ALLOC
@@ -797,15 +847,39 @@ uint16_t uniffi_mcvector_ffi_checksum_func_config_locale(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_FILE_ENTRY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_FILE_ENTRY
+uint16_t uniffi_mcvector_ffi_checksum_func_create_file_entry(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_SERVER
 uint16_t uniffi_mcvector_ffi_checksum_func_create_server(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_FILE_ENTRIES
+uint16_t uniffi_mcvector_ffi_checksum_func_delete_file_entries(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_SERVER
 uint16_t uniffi_mcvector_ffi_checksum_func_delete_server(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_FILE_ENTRY_PATH
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_FILE_ENTRY_PATH
+uint16_t uniffi_mcvector_ffi_checksum_func_file_entry_path(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_FOLDER_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_FOLDER_SIZE
+uint16_t uniffi_mcvector_ffi_checksum_func_folder_size(void
     
 );
 #endif
@@ -821,9 +895,39 @@ uint16_t uniffi_mcvector_ffi_checksum_func_get_servers(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_IMPORT_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_IMPORT_FILE_ENTRIES
+uint16_t uniffi_mcvector_ffi_checksum_func_import_file_entries(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_IS_VALID_SERVER_NAME
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_IS_VALID_SERVER_NAME
 uint16_t uniffi_mcvector_ffi_checksum_func_is_valid_server_name(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_LIST_FILES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_LIST_FILES
+uint16_t uniffi_mcvector_ffi_checksum_func_list_files(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_MOVE_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_MOVE_FILE_ENTRIES
+uint16_t uniffi_mcvector_ffi_checksum_func_move_file_entries(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_TEXT_DOCUMENT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_TEXT_DOCUMENT
+uint16_t uniffi_mcvector_ffi_checksum_func_read_text_document(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RENAME_FILE_ENTRY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RENAME_FILE_ENTRY
+uint16_t uniffi_mcvector_ffi_checksum_func_rename_file_entry(void
     
 );
 #endif
@@ -926,6 +1030,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_stop_server(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SUBSCRIBE_SERVER_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SUBSCRIBE_SERVER_EVENTS
 uint16_t uniffi_mcvector_ffi_checksum_func_subscribe_server_events(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_WRITE_TEXT_DOCUMENT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_WRITE_TEXT_DOCUMENT
+uint16_t uniffi_mcvector_ffi_checksum_func_write_text_document(void
     
 );
 #endif

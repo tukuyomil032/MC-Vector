@@ -1385,6 +1385,134 @@ public func FfiConverterTypeEulaStatus_lower(_ value: EulaStatus) -> RustBuffer 
 }
 
 
+public struct FileItem: Equatable, Hashable {
+    public var name: String
+    public var isDirectory: Bool
+    public var size: UInt64
+    /**
+     * Seconds since the Unix epoch.
+     */
+    public var modified: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, isDirectory: Bool, size: UInt64, 
+        /**
+         * Seconds since the Unix epoch.
+         */modified: UInt64) {
+        self.name = name
+        self.isDirectory = isDirectory
+        self.size = size
+        self.modified = modified
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FileItem: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFileItem: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FileItem {
+        return
+            try FileItem(
+                name: FfiConverterString.read(from: &buf), 
+                isDirectory: FfiConverterBool.read(from: &buf), 
+                size: FfiConverterUInt64.read(from: &buf), 
+                modified: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FileItem, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterBool.write(value.isDirectory, into: &buf)
+        FfiConverterUInt64.write(value.size, into: &buf)
+        FfiConverterUInt64.write(value.modified, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFileItem_lift(_ buf: RustBuffer) throws -> FileItem {
+    return try FfiConverterTypeFileItem.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFileItem_lower(_ value: FileItem) -> RustBuffer {
+    return FfiConverterTypeFileItem.lower(value)
+}
+
+
+public struct FolderSize: Equatable, Hashable {
+    public var bytes: UInt64
+    /**
+     * False when the 3-second walk ran out of time or skipped unreadable parts.
+     */
+    public var complete: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(bytes: UInt64, 
+        /**
+         * False when the 3-second walk ran out of time or skipped unreadable parts.
+         */complete: Bool) {
+        self.bytes = bytes
+        self.complete = complete
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FolderSize: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFolderSize: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FolderSize {
+        return
+            try FolderSize(
+                bytes: FfiConverterUInt64.read(from: &buf), 
+                complete: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FolderSize, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.bytes, into: &buf)
+        FfiConverterBool.write(value.complete, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFolderSize_lift(_ buf: RustBuffer) throws -> FolderSize {
+    return try FfiConverterTypeFolderSize.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFolderSize_lower(_ value: FolderSize) -> RustBuffer {
+    return FfiConverterTypeFolderSize.lower(value)
+}
+
+
 /**
  * What MC-Vector found in a picked server folder.
  */
@@ -2222,6 +2350,68 @@ public func FfiConverterTypeStatusChange_lower(_ value: StatusChange) -> RustBuf
 }
 
 
+/**
+ * A text file for the editor: no BOM, `\n` line breaks, and what it takes to
+ * write it back the same way.
+ */
+public struct TextDocumentInfo: Equatable, Hashable {
+    public var text: String
+    public var hasBom: Bool
+    public var lineEnding: LineEnding
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(text: String, hasBom: Bool, lineEnding: LineEnding) {
+        self.text = text
+        self.hasBom = hasBom
+        self.lineEnding = lineEnding
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TextDocumentInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTextDocumentInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TextDocumentInfo {
+        return
+            try TextDocumentInfo(
+                text: FfiConverterString.read(from: &buf), 
+                hasBom: FfiConverterBool.read(from: &buf), 
+                lineEnding: FfiConverterTypeLineEnding.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TextDocumentInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterBool.write(value.hasBom, into: &buf)
+        FfiConverterTypeLineEnding.write(value.lineEnding, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextDocumentInfo_lift(_ buf: RustBuffer) throws -> TextDocumentInfo {
+    return try FfiConverterTypeTextDocumentInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextDocumentInfo_lower(_ value: TextDocumentInfo) -> RustBuffer {
+    return FfiConverterTypeTextDocumentInfo.lower(value)
+}
+
+
 public struct TpsPoint: Equatable, Hashable {
     public var elapsedMs: UInt64
     public var tps: Float
@@ -2508,6 +2698,79 @@ public func FfiConverterTypeFfiError_lift(_ buf: RustBuffer) throws -> FfiError 
 public func FfiConverterTypeFfiError_lower(_ value: FfiError) -> RustBuffer {
     return FfiConverterTypeFfiError.lower(value)
 }
+
+
+
+public enum LineEnding: Equatable, Hashable {
+    
+    case lf
+    case crlf
+    case mixed
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LineEnding: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLineEnding: FfiConverterRustBuffer {
+    typealias SwiftType = LineEnding
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LineEnding {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .lf
+        
+        case 2: return .crlf
+        
+        case 3: return .mixed
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LineEnding, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .lf:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .crlf:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .mixed:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineEnding_lift(_ buf: RustBuffer) throws -> LineEnding {
+    return try FfiConverterTypeLineEnding.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineEnding_lower(_ value: LineEnding) -> RustBuffer {
+    return FfiConverterTypeLineEnding.lower(value)
+}
+
 
 
 
@@ -3010,6 +3273,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeFileItem: FfiConverterRustBuffer {
+    typealias SwiftType = [FileItem]
+
+    public static func write(_ value: [FileItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFileItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FileItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FileItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFileItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeResourcePoint: FfiConverterRustBuffer {
     typealias SwiftType = [ResourcePoint]
 
@@ -3258,6 +3546,24 @@ public func configLocale()throws  -> String?  {
 })
 }
 /**
+ * Creates a folder or an empty file named `name` in `parent`; never replaces
+ * an existing entry.
+ */
+public func createFileEntry(serverId: String, parent: String, name: String, isDirectory: Bool)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_create_file_entry(FfiConverterString.lower(serverId),FfiConverterString.lower(parent),FfiConverterString.lower(name),FfiConverterBool.lower(isDirectory)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Creates a server: validates, makes its folder, downloads and verifies the
  * jar when possible, and registers it. On failure or cancellation nothing is
  * left behind.
@@ -3277,6 +3583,23 @@ public func createServer(input: NewServerInput, observer: CreationObserver)async
         )
 }
 /**
+ * Deletes entries (folders recursively). Stops at the first failure.
+ */
+public func deleteFileEntries(serverId: String, entries: [String])async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_delete_file_entries(FfiConverterString.lower(serverId),FfiConverterSequenceString.lower(entries)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Deletes a stopped server and its managed folder. False when nothing was removed.
  */
 public func deleteServer(serverId: String)async throws  -> Bool  {
@@ -3290,6 +3613,35 @@ public func deleteServer(serverId: String)async throws  -> Bool  {
             completeFunc: ffi_mcvector_ffi_rust_future_complete_i8,
             freeFunc: ffi_mcvector_ffi_rust_future_free_i8,
             liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * The absolute path of an entry, for revealing it in Finder.
+ */
+public func fileEntryPath(serverId: String, relative: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_file_entry_path(
+        FfiConverterString.lower(serverId),
+        FfiConverterString.lower(relative),uniffiCallStatus
+    )
+})
+}
+/**
+ * Total size of a folder, measured for at most 3 seconds.
+ */
+public func folderSize(serverId: String, relative: String)async throws  -> FolderSize  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_folder_size(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeFolderSize_lift,
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
@@ -3311,6 +3663,24 @@ public func getServers()throws  -> [ServerProfile]  {
 })
 }
 /**
+ * Copies files and folders the user picked (absolute paths) into `destination`.
+ * Returns how many top-level entries were imported.
+ */
+public func importFileEntries(serverId: String, destination: String, sources: [String])async throws  -> UInt32  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_import_file_entries(FfiConverterString.lower(serverId),FfiConverterString.lower(destination),FfiConverterSequenceString.lower(sources)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_u32,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_u32,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_u32,
+            liftFunc: FfiConverterUInt32.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * The add-server name rule (trimmed `[A-Za-z0-9_-]`, 1–128 bytes), so the
  * form validates exactly like the core.
  */
@@ -3321,6 +3691,75 @@ public func isValidServerName(name: String) -> Bool  {
         FfiConverterString.lower(name),uniffiCallStatus
     )
 })
+}
+/**
+ * Lists `relative` inside a server folder (folders first, then by name).
+ */
+public func listFiles(serverId: String, relative: String)async throws  -> [FileItem]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_list_files(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeFileItem.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Moves entries into the folder `destination` ("" is the server folder).
+ * Stops at the first failure; earlier moves stay done.
+ */
+public func moveFileEntries(serverId: String, entries: [String], destination: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_move_file_entries(FfiConverterString.lower(serverId),FfiConverterSequenceString.lower(entries),FfiConverterString.lower(destination)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Reads a text file for the editor (at most 16 MiB of UTF-8).
+ */
+public func readTextDocument(serverId: String, relative: String)async throws  -> TextDocumentInfo  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_read_text_document(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeTextDocumentInfo_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Renames an entry within its folder.
+ */
+public func renameFileEntry(serverId: String, relative: String, newName: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_rename_file_entry(FfiConverterString.lower(serverId),FfiConverterString.lower(relative),FfiConverterString.lower(newName)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
 }
 /**
  * Stops and starts a server with its saved settings.
@@ -3556,6 +3995,23 @@ public func subscribeServerEvents(observer: ServerEventObserver)  {try! rustCall
     )
 }
 }
+/**
+ * Saves an edited document with its original BOM and line endings.
+ */
+public func writeTextDocument(serverId: String, relative: String, document: TextDocumentInfo)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_write_text_document(FfiConverterString.lower(serverId),FfiConverterString.lower(relative),FfiConverterTypeTextDocumentInfo_lower(document)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
 
 private enum InitializationResult {
     case ok
@@ -3590,10 +4046,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_config_locale() != 3848) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_create_file_entry() != 9895) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_create_server() != 60091) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_delete_file_entries() != 5432) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_delete_server() != 34295) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_file_entry_path() != 61501) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_folder_size() != 34438) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_get_app_settings() != 23799) {
@@ -3602,7 +4070,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_import_file_entries() != 50608) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_is_valid_server_name() != 18376) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_list_files() != 1923) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_move_file_entries() != 10227) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_read_text_document() != 44919) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_rename_file_entry() != 680) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_restart_server() != 44786) {
@@ -3654,6 +4137,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_subscribe_server_events() != 5267) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_write_text_document() != 40172) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_method_creationobserver_on_stage() != 37456) {

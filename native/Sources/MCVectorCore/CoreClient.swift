@@ -157,6 +157,71 @@ public enum CoreClient {
         }
     }
 
+    // MARK: Files (OP-FILE-001..009)
+
+    /// Runs a core call and turns its error into CoreError.
+    private static func call<T>(_ work: () async throws -> T) async throws(CoreError) -> T {
+        do { return try await work() } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func listFiles(serverID: String, relative: String) async throws(CoreError) -> [FileItem] {
+        try await call { try await MCVectorCore.listFiles(serverId: serverID, relative: relative) }
+    }
+
+    public static func createFileEntry(
+        serverID: String, parent: String, name: String, isDirectory: Bool
+    ) async throws(CoreError) {
+        try await call {
+            try await MCVectorCore.createFileEntry(serverId: serverID, parent: parent, name: name, isDirectory: isDirectory)
+        }
+    }
+
+    public static func renameFileEntry(serverID: String, relative: String, newName: String) async throws(CoreError) {
+        try await call { try await MCVectorCore.renameFileEntry(serverId: serverID, relative: relative, newName: newName) }
+    }
+
+    public static func moveFileEntries(serverID: String, entries: [String], destination: String) async throws(CoreError) {
+        try await call {
+            try await MCVectorCore.moveFileEntries(serverId: serverID, entries: entries, destination: destination)
+        }
+    }
+
+    public static func deleteFileEntries(serverID: String, entries: [String]) async throws(CoreError) {
+        try await call { try await MCVectorCore.deleteFileEntries(serverId: serverID, entries: entries) }
+    }
+
+    public static func folderSize(serverID: String, relative: String) async throws(CoreError) -> FolderSize {
+        try await call { try await MCVectorCore.folderSize(serverId: serverID, relative: relative) }
+    }
+
+    public static func importFileEntries(serverID: String, destination: String, sources: [URL]) async throws(CoreError) -> UInt32 {
+        try await call {
+            try await MCVectorCore.importFileEntries(
+                serverId: serverID,
+                destination: destination,
+                sources: sources.map { $0.path(percentEncoded: false) }
+            )
+        }
+    }
+
+    public static func fileEntryURL(serverID: String, relative: String) throws(CoreError) -> URL {
+        do {
+            return URL(fileURLWithPath: try MCVectorCore.fileEntryPath(serverId: serverID, relative: relative))
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
+    public static func readTextDocument(serverID: String, relative: String) async throws(CoreError) -> TextDocumentInfo {
+        try await call { try await MCVectorCore.readTextDocument(serverId: serverID, relative: relative) }
+    }
+
+    public static func writeTextDocument(serverID: String, relative: String, document: TextDocumentInfo) async throws(CoreError) {
+        try await call {
+            try await MCVectorCore.writeTextDocument(serverId: serverID, relative: relative, document: document)
+        }
+    }
+
     // MARK: Server import (OP-SRV-003)
 
     /// Analyzes a picked server folder without copying it. Keep the token and
