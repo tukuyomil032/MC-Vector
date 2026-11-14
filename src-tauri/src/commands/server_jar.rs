@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use mcvector_core::managed_path::is_link_or_reparse_point;
 use mcvector_core::server_jar::{
-    self as core_jar, resolve_artifact, server_jar_path, MAX_JAR_BYTES, SERVER_JAR_HOSTS,
+    resolve_artifact, server_jar_path, MAX_JAR_BYTES, SERVER_JAR_HOSTS,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -664,37 +664,6 @@ pub async fn execute_server_jar_install(
         server_id: plan.server_id,
         version: plan.target_version,
     })
-}
-
-/// Resolve and install a server JAR during Rust-owned profile creation. The
-/// caller has already created the managed server directory and holds that
-/// server's operation lock. Provider URLs and checksums never cross IPC.
-pub(crate) async fn install_server_jar_for_creation(
-    app: &AppHandle,
-    server_id: &str,
-    operation_id: &str,
-    software: &str,
-    version: &str,
-) -> Result<Option<String>, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| error.to_string())?;
-    let app = app.clone();
-    let operation_id = operation_id.to_owned();
-    core_jar::install_jar_for_creation(&app_data_dir, server_id, software, version, None, {
-        move |progress: Option<u32>| {
-            let _ = app.emit(
-                "server-creation-download-progress",
-                serde_json::json!({
-                    "operationId": operation_id,
-                    "progress": progress.unwrap_or(0)
-                }),
-            );
-        }
-    })
-    .await
-    .map_err(String::from)
 }
 
 #[cfg(test)]
