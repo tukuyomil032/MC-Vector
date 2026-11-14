@@ -104,6 +104,15 @@ prepare_fixture() {
       printf 'motd=%s\nserver-port=25565\n' "$server_id" > "$dir/servers/$server_id/server.properties"
       printf 'eula=true\n' > "$dir/servers/$server_id/eula.txt"
       printf 'stand-in jar\n' > "$dir/servers/$server_id/server.jar"
+      # A small server tree for the FILES-*/EDITOR-* states.
+      local tree="$dir/servers/$server_id"
+      mkdir -p "$tree/config" "$tree/plugins/Essentials" "$tree/logs" "$tree/world/region" "$tree/empty"
+      printf 'settings:\n  timings: true\n  view-distance: 10\n' > "$tree/config/paper.yml"
+      printf 'fake plugin\n' > "$tree/plugins/Essentials.jar"
+      printf 'newbies:\n  kit: tools\n' > "$tree/plugins/Essentials/config.yml"
+      printf '[12:00:00 INFO]: Starting minecraft server\n' > "$tree/logs/latest.log"
+      printf '\357\273\277motd=BOM and CRLF\r\nserver-port=25565\r\n' > "$tree/bom-crlf.properties"
+      printf 'region\n' > "$tree/world/region/r.0.0.mca"
     done
   fi
   printf '{"locale":"%s"}\n' "$LOCALE" > "$dir/config.json"
@@ -204,10 +213,19 @@ for id in "${IDS[@]}"; do
   wid=""
   if [ "$ready" -eq 1 ] && [ -n "$pid" ]; then
     sleep 1.2 # let sheets, alerts and transitions settle
-    case "$id" in
-      CONFIRM-quit) wid="$("$WINDOW_ID" "$pid" 120 || true)" ;;
-      *) wid="$("$WINDOW_ID" "$pid" || true)" ;;
-    esac
+    # The window list can lag behind the app for a moment; retry briefly.
+    for _ in $(seq 1 10); do
+      if ! kill -0 "$pid" 2>/dev/null; then
+        log_fail "App exited (crash?) while capturing $id (see $log_file)"
+        break
+      fi
+      case "$id" in
+        CONFIRM-quit) wid="$("$WINDOW_ID" "$pid" 120 || true)" ;;
+        *) wid="$("$WINDOW_ID" "$pid" || true)" ;;
+      esac
+      [ -n "$wid" ] && break
+      sleep 0.3
+    done
   fi
   if [ -n "$wid" ] && [ -n "${CAPTURE_RECORD:-}" ]; then
     # CAPTURE_RECORD=<seconds> also records the window, to show animations.
