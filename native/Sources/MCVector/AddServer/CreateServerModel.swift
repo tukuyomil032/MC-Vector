@@ -30,8 +30,8 @@ final class CreateServerModel {
     var groupName = ""
     var software = CreateServerModel.defaultSoftware
     var version = CreateServerModel.defaultVersion
-    var portText = "25565"
-    var memoryText = "4"
+    var portText = ServerNumbers.defaultPort
+    var memoryText = ServerNumbers.defaultMemory
     /// Errors show once the user has typed a name or tried to create.
     var showsErrors = false
 
@@ -77,16 +77,8 @@ final class CreateServerModel {
         return CoreClient.isValidServerName(name) ? nil : L10n.t("addServer.name.invalid")
     }
 
-    var port: UInt32? {
-        UInt32(portText.trimmingCharacters(in: .whitespaces)).flatMap { (1...65_535).contains($0) ? $0 : nil }
-    }
-
-    var memoryGB: UInt32? {
-        UInt32(memoryText.trimmingCharacters(in: .whitespaces)).flatMap { (1...1_024).contains($0) ? $0 : nil }
-    }
-
-    var portError: String? { port == nil ? L10n.t("addServer.port.invalid") : nil }
-    var memoryError: String? { memoryGB == nil ? L10n.t("error.server.invalid_memory") : nil }
+    var port: UInt32? { ServerNumbers.port(portText) }
+    var memoryGB: UInt32? { ServerNumbers.memoryGB(memoryText) }
 
     var isValid: Bool {
         nameError == nil && port != nil && memoryGB != nil && selectedSoftware != nil && !version.isEmpty

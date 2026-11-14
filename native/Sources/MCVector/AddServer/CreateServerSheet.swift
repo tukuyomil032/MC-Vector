@@ -18,7 +18,15 @@ struct CreateServerSheet: View {
     var body: some View {
         Group {
             if case let .creating(stage) = model.phase {
-                CreationProgressView(software: model.software, version: model.version, stage: stage)
+                CreationProgressView(
+                    title: L10n.t("addServer.title"),
+                    downloadingLabel: L10n.t(
+                        "server.toast.downloadingServer",
+                        ["software": model.software, "version": model.version]
+                    ),
+                    workingLabel: L10n.t("native.addServer.resolving"),
+                    stage: stage
+                )
             } else {
                 CreateServerForm(model: model)
             }
@@ -75,12 +83,7 @@ private struct CreateServerForm: View {
 
     var body: some View {
         Form {
-            Section {
-            } header: {
-                Text(L10n.t("addServer.title"))
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-            }
+            FormTitle(text: L10n.t("addServer.title"))
             if !model.templates.isEmpty {
                 Section {
                     Picker(L10n.t("addServer.template.label"), selection: $model.templateID) {
@@ -114,16 +117,7 @@ private struct CreateServerForm: View {
             }
 
             Section {
-                Picker(L10n.t("addServer.software.label"), selection: $model.software) {
-                    ForEach(SoftwareGroup.allInFormOrder, id: \.self) { group in
-                        Section(L10n.t(group.labelKey)) {
-                            ForEach(model.softwareOptions.filter { $0.group == group }, id: \.name) { option in
-                                Text(L10n.t("addServer.software.options.\(option.name.lowercased())"))
-                                    .tag(option.name)
-                            }
-                        }
-                    }
-                }
+                SoftwarePicker(options: model.softwareOptions, selection: $model.software)
                 Picker(L10n.t("addServer.version.label"), selection: $model.version) {
                     ForEach(model.versions, id: \.self) { version in
                         Text(version).tag(version)
@@ -136,91 +130,9 @@ private struct CreateServerForm: View {
                 ))
             }
 
-            Section {
-                TextField(L10n.t("addServer.port.label"), text: $model.portText)
-                    .multilineTextAlignment(.trailing)
-                LabeledContent(L10n.t("addServer.memory.label")) {
-                    HStack(spacing: 6) {
-                        TextField(L10n.t("addServer.memory.label"), text: $model.memoryText)
-                            .labelsHidden()
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 64)
-                        Text(L10n.t("native.addServer.memoryUnit"))
-                            .foregroundStyle(.secondary)
-                        Stepper(
-                            L10n.t("addServer.memory.label"),
-                            value: Binding(
-                                get: { Int(model.memoryText) ?? 1 },
-                                set: { model.memoryText = String(min(max($0, 1), 1_024)) }
-                            ),
-                            in: 1...1_024
-                        )
-                        .labelsHidden()
-                    }
-                }
-            } footer: {
-                VStack(alignment: .leading, spacing: 2) {
-                    if let error = model.portError { FieldError(error) }
-                    if let error = model.memoryError { FieldError(error) }
-                }
-            }
+            PortMemorySection(portText: $model.portText, memoryText: $model.memoryText)
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-private struct FieldError: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-
-    var body: some View {
-        Label(text, systemImage: "exclamationmark.circle.fill")
-            .foregroundStyle(.red)
-    }
-}
-
-private struct CreationProgressView: View {
-    let software: String
-    let version: String
-    let stage: CreationStage
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.t("addServer.title"))
-                .font(.headline)
-            switch stage {
-            case .resolving:
-                ProgressView { Text(L10n.t("native.addServer.resolving")) }
-            case let .downloading(percent):
-                let title = L10n.t("server.toast.downloadingServer", ["software": software, "version": version])
-                if let percent {
-                    ProgressView(value: Double(percent), total: 100) {
-                        Text(title)
-                    } currentValueLabel: {
-                        Text("\(percent)%").monospacedDigit()
-                    }
-                } else {
-                    ProgressView { Text(title) }
-                }
-            case .finishing:
-                ProgressView { Text(L10n.t("native.addServer.finishing")) }
-            }
-        }
-        .progressViewStyle(.linear)
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-extension SoftwareGroup {
-    static let allInFormOrder: [SoftwareGroup] = [.standard, .modded, .proxy]
-
-    var labelKey: String {
-        switch self {
-        case .standard: "addServer.software.groups.standard"
-        case .modded: "addServer.software.groups.modded"
-        case .proxy: "addServer.software.groups.proxy"
-        }
     }
 }
