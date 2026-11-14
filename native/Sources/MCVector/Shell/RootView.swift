@@ -7,6 +7,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var app
     @Environment(FeedbackCenter.self) private var feedback
+    @Environment(ServerRuntime.self) private var runtime
     @Environment(\.openSettings) private var openSettings
     @FocusState private var isSearchFieldFocused: Bool
     /// Starts with the sidebar shown; the system sidebar button toggles it.
@@ -54,6 +55,7 @@ struct RootView: View {
             }
         }
         .task {
+            runtime.serverName = { [app] id in app.servers.first { $0.id == id }?.name ?? id }
             await app.reloadServers()
             #if DEBUG
             if let id = CaptureState.requestedID {

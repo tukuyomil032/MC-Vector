@@ -76,6 +76,7 @@ private struct ServerRow: View {
     let server: ServerProfile
     let isActive: Bool
     @Environment(AppState.self) private var app
+    @Environment(ServerRuntime.self) private var runtime
 
     var body: some View {
         Button {
@@ -84,9 +85,9 @@ private struct ServerRow: View {
             HStack(spacing: 8) {
                 Image(systemName: "circle.fill")
                     .font(.system(size: 7))
-                    .foregroundStyle(ServerStatusStyle.color(server.status))
+                    .foregroundStyle(ServerStatusStyle.color(runtime.status(of: server.id)))
                     .frame(width: 16)
-                    .accessibilityLabel(Text(L10n.t(ServerStatusStyle.labelKey(server.status))))
+                    .accessibilityLabel(Text(L10n.t(ServerStatusStyle.labelKey(runtime.status(of: server.id)))))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(server.name)
                         .fontWeight(isActive ? .semibold : .regular)

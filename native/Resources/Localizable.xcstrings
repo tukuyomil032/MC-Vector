@@ -7347,6 +7347,75 @@
         }
       }
     },
+    "native.server.crashed": {
+      "comment": "Placeholders: {name}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{name} stopped unexpectedly"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{name} が予期せず停止しました"
+          }
+        }
+      }
+    },
+    "native.server.restartFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server could not be restarted"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを再起動できませんでした"
+          }
+        }
+      }
+    },
+    "native.server.startFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server could not be started"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを起動できませんでした"
+          }
+        }
+      }
+    },
+    "native.server.stopFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server could not be stopped"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを停止できませんでした"
+          }
+        }
+      }
+    },
     "native.settings.about": {
       "extractionState": "manual",
       "localizations": {

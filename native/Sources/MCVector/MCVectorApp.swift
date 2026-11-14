@@ -54,7 +54,14 @@ enum Preflight {
 struct MCVectorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var app = AppState()
-    @State private var feedback = FeedbackCenter()
+    @State private var feedback: FeedbackCenter
+    @State private var runtime: ServerRuntime
+
+    init() {
+        let feedback = FeedbackCenter()
+        _feedback = State(initialValue: feedback)
+        _runtime = State(initialValue: ServerRuntime(feedback: feedback))
+    }
 
     var body: some Scene {
         // One window, like the Tauri app (ui-parity-a D1). Minimum 720x520, default 1200x800.
@@ -62,8 +69,9 @@ struct MCVectorApp: App {
             RootView()
                 .environment(app)
                 .environment(feedback)
+                .environment(runtime)
                 .frame(minWidth: 720, minHeight: 520)
-                .onAppear { appDelegate.attach(app: app, feedback: feedback) }
+                .onAppear { appDelegate.attach(app: app, feedback: feedback, runtime: runtime) }
         }
         .defaultSize(width: 1200, height: 800)
         .commands { ShellCommands(app: app) }
@@ -97,14 +105,18 @@ struct ShellCommands: Commands {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeys: GlobalHotKeys?
 
-    /// Registers the system-wide ⌘⇧S / ⌘⇧R once the UI state exists. The server
-    /// actions are wired in phase 6; until then they explain that they are not available.
-    func attach(app: AppState, feedback: FeedbackCenter) {
+    /// Starts listening to running servers and registers the system-wide
+    /// ⌘⇧S (start/stop) and ⌘⇧R (restart) for the selected server.
+    func attach(app: AppState, feedback: FeedbackCenter, runtime: ServerRuntime) {
         guard hotKeys == nil else { return }
+        runtime.subscribe()
         hotKeys = GlobalHotKeys { action in
-            switch action {
-            case .startStop, .restart:
-                feedback.toast(.info, L10n.t("native.notPorted"))
+            guard let serverID = app.selectedServerID else { return }
+            Task { @MainActor in
+                switch action {
+                case .startStop: await runtime.toggle(serverID)
+                case .restart: await runtime.restart(serverID)
+                }
             }
         }
     }
@@ -113,4 +125,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
     }
+
 }

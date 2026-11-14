@@ -33,6 +33,8 @@ enum L10n {
         }
         if text == missing { text = key }
         for (name, value) in args {
+            // A few React strings use i18next's `{{name}}` form.
+            text = text.replacingOccurrences(of: "{{\(name)}}", with: value.description)
             text = text.replacingOccurrences(of: "{\(name)}", with: value.description)
         }
         return text

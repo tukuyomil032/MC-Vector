@@ -199,6 +199,22 @@
     "en": "This screen is not available in the Native edition yet.",
     "ja": "この画面は Native 版ではまだ使えません。"
   },
+  "native.server.crashed": {
+    "en": "{name} stopped unexpectedly",
+    "ja": "{name} が予期せず停止しました"
+  },
+  "native.server.restartFailed": {
+    "en": "The server could not be restarted",
+    "ja": "サーバーを再起動できませんでした"
+  },
+  "native.server.startFailed": {
+    "en": "The server could not be started",
+    "ja": "サーバーを起動できませんでした"
+  },
+  "native.server.stopFailed": {
+    "en": "The server could not be stopped",
+    "ja": "サーバーを停止できませんでした"
+  },
   "native.settings.about": {
     "en": "About",
     "ja": "情報"
