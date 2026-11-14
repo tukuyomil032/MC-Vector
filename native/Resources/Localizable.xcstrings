@@ -3979,6 +3979,23 @@
         }
       }
     },
+    "error.config.write_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The setting could not be saved. Check that the data folder can be written."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を保存できませんでした。データフォルダーに書き込めるか確認してください。"
+          }
+        }
+      }
+    },
     "error.core.not_started": {
       "extractionState": "manual",
       "localizations": {

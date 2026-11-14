@@ -1,4 +1,8 @@
 {
+  "error.config.write_failed": {
+    "en": "The setting could not be saved. Check that the data folder can be written.",
+    "ja": "設定を保存できませんでした。データフォルダーに書き込めるか確認してください。"
+  },
   "error.core.not_started": {
     "en": "MC-Vector has not finished starting.",
     "ja": "MC-Vector の起動処理が完了していません。"

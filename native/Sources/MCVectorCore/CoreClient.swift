@@ -63,6 +63,28 @@ public enum CoreClient {
         return try result.get()
     }
 
+    // MARK: App settings (shared config.json keys)
+
+    public static func appSettings() throws(CoreError) -> AppSettings {
+        do { return try getAppSettings() } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func setLocale(_ locale: String) throws(CoreError) {
+        do { try MCVectorCore.setLocale(locale: locale) } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func setUpdateChannel(_ channel: String) throws(CoreError) {
+        do { try MCVectorCore.setUpdateChannel(channel: channel) } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func setAllowUnverifiedPluginDownloads(_ enabled: Bool) throws(CoreError) {
+        do {
+            try MCVectorCore.setAllowUnverifiedPluginDownloads(enabled: enabled)
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
     // MARK: Server management (OP-SRV-004, OP-SRV-015, OP-SRV-016)
 
     /// Copies a stopped server's managed folder and registers it under `name`.

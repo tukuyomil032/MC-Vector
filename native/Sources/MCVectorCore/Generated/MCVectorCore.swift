@@ -581,6 +581,76 @@ fileprivate struct FfiConverterString: FfiConverter {
 }
 
 
+public struct AppSettings: Equatable, Hashable {
+    /**
+     * `"en"`, `"ja"`, or None to follow the system language.
+     */
+    public var locale: String?
+    /**
+     * `"stable"` or `"beta"`.
+     */
+    public var updateChannel: String
+    public var allowUnverifiedPluginDownloads: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `"en"`, `"ja"`, or None to follow the system language.
+         */locale: String?, 
+        /**
+         * `"stable"` or `"beta"`.
+         */updateChannel: String, allowUnverifiedPluginDownloads: Bool) {
+        self.locale = locale
+        self.updateChannel = updateChannel
+        self.allowUnverifiedPluginDownloads = allowUnverifiedPluginDownloads
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AppSettings: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAppSettings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AppSettings {
+        return
+            try AppSettings(
+                locale: FfiConverterOptionString.read(from: &buf), 
+                updateChannel: FfiConverterString.read(from: &buf), 
+                allowUnverifiedPluginDownloads: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AppSettings, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.locale, into: &buf)
+        FfiConverterString.write(value.updateChannel, into: &buf)
+        FfiConverterBool.write(value.allowUnverifiedPluginDownloads, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAppSettings_lift(_ buf: RustBuffer) throws -> AppSettings {
+    return try FfiConverterTypeAppSettings.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAppSettings_lower(_ value: AppSettings) -> RustBuffer {
+    return FfiConverterTypeAppSettings.lower(value)
+}
+
+
 public struct LockOwnerInfo: Equatable, Hashable {
     public var edition: Edition
     public var pid: UInt32
@@ -1197,6 +1267,13 @@ public func deleteServer(serverId: String)async throws  -> Bool  {
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
+public func getAppSettings()throws  -> AppSettings  {
+    return try  FfiConverterTypeAppSettings_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_get_app_settings(uniffiCallStatus
+    )
+})
+}
 /**
  * Lists registered servers. Requires a successful `start`.
  */
@@ -1224,6 +1301,27 @@ public func saveServerTemplateFromServer(serverId: String, name: String)async th
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeFfiError_lift
         )
+}
+public func setAllowUnverifiedPluginDownloads(enabled: Bool)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_set_allow_unverified_plugin_downloads(
+        FfiConverterBool.lower(enabled),uniffiCallStatus
+    )
+}
+}
+public func setLocale(locale: String)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_set_locale(
+        FfiConverterString.lower(locale),uniffiCallStatus
+    )
+}
+}
+public func setUpdateChannel(channel: String)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_set_update_channel(
+        FfiConverterString.lower(channel),uniffiCallStatus
+    )
+}
 }
 /**
  * Takes the instance lock in the shared data root and opens the server
@@ -1272,10 +1370,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_delete_server() != 34295) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_get_app_settings() != 23799) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_save_server_template_from_server() != 13376) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_set_allow_unverified_plugin_downloads() != 5592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_set_locale() != 8629) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_set_update_channel() != 30965) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_start() != 17440) {

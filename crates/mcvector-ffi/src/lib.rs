@@ -187,6 +187,55 @@ pub fn config_locale() -> Result<Option<String>, FfiError> {
     Ok(mcvector_core::config::locale(&session.data_dir))
 }
 
+// ---------------------------------------------------------------------------
+// App settings (shared config.json keys; UI-015)
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AppSettings {
+    /// `"en"`, `"ja"`, or None to follow the system language.
+    pub locale: Option<String>,
+    /// `"stable"` or `"beta"`.
+    pub update_channel: String,
+    pub allow_unverified_plugin_downloads: bool,
+}
+
+fn config_error(error: String, data_dir: &std::path::Path) -> FfiError {
+    core_error(CoreErrorCode::ConfigWriteFailed, redact(&error, data_dir))
+}
+
+#[uniffi::export]
+pub fn get_app_settings() -> Result<AppSettings, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    let settings = mcvector_core::config::app_settings(&data_dir)
+        .map_err(|error| config_error(error, &data_dir))?;
+    Ok(AppSettings {
+        locale: settings.locale,
+        update_channel: settings.update_channel,
+        allow_unverified_plugin_downloads: settings.allow_unverified_plugin_downloads,
+    })
+}
+
+#[uniffi::export]
+pub fn set_locale(locale: String) -> Result<(), FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    mcvector_core::config::set_locale(&data_dir, &locale)
+        .map_err(|error| config_error(error, &data_dir))
+}
+
+#[uniffi::export]
+pub fn set_update_channel(channel: String) -> Result<(), FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    mcvector_core::config::set_update_channel(&data_dir, &channel)
+        .map_err(|error| config_error(error, &data_dir))
+}
+
+#[uniffi::export]
+pub fn set_allow_unverified_plugin_downloads(enabled: bool) -> Result<(), FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    mcvector_core::config::set_allow_unverified_plugin_downloads(&data_dir, enabled)
+        .map_err(|error| config_error(error, &data_dir))
+}
+
 fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiError> {
     let mut session = lock_session()?;
     if session.is_some() {

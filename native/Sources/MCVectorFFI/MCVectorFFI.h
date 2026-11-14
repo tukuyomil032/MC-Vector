@@ -259,6 +259,12 @@ RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull ou
 uint64_t uniffi_mcvector_ffi_fn_func_delete_server(RustBuffer server_id
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_APP_SETTINGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_APP_SETTINGS
+RustBuffer uniffi_mcvector_ffi_fn_func_get_app_settings(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_status
@@ -268,6 +274,21 @@ RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
 uint64_t uniffi_mcvector_ffi_fn_func_save_server_template_from_server(RustBuffer server_id, RustBuffer name
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_ALLOW_UNVERIFIED_PLUGIN_DOWNLOADS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_ALLOW_UNVERIFIED_PLUGIN_DOWNLOADS
+void uniffi_mcvector_ffi_fn_func_set_allow_unverified_plugin_downloads(int8_t enabled, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_LOCALE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_LOCALE
+void uniffi_mcvector_ffi_fn_func_set_locale(RustBuffer locale, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_UPDATE_CHANNEL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_UPDATE_CHANNEL
+void uniffi_mcvector_ffi_fn_func_set_update_channel(RustBuffer channel, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_START
@@ -553,6 +574,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_delete_server(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_APP_SETTINGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_APP_SETTINGS
+uint16_t uniffi_mcvector_ffi_checksum_func_get_app_settings(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 uint16_t uniffi_mcvector_ffi_checksum_func_get_servers(void
@@ -562,6 +589,24 @@ uint16_t uniffi_mcvector_ffi_checksum_func_get_servers(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
 uint16_t uniffi_mcvector_ffi_checksum_func_save_server_template_from_server(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_ALLOW_UNVERIFIED_PLUGIN_DOWNLOADS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_ALLOW_UNVERIFIED_PLUGIN_DOWNLOADS
+uint16_t uniffi_mcvector_ffi_checksum_func_set_allow_unverified_plugin_downloads(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_LOCALE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_LOCALE
+uint16_t uniffi_mcvector_ffi_checksum_func_set_locale(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_UPDATE_CHANNEL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_UPDATE_CHANNEL
+uint16_t uniffi_mcvector_ffi_checksum_func_set_update_channel(void
     
 );
 #endif
