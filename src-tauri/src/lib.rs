@@ -1,9 +1,9 @@
 mod commands;
 mod instance_guard;
-pub mod metric_history;
+pub use mcvector_core::metric_history;
 mod plugin_catalog;
 mod plugin_installer;
-pub mod server_stdout;
+pub use mcvector_core::server_stdout;
 mod state;
 #[cfg(test)]
 mod test_support;
