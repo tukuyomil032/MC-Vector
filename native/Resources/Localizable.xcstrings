@@ -7058,23 +7058,6 @@
         }
       }
     },
-    "native.addServer.importUnavailable": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importing an existing folder comes in a later update of the Native edition."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "既存フォルダーの取り込みは、Native 版の今後の更新で使えるようになります。"
-          }
-        }
-      }
-    },
     "native.addServer.manualJar": {
       "extractionState": "manual",
       "localizations": {
@@ -7139,6 +7122,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "MC-Vector のサーバー用フォルダーの中に、新しいフォルダーを作って保存します。フォルダー名は自動で決まります。"
+          }
+        }
+      }
+    },
+    "native.import.chooseAnother": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Another…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のフォルダーを選ぶ…"
+          }
+        }
+      }
+    },
+    "native.import.copyHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MC-Vector copies this folder into its servers folder. The original folder is not changed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダーを MC-Vector のサーバー用フォルダーにコピーします。元のフォルダーは変更しません。"
+          }
+        }
+      }
+    },
+    "native.import.copying": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying the server folder…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーのフォルダーをコピーしています…"
+          }
+        }
+      }
+    },
+    "native.import.nameInvalid": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The name cannot contain /, \\, : or control characters, and can be up to 128 characters."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前には /、\\、: と制御文字は使えません。128 文字までです。"
+          }
+        }
+      }
+    },
+    "native.import.softwareUnknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The software could not be detected from the jar name. Check it before importing."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JAR の名前からソフトウェアを判定できませんでした。取り込む前に確認してください。"
           }
         }
       }

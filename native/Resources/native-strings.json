@@ -131,10 +131,6 @@
     "en": "Saving the server…",
     "ja": "サーバーを保存しています…"
   },
-  "native.addServer.importUnavailable": {
-    "en": "Importing an existing folder comes in a later update of the Native edition.",
-    "ja": "既存フォルダーの取り込みは、Native 版の今後の更新で使えるようになります。"
-  },
   "native.addServer.manualJar": {
     "en": "MC-Vector cannot download this software automatically. After creating the server, place its jar in the server folder.",
     "ja": "このソフトウェアは自動でダウンロードできません。サーバーを作成したあと、JAR をサーバーのフォルダーに置いてください。"
@@ -150,6 +146,26 @@
   "native.addServer.savePath": {
     "en": "Saved in a new folder inside MC-Vector's servers folder. The folder name is chosen automatically.",
     "ja": "MC-Vector のサーバー用フォルダーの中に、新しいフォルダーを作って保存します。フォルダー名は自動で決まります。"
+  },
+  "native.import.chooseAnother": {
+    "en": "Choose Another…",
+    "ja": "別のフォルダーを選ぶ…"
+  },
+  "native.import.copyHint": {
+    "en": "MC-Vector copies this folder into its servers folder. The original folder is not changed.",
+    "ja": "このフォルダーを MC-Vector のサーバー用フォルダーにコピーします。元のフォルダーは変更しません。"
+  },
+  "native.import.copying": {
+    "en": "Copying the server folder…",
+    "ja": "サーバーのフォルダーをコピーしています…"
+  },
+  "native.import.nameInvalid": {
+    "en": "The name cannot contain /, \\, : or control characters, and can be up to 128 characters.",
+    "ja": "名前には /、\\、: と制御文字は使えません。128 文字までです。"
+  },
+  "native.import.softwareUnknown": {
+    "en": "The software could not be detected from the jar name. Check it before importing.",
+    "ja": "JAR の名前からソフトウェアを判定できませんでした。取り込む前に確認してください。"
   },
   "native.menu.nextView": {
     "en": "Next View",

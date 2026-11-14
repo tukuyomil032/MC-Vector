@@ -3,7 +3,7 @@
 import SwiftUI
 
 /// First step of "Add Server" (React AddServerChoiceModal): create a new
-/// server or import an existing folder. Import arrives in a later phase.
+/// server or import an existing folder.
 struct AddServerChoiceSheet: View {
     enum Choice: Hashable {
         case create
@@ -27,14 +27,11 @@ struct AddServerChoiceSheet: View {
                         hint: L10n.t("addServer.choice.importServerHint")
                     )
                     .tag(Choice?.some(.importFolder))
-                    .disabled(true)
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
             } header: {
                 Text(L10n.t("addServer.choice.title"))
-            } footer: {
-                Text(L10n.t("native.addServer.importUnavailable"))
             }
         }
         .formStyle(.grouped)
@@ -46,9 +43,13 @@ struct AddServerChoiceSheet: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(L10n.t("common.next")) {
-                    if choice == .create { app.activeSheet = .addServer }
+                    switch choice {
+                    case .create: app.activeSheet = .addServer
+                    case .importFolder: app.activeSheet = .importServer
+                    case nil: break
+                    }
                 }
-                .disabled(choice != .create)
+                .disabled(choice == nil)
             }
         }
     }

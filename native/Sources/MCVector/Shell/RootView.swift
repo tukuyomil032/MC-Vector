@@ -43,6 +43,8 @@ struct RootView: View {
                 #else
                 CreateServerSheet()
                 #endif
+            case .importServer:
+                ImportServerSheet()
             default:
                 ShellSheetPlaceholder(sheet: sheet)
             }
