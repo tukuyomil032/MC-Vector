@@ -21,5 +21,6 @@ pub mod registry;
 pub mod server_creation;
 pub mod server_import;
 pub mod server_jar;
+pub mod server_process;
 pub mod server_stdout;
 pub mod shutdown;

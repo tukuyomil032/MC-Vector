@@ -19,7 +19,9 @@ log = "0.4"
 uuid = { version = "1", features = ["v4"] }
 # `operations` uses tokio::sync::Mutex; `lifecycle` runs blocking filesystem work on tokio::task::spawn_blocking;
 # `download` streams into tokio::fs files with tokio::time timeouts.
-tokio = { version = "1", features = ["sync", "rt", "fs", "io-util", "time"] }
+tokio = { version = "1", features = ["sync", "rt", "fs", "io-util", "time", "process", "macros"] }
+# `server_process` samples CPU and memory of server processes (same version as src-tauri).
+sysinfo = "0.33"
 # Verified downloads (`download`, `server_jar`): same versions and features as src-tauri.
 reqwest = { version = "0.12", features = ["stream"] }
 futures-util = "0.3"
