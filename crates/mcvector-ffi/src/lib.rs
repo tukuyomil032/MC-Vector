@@ -13,8 +13,10 @@ use std::sync::Mutex;
 
 use mcvector_core::error::{CoreError, CoreErrorCode};
 use mcvector_core::instance_lock::{self, InstanceLock, LockOutcome, LockOwner};
+use mcvector_core::lifecycle;
+use mcvector_core::operations::ServerOperationManager;
 use mcvector_core::paths;
-use mcvector_core::registry::{MinecraftServer, ServerRegistry};
+use mcvector_core::registry::{template_from_server, MinecraftServer, ServerRegistry};
 
 uniffi::setup_scaffolding!();
 
@@ -111,6 +113,24 @@ struct Session {
     _lock: InstanceLock,
     data_dir: PathBuf,
     registry: ServerRegistry,
+    /// Serializes mutations per server, like the Tauri edition's operation manager.
+    operations: ServerOperationManager,
+}
+
+/// Clones of the session handles, so async work never holds the session mutex.
+fn session_handles() -> Result<(PathBuf, ServerRegistry, ServerOperationManager), FfiError> {
+    let session = lock_session()?;
+    let session = session.as_ref().ok_or_else(|| {
+        core_error(
+            CoreErrorCode::CoreNotStarted,
+            "The core has not been started.",
+        )
+    })?;
+    Ok((
+        session.data_dir.clone(),
+        session.registry.clone(),
+        session.operations.clone(),
+    ))
 }
 
 static SESSION: Mutex<Option<Session>> = Mutex::new(None);
@@ -175,7 +195,11 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
         });
     }
 
-    let owner = LockOwner::current(instance_lock::Edition::Native, NATIVE_BUNDLE_ID, bundle_path);
+    let owner = LockOwner::current(
+        instance_lock::Edition::Native,
+        NATIVE_BUNDLE_ID,
+        bundle_path,
+    );
     let lock = match instance_lock::acquire(&data_dir, &owner) {
         Ok(LockOutcome::Acquired(lock)) => lock,
         Ok(LockOutcome::HeldByOther(other)) => {
@@ -194,7 +218,10 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
     let registry = ServerRegistry::open(&data_dir).map_err(|error| {
         core_error(
             CoreErrorCode::RegistryOpenFailed,
-            format!("The server registry could not be opened: {}", redact(&error, &data_dir)),
+            format!(
+                "The server registry could not be opened: {}",
+                redact(&error, &data_dir)
+            ),
         )
     })?;
 
@@ -202,6 +229,7 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
         _lock: lock,
         data_dir: data_dir.clone(),
         registry,
+        operations: ServerOperationManager::default(),
     });
     Ok(StartOutcome::Ready {
         data_dir: data_dir.display().to_string(),
@@ -235,6 +263,8 @@ pub struct ServerProfile {
     pub port: Option<i64>,
     /// Heap size in megabytes, as stored in the registry (`memoryGb * 1024` at creation).
     pub memory_mb: Option<u64>,
+    /// The managed server folder. Shown in the delete confirmation, as in React.
+    pub path: String,
     pub status: String,
     pub java_path: Option<String>,
     pub unavailable_reason: Option<String>,
@@ -251,6 +281,7 @@ impl From<MinecraftServer> for ServerProfile {
             software: server.software,
             port: server.port.as_i64(),
             memory_mb: server.memory.as_u64(),
+            path: server.path,
             status: server.status,
             java_path: server.java_path,
             unavailable_reason: server.unavailable_reason,
@@ -277,6 +308,84 @@ pub fn get_servers() -> Result<Vec<ServerProfile>, FfiError> {
     Ok(servers.into_iter().map(Into::into).collect())
 }
 
+// ---------------------------------------------------------------------------
+// Server management (OP-SRV-004, OP-SRV-015, OP-SRV-016)
+
+/// Until the Native server manager exists (phase 6), no server can be running in
+/// this process, and the instance lock keeps the Tauri edition from running any.
+async fn no_server_is_running(_server_id: String) -> bool {
+    false
+}
+
+/// Maps the core's String errors to structured codes. "running" errors get their
+/// own code so the UI can show the "stop it first" message.
+fn server_error(error: String, data_dir: &std::path::Path) -> FfiError {
+    let code = if error.contains("running server") {
+        CoreErrorCode::ServerRunning
+    } else {
+        CoreErrorCode::ServerOperationFailed
+    };
+    core_error(code, redact(&error, data_dir))
+}
+
+/// Copies a stopped server's managed folder and registers the copy as `name`.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn clone_server(
+    source_server_id: String,
+    name: String,
+) -> Result<ServerProfile, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    lifecycle::clone_server(
+        &data_dir,
+        &registry,
+        &operations,
+        no_server_is_running,
+        &source_server_id,
+        &name,
+    )
+    .await
+    .map(Into::into)
+    .map_err(|error| server_error(error, &data_dir))
+}
+
+/// Deletes a stopped server and its managed folder. False when nothing was removed.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn delete_server(server_id: String) -> Result<bool, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    lifecycle::delete_server(
+        &data_dir,
+        &registry,
+        &operations,
+        no_server_is_running,
+        &server_id,
+    )
+    .await
+    .map_err(|error| server_error(error, &data_dir))
+}
+
+/// Saves the server's settings as a new template named `name`
+/// (React `buildTemplateFromServer` + `save_server_template`).
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn save_server_template_from_server(
+    server_id: String,
+    name: String,
+) -> Result<(), FfiError> {
+    let (data_dir, registry, _) = session_handles()?;
+    let result = tokio::task::spawn_blocking(move || {
+        let server = registry
+            .get_servers()?
+            .into_iter()
+            .find(|server| server.id == server_id)
+            .ok_or_else(|| "Server is not registered".to_string())?;
+        let template = template_from_server(&server, uuid::Uuid::new_v4().to_string(), name);
+        registry.save_server_template(&template)
+    })
+    .await
+    .map_err(|error| error.to_string())
+    .and_then(|result| result);
+    result.map_err(|error| server_error(error, &data_dir))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -289,7 +398,11 @@ mod tests {
         let data_dir = dir.path().join("data");
 
         // Another process-like holder: a lock taken through a separate handle.
-        let tauri = LockOwner::current(instance_lock::Edition::Tauri, "com.tukuyomi032.mcvector", "/x");
+        let tauri = LockOwner::current(
+            instance_lock::Edition::Tauri,
+            "com.tukuyomi032.mcvector",
+            "/x",
+        );
         let held = match instance_lock::acquire(&data_dir, &tauri).unwrap() {
             LockOutcome::Acquired(lock) => lock,
             other => panic!("expected Acquired, got {other:?}"),
@@ -310,16 +423,67 @@ mod tests {
             Err(FfiError::Core { ref code, .. }) if code == "core.not_started"
         ));
 
+        // One registered server with its managed folder, imported from the legacy JSON.
+        let server_dir = data_dir.join("servers").join("server-1");
+        std::fs::create_dir_all(&server_dir).unwrap();
+        std::fs::write(server_dir.join("server.properties"), "motd=E2E\n").unwrap();
+        std::fs::write(
+            data_dir.join("servers.json"),
+            format!(
+                r#"[{{"id":"server-1","name":"E2E Server","version":"1.21.10","software":"Paper","port":25565,"memory":2048,"path":"{}","status":"offline"}}]"#,
+                server_dir.display()
+            ),
+        )
+        .unwrap();
+
         drop(held);
         assert!(matches!(
             start_in(data_dir.clone(), "/app".into()).unwrap(),
             StartOutcome::Ready { .. }
         ));
-        assert!(get_servers().unwrap().is_empty());
+        let servers = get_servers().unwrap();
+        assert_eq!(servers.len(), 1);
+        assert_eq!(servers[0].path, server_dir.display().to_string());
         // Idempotent.
         assert!(matches!(
-            start_in(data_dir, "/app".into()).unwrap(),
+            start_in(data_dir.clone(), "/app".into()).unwrap(),
             StartOutcome::Ready { .. }
+        ));
+
+        // Server management through the same async exports the Swift app calls.
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let copy = runtime
+            .block_on(clone_server("server-1".into(), "E2E Server Copy".into()))
+            .unwrap();
+        assert_eq!(copy.name, "E2E Server Copy");
+        assert!(std::path::Path::new(&copy.path)
+            .join("server.properties")
+            .is_file());
+        assert_eq!(get_servers().unwrap().len(), 2);
+
+        runtime
+            .block_on(save_server_template_from_server(
+                "server-1".into(),
+                "Survival Template".into(),
+            ))
+            .unwrap();
+        let (_, registry, _) = session_handles().unwrap();
+        let templates = registry.get_server_templates().unwrap();
+        assert_eq!(templates.len(), 1);
+        assert_eq!(templates[0].name, "Survival Template");
+        assert_eq!(templates[0].software, "Paper");
+
+        assert!(runtime.block_on(delete_server(copy.id.clone())).unwrap());
+        assert!(!std::path::Path::new(&copy.path).exists());
+        assert_eq!(get_servers().unwrap().len(), 1);
+
+        // Unknown server: a structured error, not a panic.
+        assert!(matches!(
+            runtime.block_on(delete_server("missing".into())),
+            Err(FfiError::Core { ref code, .. }) if code == "server.operation_failed"
         ));
     }
 

@@ -243,16 +243,31 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureRes
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CLONE_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CLONE_SERVER
+uint64_t uniffi_mcvector_ffi_fn_func_clone_server(RustBuffer source_server_id, RustBuffer name
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CONFIG_LOCALE
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CONFIG_LOCALE
 RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull out_status
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_SERVER
+uint64_t uniffi_mcvector_ffi_fn_func_delete_server(RustBuffer server_id
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_status
     
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
+uint64_t uniffi_mcvector_ffi_fn_func_save_server_template_from_server(RustBuffer server_id, RustBuffer name
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_START
@@ -520,15 +535,33 @@ void ffi_mcvector_ffi_rust_future_free_void(uint64_t handle
 void ffi_mcvector_ffi_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CLONE_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CLONE_SERVER
+uint16_t uniffi_mcvector_ffi_checksum_func_clone_server(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CONFIG_LOCALE
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CONFIG_LOCALE
 uint16_t uniffi_mcvector_ffi_checksum_func_config_locale(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_SERVER
+uint16_t uniffi_mcvector_ffi_checksum_func_delete_server(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 uint16_t uniffi_mcvector_ffi_checksum_func_get_servers(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
+uint16_t uniffi_mcvector_ffi_checksum_func_save_server_template_from_server(void
     
 );
 #endif

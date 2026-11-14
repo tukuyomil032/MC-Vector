@@ -36,6 +36,10 @@ pub enum CoreErrorCode {
     RegistryOpenFailed,
     /// The server registry could not be read.
     RegistryReadFailed,
+    /// The operation needs the server to be stopped.
+    ServerRunning,
+    /// A server management operation (clone, delete, template) failed.
+    ServerOperationFailed,
 }
 
 impl CoreErrorCode {
@@ -49,6 +53,8 @@ impl CoreErrorCode {
         CoreErrorCode::CoreNotStarted,
         CoreErrorCode::RegistryOpenFailed,
         CoreErrorCode::RegistryReadFailed,
+        CoreErrorCode::ServerRunning,
+        CoreErrorCode::ServerOperationFailed,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -62,6 +68,8 @@ impl CoreErrorCode {
             Self::CoreNotStarted => "core.not_started",
             Self::RegistryOpenFailed => "registry.open_failed",
             Self::RegistryReadFailed => "registry.read_failed",
+            Self::ServerRunning => "server.running",
+            Self::ServerOperationFailed => "server.operation_failed",
         }
     }
 
@@ -76,12 +84,16 @@ impl CoreErrorCode {
     /// Whether a failure with this code is worth retrying without changes.
     pub const fn default_retryable(self) -> bool {
         match self {
-            Self::LockHeldByOther | Self::CoreNotStarted | Self::RegistryReadFailed => true,
+            Self::LockHeldByOther
+            | Self::CoreNotStarted
+            | Self::RegistryReadFailed
+            | Self::ServerRunning => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
             | Self::InternalUnknown
-            | Self::RegistryOpenFailed => false,
+            | Self::RegistryOpenFailed
+            | Self::ServerOperationFailed => false,
         }
     }
 
@@ -156,10 +168,12 @@ mod tests {
             CoreErrorCode::CoreNotStarted => 5,
             CoreErrorCode::RegistryOpenFailed => 6,
             CoreErrorCode::RegistryReadFailed => 7,
+            CoreErrorCode::ServerRunning => 8,
+            CoreErrorCode::ServerOperationFailed => 9,
         }
     }
 
-    const VARIANT_COUNT: usize = 8;
+    const VARIANT_COUNT: usize = 10;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -205,8 +219,22 @@ mod tests {
             ),
             (CoreErrorCode::InternalUnknown, "internal.unknown", false),
             (CoreErrorCode::CoreNotStarted, "core.not_started", true),
-            (CoreErrorCode::RegistryOpenFailed, "registry.open_failed", false),
-            (CoreErrorCode::RegistryReadFailed, "registry.read_failed", true),
+            (
+                CoreErrorCode::RegistryOpenFailed,
+                "registry.open_failed",
+                false,
+            ),
+            (
+                CoreErrorCode::RegistryReadFailed,
+                "registry.read_failed",
+                true,
+            ),
+            (CoreErrorCode::ServerRunning, "server.running", true),
+            (
+                CoreErrorCode::ServerOperationFailed,
+                "server.operation_failed",
+                false,
+            ),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);

@@ -663,6 +663,10 @@ public struct ServerProfile: Equatable, Hashable {
      * Heap size in megabytes, as stored in the registry (`memoryGb * 1024` at creation).
      */
     public var memoryMb: UInt64?
+    /**
+     * The managed server folder. Shown in the delete confirmation, as in React.
+     */
+    public var path: String
     public var status: String
     public var javaPath: String?
     public var unavailableReason: String?
@@ -672,7 +676,10 @@ public struct ServerProfile: Equatable, Hashable {
     public init(id: String, name: String, profileName: String?, groupName: String?, version: String, software: String, port: Int64?, 
         /**
          * Heap size in megabytes, as stored in the registry (`memoryGb * 1024` at creation).
-         */memoryMb: UInt64?, status: String, javaPath: String?, unavailableReason: String?) {
+         */memoryMb: UInt64?, 
+        /**
+         * The managed server folder. Shown in the delete confirmation, as in React.
+         */path: String, status: String, javaPath: String?, unavailableReason: String?) {
         self.id = id
         self.name = name
         self.profileName = profileName
@@ -681,6 +688,7 @@ public struct ServerProfile: Equatable, Hashable {
         self.software = software
         self.port = port
         self.memoryMb = memoryMb
+        self.path = path
         self.status = status
         self.javaPath = javaPath
         self.unavailableReason = unavailableReason
@@ -710,6 +718,7 @@ public struct FfiConverterTypeServerProfile: FfiConverterRustBuffer {
                 software: FfiConverterString.read(from: &buf), 
                 port: FfiConverterOptionInt64.read(from: &buf), 
                 memoryMb: FfiConverterOptionUInt64.read(from: &buf), 
+                path: FfiConverterString.read(from: &buf), 
                 status: FfiConverterString.read(from: &buf), 
                 javaPath: FfiConverterOptionString.read(from: &buf), 
                 unavailableReason: FfiConverterOptionString.read(from: &buf)
@@ -725,6 +734,7 @@ public struct FfiConverterTypeServerProfile: FfiConverterRustBuffer {
         FfiConverterString.write(value.software, into: &buf)
         FfiConverterOptionInt64.write(value.port, into: &buf)
         FfiConverterOptionUInt64.write(value.memoryMb, into: &buf)
+        FfiConverterString.write(value.path, into: &buf)
         FfiConverterString.write(value.status, into: &buf)
         FfiConverterOptionString.write(value.javaPath, into: &buf)
         FfiConverterOptionString.write(value.unavailableReason, into: &buf)
@@ -1094,6 +1104,71 @@ fileprivate struct FfiConverterSequenceTypeServerProfile: FfiConverterRustBuffer
         return seq
     }
 }
+private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
+private let UNIFFI_RUST_FUTURE_POLL_WAKE: Int8 = 1
+
+fileprivate let uniffiContinuationHandleMap = UniffiHandleMap<UnsafeContinuation<Int8, Never>>()
+
+fileprivate func uniffiRustCallAsync<F, T>(
+    rustFutureFunc: () -> UInt64,
+    pollFunc: (UInt64, @escaping UniffiRustFutureContinuationCallback, UInt64) -> (),
+    completeFunc: (UInt64, UnsafeMutablePointer<RustCallStatus>) -> F,
+    freeFunc: (UInt64) -> (),
+    liftFunc: (F) throws -> T,
+    errorHandler: ((RustBuffer) throws -> Swift.Error)?
+) async throws -> T {
+    // Make sure to call the ensure init function since future creation doesn't have a
+    // RustCallStatus param, so doesn't use makeRustCall()
+    uniffiEnsureMcvectorFfiInitialized()
+    let rustFuture = rustFutureFunc()
+    defer {
+        freeFunc(rustFuture)
+    }
+    var pollResult: Int8;
+    repeat {
+        pollResult = await withUnsafeContinuation {
+            pollFunc(
+                rustFuture,
+                { handle, pollResult in
+                    uniffiFutureContinuationCallback(handle: handle, pollResult: pollResult)
+                },
+                uniffiContinuationHandleMap.insert(obj: $0)
+            )
+        }
+    } while pollResult != UNIFFI_RUST_FUTURE_POLL_READY
+
+    return try liftFunc(makeRustCall(
+        { completeFunc(rustFuture, $0) },
+        errorHandler: errorHandler
+    ))
+}
+
+// Callback handlers for an async calls.  These are invoked by Rust when the future is ready.  They
+// lift the return value or error and resume the suspended function.
+fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) {
+    if let continuation = try? uniffiContinuationHandleMap.remove(handle: handle) {
+        continuation.resume(returning: pollResult)
+    } else {
+        print("uniffiFutureContinuationCallback invalid handle")
+    }
+}
+/**
+ * Copies a stopped server's managed folder and registers the copy as `name`.
+ */
+public func cloneServer(sourceServerId: String, name: String)async throws  -> ServerProfile  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_clone_server(FfiConverterString.lower(sourceServerId),FfiConverterString.lower(name)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerProfile_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
 /**
  * The UI locale saved in config.json by either edition (`"en"` or `"ja"`),
  * or None to follow the system language (NAT-008). Requires `start`.
@@ -1106,6 +1181,23 @@ public func configLocale()throws  -> String?  {
 })
 }
 /**
+ * Deletes a stopped server and its managed folder. False when nothing was removed.
+ */
+public func deleteServer(serverId: String)async throws  -> Bool  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_delete_server(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_i8,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_i8,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Lists registered servers. Requires a successful `start`.
  */
 public func getServers()throws  -> [ServerProfile]  {
@@ -1114,6 +1206,24 @@ public func getServers()throws  -> [ServerProfile]  {
     uniffi_mcvector_ffi_fn_func_get_servers(uniffiCallStatus
     )
 })
+}
+/**
+ * Saves the server's settings as a new template named `name`
+ * (React `buildTemplateFromServer` + `save_server_template`).
+ */
+public func saveServerTemplateFromServer(serverId: String, name: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_save_server_template_from_server(FfiConverterString.lower(serverId),FfiConverterString.lower(name)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
 }
 /**
  * Takes the instance lock in the shared data root and opens the server
@@ -1153,10 +1263,19 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_clone_server() != 45594) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_config_locale() != 3848) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_delete_server() != 34295) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_save_server_template_from_server() != 13376) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_start() != 17440) {

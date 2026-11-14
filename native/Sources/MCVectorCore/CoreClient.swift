@@ -62,7 +62,33 @@ public enum CoreClient {
         }.value
         return try result.get()
     }
-}
 
-extension LockOwnerInfo: @unchecked Sendable {}
-extension ServerProfile: @unchecked Sendable {}
+    // MARK: Server management (OP-SRV-004, OP-SRV-015, OP-SRV-016)
+
+    /// Copies a stopped server's managed folder and registers it under `name`.
+    public static func cloneServer(id: String, name: String) async throws(CoreError) -> ServerProfile {
+        do {
+            return try await MCVectorCore.cloneServer(sourceServerId: id, name: name)
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
+    /// Deletes a stopped server and its managed folder. Returns false when nothing was removed.
+    public static func deleteServer(id: String) async throws(CoreError) -> Bool {
+        do {
+            return try await MCVectorCore.deleteServer(serverId: id)
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
+    /// Saves the server's settings as a new template named `name`.
+    public static func saveTemplate(fromServer id: String, name: String) async throws(CoreError) {
+        do {
+            try await MCVectorCore.saveServerTemplateFromServer(serverId: id, name: name)
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+}

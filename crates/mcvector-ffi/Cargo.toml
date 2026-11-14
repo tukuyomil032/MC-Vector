@@ -20,7 +20,10 @@ path = "src/bin/uniffi-bindgen.rs"
 
 [dependencies]
 mcvector-core = { path = "../mcvector-core" }
-uniffi = { version = "0.32.2", features = ["cli"] }
+# "tokio": async exports run on a tokio runtime (`async_runtime = "tokio"`).
+uniffi = { version = "0.32.2", features = ["cli", "tokio"] }
+tokio = { version = "1", features = ["rt"] }
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 tempfile = "3"
