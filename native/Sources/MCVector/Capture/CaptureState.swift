@@ -23,6 +23,7 @@ enum CaptureState {
         _ id: String,
         app: AppState,
         feedback: FeedbackCenter,
+        runtime: ServerRuntime,
         openSettings: OpenSettingsAction
     ) async {
         resizeMainWindow(to: CGSize(width: 1200, height: 800))
@@ -203,6 +204,85 @@ enum CaptureState {
                 signal("[capture] import failed: \(model.failure?.code ?? "?") \(model.failure?.message ?? "")")
                 feedback.toast(.error, model.failure?.uiText ?? "?")
             }
+        case "CONSOLE-offline":
+            app.navigate(to: .console)
+        case "CONSOLE-running", "CONSOLE-search", "CONSOLE-filter-warn", "CONSOLE-pinned", "HEADER-online":
+            await startStandIn(runtime: runtime, serverID: "server-1")
+            switch id {
+            case "CONSOLE-search": ConsoleView.capturePreset = .init(query: "done")
+            case "CONSOLE-filter-warn": ConsoleView.capturePreset = .init(level: .warn)
+            case "CONSOLE-pinned": ConsoleView.capturePreset = .init(pinFirstWarning: true)
+            default: break
+            }
+            app.navigate(to: id == "HEADER-online" ? .dashboard : .console)
+            try? await Task.sleep(for: .milliseconds(600))
+        case "EULA-sheet":
+            writeEula(accepted: false, serverID: "server-1")
+            app.navigate(to: .console)
+            await runtime.start("server-1")
+        case "CONFIRM-quit":
+            await startStandIn(runtime: runtime, serverID: "server-1")
+            app.navigate(to: .console)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                NSApp.terminate(nil)
+            }
+        case "VERIFY-start-stop":
+            await runtime.start("server-1")
+            try? await Task.sleep(for: .seconds(1))
+            signal("[capture] after start: \(runtime.status(of: "server-1"))")
+            do throws(CoreError) {
+                try await runtime.send("list", to: "server-1")
+            } catch {
+                signal("[capture] send failed: \(error.code)")
+            }
+            do throws(CoreError) {
+                try await runtime.send("list", to: "server-1")
+                signal("[capture] second send within 100 ms was accepted")
+            } catch {
+                signal("[capture] rate limit: \(error.code)")
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+            await runtime.stop("server-1")
+            try? await Task.sleep(for: .milliseconds(300))
+            let lines = runtime.logs["server-1"] ?? []
+            signal("[capture] after stop: \(runtime.status(of: "server-1")) lines=\(lines.count) stderr=\(lines.contains(where: \.isStderr)) last=\(lines.last?.text ?? "")")
+            app.navigate(to: .console)
+        case "VERIFY-crash":
+            await startStandIn(runtime: runtime, serverID: "server-1")
+            try? await runtime.send("crash", to: "server-1")
+            try? await Task.sleep(for: .seconds(1))
+            signal("[capture] after crash: \(runtime.status(of: "server-1"))")
+            app.navigate(to: .console)
+        case "VERIFY-real-paper":
+            // Downloads Paper, accepts its EULA, runs it with the real Java,
+            // waits for "Done (", sends a command, then stops it.
+            do throws(CoreError) {
+                let created = try await CoreClient.createServer(NewServerInput(
+                    operationId: UUID().uuidString.lowercased(), name: "real-paper", profileName: nil,
+                    groupName: nil, software: "Paper", version: "1.21.10", port: 25_590, memoryGb: 2,
+                    templateId: nil, importToken: nil
+                )) { _ in }
+                await app.reloadServers()
+                let id = created.server.id
+                app.selectedServerID = id
+                app.navigate(to: .console)
+                try CoreClient.acceptServerEula(id: id)
+                await runtime.start(id)
+                var done = false
+                for _ in 0..<240 {
+                    if runtime.logs[id]?.contains(where: { $0.text.contains("Done (") }) == true { done = true; break }
+                    if runtime.status(of: id) == "crashed" { break }
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                signal("[capture] paper done=\(done) status=\(runtime.status(of: id)) lines=\(runtime.logs[id]?.count ?? 0)")
+                try? await runtime.send("list", to: id)
+                try? await Task.sleep(for: .seconds(1))
+                signal("[capture] list reply: \(runtime.logs[id]?.last?.text ?? "")")
+                await runtime.stop(id)
+                signal("[capture] after stop: \(runtime.status(of: id))")
+            } catch {
+                signal("[capture] real paper failed: \(error.code) \(error.message)")
+            }
         case "VERIFY-template":
             do {
                 try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")
@@ -218,6 +298,22 @@ enum CaptureState {
             }
         }
         signal("[capture] ready: \(id)")
+    }
+
+    /// Starts a fixture server with the stand-in Java and waits for its log.
+    private static func startStandIn(runtime: ServerRuntime, serverID: String) async {
+        await runtime.start(serverID)
+        for _ in 0..<30 where (runtime.logs[serverID]?.count ?? 0) < 5 {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        try? await runtime.send("list", to: serverID)
+        try? await Task.sleep(for: .milliseconds(300))
+    }
+
+    private static func writeEula(accepted: Bool, serverID: String) {
+        guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+        let url = URL(fileURLWithPath: dataDir).appendingPathComponent("servers/\(serverID)/eula.txt")
+        try? "eula=\(accepted)\n".write(to: url, atomically: true, encoding: .utf8)
     }
 
     /// A preset model for the next "Create a new server" sheet (ADD-SERVER-*).

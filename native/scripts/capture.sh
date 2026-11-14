@@ -103,11 +103,41 @@ prepare_fixture() {
       mkdir -p "$dir/servers/$server_id"
       printf 'motd=%s\nserver-port=25565\n' "$server_id" > "$dir/servers/$server_id/server.properties"
       printf 'eula=true\n' > "$dir/servers/$server_id/eula.txt"
+      printf 'stand-in jar\n' > "$dir/servers/$server_id/server.jar"
     done
   fi
   printf '{"locale":"%s"}\n' "$LOCALE" > "$dir/config.json"
   prepare_import_sources "$(dirname "$dir")/import-source"
 }
+
+# The debug app runs this instead of Java (MCVECTOR_DEBUG_JAVA), so the
+# CONSOLE-*/VERIFY-* states start, stop and crash servers without a JDK.
+# stdin: "stop" exits 0, "crash" exits 1, "tps" prints a TPS line.
+STAND_IN_JAVA="$BUILD_DIR/fixtures/stand-in-java"
+write_stand_in_java() {
+  ensure_inside_build "$STAND_IN_JAVA"
+  mkdir -p "$(dirname "$STAND_IN_JAVA")"
+  cat > "$STAND_IN_JAVA" <<'SCRIPT'
+#!/bin/sh
+echo "[12:00:00 INFO]: Starting minecraft server version 1.21.10"
+echo "[12:00:00 INFO]: Loading properties"
+echo "[12:00:00 WARN]: This server is running a stand-in for Java (MC-Vector capture)"
+echo "[12:00:01 INFO]: Preparing level \"world\""
+echo "stand-in: a line on stderr" 1>&2
+echo "[12:00:02 INFO]: Done (1.234s)! For help, type \"help\""
+while IFS= read -r line; do
+  case "$line" in
+    stop) echo "[12:00:09 INFO]: Stopping server"; exit 0 ;;
+    crash) echo "[12:00:09 ERROR]: Encountered an unexpected exception"; exit 1 ;;
+    tps) echo "[12:00:05 INFO]: TPS from last 1m, 5m, 15m: 20.0, 20.0, 20.0" ;;
+    list) echo "[12:00:05 INFO]: There are 0 of a max of 20 players online:" ;;
+    *) echo "[12:00:05 INFO]: Unknown or incomplete command: $line" ;;
+  esac
+done
+SCRIPT
+  chmod +x "$STAND_IN_JAVA"
+}
+write_stand_in_java
 
 # prepare_import_sources <dir>: folders the IMPORT-* states pick, next to the
 # data folder (outside it, like a real server folder elsewhere on disk).
@@ -137,7 +167,11 @@ for id in "${IDS[@]}"; do
   # the active app (a process exec'd from a terminal stays in the background).
   # `open --stdout/--stderr` makes the launch fail, so the app reports readiness
   # by appending to MCVECTOR_CAPTURE_SIGNAL instead.
+  # VERIFY-real-* states run the real Java from PATH instead of the stand-in.
+  java_override="$STAND_IN_JAVA"
+  case "$id" in VERIFY-real-*) java_override="" ;; esac
   open -n -F "$APP" --env "MCVECTOR_DATA_DIR=$data_dir" --env "MCVECTOR_CAPTURE_SIGNAL=$log_file" \
+    --env "MCVECTOR_DEBUG_JAVA=$java_override" \
     --args --capture-state "$id"
 
   ready=0
@@ -157,7 +191,10 @@ for id in "${IDS[@]}"; do
   wid=""
   if [ "$ready" -eq 1 ] && [ -n "$pid" ]; then
     sleep 1.2 # let sheets, alerts and transitions settle
-    wid="$("$WINDOW_ID" "$pid" || true)"
+    case "$id" in
+      CONFIRM-quit) wid="$("$WINDOW_ID" "$pid" 120 || true)" ;;
+      *) wid="$("$WINDOW_ID" "$pid" || true)" ;;
+    esac
   fi
   if [ -n "$wid" ]; then
     screencapture -o -x -l "$wid" "$OUT_DIR/$id.png"

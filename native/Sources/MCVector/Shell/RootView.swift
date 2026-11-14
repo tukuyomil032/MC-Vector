@@ -64,7 +64,9 @@ struct RootView: View {
             await app.reloadServers()
             #if DEBUG
             if let id = CaptureState.requestedID {
-                await CaptureState.apply(id, app: app, feedback: feedback, openSettings: openSettings)
+                await CaptureState.apply(
+                    id, app: app, feedback: feedback, runtime: runtime, openSettings: openSettings
+                )
             }
             #endif
         }
