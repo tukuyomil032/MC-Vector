@@ -8,10 +8,6 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 
-pub(crate) use mcvector_core::java_policy::{
-    validate_java_executable_path, validate_jvm_extra_args,
-};
-
 use super::download::{
     download_verified_artifact, read_limited_response_body, send_request_with_timeout,
 };
