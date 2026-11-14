@@ -24,6 +24,11 @@ pub fn run() {
     // build has its own identifier and data directory, so it locks that one.
     let _instance_lock = instance_guard::acquire_or_exit(&context.config().identifier);
 
+    mcvector_core::download::set_user_agent(format!(
+        "MC-Vector/{} (https://github.com/tukuyomil032/MC-Vector)",
+        env!("CARGO_PKG_VERSION")
+    ));
+
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

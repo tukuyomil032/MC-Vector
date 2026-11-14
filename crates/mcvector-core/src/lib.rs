@@ -5,6 +5,7 @@
 //! `tauri-plugin-*` crate.
 
 pub mod config;
+pub mod download;
 pub mod error;
 pub mod instance_lock;
 pub mod lifecycle;

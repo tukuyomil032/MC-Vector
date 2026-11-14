@@ -2948,10 +2948,13 @@ name = "mcvector-core"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "futures-util",
  "log",
+ "reqwest 0.12.28",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
  "tokio",
  "uuid",

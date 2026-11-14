@@ -731,7 +731,7 @@ pub async fn download_java(
         },
     )
     .await?;
-    debug_assert_eq!(verified.sha256, checksum.to_ascii_lowercase());
+    debug_assert_eq!(verified.checksum, checksum.to_ascii_lowercase());
     debug_assert!(verified.size > 0);
     let mut archive_guard = DownloadTempGuard::new(verified.path.clone());
     let staging_dir = managed_root.join(format!(".jdk-{major_version}.staging-{}", Uuid::new_v4()));
