@@ -18,6 +18,8 @@ struct RootView: View {
                 .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
         } detail: {
             ContentRouter()
+                // Toasts sit just below the toolbar, centered on the content.
+                .overlay(alignment: .top) { ToastHUD(feedback: feedback) }
                 .serverToolbar()
         }
         .searchable(text: $app.searchText, placement: .toolbar, prompt: Text(L10n.t("commandPalette.placeholder")))
@@ -28,9 +30,6 @@ struct RootView: View {
                 isSearchFieldFocused = true
                 app.isSearchFocused = false
             }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            ToastStackView(feedback: feedback)
         }
         .feedbackHost(feedback)
         .sheet(item: $app.activeSheet) { sheet in

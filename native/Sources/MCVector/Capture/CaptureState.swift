@@ -37,14 +37,10 @@ enum CaptureState {
         case "SEARCH-filtered":
             app.isSearchFocused = true
             app.searchText = "con"
-        case "TOAST-stack-3":
-            feedback.error(L10n.t("server.toast.autoBackupFailed", ["name": "E2E Server"]))
-            feedback.info(L10n.t(
-                "server.toast.autoRestartScheduled",
-                ["name": "E2E Server", "seconds": 10, "attempt": 1, "max": 3]
-            ))
-            feedback.success(L10n.t("server.toast.autoBackupCreated", ["name": "E2E Server"]))
-            feedback.isStackExpanded = true
+        case "TOAST-success":
+            feedback.toast(.success, L10n.t("server.toast.cloned"))
+        case "TOAST-error":
+            feedback.toast(.error, L10n.t("server.toast.autoBackupFailed", ["name": "E2E Server"]))
         case "CONFIRM-delete-server":
             Task {
                 _ = await feedback.confirm(
@@ -71,24 +67,23 @@ enum CaptureState {
             if let copy = try? await CoreClient.cloneServer(id: "server-1", name: "E2E Server Copy") {
                 await app.reloadServers()
                 app.selectedServerID = copy.id
-                feedback.success(L10n.t("server.toast.cloned"))
+                feedback.toast(.success, L10n.t("server.toast.cloned"))
             } else {
-                feedback.error(L10n.t("server.toast.cloneFailed"))
+                feedback.toast(.error, L10n.t("server.toast.cloneFailed"))
             }
         case "VERIFY-delete":
             let deleted = (try? await CoreClient.deleteServer(id: "server-1")) ?? false
             await app.reloadServers()
-            if deleted {
-                feedback.success(L10n.t("server.toast.deleted"))
-            } else {
-                feedback.error(L10n.t("server.toast.deleteFailed"))
-            }
+            feedback.toast(
+                deleted ? .success : .error,
+                L10n.t(deleted ? "server.toast.deleted" : "server.toast.deleteFailed")
+            )
         case "VERIFY-template":
             do {
                 try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")
-                feedback.success(L10n.t("server.toast.templateSaved"))
+                feedback.toast(.success, L10n.t("server.toast.templateSaved"))
             } catch {
-                feedback.error(L10n.t("server.toast.templateSaveFailed"))
+                feedback.toast(.error, L10n.t("server.toast.templateSaveFailed"))
             }
         default:
             if let route = AppRoute.allCases.first(where: { id == "ROUTE-\($0.rawValue)" }) {

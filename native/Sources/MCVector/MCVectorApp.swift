@@ -99,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys = GlobalHotKeys { action in
             switch action {
             case .startStop, .restart:
-                feedback.info(L10n.t("native.notPorted"))
+                feedback.toast(.info, L10n.t("native.notPorted"))
             }
         }
     }

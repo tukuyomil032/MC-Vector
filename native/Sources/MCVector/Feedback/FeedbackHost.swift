@@ -2,66 +2,80 @@
 
 import SwiftUI
 
-/// Presents `FeedbackCenter.modal` (React `AppFeedbackProvider` dialogs):
-/// confirm → `.alert` with Cancel then the confirm button (destructive for `danger`),
-/// prompt → sheet with a labelled text field and Cancel / Save on the trailing side,
-/// dialog → sheet with title, description and up to two actions.
+/// Presents `FeedbackCenter.modal` with the standard components:
+/// confirm and error → `.alert`, prompt → a sheet with a text field.
 struct FeedbackHost: ViewModifier {
     @Bindable var feedback: FeedbackCenter
 
     func body(content: Content) -> some View {
         content
             .alert(
-                confirmRequest?.title ?? "",
+                alertTitle,
                 isPresented: Binding(
-                    get: { confirmRequest != nil },
-                    set: { if !$0, confirmRequest != nil { feedback.finishConfirm(false) } }
-                ),
-                presenting: confirmRequest
-            ) { request in
-                Button(request.cancelLabel, role: .cancel) { feedback.finishConfirm(false) }
-                Button(request.confirmLabel, role: request.isDanger ? .destructive : nil) {
-                    feedback.finishConfirm(true)
+                    get: { isAlert },
+                    set: { if !$0 { dismissAlert() } }
+                )
+            ) {
+                switch feedback.modal {
+                case let .confirm(request):
+                    Button(request.cancelLabel, role: .cancel) { feedback.finishConfirm(false) }
+                    Button(request.confirmLabel, role: request.isDanger ? .destructive : nil) {
+                        feedback.finishConfirm(true)
+                    }
+                case .error:
+                    Button(L10n.t("common.close")) { feedback.finishError() }
+                default:
+                    EmptyView()
                 }
-            } message: { request in
-                if let description = request.description {
-                    Text(description)
-                }
-            }
-            .sheet(item: Binding(
-                get: { sheetModal },
-                set: { if $0 == nil { dismissSheet() } }
-            )) { modal in
-                switch modal {
-                case let .prompt(request):
-                    PromptSheet(request: request) { feedback.finishPrompt($0) }
-                case let .dialog(request):
-                    DialogSheet(request: request) { feedback.finishDialog() }
-                case .confirm:
+            } message: {
+                switch feedback.modal {
+                case let .confirm(request):
+                    if let description = request.description { Text(description) }
+                case let .error(request):
+                    if let message = request.message { Text(message) }
+                default:
                     EmptyView()
                 }
             }
+            .sheet(item: Binding(
+                get: { promptRequest },
+                set: { if $0 == nil, promptRequest != nil { feedback.finishPrompt(nil) } }
+            )) { request in
+                PromptSheet(request: request) { feedback.finishPrompt($0) }
+            }
     }
 
-    private var confirmRequest: FeedbackCenter.ConfirmRequest? {
-        if case let .confirm(request) = feedback.modal { return request }
+    private var isAlert: Bool {
+        switch feedback.modal {
+        case .confirm, .error: true
+        default: false
+        }
+    }
+
+    private var alertTitle: String {
+        switch feedback.modal {
+        case let .confirm(request): request.title
+        case let .error(request): request.title
+        default: ""
+        }
+    }
+
+    private var promptRequest: FeedbackCenter.PromptRequest? {
+        if case let .prompt(request) = feedback.modal { return request }
         return nil
     }
 
-    private var sheetModal: FeedbackCenter.Modal? {
+    private func dismissAlert() {
         switch feedback.modal {
-        case .prompt, .dialog: feedback.modal
-        default: nil
-        }
-    }
-
-    private func dismissSheet() {
-        switch feedback.modal {
-        case .prompt: feedback.finishPrompt(nil)
-        case .dialog: feedback.finishDialog()
+        case .confirm: feedback.finishConfirm(false)
+        case .error: feedback.finishError()
         default: break
         }
     }
+}
+
+extension FeedbackCenter.PromptRequest: Equatable {
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
 }
 
 extension View {
@@ -70,7 +84,7 @@ extension View {
     }
 }
 
-/// PROMPT-*: title, field label, text field, then Cancel / confirm on the trailing side.
+/// A titled sheet with one labelled text field, Cancel and the confirm button.
 private struct PromptSheet: View {
     let request: FeedbackCenter.PromptRequest
     let finish: (String?) -> Void
@@ -84,31 +98,33 @@ private struct PromptSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(request.title).font(.headline)
-            if let description = request.description {
-                Text(description).foregroundStyle(.secondary)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                Text(request.label).font(.callout)
-                TextField(request.placeholder ?? "", text: $value)
-                    .textFieldStyle(.roundedBorder)
+        Form {
+            Section {
+                TextField(request.label, text: $value, prompt: request.placeholder.map(Text.init))
                     .onSubmit(submit)
                 if let error {
-                    Text(error).font(.callout).foregroundStyle(.red)
+                    Text(error).foregroundStyle(.red)
+                }
+            } header: {
+                Text(request.title).font(.headline)
+            } footer: {
+                if let description = request.description {
+                    Text(description).foregroundStyle(.secondary)
                 }
             }
-            HStack {
-                Spacer()
-                Button(L10n.t("common.cancel"), role: .cancel) { finish(nil) }
-                    .keyboardShortcut(.cancelAction)
+        }
+        .formStyle(.grouped)
+        .frame(width: 420)
+        .fixedSize(horizontal: false, vertical: true)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(L10n.t("common.cancel")) { finish(nil) }
+            }
+            ToolbarItem(placement: .confirmationAction) {
                 Button(request.confirmLabel, action: submit)
-                    .keyboardShortcut(.defaultAction)
                     .disabled(trimmed.isEmpty)
             }
         }
-        .padding(20)
-        .frame(width: 440)
     }
 
     private var trimmed: String { value.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -120,43 +136,5 @@ private struct PromptSheet: View {
             return
         }
         finish(trimmed)
-    }
-}
-
-/// FEEDBACK-dialog-*: title, description, actions on the trailing side.
-private struct DialogSheet: View {
-    let request: FeedbackCenter.DialogRequest
-    let finish: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(request.title).font(.headline)
-            if let description = request.description {
-                Text(description).foregroundStyle(.secondary)
-            }
-            HStack {
-                Spacer()
-                if let secondary = request.secondary {
-                    Button(secondary.label) {
-                        secondary.run()
-                        finish()
-                    }
-                }
-                if let primary = request.primary {
-                    Button(primary.label) {
-                        primary.run()
-                        finish()
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    Button(L10n.t("common.close"), role: .cancel, action: finish)
-                        .keyboardShortcut(.cancelAction)
-                } else {
-                    Button(L10n.t("common.close"), action: finish)
-                        .keyboardShortcut(.defaultAction)
-                }
-            }
-        }
-        .padding(20)
-        .frame(width: 440)
     }
 }

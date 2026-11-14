@@ -2,125 +2,25 @@
 
 import Foundation
 import Observation
+import UserNotifications
 
-/// Toasts and modal feedback for the whole window, mirroring React's
-/// `AppFeedbackProvider` + `notify` + arc `ToastStack`:
-/// - toasts: bottom-right stack, 5 s (warning and error 1.6x, loading until done),
-///   at most 12 kept, 3 shown stacked, fanned out on hover;
-/// - modal feedback: one at a time; a new request cancels the previous one (D8).
+/// Feedback covering what React's toasts and `AppFeedbackProvider` dialogs do,
+/// built from macOS idioms:
+/// - toasts are a single HUD capsule near the top of the window (`ToastHUD`);
+/// - confirmations and prompts are alerts and sheets; `showError` is an alert for
+///   failures the user has to read;
+/// - background events can also go to Notification Center (`notifyInBackground`).
+/// Only one modal is shown at a time; a new request cancels the previous one.
 @MainActor
 @Observable
 final class FeedbackCenter {
-    // MARK: Toasts
-
-    enum ToastKind: String, Sendable {
-        case success, error, warning, info, loading
-    }
-
-    struct Toast: Identifiable, Equatable {
-        let id: String
-        var kind: ToastKind
-        var title: String
-        var description: String?
-        /// 0...100 for `.loading`.
-        var progress: Int?
-        var actionTitle: String?
-        var action: (@MainActor () -> Void)?
-
-        static func == (lhs: Toast, rhs: Toast) -> Bool {
-            lhs.id == rhs.id && lhs.kind == rhs.kind && lhs.title == rhs.title
-                && lhs.description == rhs.description && lhs.progress == rhs.progress
-                && lhs.actionTitle == rhs.actionTitle
-        }
-    }
-
-    static let baseDuration: Duration = .milliseconds(5000)
-    static let limit = 12
-    static let visibleToasts = 3
-
-    /// Newest last.
-    private(set) var toasts: [Toast] = []
-    /// While the stack is hovered or focused it fans out and timers pause.
-    var isStackExpanded = false {
-        didSet { if !isStackExpanded { restartTimers() } }
-    }
-
-    private var timers: [String: Task<Void, Never>] = [:]
-
-    func success(_ title: String, _ description: String? = nil) { show(.success, title, description) }
-    func error(_ title: String, _ description: String? = nil) { show(.error, title, description) }
-    func warning(_ title: String, _ description: String? = nil) { show(.warning, title, description) }
-    func info(_ title: String, _ description: String? = nil) { show(.info, title, description) }
-
-    /// Shows a toast. Reusing an `id` replaces that toast in place (React `notify.progress` / `done`).
-    @discardableResult
-    func show(
-        _ kind: ToastKind,
-        _ title: String,
-        _ description: String? = nil,
-        id: String = UUID().uuidString,
-        progress: Int? = nil,
-        actionTitle: String? = nil,
-        action: (@MainActor () -> Void)? = nil
-    ) -> String {
-        let toast = Toast(
-            id: id, kind: kind, title: title, description: description,
-            progress: progress.map { min(100, max(0, $0)) },
-            actionTitle: actionTitle, action: action
-        )
-        if let index = toasts.firstIndex(where: { $0.id == id }) {
-            toasts[index] = toast
-        } else {
-            toasts.append(toast)
-            if toasts.count > Self.limit {
-                dismiss(toasts[0].id)
-            }
-        }
-        schedule(toast)
-        return id
-    }
-
-    func dismiss(_ id: String) {
-        timers[id]?.cancel()
-        timers[id] = nil
-        toasts.removeAll { $0.id == id }
-    }
-
-    private func duration(for kind: ToastKind) -> Duration? {
-        switch kind {
-        case .loading: nil
-        case .warning, .error: Self.baseDuration * 1.6
-        case .success, .info: Self.baseDuration
-        }
-    }
-
-    private func schedule(_ toast: Toast) {
-        timers[toast.id]?.cancel()
-        guard !isStackExpanded, let delay = duration(for: toast.kind) else {
-            timers[toast.id] = nil
-            return
-        }
-        let id = toast.id
-        timers[id] = Task { [weak self] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-            self?.dismiss(id)
-        }
-    }
-
-    private func restartTimers() {
-        for toast in toasts { schedule(toast) }
-    }
-
-    // MARK: Modal feedback (confirm / prompt / dialog)
-
     struct ConfirmRequest: Identifiable {
         let id = UUID()
         var title: String
         var description: String?
         var confirmLabel: String
         var cancelLabel: String
-        /// React `tone: 'danger'`: destructive confirm, focus starts on Cancel.
+        /// Destructive confirm; Cancel is the default button.
         var isDanger: Bool
         let resolve: (Bool) -> Void
     }
@@ -138,36 +38,76 @@ final class FeedbackCenter {
         let resolve: (String?) -> Void
     }
 
-    struct DialogAction {
-        var label: String
-        var run: @MainActor () -> Void
-    }
-
-    struct DialogRequest: Identifiable {
+    /// A failure the user should read: an alert with a single OK button.
+    struct ErrorRequest: Identifiable {
         let id = UUID()
         var title: String
-        var description: String?
-        var primary: DialogAction?
-        var secondary: DialogAction?
+        var message: String?
         let resolve: () -> Void
     }
 
     enum Modal: Identifiable {
         case confirm(ConfirmRequest)
         case prompt(PromptRequest)
-        case dialog(DialogRequest)
+        case error(ErrorRequest)
 
         var id: UUID {
             switch self {
             case let .confirm(request): request.id
             case let .prompt(request): request.id
-            case let .dialog(request): request.id
+            case let .error(request): request.id
             }
         }
     }
 
-    /// The one modal on screen. Setting a new one cancels the previous request.
+    /// The one modal on screen.
     private(set) var modal: Modal?
+
+    // MARK: Toast (HUD)
+
+    enum ToastKind: Sendable {
+        case success, info, warning, error
+
+        var symbol: String {
+            switch self {
+            case .success: "checkmark.circle.fill"
+            case .info: "info.circle.fill"
+            case .warning: "exclamationmark.triangle.fill"
+            case .error: "xmark.octagon.fill"
+            }
+        }
+    }
+
+    struct Toast: Identifiable, Equatable {
+        let id = UUID()
+        let kind: ToastKind
+        let title: String
+    }
+
+    /// The toast on screen. A new toast replaces the current one.
+    private(set) var toast: Toast?
+    @ObservationIgnored private var toastTimer: Task<Void, Never>?
+
+    /// Shows a short message as a HUD capsule at the top of the window, then fades
+    /// it out (about 2.5 s; warnings and errors stay a little longer).
+    func toast(_ kind: ToastKind, _ title: String) {
+        let next = Toast(kind: kind, title: title)
+        toast = next
+        toastTimer?.cancel()
+        let seconds: Double = (kind == .warning || kind == .error) ? 4 : 2.5
+        toastTimer = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, self?.toast?.id == next.id else { return }
+            self?.toast = nil
+        }
+    }
+
+    func dismissToast() {
+        toastTimer?.cancel()
+        toast = nil
+    }
+
+    // MARK: Requests
 
     /// Resolves true when confirmed; false on cancel or Escape.
     func confirm(
@@ -213,27 +153,15 @@ final class FeedbackCenter {
         }
     }
 
-    func openDialog(
-        title: String,
-        description: String? = nil,
-        primary: DialogAction? = nil,
-        secondary: DialogAction? = nil
-    ) async {
-        await withCheckedContinuation { continuation in
-            present(.dialog(DialogRequest(
-                title: title,
-                description: description,
-                primary: primary,
-                secondary: secondary,
-                resolve: { continuation.resume() }
-            )))
-        }
+    /// Shows a failure as an alert. Does not wait for the user.
+    func showError(_ title: String, message: String? = nil) {
+        present(.error(ErrorRequest(title: title, message: message, resolve: {})))
     }
 
-    /// Called by the host views when the user answers or dismisses.
+    /// Called by the host view when the user answers or dismisses.
     func finishConfirm(_ accepted: Bool) { take { if case let .confirm(r) = $0 { r.resolve(accepted) } } }
     func finishPrompt(_ value: String?) { take { if case let .prompt(r) = $0 { r.resolve(value) } } }
-    func finishDialog() { take { if case let .dialog(r) = $0 { r.resolve() } } }
+    func finishError() { take { if case let .error(r) = $0 { r.resolve() } } }
 
     private func present(_ newModal: Modal) {
         cancelCurrent()
@@ -246,7 +174,7 @@ final class FeedbackCenter {
         switch current {
         case let .confirm(request): request.resolve(false)
         case let .prompt(request): request.resolve(nil)
-        case let .dialog(request): request.resolve()
+        case let .error(request): request.resolve()
         }
     }
 
@@ -254,5 +182,23 @@ final class FeedbackCenter {
         guard let current = modal else { return }
         modal = nil
         body(current)
+    }
+
+    // MARK: Background events
+
+    /// Posts a Notification Center notification for something that happened
+    /// without the user asking (server crashed, auto backup finished...).
+    /// Permission is requested on first use; without it nothing is shown.
+    func notifyInBackground(title: String, body: String? = nil) {
+        let center = UNUserNotificationCenter.current()
+        Task {
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = title
+            if let body { content.body = body }
+            let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+            try? await center.add(request)
+        }
     }
 }

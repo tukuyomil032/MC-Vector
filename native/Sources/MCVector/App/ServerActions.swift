@@ -2,8 +2,8 @@
 
 import MCVectorCore
 
-/// Server management actions from the sidebar context menu (React
-/// `use-server-context-actions.ts`): the same confirmations, defaults and toasts.
+/// Server management from the sidebar context menu, with the same steps,
+/// confirmations and messages as React `use-server-context-actions.ts`.
 @MainActor
 struct ServerActions {
     let app: AppState
@@ -21,13 +21,13 @@ struct ServerActions {
         guard confirmed else { return }
         do {
             if try await CoreClient.deleteServer(id: server.id) {
-                await app.reloadServers(selectFirstIfMissing: true)
-                feedback.success(L10n.t("server.toast.deleted"))
+                await app.reloadServers()
+                feedback.toast(.success, L10n.t("server.toast.deleted"))
             } else {
-                feedback.error(L10n.t("server.toast.deleteFailed"))
+                feedback.toast(.error, L10n.t("server.toast.deleteFailed"))
             }
         } catch {
-            feedback.error(L10n.t(
+            feedback.toast(.error, L10n.t(
                 error.code == "server.running" ? "server.toast.deleteRunning" : "server.toast.deleteError"
             ))
         }
@@ -45,11 +45,11 @@ struct ServerActions {
                 id: server.id,
                 name: L10n.t("server.create.cloneDefaultName", ["name": server.name])
             )
-            await app.reloadServers(selectFirstIfMissing: true)
+            await app.reloadServers()
             app.selectedServerID = copy.id
-            feedback.success(L10n.t("server.toast.cloned"))
+            feedback.toast(.success, L10n.t("server.toast.cloned"))
         } catch {
-            feedback.error(L10n.t("server.toast.cloneFailed"))
+            feedback.toast(.error, L10n.t("server.toast.cloneFailed"))
         }
     }
 
@@ -63,9 +63,9 @@ struct ServerActions {
         ) else { return }
         do {
             try await CoreClient.saveTemplate(fromServer: server.id, name: name)
-            feedback.success(L10n.t("server.toast.templateSaved"))
+            feedback.toast(.success, L10n.t("server.toast.templateSaved"))
         } catch {
-            feedback.error(L10n.t("server.toast.templateSaveFailed"))
+            feedback.toast(.error, L10n.t("server.toast.templateSaveFailed"))
         }
     }
 }

@@ -47,14 +47,6 @@
     "en": "Something went wrong. Try again.",
     "ja": "問題が発生しました。もう一度お試しください。"
   },
-  "feedback.toast.dismiss": {
-    "en": "Dismiss notification",
-    "ja": "通知を閉じる"
-  },
-  "feedback.toast.region": {
-    "en": "Notifications",
-    "ja": "通知"
-  },
   "lock.other_running": {
     "en": "Another MC-Vector is already running.\nBoth editions use the same servers and data, so only one can run at a time.",
     "ja": "別の MC-Vector が起動中です。\n両方の版は同じサーバーとデータを使うため、同時には起動できません。"
