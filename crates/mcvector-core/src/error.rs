@@ -42,6 +42,22 @@ pub enum CoreErrorCode {
     ServerOperationFailed,
     /// The shared config.json could not be read or written.
     ConfigWriteFailed,
+    /// The server name is empty, too long, or uses unsupported characters.
+    ServerInvalidName,
+    /// The server port is outside 1–65535.
+    ServerInvalidPort,
+    /// The server memory is outside 1–1024 GB.
+    ServerInvalidMemory,
+    /// Another server setting (software, version, schedule…) is invalid.
+    ServerInvalidRequest,
+    /// A download or provider request failed on the network.
+    DownloadNetworkFailed,
+    /// Downloaded bytes did not match the provider's checksum or size.
+    DownloadChecksumMismatch,
+    /// A download is larger than the allowed size.
+    DownloadTooLarge,
+    /// The provider's download information could not be read.
+    DownloadUnavailable,
 }
 
 impl CoreErrorCode {
@@ -58,6 +74,14 @@ impl CoreErrorCode {
         CoreErrorCode::ServerRunning,
         CoreErrorCode::ServerOperationFailed,
         CoreErrorCode::ConfigWriteFailed,
+        CoreErrorCode::ServerInvalidName,
+        CoreErrorCode::ServerInvalidPort,
+        CoreErrorCode::ServerInvalidMemory,
+        CoreErrorCode::ServerInvalidRequest,
+        CoreErrorCode::DownloadNetworkFailed,
+        CoreErrorCode::DownloadChecksumMismatch,
+        CoreErrorCode::DownloadTooLarge,
+        CoreErrorCode::DownloadUnavailable,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -74,6 +98,14 @@ impl CoreErrorCode {
             Self::ServerRunning => "server.running",
             Self::ServerOperationFailed => "server.operation_failed",
             Self::ConfigWriteFailed => "config.write_failed",
+            Self::ServerInvalidName => "server.invalid_name",
+            Self::ServerInvalidPort => "server.invalid_port",
+            Self::ServerInvalidMemory => "server.invalid_memory",
+            Self::ServerInvalidRequest => "server.invalid_request",
+            Self::DownloadNetworkFailed => "download.network_failed",
+            Self::DownloadChecksumMismatch => "download.checksum_mismatch",
+            Self::DownloadTooLarge => "download.too_large",
+            Self::DownloadUnavailable => "download.unavailable",
         }
     }
 
@@ -92,13 +124,21 @@ impl CoreErrorCode {
             | Self::CoreNotStarted
             | Self::RegistryReadFailed
             | Self::ServerRunning
-            | Self::ConfigWriteFailed => true,
+            | Self::ConfigWriteFailed
+            | Self::DownloadNetworkFailed
+            | Self::DownloadChecksumMismatch
+            | Self::DownloadUnavailable => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
             | Self::InternalUnknown
             | Self::RegistryOpenFailed
-            | Self::ServerOperationFailed => false,
+            | Self::ServerOperationFailed
+            | Self::ServerInvalidName
+            | Self::ServerInvalidPort
+            | Self::ServerInvalidMemory
+            | Self::ServerInvalidRequest
+            | Self::DownloadTooLarge => false,
         }
     }
 
@@ -176,10 +216,18 @@ mod tests {
             CoreErrorCode::ServerRunning => 8,
             CoreErrorCode::ServerOperationFailed => 9,
             CoreErrorCode::ConfigWriteFailed => 10,
+            CoreErrorCode::ServerInvalidName => 11,
+            CoreErrorCode::ServerInvalidPort => 12,
+            CoreErrorCode::ServerInvalidMemory => 13,
+            CoreErrorCode::ServerInvalidRequest => 14,
+            CoreErrorCode::DownloadNetworkFailed => 15,
+            CoreErrorCode::DownloadChecksumMismatch => 16,
+            CoreErrorCode::DownloadTooLarge => 17,
+            CoreErrorCode::DownloadUnavailable => 18,
         }
     }
 
-    const VARIANT_COUNT: usize = 11;
+    const VARIANT_COUNT: usize = 19;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -244,6 +292,42 @@ mod tests {
             (
                 CoreErrorCode::ConfigWriteFailed,
                 "config.write_failed",
+                true,
+            ),
+            (
+                CoreErrorCode::ServerInvalidName,
+                "server.invalid_name",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerInvalidPort,
+                "server.invalid_port",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerInvalidMemory,
+                "server.invalid_memory",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerInvalidRequest,
+                "server.invalid_request",
+                false,
+            ),
+            (
+                CoreErrorCode::DownloadNetworkFailed,
+                "download.network_failed",
+                true,
+            ),
+            (
+                CoreErrorCode::DownloadChecksumMismatch,
+                "download.checksum_mismatch",
+                true,
+            ),
+            (CoreErrorCode::DownloadTooLarge, "download.too_large", false),
+            (
+                CoreErrorCode::DownloadUnavailable,
+                "download.unavailable",
                 true,
             ),
         ];
