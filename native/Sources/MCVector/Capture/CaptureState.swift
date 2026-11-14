@@ -283,6 +283,83 @@ enum CaptureState {
             } catch {
                 signal("[capture] real paper failed: \(error.code) \(error.message)")
             }
+        case "DASH-offline":
+            app.navigate(to: .dashboard)
+        case "DASH-running", "DASH-narrow", "VERIFY-high-cpu":
+            if id == "VERIFY-high-cpu" {
+                // Threshold 0: every sample is "high"; the cooldown must allow one notice.
+                runtime.serverProfile = { [app] serverID in
+                    guard var profile = app.servers.first(where: { $0.id == serverID }) else { return nil }
+                    profile.notifyOnHighCpu = true
+                    profile.notifyHighCpuThreshold = 0
+                    return profile
+                }
+            }
+            await startStandIn(runtime: runtime, serverID: "server-1")
+            app.navigate(to: .dashboard)
+            // TPS is polled every 5 s for Paper; wait for two TPS points.
+            for _ in 0..<40 where (runtime.metrics["server-1"]?.tps.count ?? 0) < 2 {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+            let snapshot = runtime.metrics["server-1"]
+            signal("[capture] metrics resource=\(snapshot?.resource.count ?? 0) tps=\(snapshot?.tps.count ?? 0) elapsed=\(snapshot?.elapsedMs ?? 0)")
+            if id == "DASH-narrow" {
+                resizeMainWindow(to: CGSize(width: 820, height: 800))
+                try? await Task.sleep(for: .milliseconds(400))
+            }
+        case "VERIFY-real-paper-dashboard":
+            do throws(CoreError) {
+                let created = try await CoreClient.createServer(NewServerInput(
+                    operationId: UUID().uuidString.lowercased(), name: "real-paper", profileName: nil,
+                    groupName: nil, software: "Paper", version: "1.21.10", port: 25_591, memoryGb: 2,
+                    templateId: nil, importToken: nil
+                )) { _ in }
+                await app.reloadServers()
+                let id = created.server.id
+                app.selectedServerID = id
+                app.navigate(to: .dashboard)
+                try CoreClient.acceptServerEula(id: id)
+                await runtime.start(id)
+                for _ in 0..<120 where (runtime.metrics[id]?.tps.count ?? 0) < 3 {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                let snapshot = runtime.metrics[id]
+                signal("[capture] paper metrics resource=\(snapshot?.resource.count ?? 0) tps=\(snapshot?.tps.map(\.tps) ?? [])")
+            } catch {
+                signal("[capture] real paper failed: \(error.code) \(error.message)")
+            }
+        case "MOTION-tour", "MOTION-tour-reduced":
+            // A scripted walk through the app's motion, recorded by capture.sh
+            // (CAPTURE_RECORD). It starts after the ready signal and the settle delay.
+            Motion.forceReducedMotion = id == "MOTION-tour-reduced"
+            await startStandIn(runtime: runtime, serverID: "server-1")
+            app.navigate(to: .dashboard)
+            Task { @MainActor in
+                let step = { (seconds: Double) in try? await Task.sleep(for: .seconds(seconds)) }
+                await step(1.6)
+                app.navigate(to: .console)
+                await step(1.4)
+                ConsoleView.captureAction = .openSearch("done")
+                await step(1.4)
+                ConsoleView.captureAction = .pinFirstWarning
+                await step(1.2)
+                ConsoleView.captureAction = .closeSearch
+                await step(1.0)
+                feedback.toast(.success, L10n.t("server.toast.cloned"))
+                await step(1.4)
+                feedback.toast(.error, L10n.t("server.toast.autoBackupFailed", ["name": "E2E Server"]))
+                await step(1.4)
+                app.navigate(to: .dashboard)
+                await step(1.4)
+                let model = CreateServerModel()
+                model.name = "motion-demo"
+                pendingCreateServerModel = model
+                app.activeSheet = .addServer
+                await step(1.2)
+                model.showProgressForCapture(.downloading(percent: 35))
+                await step(1.4)
+                app.activeSheet = nil
+            }
         case "VERIFY-template":
             do {
                 try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")

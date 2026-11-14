@@ -153,6 +153,19 @@ prepare_import_sources() {
   printf 'server-port=25565\n' > "$dir/no-jar-folder/server.properties"
 }
 
+# Killing the app skips its quit path, so a real Java server started by a
+# VERIFY-real-* state would keep running. Stop only processes whose working
+# folder is inside the capture fixtures; nothing else is touched.
+stop_fixture_servers() {
+  local server_pid cwd
+  for server_pid in $(pgrep -f -- "-jar .* nogui" || true); do
+    cwd="$(lsof -a -p "$server_pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+    case "$cwd" in
+      "$BUILD_DIR/fixtures/"*) kill "$server_pid" 2>/dev/null || true ;;
+    esac
+  done
+}
+
 failed=0
 index=0
 start="$(timer_start)"
@@ -196,6 +209,10 @@ for id in "${IDS[@]}"; do
       *) wid="$("$WINDOW_ID" "$pid" || true)" ;;
     esac
   fi
+  if [ -n "$wid" ] && [ -n "${CAPTURE_RECORD:-}" ]; then
+    # CAPTURE_RECORD=<seconds> also records the window, to show animations.
+    screencapture -x -v -V "$CAPTURE_RECORD" -l "$wid" "$OUT_DIR/$id.mov" || true
+  fi
   if [ -n "$wid" ]; then
     screencapture -o -x -l "$wid" "$OUT_DIR/$id.png"
     log_ok "$OUT_DIR/$id.png"
@@ -207,6 +224,7 @@ for id in "${IDS[@]}"; do
     kill "$pid" 2>/dev/null || true
     # Wait until it is gone, so the next launch can take the instance lock.
     for _ in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.1; done
+    stop_fixture_servers
   fi
 done
 
