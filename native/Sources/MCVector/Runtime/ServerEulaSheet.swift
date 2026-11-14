@@ -24,10 +24,12 @@ struct ServerEulaSheet: View {
                 Toggle(L10n.t("server.eula.consentLabel"), isOn: $agreed)
                     .disabled(isSaving)
             } footer: {
-                if failed { FieldError(L10n.t("server.eula.writeError")) }
+                if failed { FieldError(L10n.t("server.eula.writeError")).transition(.motionRise) }
             }
         }
         .formStyle(.grouped)
+        .animation(Motion.standard, value: failed)
+        .animation(Motion.snappy, value: agreed)
         .fixedSize(horizontal: false, vertical: true)
         .frame(width: 480)
         .interactiveDismissDisabled(isSaving)

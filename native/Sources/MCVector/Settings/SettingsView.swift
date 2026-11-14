@@ -52,6 +52,9 @@ struct SettingsView: View {
                 case .about: AboutPane()
                 }
             }
+            .id(selection)
+            .transition(.motionFade)
+            .animation(Motion.standard, value: selection)
             .navigationTitle((selection ?? .general).title)
         }
         .frame(minWidth: 680, idealWidth: 720, minHeight: 460, idealHeight: 480)

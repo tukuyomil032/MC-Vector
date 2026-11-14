@@ -24,10 +24,13 @@ struct ImportServerSheet: View {
                     workingLabel: L10n.t("native.import.copying"),
                     stage: stage
                 )
+                .transition(.motionFade)
             } else {
                 ImportServerForm(model: model, pickFolder: pickFolder)
+                    .transition(.motionFade)
             }
         }
+        .animation(Motion.spring, value: model.isCreating)
         .frame(width: 520)
         .interactiveDismissDisabled(model.isCreating)
         .toolbar {
@@ -133,7 +136,7 @@ private struct ImportServerForm: View {
                 Section {
                     TextField(L10n.t("importServer.nameLabel"), text: $model.name)
                 } footer: {
-                    if let error = model.nameError { FieldError(error) }
+                    if let error = model.nameError { FieldError(error).transition(.motionRise) }
                 }
 
                 Section {
@@ -154,5 +157,9 @@ private struct ImportServerForm: View {
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)
+        // Picking a folder unfolds the detected fields; errors fade in.
+        .animation(Motion.spring, value: model.analysis?.token)
+        .animation(Motion.standard, value: model.nameError)
+        .animation(Motion.standard, value: model.phase)
     }
 }

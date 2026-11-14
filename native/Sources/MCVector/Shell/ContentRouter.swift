@@ -11,21 +11,37 @@ struct ContentRouter: View {
     @Environment(AppState.self) private var app
 
     var body: some View {
-        Group {
-            if let staticView = staticRoute {
-                staticView
-            } else if case let .failed(error) = app.serversLoad {
-                ContentStateView(title: error.uiText)
-            } else if app.serversLoad == .loading {
-                ProgressView(L10n.t("common.loadingView"))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let server = app.selectedServer {
-                serverView(serverID: server.id)
-            } else {
-                noServerState
+        ZStack {
+            Group {
+                if let staticView = staticRoute {
+                    staticView
+                } else if case let .failed(error) = app.serversLoad {
+                    ContentStateView(title: error.uiText)
+                } else if app.serversLoad == .loading {
+                    ProgressView(L10n.t("common.loadingView"))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let server = app.selectedServer {
+                    serverView(serverID: server.id)
+                } else {
+                    noServerState
+                }
             }
+            // One identity per screen, so switching views or servers cross-fades
+            // the old content out while the new one rises in.
+            .id(contentKey)
+            .transition(.motionRise)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(Motion.standard, value: contentKey)
+    }
+
+    private var contentKey: String {
+        let load: String = switch app.serversLoad {
+        case .loading: "loading"
+        case .loaded: "loaded"
+        case .failed: "failed"
+        }
+        return "\(load)-\(app.selectedServerID ?? "none")-\(app.route.rawValue)"
     }
 
     private var staticRoute: AnyView? {

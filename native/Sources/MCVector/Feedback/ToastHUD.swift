@@ -7,28 +7,32 @@ import SwiftUI
 /// on macOS 26). It slides in, fades out on its own, and goes away on click.
 struct ToastHUD: View {
     @Bindable var feedback: FeedbackCenter
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             if let toast = feedback.toast {
                 ToastCapsule(toast: toast)
                     .onTapGesture { feedback.dismissToast() }
+                    // Drops in from the top with a light bounce, leaves upward.
                     .transition(
-                        reduceMotion
+                        Motion.isReduced
                             ? .opacity
-                            : .move(edge: .top).combined(with: .opacity)
+                            : .asymmetric(
+                                insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.92, anchor: .top)),
+                                removal: .move(edge: .top).combined(with: .opacity)
+                            )
                     )
                     .id(toast.id)
             }
         }
         .padding(.top, 12)
-        .animation(reduceMotion ? .easeInOut(duration: 0.15) : .spring(duration: 0.35, bounce: 0.2), value: feedback.toast)
+        .animation(Motion.isReduced ? Motion.standard : .spring(duration: 0.45, bounce: 0.28), value: feedback.toast)
     }
 }
 
 private struct ToastCapsule: View {
     let toast: FeedbackCenter.Toast
+    @State private var arrived = false
 
     var body: some View {
         let label = HStack(spacing: 8) {
@@ -36,6 +40,7 @@ private struct ToastCapsule: View {
                 .symbolRenderingMode(.multicolor)
                 .foregroundStyle(tint)
                 .imageScale(.large)
+                .symbolEffect(.bounce, options: .nonRepeating, value: arrived)
             Text(toast.title)
                 .font(.callout.weight(.medium))
                 .lineLimit(2)
@@ -56,6 +61,11 @@ private struct ToastCapsule: View {
             }
         }
         .frame(maxWidth: 480)
+        .task {
+            // Bounce the icon once the capsule has landed.
+            try? await Task.sleep(for: .milliseconds(180))
+            arrived = true
+        }
     }
 
     private var tint: Color {

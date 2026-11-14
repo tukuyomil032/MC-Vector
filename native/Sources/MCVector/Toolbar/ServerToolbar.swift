@@ -28,6 +28,7 @@ private struct ServerToolbar: ViewModifier {
                             Task { await runtime.start(server.id) }
                         } label: {
                             Label(L10n.t("server.actions.start"), systemImage: "play.fill")
+                                .symbolEffect(.bounce, value: status == "online")
                         }
                         .help(L10n.t("server.actions.start"))
                         .disabled(!ServerStatusStyle.canStart(status))
@@ -35,6 +36,7 @@ private struct ServerToolbar: ViewModifier {
                             Task { await runtime.restart(server.id) }
                         } label: {
                             Label(L10n.t("server.actions.restart"), systemImage: "arrow.clockwise")
+                                .symbolEffect(.rotate, isActive: status == "restarting")
                         }
                         .help(L10n.t("server.actions.restart"))
                         .disabled(status != "online")
@@ -42,6 +44,7 @@ private struct ServerToolbar: ViewModifier {
                             Task { await runtime.stop(server.id) }
                         } label: {
                             Label(L10n.t("server.actions.stop"), systemImage: "stop.fill")
+                                .symbolEffect(.bounce, value: status == "offline")
                         }
                         .help(L10n.t("server.actions.stop"))
                         .disabled(status != "online")

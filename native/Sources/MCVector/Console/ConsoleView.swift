@@ -36,16 +36,20 @@ struct ConsoleView: View {
     var body: some View {
         VStack(spacing: 0) {
             toolbar
-            if isSearching { searchBar }
-            if !pinnedEntries.isEmpty { pinnedArea }
+            if isSearching { searchBar.transition(.motionSlide(edge: .top)) }
+            if !pinnedEntries.isEmpty { pinnedArea.transition(.motionSlide(edge: .top)) }
             Divider()
             logArea
             Divider()
             CommandLine(serverID: serverID, isOnline: status == "online")
         }
         .background(.background)
+        .animation(Motion.standard, value: isSearching)
+        .animation(Motion.standard, value: pinnedIDs)
+        .animation(Motion.standard, value: levelFilter)
         #if DEBUG
         .onAppear { applyCapturePreset() }
+        .onReceive(NotificationCenter.default.publisher(for: .consoleCaptureAction)) { _ in applyCaptureAction() }
         #endif
     }
 
@@ -58,6 +62,32 @@ struct ConsoleView: View {
     }
 
     static var capturePreset: CapturePreset?
+
+    /// Capture tooling: drives an open Console during MOTION-* recordings.
+    enum CaptureAction: Equatable {
+        case openSearch(String)
+        case closeSearch
+        case pinFirstWarning
+    }
+
+    static var captureAction: CaptureAction? {
+        didSet { NotificationCenter.default.post(name: .consoleCaptureAction, object: nil) }
+    }
+
+    private func applyCaptureAction() {
+        guard let action = Self.captureAction else { return }
+        Self.captureAction = nil
+        switch action {
+        case let .openSearch(text):
+            isSearching = true
+            query = text
+        case .closeSearch:
+            isSearching = false
+            query = ""
+        case .pinFirstWarning:
+            if let warning = entries.first(where: { $0.level != .info }) { pinnedIDs = [warning.id] }
+        }
+    }
 
     private func applyCapturePreset() {
         guard let preset = Self.capturePreset else { return }
@@ -289,10 +319,14 @@ struct ConsoleView: View {
                             togglePin(entry)
                         }
                         .id(entry.id)
+                        .transition(.motionRise)
                     }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
+                // New lines rise in; bursts stay cheap because only the tail changes.
+                .animation(Motion.standard, value: visible.last?.id)
+                .animation(Motion.snappy, value: currentID)
             }
             // Lines start at the top while they fit; once they overflow, the view
             // opens at the newest line and stays there as lines arrive.
@@ -328,8 +362,10 @@ struct ConsoleView: View {
                     .controlSize(.small)
                     .buttonStyle(.borderedProminent)
                     .padding(12)
+                    .transition(.motionPop)
                 }
             }
+            .animation(Motion.spring, value: isAtBottom)
         }
     }
 }
@@ -466,3 +502,9 @@ extension LogLevel {
         }
     }
 }
+
+#if DEBUG
+extension Notification.Name {
+    static let consoleCaptureAction = Notification.Name("mcvector.console.captureAction")
+}
+#endif

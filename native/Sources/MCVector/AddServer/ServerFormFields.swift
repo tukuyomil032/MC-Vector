@@ -56,9 +56,11 @@ struct PortMemorySection: View {
             }
         } footer: {
             VStack(alignment: .leading, spacing: 2) {
-                if let error = ServerNumbers.portError(portText) { FieldError(error) }
-                if let error = ServerNumbers.memoryError(memoryText) { FieldError(error) }
+                if let error = ServerNumbers.portError(portText) { FieldError(error).transition(.motionRise) }
+                if let error = ServerNumbers.memoryError(memoryText) { FieldError(error).transition(.motionRise) }
             }
+            .animation(Motion.standard, value: ServerNumbers.portError(portText))
+            .animation(Motion.standard, value: ServerNumbers.memoryError(memoryText))
         }
     }
 }

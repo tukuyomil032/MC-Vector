@@ -27,10 +27,13 @@ struct CreateServerSheet: View {
                     workingLabel: L10n.t("native.addServer.resolving"),
                     stage: stage
                 )
+                .transition(.motionFade)
             } else {
                 CreateServerForm(model: model)
+                    .transition(.motionFade)
             }
         }
+        .animation(Motion.spring, value: model.isCreating)
         .frame(width: 520)
         .interactiveDismissDisabled(model.isCreating)
         .toolbar {
@@ -111,6 +114,7 @@ private struct CreateServerForm: View {
             } footer: {
                 if model.showsErrors, let error = model.nameError {
                     FieldError(error)
+                        .transition(.motionRise)
                 } else {
                     Text(L10n.t("native.addServer.savePath"))
                 }
@@ -134,5 +138,7 @@ private struct CreateServerForm: View {
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)
+        .animation(Motion.standard, value: model.showsErrors ? model.nameError : nil)
+        .animation(Motion.standard, value: model.templates.count)
     }
 }
