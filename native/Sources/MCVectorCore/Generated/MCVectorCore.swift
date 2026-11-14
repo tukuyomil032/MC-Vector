@@ -519,6 +519,22 @@ fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
+    typealias FfiType = Float
+    typealias SwiftType = Float
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Float {
+        return try lift(readFloat(&buf))
+    }
+
+    public static func write(_ value: Float, into buf: inout [UInt8]) {
+        writeFloat(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -791,6 +807,280 @@ public func FfiConverterTypeCreationObserver_lower(_ value: CreationObserver) ->
 
 
 
+
+
+/**
+ * Receives running-server events. Called from background threads.
+ */
+public protocol ServerEventObserver: AnyObject, Sendable {
+    
+    func onConsole(line: ConsoleLine) 
+    
+    func onStatus(change: StatusChange) 
+    
+    func onStats(sample: StatsSample) 
+    
+}
+/**
+ * Receives running-server events. Called from background threads.
+ */
+open class ServerEventObserverImpl: ServerEventObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_servereventobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_servereventobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onConsole(line: ConsoleLine)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_servereventobserver_on_console(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeConsoleLine_lower(line),uniffiCallStatus
+    )
+}
+}
+    
+open func onStatus(change: StatusChange)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_servereventobserver_on_status(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeStatusChange_lower(change),uniffiCallStatus
+    )
+}
+}
+    
+open func onStats(sample: StatsSample)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_servereventobserver_on_stats(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeStatsSample_lower(sample),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceServerEventObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceServerEventObserver = UniffiVTableCallbackInterfaceServerEventObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeServerEventObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface ServerEventObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeServerEventObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface ServerEventObserver: handle missing in uniffiClone")
+            }
+        },
+        onConsole: { (
+            uniffiHandle: UInt64,
+            line: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeServerEventObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onConsole(
+                     line: try FfiConverterTypeConsoleLine_lift(line)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onStatus: { (
+            uniffiHandle: UInt64,
+            change: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeServerEventObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onStatus(
+                     change: try FfiConverterTypeStatusChange_lift(change)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onStats: { (
+            uniffiHandle: UInt64,
+            sample: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeServerEventObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onStats(
+                     sample: try FfiConverterTypeStatsSample_lift(sample)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceServerEventObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceServerEventObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitServerEventObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_servereventobserver(UniffiCallbackInterfaceServerEventObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerEventObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<ServerEventObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = ServerEventObserver
+
+    public static func lift(_ handle: UInt64) throws -> ServerEventObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return ServerEventObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: ServerEventObserver) -> UInt64 {
+         if let rustImpl = value as? ServerEventObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerEventObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: ServerEventObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerEventObserver_lift(_ handle: UInt64) throws -> ServerEventObserver {
+    return try FfiConverterTypeServerEventObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerEventObserver_lower(_ value: ServerEventObserver) -> UInt64 {
+    return FfiConverterTypeServerEventObserver.lower(value)
+}
+
+
+
+
 public struct AppSettings: Equatable, Hashable {
     /**
      * `"en"`, `"ja"`, or None to follow the system language.
@@ -861,6 +1151,75 @@ public func FfiConverterTypeAppSettings_lower(_ value: AppSettings) -> RustBuffe
 }
 
 
+/**
+ * One console line, without ANSI or `§` color codes.
+ */
+public struct ConsoleLine: Equatable, Hashable {
+    public var serverId: String
+    public var generation: UInt64
+    public var text: String
+    public var level: LogLevel
+    public var isStderr: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, generation: UInt64, text: String, level: LogLevel, isStderr: Bool) {
+        self.serverId = serverId
+        self.generation = generation
+        self.text = text
+        self.level = level
+        self.isStderr = isStderr
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConsoleLine: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConsoleLine: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConsoleLine {
+        return
+            try ConsoleLine(
+                serverId: FfiConverterString.read(from: &buf), 
+                generation: FfiConverterUInt64.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf), 
+                level: FfiConverterTypeLogLevel.read(from: &buf), 
+                isStderr: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConsoleLine, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterUInt64.write(value.generation, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterTypeLogLevel.write(value.level, into: &buf)
+        FfiConverterBool.write(value.isStderr, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConsoleLine_lift(_ buf: RustBuffer) throws -> ConsoleLine {
+    return try FfiConverterTypeConsoleLine.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConsoleLine_lower(_ value: ConsoleLine) -> RustBuffer {
+    return FfiConverterTypeConsoleLine.lower(value)
+}
+
+
 public struct CreatedServerInfo: Equatable, Hashable {
     public var server: ServerProfile
     /**
@@ -918,6 +1277,60 @@ public func FfiConverterTypeCreatedServerInfo_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeCreatedServerInfo_lower(_ value: CreatedServerInfo) -> RustBuffer {
     return FfiConverterTypeCreatedServerInfo.lower(value)
+}
+
+
+public struct EulaStatus: Equatable, Hashable {
+    public var accepted: Bool
+    public var fileExists: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(accepted: Bool, fileExists: Bool) {
+        self.accepted = accepted
+        self.fileExists = fileExists
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EulaStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEulaStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EulaStatus {
+        return
+            try EulaStatus(
+                accepted: FfiConverterBool.read(from: &buf), 
+                fileExists: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EulaStatus, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.accepted, into: &buf)
+        FfiConverterBool.write(value.fileExists, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEulaStatus_lift(_ buf: RustBuffer) throws -> EulaStatus {
+    return try FfiConverterTypeEulaStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEulaStatus_lower(_ value: EulaStatus) -> RustBuffer {
+    return FfiConverterTypeEulaStatus.lower(value)
 }
 
 
@@ -1453,6 +1866,136 @@ public func FfiConverterTypeSoftwareOption_lower(_ value: SoftwareOption) -> Rus
 }
 
 
+public struct StatsSample: Equatable, Hashable {
+    public var serverId: String
+    public var generation: UInt64
+    public var cpu: Float
+    public var memoryBytes: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, generation: UInt64, cpu: Float, memoryBytes: UInt64) {
+        self.serverId = serverId
+        self.generation = generation
+        self.cpu = cpu
+        self.memoryBytes = memoryBytes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension StatsSample: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeStatsSample: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StatsSample {
+        return
+            try StatsSample(
+                serverId: FfiConverterString.read(from: &buf), 
+                generation: FfiConverterUInt64.read(from: &buf), 
+                cpu: FfiConverterFloat.read(from: &buf), 
+                memoryBytes: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: StatsSample, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterUInt64.write(value.generation, into: &buf)
+        FfiConverterFloat.write(value.cpu, into: &buf)
+        FfiConverterUInt64.write(value.memoryBytes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStatsSample_lift(_ buf: RustBuffer) throws -> StatsSample {
+    return try FfiConverterTypeStatsSample.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStatsSample_lower(_ value: StatsSample) -> RustBuffer {
+    return FfiConverterTypeStatsSample.lower(value)
+}
+
+
+public struct StatusChange: Equatable, Hashable {
+    public var serverId: String
+    public var generation: UInt64
+    public var status: ServerRunStatus
+    /**
+     * True when the stop was requested (stop, restart, quit).
+     */
+    public var expected: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, generation: UInt64, status: ServerRunStatus, 
+        /**
+         * True when the stop was requested (stop, restart, quit).
+         */expected: Bool) {
+        self.serverId = serverId
+        self.generation = generation
+        self.status = status
+        self.expected = expected
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension StatusChange: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeStatusChange: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StatusChange {
+        return
+            try StatusChange(
+                serverId: FfiConverterString.read(from: &buf), 
+                generation: FfiConverterUInt64.read(from: &buf), 
+                status: FfiConverterTypeServerRunStatus.read(from: &buf), 
+                expected: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: StatusChange, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterUInt64.write(value.generation, into: &buf)
+        FfiConverterTypeServerRunStatus.write(value.status, into: &buf)
+        FfiConverterBool.write(value.expected, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStatusChange_lift(_ buf: RustBuffer) throws -> StatusChange {
+    return try FfiConverterTypeStatusChange.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStatusChange_lower(_ value: StatusChange) -> RustBuffer {
+    return FfiConverterTypeStatusChange.lower(value)
+}
+
+
 
 public enum CreationStage: Equatable, Hashable {
     
@@ -1685,6 +2228,159 @@ public func FfiConverterTypeFfiError_lift(_ buf: RustBuffer) throws -> FfiError 
 public func FfiConverterTypeFfiError_lower(_ value: FfiError) -> RustBuffer {
     return FfiConverterTypeFfiError.lower(value)
 }
+
+
+
+public enum LogLevel: Equatable, Hashable {
+    
+    case info
+    case warn
+    case error
+    case fatal
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LogLevel: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLogLevel: FfiConverterRustBuffer {
+    typealias SwiftType = LogLevel
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LogLevel {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .info
+        
+        case 2: return .warn
+        
+        case 3: return .error
+        
+        case 4: return .fatal
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LogLevel, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .info:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .warn:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .error:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .fatal:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLogLevel_lift(_ buf: RustBuffer) throws -> LogLevel {
+    return try FfiConverterTypeLogLevel.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLogLevel_lower(_ value: LogLevel) -> RustBuffer {
+    return FfiConverterTypeLogLevel.lower(value)
+}
+
+
+
+
+public enum ServerRunStatus: Equatable, Hashable {
+    
+    case online
+    case offline
+    case crashed
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ServerRunStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerRunStatus: FfiConverterRustBuffer {
+    typealias SwiftType = ServerRunStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerRunStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .online
+        
+        case 2: return .offline
+        
+        case 3: return .crashed
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ServerRunStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .online:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .offline:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .crashed:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerRunStatus_lift(_ buf: RustBuffer) throws -> ServerRunStatus {
+    return try FfiConverterTypeServerRunStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerRunStatus_lower(_ value: ServerRunStatus) -> RustBuffer {
+    return FfiConverterTypeServerRunStatus.lower(value)
+}
+
 
 
 
@@ -1961,6 +2657,31 @@ fileprivate struct FfiConverterOptionTypeLockOwnerInfo: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeServerProfile: FfiConverterRustBuffer {
     typealias SwiftType = [ServerProfile]
 
@@ -2079,6 +2800,16 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
     } else {
         print("uniffiFutureContinuationCallback invalid handle")
     }
+}
+/**
+ * Writes `eula=true` into the server's eula.txt.
+ */
+public func acceptServerEula(serverId: String)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_accept_server_eula(
+        FfiConverterString.lower(serverId),uniffiCallStatus
+    )
+}
 }
 /**
  * Analyzes a folder the user picked (it is not copied yet). The folder path
@@ -2214,6 +2945,41 @@ public func isValidServerName(name: String) -> Bool  {
 })
 }
 /**
+ * Stops and starts a server with its saved settings.
+ */
+public func restartServer(serverId: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_restart_server(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * IDs of the servers this process is running.
+ */
+public func runningServerIds()async  -> [String]  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_running_server_ids(
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceString.lift,
+            errorHandler: nil
+            
+        )
+}
+/**
  * Saves the server's settings as a new template named `name`
  * (React `buildTemplateFromServer` + `save_server_template`).
  */
@@ -2230,6 +2996,34 @@ public func saveServerTemplateFromServer(serverId: String, name: String)async th
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeFfiError_lift
         )
+}
+/**
+ * Sends one console command.
+ */
+public func sendCommand(serverId: String, command: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_send_command(FfiConverterString.lower(serverId),FfiConverterString.lower(command)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Whether the server's eula.txt says `eula=true`.
+ */
+public func serverEulaStatus(serverId: String)throws  -> EulaStatus  {
+    return try  FfiConverterTypeEulaStatus_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_server_eula_status(
+        FfiConverterString.lower(serverId),uniffiCallStatus
+    )
+})
 }
 /**
  * Saved server templates.
@@ -2274,6 +3068,23 @@ public func setUpdateChannel(channel: String)throws   {try rustCallWithError(Ffi
 }
 }
 /**
+ * Stops every running server (force-killing stragglers), for quitting.
+ */
+public func shutdownAllServers()async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_shutdown_all_servers(
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * The software choices of the add-server form.
  */
 public func softwareOptions() -> [SoftwareOption]  {
@@ -2305,6 +3116,50 @@ public func start(debugBuild: Bool, bundlePath: String, debugDataDirOverride: St
     )
 })
 }
+/**
+ * Starts a registered server.
+ */
+public func startServer(serverId: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_start_server(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Sends `stop`, then force-kills the server if it is still running after 20 seconds.
+ */
+public func stopServer(serverId: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_stop_server(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Sets the one observer of running-server events (replacing any earlier one).
+ */
+public func subscribeServerEvents(observer: ServerEventObserver)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_subscribe_server_events(
+        FfiConverterTypeServerEventObserver_lower(observer),uniffiCallStatus
+    )
+}
+}
 
 private enum InitializationResult {
     case ok
@@ -2320,6 +3175,9 @@ private let initializationResult: InitializationResult = {
     let scaffolding_contract_version = ffi_mcvector_ffi_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_accept_server_eula() != 47316) {
+        return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_begin_server_import() != 47583) {
         return InitializationResult.apiChecksumMismatch
@@ -2351,7 +3209,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_is_valid_server_name() != 18376) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_restart_server() != 44786) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_running_server_ids() != 55894) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_save_server_template_from_server() != 13376) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_send_command() != 21952) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_server_eula_status() != 21143) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_server_templates() != 15954) {
@@ -2369,17 +3239,39 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_set_update_channel() != 30965) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_shutdown_all_servers() != 30519) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_software_options() != 54829) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_start() != 17440) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_start_server() != 33512) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_stop_server() != 53977) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_subscribe_server_events() != 5267) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_method_creationobserver_on_stage() != 37456) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_console() != 42971) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_status() != 47999) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_stats() != 59414) {
         return InitializationResult.apiChecksumMismatch
     }
 
     uniffiCallbackInitCreationObserver()
+    uniffiCallbackInitServerEventObserver()
     return InitializationResult.ok
 }()
 

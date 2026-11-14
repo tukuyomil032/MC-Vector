@@ -67,6 +67,14 @@
     "en": "The server list could not be read.",
     "ja": "サーバー一覧を読み込めませんでした。"
   },
+  "error.server.command_rejected": {
+    "en": "The command could not be sent. Commands must be one line of up to 1024 characters, sent at most every 0.1 seconds.",
+    "ja": "コマンドを送れませんでした。コマンドは 1 行・1024 文字までで、0.1 秒以上の間隔をあけて送ってください。"
+  },
+  "error.server.eula_required": {
+    "en": "Accept the Minecraft EULA before starting this server.",
+    "ja": "このサーバーを起動する前に、Minecraft の EULA に同意してください。"
+  },
   "error.server.invalid_memory": {
     "en": "The memory must be between 1 and 1024 GB.",
     "ja": "メモリは 1〜1024 GB の範囲で指定してください。"
@@ -82,6 +90,18 @@
   "error.server.invalid_request": {
     "en": "Some server settings are not valid. Check the form and try again.",
     "ja": "サーバーの設定に正しくない値があります。入力内容を確認してください。"
+  },
+  "error.server.java_invalid": {
+    "en": "The Java set for this server cannot be used. Choose a Java installed by MC-Vector or a system Java.",
+    "ja": "このサーバーに設定された Java は使えません。MC-Vector で入れた Java か、システムの Java を選んでください。"
+  },
+  "error.server.limit_reached": {
+    "en": "Up to 8 servers can run at once. Stop another server first.",
+    "ja": "同時に起動できるサーバーは 8 台までです。先にほかのサーバーを停止してください。"
+  },
+  "error.server.not_running": {
+    "en": "The server is not running.",
+    "ja": "サーバーは起動していません。"
   },
   "error.server.operation_failed": {
     "en": "The server operation failed.",

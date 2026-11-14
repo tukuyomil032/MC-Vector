@@ -174,6 +174,50 @@ public enum CoreClient {
         MCVectorCore.cancelServerImport(token: token)
     }
 
+    // MARK: Running servers (OP-SRV-005..008)
+
+    /// Receives console lines, status changes and stats of running servers.
+    public static func subscribeServerEvents(_ observer: ServerEventObserver) {
+        MCVectorCore.subscribeServerEvents(observer: observer)
+    }
+
+    public static func startServer(id: String) async throws(CoreError) {
+        do { try await MCVectorCore.startServer(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func stopServer(id: String) async throws(CoreError) {
+        do { try await MCVectorCore.stopServer(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func restartServer(id: String) async throws(CoreError) {
+        do { try await MCVectorCore.restartServer(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func sendCommand(id: String, command: String) async throws(CoreError) {
+        do {
+            try await MCVectorCore.sendCommand(serverId: id, command: command)
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
+    public static func runningServerIDs() async -> [String] {
+        await MCVectorCore.runningServerIds()
+    }
+
+    /// Stops every running server; used when quitting.
+    public static func shutdownAllServers() async throws(CoreError) {
+        do { try await MCVectorCore.shutdownAllServers() } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func serverEulaStatus(id: String) throws(CoreError) -> EulaStatus {
+        do { return try MCVectorCore.serverEulaStatus(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
+    public static func acceptServerEula(id: String) throws(CoreError) {
+        do { try MCVectorCore.acceptServerEula(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
     /// Asks a running creation to stop. False when it already finished.
     @discardableResult
     public static func cancelServerCreation(operationID: String) -> Bool {

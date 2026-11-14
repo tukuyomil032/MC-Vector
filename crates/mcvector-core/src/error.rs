@@ -66,6 +66,16 @@ pub enum CoreErrorCode {
     ImportTimedOut,
     /// The picked folder is no longer available; pick it again.
     ImportSessionExpired,
+    /// The Minecraft EULA must be accepted before the server starts.
+    ServerEulaRequired,
+    /// The configured Java executable cannot be used.
+    ServerJavaInvalid,
+    /// Too many servers are running at once.
+    ServerLimitReached,
+    /// The server is not running.
+    ServerNotRunning,
+    /// The console command is empty, too long, multi-line, or sent too quickly.
+    ServerCommandRejected,
 }
 
 impl CoreErrorCode {
@@ -94,6 +104,11 @@ impl CoreErrorCode {
         CoreErrorCode::ImportInvalidFolder,
         CoreErrorCode::ImportTimedOut,
         CoreErrorCode::ImportSessionExpired,
+        CoreErrorCode::ServerEulaRequired,
+        CoreErrorCode::ServerJavaInvalid,
+        CoreErrorCode::ServerLimitReached,
+        CoreErrorCode::ServerNotRunning,
+        CoreErrorCode::ServerCommandRejected,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -122,6 +137,11 @@ impl CoreErrorCode {
             Self::ImportInvalidFolder => "import.invalid_folder",
             Self::ImportTimedOut => "import.timed_out",
             Self::ImportSessionExpired => "import.session_expired",
+            Self::ServerEulaRequired => "server.eula_required",
+            Self::ServerJavaInvalid => "server.java_invalid",
+            Self::ServerLimitReached => "server.limit_reached",
+            Self::ServerNotRunning => "server.not_running",
+            Self::ServerCommandRejected => "server.command_rejected",
         }
     }
 
@@ -145,7 +165,10 @@ impl CoreErrorCode {
             | Self::DownloadChecksumMismatch
             | Self::DownloadUnavailable
             | Self::ImportTimedOut
-            | Self::ImportSessionExpired => true,
+            | Self::ImportSessionExpired
+            | Self::ServerEulaRequired
+            | Self::ServerLimitReached
+            | Self::ServerCommandRejected => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
@@ -158,7 +181,9 @@ impl CoreErrorCode {
             | Self::ServerInvalidRequest
             | Self::DownloadTooLarge
             | Self::ImportTooLarge
-            | Self::ImportInvalidFolder => false,
+            | Self::ImportInvalidFolder
+            | Self::ServerJavaInvalid
+            | Self::ServerNotRunning => false,
         }
     }
 
@@ -248,10 +273,15 @@ mod tests {
             CoreErrorCode::ImportInvalidFolder => 20,
             CoreErrorCode::ImportTimedOut => 21,
             CoreErrorCode::ImportSessionExpired => 22,
+            CoreErrorCode::ServerEulaRequired => 23,
+            CoreErrorCode::ServerJavaInvalid => 24,
+            CoreErrorCode::ServerLimitReached => 25,
+            CoreErrorCode::ServerNotRunning => 26,
+            CoreErrorCode::ServerCommandRejected => 27,
         }
     }
 
-    const VARIANT_COUNT: usize = 23;
+    const VARIANT_COUNT: usize = 28;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -364,6 +394,27 @@ mod tests {
             (
                 CoreErrorCode::ImportSessionExpired,
                 "import.session_expired",
+                true,
+            ),
+            (
+                CoreErrorCode::ServerEulaRequired,
+                "server.eula_required",
+                true,
+            ),
+            (
+                CoreErrorCode::ServerJavaInvalid,
+                "server.java_invalid",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerLimitReached,
+                "server.limit_reached",
+                true,
+            ),
+            (CoreErrorCode::ServerNotRunning, "server.not_running", false),
+            (
+                CoreErrorCode::ServerCommandRejected,
+                "server.command_rejected",
                 true,
             ),
         ];

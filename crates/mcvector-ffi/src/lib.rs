@@ -10,12 +10,15 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex, RwLock};
 
+use mcvector_core::console_line;
 use mcvector_core::download::CancelFlag;
 use mcvector_core::error::{CoreError, CoreErrorCode};
+use mcvector_core::eula::{self, EULA_REQUIRED_ERROR};
 use mcvector_core::instance_lock::{self, InstanceLock, LockOutcome, LockOwner};
 use mcvector_core::lifecycle;
+use mcvector_core::metric_history::MetricHistorySnapshot;
 use mcvector_core::operations::ServerOperationManager;
 use mcvector_core::paths;
 use mcvector_core::registry::{
@@ -24,6 +27,10 @@ use mcvector_core::registry::{
 use mcvector_core::server_creation::{self, CreationEvent, NewServerRequest};
 use mcvector_core::server_import::ImportManager;
 use mcvector_core::server_jar;
+use mcvector_core::server_process::{
+    self, CommandLimiter, LogStream, ServerContext, ServerEvents, ServerLogEvent, ServerManager,
+    ServerStatsEvent, ServerStatus, ServerStatusEvent,
+};
 
 uniffi::setup_scaffolding!();
 
@@ -367,10 +374,10 @@ pub fn get_servers() -> Result<Vec<ServerProfile>, FfiError> {
 // ---------------------------------------------------------------------------
 // Server management (OP-SRV-004, OP-SRV-015, OP-SRV-016)
 
-/// Until the Native server manager exists (phase 6), no server can be running in
-/// this process, and the instance lock keeps the Tauri edition from running any.
-async fn no_server_is_running(_server_id: String) -> bool {
-    false
+/// Clone and delete refuse running servers. The instance lock keeps the Tauri
+/// edition from running any, so this process's manager is the whole truth.
+async fn server_is_running(server_id: String) -> bool {
+    SERVERS.is_server_running(&server_id).await
 }
 
 /// Maps the core's String errors to structured codes. "running" errors get their
@@ -395,7 +402,7 @@ pub async fn clone_server(
         &data_dir,
         &registry,
         &operations,
-        no_server_is_running,
+        server_is_running,
         &source_server_id,
         &name,
     )
@@ -412,7 +419,7 @@ pub async fn delete_server(server_id: String) -> Result<bool, FfiError> {
         &data_dir,
         &registry,
         &operations,
-        no_server_is_running,
+        server_is_running,
         &server_id,
     )
     .await
@@ -744,6 +751,250 @@ pub async fn begin_server_import(path: String) -> Result<ImportAnalysisInfo, Ffi
 #[uniffi::export]
 pub fn cancel_server_import(token: String) {
     IMPORTS.cancel(&token);
+}
+
+// ---------------------------------------------------------------------------
+// Running servers (OP-SRV-005..008)
+
+/// Running servers of this process.
+static SERVERS: LazyLock<ServerManager> = LazyLock::new(|| {
+    let manager = ServerManager::default();
+    // The Native edition has no automation service yet (auto-restart and
+    // auto-backup arrive with backups), so nothing reads the private status
+    // channel: drop its receiver instead of letting events queue up.
+    drop(manager.take_status_receiver());
+    manager
+});
+static LIMITER: LazyLock<CommandLimiter> = LazyLock::new(CommandLimiter::default);
+static OBSERVER: RwLock<Option<Arc<dyn ServerEventObserver>>> = RwLock::new(None);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ServerRunStatus {
+    Online,
+    Offline,
+    Crashed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum LogLevel {
+    Info,
+    Warn,
+    Error,
+    Fatal,
+}
+
+/// One console line, without ANSI or `§` color codes.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ConsoleLine {
+    pub server_id: String,
+    pub generation: u64,
+    pub text: String,
+    pub level: LogLevel,
+    pub is_stderr: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct StatusChange {
+    pub server_id: String,
+    pub generation: u64,
+    pub status: ServerRunStatus,
+    /// True when the stop was requested (stop, restart, quit).
+    pub expected: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct StatsSample {
+    pub server_id: String,
+    pub generation: u64,
+    pub cpu: f32,
+    pub memory_bytes: u64,
+}
+
+/// Receives running-server events. Called from background threads.
+#[uniffi::export(with_foreign)]
+pub trait ServerEventObserver: Send + Sync {
+    fn on_console(&self, line: ConsoleLine);
+    fn on_status(&self, change: StatusChange);
+    fn on_stats(&self, sample: StatsSample);
+}
+
+/// Sets the one observer of running-server events (replacing any earlier one).
+#[uniffi::export]
+pub fn subscribe_server_events(observer: Arc<dyn ServerEventObserver>) {
+    if let Ok(mut current) = OBSERVER.write() {
+        *current = Some(observer);
+    }
+}
+
+fn observer() -> Option<Arc<dyn ServerEventObserver>> {
+    OBSERVER.read().ok().and_then(|current| current.clone())
+}
+
+struct FfiServerEvents;
+
+impl ServerEvents for FfiServerEvents {
+    fn log(&self, event: ServerLogEvent) {
+        let Some(observer) = observer() else { return };
+        let text = console_line::strip_formatting(&event.line);
+        let level = match console_line::detect_level(&text) {
+            console_line::LogLevel::Info => LogLevel::Info,
+            console_line::LogLevel::Warn => LogLevel::Warn,
+            console_line::LogLevel::Error => LogLevel::Error,
+            console_line::LogLevel::Fatal => LogLevel::Fatal,
+        };
+        observer.on_console(ConsoleLine {
+            server_id: event.server_id,
+            generation: event.generation,
+            text,
+            level,
+            is_stderr: event.stream == LogStream::Stderr,
+        });
+    }
+
+    fn status(&self, event: &ServerStatusEvent) {
+        let Some(observer) = observer() else { return };
+        observer.on_status(StatusChange {
+            server_id: event.server_id.clone(),
+            generation: event.generation,
+            status: match event.status {
+                ServerStatus::Online => ServerRunStatus::Online,
+                ServerStatus::Offline => ServerRunStatus::Offline,
+                ServerStatus::Crashed => ServerRunStatus::Crashed,
+            },
+            expected: event.expected,
+        });
+    }
+
+    fn stats(&self, event: ServerStatsEvent) {
+        let Some(observer) = observer() else { return };
+        observer.on_stats(StatsSample {
+            server_id: event.server_id,
+            generation: event.generation,
+            cpu: event.cpu,
+            memory_bytes: event.memory,
+        });
+    }
+
+    fn metrics(&self, _snapshot: &MetricHistorySnapshot) {
+        // The dashboard phase reads metric history; nothing listens yet.
+    }
+}
+
+fn server_context(data_dir: PathBuf) -> ServerContext {
+    ServerContext {
+        data_dir,
+        events: Arc::new(FfiServerEvents),
+    }
+}
+
+/// Maps the process manager's messages to codes the UI can explain.
+fn run_error(error: String, data_dir: &std::path::Path) -> FfiError {
+    let code = if error == EULA_REQUIRED_ERROR {
+        CoreErrorCode::ServerEulaRequired
+    } else if error.contains("Too many running servers") {
+        CoreErrorCode::ServerLimitReached
+    } else if error.contains("not found or not running") {
+        CoreErrorCode::ServerNotRunning
+    } else if error.contains("already running") {
+        CoreErrorCode::ServerRunning
+    } else if error.starts_with("Command ") || error.contains("sent too quickly") {
+        CoreErrorCode::ServerCommandRejected
+    } else if error.contains("Java") || error.contains("java") {
+        CoreErrorCode::ServerJavaInvalid
+    } else {
+        CoreErrorCode::ServerOperationFailed
+    };
+    core_error(code, redact(&error, data_dir))
+}
+
+/// Starts a registered server.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn start_server(server_id: String) -> Result<(), FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    server_process::start_registered_server(
+        server_context(data_dir.clone()),
+        &SERVERS,
+        &LIMITER,
+        &operations,
+        &registry,
+        server_id,
+    )
+    .await
+    .map_err(|error| run_error(error, &data_dir))
+}
+
+/// Sends `stop`, then force-kills the server if it is still running after 20 seconds.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn stop_server(server_id: String) -> Result<(), FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    server_process::stop_server_with_id(&SERVERS, &operations, server_id)
+        .await
+        .map_err(|error| run_error(error, &data_dir))
+}
+
+/// Stops and starts a server with its saved settings.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn restart_server(server_id: String) -> Result<(), FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    server_process::restart_server(
+        server_context(data_dir.clone()),
+        &SERVERS,
+        &LIMITER,
+        &operations,
+        &registry,
+        &server_id,
+    )
+    .await
+    .map_err(|error| run_error(error, &data_dir))
+}
+
+/// Sends one console command.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn send_command(server_id: String, command: String) -> Result<(), FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    server_process::send_command(&SERVERS, &LIMITER, &server_id, &command)
+        .await
+        .map_err(|error| run_error(error, &data_dir))
+}
+
+/// IDs of the servers this process is running.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn running_server_ids() -> Vec<String> {
+    SERVERS.running_server_ids().await
+}
+
+/// Stops every running server (force-killing stragglers), for quitting.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn shutdown_all_servers() -> Result<(), FfiError> {
+    SERVERS
+        .shutdown_all()
+        .await
+        .map_err(|error| core_error(CoreErrorCode::ServerOperationFailed, error))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct EulaStatus {
+    pub accepted: bool,
+    pub file_exists: bool,
+}
+
+/// Whether the server's eula.txt says `eula=true`.
+#[uniffi::export]
+pub fn server_eula_status(server_id: String) -> Result<EulaStatus, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    let status =
+        eula::eula_status(&data_dir, &server_id).map_err(|error| run_error(error, &data_dir))?;
+    Ok(EulaStatus {
+        accepted: status.accepted,
+        file_exists: status.file_exists,
+    })
+}
+
+/// Writes `eula=true` into the server's eula.txt.
+#[uniffi::export]
+pub fn accept_server_eula(server_id: String) -> Result<(), FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    eula::accept_eula(&data_dir, &server_id).map_err(|error| run_error(error, &data_dir))
 }
 
 #[cfg(test)]

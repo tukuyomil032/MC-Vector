@@ -5,6 +5,7 @@
 //! `tauri-plugin-*` crate.
 
 pub mod config;
+pub mod console_line;
 pub mod download;
 pub mod error;
 pub mod eula;

@@ -4268,6 +4268,40 @@
         }
       }
     },
+    "error.server.command_rejected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The command could not be sent. Commands must be one line of up to 1024 characters, sent at most every 0.1 seconds."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドを送れませんでした。コマンドは 1 行・1024 文字までで、0.1 秒以上の間隔をあけて送ってください。"
+          }
+        }
+      }
+    },
+    "error.server.eula_required": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept the Minecraft EULA before starting this server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーを起動する前に、Minecraft の EULA に同意してください。"
+          }
+        }
+      }
+    },
     "error.server.invalid_memory": {
       "extractionState": "manual",
       "localizations": {
@@ -4332,6 +4366,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバーの設定に正しくない値があります。入力内容を確認してください。"
+          }
+        }
+      }
+    },
+    "error.server.java_invalid": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Java set for this server cannot be used. Choose a Java installed by MC-Vector or a system Java."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーに設定された Java は使えません。MC-Vector で入れた Java か、システムの Java を選んでください。"
+          }
+        }
+      }
+    },
+    "error.server.limit_reached": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to 8 servers can run at once. Stop another server first."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同時に起動できるサーバーは 8 台までです。先にほかのサーバーを停止してください。"
+          }
+        }
+      }
+    },
+    "error.server.not_running": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server is not running."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーは起動していません。"
           }
         }
       }
