@@ -127,7 +127,8 @@ for id in "${IDS[@]}"; do
 
   ready=0
   pid=""
-  deadline=$((SECONDS + 20))
+  # CAPTURE_TIMEOUT (seconds) lets slow states, such as real downloads, finish.
+  deadline=$((SECONDS + ${CAPTURE_TIMEOUT:-20}))
   while [ "$SECONDS" -lt "$deadline" ]; do
     if [ -z "$pid" ]; then
       pid="$(pgrep -n -f "$EXE --capture-state $id" || true)"

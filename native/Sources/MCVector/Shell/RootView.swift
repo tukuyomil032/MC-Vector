@@ -38,7 +38,11 @@ struct RootView: View {
             case .addServerChoice:
                 AddServerChoiceSheet()
             case .addServer:
+                #if DEBUG
+                CreateServerSheet(model: CaptureState.takeCreateServerModel() ?? CreateServerModel())
+                #else
                 CreateServerSheet()
+                #endif
             default:
                 ShellSheetPlaceholder(sheet: sheet)
             }

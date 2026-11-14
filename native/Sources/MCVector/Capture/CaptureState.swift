@@ -96,6 +96,82 @@ enum CaptureState {
                 deleted ? .success : .error,
                 L10n.t(deleted ? "server.toast.deleted" : "server.toast.deleteFailed")
             )
+        case "ADD-CHOICE-open":
+            app.activeSheet = .addServerChoice
+        case "ADD-SERVER-empty":
+            app.activeSheet = .addServer
+        case "ADD-SERVER-filled", "ADD-SERVER-invalid", "ADD-SERVER-progress":
+            let model = CreateServerModel()
+            if id == "ADD-SERVER-invalid" {
+                model.name = "my server"
+                model.portText = "70000"
+                model.memoryText = "0"
+                model.showsErrors = true
+            } else {
+                model.name = "survival"
+                model.profileName = "Survival"
+                model.groupName = "Production"
+                model.software = "Vanilla"
+                model.version = "1.21.10"
+                model.memoryText = "6"
+            }
+            if id == "ADD-SERVER-progress" {
+                model.showProgressForCapture(.downloading(percent: 42))
+            }
+            pendingCreateServerModel = model
+            app.activeSheet = .addServer
+        case "VERIFY-create-manual":
+            // Runs the real creation for software without an automatic jar
+            // (no network), then shows the result like the sheet does.
+            let input = NewServerInput(
+                operationId: UUID().uuidString.lowercased(),
+                name: "Lobby-2",
+                profileName: nil,
+                groupName: "Testing",
+                software: "Spigot",
+                version: "1.21.10",
+                port: 25_570,
+                memoryGb: 2,
+                templateId: nil
+            )
+            do {
+                let created = try await CoreClient.createServer(input) { _ in }
+                await app.reloadServers()
+                app.selectedServerID = created.server.id
+                feedback.toast(.info, L10n.t("native.addServer.createdManualJar", ["name": created.server.name]))
+            } catch {
+                feedback.toast(.error, error.uiText)
+            }
+        case "VERIFY-create-paper", "VERIFY-create-vanilla", "VERIFY-create-cancel":
+            // Real downloads from the official sources (needs the network).
+            let software = id == "VERIFY-create-paper" ? "Paper" : "Vanilla"
+            let operationID = UUID().uuidString.lowercased()
+            let input = NewServerInput(
+                operationId: operationID,
+                name: "verify-\(software.lowercased())",
+                profileName: nil,
+                groupName: "Verify",
+                software: software,
+                version: "1.21.10",
+                port: 25_580,
+                memoryGb: 2,
+                templateId: nil
+            )
+            let cancelOnDownload = id == "VERIFY-create-cancel"
+            do {
+                let created = try await CoreClient.createServer(input) { stage in
+                    if cancelOnDownload, case .downloading = stage {
+                        CoreClient.cancelServerCreation(operationID: operationID)
+                    }
+                }
+                await app.reloadServers()
+                app.selectedServerID = created.server.id
+                signal("[capture] created \(created.server.software) \(created.server.version) jar=\(created.jarInstalled) path=\(created.server.path)")
+                feedback.toast(.success, L10n.t("server.toast.created", ["name": created.server.name]))
+            } catch {
+                signal("[capture] create failed: \(error.code) \(error.message)")
+                feedback.toast(.error, error.uiText)
+            }
         case "VERIFY-template":
             do {
                 try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")
@@ -111,6 +187,14 @@ enum CaptureState {
             }
         }
         signal("[capture] ready: \(id)")
+    }
+
+    /// A preset model for the next "Create a new server" sheet (ADD-SERVER-*).
+    private static var pendingCreateServerModel: CreateServerModel?
+
+    static func takeCreateServerModel() -> CreateServerModel? {
+        defer { pendingCreateServerModel = nil }
+        return pendingCreateServerModel
     }
 
     /// Writes the line to stderr and, when `MCVECTOR_CAPTURE_SIGNAL` names a file,
