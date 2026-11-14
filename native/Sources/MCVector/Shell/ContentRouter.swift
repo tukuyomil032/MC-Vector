@@ -57,6 +57,7 @@ struct ContentRouter: View {
         Group {
             switch app.route {
             case .console: ConsoleView(serverID: serverID)
+            case .dashboard: DashboardView(serverID: serverID)
             default: NotPortedView(route: app.route)
             }
         }
