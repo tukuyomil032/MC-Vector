@@ -339,6 +339,11 @@ enum CaptureState {
             .appendingPathComponent("import-source").appendingPathComponent(name)
     }
 
+    /// Records a line for capture.sh from anywhere in the app.
+    static func note(_ line: String) {
+        signal(line)
+    }
+
     /// Writes the line to stderr and, when `MCVECTOR_CAPTURE_SIGNAL` names a file,
     /// appends it there. capture.sh launches the app through `open`, which cannot
     /// redirect the app's output, so it watches that file instead.

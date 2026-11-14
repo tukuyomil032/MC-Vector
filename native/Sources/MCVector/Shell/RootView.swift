@@ -60,7 +60,7 @@ struct RootView: View {
             if let pending { app.activeSheet = .serverEula(serverID: pending.serverID) }
         }
         .task {
-            runtime.serverName = { [app] id in app.servers.first { $0.id == id }?.name ?? id }
+            runtime.serverProfile = { [app] id in app.servers.first { $0.id == id } }
             await app.reloadServers()
             #if DEBUG
             if let id = CaptureState.requestedID {

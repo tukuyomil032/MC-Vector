@@ -33,12 +33,22 @@ final class ServerRuntime {
     private(set) var transitional: [String: String] = [:]
     private(set) var logs: [String: [Entry]] = [:]
     private(set) var memoryBytes: [String: UInt64] = [:]
+    /// The newest metric window per server and when it arrived (for uptime).
+    private(set) var metrics: [String: MetricSnapshot] = [:]
+    private(set) var metricsReceivedAt: [String: Date] = [:]
+    /// Last high-CPU notification per server (React: 5-minute cooldown).
+    private var lastHighCpuNotice: [String: Date] = [:]
+    static let highCpuCooldown: TimeInterval = 5 * 60
     private(set) var pendingEula: PendingEula?
     private var nextEntryID = 0
 
     private let feedback: FeedbackCenter
-    /// Server names for messages; set by the shell.
-    var serverName: (String) -> String = { $0 }
+    /// Profiles for names and notification settings; set by the shell.
+    var serverProfile: (String) -> ServerProfile? = { _ in nil }
+
+    private func serverName(_ serverID: String) -> String {
+        serverProfile(serverID)?.name ?? serverID
+    }
 
     init(feedback: FeedbackCenter) {
         self.feedback = feedback
@@ -171,12 +181,14 @@ final class ServerRuntime {
         switch change.status {
         case .online:
             liveStatus[change.serverId] = "online"
+            let serverID = change.serverId
+            Task { await refreshMetrics(serverID) }
         case .offline:
             liveStatus[change.serverId] = "offline"
-            memoryBytes[change.serverId] = nil
+            clearMetrics(change.serverId)
         case .crashed:
             liveStatus[change.serverId] = "crashed"
-            memoryBytes[change.serverId] = nil
+            clearMetrics(change.serverId)
             if !change.expected {
                 let name = serverName(change.serverId)
                 feedback.toast(.error, L10n.t("native.server.crashed", ["name": name]))
@@ -191,6 +203,50 @@ final class ServerRuntime {
     fileprivate func receive(_ sample: StatsSample) {
         guard liveStatus[sample.serverId] == "online" else { return }
         memoryBytes[sample.serverId] = sample.memoryBytes
+        noticeHighCpu(sample)
+    }
+
+    /// Keeps the newest snapshot of the current generation (React metric store).
+    fileprivate func receive(_ snapshot: MetricSnapshot) {
+        let serverID = snapshot.serverId
+        guard liveStatus[serverID] == "online" else { return }
+        if let shown = metrics[serverID],
+           shown.generation == snapshot.generation, shown.sequence >= snapshot.sequence {
+            return
+        }
+        metrics[serverID] = snapshot
+        metricsReceivedAt[serverID] = Date()
+    }
+
+    /// Fills the window after a start, or when the dashboard opens.
+    func refreshMetrics(_ serverID: String) async {
+        if let snapshot = await CoreClient.serverMetricHistory(id: serverID) {
+            receive(snapshot)
+        }
+    }
+
+    private func clearMetrics(_ serverID: String) {
+        memoryBytes[serverID] = nil
+        metrics[serverID] = nil
+        metricsReceivedAt[serverID] = nil
+    }
+
+    /// React notifies only while its dashboard is open; here it works on any view.
+    private func noticeHighCpu(_ sample: StatsSample) {
+        guard let profile = serverProfile(sample.serverId), profile.notifyOnHighCpu else { return }
+        let threshold = profile.notifyHighCpuThreshold ?? 90
+        guard Double(sample.cpu) >= threshold else { return }
+        if let last = lastHighCpuNotice[sample.serverId], Date().timeIntervalSince(last) < Self.highCpuCooldown {
+            return
+        }
+        lastHighCpuNotice[sample.serverId] = Date()
+        feedback.notifyInBackground(
+            title: L10n.t("server.notification.highCpu"),
+            body: "\(profile.name): \(Int(sample.cpu.rounded()))%"
+        )
+        #if DEBUG
+        CaptureState.note("[capture] high cpu notice: \(profile.name) \(Int(sample.cpu.rounded()))%")
+        #endif
     }
 
     #if DEBUG
@@ -223,6 +279,12 @@ private final class RuntimeObserver: ServerEventObserver, @unchecked Sendable {
     func onStatus(change: StatusChange) {
         DispatchQueue.main.async { [weak self] in
             MainActor.assumeIsolated { self?.runtime?.receive(change) }
+        }
+    }
+
+    func onMetrics(snapshot: MetricSnapshot) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.runtime?.receive(snapshot) }
         }
     }
 
