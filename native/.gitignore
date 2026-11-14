@@ -7,5 +7,12 @@
 xcuserdata/
 .DS_Store
 
+# Per-file compiler outputs that an editor's SourceKit-LSP can drop next to the
+# package when it type-checks files outside a SwiftPM build. Never source.
+/*.swiftmodule
+/*.swiftdeps
+/*.dia
+/*-[0-9].d
+
 # Committed on purpose (REPO-007): Package.resolved, Sources/MCVectorCore/Generated/,
 # Sources/MCVectorFFI/ (generated header + hand-written module.modulemap).
