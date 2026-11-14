@@ -174,6 +174,35 @@ enum CaptureState {
                 signal("[capture] create failed: \(error.code) \(error.message)")
                 feedback.toast(.error, error.uiText)
             }
+        case "IMPORT-empty":
+            app.activeSheet = .importServer
+        case "IMPORT-analyzed", "IMPORT-invalid", "IMPORT-progress", "IMPORT-no-jar":
+            let model = ImportServerModel()
+            let folder = id == "IMPORT-no-jar" ? "no-jar-folder" : "paper-survival"
+            await model.choose(folder: importSource(folder))
+            if id == "IMPORT-invalid" {
+                model.name = "survival/world"
+                model.memoryText = "2048"
+            }
+            if id == "IMPORT-progress" {
+                model.showProgressForCapture(.resolving)
+            }
+            pendingImportServerModel = model
+            app.activeSheet = .importServer
+        case "VERIFY-import":
+            // Real import of the fixture folder through the FFI.
+            let model = ImportServerModel()
+            await model.choose(folder: importSource("paper-survival"))
+            if let created = await model.importServer() {
+                await app.reloadServers()
+                app.selectedServerID = created.server.id
+                let copied = FileManager.default.fileExists(atPath: created.server.path + "/world/level.dat")
+                signal("[capture] imported \(created.server.software) \(created.server.version) port=\(created.server.port ?? 0) world=\(copied) path=\(created.server.path)")
+                feedback.toast(.success, L10n.t("importServer.toast.success"))
+            } else {
+                signal("[capture] import failed: \(model.failure?.code ?? "?") \(model.failure?.message ?? "")")
+                feedback.toast(.error, model.failure?.uiText ?? "?")
+            }
         case "VERIFY-template":
             do {
                 try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")
@@ -197,6 +226,21 @@ enum CaptureState {
     static func takeCreateServerModel() -> CreateServerModel? {
         defer { pendingCreateServerModel = nil }
         return pendingCreateServerModel
+    }
+
+    /// A preset model for the next import sheet (IMPORT-*).
+    private static var pendingImportServerModel: ImportServerModel?
+
+    static func takeImportServerModel() -> ImportServerModel? {
+        defer { pendingImportServerModel = nil }
+        return pendingImportServerModel
+    }
+
+    /// Folders prepared by capture.sh next to the fixture data folder.
+    private static func importSource(_ name: String) -> URL {
+        let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] ?? NSTemporaryDirectory()
+        return URL(fileURLWithPath: dataDir).deletingLastPathComponent()
+            .appendingPathComponent("import-source").appendingPathComponent(name)
     }
 
     /// Writes the line to stderr and, when `MCVECTOR_CAPTURE_SIGNAL` names a file,

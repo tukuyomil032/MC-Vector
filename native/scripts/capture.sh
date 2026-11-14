@@ -106,6 +106,21 @@ prepare_fixture() {
     done
   fi
   printf '{"locale":"%s"}\n' "$LOCALE" > "$dir/config.json"
+  prepare_import_sources "$(dirname "$dir")/import-source"
+}
+
+# prepare_import_sources <dir>: folders the IMPORT-* states pick, next to the
+# data folder (outside it, like a real server folder elsewhere on disk).
+prepare_import_sources() {
+  local dir="$1"
+  ensure_inside_build "$dir"
+  rm -rf "$dir"
+  mkdir -p "$dir/paper-survival/world" "$dir/no-jar-folder"
+  printf 'fake paper jar\n' > "$dir/paper-survival/paper-1.21.4-123.jar"
+  printf 'motd=Imported survival\nserver-port=25600\n' > "$dir/paper-survival/server.properties"
+  printf 'eula=false\n' > "$dir/paper-survival/eula.txt"
+  printf 'level\n' > "$dir/paper-survival/world/level.dat"
+  printf 'server-port=25565\n' > "$dir/no-jar-folder/server.properties"
 }
 
 failed=0

@@ -44,7 +44,11 @@ struct RootView: View {
                 CreateServerSheet()
                 #endif
             case .importServer:
+                #if DEBUG
+                ImportServerSheet(model: CaptureState.takeImportServerModel() ?? ImportServerModel())
+                #else
                 ImportServerSheet()
+                #endif
             default:
                 ShellSheetPlaceholder(sheet: sheet)
             }
