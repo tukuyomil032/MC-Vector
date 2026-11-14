@@ -8,15 +8,21 @@
 //! instance lock (NAT-010): `start` stores the lock and the opened registry in
 //! process-wide state, and every other function reads that state.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
+use mcvector_core::download::CancelFlag;
 use mcvector_core::error::{CoreError, CoreErrorCode};
 use mcvector_core::instance_lock::{self, InstanceLock, LockOutcome, LockOwner};
 use mcvector_core::lifecycle;
 use mcvector_core::operations::ServerOperationManager;
 use mcvector_core::paths;
-use mcvector_core::registry::{template_from_server, MinecraftServer, ServerRegistry};
+use mcvector_core::registry::{
+    template_from_server, MinecraftServer, ServerRegistry, ServerTemplate,
+};
+use mcvector_core::server_creation::{self, CreationEvent, NewServerRequest};
+use mcvector_core::server_jar;
 
 uniffi::setup_scaffolding!();
 
@@ -433,6 +439,248 @@ pub async fn save_server_template_from_server(
     .map_err(|error| error.to_string())
     .and_then(|result| result);
     result.map_err(|error| server_error(error, &data_dir))
+}
+
+// ---------------------------------------------------------------------------
+// Server creation (OP-SRV-002)
+
+/// Sets the User-Agent for provider requests, for example from the bundle's
+/// `CFBundleShortVersionString`. Call once at startup.
+#[uniffi::export]
+pub fn set_app_version(version: String) {
+    mcvector_core::download::set_user_agent(format!(
+        "MC-Vector-Native/{} (https://github.com/tukuyomil032/MC-Vector)",
+        version.trim()
+    ));
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum SoftwareGroup {
+    Standard,
+    Modded,
+    Proxy,
+}
+
+/// One software choice of the add-server form, in display order.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SoftwareOption {
+    pub name: String,
+    pub group: SoftwareGroup,
+    /// True when MC-Vector downloads and verifies the jar itself.
+    pub automatic_jar: bool,
+}
+
+/// The software choices of the add-server form.
+#[uniffi::export]
+pub fn software_options() -> Vec<SoftwareOption> {
+    server_creation::SOFTWARE_OPTIONS
+        .iter()
+        .map(|option| SoftwareOption {
+            name: option.name.to_string(),
+            group: match option.group {
+                server_creation::SoftwareGroup::Standard => SoftwareGroup::Standard,
+                server_creation::SoftwareGroup::Modded => SoftwareGroup::Modded,
+                server_creation::SoftwareGroup::Proxy => SoftwareGroup::Proxy,
+            },
+            automatic_jar: server_jar::supports_automatic_install(option.name),
+        })
+        .collect()
+}
+
+/// The add-server name rule (trimmed `[A-Za-z0-9_-]`, 1–128 bytes), so the
+/// form validates exactly like the core.
+#[uniffi::export]
+pub fn is_valid_server_name(name: String) -> bool {
+    server_creation::is_valid_server_name(&name)
+}
+
+/// A saved template, with the fields the add-server form fills from it.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct ServerTemplateInfo {
+    pub id: String,
+    pub name: String,
+    pub profile_name: Option<String>,
+    pub group_name: Option<String>,
+    pub version: String,
+    pub software: String,
+    pub port: Option<i64>,
+    pub memory_mb: Option<u64>,
+}
+
+impl From<&ServerTemplate> for ServerTemplateInfo {
+    fn from(template: &ServerTemplate) -> Self {
+        Self {
+            id: template.id.clone(),
+            name: template.name.clone(),
+            profile_name: template.profile_name.clone(),
+            group_name: template.group_name.clone(),
+            version: template.version.clone(),
+            software: template.software.clone(),
+            port: template.port.as_i64(),
+            memory_mb: template.memory.as_u64(),
+        }
+    }
+}
+
+/// Saved server templates.
+#[uniffi::export]
+pub fn server_templates() -> Result<Vec<ServerTemplateInfo>, FfiError> {
+    let (_, registry, _) = session_handles()?;
+    let templates = registry.get_server_templates().map_err(|error| {
+        core_error(
+            CoreErrorCode::RegistryReadFailed,
+            format!("The templates could not be read: {error}"),
+        )
+    })?;
+    Ok(templates.iter().map(Into::into).collect())
+}
+
+/// What the add-server form sends.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct NewServerInput {
+    /// A UUID chosen by the caller; pass it to `cancel_server_creation`.
+    pub operation_id: String,
+    pub name: String,
+    pub profile_name: Option<String>,
+    pub group_name: Option<String>,
+    pub software: String,
+    pub version: String,
+    pub port: u32,
+    pub memory_gb: u32,
+    /// The template the form was filled from. Its Java path, auto-restart and
+    /// auto-backup settings are copied too, as React does.
+    pub template_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct CreatedServerInfo {
+    pub server: ServerProfile,
+    /// False when the user must place the server jar by hand.
+    pub jar_installed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum CreationStage {
+    /// Looking up the official download.
+    Resolving,
+    /// Downloading the jar; `percent` is None while the size is unknown.
+    Downloading { percent: Option<u32> },
+    /// Saving the new server.
+    Finishing,
+}
+
+/// Receives creation progress. Called from a background thread.
+#[uniffi::export(with_foreign)]
+pub trait CreationObserver: Send + Sync {
+    fn on_stage(&self, stage: CreationStage);
+}
+
+static CREATIONS: Mutex<Option<HashMap<String, CancelFlag>>> = Mutex::new(None);
+
+fn with_creations<T>(update: impl FnOnce(&mut HashMap<String, CancelFlag>) -> T) -> T {
+    let mut creations = CREATIONS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    update(creations.get_or_insert_with(HashMap::new))
+}
+
+fn apply_template(request: &mut NewServerRequest, template: &ServerTemplate) {
+    macro_rules! number {
+        ($field:expr) => {
+            $field
+                .as_ref()
+                .and_then(|value| value.as_u64())
+                .and_then(|value| u32::try_from(value).ok())
+        };
+    }
+    request.java_path = template.java_path.clone();
+    request.auto_restart_on_crash = template.auto_restart_on_crash;
+    request.max_auto_restarts = number!(template.max_auto_restarts);
+    request.auto_restart_delay_sec = number!(template.auto_restart_delay_sec);
+    request.auto_backup_enabled = template.auto_backup_enabled;
+    request.auto_backup_interval_min = number!(template.auto_backup_interval_min);
+    request.auto_backup_schedule_type = template.auto_backup_schedule_type.clone();
+    request.auto_backup_time = template.auto_backup_time.clone();
+    request.auto_backup_weekday = number!(template.auto_backup_weekday);
+}
+
+/// Creates a server: validates, makes its folder, downloads and verifies the
+/// jar when possible, and registers it. On failure or cancellation nothing is
+/// left behind.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn create_server(
+    input: NewServerInput,
+    observer: Arc<dyn CreationObserver>,
+) -> Result<CreatedServerInfo, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let operation_id = server_creation::validate_operation_id(&input.operation_id)?;
+
+    let mut request = NewServerRequest {
+        operation_id: operation_id.clone(),
+        name: input.name,
+        profile_name: input.profile_name,
+        group_name: input.group_name,
+        version: input.version,
+        software: input.software,
+        port: input.port,
+        memory_gb: input.memory_gb,
+        ..NewServerRequest::default()
+    };
+    if let Some(template_id) = input.template_id {
+        let template = registry
+            .get_server_templates()
+            .map_err(|error| core_error(CoreErrorCode::RegistryReadFailed, error))?
+            .into_iter()
+            .find(|template| template.id == template_id);
+        if let Some(template) = template {
+            apply_template(&mut request, &template);
+        }
+    }
+
+    let cancel = CancelFlag::new();
+    with_creations(|creations| creations.insert(operation_id.clone(), cancel.clone()));
+    let progress = move |event: CreationEvent| {
+        observer.on_stage(match event {
+            CreationEvent::Resolving => CreationStage::Resolving,
+            CreationEvent::Downloading { percent } => CreationStage::Downloading { percent },
+            CreationEvent::Finishing => CreationStage::Finishing,
+        });
+    };
+    let result = server_creation::create_server(
+        &data_dir,
+        &registry,
+        &operations,
+        request,
+        None,
+        &progress,
+        Some(&cancel),
+    )
+    .await;
+    with_creations(|creations| creations.remove(&operation_id));
+
+    result
+        .map(|created| CreatedServerInfo {
+            server: created.server.into(),
+            jar_installed: created.jar_installed,
+        })
+        .map_err(|error| {
+            FfiError::from(CoreError {
+                message: redact(&error.message, &data_dir),
+                ..error
+            })
+        })
+}
+
+/// Cancels a running `create_server`. Returns false when no creation with
+/// that ID is running (for example, it already finished).
+#[uniffi::export]
+pub fn cancel_server_creation(operation_id: String) -> bool {
+    with_creations(|creations| {
+        creations
+            .get(operation_id.trim())
+            .map(CancelFlag::cancel)
+            .is_some()
+    })
 }
 
 #[cfg(test)]

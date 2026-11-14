@@ -4013,6 +4013,74 @@
         }
       }
     },
+    "error.download.checksum_mismatch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded file did not match the official checksum, so it was discarded. Try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードしたファイルが公式のチェックサムと一致しなかったため、破棄しました。もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.download.network_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download failed. Check your internet connection and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードに失敗しました。インターネット接続を確認して、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.download.too_large": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download is larger than allowed, so it was stopped."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードするファイルが上限より大きいため、中止しました。"
+          }
+        }
+      }
+    },
+    "error.download.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download information could not be read from the official site. Try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公式サイトからダウンロード情報を取得できませんでした。時間をおいてもう一度お試しください。"
+          }
+        }
+      }
+    },
     "error.internal.unknown": {
       "extractionState": "manual",
       "localizations": {
@@ -4128,6 +4196,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバー一覧を読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "error.server.invalid_memory": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The memory must be between 1 and 1024 GB."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリは 1〜1024 GB の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "error.server.invalid_name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use only letters, numbers, - and _ for the server name (up to 128 characters)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー名には英数字と - と _ だけを使ってください（128 文字まで）。"
+          }
+        }
+      }
+    },
+    "error.server.invalid_port": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The port must be between 1 and 65535."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートは 1〜65535 の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "error.server.invalid_request": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some server settings are not valid. Check the form and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの設定に正しくない値があります。入力内容を確認してください。"
           }
         }
       }

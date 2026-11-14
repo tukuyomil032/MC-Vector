@@ -7,6 +7,22 @@
     "en": "MC-Vector has not finished starting.",
     "ja": "MC-Vector の起動処理が完了していません。"
   },
+  "error.download.checksum_mismatch": {
+    "en": "The downloaded file did not match the official checksum, so it was discarded. Try again.",
+    "ja": "ダウンロードしたファイルが公式のチェックサムと一致しなかったため、破棄しました。もう一度お試しください。"
+  },
+  "error.download.network_failed": {
+    "en": "The download failed. Check your internet connection and try again.",
+    "ja": "ダウンロードに失敗しました。インターネット接続を確認して、もう一度お試しください。"
+  },
+  "error.download.too_large": {
+    "en": "The download is larger than allowed, so it was stopped.",
+    "ja": "ダウンロードするファイルが上限より大きいため、中止しました。"
+  },
+  "error.download.unavailable": {
+    "en": "The download information could not be read from the official site. Try again later.",
+    "ja": "公式サイトからダウンロード情報を取得できませんでした。時間をおいてもう一度お試しください。"
+  },
   "error.internal.unknown": {
     "en": "An unexpected error occurred.",
     "ja": "予期しないエラーが発生しました。"
@@ -34,6 +50,22 @@
   "error.registry.read_failed": {
     "en": "The server list could not be read.",
     "ja": "サーバー一覧を読み込めませんでした。"
+  },
+  "error.server.invalid_memory": {
+    "en": "The memory must be between 1 and 1024 GB.",
+    "ja": "メモリは 1〜1024 GB の範囲で指定してください。"
+  },
+  "error.server.invalid_name": {
+    "en": "Use only letters, numbers, - and _ for the server name (up to 128 characters).",
+    "ja": "サーバー名には英数字と - と _ だけを使ってください（128 文字まで）。"
+  },
+  "error.server.invalid_port": {
+    "en": "The port must be between 1 and 65535.",
+    "ja": "ポートは 1〜65535 の範囲で指定してください。"
+  },
+  "error.server.invalid_request": {
+    "en": "Some server settings are not valid. Check the form and try again.",
+    "ja": "サーバーの設定に正しくない値があります。入力内容を確認してください。"
   },
   "error.server.operation_failed": {
     "en": "The server operation failed.",

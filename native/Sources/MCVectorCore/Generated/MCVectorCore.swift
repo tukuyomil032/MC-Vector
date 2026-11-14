@@ -460,7 +460,13 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 
 
 // Public interface members begin here.
-
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+private let IDX_CALLBACK_FREE: Int32 = 0
+// Callback return codes
+private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
+private let UNIFFI_CALLBACK_ERROR: Int32 = 1
+private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -581,6 +587,210 @@ fileprivate struct FfiConverterString: FfiConverter {
 }
 
 
+
+
+/**
+ * Receives creation progress. Called from a background thread.
+ */
+public protocol CreationObserver: AnyObject, Sendable {
+    
+    func onStage(stage: CreationStage) 
+    
+}
+/**
+ * Receives creation progress. Called from a background thread.
+ */
+open class CreationObserverImpl: CreationObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_creationobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_creationobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onStage(stage: CreationStage)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_creationobserver_on_stage(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeCreationStage_lower(stage),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceCreationObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceCreationObserver = UniffiVTableCallbackInterfaceCreationObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeCreationObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface CreationObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeCreationObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface CreationObserver: handle missing in uniffiClone")
+            }
+        },
+        onStage: { (
+            uniffiHandle: UInt64,
+            stage: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeCreationObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onStage(
+                     stage: try FfiConverterTypeCreationStage_lift(stage)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceCreationObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceCreationObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitCreationObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_creationobserver(UniffiCallbackInterfaceCreationObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCreationObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<CreationObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = CreationObserver
+
+    public static func lift(_ handle: UInt64) throws -> CreationObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return CreationObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: CreationObserver) -> UInt64 {
+         if let rustImpl = value as? CreationObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CreationObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: CreationObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreationObserver_lift(_ handle: UInt64) throws -> CreationObserver {
+    return try FfiConverterTypeCreationObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreationObserver_lower(_ value: CreationObserver) -> UInt64 {
+    return FfiConverterTypeCreationObserver.lower(value)
+}
+
+
+
+
 public struct AppSettings: Equatable, Hashable {
     /**
      * `"en"`, `"ja"`, or None to follow the system language.
@@ -651,6 +861,66 @@ public func FfiConverterTypeAppSettings_lower(_ value: AppSettings) -> RustBuffe
 }
 
 
+public struct CreatedServerInfo: Equatable, Hashable {
+    public var server: ServerProfile
+    /**
+     * False when the user must place the server jar by hand.
+     */
+    public var jarInstalled: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(server: ServerProfile, 
+        /**
+         * False when the user must place the server jar by hand.
+         */jarInstalled: Bool) {
+        self.server = server
+        self.jarInstalled = jarInstalled
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CreatedServerInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCreatedServerInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CreatedServerInfo {
+        return
+            try CreatedServerInfo(
+                server: FfiConverterTypeServerProfile.read(from: &buf), 
+                jarInstalled: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CreatedServerInfo, into buf: inout [UInt8]) {
+        FfiConverterTypeServerProfile.write(value.server, into: &buf)
+        FfiConverterBool.write(value.jarInstalled, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreatedServerInfo_lift(_ buf: RustBuffer) throws -> CreatedServerInfo {
+    return try FfiConverterTypeCreatedServerInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreatedServerInfo_lower(_ value: CreatedServerInfo) -> RustBuffer {
+    return FfiConverterTypeCreatedServerInfo.lower(value)
+}
+
+
 public struct LockOwnerInfo: Equatable, Hashable {
     public var edition: Edition
     public var pid: UInt32
@@ -714,6 +984,105 @@ public func FfiConverterTypeLockOwnerInfo_lift(_ buf: RustBuffer) throws -> Lock
 #endif
 public func FfiConverterTypeLockOwnerInfo_lower(_ value: LockOwnerInfo) -> RustBuffer {
     return FfiConverterTypeLockOwnerInfo.lower(value)
+}
+
+
+/**
+ * What the add-server form sends.
+ */
+public struct NewServerInput: Equatable, Hashable {
+    /**
+     * A UUID chosen by the caller; pass it to `cancel_server_creation`.
+     */
+    public var operationId: String
+    public var name: String
+    public var profileName: String?
+    public var groupName: String?
+    public var software: String
+    public var version: String
+    public var port: UInt32
+    public var memoryGb: UInt32
+    /**
+     * The template the form was filled from. Its Java path, auto-restart and
+     * auto-backup settings are copied too, as React does.
+     */
+    public var templateId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * A UUID chosen by the caller; pass it to `cancel_server_creation`.
+         */operationId: String, name: String, profileName: String?, groupName: String?, software: String, version: String, port: UInt32, memoryGb: UInt32, 
+        /**
+         * The template the form was filled from. Its Java path, auto-restart and
+         * auto-backup settings are copied too, as React does.
+         */templateId: String?) {
+        self.operationId = operationId
+        self.name = name
+        self.profileName = profileName
+        self.groupName = groupName
+        self.software = software
+        self.version = version
+        self.port = port
+        self.memoryGb = memoryGb
+        self.templateId = templateId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NewServerInput: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNewServerInput: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NewServerInput {
+        return
+            try NewServerInput(
+                operationId: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                profileName: FfiConverterOptionString.read(from: &buf), 
+                groupName: FfiConverterOptionString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf), 
+                port: FfiConverterUInt32.read(from: &buf), 
+                memoryGb: FfiConverterUInt32.read(from: &buf), 
+                templateId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NewServerInput, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.profileName, into: &buf)
+        FfiConverterOptionString.write(value.groupName, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterUInt32.write(value.port, into: &buf)
+        FfiConverterUInt32.write(value.memoryGb, into: &buf)
+        FfiConverterOptionString.write(value.templateId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNewServerInput_lift(_ buf: RustBuffer) throws -> NewServerInput {
+    return try FfiConverterTypeNewServerInput.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNewServerInput_lower(_ value: NewServerInput) -> RustBuffer {
+    return FfiConverterTypeNewServerInput.lower(value)
 }
 
 
@@ -825,6 +1194,239 @@ public func FfiConverterTypeServerProfile_lift(_ buf: RustBuffer) throws -> Serv
 public func FfiConverterTypeServerProfile_lower(_ value: ServerProfile) -> RustBuffer {
     return FfiConverterTypeServerProfile.lower(value)
 }
+
+
+/**
+ * A saved template, with the fields the add-server form fills from it.
+ */
+public struct ServerTemplateInfo: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    public var profileName: String?
+    public var groupName: String?
+    public var version: String
+    public var software: String
+    public var port: Int64?
+    public var memoryMb: UInt64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, profileName: String?, groupName: String?, version: String, software: String, port: Int64?, memoryMb: UInt64?) {
+        self.id = id
+        self.name = name
+        self.profileName = profileName
+        self.groupName = groupName
+        self.version = version
+        self.software = software
+        self.port = port
+        self.memoryMb = memoryMb
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerTemplateInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerTemplateInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerTemplateInfo {
+        return
+            try ServerTemplateInfo(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                profileName: FfiConverterOptionString.read(from: &buf), 
+                groupName: FfiConverterOptionString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                port: FfiConverterOptionInt64.read(from: &buf), 
+                memoryMb: FfiConverterOptionUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerTemplateInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.profileName, into: &buf)
+        FfiConverterOptionString.write(value.groupName, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterOptionInt64.write(value.port, into: &buf)
+        FfiConverterOptionUInt64.write(value.memoryMb, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerTemplateInfo_lift(_ buf: RustBuffer) throws -> ServerTemplateInfo {
+    return try FfiConverterTypeServerTemplateInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerTemplateInfo_lower(_ value: ServerTemplateInfo) -> RustBuffer {
+    return FfiConverterTypeServerTemplateInfo.lower(value)
+}
+
+
+/**
+ * One software choice of the add-server form, in display order.
+ */
+public struct SoftwareOption: Equatable, Hashable {
+    public var name: String
+    public var group: SoftwareGroup
+    /**
+     * True when MC-Vector downloads and verifies the jar itself.
+     */
+    public var automaticJar: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, group: SoftwareGroup, 
+        /**
+         * True when MC-Vector downloads and verifies the jar itself.
+         */automaticJar: Bool) {
+        self.name = name
+        self.group = group
+        self.automaticJar = automaticJar
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SoftwareOption: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSoftwareOption: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SoftwareOption {
+        return
+            try SoftwareOption(
+                name: FfiConverterString.read(from: &buf), 
+                group: FfiConverterTypeSoftwareGroup.read(from: &buf), 
+                automaticJar: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SoftwareOption, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterTypeSoftwareGroup.write(value.group, into: &buf)
+        FfiConverterBool.write(value.automaticJar, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSoftwareOption_lift(_ buf: RustBuffer) throws -> SoftwareOption {
+    return try FfiConverterTypeSoftwareOption.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSoftwareOption_lower(_ value: SoftwareOption) -> RustBuffer {
+    return FfiConverterTypeSoftwareOption.lower(value)
+}
+
+
+
+public enum CreationStage: Equatable, Hashable {
+    
+    /**
+     * Looking up the official download.
+     */
+    case resolving
+    /**
+     * Downloading the jar; `percent` is None while the size is unknown.
+     */
+    case downloading(percent: UInt32?
+    )
+    /**
+     * Saving the new server.
+     */
+    case finishing
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CreationStage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCreationStage: FfiConverterRustBuffer {
+    typealias SwiftType = CreationStage
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CreationStage {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .resolving
+        
+        case 2: return .downloading(percent: try FfiConverterOptionUInt32.read(from: &buf)
+        )
+        
+        case 3: return .finishing
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CreationStage, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .resolving:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .downloading(percent):
+            writeInt(&buf, Int32(2))
+            FfiConverterOptionUInt32.write(percent, into: &buf)
+            
+        
+        case .finishing:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreationStage_lift(_ buf: RustBuffer) throws -> CreationStage {
+    return try FfiConverterTypeCreationStage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreationStage_lower(_ value: CreationStage) -> RustBuffer {
+    return FfiConverterTypeCreationStage.lower(value)
+}
+
 
 
 
@@ -977,6 +1579,79 @@ public func FfiConverterTypeFfiError_lower(_ value: FfiError) -> RustBuffer {
 
 
 
+public enum SoftwareGroup: Equatable, Hashable {
+    
+    case standard
+    case modded
+    case proxy
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SoftwareGroup: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSoftwareGroup: FfiConverterRustBuffer {
+    typealias SwiftType = SoftwareGroup
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SoftwareGroup {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .standard
+        
+        case 2: return .modded
+        
+        case 3: return .proxy
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SoftwareGroup, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .standard:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .modded:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .proxy:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSoftwareGroup_lift(_ buf: RustBuffer) throws -> SoftwareGroup {
+    return try FfiConverterTypeSoftwareGroup.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSoftwareGroup_lower(_ value: SoftwareGroup) -> RustBuffer {
+    return FfiConverterTypeSoftwareGroup.lower(value)
+}
+
+
+
+
 public enum StartOutcome: Equatable, Hashable {
     
     /**
@@ -1053,6 +1728,30 @@ public func FfiConverterTypeStartOutcome_lower(_ value: StartOutcome) -> RustBuf
     return FfiConverterTypeStartOutcome.lower(value)
 }
 
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = UInt32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1174,6 +1873,56 @@ fileprivate struct FfiConverterSequenceTypeServerProfile: FfiConverterRustBuffer
         return seq
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeServerTemplateInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [ServerTemplateInfo]
+
+    public static func write(_ value: [ServerTemplateInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeServerTemplateInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ServerTemplateInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ServerTemplateInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeServerTemplateInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeSoftwareOption: FfiConverterRustBuffer {
+    typealias SwiftType = [SoftwareOption]
+
+    public static func write(_ value: [SoftwareOption], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSoftwareOption.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SoftwareOption] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SoftwareOption]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSoftwareOption.read(from: &buf))
+        }
+        return seq
+    }
+}
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_WAKE: Int8 = 1
 
@@ -1223,6 +1972,18 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
     }
 }
 /**
+ * Cancels a running `create_server`. Returns false when no creation with
+ * that ID is running (for example, it already finished).
+ */
+public func cancelServerCreation(operationId: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_cancel_server_creation(
+        FfiConverterString.lower(operationId),uniffiCallStatus
+    )
+})
+}
+/**
  * Copies a stopped server's managed folder and registers the copy as `name`.
  */
 public func cloneServer(sourceServerId: String, name: String)async throws  -> ServerProfile  {
@@ -1249,6 +2010,25 @@ public func configLocale()throws  -> String?  {
     uniffi_mcvector_ffi_fn_func_config_locale(uniffiCallStatus
     )
 })
+}
+/**
+ * Creates a server: validates, makes its folder, downloads and verifies the
+ * jar when possible, and registers it. On failure or cancellation nothing is
+ * left behind.
+ */
+public func createServer(input: NewServerInput, observer: CreationObserver)async throws  -> CreatedServerInfo  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_create_server(FfiConverterTypeNewServerInput_lower(input),FfiConverterTypeCreationObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeCreatedServerInfo_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
 }
 /**
  * Deletes a stopped server and its managed folder. False when nothing was removed.
@@ -1285,6 +2065,18 @@ public func getServers()throws  -> [ServerProfile]  {
 })
 }
 /**
+ * The add-server name rule (trimmed `[A-Za-z0-9_-]`, 1–128 bytes), so the
+ * form validates exactly like the core.
+ */
+public func isValidServerName(name: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_is_valid_server_name(
+        FfiConverterString.lower(name),uniffiCallStatus
+    )
+})
+}
+/**
  * Saves the server's settings as a new template named `name`
  * (React `buildTemplateFromServer` + `save_server_template`).
  */
@@ -1302,10 +2094,31 @@ public func saveServerTemplateFromServer(serverId: String, name: String)async th
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
+/**
+ * Saved server templates.
+ */
+public func serverTemplates()throws  -> [ServerTemplateInfo]  {
+    return try  FfiConverterSequenceTypeServerTemplateInfo.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_server_templates(uniffiCallStatus
+    )
+})
+}
 public func setAllowUnverifiedPluginDownloads(enabled: Bool)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
         uniffiCallStatus in
     uniffi_mcvector_ffi_fn_func_set_allow_unverified_plugin_downloads(
         FfiConverterBool.lower(enabled),uniffiCallStatus
+    )
+}
+}
+/**
+ * Sets the User-Agent for provider requests, for example from the bundle's
+ * `CFBundleShortVersionString`. Call once at startup.
+ */
+public func setAppVersion(version: String)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_set_app_version(
+        FfiConverterString.lower(version),uniffiCallStatus
     )
 }
 }
@@ -1322,6 +2135,16 @@ public func setUpdateChannel(channel: String)throws   {try rustCallWithError(Ffi
         FfiConverterString.lower(channel),uniffiCallStatus
     )
 }
+}
+/**
+ * The software choices of the add-server form.
+ */
+public func softwareOptions() -> [SoftwareOption]  {
+    return try!  FfiConverterSequenceTypeSoftwareOption.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_software_options(uniffiCallStatus
+    )
+})
 }
 /**
  * Takes the instance lock in the shared data root and opens the server
@@ -1361,10 +2184,16 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_cancel_server_creation() != 36497) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_clone_server() != 45594) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_config_locale() != 3848) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_create_server() != 60091) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_delete_server() != 34295) {
@@ -1376,10 +2205,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_is_valid_server_name() != 18376) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_save_server_template_from_server() != 13376) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_server_templates() != 15954) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_set_allow_unverified_plugin_downloads() != 5592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_set_app_version() != 28331) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_set_locale() != 8629) {
@@ -1388,10 +2226,17 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_set_update_channel() != 30965) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_software_options() != 54829) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_start() != 17440) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_method_creationobserver_on_stage() != 37456) {
+        return InitializationResult.apiChecksumMismatch
+    }
 
+    uniffiCallbackInitCreationObserver()
     return InitializationResult.ok
 }()
 

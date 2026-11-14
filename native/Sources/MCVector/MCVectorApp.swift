@@ -25,6 +25,9 @@ enum Preflight {
             case .ready:
                 // The core is started, so config.json can be read (NAT-008).
                 L10n.configure(locale: CoreClient.configLocale())
+                if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                    CoreClient.setAppVersion(version)
+                }
                 return
             case let .heldByOther(owner):
                 // The other edition holds the data folder: never read config.json here.

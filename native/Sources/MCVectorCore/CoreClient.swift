@@ -113,4 +113,66 @@ public enum CoreClient {
             throw CoreError.unexpected(error)
         }
     }
+
+    // MARK: Server creation (OP-SRV-002)
+
+    /// Identifies this app in provider requests. Call once at startup.
+    public static func setAppVersion(_ version: String) {
+        MCVectorCore.setAppVersion(version: version)
+    }
+
+    /// The add-server form's software choices, in display order.
+    public static func softwareOptions() -> [SoftwareOption] {
+        MCVectorCore.softwareOptions()
+    }
+
+    /// The core's server-name rule (trimmed `[A-Za-z0-9_-]`, 1–128 bytes).
+    public static func isValidServerName(_ name: String) -> Bool {
+        MCVectorCore.isValidServerName(name: name)
+    }
+
+    /// Saved server templates.
+    public static func serverTemplates() async throws(CoreError) -> [ServerTemplateInfo] {
+        let result: Result<[ServerTemplateInfo], CoreError> = await Task.detached(priority: .userInitiated) {
+            do {
+                return .success(try MCVectorCore.serverTemplates())
+            } catch {
+                return .failure(CoreError.unexpected(error))
+            }
+        }.value
+        return try result.get()
+    }
+
+    /// Creates a server. `onStage` is called from a background thread.
+    /// Cancel with `cancelServerCreation(operationID:)`; a cancelled creation
+    /// throws `operation.cancelled` and leaves nothing behind.
+    public static func createServer(
+        _ input: NewServerInput,
+        onStage: @escaping @Sendable (CreationStage) -> Void
+    ) async throws(CoreError) -> CreatedServerInfo {
+        do {
+            return try await MCVectorCore.createServer(input: input, observer: StageObserver(onStage))
+        } catch {
+            throw CoreError.unexpected(error)
+        }
+    }
+
+    /// Asks a running creation to stop. False when it already finished.
+    @discardableResult
+    public static func cancelServerCreation(operationID: String) -> Bool {
+        MCVectorCore.cancelServerCreation(operationId: operationID)
+    }
+}
+
+/// Forwards creation progress from Rust to a Swift closure.
+private final class StageObserver: CreationObserver {
+    private let onStage: @Sendable (CreationStage) -> Void
+
+    init(_ onStage: @escaping @Sendable (CreationStage) -> Void) {
+        self.onStage = onStage
+    }
+
+    func onStage(stage: CreationStage) {
+        onStage(stage)
+    }
 }
