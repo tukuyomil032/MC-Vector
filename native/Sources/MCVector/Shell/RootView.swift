@@ -44,6 +44,8 @@ struct RootView: View {
                 #else
                 CreateServerSheet()
                 #endif
+            case let .serverEula(serverID):
+                ServerEulaSheet(serverID: serverID)
             case .importServer:
                 #if DEBUG
                 ImportServerSheet(model: CaptureState.takeImportServerModel() ?? ImportServerModel())
@@ -53,6 +55,9 @@ struct RootView: View {
             default:
                 ShellSheetPlaceholder(sheet: sheet)
             }
+        }
+        .onChange(of: runtime.pendingEula) { _, pending in
+            if let pending { app.activeSheet = .serverEula(serverID: pending.serverID) }
         }
         .task {
             runtime.serverName = { [app] id in app.servers.first { $0.id == id }?.name ?? id }
