@@ -29,7 +29,9 @@ struct ContentRouter: View {
             // One identity per screen, so switching views or servers cross-fades
             // the old content out while the new one rises in.
             .id(contentKey)
-            .transition(.motionRise)
+            // Screens built on a Table only fade: rising and scaling resizes the
+            // NSTableView every frame and it re-enters its own row measuring.
+            .transition(app.route.hostsTable ? .motionFade : .motionRise)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(Motion.standard, value: contentKey)
@@ -58,6 +60,7 @@ struct ContentRouter: View {
             switch app.route {
             case .console: ConsoleView(serverID: serverID)
             case .dashboard: DashboardView(serverID: serverID)
+            case .files: FilesView(serverID: serverID)
             default: NotPortedView(route: app.route)
             }
         }
@@ -117,4 +120,9 @@ struct NotPortedView: View {
             description: Text(L10n.t("native.notPorted"))
         )
     }
+}
+
+private extension AppRoute {
+    /// Routes whose screen is a SwiftUI Table (NSTableView underneath).
+    var hostsTable: Bool { self == .files }
 }

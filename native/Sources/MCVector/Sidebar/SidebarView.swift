@@ -31,7 +31,6 @@ struct SidebarView: View {
                 Section(group.title) {
                     ForEach(group.servers, id: \.id) { server in
                         ServerRow(server: server, isActive: server.id == app.selectedServerID)
-                            .transition(.motionFade)
                     }
                 }
             }
@@ -46,8 +45,6 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        .animation(Motion.standard, value: app.servers.map(\.id))
-        .animation(Motion.snappy, value: app.selectedServerID)
     }
 
     /// Named groups in first-seen order, then servers without a group. With no

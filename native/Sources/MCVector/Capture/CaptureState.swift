@@ -360,6 +360,58 @@ enum CaptureState {
                 await step(1.4)
                 app.activeSheet = nil
             }
+        case "FILES-root":
+            app.navigate(to: .files)
+        case "FILES-selection":
+            FilesView.capturePreset = .init(selection: ["config", "server.properties"])
+            app.navigate(to: .files)
+        case "FILES-plugins":
+            FilesView.capturePreset = .init(path: ["plugins"])
+            app.navigate(to: .files)
+        case "FILES-empty":
+            FilesView.capturePreset = .init(path: ["empty"])
+            app.navigate(to: .files)
+        case "CONFIRM-delete-files":
+            app.navigate(to: .files)
+            Task {
+                _ = await feedback.confirm(
+                    title: L10n.t("files.confirm.deleteTitle"),
+                    description: L10n.t("files.confirm.delete", ["count": 2]) + "\n\nconfig\nserver.properties",
+                    confirmLabel: L10n.t("files.toolbar.delete"),
+                    isDanger: true
+                )
+            }
+        case "VERIFY-files":
+            // Real file operations through the FFI, logged for capture.sh.
+            let server = "server-1"
+            func step(_ label: String, _ work: () async throws -> Void) async {
+                do {
+                    try await work()
+                    signal("[capture] \(label): ok")
+                } catch {
+                    signal("[capture] \(label): \((error as? CoreError)?.code ?? "\(error)")")
+                }
+            }
+            await step("create folder") { try await CoreClient.createFileEntry(serverID: server, parent: "", name: "notes", isDirectory: true) }
+            await step("create file") { try await CoreClient.createFileEntry(serverID: server, parent: "notes", name: "todo.txt", isDirectory: false) }
+            await step("create existing file") { try await CoreClient.createFileEntry(serverID: server, parent: "", name: "server.properties", isDirectory: false) }
+            await step("rename") { try await CoreClient.renameFileEntry(serverID: server, relative: "notes/todo.txt", newName: "done.txt") }
+            await step("rename onto existing") { try await CoreClient.renameFileEntry(serverID: server, relative: "notes", newName: "config") }
+            await step("move") { try await CoreClient.moveFileEntries(serverID: server, entries: ["notes"], destination: "plugins") }
+            await step("bad name") { try await CoreClient.createFileEntry(serverID: server, parent: "", name: "a/b", isDirectory: false) }
+            await step("delete") { try await CoreClient.deleteFileEntries(serverID: server, entries: ["plugins/notes"]) }
+            let original = try? Data(contentsOf: (try? CoreClient.fileEntryURL(serverID: server, relative: "bom-crlf.properties"))!)
+            await step("round trip") {
+                let document = try await CoreClient.readTextDocument(serverID: server, relative: "bom-crlf.properties")
+                signal("[capture] document bom=\(document.hasBom) ending=\(document.lineEnding) text=\(document.text.debugDescription)")
+                try await CoreClient.writeTextDocument(serverID: server, relative: "bom-crlf.properties", document: document)
+            }
+            let after = try? Data(contentsOf: (try? CoreClient.fileEntryURL(serverID: server, relative: "bom-crlf.properties"))!)
+            signal("[capture] bytes unchanged=\(original == after && original != nil)")
+            await step("binary refused") { _ = try await CoreClient.readTextDocument(serverID: server, relative: "world/region/r.0.0.mca") }
+            let listing = (try? await CoreClient.listFiles(serverID: server, relative: "")) ?? []
+            signal("[capture] root: \(listing.map { $0.isDirectory ? $0.name + "/" : $0.name }.joined(separator: " "))")
+            app.navigate(to: .files)
         case "VERIFY-template":
             do {
                 try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")

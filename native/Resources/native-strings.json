@@ -23,6 +23,22 @@
     "en": "The download information could not be read from the official site. Try again later.",
     "ja": "公式サイトからダウンロード情報を取得できませんでした。時間をおいてもう一度お試しください。"
   },
+  "error.files.already_exists": {
+    "en": "An item with the same name already exists here.",
+    "ja": "同じ名前のものがすでにあります。"
+  },
+  "error.files.invalid_name": {
+    "en": "Use a name without /, \\ or :.",
+    "ja": "名前に /、\\、: は使えません。"
+  },
+  "error.files.not_text": {
+    "en": "The file is not UTF-8 text, so it cannot be edited.",
+    "ja": "UTF-8 のテキストではないため、編集できません。"
+  },
+  "error.files.too_large": {
+    "en": "The file is too large (up to 16 MB).",
+    "ja": "ファイルが大きすぎます（16 MB まで）。"
+  },
   "error.import.invalid_folder": {
     "en": "The folder cannot be imported. It must be a real folder without symbolic links, and must not change while importing.",
     "ja": "このフォルダーは取り込めません。シンボリックリンクを含まない実体のフォルダーで、取り込み中に変更されないようにしてください。"
@@ -170,6 +186,34 @@
   "native.console.sendFailed": {
     "en": "The command could not be sent",
     "ja": "コマンドを送信できませんでした"
+  },
+  "native.files.archiveLater": {
+    "en": "Compress and Extract arrive with the Backups screen.",
+    "ja": "圧縮と展開は、バックアップの画面と一緒に使えるようになります。"
+  },
+  "native.files.modified": {
+    "en": "Modified",
+    "ja": "更新日時"
+  },
+  "native.files.moveTo": {
+    "en": "Move {count} item(s) to:",
+    "ja": "{count} 件の移動先："
+  },
+  "native.files.name": {
+    "en": "Name",
+    "ja": "名前"
+  },
+  "native.files.openInFinder": {
+    "en": "Show in Finder",
+    "ja": "Finder で表示"
+  },
+  "native.files.servers": {
+    "en": "Server folder",
+    "ja": "サーバーのフォルダー"
+  },
+  "native.files.size": {
+    "en": "Size",
+    "ja": "サイズ"
   },
   "native.import.chooseAnother": {
     "en": "Choose Another…",
