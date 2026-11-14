@@ -34,7 +34,14 @@ struct RootView: View {
         }
         .feedbackHost(feedback)
         .sheet(item: $app.activeSheet) { sheet in
-            ShellSheetPlaceholder(sheet: sheet)
+            switch sheet {
+            case .addServerChoice:
+                AddServerChoiceSheet()
+            case .addServer:
+                CreateServerSheet()
+            default:
+                ShellSheetPlaceholder(sheet: sheet)
+            }
         }
         .task {
             await app.reloadServers()

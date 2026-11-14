@@ -99,6 +99,42 @@
     "en": "MC-Vector (Tauri edition) is already running.\nBoth editions use the same servers and data, so only one can run at a time.",
     "ja": "MC-Vector（Tauri 版）が起動中です。\n両方の版は同じサーバーとデータを使うため、同時には起動できません。"
   },
+  "native.addServer.automaticJar": {
+    "en": "MC-Vector downloads the official server jar and checks it against the published checksum.",
+    "ja": "公式のサーバー JAR をダウンロードし、公開されているチェックサムで確認します。"
+  },
+  "native.addServer.cancel": {
+    "en": "Stop",
+    "ja": "中止"
+  },
+  "native.addServer.createdManualJar": {
+    "en": "Server \"{name}\" created. Place its server jar in the server folder before starting it.",
+    "ja": "サーバー「{name}」を作成しました。起動する前に、サーバーのフォルダーに JAR を置いてください。"
+  },
+  "native.addServer.finishing": {
+    "en": "Saving the server…",
+    "ja": "サーバーを保存しています…"
+  },
+  "native.addServer.importUnavailable": {
+    "en": "Importing an existing folder comes in a later update of the Native edition.",
+    "ja": "既存フォルダーの取り込みは、Native 版の今後の更新で使えるようになります。"
+  },
+  "native.addServer.manualJar": {
+    "en": "MC-Vector cannot download this software automatically. After creating the server, place its jar in the server folder.",
+    "ja": "このソフトウェアは自動でダウンロードできません。サーバーを作成したあと、JAR をサーバーのフォルダーに置いてください。"
+  },
+  "native.addServer.memoryUnit": {
+    "en": "GB",
+    "ja": "GB"
+  },
+  "native.addServer.resolving": {
+    "en": "Looking up the official download…",
+    "ja": "公式のダウンロード先を確認しています…"
+  },
+  "native.addServer.savePath": {
+    "en": "Saved in a new folder inside MC-Vector's servers folder. The folder name is chosen automatically.",
+    "ja": "MC-Vector のサーバー用フォルダーの中に、新しいフォルダーを作って保存します。フォルダー名は自動で決まります。"
+  },
   "native.menu.nextView": {
     "en": "Next View",
     "ja": "次の画面"

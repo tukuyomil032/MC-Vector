@@ -6921,6 +6921,160 @@
         }
       }
     },
+    "native.addServer.automaticJar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MC-Vector downloads the official server jar and checks it against the published checksum."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公式のサーバー JAR をダウンロードし、公開されているチェックサムで確認します。"
+          }
+        }
+      }
+    },
+    "native.addServer.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中止"
+          }
+        }
+      }
+    },
+    "native.addServer.createdManualJar": {
+      "comment": "Placeholders: {name}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server \"{name}\" created. Place its server jar in the server folder before starting it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー「{name}」を作成しました。起動する前に、サーバーのフォルダーに JAR を置いてください。"
+          }
+        }
+      }
+    },
+    "native.addServer.finishing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving the server…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを保存しています…"
+          }
+        }
+      }
+    },
+    "native.addServer.importUnavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing an existing folder comes in a later update of the Native edition."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既存フォルダーの取り込みは、Native 版の今後の更新で使えるようになります。"
+          }
+        }
+      }
+    },
+    "native.addServer.manualJar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MC-Vector cannot download this software automatically. After creating the server, place its jar in the server folder."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このソフトウェアは自動でダウンロードできません。サーバーを作成したあと、JAR をサーバーのフォルダーに置いてください。"
+          }
+        }
+      }
+    },
+    "native.addServer.memoryUnit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GB"
+          }
+        }
+      }
+    },
+    "native.addServer.resolving": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looking up the official download…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公式のダウンロード先を確認しています…"
+          }
+        }
+      }
+    },
+    "native.addServer.savePath": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved in a new folder inside MC-Vector's servers folder. The folder name is chosen automatically."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MC-Vector のサーバー用フォルダーの中に、新しいフォルダーを作って保存します。フォルダー名は自動で決まります。"
+          }
+        }
+      }
+    },
     "native.menu.nextView": {
       "extractionState": "manual",
       "localizations": {

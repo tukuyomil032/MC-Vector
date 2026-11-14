@@ -39,8 +39,18 @@ struct SearchSuggestions: View {
                 }
             }
         }
-        if !servers.isEmpty {
+        // React's palette lists "Add Server" in the Servers group.
+        let showAddServer = matches(L10n.t("nav.addServer"), query) || matches("add server", query)
+        if !servers.isEmpty || showAddServer {
             Section(L10n.t("commandPalette.servers")) {
+                if showAddServer {
+                    Button {
+                        app.searchText = ""
+                        app.activeSheet = .addServerChoice
+                    } label: {
+                        Label(L10n.t("nav.addServer"), systemImage: "plus")
+                    }
+                }
                 ForEach(servers, id: \.id) { server in
                     Button {
                         app.selectedServerID = server.id
@@ -56,7 +66,7 @@ struct SearchSuggestions: View {
                 }
             }
         }
-        if routes.isEmpty, servers.isEmpty, !showSettings, !query.isEmpty {
+        if routes.isEmpty, servers.isEmpty, !showSettings, !showAddServer, !query.isEmpty {
             Text(L10n.t("commandPalette.noResults"))
                 .foregroundStyle(.secondary)
         }
