@@ -58,6 +58,14 @@ pub enum CoreErrorCode {
     DownloadTooLarge,
     /// The provider's download information could not be read.
     DownloadUnavailable,
+    /// The folder to import has too many files, is too large, or is nested too deeply.
+    ImportTooLarge,
+    /// The folder to import is not a real folder, contains links, or changed while importing.
+    ImportInvalidFolder,
+    /// Importing the folder took longer than the time limit.
+    ImportTimedOut,
+    /// The picked folder is no longer available; pick it again.
+    ImportSessionExpired,
 }
 
 impl CoreErrorCode {
@@ -82,6 +90,10 @@ impl CoreErrorCode {
         CoreErrorCode::DownloadChecksumMismatch,
         CoreErrorCode::DownloadTooLarge,
         CoreErrorCode::DownloadUnavailable,
+        CoreErrorCode::ImportTooLarge,
+        CoreErrorCode::ImportInvalidFolder,
+        CoreErrorCode::ImportTimedOut,
+        CoreErrorCode::ImportSessionExpired,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -106,6 +118,10 @@ impl CoreErrorCode {
             Self::DownloadChecksumMismatch => "download.checksum_mismatch",
             Self::DownloadTooLarge => "download.too_large",
             Self::DownloadUnavailable => "download.unavailable",
+            Self::ImportTooLarge => "import.too_large",
+            Self::ImportInvalidFolder => "import.invalid_folder",
+            Self::ImportTimedOut => "import.timed_out",
+            Self::ImportSessionExpired => "import.session_expired",
         }
     }
 
@@ -127,7 +143,9 @@ impl CoreErrorCode {
             | Self::ConfigWriteFailed
             | Self::DownloadNetworkFailed
             | Self::DownloadChecksumMismatch
-            | Self::DownloadUnavailable => true,
+            | Self::DownloadUnavailable
+            | Self::ImportTimedOut
+            | Self::ImportSessionExpired => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
@@ -138,7 +156,9 @@ impl CoreErrorCode {
             | Self::ServerInvalidPort
             | Self::ServerInvalidMemory
             | Self::ServerInvalidRequest
-            | Self::DownloadTooLarge => false,
+            | Self::DownloadTooLarge
+            | Self::ImportTooLarge
+            | Self::ImportInvalidFolder => false,
         }
     }
 
@@ -224,10 +244,14 @@ mod tests {
             CoreErrorCode::DownloadChecksumMismatch => 16,
             CoreErrorCode::DownloadTooLarge => 17,
             CoreErrorCode::DownloadUnavailable => 18,
+            CoreErrorCode::ImportTooLarge => 19,
+            CoreErrorCode::ImportInvalidFolder => 20,
+            CoreErrorCode::ImportTimedOut => 21,
+            CoreErrorCode::ImportSessionExpired => 22,
         }
     }
 
-    const VARIANT_COUNT: usize = 19;
+    const VARIANT_COUNT: usize = 23;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -328,6 +352,18 @@ mod tests {
             (
                 CoreErrorCode::DownloadUnavailable,
                 "download.unavailable",
+                true,
+            ),
+            (CoreErrorCode::ImportTooLarge, "import.too_large", false),
+            (
+                CoreErrorCode::ImportInvalidFolder,
+                "import.invalid_folder",
+                false,
+            ),
+            (CoreErrorCode::ImportTimedOut, "import.timed_out", true),
+            (
+                CoreErrorCode::ImportSessionExpired,
+                "import.session_expired",
                 true,
             ),
         ];

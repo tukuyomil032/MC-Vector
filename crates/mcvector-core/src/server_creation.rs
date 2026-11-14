@@ -190,7 +190,8 @@ where
 }
 
 /// Fills the new server folder from an import: `(data_dir, server_id)`.
-pub type ImportStep = Box<dyn FnOnce(&Path, &str) -> Result<(), String> + Send + 'static>;
+/// See `server_import::ImportManager::import_step`.
+pub type ImportStep = Box<dyn FnOnce(&Path, &str) -> Result<(), CoreError> + Send + 'static>;
 
 fn invalid(code: CoreErrorCode, message: &str) -> CoreError {
     CoreError::new(code, message)
@@ -528,8 +529,7 @@ pub async fn create_server(
                         CoreErrorCode::ServerOperationFailed,
                         format!("Server import task failed: {error}"),
                     )
-                })?
-                .map_err(|message| CoreError::new(CoreErrorCode::ServerOperationFailed, message))?;
+                })??;
             return Ok(true);
         }
         if !server_jar::supports_automatic_install(&server.software) {
@@ -817,7 +817,12 @@ mod tests {
 
         let mut import = request();
         import.import_token = Some("token".into());
-        let failing: ImportStep = Box::new(|_, _| Err("copy failed".to_string()));
+        let failing: ImportStep = Box::new(|_, _| {
+            Err(CoreError::new(
+                CoreErrorCode::ServerOperationFailed,
+                "copy failed",
+            ))
+        });
         let error = create_server(
             &data,
             &registry,

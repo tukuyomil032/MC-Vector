@@ -7,6 +7,7 @@
 pub mod config;
 pub mod download;
 pub mod error;
+pub mod external_copy;
 pub mod instance_lock;
 pub mod lifecycle;
 pub mod managed_path;
@@ -15,5 +16,6 @@ pub mod paths;
 pub mod recovery_record;
 pub mod registry;
 pub mod server_creation;
+pub mod server_import;
 pub mod server_jar;
 pub mod shutdown;
