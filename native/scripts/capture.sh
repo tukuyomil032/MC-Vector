@@ -96,6 +96,14 @@ prepare_fixture() {
   mkdir -p "$dir"
   if [ "$FIXTURE" != "empty" ]; then
     sed "s#__DATA_DIR__#$dir#g" "$NATIVE_DIR/scripts/fixtures/$FIXTURE/servers.json" > "$dir/servers.json"
+    # Each registered server gets its managed folder, like a real installation,
+    # so clone/delete/file actions have something to work on.
+    local server_id
+    for server_id in $(sed -n 's/.*"id": *"\([^"]*\)".*/\1/p' "$dir/servers.json"); do
+      mkdir -p "$dir/servers/$server_id"
+      printf 'motd=%s\nserver-port=25565\n' "$server_id" > "$dir/servers/$server_id/server.properties"
+      printf 'eula=true\n' > "$dir/servers/$server_id/eula.txt"
+    done
   fi
   printf '{"locale":"%s"}\n' "$LOCALE" > "$dir/config.json"
 }
@@ -119,9 +127,15 @@ for id in "${IDS[@]}"; do
 
   ready=0
   pid=""
-  for _ in $(seq 1 80); do
-    [ -z "$pid" ] && pid="$(pgrep -n -f "$EXE --capture-state $id" || true)"
-    if grep -q "\[capture\] ready: $id" "$log_file" 2>/dev/null; then ready=1; break; fi
+  deadline=$((SECONDS + 20))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if [ -z "$pid" ]; then
+      pid="$(pgrep -n -f "$EXE --capture-state $id" || true)"
+    fi
+    if grep -q "\[capture\] ready: $id" "$log_file" 2>/dev/null; then
+      ready=1
+      break
+    fi
     sleep 0.25
   done
   wid=""
