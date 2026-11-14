@@ -53,7 +53,11 @@ mod tests {
     #[test]
     fn reads_supported_locale_only() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join(CONFIG_FILE), br#"{"locale":"ja","theme":"dark"}"#).unwrap();
+        std::fs::write(
+            dir.path().join(CONFIG_FILE),
+            br#"{"locale":"ja","theme":"dark"}"#,
+        )
+        .unwrap();
         assert_eq!(locale(dir.path()).as_deref(), Some("ja"));
         std::fs::write(dir.path().join(CONFIG_FILE), br#"{"locale":"fr"}"#).unwrap();
         assert_eq!(locale(dir.path()), None);

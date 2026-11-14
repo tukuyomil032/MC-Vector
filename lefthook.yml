@@ -18,4 +18,5 @@ pre-commit:
       glob:
         - 'src-tauri/src/*.rs'
         - 'src-tauri/src/**/*.rs'
+        - 'crates/**/*.rs'
       run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
