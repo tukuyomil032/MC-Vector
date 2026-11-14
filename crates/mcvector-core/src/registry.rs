@@ -79,6 +79,31 @@ pub struct ServerTemplate {
     pub extra: HashMap<String, Value>,
 }
 
+/// Builds a template from a server profile. Copies the same profile fields as
+/// the React `buildTemplateFromServer` helper and leaves `extra` empty.
+pub fn template_from_server(server: &MinecraftServer, id: String, name: String) -> ServerTemplate {
+    ServerTemplate {
+        id,
+        name,
+        profile_name: server.profile_name.clone(),
+        group_name: server.group_name.clone(),
+        version: server.version.clone(),
+        software: server.software.clone(),
+        port: server.port.clone(),
+        memory: server.memory.clone(),
+        java_path: server.java_path.clone(),
+        auto_restart_on_crash: server.auto_restart_on_crash,
+        max_auto_restarts: server.max_auto_restarts.clone(),
+        auto_restart_delay_sec: server.auto_restart_delay_sec.clone(),
+        auto_backup_enabled: server.auto_backup_enabled,
+        auto_backup_interval_min: server.auto_backup_interval_min.clone(),
+        auto_backup_schedule_type: server.auto_backup_schedule_type.clone(),
+        auto_backup_time: server.auto_backup_time.clone(),
+        auto_backup_weekday: server.auto_backup_weekday.clone(),
+        extra: HashMap::new(),
+    }
+}
+
 #[derive(Clone)]
 pub struct ServerRegistry {
     connection: Arc<Mutex<Connection>>,
@@ -530,8 +555,8 @@ fn find_legacy_list<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a Value> {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_runtime_statuses, JsonNumber, MinecraftServer, ServerRegistry, ServerTemplate,
-        DATABASE_FILE, MIGRATION_ID,
+        apply_runtime_statuses, template_from_server, JsonNumber, MinecraftServer, ServerRegistry,
+        ServerTemplate, DATABASE_FILE, MIGRATION_ID,
     };
     use rusqlite::Connection;
     use serde_json::Value;
@@ -598,6 +623,50 @@ mod tests {
             auto_backup_weekday: Some(JsonNumber::from(0)),
             extra: HashMap::new(),
         }
+    }
+
+    #[test]
+    fn template_from_server_copies_profile_fields_and_leaves_extra_empty() {
+        let mut server = sample_server("server-a", "Server A");
+        server.profile_name = Some("Survival".to_string());
+        server.group_name = Some("Main".to_string());
+        server.java_path = Some("/opt/java/bin/java".to_string());
+        server.auto_backup_time = Some("04:30".to_string());
+        server.auto_backup_weekday = Some(JsonNumber::from(2));
+        server
+            .extra
+            .insert("legacyField".to_string(), serde_json::json!(true));
+
+        let template = template_from_server(
+            &server,
+            "template-a".to_string(),
+            "Survival base".to_string(),
+        );
+
+        assert_eq!(template.id, "template-a");
+        assert_eq!(template.name, "Survival base");
+        assert_eq!(template.profile_name.as_deref(), Some("Survival"));
+        assert_eq!(template.group_name.as_deref(), Some("Main"));
+        assert_eq!(template.version, "1.21");
+        assert_eq!(template.software, "Paper");
+        assert_eq!(template.port, JsonNumber::from(25565));
+        assert_eq!(template.memory, JsonNumber::from(2048));
+        assert_eq!(template.java_path.as_deref(), Some("/opt/java/bin/java"));
+        assert_eq!(template.auto_restart_on_crash, Some(false));
+        assert_eq!(template.max_auto_restarts, Some(JsonNumber::from(3)));
+        assert_eq!(template.auto_restart_delay_sec, Some(JsonNumber::from(5)));
+        assert_eq!(template.auto_backup_enabled, Some(false));
+        assert_eq!(
+            template.auto_backup_interval_min,
+            Some(JsonNumber::from(60))
+        );
+        assert_eq!(
+            template.auto_backup_schedule_type.as_deref(),
+            Some("interval")
+        );
+        assert_eq!(template.auto_backup_time.as_deref(), Some("04:30"));
+        assert_eq!(template.auto_backup_weekday, Some(JsonNumber::from(2)));
+        assert!(template.extra.is_empty());
     }
 
     #[test]

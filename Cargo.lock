@@ -2935,10 +2935,13 @@ name = "mcvector-core"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "log",
  "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

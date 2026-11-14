@@ -7,6 +7,9 @@
 pub mod config;
 pub mod error;
 pub mod instance_lock;
+pub mod lifecycle;
+pub mod managed_path;
+pub mod operations;
 pub mod paths;
 pub mod recovery_record;
 pub mod registry;
