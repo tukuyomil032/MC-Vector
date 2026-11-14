@@ -104,11 +104,14 @@ struct ShellCommands: Commands {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeys: GlobalHotKeys?
+    private weak var runtime: ServerRuntime?
+    private var isQuitting = false
 
     /// Starts listening to running servers and registers the system-wide
     /// ⌘⇧S (start/stop) and ⌘⇧R (restart) for the selected server.
     func attach(app: AppState, feedback: FeedbackCenter, runtime: ServerRuntime) {
         guard hotKeys == nil else { return }
+        self.runtime = runtime
         runtime.subscribe()
         hotKeys = GlobalHotKeys { action in
             guard let serverID = app.selectedServerID else { return }
@@ -126,4 +129,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 
+    /// ⌘Q and closing the window both come here. With servers running, ask
+    /// first (React `use-exit-confirmation`), then stop them all before quitting.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if isQuitting { return .terminateLater }
+        guard let runtime, !runtime.activeServerIDs.isEmpty else { return .terminateNow }
+        guard QuitConfirmation.run() else { return .terminateCancel }
+        isQuitting = true
+        Task { @MainActor in
+            try? await CoreClient.shutdownAllServers()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
 }
