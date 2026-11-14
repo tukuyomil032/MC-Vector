@@ -40,6 +40,8 @@ pub enum CoreErrorCode {
     ServerRunning,
     /// A server management operation (clone, delete, template) failed.
     ServerOperationFailed,
+    /// The shared config.json could not be read or written.
+    ConfigWriteFailed,
 }
 
 impl CoreErrorCode {
@@ -55,6 +57,7 @@ impl CoreErrorCode {
         CoreErrorCode::RegistryReadFailed,
         CoreErrorCode::ServerRunning,
         CoreErrorCode::ServerOperationFailed,
+        CoreErrorCode::ConfigWriteFailed,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -70,6 +73,7 @@ impl CoreErrorCode {
             Self::RegistryReadFailed => "registry.read_failed",
             Self::ServerRunning => "server.running",
             Self::ServerOperationFailed => "server.operation_failed",
+            Self::ConfigWriteFailed => "config.write_failed",
         }
     }
 
@@ -87,7 +91,8 @@ impl CoreErrorCode {
             Self::LockHeldByOther
             | Self::CoreNotStarted
             | Self::RegistryReadFailed
-            | Self::ServerRunning => true,
+            | Self::ServerRunning
+            | Self::ConfigWriteFailed => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
@@ -170,10 +175,11 @@ mod tests {
             CoreErrorCode::RegistryReadFailed => 7,
             CoreErrorCode::ServerRunning => 8,
             CoreErrorCode::ServerOperationFailed => 9,
+            CoreErrorCode::ConfigWriteFailed => 10,
         }
     }
 
-    const VARIANT_COUNT: usize = 10;
+    const VARIANT_COUNT: usize = 11;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -234,6 +240,11 @@ mod tests {
                 CoreErrorCode::ServerOperationFailed,
                 "server.operation_failed",
                 false,
+            ),
+            (
+                CoreErrorCode::ConfigWriteFailed,
+                "config.write_failed",
+                true,
             ),
         ];
         for (code, wire, retryable) in expected {
