@@ -431,6 +431,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_get_player_lists(RustBuffer server_id
 uint64_t uniffi_mcvector_ffi_fn_func_get_server_properties(RustBuffer server_id
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVER_SETTINGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVER_SETTINGS
+uint64_t uniffi_mcvector_ffi_fn_func_get_server_settings(RustBuffer server_id
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_status
@@ -564,6 +569,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_stop_server(RustBuffer server_id
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SUBSCRIBE_SERVER_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SUBSCRIBE_SERVER_EVENTS
 void uniffi_mcvector_ffi_fn_func_subscribe_server_events(uint64_t observer, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_UPDATE_SERVER_SETTINGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_UPDATE_SERVER_SETTINGS
+uint64_t uniffi_mcvector_ffi_fn_func_update_server_settings(RustBuffer server_id, RustBuffer settings
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
@@ -921,6 +931,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_get_server_properties(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVER_SETTINGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVER_SETTINGS
+uint16_t uniffi_mcvector_ffi_checksum_func_get_server_settings(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 uint16_t uniffi_mcvector_ffi_checksum_func_get_servers(void
@@ -1074,6 +1090,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_stop_server(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SUBSCRIBE_SERVER_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SUBSCRIBE_SERVER_EVENTS
 uint16_t uniffi_mcvector_ffi_checksum_func_subscribe_server_events(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_UPDATE_SERVER_SETTINGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_UPDATE_SERVER_SETTINGS
+uint16_t uniffi_mcvector_ffi_checksum_func_update_server_settings(void
     
 );
 #endif

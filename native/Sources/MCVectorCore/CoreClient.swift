@@ -18,9 +18,9 @@ public enum CoreClient {
     /// Debug builds use the `.debug` data folder shared with the Tauri debug build.
     public static var isDebugBuild: Bool {
         #if DEBUG
-        true
+            true
         #else
-        false
+            false
         #endif
     }
 
@@ -36,9 +36,9 @@ public enum CoreClient {
                 bundlePath: bundlePath,
                 debugDataDirOverride: dataDirOverride
             ) {
-            case let .ready(dataDir):
+            case .ready(let dataDir):
                 return .ready(dataDirectory: dataDir)
-            case let .heldByOther(owner):
+            case .heldByOther(let owner):
                 return .heldByOther(owner)
             }
         } catch {
@@ -187,15 +187,19 @@ public enum CoreClient {
         serverID: String, parent: String, name: String, isDirectory: Bool
     ) async throws(CoreError) {
         try await call {
-            try await MCVectorCore.createFileEntry(serverId: serverID, parent: parent, name: name, isDirectory: isDirectory)
+            try await MCVectorCore.createFileEntry(
+                serverId: serverID, parent: parent, name: name, isDirectory: isDirectory)
         }
     }
 
     public static func renameFileEntry(serverID: String, relative: String, newName: String) async throws(CoreError) {
-        try await call { try await MCVectorCore.renameFileEntry(serverId: serverID, relative: relative, newName: newName) }
+        try await call {
+            try await MCVectorCore.renameFileEntry(serverId: serverID, relative: relative, newName: newName)
+        }
     }
 
-    public static func moveFileEntries(serverID: String, entries: [String], destination: String) async throws(CoreError) {
+    public static func moveFileEntries(serverID: String, entries: [String], destination: String) async throws(CoreError)
+    {
         try await call {
             try await MCVectorCore.moveFileEntries(serverId: serverID, entries: entries, destination: destination)
         }
@@ -209,7 +213,9 @@ public enum CoreClient {
         try await call { try await MCVectorCore.folderSize(serverId: serverID, relative: relative) }
     }
 
-    public static func importFileEntries(serverID: String, destination: String, sources: [URL]) async throws(CoreError) -> UInt32 {
+    public static func importFileEntries(serverID: String, destination: String, sources: [URL]) async throws(CoreError)
+        -> UInt32
+    {
         try await call {
             try await MCVectorCore.importFileEntries(
                 serverId: serverID,
@@ -227,11 +233,14 @@ public enum CoreClient {
         }
     }
 
-    public static func readTextDocument(serverID: String, relative: String) async throws(CoreError) -> TextDocumentInfo {
+    public static func readTextDocument(serverID: String, relative: String) async throws(CoreError) -> TextDocumentInfo
+    {
         try await call { try await MCVectorCore.readTextDocument(serverId: serverID, relative: relative) }
     }
 
-    public static func writeTextDocument(serverID: String, relative: String, document: TextDocumentInfo) async throws(CoreError) {
+    public static func writeTextDocument(serverID: String, relative: String, document: TextDocumentInfo)
+        async throws(CoreError)
+    {
         try await call {
             try await MCVectorCore.writeTextDocument(serverId: serverID, relative: relative, document: document)
         }
@@ -301,6 +310,24 @@ public enum CoreClient {
 
     public static func acceptServerEula(id: String) throws(CoreError) {
         do { try MCVectorCore.acceptServerEula(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
+    // MARK: Server general settings (UI-014)
+
+    /// Reads the persisted general settings for one server.
+    public static func serverSettings(serverID: String) async throws(CoreError) -> ServerSettings {
+        try await detachedCall {
+            try await MCVectorCore.getServerSettings(serverId: serverID)
+        }
+    }
+
+    /// Saves general settings and reports whether changed values take effect after a restart.
+    public static func updateServerSettings(
+        serverID: String, settings: ServerSettingsUpdate
+    ) async throws(CoreError) -> ServerSettingsSaveResult {
+        try await detachedCall {
+            try await MCVectorCore.updateServerSettings(serverId: serverID, settings: settings)
+        }
     }
 
     // MARK: Server properties (OP-SRV-021, OP-SRV-022)

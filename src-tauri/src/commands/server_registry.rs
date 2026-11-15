@@ -116,17 +116,23 @@ fn legacy_server_directory_name(
 
 #[tauri::command]
 pub async fn update_server(
+    app: AppHandle,
     registry: State<'_, ServerRegistry>,
     operations: State<'_, ServerOperationManager>,
     server: MinecraftServer,
 ) -> Result<bool, String> {
-    let _guard = operations
-        .acquire(&server.id, OperationKind::FileMutation)
-        .await?;
-    let registry = registry.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || registry.update_server(&server))
-        .await
-        .map_err(|error| error.to_string())?
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    mcvector_core::server_settings::update_server_profile(
+        operations.inner(),
+        app_data_dir,
+        registry.inner().clone(),
+        server,
+    )
+    .await
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

@@ -75,7 +75,23 @@ pub fn validate_jvm_extra_args(raw: &str) -> Result<Vec<String>, String> {
                 || arg.starts_with("-XX:-")
                 || arg.starts_with("-XX:MaxGCPauseMillis=")
                 || arg.starts_with("-XX:G1HeapRegionSize=")
-                || arg.starts_with("-XX:InitiatingHeapOccupancyPercent=");
+                || arg.starts_with("-XX:InitiatingHeapOccupancyPercent=")
+                // Exact additional G1 tuning keys used by the bundled Aikar
+                // preset. Keep the list narrow instead of allowing arbitrary
+                // -XX options from the General Settings text field.
+                || [
+                    "-XX:G1NewSizePercent=",
+                    "-XX:G1MaxNewSizePercent=",
+                    "-XX:G1ReservePercent=",
+                    "-XX:G1HeapWastePercent=",
+                    "-XX:G1MixedGCCountTarget=",
+                    "-XX:G1MixedGCLiveThresholdPercent=",
+                    "-XX:G1RSetUpdatingPauseTimePercent=",
+                    "-XX:SurvivorRatio=",
+                    "-XX:MaxTenuringThreshold=",
+                ]
+                .iter()
+                .any(|prefix| arg.starts_with(prefix));
             if !allowed
                 || arg.len() > 256
                 || arg.contains(|character: char| {
@@ -113,6 +129,11 @@ mod tests {
     #[test]
     fn jvm_arguments_allow_tuning_flags_and_refuse_agents_and_classpaths() {
         assert!(validate_jvm_extra_args("-Dfile.encoding=UTF-8 -XX:+UseG1GC").is_ok());
+        assert!(validate_jvm_extra_args(
+            "-XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=30 -XX:G1ReservePercent=20 -XX:SurvivorRatio=32 -XX:MaxTenuringThreshold=1"
+        )
+        .is_ok());
+        assert!(validate_jvm_extra_args("-XX:UnknownDangerousFlag=true").is_err());
         for arg in ["-javaagent:evil.jar", "-cp evil.jar", "-XX:OnError=cmd"] {
             assert!(validate_jvm_extra_args(arg).is_err(), "{arg}");
         }

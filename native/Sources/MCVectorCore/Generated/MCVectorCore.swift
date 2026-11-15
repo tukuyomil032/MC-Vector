@@ -2523,6 +2523,373 @@ public func FfiConverterTypeServerPropertiesSnapshot_lower(_ value: ServerProper
 
 
 /**
+ * Typed Native view of all per-server general settings.
+ *
+ * Software and version are editable metadata here; jar upgrades still use
+ * their separate version-upgrade operation. `server_path` is read-only.
+ */
+public struct ServerSettings: Equatable, Hashable {
+    public var serverId: String
+    public var serverPath: String
+    public var name: String
+    public var profileName: String
+    public var groupName: String
+    public var software: String
+    public var version: String
+    public var memoryMb: UInt64
+    public var port: UInt16
+    /**
+     * `None` selects the system Java runtime.
+     */
+    public var javaPath: String?
+    public var jvmArgs: String
+    public var autoRestartOnCrash: Bool
+    public var maxAutoRestarts: UInt32
+    public var autoRestartDelaySec: UInt32
+    public var autoBackupEnabled: Bool
+    public var autoBackupIntervalMin: UInt32
+    public var autoBackupScheduleType: AutoBackupScheduleType
+    public var autoBackupTime: String
+    public var autoBackupWeekday: UInt8
+    public var autoBackupRetainCount: UInt32
+    public var autoBackupRetainDays: UInt32
+    public var backupRestartAfterSafeBackup: Bool
+    public var notifyOnCrash: Bool
+    public var notifyOnStart: Bool
+    public var notifyOnHighCpu: Bool
+    public var notifyHighCpuThreshold: UInt8
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, serverPath: String, name: String, profileName: String, groupName: String, software: String, version: String, memoryMb: UInt64, port: UInt16, 
+        /**
+         * `None` selects the system Java runtime.
+         */javaPath: String?, jvmArgs: String, autoRestartOnCrash: Bool, maxAutoRestarts: UInt32, autoRestartDelaySec: UInt32, autoBackupEnabled: Bool, autoBackupIntervalMin: UInt32, autoBackupScheduleType: AutoBackupScheduleType, autoBackupTime: String, autoBackupWeekday: UInt8, autoBackupRetainCount: UInt32, autoBackupRetainDays: UInt32, backupRestartAfterSafeBackup: Bool, notifyOnCrash: Bool, notifyOnStart: Bool, notifyOnHighCpu: Bool, notifyHighCpuThreshold: UInt8) {
+        self.serverId = serverId
+        self.serverPath = serverPath
+        self.name = name
+        self.profileName = profileName
+        self.groupName = groupName
+        self.software = software
+        self.version = version
+        self.memoryMb = memoryMb
+        self.port = port
+        self.javaPath = javaPath
+        self.jvmArgs = jvmArgs
+        self.autoRestartOnCrash = autoRestartOnCrash
+        self.maxAutoRestarts = maxAutoRestarts
+        self.autoRestartDelaySec = autoRestartDelaySec
+        self.autoBackupEnabled = autoBackupEnabled
+        self.autoBackupIntervalMin = autoBackupIntervalMin
+        self.autoBackupScheduleType = autoBackupScheduleType
+        self.autoBackupTime = autoBackupTime
+        self.autoBackupWeekday = autoBackupWeekday
+        self.autoBackupRetainCount = autoBackupRetainCount
+        self.autoBackupRetainDays = autoBackupRetainDays
+        self.backupRestartAfterSafeBackup = backupRestartAfterSafeBackup
+        self.notifyOnCrash = notifyOnCrash
+        self.notifyOnStart = notifyOnStart
+        self.notifyOnHighCpu = notifyOnHighCpu
+        self.notifyHighCpuThreshold = notifyHighCpuThreshold
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerSettings: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerSettings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerSettings {
+        return
+            try ServerSettings(
+                serverId: FfiConverterString.read(from: &buf), 
+                serverPath: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                profileName: FfiConverterString.read(from: &buf), 
+                groupName: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf), 
+                memoryMb: FfiConverterUInt64.read(from: &buf), 
+                port: FfiConverterUInt16.read(from: &buf), 
+                javaPath: FfiConverterOptionString.read(from: &buf), 
+                jvmArgs: FfiConverterString.read(from: &buf), 
+                autoRestartOnCrash: FfiConverterBool.read(from: &buf), 
+                maxAutoRestarts: FfiConverterUInt32.read(from: &buf), 
+                autoRestartDelaySec: FfiConverterUInt32.read(from: &buf), 
+                autoBackupEnabled: FfiConverterBool.read(from: &buf), 
+                autoBackupIntervalMin: FfiConverterUInt32.read(from: &buf), 
+                autoBackupScheduleType: FfiConverterTypeAutoBackupScheduleType.read(from: &buf), 
+                autoBackupTime: FfiConverterString.read(from: &buf), 
+                autoBackupWeekday: FfiConverterUInt8.read(from: &buf), 
+                autoBackupRetainCount: FfiConverterUInt32.read(from: &buf), 
+                autoBackupRetainDays: FfiConverterUInt32.read(from: &buf), 
+                backupRestartAfterSafeBackup: FfiConverterBool.read(from: &buf), 
+                notifyOnCrash: FfiConverterBool.read(from: &buf), 
+                notifyOnStart: FfiConverterBool.read(from: &buf), 
+                notifyOnHighCpu: FfiConverterBool.read(from: &buf), 
+                notifyHighCpuThreshold: FfiConverterUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerSettings, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.serverPath, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.profileName, into: &buf)
+        FfiConverterString.write(value.groupName, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterUInt64.write(value.memoryMb, into: &buf)
+        FfiConverterUInt16.write(value.port, into: &buf)
+        FfiConverterOptionString.write(value.javaPath, into: &buf)
+        FfiConverterString.write(value.jvmArgs, into: &buf)
+        FfiConverterBool.write(value.autoRestartOnCrash, into: &buf)
+        FfiConverterUInt32.write(value.maxAutoRestarts, into: &buf)
+        FfiConverterUInt32.write(value.autoRestartDelaySec, into: &buf)
+        FfiConverterBool.write(value.autoBackupEnabled, into: &buf)
+        FfiConverterUInt32.write(value.autoBackupIntervalMin, into: &buf)
+        FfiConverterTypeAutoBackupScheduleType.write(value.autoBackupScheduleType, into: &buf)
+        FfiConverterString.write(value.autoBackupTime, into: &buf)
+        FfiConverterUInt8.write(value.autoBackupWeekday, into: &buf)
+        FfiConverterUInt32.write(value.autoBackupRetainCount, into: &buf)
+        FfiConverterUInt32.write(value.autoBackupRetainDays, into: &buf)
+        FfiConverterBool.write(value.backupRestartAfterSafeBackup, into: &buf)
+        FfiConverterBool.write(value.notifyOnCrash, into: &buf)
+        FfiConverterBool.write(value.notifyOnStart, into: &buf)
+        FfiConverterBool.write(value.notifyOnHighCpu, into: &buf)
+        FfiConverterUInt8.write(value.notifyHighCpuThreshold, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerSettings_lift(_ buf: RustBuffer) throws -> ServerSettings {
+    return try FfiConverterTypeServerSettings.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerSettings_lower(_ value: ServerSettings) -> RustBuffer {
+    return FfiConverterTypeServerSettings.lower(value)
+}
+
+
+/**
+ * Result of saving settings, including whether the new values need a restart.
+ */
+public struct ServerSettingsSaveResult: Equatable, Hashable {
+    public var settings: ServerSettings
+    public var restartRequired: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(settings: ServerSettings, restartRequired: Bool) {
+        self.settings = settings
+        self.restartRequired = restartRequired
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerSettingsSaveResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerSettingsSaveResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerSettingsSaveResult {
+        return
+            try ServerSettingsSaveResult(
+                settings: FfiConverterTypeServerSettings.read(from: &buf), 
+                restartRequired: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerSettingsSaveResult, into buf: inout [UInt8]) {
+        FfiConverterTypeServerSettings.write(value.settings, into: &buf)
+        FfiConverterBool.write(value.restartRequired, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerSettingsSaveResult_lift(_ buf: RustBuffer) throws -> ServerSettingsSaveResult {
+    return try FfiConverterTypeServerSettingsSaveResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerSettingsSaveResult_lower(_ value: ServerSettingsSaveResult) -> RustBuffer {
+    return FfiConverterTypeServerSettingsSaveResult.lower(value)
+}
+
+
+/**
+ * Full update to the editable general-settings fields.
+ *
+ * `backup_restart_after_safe_backup` is optional because the current React
+ * form does not expose it; `None` preserves the stored value.
+ */
+public struct ServerSettingsUpdate: Equatable, Hashable {
+    public var name: String
+    public var profileName: String
+    public var groupName: String
+    public var software: String
+    public var version: String
+    public var memoryMb: UInt64
+    public var port: UInt16
+    public var javaPath: String?
+    public var jvmArgs: String
+    public var autoRestartOnCrash: Bool
+    public var maxAutoRestarts: UInt32
+    public var autoRestartDelaySec: UInt32
+    public var autoBackupEnabled: Bool
+    public var autoBackupIntervalMin: UInt32
+    public var autoBackupScheduleType: AutoBackupScheduleType
+    public var autoBackupTime: String
+    public var autoBackupWeekday: UInt8
+    public var autoBackupRetainCount: UInt32
+    public var autoBackupRetainDays: UInt32
+    public var backupRestartAfterSafeBackup: Bool?
+    public var notifyOnCrash: Bool
+    public var notifyOnStart: Bool
+    public var notifyOnHighCpu: Bool
+    public var notifyHighCpuThreshold: UInt8
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, profileName: String, groupName: String, software: String, version: String, memoryMb: UInt64, port: UInt16, javaPath: String?, jvmArgs: String, autoRestartOnCrash: Bool, maxAutoRestarts: UInt32, autoRestartDelaySec: UInt32, autoBackupEnabled: Bool, autoBackupIntervalMin: UInt32, autoBackupScheduleType: AutoBackupScheduleType, autoBackupTime: String, autoBackupWeekday: UInt8, autoBackupRetainCount: UInt32, autoBackupRetainDays: UInt32, backupRestartAfterSafeBackup: Bool?, notifyOnCrash: Bool, notifyOnStart: Bool, notifyOnHighCpu: Bool, notifyHighCpuThreshold: UInt8) {
+        self.name = name
+        self.profileName = profileName
+        self.groupName = groupName
+        self.software = software
+        self.version = version
+        self.memoryMb = memoryMb
+        self.port = port
+        self.javaPath = javaPath
+        self.jvmArgs = jvmArgs
+        self.autoRestartOnCrash = autoRestartOnCrash
+        self.maxAutoRestarts = maxAutoRestarts
+        self.autoRestartDelaySec = autoRestartDelaySec
+        self.autoBackupEnabled = autoBackupEnabled
+        self.autoBackupIntervalMin = autoBackupIntervalMin
+        self.autoBackupScheduleType = autoBackupScheduleType
+        self.autoBackupTime = autoBackupTime
+        self.autoBackupWeekday = autoBackupWeekday
+        self.autoBackupRetainCount = autoBackupRetainCount
+        self.autoBackupRetainDays = autoBackupRetainDays
+        self.backupRestartAfterSafeBackup = backupRestartAfterSafeBackup
+        self.notifyOnCrash = notifyOnCrash
+        self.notifyOnStart = notifyOnStart
+        self.notifyOnHighCpu = notifyOnHighCpu
+        self.notifyHighCpuThreshold = notifyHighCpuThreshold
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerSettingsUpdate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerSettingsUpdate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerSettingsUpdate {
+        return
+            try ServerSettingsUpdate(
+                name: FfiConverterString.read(from: &buf), 
+                profileName: FfiConverterString.read(from: &buf), 
+                groupName: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf), 
+                memoryMb: FfiConverterUInt64.read(from: &buf), 
+                port: FfiConverterUInt16.read(from: &buf), 
+                javaPath: FfiConverterOptionString.read(from: &buf), 
+                jvmArgs: FfiConverterString.read(from: &buf), 
+                autoRestartOnCrash: FfiConverterBool.read(from: &buf), 
+                maxAutoRestarts: FfiConverterUInt32.read(from: &buf), 
+                autoRestartDelaySec: FfiConverterUInt32.read(from: &buf), 
+                autoBackupEnabled: FfiConverterBool.read(from: &buf), 
+                autoBackupIntervalMin: FfiConverterUInt32.read(from: &buf), 
+                autoBackupScheduleType: FfiConverterTypeAutoBackupScheduleType.read(from: &buf), 
+                autoBackupTime: FfiConverterString.read(from: &buf), 
+                autoBackupWeekday: FfiConverterUInt8.read(from: &buf), 
+                autoBackupRetainCount: FfiConverterUInt32.read(from: &buf), 
+                autoBackupRetainDays: FfiConverterUInt32.read(from: &buf), 
+                backupRestartAfterSafeBackup: FfiConverterOptionBool.read(from: &buf), 
+                notifyOnCrash: FfiConverterBool.read(from: &buf), 
+                notifyOnStart: FfiConverterBool.read(from: &buf), 
+                notifyOnHighCpu: FfiConverterBool.read(from: &buf), 
+                notifyHighCpuThreshold: FfiConverterUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerSettingsUpdate, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.profileName, into: &buf)
+        FfiConverterString.write(value.groupName, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterUInt64.write(value.memoryMb, into: &buf)
+        FfiConverterUInt16.write(value.port, into: &buf)
+        FfiConverterOptionString.write(value.javaPath, into: &buf)
+        FfiConverterString.write(value.jvmArgs, into: &buf)
+        FfiConverterBool.write(value.autoRestartOnCrash, into: &buf)
+        FfiConverterUInt32.write(value.maxAutoRestarts, into: &buf)
+        FfiConverterUInt32.write(value.autoRestartDelaySec, into: &buf)
+        FfiConverterBool.write(value.autoBackupEnabled, into: &buf)
+        FfiConverterUInt32.write(value.autoBackupIntervalMin, into: &buf)
+        FfiConverterTypeAutoBackupScheduleType.write(value.autoBackupScheduleType, into: &buf)
+        FfiConverterString.write(value.autoBackupTime, into: &buf)
+        FfiConverterUInt8.write(value.autoBackupWeekday, into: &buf)
+        FfiConverterUInt32.write(value.autoBackupRetainCount, into: &buf)
+        FfiConverterUInt32.write(value.autoBackupRetainDays, into: &buf)
+        FfiConverterOptionBool.write(value.backupRestartAfterSafeBackup, into: &buf)
+        FfiConverterBool.write(value.notifyOnCrash, into: &buf)
+        FfiConverterBool.write(value.notifyOnStart, into: &buf)
+        FfiConverterBool.write(value.notifyOnHighCpu, into: &buf)
+        FfiConverterUInt8.write(value.notifyHighCpuThreshold, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerSettingsUpdate_lift(_ buf: RustBuffer) throws -> ServerSettingsUpdate {
+    return try FfiConverterTypeServerSettingsUpdate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerSettingsUpdate_lower(_ value: ServerSettingsUpdate) -> RustBuffer {
+    return FfiConverterTypeServerSettingsUpdate.lower(value)
+}
+
+
+/**
  * A saved template, with the fields the add-server form fills from it.
  */
 public struct ServerTemplateInfo: Equatable, Hashable {
@@ -2924,6 +3291,82 @@ public func FfiConverterTypeTpsPoint_lift(_ buf: RustBuffer) throws -> TpsPoint 
 public func FfiConverterTypeTpsPoint_lower(_ value: TpsPoint) -> RustBuffer {
     return FfiConverterTypeTpsPoint.lower(value)
 }
+
+
+/**
+ * The backup schedule selected in the server's general settings.
+ */
+
+public enum AutoBackupScheduleType: Equatable, Hashable {
+    
+    case interval
+    case daily
+    case weekly
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AutoBackupScheduleType: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAutoBackupScheduleType: FfiConverterRustBuffer {
+    typealias SwiftType = AutoBackupScheduleType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AutoBackupScheduleType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .interval
+        
+        case 2: return .daily
+        
+        case 3: return .weekly
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AutoBackupScheduleType, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .interval:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .daily:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .weekly:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAutoBackupScheduleType_lift(_ buf: RustBuffer) throws -> AutoBackupScheduleType {
+    return try FfiConverterTypeAutoBackupScheduleType.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAutoBackupScheduleType_lower(_ value: AutoBackupScheduleType) -> RustBuffer {
+    return FfiConverterTypeAutoBackupScheduleType.lower(value)
+}
+
 
 
 
@@ -4514,6 +4957,23 @@ public func getServerProperties(serverId: String)async throws  -> ServerProperti
         )
 }
 /**
+ * Reads the typed general settings for one registered server.
+ */
+public func getServerSettings(serverId: String)async throws  -> ServerSettings  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_get_server_settings(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerSettings_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Lists registered servers. Requires a successful `start`.
  */
 public func getServers()throws  -> [ServerProfile]  {
@@ -4893,6 +5353,23 @@ public func subscribeServerEvents(observer: ServerEventObserver)  {try! rustCall
 }
 }
 /**
+ * Saves the typed general settings for one registered server.
+ */
+public func updateServerSettings(serverId: String, settings: ServerSettingsUpdate)async throws  -> ServerSettingsSaveResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_update_server_settings(FfiConverterString.lower(serverId),FfiConverterTypeServerSettingsUpdate_lower(settings)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerSettingsSaveResult_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Saves an edited document with its original BOM and line endings.
  */
 public func writeTextDocument(serverId: String, relative: String, document: TextDocumentInfo)async throws   {
@@ -4968,6 +5445,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_get_server_properties() != 25106) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_get_server_settings() != 18511) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
@@ -5046,6 +5526,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_subscribe_server_events() != 5267) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_update_server_settings() != 33549) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_write_text_document() != 40172) {

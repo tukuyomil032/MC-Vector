@@ -45,6 +45,11 @@ use mcvector_core::server_process::{
     self, CommandLimiter, LogStream, ServerContext, ServerEvents, ServerLogEvent, ServerManager,
     ServerStatsEvent, ServerStatus, ServerStatusEvent,
 };
+use mcvector_core::server_settings::{
+    self, AutoBackupScheduleType as CoreAutoBackupScheduleType,
+    ServerSettings as CoreServerSettings, ServerSettingsSaveResult as CoreServerSettingsSaveResult,
+    ServerSettingsUpdate as CoreServerSettingsUpdate,
+};
 
 uniffi::setup_scaffolding!();
 
@@ -392,6 +397,213 @@ pub fn get_servers() -> Result<Vec<ServerProfile>, FfiError> {
         )
     })?;
     Ok(servers.into_iter().map(Into::into).collect())
+}
+
+// ---------------------------------------------------------------------------
+// Server general settings (UI-014)
+
+/// The backup schedule selected in the server's general settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum AutoBackupScheduleType {
+    Interval,
+    Daily,
+    Weekly,
+}
+
+impl From<CoreAutoBackupScheduleType> for AutoBackupScheduleType {
+    fn from(schedule: CoreAutoBackupScheduleType) -> Self {
+        match schedule {
+            CoreAutoBackupScheduleType::Interval => Self::Interval,
+            CoreAutoBackupScheduleType::Daily => Self::Daily,
+            CoreAutoBackupScheduleType::Weekly => Self::Weekly,
+        }
+    }
+}
+
+impl From<AutoBackupScheduleType> for CoreAutoBackupScheduleType {
+    fn from(schedule: AutoBackupScheduleType) -> Self {
+        match schedule {
+            AutoBackupScheduleType::Interval => Self::Interval,
+            AutoBackupScheduleType::Daily => Self::Daily,
+            AutoBackupScheduleType::Weekly => Self::Weekly,
+        }
+    }
+}
+
+/// Typed Native view of all per-server general settings.
+///
+/// Software and version are editable metadata here; jar upgrades still use
+/// their separate version-upgrade operation. `server_path` is read-only.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ServerSettings {
+    pub server_id: String,
+    pub server_path: String,
+    pub name: String,
+    pub profile_name: String,
+    pub group_name: String,
+    pub software: String,
+    pub version: String,
+    pub memory_mb: u64,
+    pub port: u16,
+    /// `None` selects the system Java runtime.
+    pub java_path: Option<String>,
+    pub jvm_args: String,
+    pub auto_restart_on_crash: bool,
+    pub max_auto_restarts: u32,
+    pub auto_restart_delay_sec: u32,
+    pub auto_backup_enabled: bool,
+    pub auto_backup_interval_min: u32,
+    pub auto_backup_schedule_type: AutoBackupScheduleType,
+    pub auto_backup_time: String,
+    pub auto_backup_weekday: u8,
+    pub auto_backup_retain_count: u32,
+    pub auto_backup_retain_days: u32,
+    pub backup_restart_after_safe_backup: bool,
+    pub notify_on_crash: bool,
+    pub notify_on_start: bool,
+    pub notify_on_high_cpu: bool,
+    pub notify_high_cpu_threshold: u8,
+}
+
+impl From<CoreServerSettings> for ServerSettings {
+    fn from(settings: CoreServerSettings) -> Self {
+        Self {
+            server_id: settings.server_id,
+            server_path: settings.server_path,
+            name: settings.name,
+            profile_name: settings.profile_name,
+            group_name: settings.group_name,
+            software: settings.software,
+            version: settings.version,
+            memory_mb: settings.memory_mb,
+            port: settings.port,
+            java_path: settings.java_path,
+            jvm_args: settings.jvm_args,
+            auto_restart_on_crash: settings.auto_restart_on_crash,
+            max_auto_restarts: settings.max_auto_restarts,
+            auto_restart_delay_sec: settings.auto_restart_delay_sec,
+            auto_backup_enabled: settings.auto_backup_enabled,
+            auto_backup_interval_min: settings.auto_backup_interval_min,
+            auto_backup_schedule_type: settings.auto_backup_schedule_type.into(),
+            auto_backup_time: settings.auto_backup_time,
+            auto_backup_weekday: settings.auto_backup_weekday,
+            auto_backup_retain_count: settings.auto_backup_retain_count,
+            auto_backup_retain_days: settings.auto_backup_retain_days,
+            backup_restart_after_safe_backup: settings.backup_restart_after_safe_backup,
+            notify_on_crash: settings.notify_on_crash,
+            notify_on_start: settings.notify_on_start,
+            notify_on_high_cpu: settings.notify_on_high_cpu,
+            notify_high_cpu_threshold: settings.notify_high_cpu_threshold,
+        }
+    }
+}
+
+/// Full update to the editable general-settings fields.
+///
+/// `backup_restart_after_safe_backup` is optional because the current React
+/// form does not expose it; `None` preserves the stored value.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ServerSettingsUpdate {
+    pub name: String,
+    pub profile_name: String,
+    pub group_name: String,
+    pub software: String,
+    pub version: String,
+    pub memory_mb: u64,
+    pub port: u16,
+    pub java_path: Option<String>,
+    pub jvm_args: String,
+    pub auto_restart_on_crash: bool,
+    pub max_auto_restarts: u32,
+    pub auto_restart_delay_sec: u32,
+    pub auto_backup_enabled: bool,
+    pub auto_backup_interval_min: u32,
+    pub auto_backup_schedule_type: AutoBackupScheduleType,
+    pub auto_backup_time: String,
+    pub auto_backup_weekday: u8,
+    pub auto_backup_retain_count: u32,
+    pub auto_backup_retain_days: u32,
+    pub backup_restart_after_safe_backup: Option<bool>,
+    pub notify_on_crash: bool,
+    pub notify_on_start: bool,
+    pub notify_on_high_cpu: bool,
+    pub notify_high_cpu_threshold: u8,
+}
+
+impl ServerSettingsUpdate {
+    fn into_core(self) -> CoreServerSettingsUpdate {
+        CoreServerSettingsUpdate {
+            name: self.name,
+            profile_name: self.profile_name,
+            group_name: self.group_name,
+            software: self.software,
+            version: self.version,
+            memory_mb: self.memory_mb,
+            port: self.port,
+            java_path: self.java_path,
+            jvm_args: self.jvm_args,
+            auto_restart_on_crash: self.auto_restart_on_crash,
+            max_auto_restarts: self.max_auto_restarts,
+            auto_restart_delay_sec: self.auto_restart_delay_sec,
+            auto_backup_enabled: self.auto_backup_enabled,
+            auto_backup_interval_min: self.auto_backup_interval_min,
+            auto_backup_schedule_type: self.auto_backup_schedule_type.into(),
+            auto_backup_time: self.auto_backup_time,
+            auto_backup_weekday: self.auto_backup_weekday,
+            auto_backup_retain_count: self.auto_backup_retain_count,
+            auto_backup_retain_days: self.auto_backup_retain_days,
+            backup_restart_after_safe_backup: self.backup_restart_after_safe_backup,
+            notify_on_crash: self.notify_on_crash,
+            notify_on_start: self.notify_on_start,
+            notify_on_high_cpu: self.notify_on_high_cpu,
+            notify_high_cpu_threshold: self.notify_high_cpu_threshold,
+        }
+    }
+}
+
+/// Result of saving settings, including whether the new values need a restart.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ServerSettingsSaveResult {
+    pub settings: ServerSettings,
+    pub restart_required: bool,
+}
+
+impl From<CoreServerSettingsSaveResult> for ServerSettingsSaveResult {
+    fn from(result: CoreServerSettingsSaveResult) -> Self {
+        Self {
+            settings: result.settings.into(),
+            restart_required: result.restart_required,
+        }
+    }
+}
+
+/// Reads the typed general settings for one registered server.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn get_server_settings(server_id: String) -> Result<ServerSettings, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    Ok(
+        server_settings::get_server_settings(&operations, data_dir, registry, server_id)
+            .await?
+            .into(),
+    )
+}
+
+/// Saves the typed general settings for one registered server.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn update_server_settings(
+    server_id: String,
+    settings: ServerSettingsUpdate,
+) -> Result<ServerSettingsSaveResult, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    Ok(server_settings::update_server_settings(
+        &operations,
+        data_dir,
+        registry,
+        server_id,
+        settings.into_core(),
+    )
+    .await?
+    .into())
 }
 
 // ---------------------------------------------------------------------------
@@ -1848,6 +2060,131 @@ mod tests {
             redact("failed at /Users/me/Library/Application Support/x/db", dir),
             "failed at <data>/db"
         );
+    }
+
+    #[test]
+    fn server_settings_records_preserve_core_values_and_request_semantics() {
+        let core_settings = CoreServerSettings {
+            server_id: "server-1".into(),
+            server_path: "/managed/servers/server-1".into(),
+            name: "Survival".into(),
+            profile_name: "Main".into(),
+            group_name: "Production".into(),
+            software: "Paper".into(),
+            version: "1.21.10".into(),
+            memory_mb: 8192,
+            port: 25566,
+            java_path: Some("/usr/bin/java".into()),
+            jvm_args: "-Xms4G -Xmx8G".into(),
+            auto_restart_on_crash: true,
+            max_auto_restarts: 7,
+            auto_restart_delay_sec: 12,
+            auto_backup_enabled: true,
+            auto_backup_interval_min: 90,
+            auto_backup_schedule_type: CoreAutoBackupScheduleType::Weekly,
+            auto_backup_time: "04:30".into(),
+            auto_backup_weekday: 2,
+            auto_backup_retain_count: 5,
+            auto_backup_retain_days: 14,
+            backup_restart_after_safe_backup: true,
+            notify_on_crash: true,
+            notify_on_start: true,
+            notify_on_high_cpu: true,
+            notify_high_cpu_threshold: 87,
+        };
+
+        let settings = ServerSettings::from(core_settings.clone());
+        assert_eq!(settings.server_id, "server-1");
+        assert_eq!(settings.server_path, "/managed/servers/server-1");
+        assert_eq!(settings.name, "Survival");
+        assert_eq!(settings.profile_name, "Main");
+        assert_eq!(settings.group_name, "Production");
+        assert_eq!(settings.software, "Paper");
+        assert_eq!(settings.version, "1.21.10");
+        assert_eq!(settings.memory_mb, 8192);
+        assert_eq!(settings.port, 25566);
+        assert_eq!(settings.java_path.as_deref(), Some("/usr/bin/java"));
+        assert_eq!(settings.jvm_args, "-Xms4G -Xmx8G");
+        assert!(settings.auto_restart_on_crash);
+        assert_eq!(settings.max_auto_restarts, 7);
+        assert_eq!(settings.auto_restart_delay_sec, 12);
+        assert!(settings.auto_backup_enabled);
+        assert_eq!(settings.auto_backup_interval_min, 90);
+        assert_eq!(
+            settings.auto_backup_schedule_type,
+            AutoBackupScheduleType::Weekly
+        );
+        assert_eq!(settings.auto_backup_time, "04:30");
+        assert_eq!(settings.auto_backup_weekday, 2);
+        assert_eq!(settings.auto_backup_retain_count, 5);
+        assert_eq!(settings.auto_backup_retain_days, 14);
+        assert!(settings.backup_restart_after_safe_backup);
+        assert!(settings.notify_on_crash);
+        assert!(settings.notify_on_start);
+        assert!(settings.notify_on_high_cpu);
+        assert_eq!(settings.notify_high_cpu_threshold, 87);
+
+        let saved = ServerSettingsSaveResult::from(CoreServerSettingsSaveResult {
+            settings: core_settings,
+            restart_required: true,
+        });
+        assert!(saved.restart_required);
+        assert_eq!(saved.settings.server_id, "server-1");
+
+        let update = ServerSettingsUpdate {
+            name: "Creative".into(),
+            profile_name: "Build".into(),
+            group_name: "Testing".into(),
+            software: "Paper".into(),
+            version: "1.21.11".into(),
+            memory_mb: 4096,
+            port: 25567,
+            java_path: None,
+            jvm_args: "-Xms2G -Xmx4G".into(),
+            auto_restart_on_crash: false,
+            max_auto_restarts: 3,
+            auto_restart_delay_sec: 5,
+            auto_backup_enabled: false,
+            auto_backup_interval_min: 60,
+            auto_backup_schedule_type: AutoBackupScheduleType::Daily,
+            auto_backup_time: "03:00".into(),
+            auto_backup_weekday: 0,
+            auto_backup_retain_count: 2,
+            auto_backup_retain_days: 7,
+            backup_restart_after_safe_backup: None,
+            notify_on_crash: true,
+            notify_on_start: false,
+            notify_on_high_cpu: false,
+            notify_high_cpu_threshold: 90,
+        }
+        .into_core();
+        assert_eq!(update.name, "Creative");
+        assert_eq!(update.profile_name, "Build");
+        assert_eq!(update.group_name, "Testing");
+        assert_eq!(update.software, "Paper");
+        assert_eq!(update.version, "1.21.11");
+        assert_eq!(update.memory_mb, 4096);
+        assert_eq!(update.port, 25567);
+        assert_eq!(update.java_path, None);
+        assert_eq!(update.jvm_args, "-Xms2G -Xmx4G");
+        assert!(!update.auto_restart_on_crash);
+        assert_eq!(update.max_auto_restarts, 3);
+        assert_eq!(update.auto_restart_delay_sec, 5);
+        assert!(!update.auto_backup_enabled);
+        assert_eq!(update.auto_backup_interval_min, 60);
+        assert_eq!(
+            update.auto_backup_schedule_type,
+            CoreAutoBackupScheduleType::Daily
+        );
+        assert_eq!(update.auto_backup_time, "03:00");
+        assert_eq!(update.auto_backup_weekday, 0);
+        assert_eq!(update.auto_backup_retain_count, 2);
+        assert_eq!(update.auto_backup_retain_days, 7);
+        assert_eq!(update.backup_restart_after_safe_backup, None);
+        assert!(update.notify_on_crash);
+        assert!(!update.notify_on_start);
+        assert!(!update.notify_on_high_cpu);
+        assert_eq!(update.notify_high_cpu_threshold, 90);
     }
 
     #[test]

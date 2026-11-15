@@ -108,6 +108,22 @@ pub enum CoreErrorCode {
     PlayerMalformedList,
     /// A player list file could not be read or written.
     PlayerIo,
+    /// A requested server settings profile could not be found.
+    ServerSettingsNotFound,
+    /// The registered server settings path is outside the managed server root.
+    ServerSettingsUnmanaged,
+    /// The server settings name is invalid.
+    ServerSettingsInvalidName,
+    /// The server settings port is outside 1–65535.
+    ServerSettingsInvalidPort,
+    /// The server settings memory is outside the supported range.
+    ServerSettingsInvalidMemory,
+    /// A server settings field is invalid.
+    ServerSettingsInvalidRequest,
+    /// Server settings files could not be read or written.
+    ServerSettingsIo,
+    /// The server registry could not be updated with server settings.
+    ServerSettingsRegistry,
 }
 
 impl CoreErrorCode {
@@ -157,6 +173,14 @@ impl CoreErrorCode {
         CoreErrorCode::PlayerListTooLarge,
         CoreErrorCode::PlayerMalformedList,
         CoreErrorCode::PlayerIo,
+        CoreErrorCode::ServerSettingsNotFound,
+        CoreErrorCode::ServerSettingsUnmanaged,
+        CoreErrorCode::ServerSettingsInvalidName,
+        CoreErrorCode::ServerSettingsInvalidPort,
+        CoreErrorCode::ServerSettingsInvalidMemory,
+        CoreErrorCode::ServerSettingsInvalidRequest,
+        CoreErrorCode::ServerSettingsIo,
+        CoreErrorCode::ServerSettingsRegistry,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -206,6 +230,14 @@ impl CoreErrorCode {
             Self::PlayerListTooLarge => "player.list_too_large",
             Self::PlayerMalformedList => "player.malformed_list",
             Self::PlayerIo => "player.io",
+            Self::ServerSettingsNotFound => "server_settings.not_found",
+            Self::ServerSettingsUnmanaged => "server_settings.unmanaged",
+            Self::ServerSettingsInvalidName => "server_settings.invalid_name",
+            Self::ServerSettingsInvalidPort => "server_settings.invalid_port",
+            Self::ServerSettingsInvalidMemory => "server_settings.invalid_memory",
+            Self::ServerSettingsInvalidRequest => "server_settings.invalid_request",
+            Self::ServerSettingsIo => "server_settings.io",
+            Self::ServerSettingsRegistry => "server_settings.registry",
         }
     }
 
@@ -261,8 +293,17 @@ impl CoreErrorCode {
             | Self::PlayerInvalidIp
             | Self::PlayerInvalidFile
             | Self::PlayerListTooLarge
-            | Self::PlayerMalformedList => false,
-            Self::PropertiesIo | Self::PlayerIo => true,
+            | Self::PlayerMalformedList
+            | Self::ServerSettingsNotFound
+            | Self::ServerSettingsUnmanaged
+            | Self::ServerSettingsInvalidName
+            | Self::ServerSettingsInvalidPort
+            | Self::ServerSettingsInvalidMemory
+            | Self::ServerSettingsInvalidRequest => false,
+            Self::PropertiesIo
+            | Self::PlayerIo
+            | Self::ServerSettingsIo
+            | Self::ServerSettingsRegistry => true,
         }
     }
 
@@ -373,10 +414,18 @@ mod tests {
             CoreErrorCode::PlayerListTooLarge => 41,
             CoreErrorCode::PlayerMalformedList => 42,
             CoreErrorCode::PlayerIo => 43,
+            CoreErrorCode::ServerSettingsNotFound => 44,
+            CoreErrorCode::ServerSettingsUnmanaged => 45,
+            CoreErrorCode::ServerSettingsInvalidName => 46,
+            CoreErrorCode::ServerSettingsInvalidPort => 47,
+            CoreErrorCode::ServerSettingsInvalidMemory => 48,
+            CoreErrorCode::ServerSettingsInvalidRequest => 49,
+            CoreErrorCode::ServerSettingsIo => 50,
+            CoreErrorCode::ServerSettingsRegistry => 51,
         }
     }
 
-    const VARIANT_COUNT: usize = 44;
+    const VARIANT_COUNT: usize = 52;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -560,6 +609,42 @@ mod tests {
                 false,
             ),
             (CoreErrorCode::PlayerIo, "player.io", true),
+            (
+                CoreErrorCode::ServerSettingsNotFound,
+                "server_settings.not_found",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerSettingsUnmanaged,
+                "server_settings.unmanaged",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerSettingsInvalidName,
+                "server_settings.invalid_name",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerSettingsInvalidPort,
+                "server_settings.invalid_port",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerSettingsInvalidMemory,
+                "server_settings.invalid_memory",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerSettingsInvalidRequest,
+                "server_settings.invalid_request",
+                false,
+            ),
+            (CoreErrorCode::ServerSettingsIo, "server_settings.io", true),
+            (
+                CoreErrorCode::ServerSettingsRegistry,
+                "server_settings.registry",
+                true,
+            ),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);

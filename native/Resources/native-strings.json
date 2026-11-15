@@ -175,6 +175,38 @@
     "en": "This server's folder is outside MC-Vector's managed folders, so it cannot be changed here.",
     "ja": "このサーバーのフォルダーは MC-Vector の管理フォルダーの外にあるため、ここでは変更できません。"
   },
+  "error.server_settings.invalid_memory": {
+    "en": "The server memory must be between 1024 and 1048576 MB.",
+    "ja": "メモリは1024から1048576 MBの範囲で指定してください。"
+  },
+  "error.server_settings.invalid_name": {
+    "en": "Enter a valid, non-empty server name.",
+    "ja": "有効なサーバー名を入力してください。空の名前は保存できません。"
+  },
+  "error.server_settings.invalid_port": {
+    "en": "The server port must be between 1 and 65535.",
+    "ja": "ポート番号は1から65535の範囲で指定してください。"
+  },
+  "error.server_settings.invalid_request": {
+    "en": "Check the server settings, schedule, Java path, and JVM arguments.",
+    "ja": "サーバー設定、スケジュール、Javaのパス、JVM引数を確認してください。"
+  },
+  "error.server_settings.io": {
+    "en": "The server settings file could not be read or saved. Check folder permissions and try again.",
+    "ja": "サーバー設定ファイルを読み書きできませんでした。フォルダーのアクセス権を確認して、もう一度お試しください。"
+  },
+  "error.server_settings.not_found": {
+    "en": "The server could not be found. Reload the server list and try again.",
+    "ja": "サーバーが見つかりませんでした。一覧を再読み込みして、もう一度お試しください。"
+  },
+  "error.server_settings.registry": {
+    "en": "The server settings registry could not be read or saved. Try again.",
+    "ja": "サーバー設定の登録情報を読み書きできませんでした。もう一度お試しください。"
+  },
+  "error.server_settings.unmanaged": {
+    "en": "The server folder is outside its managed location.",
+    "ja": "サーバーフォルダーが管理対象の場所と一致しません。"
+  },
   "error.unknown": {
     "en": "Something went wrong. Try again.",
     "ja": "問題が発生しました。もう一度お試しください。"

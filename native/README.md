@@ -60,6 +60,9 @@ In Swift, look texts up with `L10n.t("react.key", ["name": value])`. React's `{n
 
 ## UI approach
 
+The [General Settings API](GENERAL_SETTINGS.md) documents shared defaults,
+validation, restart behavior, and synchronization with `server.properties`.
+
 The Native edition keeps the Tauri edition's screens and features, but it is a Mac app: it follows Apple's Human Interface Guidelines and uses the standard SwiftUI and macOS components (sidebar list, system sidebar toggle, toolbar items, toolbar search, `Form`, `Table`, sheets, alerts, context menus, `ContentUnavailableView`). Do not recreate web widgets or the web color theme.
 
 ## Screenshots of the app

@@ -4727,6 +4727,142 @@
         }
       }
     },
+    "error.server_settings.invalid_memory": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server memory must be between 1024 and 1048576 MB."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリは1024から1048576 MBの範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "error.server_settings.invalid_name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid, non-empty server name."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効なサーバー名を入力してください。空の名前は保存できません。"
+          }
+        }
+      }
+    },
+    "error.server_settings.invalid_port": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server port must be between 1 and 65535."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート番号は1から65535の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "error.server_settings.invalid_request": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the server settings, schedule, Java path, and JVM arguments."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー設定、スケジュール、Javaのパス、JVM引数を確認してください。"
+          }
+        }
+      }
+    },
+    "error.server_settings.io": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server settings file could not be read or saved. Check folder permissions and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー設定ファイルを読み書きできませんでした。フォルダーのアクセス権を確認して、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.server_settings.not_found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server could not be found. Reload the server list and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーが見つかりませんでした。一覧を再読み込みして、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.server_settings.registry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server settings registry could not be read or saved. Try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー設定の登録情報を読み書きできませんでした。もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "error.server_settings.unmanaged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server folder is outside its managed location."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーフォルダーが管理対象の場所と一致しません。"
+          }
+        }
+      }
+    },
     "error.unknown": {
       "extractionState": "manual",
       "localizations": {
