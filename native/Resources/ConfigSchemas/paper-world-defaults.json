@@ -1,0 +1,2848 @@
+{
+  "id": "paper-world-defaults",
+  "title": "Paper world defaults configuration",
+  "format": "yaml",
+  "files": [
+    "config/paper-world-defaults.yml"
+  ],
+  "software": [
+    "paper",
+    "leaf"
+  ],
+  "since": "1.19",
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/world-configuration/",
+    "https://github.com/PaperMC/docs/blob/main/src/config/paper/paper-world-defaults.yml",
+    "https://github.com/PaperMC/Paper/blob/main/paper-server/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java",
+    "https://github.com/Winds-Studio/Leaf/blob/ver/26.3/README.md"
+  ],
+  "entries": [
+    {
+      "path": "anticheat.anti-xray.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls the on/off state for the Anti-Xray system",
+        "ja": "アンチXray機能を有効にするかどうかを設定します。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.engine-mode",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the Anti-Xray engine mode. 1 replaces specified blocks (hidden-blocks) with other \"fake\" blocks, stone (deepslate at y < 0), netherrack, or end_stone based on the dimension.",
+        "ja": "隠すブロックを偽装する方法を指定します。1は指定ブロックを置き換え、2と3はリスト内のブロックをランダムに配置します。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.hidden-blocks",
+      "type": "list",
+      "default": [
+        "copper_ore",
+        "deepslate_copper_ore",
+        "raw_copper_block",
+        "gold_ore",
+        "deepslate_gold_ore",
+        "iron_ore",
+        "deepslate_iron_ore",
+        "raw_iron_block",
+        "coal_ore",
+        "deepslate_coal_ore",
+        "lapis_ore",
+        "deepslate_lapis_ore",
+        "mossy_cobblestone",
+        "obsidian",
+        "chest",
+        "diamond_ore",
+        "deepslate_diamond_ore",
+        "redstone_ore",
+        "deepslate_redstone_ore",
+        "clay",
+        "emerald_ore",
+        "deepslate_emerald_ore",
+        "ender_chest"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "With engine-mode: 1, these blocks will be replaced by stone (deepslate at y < 0), netherrack, or end_stone, based on the dimension. All types of air are ignored on this list.",
+        "ja": "隠す対象にするブロックを列挙します。適用方法はengine-modeで変わります。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.lava-obscures",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to obfuscate blocks touching lava. Does not work well with non-stone-like ore textures.",
+        "ja": "溶岩に接するブロックも難読化するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.max-block-height",
+      "type": "int",
+      "default": 64,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum height (y coordinate, starting from the bottom of the world) to which anti-xray will operate. Only integer multiples of 16 are accepted.",
+        "ja": "アンチXrayを適用する最大のY座標を指定します。16の倍数にそろえられます。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.replacement-blocks",
+      "type": "list",
+      "default": [
+        "stone",
+        "oak_planks",
+        "deepslate"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "With engine-mode: 1, replacement blocks are not used. Changing this list will have no effect.",
+        "ja": "engine-mode 2または3で置換に使うブロックを列挙します。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.update-radius",
+      "type": "int",
+      "default": 2,
+      "min": 0,
+      "max": 2,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Radius for block updates which will be sent containing real block data when the client interacts with a block. Only values 0, 1, and 2 are accepted.",
+        "ja": "クライアントが操作したブロックの周囲で実際のブロック情報を送信する半径を指定します。値は0〜2の範囲に制限されます。"
+      }
+    },
+    {
+      "path": "anticheat.anti-xray.use-permission",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to allow players with the paper.antixray.bypass permission to bypass anti-xray. Checking this permission is disabled by default as legacy permission plugins may struggle with the number of checks made.",
+        "ja": "paper.antixray.bypass権限を持つプレイヤーにアンチXrayを迂回させるか設定します。"
+      }
+    },
+    {
+      "path": "chunks.auto-save-interval",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Configures the world saving interval in ticks. Overrides ticks-per.autosave in bukkit.yml for this world.",
+        "ja": "ワールドの保存間隔をtick単位で指定します。defaultではbukkit.ymlのticks-per.autosaveを使います。"
+      }
+    },
+    {
+      "path": "chunks.delay-chunk-unloads-by",
+      "type": "string",
+      "default": "10s",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Delays chunk unloads by the specified time. Formatted as a duration with a single unit e.g.",
+        "ja": "チャンクのアンロードを指定時間だけ遅らせます。d、h、m、sの単位を使えます。"
+      }
+    },
+    {
+      "path": "chunks.entity-per-chunk-save-limit.experience_orb",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the number of experience_orb's that will be saved/loaded per chunk. A value of -1 disables the limit for a specific entity.",
+        "ja": "チャンクごとに保存・読み込みする経験値オーブの最大数を指定します。-1では上限を設けません。"
+      }
+    },
+    {
+      "path": "chunks.entity-per-chunk-save-limit.*",
+      "type": "int",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the number of any type of entity that will be saved/loaded per chunk. A value of -1 disables the limit for a specific entity.",
+        "ja": "指定したエンティティ種別ごとに、チャンクへ保存・読み込む数の上限を設定します。-1では上限を設けません。"
+      }
+    },
+    {
+      "path": "chunks.fixed-chunk-inhabited-time",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If 0 or greater, set the chunk inhabited time to a fixed number. Fixed in this instance means static or unchanging.",
+        "ja": "チャンクのinhabited timeを固定値に設定します。0以上の値で固定されます。"
+      }
+    },
+    {
+      "path": "chunks.flush-regions-on-save",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets whether the server will flush chunks to disk when they are saved. This may have a performance impact",
+        "ja": "チャンク保存時にデータをディスクへフラッシュするか設定します。性能に影響することがあります。"
+      }
+    },
+    {
+      "path": "chunks.max-auto-save-chunks-per-tick",
+      "type": "int",
+      "default": 24,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum number of chunks the auto-save system will save in a single tick",
+        "ja": "自動保存で1tickに処理するチャンク数の最大値を指定します。"
+      }
+    },
+    {
+      "path": "chunks.min-chunk-unload-count",
+      "type": "int",
+      "default": 50,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum number of eligible chunks to unload each tick. The chunks will unload from world chunk map, and save to disk asynchronously.",
+        "ja": "各tickでアンロードする適格チャンクの最低数を指定します。"
+      }
+    },
+    {
+      "path": "chunks.min-chunk-unload-fraction",
+      "type": "float",
+      "default": 0.05,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum fraction of eligible chunks to unload each tick. The final number of chunk unloads per tick is the maximum of min-chunk-unload-count and eligible-chunks * min-chunk-unload-fraction.",
+        "ja": "各tickでアンロードする適格チャンクの最低割合を指定します。最低数と割合から大きい方の値を処理します。"
+      }
+    },
+    {
+      "path": "chunks.prevent-moving-into-unloaded-chunks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets whether the server will prevent players from moving into unloaded chunks or not",
+        "ja": "プレイヤーが未読み込みチャンクへ移動できるかどうかを設定します。"
+      }
+    },
+    {
+      "path": "collisions.allow-player-cramming-damage",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows players to take damage from cramming when colliding with more entities than set in the maxEntityCramming game rule",
+        "ja": "エンティティ詰め込み上限を超えてぶつかった際、プレイヤーにダメージを与えるか設定します。"
+      }
+    },
+    {
+      "path": "collisions.allow-vehicle-collisions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether vehicles should also be able to collide while only-players-collide is enabled",
+        "ja": "only-players-collideが有効な場合、乗り物同士の衝突も有効にするか設定します。"
+      }
+    },
+    {
+      "path": "collisions.fix-climbing-bypassing-cramming-rule",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets whether climbing should bypass the entity cramming limit(maxEntityCramming game rule). If set to true, climbing entities will also be counted towards the entity cramming limit so that they can take suffocation damage",
+        "ja": "登攀中のエンティティをエンティティ詰め込み上限に数えるか設定します。有効にすると、上限超過時に窒息ダメージを受けることがあります。"
+      }
+    },
+    {
+      "path": "collisions.max-entity-collisions",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to stop processing collisions after this value is reached",
+        "ja": "この上限に達した後、サーバーが衝突判定を止めるエンティティ数を指定します。"
+      }
+    },
+    {
+      "path": "collisions.only-players-collide",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Only calculate collisions if a player is one of the two entities colliding",
+        "ja": "プレイヤーが関係する衝突だけを計算するか設定します。"
+      }
+    },
+    {
+      "path": "command-blocks.force-follow-perm-level",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"Require that command blocks meet both the Bukkit permission requirements",
+        "ja": "コマンドブロックにBukkitの権限要件と権限レベルの両方を適用するか設定します。"
+      }
+    },
+    {
+      "path": "command-blocks.permissions-level",
+      "type": "int",
+      "default": 2,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"Default Vanilla permission level for command blocks.\"",
+        "ja": "コマンドブロックの既定のVanilla権限レベルを指定します。"
+      }
+    },
+    {
+      "path": "entities.armor-stands.do-collision-entity-lookups",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs armor stand entities to do entity collision checks",
+        "ja": "防具立ての衝突判定でエンティティを検索するか設定します。"
+      }
+    },
+    {
+      "path": "entities.armor-stands.tick",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disable to prevent armor stands from ticking. Can improve performance with many armor stands",
+        "ja": "防具立てをtick処理するか設定します。無効にすると、多数の防具立てがある環境で性能が向上する場合があります。"
+      }
+    },
+    {
+      "path": "entities.behavior.allow-spider-world-border-climbing",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether spiders should be able to climb on the world border, as if it were a regular wall.",
+        "ja": "クモがワールド境界を壁として登れるようにするか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.baby-zombie-movement-modifier",
+      "type": "float",
+      "default": 0.5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Modifies the speed that baby zombies move at, where 0.5 is 50% faster than the mob base speed, and -0.4 would be 40% slower",
+        "ja": "子どもゾンビの移動速度への補正値を指定します。0.5は基礎速度より50%速く、-0.4は40%遅くなります。"
+      }
+    },
+    {
+      "path": "entities.behavior.cooldown-failed-beehive-releases",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Adds a cooldown to bees being released after a failed release, which can occur if the hive is blocked or it being night.",
+        "ja": "ハチの巣から出られなかったハチに再試行までの待ち時間を設けるか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.disable-chest-cat-detection",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows you to open chests even if they have a cat sitting on top of them",
+        "ja": "ネコがチェストの上にいる場合でも開けられるようにします。"
+      }
+    },
+    {
+      "path": "entities.behavior.disable-creeper-lingering-effect",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables creepers randomly leaving behind a lingering area effect cloud",
+        "ja": "クリーパーが死亡時に残留効果の雲を残す動作を無効にします。"
+      }
+    },
+    {
+      "path": "entities.behavior.disable-player-crits",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to disable critical hits in PvP, treating them as normal hits instead",
+        "ja": "プレイヤー同士のPvPでクリティカルヒットを通常攻撃として扱うか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.door-breaking-difficulty.vindicator",
+      "type": "list",
+      "default": [
+        "NORMAL",
+        "HARD"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A list of difficulties (PEACEFUL, EASY, NORMAL, HARD) at which vindicators will attempt to break doors.",
+        "ja": "ヴィンディケーターがドアを壊そうとする難易度を列挙します。"
+      }
+    },
+    {
+      "path": "entities.behavior.door-breaking-difficulty.*",
+      "type": "list",
+      "default": [
+        "HARD"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A list of difficulties (PEACEFUL, EASY, NORMAL, HARD) at which zombie-like entities (husks, zombies, zombie villagers and zombified piglins) will attempt to break doors.",
+        "ja": "ゾンビ系エンティティがドアを壊そうとする難易度を列挙します。"
+      }
+    },
+    {
+      "path": "entities.behavior.ender-dragons-death-always-places-dragon-egg",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether ender dragons should always drop dragon eggs on death",
+        "ja": "エンダードラゴンの死亡時にドラゴンの卵を必ず配置するか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.experience-merge-max-value",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to put a maximum value on experience orbs, preventing them all from merging down into 1 single orb. A value of -1 instructs the server to use no max value, allowing them to merge down into a single orb.",
+        "ja": "経験値オーブを統合するときの最大値を指定します。-1では制限せず、1つのオーブまで統合できます。"
+      }
+    },
+    {
+      "path": "entities.behavior.mobs-can-always-pick-up-loot.skeletons",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to allow skeletons to pick up loot. If set to false, the probability that a skeleton picks up items depends on the world's difficulty (Vanilla behavior)",
+        "ja": "スケルトンが常にアイテムを拾えるようにするか設定します。無効時は難易度に応じて拾います。"
+      }
+    },
+    {
+      "path": "entities.behavior.mobs-can-always-pick-up-loot.zombies",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to allow zombies to pick up loot. If set to false, the probability that a zombie picks up items depends on the world's difficulty (Vanilla behavior)",
+        "ja": "ゾンビが常にアイテムを拾えるようにするか設定します。無効時は難易度に応じて拾います。"
+      }
+    },
+    {
+      "path": "entities.behavior.nerf-pigmen-from-nether-portals",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"Removes AI from pigmen spawned via nether portals \"",
+        "ja": "ネザーゲートから出現したゾンビピグリンのAIを無効にします。"
+      }
+    },
+    {
+      "path": "entities.behavior.only-merge-items-horizontally",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents merging items that are not on the same y level, preventing potential visual artifacts.",
+        "ja": "Y座標が異なるアイテム同士の統合を防ぎます。"
+      }
+    },
+    {
+      "path": "entities.behavior.parrots-are-unaffected-by-player-movement",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Makes parrots \"sticky\" so they do not fall off a player's shoulder when they move. Use crouch to shake them off",
+        "ja": "プレイヤーの移動で肩のオウムが落ちないようにします。しゃがむと降ろせます。"
+      }
+    },
+    {
+      "path": "entities.behavior.phantoms-do-not-spawn-on-creative-players",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"Disables spawning of phantoms on players in creative mode \"",
+        "ja": "クリエイティブモードのプレイヤーにファントムが出現しないようにします。"
+      }
+    },
+    {
+      "path": "entities.behavior.phantoms-only-attack-insomniacs",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"Prevents phantoms from attacking players who have slept \"",
+        "ja": "眠ったプレイヤーをファントムが攻撃しないようにします。"
+      }
+    },
+    {
+      "path": "entities.behavior.phantoms-spawn-attempt-max-seconds",
+      "type": "int",
+      "default": 119,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of seconds between phantom spawn attempts",
+        "ja": "ファントムの出現を試みる間隔の最大秒数を指定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.phantoms-spawn-attempt-min-seconds",
+      "type": "int",
+      "default": 60,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum number of seconds between phantom spawn attempts",
+        "ja": "ファントムの出現を試みる間隔の最小秒数を指定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.piglins-guard-chests",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If piglins should attempt to guard chests when angered",
+        "ja": "怒ったピグリンがチェストを守ろうとするか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.pillager-patrols.disable",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables Pillager patrols and associated AI",
+        "ja": "ピリジャーのパトロールと関連AIを無効にします。"
+      }
+    },
+    {
+      "path": "entities.behavior.pillager-patrols.spawn-chance",
+      "type": "float",
+      "default": 0.2,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Modify the spawn changes for patrols",
+        "ja": "パトロールの出現確率を調整します。"
+      }
+    },
+    {
+      "path": "entities.behavior.pillager-patrols.spawn-delay.ticks",
+      "type": "int",
+      "default": 12000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Delay in ticks between spawn chance",
+        "ja": "パトロールの出現を試みる間隔をtick単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.pillager-patrols.spawn-delay.per-player",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the delay to be independent for each player",
+        "ja": "出現間隔をプレイヤーごとに独立させるか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.pillager-patrols.start.day",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Days between raid spawns",
+        "ja": "パトロール開始までの日数を指定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.pillager-patrols.start.per-player",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the start to be independent for each player",
+        "ja": "開始日数をプレイヤーごとに独立させるか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.player-insomnia-start-ticks",
+      "type": "int",
+      "default": 72000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Number of ticks a player must stay awake before phantoms can start spawning. Default (72000) is 3 Minecraft days, -1 disables phantom spawning.",
+        "ja": "ファントムが出現できるまでプレイヤーが起きている必要のあるtick数を指定します。-1ではファントムの出現を無効にします。"
+      }
+    },
+    {
+      "path": "entities.behavior.should-remove-dragon",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets whether to remove the dragon if it exists without a portal",
+        "ja": "ポータルのないエンダードラゴンを削除するか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.spawner-nerfed-mobs-should-jump",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines if spawner nerfed mobs should attempt to float (jump) in water",
+        "ja": "スポナーで弱体化されたMobが水中でジャンプするか設定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.stuck-entity-poi-retry-delay",
+      "type": "int",
+      "default": 200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The delay before retrying POI acquisition when entity navigation is stuck. This will reduce pathfinding performance impact.",
+        "ja": "エンティティの移動が止まっている場合にPOI取得を再試行するまでのtick数を指定します。"
+      }
+    },
+    {
+      "path": "entities.behavior.zombie-villager-infection-chance",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the chance for villager conversion to zombie villager. Set to \"default\" for default behavior based on game difficulty.",
+        "ja": "村人がゾンビ化する確率を指定します。defaultでは難易度に応じた既定動作を使い、0.0では死亡、100.0では必ずゾンビ化します。"
+      }
+    },
+    {
+      "path": "entities.behavior.zombies-target-turtle-eggs",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets whether zombies and zombified piglins should target turtle eggs. Setting this to false may help with performance, as they won't search for nearby eggs",
+        "ja": "ゾンビとゾンビ化したピグリンがカメの卵を狙うか設定します。無効にすると卵の探索負荷を減らせる場合があります。"
+      }
+    },
+    {
+      "path": "entities.behavior.inactive-mob-goal-selector-throttle-rate",
+      "type": "string",
+      "default": "disabled",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If specified, this setting controls how often to tick inactive mobs' goal selectors. Higher values reduce the performance impact of ticking mobs that are far away.",
+        "ja": "非アクティブなMobのgoal selectorをtickする間隔を指定します。disabledではこの処理を制限しません。"
+      }
+    },
+    {
+      "path": "entities.entities-target-with-follow-range",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"Sets whether the server should use follow range when targeting entities \"",
+        "ja": "ターゲットを選ぶ際にエンティティのfollow rangeを使うか設定します。"
+      }
+    },
+    {
+      "path": "entities.markers.tick",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disable to prevent markers from ticking. This may affect how they behave as passengers of other entities",
+        "ja": "マーカーエンティティをtick処理するか設定します。無効にすると乗客としての挙動に影響する場合があります。"
+      }
+    },
+    {
+      "path": "entities.mob-effects.immune-to-wither-effect",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If the specified entity should be immune to the wither effect",
+        "ja": "対象エンティティをウィザー効果に免疫化するか設定します。"
+      }
+    },
+    {
+      "path": "entities.mob-effects.spiders-immune-to-poison-effect",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If spiders should be immune to poison",
+        "ja": "クモを毒効果に免疫化するか設定します。"
+      }
+    },
+    {
+      "path": "entities.sniffer.boosted-hatch-time",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The boosted hatch time, in ticks, a sniffer egg requires to hatch. Boosted hatching occurs when planted on specific blocks.",
+        "ja": "特定ブロックに植えたスニッファーの卵が必要とする孵化時間をtick単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.sniffer.hatch-time",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "\"The non-boosted hatch time, in ticks, a sniffer egg requires to hatch.\"",
+        "ja": "通常条件でのスニッファーの卵の孵化時間をtick単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.all-chunks-are-slime-chunks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to treat all chunks like slime chunks, allowing them to spawn in any chunk. This may actually decrease your chances of running into a Slime as they now have a much larger potential spawn area",
+        "ja": "すべてのチャンクをスライムチャンクとして扱うか設定します。対象範囲が広がるため、スライムに遭遇しにくくなる場合があります。"
+      }
+    },
+    {
+      "path": "entities.spawning.alt-item-despawn-rate.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines if items will have different despawn rates",
+        "ja": "アイテムごとに異なるデスポーン時間を使うか設定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.alt-item-despawn-rate.items.cobblestone",
+      "type": "int",
+      "default": 300,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets a custom despawn rate for cobblestone of 300 ticks",
+        "ja": "cobblestoneがデスポーンするまでのtick数を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.alt-item-despawn-rate.items.*",
+      "type": "int",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how long each respective item despawns in ticks. The item ids are the same as those used in the /give command.",
+        "ja": "アイテムIDごとにデスポーンまでのtick数を指定します。IDは/giveコマンドで使うものです。"
+      }
+    },
+    {
+      "path": "entities.spawning.max-arrow-despawn-invulnerability",
+      "type": "int",
+      "default": 200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Workaround for MC-125757, makes all arrows advance their despawn timer as if they were stuck in the ground, after a delay (in ticks).",
+        "ja": "矢が着弾したかのようにデスポーン時間を進め始めるまでのtick数を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.count-all-mobs-for-spawning",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines whether spawner mobs and other misc mobs are counted towards the global mob limit",
+        "ja": "スポナーから出たMobなども全体のMob上限に数えるか設定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.creative-arrow-despawn-rate",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The rate, in ticks, at which arrows shot from players in creative mode are despawned",
+        "ja": "クリエイティブモードのプレイヤーが発射した矢のデスポーン時間を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-range-shape",
+      "type": "enum",
+      "default": "ELLIPSOID",
+      "min": null,
+      "max": null,
+      "values": [
+        "ELLIPSOID",
+        "CYLINDER"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The shape of the despawn range. Can be one of the following values: - ELLIPSOID: The despawn range is an ellipsoid, with the horizontal and vertical despawn ranges being separate.",
+        "ja": "デスポーン距離の形状を指定します。ELLIPSOIDは水平・垂直を別々に扱い、CYLINDERは水平距離を円形に扱います。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-ranges.*.hard",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The horizontal and vertical number of blocks away from a player in which each monster type (set individually) will be forcibly despawned.",
+        "ja": "Mobカテゴリごとに、プレイヤーから離れたMobを強制デスポーンさせる水平・垂直距離を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-ranges.*.soft",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The horizontal and vertical number of blocks away from a player in which each monster type (set individually) will be randomly selected to be despawned.",
+        "ja": "Mobカテゴリごとに、プレイヤーから離れたMobをランダムに選んでデスポーンさせる水平・垂直距離を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-ranges.*.hard.horizontal",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The horizontal number of blocks away from a player in which each entity type (set individually) will be forcibly despawned.",
+        "ja": "エンティティ種別ごとの強制デスポーン距離の水平成分を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-ranges.*.hard.vertical",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The vertical number of blocks away from a player in which each entity type (set individually) will be forcibly despawned.",
+        "ja": "エンティティ種別ごとの強制デスポーン距離の垂直成分を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-ranges.*.soft.horizontal",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The horizontal number of blocks away from a player in which each entity type (set individually) will be randomly selected to be despawned.",
+        "ja": "エンティティ種別ごとのランダムなデスポーン距離の水平成分を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-ranges.*.soft.vertical",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The vertical number of blocks away from a player in which each entity type (set individually) will be randomly selected to be despawned.",
+        "ja": "エンティティ種別ごとのランダムなデスポーン距離の垂直成分を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.despawn-time.*",
+      "type": "string",
+      "default": "disabled",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A server-introduced despawn time after which the entity is forcefully despawned. If disabled or not specified, the entity will simply despawn according to Vanilla rules.",
+        "ja": "エンティティ種別ごとに、強制削除までのデスポーン時間を指定します。disabledではVanillaの動作を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.disable-mob-spawner-spawn-egg-transformation",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to block players from changing the type of mob spawners with a spawn egg",
+        "ja": "スポーンエッグでスポナーのMob種別を変更できないようにします。"
+      }
+    },
+    {
+      "path": "entities.spawning.duplicate-uuid.mode",
+      "type": "enum",
+      "default": "SAFE_REGEN",
+      "min": null,
+      "max": null,
+      "values": [
+        "SAFE_REGEN",
+        "DELETE",
+        "NOTHING",
+        "WARN"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Specifies the method the server uses to resolve entities with duplicate UUIDs. This can be one of the following values: - SAFE_REGEN: Regenerate a UUID for the entity, or delete it if they are close. - DELETE: Delete the entity. - NOTHING: Does nothing, not printing logs. - WARN: Does nothing, printing logs",
+        "ja": "UUIDが重複したエンティティを解決する方法を指定します。SAFE_REGEN、DELETE、NOTHING、WARNを選べます。"
+      }
+    },
+    {
+      "path": "entities.spawning.duplicate-uuid.safe-regen-delete-range",
+      "type": "int",
+      "default": 32,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If multiple entities with duplicate UUIDs are within this many blocks, saferegen will delete all but 1 of them",
+        "ja": "重複UUIDを持つエンティティ同士がこの距離内にいる場合、1体以外を削除します。"
+      }
+    },
+    {
+      "path": "entities.spawning.filter-bad-tile-entity-nbt-from-falling-blocks",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to remove certain NBT data from falling blocks. Note: Some adventure maps may require this to be turned off to function correctly, but we do not recommend turning it off on a public server",
+        "ja": "落下ブロックから問題のあるタイルエンティティNBTを除去します。公開サーバーで無効にすることは推奨されていません。"
+      }
+    },
+    {
+      "path": "entities.spawning.filtered-entity-tag-nbt-paths",
+      "type": "list",
+      "default": [
+        "Pos",
+        "Motion",
+        "sleeping_pos"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A list of NBT tags that will be removed from the \"entity_data\" component on items which spawn entities. The format of these strings follows the same format used to select NBT tags in Vanilla commands.",
+        "ja": "エンティティを出現させるアイテムから削除するNBTパスを列挙します。既定値は、出現位置や移動先を不正に変更されるのを防ぎます。"
+      }
+    },
+    {
+      "path": "entities.spawning.iron-golems-can-spawn-in-air",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets whether iron golems can spawn in the air. Iron farms may break depending on this setting",
+        "ja": "アイアンゴーレムが空中に出現できるか設定します。アイアンファームの動作に影響する場合があります。"
+      }
+    },
+    {
+      "path": "entities.spawning.monster-spawn-max-light-level",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "When set to \"default\", the Vanilla default will be used (=0). Set to 15 or greater to revert to pre-1.18 behavior",
+        "ja": "defaultではVanilla既定値の0を使います。15以上にすると1.18以前の動作に戻します。"
+      }
+    },
+    {
+      "path": "entities.spawning.non-player-arrow-despawn-rate",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The rate, in ticks, at which arrows shot from non-player entities are despawned. The default value instructs the server to use the same default arrow despawn rate from spigot.yml that is used for all arrows",
+        "ja": "プレイヤー以外が撃った矢のデスポーン時間を指定します。defaultではspigot.ymlの共通設定を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.per-player-mob-spawns",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines whether the mob limit (in bukkit.yml) is counted per player or for the entire server. Enabling this setting results in roughly the same number of mobs, but with a more even distribution that prevents one player from using the entire mob cap and provides a more single-player like experience",
+        "ja": "Mobの上限をプレイヤーごとに数えるか、ワールド全体で数えるか設定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.scan-for-legacy-ender-dragon",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines if the server attempts to start the ender dragon fight. Setting this to false will make the ender dragon not spawn in the end, even with a new world",
+        "ja": "エンダードラゴン戦の開始を試みるか設定します。無効にすると新規ワールドでもエンダードラゴンが出現しません。"
+      }
+    },
+    {
+      "path": "entities.spawning.skeleton-horse-thunder-spawn-chance",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the chance that a \"Skeleton Trap\" (4 skeleton horsemen) will spawn in a thunderstorm. Takes a double between 0 and 1, where 0 is 0% chance",
+        "ja": "雷雨中にスケルトンホースのトラップが発生する確率を0〜1で指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.slime-spawn-height.slime-chunk.maximum",
+      "type": "int",
+      "default": 40,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum Y position for natural Slime spawn in Slime Chunks",
+        "ja": "スライムチャンクで自然発生するスライムの最大Y座標を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.slime-spawn-height.surface-biome.minimum",
+      "type": "int",
+      "default": 50,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum Y position for natural Slime spawn in Surface Biomes",
+        "ja": "地上バイオームで自然発生するスライムの最小Y座標を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.slime-spawn-height.surface-biome.maximum",
+      "type": "int",
+      "default": 70,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum Y position for natural Slime spawn in Surface Biomes",
+        "ja": "地上バイオームで自然発生するスライムの最大Y座標を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.ambient",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many ambient mobs will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world.",
+        "ja": "ワールド内で自然発生するコウモリの上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.axolotls",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many axolotls will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world.",
+        "ja": "ワールド内で自然発生するウーパールーパーの上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.creature",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many animals will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world, and the name.",
+        "ja": "ワールド内で自然発生する動物の上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.monster",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many monsters will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world.",
+        "ja": "ワールド内で自然発生するモンスターの上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.underground_water_creature",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many underground water creatures will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world.",
+        "ja": "ワールド内で自然発生する地下水生Mobの上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.water_ambient",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many water ambient mobs will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world.",
+        "ja": "ワールド内で自然発生する水生の環境Mobの上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.spawn-limits.water_creature",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The constant used to determine how many water animals will be naturally spawned per world. This is identical to the value set in bukkit.yml, except that it can be configured per world.",
+        "ja": "ワールド内で自然発生する水生Mobの上限を指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.ambient",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn ambient mobs (bats). Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "コウモリの出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.axolotls",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn axolotls. Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "ウーパールーパーの出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.creature",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn passive creatures (animals). Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "動物の出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.monster",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn hostile monsters. Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "モンスターの出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.underground_water_creature",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn underground water creatures (glow squid). Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "地下水生Mobの出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.water_ambient",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn ambient water mobs (tropical fish). Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "水生の環境Mobの出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.ticks-per-spawn.water_creature",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines how many ticks there are between attempts to spawn water creatures (squid, dolphins). Default (-1) uses bukkit.yml spawn rate.",
+        "ja": "水生Mobの出現を試みる間隔をtick単位で指定します。-1ではbukkit.ymlの値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.wandering-trader.spawn-chance-failure-increment",
+      "type": "int",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How much the spawn chance will be increased on every failed wandering trader spawn",
+        "ja": "行商人の出現確率が失敗ごとに増える量を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.wandering-trader.spawn-chance-max",
+      "type": "int",
+      "default": 75,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum chance that a wandering trader will be spawned",
+        "ja": "行商人が出現する最大確率を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.wandering-trader.spawn-chance-min",
+      "type": "int",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum chance that a wandering trader will be spawned",
+        "ja": "行商人が出現する最小確率を指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.wandering-trader.spawn-day-length",
+      "type": "int",
+      "default": 24000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Time between wandering trader spawn attempts in ticks",
+        "ja": "行商人の出現試行間隔をtick単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.wandering-trader.spawn-minute-length",
+      "type": "int",
+      "default": 1200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The length of the wandering trader spawn minute in ticks",
+        "ja": "行商人の出現における1分の長さをtick単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.spawning.wateranimal-spawn-height.maximum",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum height at which water animals will spawn. Note: The default value defers to Minecraft's default setting, which as of 1.12 is the sea level of the world (usually Y: 64)",
+        "ja": "水生Mobが出現する最大Y座標を指定します。defaultではMinecraftの既定値を使います。"
+      }
+    },
+    {
+      "path": "entities.spawning.wateranimal-spawn-height.minimum",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum height at which water animals will spawn. Note: The default value defers to Minecraft's default setting, which as of 1.12 is the sea level of the world (usually Y: 64)",
+        "ja": "水生Mobが出現する最小Y座標を指定します。defaultではMinecraftの既定値を使います。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.animal",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far vertically in blocks animals are tracked (sent to) the player.",
+        "ja": "動物の追跡に使う垂直方向の距離をブロック単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.display",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far vertically in blocks display entities are tracked (sent to) the player.",
+        "ja": "ディスプレイエンティティの追跡に使う垂直方向の距離をブロック単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables separate ranges for tracking ranges in the vertical (Y) direction.",
+        "ja": "追跡距離に垂直方向の個別範囲を使うか設定します。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.misc",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far vertically in blocks miscellaneous are tracked (sent to) the player.",
+        "ja": "その他のMobの追跡に使う垂直方向の距離をブロック単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.monster",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far vertically in blocks monsters are tracked (sent to) the player.",
+        "ja": "モンスターの追跡に使う垂直方向の距離をブロック単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.other",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far vertically in blocks other entities are tracked (sent to) the player.",
+        "ja": "その他のエンティティの追跡に使う垂直方向の距離をブロック単位で指定します。"
+      }
+    },
+    {
+      "path": "entities.tracking-range-y.player",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far vertically in blocks players are tracked (sent to) the player.",
+        "ja": "プレイヤーの追跡に使う垂直方向の距離をブロック単位で指定します。"
+      }
+    },
+    {
+      "path": "environment.disable-explosion-knockback",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to completely block any knockback that occurs as a result of an explosion",
+        "ja": "爆発によるノックバックを完全に無効にします。"
+      }
+    },
+    {
+      "path": "environment.disable-ice-and-snow",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables ice and snow formation. This also causes cauldrons to no longer be filled by rain or snow",
+        "ja": "氷と雪の生成を無効にします。無効にすると雨や雪で大釜が満たされなくなります。"
+      }
+    },
+    {
+      "path": "environment.disable-thunder",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables thunderstorms",
+        "ja": "雷雨を無効にします。"
+      }
+    },
+    {
+      "path": "environment.fire-tick-delay",
+      "type": "int",
+      "default": 30,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum delay between fire ticks",
+        "ja": "火のtick間隔の最小値を指定します。"
+      }
+    },
+    {
+      "path": "environment.frosted-ice.delay.max",
+      "type": "int",
+      "default": 40,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum RNG value to apply frosted-ice effects at",
+        "ja": "フロストアイス効果に適用する乱数の最大値を指定します。"
+      }
+    },
+    {
+      "path": "environment.frosted-ice.delay.min",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Minimum RNG value to apply frosted-ice effects at",
+        "ja": "フロストアイス効果に適用する乱数の最小値を指定します。"
+      }
+    },
+    {
+      "path": "environment.frosted-ice.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to enable (and tick) frosted ice blocks",
+        "ja": "フロストアイスのブロックを有効にしてtick処理するか設定します。"
+      }
+    },
+    {
+      "path": "environment.generate-flat-bedrock",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to generate bedrock as a single flat layer",
+        "ja": "岩盤を平らな一層として生成するか設定します。"
+      }
+    },
+    {
+      "path": "environment.locate-structures-outside-world-border",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If the server should be able to locate structures in chunks that are outside the world border.",
+        "ja": "ワールド境界の外にあるチャンクの構造物を検索できるようにするか設定します。"
+      }
+    },
+    {
+      "path": "environment.max-block-ticks",
+      "type": "int",
+      "default": 65536,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum number of block ticks that can be processed in a single tick. This is a safety measure to prevent the server from hanging when there is a large amount of block updates.",
+        "ja": "1tickに処理するブロックtickの最大数を指定します。大量の更新によるサーバー停止を防ぐ安全上限です。"
+      }
+    },
+    {
+      "path": "environment.max-fluid-ticks",
+      "type": "int",
+      "default": 65536,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum number of fluid ticks that can be processed in a single tick. This is a safety measure to prevent the server from hanging when there is a large number of fluid updates.",
+        "ja": "1tickに処理する液体tickの最大数を指定します。大量の更新によるサーバー停止を防ぐ安全上限です。"
+      }
+    },
+    {
+      "path": "environment.nether-ceiling-void-damage-height",
+      "type": "string",
+      "default": "disabled",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the level above which players in the nether will take void damage. This is a Vanilla-friendly way to restrict players from using the nether ceiling as a buildable area.",
+        "ja": "ネザーの天井より上にいるプレイヤーへ奈落ダメージを与える高さを指定します。disabledでは無効です。"
+      }
+    },
+    {
+      "path": "environment.optimize-explosions",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to cache entity lookups during an explosion, rather than recalculating throughout the process. This speeds up explosions significantly",
+        "ja": "爆発中のエンティティ検索をキャッシュするか設定します。検索の再計算を減らして爆発処理を速めます。"
+      }
+    },
+    {
+      "path": "environment.portal-create-radius",
+      "type": "int",
+      "default": 16,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum range the server will try to create a portal around when generating a new portal",
+        "ja": "新しいポータルを生成する際に試す最大範囲を指定します。"
+      }
+    },
+    {
+      "path": "environment.portal-search-radius",
+      "type": "int",
+      "default": 128,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum range the server will use to look for an existing nether portal. If it can't find one in that range, it will generate a new one",
+        "ja": "既存のネザーポータルを探す最大範囲を指定し、見つからない場合は新しいポータルを生成します。"
+      }
+    },
+    {
+      "path": "environment.portal-search-vanilla-dimension-scaling",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to apply Vanilla dimension scaling to portal-search-radius",
+        "ja": "ポータル探索範囲にVanillaのディメンション倍率を適用するか設定します。"
+      }
+    },
+    {
+      "path": "environment.treasure-maps.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If villagers should trade treasure maps and treasure maps from chests should lead to a feature",
+        "ja": "村人との取引やチェストから入手する宝の地図を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "environment.treasure-maps.find-already-discovered.loot-tables",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the loot table-configured check for undiscovered structures. default allows loot tables to individually determine if the map should allow discovered locations in its search. All Vanilla loot tables default to skipping discovered locations so changing this to false would override that behavior and force them to search discovered locations",
+        "ja": "既に発見された構造物を宝の地図の探索対象にするかをloot table設定から上書きします。defaultでは各loot tableの設定に従います。"
+      }
+    },
+    {
+      "path": "environment.treasure-maps.find-already-discovered.villager-trade",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to target the first treasure location found for maps obtained via trading with villagers",
+        "ja": "村人取引の地図が既に発見された場所を対象にできるか設定します。"
+      }
+    },
+    {
+      "path": "environment.void-damage-amount",
+      "type": "int",
+      "default": 4,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The amount of void damage dealt per void damage attempt. May be set to disabled to completely disable void damage in the world.",
+        "ja": "奈落ダメージの試行ごとに与えるダメージ量を指定します。disabledではワールドの奈落ダメージを無効にします。"
+      }
+    },
+    {
+      "path": "environment.void-damage-min-build-height-offset",
+      "type": "int",
+      "default": -64,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The offset from a world's minimum build height at which entities should receive void damage.",
+        "ja": "ワールドの最低建築高度からどれだけ下で奈落ダメージを開始するか指定します。"
+      }
+    },
+    {
+      "path": "environment.water-over-lava-flow-speed",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the speed at which water flows while over lava",
+        "ja": "溶岩の上を流れる水の速度を指定します。"
+      }
+    },
+    {
+      "path": "feature-seeds.generate-random-seeds-for-all",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables autofilling random seeds for all available features you haven't already set a seed to. Using this in a controlled environment is also a good way of receiving a full list of features you can set seeds for",
+        "ja": "未設定の全featureにランダムなpopulation seedを自動設定するか指定します。"
+      }
+    },
+    {
+      "path": "feature-seeds.*",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the population seed for the specified feature. If set to -1, the Vanilla population seed stays unchanged and will not be overridden by the autofill option",
+        "ja": "指定したfeatureのpopulation seedを設定します。-1ではVanillaのseedを維持し、自動補完でも上書きしません。"
+      }
+    },
+    {
+      "path": "fishing-time-range.maximum",
+      "type": "int",
+      "default": 600,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum number of RNG ticks before catching a fish",
+        "ja": "釣りで魚が掛かるまでに必要な乱数tickの最大値を指定します。"
+      }
+    },
+    {
+      "path": "fishing-time-range.minimum",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum number of RNG ticks needed to catch a fish",
+        "ja": "釣りで魚が掛かるまでに必要な乱数tickの最小値を指定します。"
+      }
+    },
+    {
+      "path": "fixes.disable-unloaded-chunk-enderpearl-exploit",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevent enderpearls from storing the thrower when in an unloaded chunk",
+        "ja": "未読み込みチャンクで投げたエンダーパールが投擲者を保存する動作を防ぎます。"
+      }
+    },
+    {
+      "path": "fixes.falling-block-height-nerf",
+      "type": "string",
+      "default": "disabled",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The height at which falling blocks will be removed from the server. A value of disabled will disable this feature",
+        "ja": "指定した高さで落下ブロックをサーバーから削除します。disabledでは無効です。"
+      }
+    },
+    {
+      "path": "fixes.fix-items-merging-through-walls",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether items should be prevented from merging through walls. Enabling this will incur a performance degradation.",
+        "ja": "アイテムが壁越しに統合されるのを防ぐか設定します。有効にすると性能が低下することがあります。"
+      }
+    },
+    {
+      "path": "fixes.prevent-tnt-from-moving-in-water",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to keep Primed TNT entities from moving in flowing water",
+        "ja": "流れる水の中で起爆済みTNTが移動しないようにします。"
+      }
+    },
+    {
+      "path": "fixes.split-overstacked-loot",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "When set to false, loot tables will not attempt to split items with a stack size higher than the maximum into items of smaller stack sizes. This will prevent overstacked items from being lost or causing a chunk to become uninhabitable (due to players getting constantly kicked because of oversized packets) when a shulker box is broken in survival",
+        "ja": "最大スタック数を超えるアイテムをloot tableが分割するか設定します。無効にすると超過アイテムの消失やチャンク問題を防ぐ場合があります。"
+      }
+    },
+    {
+      "path": "fixes.tnt-entity-height-nerf",
+      "type": "string",
+      "default": "disabled",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The height at which Primed TNT entities will be removed from the server. A value of disabled will disable this feature",
+        "ja": "指定した高さで起爆済みTNTをサーバーから削除します。disabledでは無効です。"
+      }
+    },
+    {
+      "path": "hopper.cooldown-when-full",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to apply a short cooldown when the hopper is full, instead of constantly trying to pull new items",
+        "ja": "ホッパーが満杯のとき、アイテム取得を繰り返す代わりに短いクールダウンを設けます。"
+      }
+    },
+    {
+      "path": "hopper.disable-move-event",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Completely disables the InventoryMoveItemEvent for hoppers. Dramatically improves hopper performance but will break protection plugins and any others that depend on this event",
+        "ja": "ホッパーのInventoryMoveItemEventを無効にします。性能は上がりますが、このイベントに依存する保護プラグインが動かなくなる場合があります。"
+      }
+    },
+    {
+      "path": "hopper.ignore-occluding-blocks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines if hoppers will ignore containers inside occluding blocks, like a hopper minecart inside a sand block. Enabling this will improve performance for hoppers checking where to insert items",
+        "ja": "遮蔽ブロックの中にあるコンテナをホッパーが無視するか設定します。有効にすると探索性能が向上します。"
+      }
+    },
+    {
+      "path": "lootables.auto-replenish",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to automatically replenish lootable containers. This feature is useful for long-term worlds in which players are not expected to constantly explore to generate new chunks.",
+        "ja": "lootableコンテナの中身を自動補充するか設定します。"
+      }
+    },
+    {
+      "path": "lootables.max-refills",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of times a lootable may be refilled. Note: The default value will allow a lootable to refill an infinite number of times",
+        "ja": "lootableコンテナを補充できる最大回数を指定します。-1では回数を制限しません。"
+      }
+    },
+    {
+      "path": "lootables.refresh-max",
+      "type": "string",
+      "default": "2d",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum amount of time that can pass before a lootable is refilled. Formatted as a duration with a single unit e.g.",
+        "ja": "lootableコンテナを補充するまでの最大時間を指定します。d、h、m、sの単位を使えます。"
+      }
+    },
+    {
+      "path": "lootables.refresh-min",
+      "type": "string",
+      "default": "12h",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum amount of time that must pass before a lootable will be eligible to be refilled. Formatted as a duration with a single unit e.g.",
+        "ja": "lootableコンテナを再補充可能にするまでの最小時間を指定します。d、h、m、sの単位を使えます。"
+      }
+    },
+    {
+      "path": "lootables.reset-seed-on-fill",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Resets the loot seed each time the lootable is refilled, effectively randomizing the new loot items on each refill",
+        "ja": "補充時にloot seedをリセットし、新しいアイテムをランダム化するか設定します。"
+      }
+    },
+    {
+      "path": "lootables.restrict-player-reloot",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents the same players from coming back and re-looting the same containers over and over",
+        "ja": "同じプレイヤーがlootableコンテナを繰り返し漁るのを防ぎます。"
+      }
+    },
+    {
+      "path": "lootables.restrict-player-reloot-time",
+      "type": "string",
+      "default": "disabled",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Per-player cooldown between reloots. Formatted as a duration with a single unit e.g.",
+        "ja": "同じプレイヤーが再びlootできるまでの待ち時間を指定します。d、h、m、sの単位を使えます。"
+      }
+    },
+    {
+      "path": "lootables.retain-unlooted-shulker-box-loot-table-on-non-player-break",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Configures if breaking a shulker box via non-player means, e.g. a piston, should retain the shulker box's loot table if the shulker box has not been looted yet. Setting this option to false prevents players from moving shulker boxes with potentially refilling loot tables to new locations by breaking them via the likes of pistons.",
+        "ja": "プレイヤー以外の方法で壊した未開封シュルカーボックスに、loot tableを保持するか設定します。"
+      }
+    },
+    {
+      "path": "maps.item-frame-cursor-limit",
+      "type": "int",
+      "default": 128,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The number of cursors (markers) allowed per map. A large number of cursors may be used to lag clients",
+        "ja": "1枚の地図に表示できるカーソル数を指定します。多すぎるとクライアントが重くなることがあります。"
+      }
+    },
+    {
+      "path": "maps.item-frame-cursor-update-interval",
+      "type": "int",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The interval in ticks at which cursors on maps in item frames are updated. Setting this to a number less than 1 will disable updates altogether",
+        "ja": "額縁に入れた地図のカーソルを更新する間隔をtick単位で指定します。1未満では更新を無効にします。"
+      }
+    },
+    {
+      "path": "max-growth-height.bamboo.max",
+      "type": "int",
+      "default": 16,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum height bamboo will naturally grow to",
+        "ja": "竹が自然に成長できる最大高さを指定します。"
+      }
+    },
+    {
+      "path": "max-growth-height.bamboo.min",
+      "type": "int",
+      "default": 11,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Minimum height bamboo will naturally grow to",
+        "ja": "竹が自然に成長できる最小高さを指定します。"
+      }
+    },
+    {
+      "path": "max-growth-height.cactus",
+      "type": "int",
+      "default": 3,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum height cactus blocks will naturally grow to",
+        "ja": "サボテンが自然に成長できる最大高さを指定します。"
+      }
+    },
+    {
+      "path": "max-growth-height.reeds",
+      "type": "int",
+      "default": 3,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum height sugar cane/reeds blocks will naturally grow to",
+        "ja": "サトウキビが自然に成長できる最大高さを指定します。"
+      }
+    },
+    {
+      "path": "misc.allow-remote-ender-dragon-respawning",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables an optimization which verifies that end crystals placed in the end are placed on the portal frame before any attempt is made at respawning the ender dragon. Enabling this setting allows remote ender dragon respawning to work again.",
+        "ja": "遠隔地からのエンダードラゴン再召喚を可能にするため、エンドクリスタル配置位置を検証する最適化を無効にします。"
+      }
+    },
+    {
+      "path": "misc.alternate-current-update-order",
+      "type": "enum",
+      "default": "HORIZONTAL_FIRST_OUTWARD",
+      "min": null,
+      "max": null,
+      "values": [
+        "HORIZONTAL_FIRST_OUTWARD",
+        "HORIZONTAL_FIRST_INWARD",
+        "VERTICAL_FIRST_OUTWARD",
+        "VERTICAL_FIRST_INWARD"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls the order in which Alternate Current updates wires and neighboring blocks. Only has an effect when using the \"ALTERNATE_CURRENT\" redstone implementation.",
+        "ja": "Alternate Currentがワイヤーや隣接ブロックを更新する順序を指定します。この値はALTERNATE_CURRENT方式でのみ使います。"
+      }
+    },
+    {
+      "path": "misc.disable-end-credits",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to never send the end game credits when leaving the End",
+        "ja": "エンドを出た際にエンドクレジットを表示しないようにします。"
+      }
+    },
+    {
+      "path": "misc.disable-relative-projectile-velocity",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to ignore shooter velocity when calculating the velocity of a fired arrow",
+        "ja": "発射体の速度計算で射手の移動速度を無視します。"
+      }
+    },
+    {
+      "path": "misc.disable-sprint-interruption-on-attack",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines if the server will interrupt a sprinting player if they are attacked. When set to true, you may be subject to a Vanilla bug where sprinting is stopped and started when attacking players.",
+        "ja": "攻撃を受けたときのダッシュ中断を有効にするか設定します。Vanillaの不具合により、攻撃時にダッシュが中断と再開を繰り返すことがあります。"
+      }
+    },
+    {
+      "path": "misc.legacy-ender-pearl-behavior",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Determines if the server uses legacy (pre-1.21.2) ender pearl behavior. If enabled, ender pearls will no longer load chunks and will be saved with the launching player instead of being saved as independent entities in the world.",
+        "ja": "旧形式のエンダーパールの挙動を使います。有効にするとチャンクを読み込まず、投げたプレイヤーと一緒に保存します。"
+      }
+    },
+    {
+      "path": "misc.max-leash-distance",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Configure the maximum distance of a leash. If the distance to the leashed entity is greater, the leash will break.",
+        "ja": "リードが切れるまでの最大距離を設定します。距離がこれを超えると切れます。"
+      }
+    },
+    {
+      "path": "misc.redstone-implementation",
+      "type": "enum",
+      "default": "VANILLA",
+      "min": null,
+      "max": null,
+      "values": [
+        "VANILLA",
+        "EIGENCRAFT",
+        "ALTERNATE_CURRENT"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Specifies the redstone implementation that the server uses. Alternative implementations can greatly reduce the lag caused by redstone dust by optimizing power calculations and reducing the number of block and shape updates emitted.",
+        "ja": "サーバーが使うレッドストーン実装を指定します。代替実装はレッドストーンダスト処理を高速化することがあります。"
+      }
+    },
+    {
+      "path": "misc.show-sign-click-command-failure-msgs-to-player",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether commands executed by sign click should show failure messages to players",
+        "ja": "看板クリックで実行したコマンドの失敗メッセージをプレイヤーに表示するか設定します。"
+      }
+    },
+    {
+      "path": "misc.update-pathfinding-on-block-update",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the pathfinding of mobs is updated when a block is updated in the world. Disabling this option can improve the server performance significantly, while there is almost no noticeable effect on the game mechanics.",
+        "ja": "ブロック更新時にMobの経路探索を更新するか設定します。無効にするとMobが多い自動装置やレッドストーン時計で性能が向上する場合があります。"
+      }
+    },
+    {
+      "path": "scoreboards.allow-non-player-entities-on-scoreboards",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to always treat non-player entities as if they are never on a team. Disabling this may slightly decrease the amount of time the server spends calculating entity collisions",
+        "ja": "スコアボード上で非プレイヤーエンティティを常にチーム外として扱うか設定します。"
+      }
+    },
+    {
+      "path": "scoreboards.use-vanilla-world-scoreboard-name-coloring",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Instructs the server to use the Vanilla scoreboard for player nickname coloring. Useful when playing on adventure maps made for the Vanilla server and client",
+        "ja": "プレイヤーのニックネーム色にVanillaのワールドスコアボード方式を使います。Vanilla向けアドベンチャーマップで利用できます。"
+      }
+    },
+    {
+      "path": "spawn.allow-using-signs-inside-spawn-protection",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows players to use signs while inside spawn protection",
+        "ja": "スポーン保護範囲内でも看板を使えるようにします。"
+      }
+    },
+    {
+      "path": "tick-rates.behavior.villager.validatenearbypoi",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the tick rate of the validatenearbypoi behavior. of Villager entities",
+        "ja": "村人のvalidatenearbypoi behaviorをtickする間隔を指定します。"
+      }
+    },
+    {
+      "path": "tick-rates.behavior.*.*",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the behavior tick rate of an entity. -1 uses Vanilla. See timings for the names.",
+        "ja": "エンティティごとのbehaviorをtickする間隔を指定します。-1ではVanillaの設定を使います。"
+      }
+    },
+    {
+      "path": "tick-rates.container-update",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The rate, in ticks, at which the server updates containers and inventories. Higher values than 1 can cause item desync/ghosting or make block breaking progress appear to reset randomly.",
+        "ja": "コンテナやインベントリの更新間隔をtick単位で指定します。1より大きい値は表示上のずれなどを起こすことがあります。"
+      }
+    },
+    {
+      "path": "tick-rates.dry-farmland",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how frequently dry farmland blocks are ticked. Higher values slow down the rate at which farmland checks for moisture updates.",
+        "ja": "乾いた農地をtickする頻度を設定します。高い値では湿り気確認の頻度が下がり、-1ではランダムtickを無効にします。"
+      }
+    },
+    {
+      "path": "tick-rates.grass-spread",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the delay, in ticks, at which the server attempts to spread grass. Higher values will result in a slower spread",
+        "ja": "草が広がる処理を試みる間隔をtick単位で指定します。高い値では広がりが遅くなります。"
+      }
+    },
+    {
+      "path": "tick-rates.mob-spawner",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often mob spawners should tick to calculate available spawn areas and spawn new entities into the world. A value of -1 will disable all spawners",
+        "ja": "Mobスポナーが周囲を確認してMobを出現させるtick間隔を指定します。-1ではすべてのスポナーを無効にします。"
+      }
+    },
+    {
+      "path": "tick-rates.sensor.villager.secondarypoisensor",
+      "type": "int",
+      "default": 40,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the tick rate of the secondarypoisensor sensor of Villager entities",
+        "ja": "村人のsecondarypoisensor sensorをtickする間隔を指定します。"
+      }
+    },
+    {
+      "path": "tick-rates.sensor.*.*",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the sensor tick rate of an entity. -1 uses Vanilla. See timings for the names.",
+        "ja": "エンティティごとのsensorをtickする間隔を指定します。-1ではVanillaの設定を使います。"
+      }
+    },
+    {
+      "path": "tick-rates.wet-farmland",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how frequently wet farmland blocks are ticked. Higher values slow down the rate at which farmland checks for moisture updates.",
+        "ja": "湿った農地をtickする頻度を設定します。高い値では湿り気確認が遅くなり、-1ではランダムtickを無効にします。"
+      }
+    },
+    {
+      "path": "unsupported-settings.disable-world-ticking-when-empty",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Stops the ticking of the world when there are no players or force loaded chunks present in the world.",
+        "ja": "プレイヤーや強制読み込みチャンクがないワールドのtick処理を停止します。"
+      }
+    },
+    {
+      "path": "unsupported-settings.fix-invulnerable-end-crystal-exploit",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If set to false, the creation of invulnerable end crystals will be allowed. Fixes MC-108513",
+        "ja": "無敵のエンドクリスタル生成を許可するか設定します。falseでは生成が許可されます。"
+      }
+    },
+    {
+      "path": "unsupported-settings.ticking.chunks",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the server ticks chunks. This includes mob spawning, random block ticking, thunder, and ice and snow creation.",
+        "ja": "ワールドのチャンクをtickするか設定します。Mob出現、ブロックのランダムtick、雷雨、氷雪生成などに影響します。"
+      }
+    },
+    {
+      "path": "unsupported-settings.ticking.block-entities",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the server ticks block entities.",
+        "ja": "ワールドのブロックエンティティをtickするか設定します。"
+      }
+    }
+  ]
+}

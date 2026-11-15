@@ -1,0 +1,1466 @@
+{
+  "id": "paper-legacy",
+  "title": "Paper legacy configuration",
+  "format": "yaml",
+  "files": [
+    "paper.yml"
+  ],
+  "software": [
+    "paper"
+  ],
+  "since": null,
+  "until": "1.18.2",
+  "sources": [
+    "https://paper.readthedocs.io/en/latest/server/configuration.html",
+    "https://paperdocs-rework.readthedocs.io/en/rework/paper/configuration.html",
+    "https://github.com/PaperMC/docs/diffs/6?commit=71253f40531b1bf84154e9b56dd32062d2c2bf75&name=main&sha1=78158e0007492dba19edbd93ba9f5dd469960c6d&sha2=71253f40531b1bf84154e9b56dd32062d2c2bf75&short_path=8afc52b&w=false",
+    "https://docs.papermc.io/paper/anti-xray/"
+  ],
+  "entries": [
+    {
+      "path": "verbose",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether Paper logs its configuration values during startup.",
+        "ja": "起動時にPaperの設定値をログへ出すかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.enable-player-collisions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether players can collide with one another. Scoreboard plugins may affect this setting.",
+        "ja": "プレイヤー同士の衝突を有効にします。スコアボードを扱うプラグインがこの設定に影響することがあります。"
+      }
+    },
+    {
+      "path": "settings.player-auto-save-rate",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the tick delay between automatic player-data saves. The default uses the world's autosave interval.",
+        "ja": "プレイヤーデータを自動保存する間隔をtick数で指定します。既定値ではワールドの自動保存間隔を使います。"
+      }
+    },
+    {
+      "path": "settings.max-player-auto-save-per-tick",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits how many players may have their data autosaved in one tick. Paper selects a recommended value when this is negative.",
+        "ja": "1tickに自動保存するプレイヤーデータの数を制限します。負の値ではPaperが推奨値を選びます。"
+      }
+    },
+    {
+      "path": "settings.load-permissions-yml-before-plugins",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Loads Bukkit's permissions.yml before plugins so they can use its permissions during startup.",
+        "ja": "プラグインの起動前にBukkitのpermissions.ymlを読み込み、起動時から権限を使えるようにします。"
+      }
+    },
+    {
+      "path": "settings.bungee-online-mode",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how Paper handles authentication when it is behind BungeeCord. Match this value to the proxy's online-mode setting.",
+        "ja": "BungeeCordの背後でPaperが認証を扱う方法を設定します。プロキシのonline-modeと同じ値にしてください。"
+      }
+    },
+    {
+      "path": "settings.sleep-between-chunk-saves",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sleeps the chunk-save thread after each chunk save. Enabling it may increase memory use and slow chunk saving.",
+        "ja": "チャンクを保存するたびに保存スレッドを休止させます。有効にするとメモリ使用量が増え、保存が遅くなることがあります。"
+      }
+    },
+    {
+      "path": "settings.region-file-cache-size",
+      "type": "int",
+      "default": 256,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of region files kept in the cache.",
+        "ja": "キャッシュに保持するリージョンファイル数の上限を設定します。"
+      }
+    },
+    {
+      "path": "settings.save-empty-scoreboard-teams",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Removes empty scoreboard teams left by plugins, which can otherwise slow down player logins.",
+        "ja": "プラグインが残した空のスコアボードチームを削除します。空のチームが多いとプレイヤーのログインが遅くなることがあります。"
+      }
+    },
+    {
+      "path": "settings.incoming-packet-spam-threshold",
+      "type": "int",
+      "default": 300,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the threshold at which incoming packets are treated as spam and ignored.",
+        "ja": "受信パケットをスパムとみなして無視するしきい値を設定します。"
+      }
+    },
+    {
+      "path": "settings.remove-invalid-statistics",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Removes invalid statistics from world save data while it is loaded.",
+        "ja": "ワールドのセーブデータを読み込む際に、不正な統計情報を削除します。"
+      }
+    },
+    {
+      "path": "settings.min-chunk-load-threads",
+      "type": "int",
+      "default": 2,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum number of threads used for asynchronous chunk-loading file I/O. This affects file I/O threads only.",
+        "ja": "非同期チャンク読み込みのファイルI/Oに使うスレッド数の下限を設定します。ファイルI/O用スレッドだけに適用されます。"
+      }
+    },
+    {
+      "path": "settings.suggest-player-names-when-null-tab-completions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Returns player names for tab completion when a plugin does not provide its own completions.",
+        "ja": "プラグインが補完候補を返さない場合に、プレイヤー名をタブ補完候補として返します。"
+      }
+    },
+    {
+      "path": "timings.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the Timings reporting system is enabled.",
+        "ja": "Timingsによる計測を有効にするかどうかを設定します。"
+      }
+    },
+    {
+      "path": "timings.verbose",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Includes more specific information in Timings reports, such as the entity types causing lag.",
+        "ja": "Timingsレポートに、遅延の原因となるエンティティの種類など、より詳しい情報を含めます。"
+      }
+    },
+    {
+      "path": "timings.server-name-privacy",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Hides server-name information in Timings reports.",
+        "ja": "Timingsレポートでサーバー名を隠します。"
+      }
+    },
+    {
+      "path": "timings.hidden-config-entries",
+      "type": "list",
+      "default": [
+        "database",
+        "settings.bungeecord-addresses"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists configuration entries to hide from Timings reports.",
+        "ja": "Timingsレポートから隠す設定項目を列挙します。"
+      }
+    },
+    {
+      "path": "timings.history-interval",
+      "type": "int",
+      "default": 300,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the interval in seconds between data points in a Timings report.",
+        "ja": "Timingsレポートでデータを記録する間隔を秒数で設定します。"
+      }
+    },
+    {
+      "path": "timings.history-length",
+      "type": "int",
+      "default": 3600,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how long data is retained for a Timings report, in seconds.",
+        "ja": "Timingsレポートにデータを保持する長さを秒数で設定します。"
+      }
+    },
+    {
+      "path": "messages.kick.authentication-servers-down",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message used when Mojang authentication servers are unavailable. An empty value uses the vanilla translatable message.",
+        "ja": "Mojang認証サーバーが利用できないときのキックメッセージを設定します。空文字列ではVanillaの翻訳メッセージを使います。"
+      }
+    },
+    {
+      "path": "messages.kick.flying-player",
+      "type": "string",
+      "default": "Flying is not enabled on this server",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the message used when a player is kicked for flying.",
+        "ja": "飛行を理由にプレイヤーをキックするときのメッセージを設定します。"
+      }
+    },
+    {
+      "path": "messages.kick.flying-vehicle",
+      "type": "string",
+      "default": "Flying is not enabled on this server",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the message used when a player's vehicle is kicked for flying.",
+        "ja": "乗り物の飛行を理由にキックするときのメッセージを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.keep-spawn-loaded-range",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of chunks around the world spawn that are kept loaded.",
+        "ja": "ワールドのスポーン地点の周囲で読み込み状態を保つチャンク数を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.auto-save-interval",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets this world's save interval in ticks instead of using Bukkit's global autosave value. The default uses the global value.",
+        "ja": "Bukkit全体の自動保存値に代えて、このワールドの保存間隔をtick数で設定します。既定値では全体設定を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.parrots-are-unaffected-by-player-movement",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Keeps parrots on a player's shoulder while the player moves. Crouch to make them leave.",
+        "ja": "プレイヤーが移動してもオウムが肩から落ちないようにします。しゃがむと降ります。"
+      }
+    },
+    {
+      "path": "world-settings.*.game-mechanics.disable-player-crits",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables critical hits in PvP, treating them as normal hits.",
+        "ja": "PvPでクリティカルヒットを無効にし、通常の攻撃として扱います。"
+      }
+    },
+    {
+      "path": "world-settings.*.game-mechanics.disable-chest-cat-detection",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows chests to be opened while a cat is sitting on top of them.",
+        "ja": "ネコが上に座っているチェストを開けられるようにします。"
+      }
+    },
+    {
+      "path": "world-settings.*.game-mechanics.disable-end-credits",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents the end-game credits from appearing when leaving the End.",
+        "ja": "ジ・エンドを離れるときにエンディングクレジットを表示しません。"
+      }
+    },
+    {
+      "path": "world-settings.*.disable-explosion-knockback",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Blocks knockback caused by explosions.",
+        "ja": "爆発によるノックバックを無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.elytra-hit-wall-damage",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Applies damage when a player using an elytra flies into a wall.",
+        "ja": "エリトラで飛行中のプレイヤーが壁に衝突したときにダメージを与えます。"
+      }
+    },
+    {
+      "path": "world-settings.*.grass-spread-tick-rate",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the delay in ticks between attempts to spread grass. Higher values slow down spreading.",
+        "ja": "草が広がる処理の間隔をtick数で設定します。値を大きくすると広がる速度が遅くなります。"
+      }
+    },
+    {
+      "path": "world-settings.*.allow-leashing-undead-horse",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows players to attach leads to undead horse types.",
+        "ja": "アンデッド系の馬にリードを付けられるようにします。"
+      }
+    },
+    {
+      "path": "world-settings.*.frosted-ice.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables and ticks frosted ice blocks.",
+        "ja": "薄氷ブロックを有効にしてtick処理します。"
+      }
+    },
+    {
+      "path": "world-settings.*.frosted-ice.delay.min",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum random value used for frosted-ice effects.",
+        "ja": "薄氷の効果に使う乱数値の下限を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.frosted-ice.delay.max",
+      "type": "int",
+      "default": 40,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum random value used for frosted-ice effects.",
+        "ja": "薄氷の効果に使う乱数値の上限を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hopper.push-based",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Uses an alternative hopper system in which items push themselves into hoppers. The documentation warns that this feature is buggy.",
+        "ja": "アイテムがホッパーへ押し込まれる別方式を使います。ドキュメントでは不具合があると警告されています。"
+      }
+    },
+    {
+      "path": "world-settings.*.hopper.cooldown-when-full",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Applies a short cooldown to a full hopper instead of repeatedly trying to pull items.",
+        "ja": "満杯のホッパーがアイテムを繰り返し吸い込もうとする代わりに、短いクールダウンを適用します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hopper.disable-move-event",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables InventoryMoveItemEvent for hoppers. Plugins that depend on this event may stop working.",
+        "ja": "ホッパーのInventoryMoveItemEventを無効にします。このイベントに依存するプラグインが動作しなくなることがあります。"
+      }
+    },
+    {
+      "path": "world-settings.*.baby-zombie-movement-speed",
+      "type": "float",
+      "default": 0.5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Modifies baby zombie movement speed relative to its base speed.",
+        "ja": "子どもゾンビの移動速度を基本速度に対する倍率で調整します。"
+      }
+    },
+    {
+      "path": "world-settings.*.keep-spawn-loaded",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Keeps the world's spawn chunks loaded at all times.",
+        "ja": "ワールドのスポーンチャンクを常に読み込み状態に保ちます。"
+      }
+    },
+    {
+      "path": "world-settings.*.enable-treasure-maps",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows villagers to trade treasure maps.",
+        "ja": "村人が宝の地図を取引できるようにします。"
+      }
+    },
+    {
+      "path": "world-settings.*.treasure-maps-return-already-discovered",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Makes treasure maps target the first location found, even if it has already been discovered.",
+        "ja": "宝の地図が、すでに発見済みの場所も含め、最初に見つかった場所を対象にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.nether-ceiling-void-damage-height",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the Y level above which entities in the Nether take void damage. A value of 0 disables this behavior.",
+        "ja": "ネザーで奈落ダメージを受けるY座標を設定します。0では無効になります。"
+      }
+    },
+    {
+      "path": "world-settings.*.allow-non-player-entities-on-scoreboards",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Treats non-player entities as if they are never on a scoreboard. Enabling this may increase collision-calculation time.",
+        "ja": "プレイヤー以外のエンティティをスコアボードに所属しないものとして扱います。有効にすると衝突計算に時間がかかることがあります。"
+      }
+    },
+    {
+      "path": "world-settings.*.container-update-tick-rate",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how often containers and inventories are updated, in ticks.",
+        "ja": "コンテナとインベントリを更新する間隔をtick数で設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.use-alternate-fallingblock-onGround-detection",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Uses an alternative method to detect when falling blocks are on the ground.",
+        "ja": "落下ブロックが地面に着いたかどうかを別の方法で判定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.prevent-tnt-from-moving-in-water",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents primed TNT entities from moving in flowing water.",
+        "ja": "起爆済みTNTが流れる水で移動しないようにします。"
+      }
+    },
+    {
+      "path": "world-settings.*.non-player-arrow-despawn-rate",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the despawn time in ticks for arrows shot by non-player entities. The default uses the shared arrow despawn rate from spigot.yml.",
+        "ja": "プレイヤー以外が放った矢が消えるまでの時間をtick数で設定します。既定値ではspigot.ymlの共通設定を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether Anti-Xray is enabled for this world.",
+        "ja": "このワールドでAnti-Xrayを有効にするかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.engine-mode",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Selects the Anti-Xray mode. Mode 1 replaces hidden blocks with configured replacement blocks; mode 2 uses randomly generated hidden blocks.",
+        "ja": "Anti-Xrayの方式を選びます。1では隠すブロックを置換ブロックに変え、2ではhidden-blocksからランダムに置き換えます。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.chunk-edge-mode",
+      "type": "int",
+      "default": 3,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether Anti-Xray obfuscates chunk edges, waits for neighboring chunks, or loads a neighboring chunk. The documented modes are 1, 2, and 3.",
+        "ja": "Anti-Xrayでチャンク端を隠すか、隣接チャンクを待つか、隣接チャンクを読み込むかを設定します。ドキュメントには1、2、3が記載されています。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.max-chunk-section-index",
+      "type": "int",
+      "default": 3,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the highest chunk section index processed by Anti-Xray. The documented height is calculated as (index + 1) * 16 blocks.",
+        "ja": "Anti-Xrayが処理するチャンクセクションの最大インデックスを設定します。高さは(index + 1) * 16ブロックで計算します。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.hidden-blocks",
+      "type": "list",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists the block types that Anti-Xray hides or obfuscates. The list uses Minecraft block names.",
+        "ja": "Anti-Xrayで隠す、または置き換えるブロックを列挙します。Minecraftのブロック名を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.replacement-blocks",
+      "type": "list",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists the block types used to replace hidden blocks in the documented Anti-Xray mode.",
+        "ja": "ドキュメントに記載されたAnti-Xray方式で、隠すブロックの置換に使うブロックを列挙します。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.max-block-height",
+      "type": "int",
+      "default": 64,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the highest Y level at which Anti-Xray operates. Values are rounded down to a multiple of 16.",
+        "ja": "Anti-Xrayが動作する最高Y座標を設定します。値は16の倍数へ切り下げられます。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.update-radius",
+      "type": "int",
+      "default": 2,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the radius around a player interaction for sending real block data. The documented values are 0, 1, and 2; other values are clamped.",
+        "ja": "プレイヤーの操作時に実際のブロック情報を送る範囲を設定します。使用できる値は0、1、2で、範囲外の値は補正されます。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.lava-obscures",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether Anti-Xray also obfuscates blocks touching lava.",
+        "ja": "溶岩に接しているブロックもAnti-Xrayで隠すかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.anti-xray.use-permission",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows players with the paper.antixray.bypass permission to bypass Anti-Xray.",
+        "ja": "paper.antixray.bypass権限を持つプレイヤーがAnti-Xrayを回避できるようにします。"
+      }
+    },
+    {
+      "path": "world-settings.*.experience-merge-max-value",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets a maximum experience value for merged experience orbs. The default allows orbs to merge without a maximum.",
+        "ja": "結合する経験値オーブの値に上限を設定します。既定値では上限なしで結合します。"
+      }
+    },
+    {
+      "path": "world-settings.*.armor-stands-do-collision-entity-lookups",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether armor stands check for entities during collision handling.",
+        "ja": "防具立てが衝突処理でエンティティを検索するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.queue-light-updates",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Queues lighting updates until the end of the tick and processes them when time is available.",
+        "ja": "光源更新をtickの終わりまでキューに入れ、時間があるときに処理します。"
+      }
+    },
+    {
+      "path": "world-settings.*.optimize-explosions",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Caches entity lookups during explosions instead of recalculating them repeatedly.",
+        "ja": "爆発中のエンティティ検索を繰り返さず、結果をキャッシュします。"
+      }
+    },
+    {
+      "path": "world-settings.*.use-chunk-inhabited-timer",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Includes chunk inhabited time in server calculations. Player activity increases this timer.",
+        "ja": "サーバーの計算にチャンクの滞在時間を含めます。この時間はプレイヤーの活動で増加します。"
+      }
+    },
+    {
+      "path": "world-settings.*.use-vanilla-world-scoreboard-name-coloring",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Uses the Vanilla scoreboard for player nickname coloring.",
+        "ja": "プレイヤーのニックネーム色付けにVanillaのスコアボードを使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.delay-chunk-unloads-by",
+      "type": "string",
+      "default": "10s",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Delays chunk unloading by a duration such as 10s, to reduce repeated chunk loading and unloading.",
+        "ja": "チャンクの読み込みと破棄の繰り返しを減らすため、10sなどの時間だけ破棄を遅らせます。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-auto-save-chunks-per-tick",
+      "type": "int",
+      "default": 24,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of chunks saved by the autosave system in one tick.",
+        "ja": "自動保存システムが1tickに保存するチャンク数の上限を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.save-queue-limit-for-auto-save",
+      "type": "int",
+      "default": 50,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Stops adding chunks to the autosave queue until the queue drops below this size.",
+        "ja": "自動保存キューがこの数を下回るまで、新しいチャンクをキューへ追加しません。"
+      }
+    },
+    {
+      "path": "world-settings.*.remove-corrupt-tile-entities",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Removes tile entities that Paper detects as broken and cannot repair.",
+        "ja": "Paperが破損して修復できないと判定したブロックエンティティを削除します。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-chunk-sends-per-tick",
+      "type": "int",
+      "default": 81,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of chunks sent to clients in one tick.",
+        "ja": "1tickにクライアントへ送信するチャンク数の上限を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-chunk-gens-per-tick",
+      "type": "int",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of chunks generated in one tick.",
+        "ja": "1tickに生成するチャンク数の上限を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-growth-height.cactus",
+      "type": "int",
+      "default": 3,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum natural height of cactus.",
+        "ja": "サボテンが自然に成長する最大の高さを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-growth-height.reeds",
+      "type": "int",
+      "default": 3,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum natural height of sugar cane.",
+        "ja": "サトウキビが自然に成長する最大の高さを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.fishing-time-range.MinimumTicks",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum random tick count before a fish is caught.",
+        "ja": "魚が釣れるまでの乱数tick数の最小値を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.fishing-time-range.MaximumTicks",
+      "type": "int",
+      "default": 600,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum random tick count before a fish is caught.",
+        "ja": "魚が釣れるまでの乱数tick数の最大値を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.despawn-ranges.soft",
+      "type": "int",
+      "default": 32,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the distance at which entities may be randomly selected to despawn.",
+        "ja": "エンティティがランダムに選ばれて消える距離を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.despawn-ranges.hard",
+      "type": "int",
+      "default": 128,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the distance at which entities are forcibly despawned.",
+        "ja": "エンティティを強制的に消す距離を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.falling-block-height-nerf",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the height at which falling blocks are removed. Values below 1 disable this feature.",
+        "ja": "落下ブロックを削除する高さを設定します。1未満では無効になります。"
+      }
+    },
+    {
+      "path": "world-settings.*.tnt-entity-height-nerf",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the height at which primed TNT entities are removed. Values below 1 disable this feature.",
+        "ja": "起爆済みTNTを削除する高さを設定します。1未満では無効になります。"
+      }
+    },
+    {
+      "path": "world-settings.*.water-over-lava-flow-speed",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the speed at which water flows over lava.",
+        "ja": "溶岩の上を流れる水の速度を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.fast-drain.lava",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether lava source blocks drain more quickly when removed.",
+        "ja": "溶岩の源ブロックが除去されたときに、より速く流れ出すかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.fast-drain.water",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether water source blocks drain more quickly when removed.",
+        "ja": "水の源ブロックが除去されたときに、より速く流れ出すかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.lava-flow-speed.normal",
+      "type": "int",
+      "default": 30,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets lava flow speed in the Overworld.",
+        "ja": "オーバーワールドでの溶岩の流れる速さを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.lava-flow-speed.nether",
+      "type": "int",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets lava flow speed in the Nether.",
+        "ja": "ネザーでの溶岩の流れる速さを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.lootables.auto-replenish",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Automatically replenishes lootable containers.",
+        "ja": "戦利品コンテナを自動で補充します。"
+      }
+    },
+    {
+      "path": "world-settings.*.lootables.restrict-player-reloot",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents the same players from repeatedly looting the same containers.",
+        "ja": "同じプレイヤーが同じコンテナから繰り返し戦利品を得ることを防ぎます。"
+      }
+    },
+    {
+      "path": "world-settings.*.lootables.reset-seed-on-fill",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Resets the loot seed whenever a container is replenished.",
+        "ja": "コンテナを補充するたびに戦利品シードをリセットします。"
+      }
+    },
+    {
+      "path": "world-settings.*.lootables.max-refills",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of times a lootable container can be replenished. The default permits unlimited refills.",
+        "ja": "戦利品コンテナを補充できる最大回数を設定します。既定値では無制限です。"
+      }
+    },
+    {
+      "path": "world-settings.*.lootables.refresh-min",
+      "type": "string",
+      "default": "12h",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum wait before a lootable container can be replenished. Time values support seconds, hours, and days.",
+        "ja": "戦利品コンテナを補充できるようになるまでの最短時間を設定します。秒、時間、日単位の値を使えます。"
+      }
+    },
+    {
+      "path": "world-settings.*.lootables.refresh-max",
+      "type": "string",
+      "default": "2d",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum wait before a lootable container is replenished. Time values support seconds, hours, and days.",
+        "ja": "戦利品コンテナが補充されるまでの最長時間を設定します。秒、時間、日単位の値を使えます。"
+      }
+    },
+    {
+      "path": "world-settings.*.filter-nbt-data-from-spawn-eggs-and-related",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Removes certain NBT data from spawn eggs, falling blocks, and similar items. Some adventure maps may require disabling it.",
+        "ja": "スポーンエッグや落下ブロックなどから一部のNBTデータを削除します。無効化が必要なアドベンチャーマップもあります。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-entity-collisions",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Stops processing entity collisions after this limit is reached.",
+        "ja": "この上限に達すると、エンティティの衝突処理を停止します。"
+      }
+    },
+    {
+      "path": "world-settings.*.disable-creeper-lingering-effect",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents creepers from randomly leaving a lingering area-effect cloud.",
+        "ja": "クリーパーがランダムに残留するエリア効果クラウドを残さないようにします。"
+      }
+    },
+    {
+      "path": "world-settings.*.disable-thunder",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables thunderstorms.",
+        "ja": "雷雨を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.skeleton-horse-thunder-spawn-chance",
+      "type": "float",
+      "default": 0.01,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the chance that a skeleton horse trap spawns during a thunderstorm.",
+        "ja": "雷雨のときにスケルトンホースのトラップが出現する確率を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.disable-ice-and-snow",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables ice and snow formation. Cauldrons are also no longer filled by rain or snow.",
+        "ja": "氷や雪の生成を無効にします。雨や雪で大釜が満たされなくなります。"
+      }
+    },
+    {
+      "path": "world-settings.*.fire-physics-event-for-redstone",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Fires BlockPhysicsEvent when redstone is activated.",
+        "ja": "レッドストーンが作動したときにBlockPhysicsEventを発火します。"
+      }
+    },
+    {
+      "path": "world-settings.*.mob-spawner-tick-rate",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how often mob spawners check for valid spawn areas and spawn entities. A value of -1 disables spawners.",
+        "ja": "モンスタースポナーが出現可能な場所を調べてエンティティを出現させる間隔を設定します。-1ではスポナーを無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.all-chunks-are-slime-chunks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Treats every chunk as a slime chunk.",
+        "ja": "すべてのチャンクをスライムチャンクとして扱います。"
+      }
+    },
+    {
+      "path": "world-settings.*.squid-spawn-height.maximum",
+      "type": "float",
+      "default": 0.0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum Y level for squid spawning. The default defers to Minecraft's default sea level.",
+        "ja": "イカが出現する最大Y座標を設定します。既定値ではMinecraftの海面高度を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.disable-teleportation-suffocation-check",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables the suffocation check performed before teleporting a player. This may allow teleportation into solid blocks.",
+        "ja": "プレイヤーをテレポートする前の窒息判定を無効にします。固体ブロック内へのテレポートを許すことがあります。"
+      }
+    },
+    {
+      "path": "world-settings.*.portal-search-radius",
+      "type": "int",
+      "default": 128,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum range used to find an existing Nether portal before a new one is created.",
+        "ja": "新しいネザーポータルを作る前に、既存ポータルを探す最大範囲を設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.generator-settings.flat-bedrock",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Generates bedrock as one flat layer.",
+        "ja": "岩盤を平らな1層として生成します。"
+      }
+    },
+    {
+      "path": "world-settings.*.no-tick-view-distance",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.17",
+      "until": "1.17.1",
+      "doc": {
+        "en": "Sets the no-tick view distance. A value of -1 disables it. The setting was replaced by server.properties view-distance in Minecraft 1.18.",
+        "ja": "no-tick-view-distanceを設定します。-1で無効になり、Minecraft 1.18ではserver.propertiesのview-distanceに置き換えられました。"
+      }
+    }
+  ]
+}

@@ -1,0 +1,2282 @@
+{
+  "id": "leaf-global",
+  "title": "Leaf global configuration",
+  "format": "yaml",
+  "files": [
+    "config/leaf-global.yml"
+  ],
+  "software": [
+    "leaf"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://www.leafmc.one/en/docs/config/leaf-global",
+    "https://github.com/Winds-Studio/Leaf-website/blob/main/src/components/config/data/leaf-global-latest.ts",
+    "https://github.com/Winds-Studio/Leaf-website/blob/main/content/docs/en/config/message/leaf-global-latest-en.ts",
+    "https://raw.githubusercontent.com/Winds-Studio/Leaf/ver/26.3/leaf-server/src/main/java/org/dreeam/leaf/config/LeafConfig.java",
+    "https://raw.githubusercontent.com/Winds-Studio/Leaf/ver/26.3/leaf-server/src/main/java/org/dreeam/leaf/config/modules/async/AsyncPathfinding.java",
+    "https://raw.githubusercontent.com/Winds-Studio/Leaf/ver/26.3/leaf-server/src/main/java/org/dreeam/leaf/config/modules/async/AsyncMobSpawning.java",
+    "https://raw.githubusercontent.com/Winds-Studio/Leaf/ver/26.3/leaf-server/src/main/java/org/dreeam/leaf/config/modules/async/SparklyPaperParallelWorldTicking.java",
+    "https://raw.githubusercontent.com/Winds-Studio/Leaf/ver/26.3/leaf-server/src/main/java/org/dreeam/leaf/config/modules/misc/RegionFormatConfig.java",
+    "https://raw.githubusercontent.com/Winds-Studio/Leaf/ver/26.2/leaf-server/src/main/java/org/dreeam/leaf/config/modules/misc/RegionFormatConfig.java"
+  ],
+  "entries": [
+    {
+      "path": "config-version",
+      "type": "string",
+      "default": "3.0",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Records the Leaf configuration format version.",
+        "ja": "Leaf設定ファイルの形式バージョンを記録します。"
+      }
+    },
+    {
+      "path": "async.async-chunk-send.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to make packing and sending chunk packets asynchronous.",
+        "ja": "チャンクパケットの組み立てと送信を非同期で行うかどうかを設定します。"
+      }
+    },
+    {
+      "path": "async.async-mob-spawning.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to make mob spawning asynchronous.",
+        "ja": "モブのスポーン処理を非同期で行うかどうかを設定します。"
+      }
+    },
+    {
+      "path": "async.async-pathfinding.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to make the mob pathfinding calculation asynchronously.",
+        "ja": "モブの経路探索を非同期で計算するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "async.async-pathfinding.max-threads",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum number of threads for async mob pathfinding to use.",
+        "ja": "非同期のモブ経路探索に使うスレッド数の上限を指定します。"
+      }
+    },
+    {
+      "path": "async.async-pathfinding.keepalive",
+      "type": "int",
+      "default": 60,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The thread keepalive time, threads with no tasks will be terminated if they exceed the time.",
+        "ja": "タスクのないスレッドを終了するまでの待機時間を秒で指定します。"
+      }
+    },
+    {
+      "path": "async.async-pathfinding.queue-size",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum size of the queue for pending mob pathfinding tasks.",
+        "ja": "実行待ちの経路探索タスクを保持するキューの最大サイズを指定します。"
+      }
+    },
+    {
+      "path": "async.async-pathfinding.reject-policy",
+      "type": "enum",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": [
+        "FLUSH_ALL",
+        "CALLER_RUNS"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The policy to use when the pathfinding task queue is full, and a new task is submitted.",
+        "ja": "キューが満杯のとき、新しい経路探索タスクを処理する方式を設定します。"
+      }
+    },
+    {
+      "path": "async.async-playerdata-save.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to make player data saving asynchronous (I/O operations are expensive).",
+        "ja": "プレイヤーデータの保存を非同期で行うかどうかを設定します。"
+      }
+    },
+    {
+      "path": "async.async-entity-tracker.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to make entity tracking asynchronous.",
+        "ja": "エンティティ追跡を非同期で行うかどうかを設定します。"
+      }
+    },
+    {
+      "path": "async.async-entity-tracker.threads",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maximum number of threads for async entity tracker to use.",
+        "ja": "非同期エンティティ追跡に使うスレッド数の上限を指定します。"
+      }
+    },
+    {
+      "path": "async.parallel-world-ticking.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to parallel process different worlds in separate threads, which can improve performance on a multi-core system.",
+        "ja": "複数のワールドを別々のスレッドで並列処理するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "async.parallel-world-ticking.threads",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Number of threads dedicated to parallel world ticking.",
+        "ja": "並列ワールド処理に使うスレッド数を指定します。"
+      }
+    },
+    {
+      "path": "async.parallel-world-ticking.log-container-creation-stacktraces",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to log stacktraces when containers (like Block Entities or Entities) are created during parallel ticking.",
+        "ja": "並列処理中にコンテナが作られた際、スタックトレースを記録するか設定します。"
+      }
+    },
+    {
+      "path": "async.parallel-world-ticking.disable-hard-throw",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to disable hard throws (which usually stop the server) related to parallel ticking errors.",
+        "ja": "並列処理のエラーでサーバーを停止する例外を無効にするか設定します。"
+      }
+    },
+    {
+      "path": "async.parallel-world-ticking.async-unsafe-read-handling",
+      "type": "string",
+      "default": "DISABLED",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to run asynchronous tasks synchronously within the parallel ticking system.",
+        "ja": "並列処理中に非同期タスクを同期実行する方式を設定します。"
+      }
+    },
+    {
+      "path": "performance.check-survival-before-growth.cactus-check-survival",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to check if the cactus can survive before trying to grow.",
+        "ja": "サボテンの成長前に生存可能か確認するか設定します。"
+      }
+    },
+    {
+      "path": "performance.despawn-time.proactive-weak-loading-despawn",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable proactive despawn check for weak-loaded entities.",
+        "ja": "読み込みが不完全なエンティティのデスポーンを事前に確認するか設定します。"
+      }
+    },
+    {
+      "path": "performance.dont-save-entity.dont-save-primed-tnt",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to disable saving primed TNT on chunk unloads.",
+        "ja": "チャンクのアンロード時に点火済みTNTを保存しないか設定します。"
+      }
+    },
+    {
+      "path": "performance.dont-save-entity.dont-save-falling-block",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to disable saving falling blocks on chunk unloads.",
+        "ja": "チャンクのアンロード時に落下ブロックを保存しないか設定します。"
+      }
+    },
+    {
+      "path": "performance.dab.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable the DAB.",
+        "ja": "DABを有効にするか設定します。"
+      }
+    },
+    {
+      "path": "performance.dab.dont-enable-if-in-water",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the non-aquatic entities in the water will be excluded by DAB.",
+        "ja": "水棲でないエンティティが水中にいる場合、DABを適用しないか設定します。"
+      }
+    },
+    {
+      "path": "performance.dab.start-distance",
+      "type": "int",
+      "default": 12,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The distance determines how far away an entity has to be from the player to start being affected by DAB.",
+        "ja": "プレイヤーからこの距離より遠いエンティティにDABを適用し始めます。"
+      }
+    },
+    {
+      "path": "performance.dab.max-tick-freq",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum tick time defines how often the furthest entity will get their pathfinders and behaviors ticked.",
+        "ja": "最も遠いエンティティの経路探索や行動を更新する最大間隔を指定します。"
+      }
+    },
+    {
+      "path": "performance.dab.activation-dist-mod",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The tick frequency that defines how much distance modifies an entity's tick frequency.",
+        "ja": "距離に応じてエンティティの更新頻度を調整する値を指定します。"
+      }
+    },
+    {
+      "path": "performance.dab.blacklisted-entities",
+      "type": "list",
+      "default": [
+        "villager",
+        "axolotl",
+        "hoglin",
+        "zombified_piglin",
+        "goat"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A list of entity types that will not be affected by DAB.",
+        "ja": "DABの対象外にするエンティティ型を列挙します。"
+      }
+    },
+    {
+      "path": "performance.enable-cached-minecraft-to-bukkit-entitytype-convert",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to cache the result of *Minecraft EntityType* to *Bukkit EntityType* conversion.",
+        "ja": "Minecraft EntityTypeからBukkit EntityTypeへの変換結果をキャッシュするか設定します。"
+      }
+    },
+    {
+      "path": "performance.entity-goal.start-tick-chance.nearest-attackable-target",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often does the nearest attackable target goal attempt to start running for an entity.",
+        "ja": "エンティティの最近攻撃対象ゴールを開始する頻度を指定します。"
+      }
+    },
+    {
+      "path": "performance.entity-goal.start-tick-chance.follow-parent",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often does the follow parent goal attempt to start running for an entity.",
+        "ja": "親を追うゴールを開始する頻度を指定します。"
+      }
+    },
+    {
+      "path": "performance.entity-goal.start-tick-chance.avoid-entity",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often does the avoid entity goal attempt to start running for an entity.",
+        "ja": "エンティティ回避ゴールを開始する頻度を指定します。"
+      }
+    },
+    {
+      "path": "performance.entity-goal.start-tick-chance.temptation",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often does the temptation goal attempt to start running for an entity.",
+        "ja": "誘引ゴールを開始する頻度を指定します。"
+      }
+    },
+    {
+      "path": "performance.entity-goal.start-tick-chance.enderman-look-for-player",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often does the look for player goal attempt to start running for an enderman.",
+        "ja": "エンダーマンがプレイヤーを探すゴールを開始する頻度を指定します。"
+      }
+    },
+    {
+      "path": "performance.fast-biome-manager-seed-obfuscation.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to replace vanilla SHA-256 seed obfuscation in BiomeManager with XXHash.",
+        "ja": "BiomeManagerのシード難読化をSHA-256からXXHashに置き換えるか設定します。"
+      }
+    },
+    {
+      "path": "performance.fast-biome-manager-seed-obfuscation.seed-obfuscation-key",
+      "type": "int",
+      "default": 513317,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Seed obfuscation key for XXHash.",
+        "ja": "XXHashでシードを難読化するためのキーを指定します。"
+      }
+    },
+    {
+      "path": "performance.faster-random-generator.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the faster random generator introduced in Java 17 (Xoroshiro128PlusPlus).",
+        "ja": "Java 17で導入された高速乱数生成器Xoroshiro128PlusPlusを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.faster-random-generator.enable-for-worldgen",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the faster random generator for world generation.",
+        "ja": "ワールド生成にも高速乱数生成器を使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.faster-random-generator.warn-for-slime-chunk",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the server prints a warning message on startup if the faster random generator for slime chunk generation is enabled.",
+        "ja": "スライムチャンク生成に高速乱数生成器を使う場合、起動時に警告するか設定します。"
+      }
+    },
+    {
+      "path": "performance.faster-random-generator.use-legacy-random-for-slime-chunk",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use legacy random source (java.util.Random) for slime chunk generation to follow the vanilla behavior.",
+        "ja": "スライムチャンク生成にバニラ互換のjava.util.Randomを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.faster-structure-gen-future-sequencing",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use faster task sequencing for generating structures.",
+        "ja": "構造物生成のタスク順序を高速化するか設定します。"
+      }
+    },
+    {
+      "path": "performance.reuse-random-ticking-blockpos",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to reuse part of the blockpos instance during random block ticking.",
+        "ja": "ランダムブロックtick中にBlockPosインスタンスの一部を再利用するか設定します。"
+      }
+    },
+    {
+      "path": "performance.cache-biome.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to cache the biome data of the block location, instead of recalculating the biome every time searching.",
+        "ja": "座標のバイオーム情報を再計算せずキャッシュするか設定します。"
+      }
+    },
+    {
+      "path": "performance.cache-biome.mob-spawning",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to cache the biome in mob spawning logic.",
+        "ja": "モブのスポーン処理でバイオーム情報をキャッシュするか設定します。"
+      }
+    },
+    {
+      "path": "performance.cache-biome.advancements",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to cache the biome in player advancement calculation logic.",
+        "ja": "プレイヤーの進捗判定でバイオーム情報をキャッシュするか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-block-entities",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the more efficient map data structure for block entity ticker storage.",
+        "ja": "ブロックエンティティのtick保存に効率的なマップ構造を使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-mob-despawn",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use more efficient logic for mob natural despawn.",
+        "ja": "モブの自然デスポーン処理を効率化するか設定します。"
+      }
+    },
+    {
+      "path": "performance.only-tick-items-in-hand",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to tick or update items only if the player holds them in the main hand or offhand, instead of ticking the entire inventory.",
+        "ja": "メインハンドとオフハンドのアイテムだけをtickし、インベントリ全体はtickしないか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-mob-spawning",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use a more efficient data structure for collecting spawning chunks and nearest player lookup.",
+        "ja": "スポーン対象チャンクと最寄りプレイヤーの検索に効率的なデータ構造を使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-no-action-time.disable-light-check",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to skip the light check in the monster's noActionTime update.",
+        "ja": "モンスターのnoActionTime更新時に光量判定を省略するか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-player-movement",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to skip unnecessary block edge checks on player moving and avoid redundant view distance updates.",
+        "ja": "プレイヤー移動時に不要なブロック境界判定と視認距離更新を省くか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-random-tick",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the rewritten random ticking system.",
+        "ja": "書き換え版のランダムtickシステムを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimize-waypoint",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to update the player's waypoint tracking data only when their block positions change.",
+        "ja": "ブロック位置が変わった場合だけウェイポイント追跡データを更新するか設定します。"
+      }
+    },
+    {
+      "path": "performance.optimized-powered-rails",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use optimized powered rails.",
+        "ja": "パワードレールの処理を最適化するか設定します。"
+      }
+    },
+    {
+      "path": "performance.reduce-packets.reduce-entity-move-packets",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to reduce the useless entity movement packets sent to players (e.g., small movements).",
+        "ja": "小さな移動など、不要なエンティティ移動パケットを減らすか設定します。"
+      }
+    },
+    {
+      "path": "performance.reduce-packets.reduce-entity-motion-packets",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to filter useless entity motion packets (ClientboundSetEntityMotionPacket).",
+        "ja": "不要なエンティティ運動パケットを除去するか設定します。"
+      }
+    },
+    {
+      "path": "performance.reduce-packets.disable-useless-particles",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to disable server-side logic for cosmetic particles (Sprint, Death, Effect, Water Splash, and Bubble Column).",
+        "ja": "装飾用パーティクルのサーバー側処理を無効にするか設定します。"
+      }
+    },
+    {
+      "path": "performance.skip-ai-for-non-aware-mob",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to skip AI ticks entirely for mobs that are both _inactive_ and _unaware_.",
+        "ja": "非アクティブかつ周囲を認識していないモブのAI tickを省くか設定します。"
+      }
+    },
+    {
+      "path": "performance.datapack.skip-inactive-entity-for-execute-command",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to skip selecting inactive entities when using the execute command.",
+        "ja": "executeコマンドの対象選択で非アクティブなエンティティを除外するか設定します。"
+      }
+    },
+    {
+      "path": "performance.skip-map-item-data-updates-if-map-does-not-have-craftmaprenderer",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to skip updating map item data if the map doesn't have a renderer (CraftMapRenderer).",
+        "ja": "レンダラーのない地図アイテムのデータ更新を省略するか設定します。"
+      }
+    },
+    {
+      "path": "performance.sleeping-block-entity",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use Lithium's sleeping block entity optimization.",
+        "ja": "Lithiumのスリープ中ブロックエンティティ最適化を使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to skip mob spawning in chunks that have repeatedly failed to spawn mobs beyond the configured min-failed value.",
+        "ja": "スポーン失敗が続いたチャンクでモブのスポーン試行を抑えるか設定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.monster.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for hostile monsters.",
+        "ja": "モンスターのスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.monster.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of hostile monsters after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後のモンスターのスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.creature.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for passive creatures (animals).",
+        "ja": "動物のスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.creature.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of passive creatures (animals) after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後の動物のスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.ambient.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for ambient mobs (bats).",
+        "ja": "コウモリなど環境モブのスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.ambient.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of ambient mobs (bats) after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後の環境モブのスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.axolotls.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for axolotls.",
+        "ja": "ウーパールーパーのスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.axolotls.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of axolotls after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後のウーパールーパーのスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.underground_water_creature.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for underground water creatures (glow squid).",
+        "ja": "洞窟の水生モブのスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.underground_water_creature.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of underground water creatures (glow squid) after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後の洞窟の水生モブのスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.water_creature.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for water creatures (squid, dolphins).",
+        "ja": "水生モブのスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.water_creature.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of water creatures (squid, dolphins) after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後の水生モブのスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.water_ambient.min-failed",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum failed spawn attempt for ambient water mobs (tropical fish).",
+        "ja": "熱帯魚など水中の環境モブのスポーン試行を抑え始めるまでの失敗回数を指定します。"
+      }
+    },
+    {
+      "path": "performance.throttle-mob-spawning.water_ambient.spawn-chance",
+      "type": "float",
+      "default": 25,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The spawn chance of ambient water mobs (tropical fish) after reaching the min-failed value above.",
+        "ja": "指定した失敗回数に達した後の水中の環境モブのスポーン確率を指定します。"
+      }
+    },
+    {
+      "path": "performance.create-snapshot-on-retrieving-blockstate",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to create a snapshot (copy) of BlockEntity / BlockState data by default when plugins retrieve them.",
+        "ja": "プラグインがBlockEntityやBlockStateを取得する際、既定でデータのコピーを作成するか設定します。"
+      }
+    },
+    {
+      "path": "performance.use-virtual-thread.bukkit-async-scheduler",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for the CraftAsyncScheduler, which could improve the performance of plugins that heavily utilize the Bukkit async scheduler.",
+        "ja": "Bukkitの非同期スケジューラーにJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.use-virtual-thread.folia-async-scheduler",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for the FoliaAsyncScheduler, which could improve the performance of plugins that heavily utilize the Folia async scheduler.",
+        "ja": "Foliaの非同期スケジューラーにJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.use-virtual-thread.async-chat-executor",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for the Async Chat Executor.",
+        "ja": "非同期チャット処理にJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.use-virtual-thread.download-pool",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for fetching player profiles and skull skins.",
+        "ja": "プレイヤープロフィールと頭部スキンの取得にJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.use-virtual-thread.auth-pool",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for user authentication, which handles premium player join verification.",
+        "ja": "プレミアムプレイヤーの参加認証にJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "performance.use-virtual-thread.paper-configuration-pool",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for Paper's task pool during the Minecraft configuration phase.",
+        "ja": "Minecraft設定処理中のPaperタスクプールにJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "fixes.vanilla-bug-fix.mc-270656",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to fix incorrect granting of Who needs rockets? advancement.",
+        "ja": "Who needs rockets?進捗が誤って付与される問題を修正するか設定します。"
+      }
+    },
+    {
+      "path": "fixes.vanilla-bug-fix.mc-301114",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to fix the memory leak in the combat tracker caused by the mob constantly being damaged.",
+        "ja": "モブが継続してダメージを受けると戦闘トラッカーでメモリリークが起きる問題を修正するか設定します。"
+      }
+    },
+    {
+      "path": "fixes.vanilla-bug-fix.mc-301114-max-entries",
+      "type": "int",
+      "default": 10240,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Max allowed entries in the mob's combat tracker.",
+        "ja": "モブの戦闘トラッカーに保持するエントリー数の上限を指定します。"
+      }
+    },
+    {
+      "path": "fixes.vanilla-bug-fix.mc-152094",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to fix the bug that the End City ship generation gets cut at chunk borders.",
+        "ja": "エンドシティ船の生成がチャンク境界で切れる問題を修正するか設定します。"
+      }
+    },
+    {
+      "path": "fixes.prevent-moving-into-weak-loaded-chunks.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Set this to true to be able to use options below.",
+        "ja": "下の設定を使うため、この機能を有効にします。"
+      }
+    },
+    {
+      "path": "fixes.prevent-moving-into-weak-loaded-chunks.projectiles",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to prevent projectiles from moving into weak-loaded chunks.",
+        "ja": "投射物が弱く読み込まれたチャンクへ移動するのを防ぐか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.afk-command.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable the AFK command based on Minecraft's built-in idle-timeout mechanism.",
+        "ja": "Minecraftのアイドル時間設定に基づくAFKコマンドを有効にするか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.inventory-overflow-event.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable the inventory overflow event.",
+        "ja": "インベントリ超過イベントを有効にするか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.inventory-overflow-event.listener-class",
+      "type": "string",
+      "default": "com.example.package.PlayerInventoryOverflowEvent",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The full listener class name that listens to this inventory overflow event.",
+        "ja": "インベントリ超過イベントを受け取るリスナークラスの完全修飾名を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.player.max-use-item-distance",
+      "type": "float",
+      "default": 1.0000001,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum distance that the player is allowed to interact using an item.",
+        "ja": "アイテムを使うプレイヤーに許可する最大距離を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.allow-tripwire-dupe",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to bring back tripwire dupe (MC-59471) which is fixed in 1.21.2's snapshots 24w33a and 24w36a.",
+        "ja": "1.21.2のスナップショットで修正されたトリップワイヤー増殖バグを戻すか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.death-item-drop-knockback.drop-around",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to drop items randomly around the player on their death.",
+        "ja": "プレイヤーの死亡時にアイテムを周囲へランダムに落とすか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.death-item-drop-knockback.horizontal-force",
+      "type": "float",
+      "default": 0.5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Base speed of horizontal velocity that applies to the player's dropped items on death.",
+        "ja": "死亡時にドロップするアイテムへ加える水平方向の速度を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.death-item-drop-knockback.vertical-force",
+      "type": "float",
+      "default": 0.2,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Same as horizontal-force, but it is for vertical velocity.",
+        "ja": "死亡時にドロップするアイテムへ加える垂直方向の速度を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.ice-and-snow-chance",
+      "type": "int",
+      "default": 48,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The chance of ice and snow formation.",
+        "ja": "氷と雪が形成される確率を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.knockback.snowball-knockback-players",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the snowball can knockback players.",
+        "ja": "雪玉がプレイヤーにノックバックを与えるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.knockback.egg-knockback-players",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the egg can knockback players.",
+        "ja": "卵がプレイヤーにノックバックを与えるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.knockback.can-player-knockback-zombie",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the player can knockback zombies using the hand, weapon, projectile, etc.",
+        "ja": "手や武器、投射物などでプレイヤーがゾンビにノックバックを与えられるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.knockback.flush-location-while-knockback-player",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to synchronize player movement immediately when it gets knockback.",
+        "ja": "ノックバック時にプレイヤーの移動位置をすぐ同期するか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.knockback.old-blast-protection-explosion-knockback",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the old If set to true, the explosion knockback will be calculated based on the blast protection enchantment the player has.",
+        "ja": "爆発によるノックバックを爆発耐性のエンチャントに基づいて計算する旧方式を使うか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.only-player-pushable",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether only the player can be pushed.",
+        "ja": "プレイヤーだけが押される対象になるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use custom spawner options below.",
+        "ja": "下のカスタムスポナー設定を使うか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.checks.light-level-check",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to check if the light level is sufficient to spawn the mob.",
+        "ja": "モブがスポーンできる光量か確認するか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.checks.spawner-max-nearby-check",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to check if there is the maximum amount of nearby mobs to spawn the mob.",
+        "ja": "周囲のモブが上限に達しているか確認するか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.checks.check-for-nearby-players",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to check if any players are in a radius to spawn the mob.",
+        "ja": "スポーン範囲内にプレイヤーがいるか確認するか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.checks.spawner-block-checks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to prevent spawn attempts if the spawn point is obstructed by blocks.",
+        "ja": "ブロックがスポーン地点を塞いでいる場合にスポーンを止めるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.checks.water-prevent-spawn-check",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to prevent spawn attempts if the spawn point has water.",
+        "ja": "スポーン地点に水がある場合にスポーンを止めるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.checks.ignore-spawn-rules",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to ignore additional spawn rules of mobs.",
+        "ja": "モブ固有の追加スポーン条件を無視するか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.min-spawn-delay",
+      "type": "int",
+      "default": 200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The minimum delay between each spawn attempt of the spawner.",
+        "ja": "スポナーのスポーン試行間隔の最小値を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.spawner-settings.max-spawn-delay",
+      "type": "int",
+      "default": 800,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum delay between each spawn attempt of the spawner.",
+        "ja": "スポナーのスポーン試行間隔の最大値を指定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.use-spigot-item-merging-mechanism",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to merge dropped items based on their tick sequence, which is the long-standing default behavior of Spigot.",
+        "ja": "Spigotで使われるtick順に基づいてドロップアイテムをまとめるか設定します。"
+      }
+    },
+    {
+      "path": "gameplay-mechanisms.use-vanilla-hopper",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use an aggresive way to revert Paper's hopper behavior to be close to vanilla behavior.",
+        "ja": "Paperのホッパー動作をバニラに近づける方式を使うか設定します。"
+      }
+    },
+    {
+      "path": "network.async-switch-state",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to process the connection state switch logic of the player asynchronously.",
+        "ja": "プレイヤー接続の状態切り替え処理を非同期で行うか設定します。"
+      }
+    },
+    {
+      "path": "network.chat-message-signature",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable chat message signature, which was introduced in Minecraft 1.19.1.",
+        "ja": "Minecraft 1.19.1で導入されたチャットメッセージ署名を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.OptimizeNonFlushPacketSending",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to optimize the sending of non-flushed packets by using Netty's lazyExecute) method.",
+        "ja": "NettyのlazyExecuteを使ってflushしないパケットの送信を最適化するか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.strict-mode",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to throw the error instead of logging it when an exception happens while handling Leaves's protocol features.",
+        "ja": "Leafのプロトコル機能処理で例外が起きた際、ログだけでなくエラーを投げるか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.jade-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable Jade protocol support.",
+        "ja": "Jadeプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.appleskin-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable AppleSkin protocol support.",
+        "ja": "AppleSkinプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.appleskin-protocol-sync-tick-interval",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often the server should synchronize AppleSkin data to clients with AppleSkin installed.",
+        "ja": "AppleSkinを導入したクライアントへのデータ同期間隔をtick数で指定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.asteorbar-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable AsteorBar protocol support.",
+        "ja": "AsteorBarプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.chatimage-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable ChatImage protocol support.",
+        "ja": "ChatImageプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.xaero-map-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable XaeroMap protocol support.",
+        "ja": "XaeroMapプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.xaero-map-server-id",
+      "type": "int",
+      "default": 513317,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Unique number ID for XaeroMap to identify the server.",
+        "ja": "XaeroMapがサーバーを識別する番号を指定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.syncmatica-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable Syncmatica protocol support.",
+        "ja": "Syncmaticaプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.syncmatica-quota",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable the maximum file size limit for each shared schematics file of the Litematica mod.",
+        "ja": "Litematicaの共有 schematic ファイルにサイズ上限を設けるか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.syncmatica-quota-limit",
+      "type": "int",
+      "default": 40000000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The maximum file size of each shared schematic file is uploaded to the server.",
+        "ja": "サーバーへアップロードできる共有 schematic ファイルの最大サイズをバイト数で指定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.do-a-barrel-roll-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable Do a Barrel Roll protocol support.",
+        "ja": "Do a Barrel Rollプロトコルへの対応を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.do-a-barrel-roll-allow-thrusting",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to allow players to enable enable_thrust option in their client configuration.",
+        "ja": "クライアント設定でenable_thrustを有効にすることを許可するか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.do-a-barrel-roll-force-enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to force the mod to be enabled for all players who have this mod installed, regardless of their client configuration.",
+        "ja": "クライアント設定に関わらず、対応Modを導入した全員に機能を強制的に有効化するか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.do-a-barrel-roll-force-installed",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to reject players who join if they don't have this mod installed in their clients.",
+        "ja": "クライアントに対応Modが入っていないプレイヤーの接続を拒否するか設定します。"
+      }
+    },
+    {
+      "path": "network.protocol-support.do-a-barrel-roll-installed-timeout",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The amount of time to wait for a client to respond to the do_a_barrel_roll:config_sync packet.",
+        "ja": "do_a_barrel_roll:config_syncパケットへの応答を待つ時間を指定します。"
+      }
+    },
+    {
+      "path": "misc.connection-message.join.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to broadcast a message when the player joins.",
+        "ja": "プレイヤーの参加時にメッセージを通知するか設定します。"
+      }
+    },
+    {
+      "path": "misc.connection-message.join.message",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The join message of the player.",
+        "ja": "プレイヤー参加時に表示するメッセージを指定します。"
+      }
+    },
+    {
+      "path": "misc.connection-message.quit.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to broadcast a message when the player quits.",
+        "ja": "プレイヤーの退出時にメッセージを通知するか設定します。"
+      }
+    },
+    {
+      "path": "misc.connection-message.quit.message",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The quit message of the player.",
+        "ja": "プレイヤー退出時に表示するメッセージを指定します。"
+      }
+    },
+    {
+      "path": "misc.disable-world-data-saving.worlds",
+      "type": "list",
+      "default": [],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Worlds listed here will skip the world saving.",
+        "ja": "ワールドの保存を行わない対象を列挙します。"
+      }
+    },
+    {
+      "path": "misc.including-5s-in-get-tps",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to include 5-second TPS in the result of API Bukkit#getTPS and Server#getTPS.",
+        "ja": "Bukkit#getTPSとServer#getTPSの結果に5秒平均TPSを含めるか設定します。"
+      }
+    },
+    {
+      "path": "misc.region-format.format-name",
+      "type": "enum",
+      "default": "MCA",
+      "min": null,
+      "max": null,
+      "values": [
+        "MCA",
+        "B_LINEAR"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The format used for saving chunk data in region files.",
+        "ja": "リージョンファイルにチャンクデータを保存する形式を指定します。"
+      }
+    },
+    {
+      "path": "misc.region-format.compress-level",
+      "type": "int",
+      "default": 6,
+      "min": 1,
+      "max": 22,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The compression level of the linear region format file.",
+        "ja": "リージョンファイル形式の圧縮レベルを指定します。"
+      }
+    },
+    {
+      "path": "misc.region-format.io-thread-count",
+      "type": "int",
+      "default": 6,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The worker thread count of linear region format.",
+        "ja": "リージョンファイルの処理に使うワーカースレッド数を指定します。"
+      }
+    },
+    {
+      "path": "misc.region-format.io-flush-delay",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "When it will be flushed to the region file when there have been no write operations.",
+        "ja": "書き込みが止まってからリージョンファイルへ反映するまでの時間を指定します。"
+      }
+    },
+    {
+      "path": "misc.region-format.linear-use-virtual-thread",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": "26.2",
+      "doc": {
+        "en": "Whether to use the Virtual Thread introduced in Java 21 for linear region format.",
+        "ja": "Linear形式でJava 21の仮想スレッドを使うか設定します。"
+      }
+    },
+    {
+      "path": "misc.lag-compensation.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The lag compensation is designed to mitigate the gameplay impact of server lag spikes or low TPS situations, which could ensure the basic game experience for players during the lag.",
+        "ja": "サーバーの遅延や低TPS時にゲーム体験への影響を抑える遅延補正を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "misc.lag-compensation.enable-for-water",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable lag compensation for water flowing.",
+        "ja": "水流の遅延補正を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "misc.lag-compensation.enable-for-lava",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enable lag compensation for lava flowing.",
+        "ja": "溶岩流の遅延補正を有効にするか設定します。"
+      }
+    },
+    {
+      "path": "misc.remove-change-non-editable-sign-warning",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the server prints a warning message when players try to edit the sign that they are not allowed to edit.",
+        "ja": "編集できない看板をプレイヤーが編集しようとした際、警告を出すか設定します。"
+      }
+    },
+    {
+      "path": "misc.remove-spigot-check-bungee-config",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the player can enter the backend server via proxy, without the backend server enabling BungeeCord mode in spigot.yml.",
+        "ja": "SpigotのBungeeCordモードを有効にせず、プロキシからバックエンドへ接続できるようにするか設定します。"
+      }
+    },
+    {
+      "path": "misc.secure-seed.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the secure seed.",
+        "ja": "セキュアシードを有効にするか設定します。"
+      }
+    },
+    {
+      "path": "misc.sentry.dsn",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The DSN key of your Sentry.",
+        "ja": "SentryのDSNキーを指定します。"
+      }
+    },
+    {
+      "path": "misc.sentry.log-level",
+      "type": "enum",
+      "default": "WARN",
+      "min": null,
+      "max": null,
+      "values": [
+        "WARN",
+        "ERROR",
+        "FATAL"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Logs with a level higher than or equal to this level will be recorded.",
+        "ja": "記録するログの最低レベルを指定します。"
+      }
+    },
+    {
+      "path": "misc.sentry.only-log-thrown",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether the Sentry only records the log with Java's Throwable.",
+        "ja": "JavaのThrowableを伴うログだけをSentryに記録するか設定します。"
+      }
+    },
+    {
+      "path": "misc.rebrand.server-mod-name",
+      "type": "string",
+      "default": "Leaf",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The server brand name that will be shown on the client's F3 debug menu and server MOTD.",
+        "ja": "F3デバッグ画面とサーバーMOTDに表示するサーバーブランド名を指定します。"
+      }
+    },
+    {
+      "path": "misc.rebrand.server-gui-name",
+      "type": "string",
+      "default": "Leaf Console",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The title displayed on the server GUI window, if you launched the server without adding the --nogui option in the startup flag.",
+        "ja": "GUIで起動したときにサーバーウィンドウへ表示するタイトルを指定します。"
+      }
+    },
+    {
+      "path": "misc.message.unknown-command",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The unknown command message will be sent to the player if they execute an unknown command.",
+        "ja": "不明なコマンドを実行したプレイヤーに送るメッセージを指定します。"
+      }
+    },
+    {
+      "path": "misc.vanilla-username-check.remove-all-check",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to remove the vanilla username check, allowing all characters as usernames, including Chinese characters, etc.",
+        "ja": "Vanillaのユーザー名検査を無効にして、中国語などの文字を許可するか設定します。"
+      }
+    },
+    {
+      "path": "misc.vanilla-username-check.enforce-skull-validation",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to enforce skull validation, preventing skulls with invalid names from disconnecting the client.",
+        "ja": "不正な名前の頭部データでクライアントが切断されないよう、頭部検査を行うか設定します。"
+      }
+    },
+    {
+      "path": "misc.vanilla-username-check.allow-old-players-join",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to allow old players to join the server after the username regex is changed, even if their names don't meet the new requirements.",
+        "ja": "ユーザー名の正規表現を変更した後、古い名前が新しい条件に合わなくても参加を許可するか設定します。"
+      }
+    },
+    {
+      "path": "misc.vanilla-username-check.use-username-regex",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to use the username regex to validate usernames, allowing only characters specified in the regex.",
+        "ja": "ユーザー名の検査に正規表現を使うか設定します。"
+      }
+    },
+    {
+      "path": "misc.vanilla-username-check.username-regex",
+      "type": "string",
+      "default": "^[a-zA-Z0-9_.]*$",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The username regex specifies the characters allowed in usernames.",
+        "ja": "ユーザー名に使える文字を定める正規表現を指定します。"
+      }
+    }
+  ]
+}
