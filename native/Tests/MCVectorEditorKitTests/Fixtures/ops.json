@@ -1,0 +1,56 @@
+{
+  "id": "ops",
+  "title": "Operator List Fixture",
+  "format": "json",
+  "files": ["ops.json"],
+  "software": ["vanilla", "paper"],
+  "since": null,
+  "until": null,
+  "sources": ["https://example.invalid/ops"],
+  "entries": [
+    {
+      "path": "[]",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "An operator entry.", "ja": "オペレーターの項目です。"}
+    },
+    {
+      "path": "[].uuid",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Player UUID.", "ja": "プレイヤーのUUIDです。"}
+    },
+    {
+      "path": "[].name",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Player name.", "ja": "プレイヤー名です。"}
+    },
+    {
+      "path": "[].level",
+      "type": "int",
+      "default": 4,
+      "min": 1,
+      "max": 4,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Permission level.", "ja": "権限レベルです。"}
+    }
+  ]
+}

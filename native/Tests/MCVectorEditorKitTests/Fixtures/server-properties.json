@@ -1,0 +1,45 @@
+{
+  "id": "server-properties",
+  "title": "Server Properties Fixture",
+  "format": "properties",
+  "files": ["server.properties"],
+  "software": ["vanilla", "paper", "spigot", "leaf", "forge", "fabric"],
+  "since": null,
+  "until": null,
+  "sources": ["https://example.invalid/server-properties"],
+  "entries": [
+    {
+      "path": "motd",
+      "type": "string",
+      "default": "A Minecraft Server",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Message of the day.", "ja": "サーバーのメッセージです。"}
+    },
+    {
+      "path": "gamemode",
+      "type": "enum",
+      "default": "survival",
+      "min": null,
+      "max": null,
+      "values": ["survival", "creative", "adventure", "spectator"],
+      "since": null,
+      "until": null,
+      "doc": {"en": "Default game mode.", "ja": "既定のゲームモードです。"}
+    },
+    {
+      "path": "level-name",
+      "type": "string",
+      "default": "world",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "World folder name.", "ja": "ワールドフォルダー名です。"}
+    }
+  ]
+}

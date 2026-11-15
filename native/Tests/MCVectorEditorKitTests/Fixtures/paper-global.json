@@ -1,0 +1,144 @@
+{
+  "id": "paper-global",
+  "title": "Paper Global Fixture",
+  "format": "yaml",
+  "files": ["config/paper-global.yml"],
+  "software": ["paper", "leaf"],
+  "since": "1.20",
+  "until": "1.21.4",
+  "sources": ["https://example.invalid/paper-global"],
+  "entries": [
+    {
+      "path": "settings",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "General settings.", "ja": "一般設定です。"}
+    },
+    {
+      "path": "settings.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Enable the feature.", "ja": "機能を有効にします。"}
+    },
+    {
+      "path": "settings.mode",
+      "type": "enum",
+      "default": "survival",
+      "min": null,
+      "max": null,
+      "values": ["survival", "creative", "adventure", "spectator"],
+      "since": null,
+      "until": null,
+      "doc": {"en": "The mode to use.", "ja": "使用するモードです。"}
+    },
+    {
+      "path": "settings.max-players",
+      "type": "int",
+      "default": 20,
+      "min": 1,
+      "max": 100,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Maximum players.", "ja": "最大プレイヤー数です。"}
+    },
+    {
+      "path": "settings.advanced",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Advanced settings.", "ja": "詳細設定です。"}
+    },
+    {
+      "path": "settings.advanced.message",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "A custom message.", "ja": "カスタムメッセージです。"}
+    },
+    {
+      "path": "settings.retired",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.20",
+      "until": "1.21.4",
+      "doc": {"en": "A versioned setting.", "ja": "バージョン付き設定です。"}
+    },
+    {
+      "path": "settings.modern",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.4",
+      "until": null,
+      "doc": {"en": "A newer setting.", "ja": "新しい設定です。"}
+    },
+    {
+      "path": "world-settings",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "World settings.", "ja": "ワールド設定です。"}
+    },
+    {
+      "path": "world-settings.*.verbose",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "Enable verbose output for a world.", "ja": "ワールドの詳細出力を有効にします。"}
+    },
+    {
+      "path": "world-settings.*.difficulty",
+      "type": "enum",
+      "default": "normal",
+      "min": null,
+      "max": null,
+      "values": ["peaceful", "easy", "normal", "hard"],
+      "since": null,
+      "until": null,
+      "doc": {"en": "Difficulty for a world.", "ja": "ワールドの難易度です。"}
+    },
+    {
+      "path": "other",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {"en": "A sibling setting.", "ja": "兄弟設定です。"}
+    }
+  ]
+}

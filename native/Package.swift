@@ -14,6 +14,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "MCVector", targets: ["MCVector"]),
+        .library(name: "MCVectorEditorKit", targets: ["MCVectorEditorKit"]),
     ],
     // Approved packages only (requirements DEP-001, DEP-002). The Neon plugin pins
     // Neon by revision, so SwiftPM only accepts the plugin itself by revision too
@@ -26,6 +27,11 @@ let package = Package(
         ),
     ],
     targets: [
+        .target(
+            name: "MCVectorEditorKit",
+            path: "Sources/MCVectorEditorKit",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
         // UniFFI-generated C header + hand-written module map for the Rust static library.
         .systemLibrary(
             name: "MCVectorFFI",
@@ -50,10 +56,18 @@ let package = Package(
             name: "MCVector",
             dependencies: [
                 "MCVectorCore",
+                "MCVectorEditorKit",
                 .product(name: "STTextView", package: "STTextView"),
                 .product(name: "STTextView-Plugin-Neon", package: "STTextView-Plugin-Neon"),
             ],
             path: "Sources/MCVector"
+        ),
+        .testTarget(
+            name: "MCVectorEditorKitTests",
+            dependencies: ["MCVectorEditorKit"],
+            path: "Tests/MCVectorEditorKitTests",
+            resources: [.copy("Fixtures")],
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "MCVectorTests",
