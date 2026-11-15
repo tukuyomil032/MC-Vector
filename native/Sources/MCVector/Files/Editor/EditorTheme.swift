@@ -51,10 +51,16 @@ struct EditorTheme: Identifiable, Hashable, Decodable {
             var name = token.lowercased()
             while true {
                 if let color = tokens[name] { return color.nsColor }
-                guard let dot = name.lastIndex(of: ".") else { return nil }
+                guard let dot = name.lastIndex(of: ".") else { break }
                 name = String(name[..<dot])
             }
+            // Grammars name config keys differently (YAML's query says
+            // `field`); themes describe them once, as `property`.
+            if let alias = Self.aliases[name] { return color(forToken: alias) }
+            return nil
         }
+
+        private static let aliases = ["field": "property"]
     }
 }
 

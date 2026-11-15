@@ -31,6 +31,8 @@ final class EditorAssistController: EditorTextViewAssist {
     private let hover = HoverCardPanel()
     private var hoverRange: NSRange?
     private var markedDiagnostics: [NSRange] = []
+    /// A problem in the value being typed; shown once the cursor leaves it.
+    private var heldDiagnostic: NSRange?
     /// Short messages at the end of lines with a problem.
     private let annotations = DiagnosticAnnotations()
     private var annotationsPlugin: STAnnotationsPlugin?
@@ -101,6 +103,12 @@ final class EditorAssistController: EditorTextViewAssist {
             textView.textSelection != NSRange(location: inline.range.location + inline.range.length, length: 0)
         {
             hideInline()
+        }
+        if let held = heldDiagnostic, Date().timeIntervalSince(lastEdit) > 0.1,
+            !Self.touches(held, textView.textSelection.location)
+        {
+            heldDiagnostic = nil
+            scheduleValidation(delay: .zero)
         }
         // The cursor was moved (click, arrow keys) onto a value: after a short
         // pause, offer its allowed values, so nobody has to guess a first letter.
@@ -282,7 +290,16 @@ final class EditorAssistController: EditorTextViewAssist {
 
     private func validate() {
         guard let textView, let text = document.currentText, let format = document.format else { return }
-        let diagnostics = Validator.diagnostics(text: text as String, format: format, entries: document.entries)
+        // A half-typed value is not a mistake yet: while the cursor is still in
+        // the value just edited, hold its warning back so it does not cover the
+        // suggestions. Moving the cursor away shows it (selectionDidChange).
+        let caret = textView.textSelection
+        let isTyping = Date().timeIntervalSince(lastEdit) < 10 && caret.length == 0
+        var diagnostics = Validator.diagnostics(text: text as String, format: format, entries: document.entries)
+        heldDiagnostic = nil
+        if isTyping, let index = diagnostics.firstIndex(where: { Self.touches($0.range, caret.location) }) {
+            heldDiagnostic = diagnostics.remove(at: index).range
+        }
         document.diagnostics = diagnostics
         let manager = textView.textContentManager
         for range in markedDiagnostics {
@@ -314,6 +331,10 @@ final class EditorAssistController: EditorTextViewAssist {
         annotationsPlugin?.reloadAnnotations()
         textView.needsLayout = true
         textView.needsDisplay = true
+    }
+
+    private static func touches(_ range: NSRange, _ location: Int) -> Bool {
+        location >= range.location && location <= NSMaxRange(range)
     }
 
     // MARK: Hover
