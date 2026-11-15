@@ -4,9 +4,9 @@
 # Runs the native test suites and prints one summary table:
 #   Rust      cargo test -p mcvector-core -p mcvector-ffi
 #   Swift     swift test for native/ (needs the Rust static library)
-#   Bindings  regenerates the UniFFI bindings and fails if git sees a change
-#   Strings   regenerates Localizable.xcstrings and fails if git sees a change
-#   Versions  regenerates minecraft-versions.json and fails if git sees a change
+#   Bindings  regenerates into .build and compares with current source files
+#   Strings   renders the catalog and compares without rewriting the source file
+#   Versions  renders the version list and compares without rewriting the source file
 #
 # Every selected part runs even when an earlier one fails. Exit 0 when all pass,
 # 1 when any part fails, 2 on a usage error.
@@ -22,11 +22,6 @@ BUILD_DIR="$NATIVE_DIR/.build"
 
 source "$NATIVE_DIR/scripts/lib/log.sh"
 source "$NATIVE_DIR/scripts/lib/bindings.sh"
-
-# Paths the drift checks compare, relative to ROOT_DIR (for git).
-BINDING_GIT_PATHS=(native/Sources/MCVectorCore/Generated native/Sources/MCVectorFFI)
-STRINGS_GIT_PATHS=(native/Resources/Localizable.xcstrings)
-VERSIONS_GIT_PATHS=(native/Resources/minecraft-versions.json)
 
 usage() {
   cat <<'EOF'
@@ -46,6 +41,7 @@ Options:
   -h, --help          Show this help and exit
 
 Set VERBOSE=1 to stream tool output instead of writing native/.build/logs.
+Set SWIFT_DISABLE_SANDBOX=1 when the host cannot launch SwiftPM's sandbox-exec.
 EOF
 }
 
@@ -139,6 +135,9 @@ run_swift_part() {
 
   args=(test --package-path "$NATIVE_DIR" --scratch-path "$BUILD_DIR/swift" \
     --cache-path "$BUILD_DIR/cache" -Xlinker -L -Xlinker "$BUILD_DIR/rust/lib")
+  if [ "${SWIFT_DISABLE_SANDBOX:-0}" = "1" ]; then
+    args+=(--disable-sandbox)
+  fi
   if [ -n "$FILTER" ]; then
     args+=(--filter "$FILTER")
   fi
@@ -165,8 +164,8 @@ run_swift_part() {
   PART_TIME="$(timer_elapsed "$t0")"
 }
 
-# Bindings: regenerate exactly like build.sh step 3, then fail on any difference
-# from git (tracked changes, staged changes or untracked files).
+# Bindings: generate into .build and compare with the current source files. The
+# check is independent of git state and never syncs over expected working edits.
 run_bindings_part() {
   local t0 rc=0 host_dylib="$CARGO_TARGET_DIR/$HOST_TRIPLE/debug/libmcvector_ffi.dylib"
   t0="$(timer_start)"
@@ -178,14 +177,7 @@ run_bindings_part() {
     bindings_regenerate "$host_dylib" || rc=$?
   fi
   if [ "$rc" -eq 0 ]; then
-    bindings_sync || rc=$?
-  fi
-  if [ "$rc" -eq 0 ]; then
-    if ! git -C "$ROOT_DIR" diff --quiet -- "${BINDING_GIT_PATHS[@]}" \
-      || [ -n "$(git -C "$ROOT_DIR" status --porcelain -- "${BINDING_GIT_PATHS[@]}")" ]; then
-      log_fail "Generated bindings are out of date: run native/build.sh and commit native/Sources/MCVectorCore/Generated and native/Sources/MCVectorFFI"
-      rc=1
-    fi
+    bindings_check || rc=$?
   fi
 
   if [ "$rc" -eq 0 ]; then
@@ -196,8 +188,7 @@ run_bindings_part() {
   PART_TIME="$(timer_elapsed "$t0")"
 }
 
-# Strings: regenerate Localizable.xcstrings with the sync script, then fail on any
-# difference from git (tracked changes, staged changes or untracked files).
+# Strings: render the catalog and compare it without rewriting the source file.
 run_strings_part() {
   local t0 rc=0
   t0="$(timer_start)"
@@ -208,14 +199,7 @@ run_strings_part() {
     rc=1
   fi
   if [ "$rc" -eq 0 ]; then
-    run_logged "sync-strings" bun "$NATIVE_DIR/scripts/sync-strings.ts" || rc=$?
-  fi
-  if [ "$rc" -eq 0 ]; then
-    if ! git -C "$ROOT_DIR" diff --quiet -- "${STRINGS_GIT_PATHS[@]}" \
-      || [ -n "$(git -C "$ROOT_DIR" status --porcelain -- "${STRINGS_GIT_PATHS[@]}")" ]; then
-      log_fail "Localizable.xcstrings is out of date: run bun native/scripts/sync-strings.ts and commit native/Resources/Localizable.xcstrings"
-      rc=1
-    fi
+    run_logged "sync-strings-check" bun "$NATIVE_DIR/scripts/sync-strings.ts" --check || rc=$?
   fi
 
   if [ "$rc" -eq 0 ]; then
@@ -226,8 +210,7 @@ run_strings_part() {
   PART_TIME="$(timer_elapsed "$t0")"
 }
 
-# Versions: regenerate minecraft-versions.json with the sync script, then fail on any
-# difference from git (tracked changes, staged changes or untracked files).
+# Versions: render the list and compare it without rewriting the source file.
 run_versions_part() {
   local t0 rc=0
   t0="$(timer_start)"
@@ -238,14 +221,7 @@ run_versions_part() {
     rc=1
   fi
   if [ "$rc" -eq 0 ]; then
-    run_logged "sync-versions" bun "$NATIVE_DIR/scripts/sync-versions.ts" || rc=$?
-  fi
-  if [ "$rc" -eq 0 ]; then
-    if ! git -C "$ROOT_DIR" diff --quiet -- "${VERSIONS_GIT_PATHS[@]}" \
-      || [ -n "$(git -C "$ROOT_DIR" status --porcelain -- "${VERSIONS_GIT_PATHS[@]}")" ]; then
-      log_fail "minecraft-versions.json is out of date: run bun native/scripts/sync-versions.ts and commit native/Resources/minecraft-versions.json"
-      rc=1
-    fi
+    run_logged "sync-versions-check" bun "$NATIVE_DIR/scripts/sync-versions.ts" --check || rc=$?
   fi
 
   if [ "$rc" -eq 0 ]; then

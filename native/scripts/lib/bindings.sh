@@ -64,3 +64,51 @@ bindings_sync() {
     log_ok "Generated bindings updated ($changed file(s))"
   fi
 }
+
+# bindings_check
+# Compares generated *.swift and *.h files in $BUILD_DIR/bindings with the
+# current source files without writing to them or consulting git state.
+bindings_check() {
+  local src dest_dir dest name src_dir="$BUILD_DIR/bindings"
+  local total=0 mismatches=0
+  for src in "$src_dir"/*.swift "$src_dir"/*.h; do
+    if [ ! -f "$src" ]; then
+      continue
+    fi
+    name="${src##*/}"
+    case "$name" in
+      *.swift) dest_dir="$BINDINGS_CORE_DIR" ;;
+      *.h) dest_dir="$BINDINGS_FFI_DIR" ;;
+      *) continue ;;
+    esac
+    total=$((total + 1))
+    dest="$dest_dir/$name"
+    if [ ! -f "$dest" ] || ! cmp -s "$src" "$dest"; then
+      log_fail "Generated binding differs from current source: ${dest#"$ROOT_DIR"/}"
+      mismatches=$((mismatches + 1))
+    fi
+  done
+
+  for dest_dir in "$BINDINGS_CORE_DIR" "$BINDINGS_FFI_DIR"; do
+    for dest in "$dest_dir"/*.swift "$dest_dir"/*.h; do
+      if [ ! -f "$dest" ]; then
+        continue
+      fi
+      name="${dest##*/}"
+      if [ ! -f "$src_dir/$name" ]; then
+        log_fail "Stale generated binding: ${dest#"$ROOT_DIR"/}"
+        mismatches=$((mismatches + 1))
+      fi
+    done
+  done
+
+  if [ "$total" -eq 0 ]; then
+    log_fail "No bindings were generated in $src_dir"
+    return 1
+  fi
+  if [ "$mismatches" -gt 0 ]; then
+    log_fail "Generated bindings are out of date: run native/build.sh"
+    return 1
+  fi
+  log_ok "Generated bindings match current sources"
+}

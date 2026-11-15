@@ -72,12 +72,27 @@ async function readIfExists(path: string): Promise<string | null> {
 }
 
 async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (args.some((argument) => argument !== '--check') || args.length > 1) {
+    fail('usage: bun native/scripts/sync-versions.ts [--check]');
+  }
+  const checkOnly = args.includes('--check');
+
   const versions = validateVersions(VERSION_OPTIONS);
 
   const text = renderVersions(versions);
   const label = relative(ROOT_DIR, OUTPUT_PATH);
+  const current = await readIfExists(OUTPUT_PATH);
+  if (checkOnly) {
+    if (current !== text) {
+      fail(`${label} is out of date`);
+    }
+    console.log(`${label}: ${versions.length} versions (up to date)`);
+    return;
+  }
+
   let action = 'unchanged';
-  if ((await readIfExists(OUTPUT_PATH)) !== text) {
+  if (current !== text) {
     await writeFile(OUTPUT_PATH, text, 'utf8');
     action = 'written';
   }
