@@ -13,6 +13,8 @@
     /// `--capture-state <ID>`; the state is applied once the server list has loaded.
     @MainActor
     enum CaptureState {
+        private static var viewReadyIDs: Set<String> = []
+
         static var requestedID: String? {
             let arguments = CommandLine.arguments
             guard let index = arguments.firstIndex(of: "--capture-state"), index + 1 < arguments.count else {
@@ -416,6 +418,52 @@
                 FilesView.capturePreset = .init(openFile: "server.properties")
                 FileEditorView.captureScript = .init(hover: "server-port")
                 app.navigate(to: .files)
+            case "USERS-01":
+                writePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .none)
+                app.navigate(to: .users)
+                try? await Task.sleep(for: .milliseconds(800))
+            case "USERS-empty":
+                removePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .none)
+                app.navigate(to: .users)
+            case "USERS-loading":
+                removePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .holdLoading)
+                app.navigate(to: .users)
+            case "USERS-load-error":
+                writeMalformedPlayerList(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .none)
+                app.navigate(to: .users)
+            case "USERS-add-validation":
+                removePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .submitEmpty)
+                app.navigate(to: .users)
+            case "USERS-add-pending":
+                removePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .pendingAdd("Alex"))
+                app.navigate(to: .users)
+            case "USERS-remove-confirm":
+                writePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .confirmRemove("Notch"))
+                app.navigate(to: .users)
+            case "USERS-toast-added":
+                removePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .add("Alex"))
+                app.navigate(to: .users)
+            case "USERS-toast-exists":
+                writePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .add("Notch"))
+                app.navigate(to: .users)
+            case "USERS-toast-removed":
+                writePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .remove("Notch"))
+                app.navigate(to: .users)
+            case "USERS-live-command":
+                writePlayerLists(serverID: "server-1")
+                UsersView.captureScript = .init(id: id, action: .addAndShowConsole("Alex"))
+                await startStandIn(runtime: runtime, serverID: "server-1")
+                app.navigate(to: .users)
             case "FILES-editor-hover-then-suggest":
                 FilesView.capturePreset = .init(openFile: "server.properties")
                 FileEditorView.captureScript = .init(hover: "25565", suggestAfterHover: true)
@@ -593,7 +641,26 @@
                     signal("[capture] unknown capture state: \(id)")
                 }
             }
+            if id.hasPrefix("USERS-") || id.hasPrefix("PROPS-") {
+                guard await waitForViewReady(id) else {
+                    signal("[capture] state did not become ready: \(id)")
+                    return
+                }
+            }
             signal("[capture] ready: \(id)")
+        }
+
+        /// Views acknowledge capture states only after their scripted state is visible.
+        static func markViewReady(for id: String) {
+            viewReadyIDs.insert(id)
+        }
+
+        private static func waitForViewReady(_ id: String) async -> Bool {
+            for _ in 0..<150 {
+                if viewReadyIDs.remove(id) != nil { return true }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            return false
         }
 
         /// Starts a fixture server with the stand-in Java and waits for its log.
@@ -604,6 +671,87 @@
             }
             try? await runtime.send("list", to: serverID)
             try? await Task.sleep(for: .milliseconds(300))
+        }
+
+        /// Sample whitelist, ops and bans for USERS-* states.
+        private static func writePlayerLists(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+            let folder = URL(fileURLWithPath: dataDir).appendingPathComponent("servers/\(serverID)")
+            let files = [
+                "whitelist.json": """
+                [{"uuid":"069a79f4-44e9-4726-a5be-fca90e38aaf5","name":"Notch"},
+                 {"uuid":"853c80ef-3c37-49fd-aa49-938b674adae6","name":"jeb_"}]
+                """,
+                "ops.json": """
+                [{"uuid":"069a79f4-44e9-4726-a5be-fca90e38aaf5","name":"Notch","level":4,"bypassesPlayerLimit":false}]
+                """,
+                "banned-players.json": """
+                [{"uuid":"00000000-0000-0000-0000-000000000001","name":"Griefer","created":"2026-11-01 10:00:00 +0900",
+                  "source":"Server","expires":"forever","reason":"Griefing"}]
+                """,
+                "banned-ips.json": """
+                [{"ip":"203.0.113.7","created":"2026-11-01 10:00:00 +0900","source":"Server",
+                  "expires":"forever","reason":"Hacking"}]
+                """,
+            ]
+            for (name, text) in files {
+                try? text.write(to: folder.appendingPathComponent(name), atomically: true, encoding: .utf8)
+            }
+        }
+
+        private static func removePlayerLists(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+            let folder = URL(fileURLWithPath: dataDir).appendingPathComponent("servers/\(serverID)")
+            for name in ["whitelist.json", "ops.json", "banned-players.json", "banned-ips.json"] {
+                try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
+            }
+        }
+
+        private static func writeMalformedPlayerList(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+            let url = URL(fileURLWithPath: dataDir)
+                .appendingPathComponent("servers/\(serverID)/whitelist.json")
+            try? "{malformed".write(to: url, atomically: true, encoding: .utf8)
+        }
+
+        private static func writeProperties(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+            let url = URL(fileURLWithPath: dataDir)
+                .appendingPathComponent("servers/\(serverID)/server.properties")
+            let contents = """
+            # E2E fixture for Native Properties captures
+            # Comments and representative values are retained in the source file.
+            motd=Welcome to E2E Survival
+            gamemode=survival
+            difficulty=normal
+            server-port=25565
+            query.port=25570
+            rcon.port=25575
+            rcon.password=CaptureSecret42
+            enable-query=true
+            enable-rcon=true
+            online-mode=true
+            white-list=false
+            pvp=true
+            allow-flight=false
+            enable-command-block=false
+            max-players=20
+            """
+            try? contents.write(to: url, atomically: true, encoding: .utf8)
+        }
+
+        private static func writeMalformedProperties(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+            let url = URL(fileURLWithPath: dataDir)
+                .appendingPathComponent("servers/\(serverID)/server.properties")
+            try? "motd=Broken fixture\nmissing-assignment\n".write(to: url, atomically: true, encoding: .utf8)
+        }
+
+        private static func removeProperties(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
+            let url = URL(fileURLWithPath: dataDir)
+                .appendingPathComponent("servers/\(serverID)/server.properties")
+            try? FileManager.default.removeItem(at: url)
         }
 
         private static func writeEula(accepted: Bool, serverID: String) {
@@ -658,7 +806,7 @@
             }
         }
 
-        private static func resizeMainWindow(to size: CGSize) {
+        static func resizeMainWindow(to size: CGSize) {
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) else { return }
             window.setContentSize(size)
             window.center()

@@ -61,6 +61,7 @@ struct ContentRouter: View {
             case .console: ConsoleView(serverID: serverID)
             case .dashboard: DashboardView(serverID: serverID)
             case .files: FilesView(serverID: serverID)
+            case .users: UsersView(serverID: serverID)
             default: NotPortedView(route: app.route)
             }
         }
