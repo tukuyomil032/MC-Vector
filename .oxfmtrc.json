@@ -7,6 +7,8 @@
   "trailingComma": "all",
   "ignorePatterns": [
     "**/*.md",
+    "native/**/*.json",
+    "native/.build/**",
     "**/*.mdx",
     "**/*.yml",
     "**/*.yaml",

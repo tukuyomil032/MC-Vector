@@ -22,7 +22,10 @@ pre-commit:
       run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
     swift-format:
       glob: "native/**/*.swift"
+      # UniFFI output must stay exactly as generated (test.sh compares it).
+      exclude: "native/Sources/MCVectorCore/Generated/**"
       run: swift-format format --in-place {staged_files}
     swiftlint:
       glob: "native/**/*.swift"
+      exclude: "native/Sources/MCVectorCore/Generated/**"
       run: swiftlint lint --quiet {staged_files}
