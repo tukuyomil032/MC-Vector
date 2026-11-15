@@ -73,6 +73,24 @@ ensure_inside_build "$OUT_DIR"
 ensure_inside_build "$TOOLS_DIR"
 mkdir -p "$OUT_DIR" "$TOOLS_DIR" "$BUILD_DIR/logs"
 
+# Everything the app itself reads or writes during a capture (fixture data, the
+# ready signal, the stand-in Java) lives outside ~/Documents. Files in Documents
+# need a privacy grant, and the ad-hoc signed debug app is a new app to macOS
+# after every build, so the "access Documents" prompt would block each capture.
+RUN_DIR="$HOME/Library/Caches/com.tukuyomi032.mcvector.capture"
+mkdir -p "$RUN_DIR/fixtures" "$RUN_DIR/logs"
+
+# ensure_inside_run <path>: refuse to touch anything outside RUN_DIR.
+ensure_inside_run() {
+  case "/$1/" in
+    */../*|*/./*) log_fail "Refusing path with '.' or '..' components: $1"; exit 1 ;;
+  esac
+  case "$1/" in
+    "$RUN_DIR"/?*) ;;
+    *) log_fail "Refusing path outside $RUN_DIR: $1"; exit 1 ;;
+  esac
+}
+
 if [ "$NO_BUILD" -eq 0 ]; then
   "$NATIVE_DIR/build.sh"
 fi
@@ -91,7 +109,7 @@ fi
 # prepare_fixture <dir>: fresh data folder for one launch.
 prepare_fixture() {
   local dir="$1"
-  ensure_inside_build "$dir"
+  ensure_inside_run "$dir"
   rm -rf "$dir"
   mkdir -p "$dir"
   if [ "$FIXTURE" != "empty" ]; then
@@ -135,9 +153,9 @@ prepare_fixture() {
 # The debug app runs this instead of Java (MCVECTOR_DEBUG_JAVA), so the
 # CONSOLE-*/VERIFY-* states start, stop and crash servers without a JDK.
 # stdin: "stop" exits 0, "crash" exits 1, "tps" prints a TPS line.
-STAND_IN_JAVA="$BUILD_DIR/fixtures/stand-in-java"
+STAND_IN_JAVA="$RUN_DIR/fixtures/stand-in-java"
 write_stand_in_java() {
-  ensure_inside_build "$STAND_IN_JAVA"
+  ensure_inside_run "$STAND_IN_JAVA"
   mkdir -p "$(dirname "$STAND_IN_JAVA")"
   cat > "$STAND_IN_JAVA" <<'SCRIPT'
 #!/bin/sh
@@ -165,7 +183,7 @@ write_stand_in_java
 # data folder (outside it, like a real server folder elsewhere on disk).
 prepare_import_sources() {
   local dir="$1"
-  ensure_inside_build "$dir"
+  ensure_inside_run "$dir"
   rm -rf "$dir"
   mkdir -p "$dir/paper-survival/world" "$dir/no-jar-folder"
   printf 'fake paper jar\n' > "$dir/paper-survival/paper-1.21.4-123.jar"
@@ -183,7 +201,7 @@ stop_fixture_servers() {
   for server_pid in $(pgrep -f -- "-jar .* nogui" || true); do
     cwd="$(lsof -a -p "$server_pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
     case "$cwd" in
-      "$BUILD_DIR/fixtures/"*) kill "$server_pid" 2>/dev/null || true ;;
+      "$RUN_DIR/fixtures/"*) kill "$server_pid" 2>/dev/null || true ;;
     esac
   done
 }
@@ -194,9 +212,9 @@ start="$(timer_start)"
 for id in "${IDS[@]}"; do
   index=$((index + 1))
   log_step "$index" "${#IDS[@]}" "Capture $id ($FIXTURE, $LOCALE)"
-  data_dir="$BUILD_DIR/fixtures/$FIXTURE-$LOCALE"
+  data_dir="$RUN_DIR/fixtures/$FIXTURE-$LOCALE"
   prepare_fixture "$data_dir"
-  log_file="$BUILD_DIR/logs/capture-$id.log"
+  log_file="$RUN_DIR/logs/capture-$id.log"
   : > "$log_file"
   # Launch through LaunchServices like a normal app, so macOS lets it become
   # the active app (a process exec'd from a terminal stays in the background).
@@ -205,9 +223,13 @@ for id in "${IDS[@]}"; do
   # VERIFY-real-* states run the real Java from PATH instead of the stand-in.
   java_override="$STAND_IN_JAVA"
   case "$id" in VERIFY-real-*) java_override="" ;; esac
-  open -n -F "$APP" --env "MCVECTOR_DATA_DIR=$data_dir" --env "MCVECTOR_CAPTURE_SIGNAL=$log_file" \
+  if ! open -n -F "$APP" --env "MCVECTOR_DATA_DIR=$data_dir" --env "MCVECTOR_CAPTURE_SIGNAL=$log_file" \
     --env "MCVECTOR_DEBUG_JAVA=$java_override" \
-    --args --capture-state "$id"
+    --args --capture-state "$id" 2>>"$log_file"; then
+    log_fail "App launch failed for $id (see $log_file)"
+    failed=1
+    continue
+  fi
 
   ready=0
   pid=""
