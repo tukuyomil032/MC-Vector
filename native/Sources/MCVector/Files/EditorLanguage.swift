@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import Foundation
+import MCVectorEditorKit
 import TreeSitterResource
 
 /// The editor mode of a file, picked from its lowercased last extension
@@ -9,6 +10,17 @@ struct EditorLanguage: Equatable {
     /// Shown in the status bar.
     let displayName: String
     let highlighting: Highlighting
+
+    /// The config format for completion and validation, when the mode has one.
+    var format: ConfigFormat? {
+        switch displayName {
+        case "JSON": .json
+        case "YAML": .yaml
+        case "TOML": .toml
+        case "INI": .properties
+        default: nil
+        }
+    }
 
     enum Highlighting: Equatable {
         /// A tree-sitter grammar bundled with STTextView-Plugin-Neon; `queries`

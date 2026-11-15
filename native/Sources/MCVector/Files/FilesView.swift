@@ -30,7 +30,9 @@ struct FilesView: View {
     var body: some View {
         ZStack {
             if let openedFile {
-                FileEditorView(serverID: serverID, file: openedFile) {
+                FileEditorView(
+                    serverID: serverID, file: openedFile, software: server?.software, version: server?.version
+                ) {
                     withAnimation(Motion.standard) { self.openedFile = nil }
                     Task { await reload() }
                 }
@@ -46,7 +48,7 @@ struct FilesView: View {
         .animation(Motion.standard, value: openedFile)
         .task(id: currentPath) { await reload() }
         #if DEBUG
-        .onAppear { applyCapturePreset() }
+            .onAppear { applyCapturePreset() }
         #endif
     }
 
@@ -286,6 +288,10 @@ struct FilesView: View {
         return formatter
     }()
 
+}
+
+// Navigation and actions live in an extension so the view body stays short.
+extension FilesView {
     // MARK: Navigation
 
     private func relative(_ name: String) -> String {
@@ -347,13 +353,16 @@ struct FilesView: View {
     // MARK: Actions
 
     private func create(isDirectory: Bool) async {
-        guard let name = await feedback.prompt(
-            title: L10n.t("files.modal.createImportTitle"),
-            label: L10n.t("files.modal.nameLabel"),
-            placeholder: L10n.t(isDirectory ? "files.modal.newFolderPlaceholder" : "files.modal.newFilePlaceholder")
-        ) else { return }
+        guard
+            let name = await feedback.prompt(
+                title: L10n.t("files.modal.createImportTitle"),
+                label: L10n.t("files.modal.nameLabel"),
+                placeholder: L10n.t(isDirectory ? "files.modal.newFolderPlaceholder" : "files.modal.newFilePlaceholder")
+            )
+        else { return }
         do throws(CoreError) {
-            try await CoreClient.createFileEntry(serverID: serverID, parent: currentPath, name: name, isDirectory: isDirectory)
+            try await CoreClient.createFileEntry(
+                serverID: serverID, parent: currentPath, name: name, isDirectory: isDirectory)
             feedback.toast(.success, L10n.t("files.toast.created"))
         } catch {
             feedback.showError(L10n.t("files.toast.createFailed"), message: error.uiText)
@@ -362,12 +371,14 @@ struct FilesView: View {
     }
 
     private func rename(_ name: String) async {
-        guard let newName = await feedback.prompt(
-            title: L10n.t("files.modal.renameTitle"),
-            label: L10n.t("files.modal.renameLabel"),
-            defaultValue: name,
-            confirmLabel: L10n.t("files.modal.renameButton")
-        ), newName != name else { return }
+        guard
+            let newName = await feedback.prompt(
+                title: L10n.t("files.modal.renameTitle"),
+                label: L10n.t("files.modal.renameLabel"),
+                defaultValue: name,
+                confirmLabel: L10n.t("files.modal.renameButton")
+            ), newName != name
+        else { return }
         do throws(CoreError) {
             try await CoreClient.renameFileEntry(serverID: serverID, relative: relative(name), newName: newName)
             feedback.toast(.success, L10n.t("files.toast.renamed"))
@@ -383,14 +394,16 @@ struct FilesView: View {
 
     /// Asks for a destination folder relative to the server folder.
     private func move(names: Set<String>) async {
-        guard let destination = await feedback.prompt(
-            title: L10n.t("files.modal.moveTitle"),
-            description: L10n.t("files.modal.moveDescription", ["count": names.count]),
-            label: L10n.t("files.modal.moveDestLabel"),
-            defaultValue: currentPath,
-            placeholder: L10n.t("files.modal.moveDestPlaceholder"),
-            confirmLabel: L10n.t("files.modal.moveButton")
-        ) else { return }
+        guard
+            let destination = await feedback.prompt(
+                title: L10n.t("files.modal.moveTitle"),
+                description: L10n.t("files.modal.moveDescription", ["count": names.count]),
+                label: L10n.t("files.modal.moveDestLabel"),
+                defaultValue: currentPath,
+                placeholder: L10n.t("files.modal.moveDestPlaceholder"),
+                confirmLabel: L10n.t("files.modal.moveButton")
+            )
+        else { return }
         let target = destination.split(separator: "/").map(String.init).filter { !$0.isEmpty }
         await move(names: names, to: target)
     }
@@ -418,13 +431,15 @@ struct FilesView: View {
     /// React "Move Directory": moves the folder being viewed, then follows it.
     private func moveCurrentFolder() async {
         guard let name = path.last else { return }
-        guard let destination = await feedback.prompt(
-            title: L10n.t("files.modal.moveDirectoryTitle"),
-            description: L10n.t("files.modal.moveDirectoryDescription"),
-            label: L10n.t("files.modal.moveDestLabel"),
-            defaultValue: path.dropLast().joined(separator: "/"),
-            confirmLabel: L10n.t("files.modal.moveButton")
-        ) else { return }
+        guard
+            let destination = await feedback.prompt(
+                title: L10n.t("files.modal.moveDirectoryTitle"),
+                description: L10n.t("files.modal.moveDirectoryDescription"),
+                label: L10n.t("files.modal.moveDestLabel"),
+                defaultValue: path.dropLast().joined(separator: "/"),
+                confirmLabel: L10n.t("files.modal.moveButton")
+            )
+        else { return }
         let target = destination.split(separator: "/").map(String.init).filter { !$0.isEmpty }
         do throws(CoreError) {
             try await CoreClient.moveFileEntries(
@@ -443,12 +458,14 @@ struct FilesView: View {
         guard !names.isEmpty else { return }
         let listed = names.sorted().prefix(5).joined(separator: "\n")
         let more = names.count > 5 ? "\n…" : ""
-        guard await feedback.confirm(
-            title: L10n.t("files.confirm.deleteTitle"),
-            description: L10n.t("files.confirm.delete", ["count": names.count]) + "\n\n" + listed + more,
-            confirmLabel: L10n.t("files.toolbar.delete"),
-            isDanger: true
-        ) else { return }
+        guard
+            await feedback.confirm(
+                title: L10n.t("files.confirm.deleteTitle"),
+                description: L10n.t("files.confirm.delete", ["count": names.count]) + "\n\n" + listed + more,
+                confirmLabel: L10n.t("files.toolbar.delete"),
+                isDanger: true
+            )
+        else { return }
         do throws(CoreError) {
             try await CoreClient.deleteFileEntries(serverID: serverID, entries: names.sorted().map(relative))
             feedback.toast(.success, L10n.t("files.toast.deleted"))
@@ -473,7 +490,8 @@ struct FilesView: View {
 
     private func importFiles(_ urls: [URL]) async {
         do throws(CoreError) {
-            let count = try await CoreClient.importFileEntries(serverID: serverID, destination: currentPath, sources: urls)
+            let count = try await CoreClient.importFileEntries(
+                serverID: serverID, destination: currentPath, sources: urls)
             feedback.toast(.success, L10n.t("files.toast.uploadSuccess", ["count": count]))
         } catch {
             feedback.showError(L10n.t("files.toast.uploadFailed"), message: error.uiText)
@@ -488,26 +506,26 @@ struct FilesView: View {
     }
 
     #if DEBUG
-    /// Capture tooling: opens a folder, selects rows or opens a file.
-    struct CapturePreset {
-        var path: [String] = []
-        var selection: Set<String> = []
-        /// A file name inside `path` to open in the editor.
-        var openFile: String?
-    }
-
-    static var capturePreset: CapturePreset?
-
-    private func applyCapturePreset() {
-        guard let preset = Self.capturePreset else { return }
-        Self.capturePreset = nil
-        path = preset.path
-        pendingOpen = preset.openFile
-        Task {
-            try? await Task.sleep(for: .milliseconds(400))
-            selection = preset.selection
+        /// Capture tooling: opens a folder, selects rows or opens a file.
+        struct CapturePreset {
+            var path: [String] = []
+            var selection: Set<String> = []
+            /// A file name inside `path` to open in the editor.
+            var openFile: String?
         }
-    }
+
+        static var capturePreset: CapturePreset?
+
+        private func applyCapturePreset() {
+            guard let preset = Self.capturePreset else { return }
+            Self.capturePreset = nil
+            path = preset.path
+            pendingOpen = preset.openFile
+            Task {
+                try? await Task.sleep(for: .milliseconds(400))
+                selection = preset.selection
+            }
+        }
     #endif
 }
 

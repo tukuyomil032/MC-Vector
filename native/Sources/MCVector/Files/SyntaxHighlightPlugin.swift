@@ -55,16 +55,19 @@ final class SyntaxHighlightCoordinator {
     private var tsClient: TreeSitterClient?
     private var previousViewportRange: NSTextRange?
     private var scrollObserver: (any NSObjectProtocol)?
+    private var styleObserver: (any NSObjectProtocol)?
 
     init(textView: STTextView, language: TreeSitterLanguage, queryURL: URL?) {
         let tsLanguage = Language(language: language.parser)
         guard let queryURL, let query = try? tsLanguage.query(contentsOf: queryURL),
-              let client = try? TreeSitterClient(language: tsLanguage, transformer: { codePointIndex in
-                  guard let location = textView.textContentManager.location(at: codePointIndex),
+            let client = try? TreeSitterClient(
+                language: tsLanguage,
+                transformer: { codePointIndex in
+                    guard let location = textView.textContentManager.location(at: codePointIndex),
                         let position = textView.textContentManager.position(location)
-                  else { return .zero }
-                  return Point(row: position.row, column: position.column)
-              })
+                    else { return .zero }
+                    return Point(row: position.row, column: position.column)
+                })
         else { return }
         tsClient = client
 
@@ -103,10 +106,16 @@ final class SyntaxHighlightCoordinator {
                 MainActor.assumeIsolated { self?.highlighter?.visibleContentDidChange() }
             }
         }
+        styleObserver = NotificationCenter.default.addObserver(
+            forName: EditorStyle.didChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.highlighter?.invalidate(.all) }
+        }
     }
 
     isolated deinit {
         if let scrollObserver { NotificationCenter.default.removeObserver(scrollObserver) }
+        if let styleObserver { NotificationCenter.default.removeObserver(styleObserver) }
     }
 
     func updateViewportRange(_ range: NSTextRange?) {
@@ -146,7 +155,7 @@ private final class TextViewInterface: TextSystemInterface {
     }
 
     func applyStyle(to token: Neon.Token) {
-        guard let color = SyntaxColors.color(for: token.name) else { return }
+        guard let color = EditorStyle.color(forToken: token.name) else { return }
         textView.addRenderingAttributes([.foregroundColor: color], range: token.range)
     }
 
@@ -162,26 +171,24 @@ private final class TextViewInterface: TextSystemInterface {
     }
 }
 
-/// Token colors from system colors, close to Xcode's default theme.
-enum SyntaxColors {
-    static func color(for token: String) -> NSColor? {
-        let name = token.lowercased()
-        func has(_ prefix: String) -> Bool { name == prefix || name.hasPrefix(prefix + ".") }
-        if has("comment") { return .systemGray }
-        if has("string.special.key") || has("property") || has("label") { return .systemBlue }
-        if has("string") || has("text.literal") || has("character") { return .systemRed }
-        if has("number") || has("float") || has("boolean") || has("constant") { return .systemIndigo }
-        if has("keyword") || has("include") || has("conditional") || has("repeat")
-            || has("exception") || has("variable.builtin") || has("tag") { return .systemPink }
-        if has("type") || has("constructor") { return .systemPurple }
-        if has("function") || has("method") { return .systemTeal }
-        if has("attribute") { return .systemOrange }
-        if has("text.title") || has("markup.heading") { return .systemBlue }
-        return nil
+/// The palette the editor colors text with. CodeTextView sets it from the
+/// chosen theme and the appearance; highlighters color again when it changes.
+@MainActor
+enum EditorStyle {
+    static let didChange = Notification.Name("MCVectorEditorStyleDidChange")
+
+    private(set) static var palette: EditorTheme.Palette = .fallback
+    private static var key = ""
+
+    /// `key` identifies theme and appearance, so the same palette is not re-sent.
+    static func apply(_ palette: EditorTheme.Palette, key: String) {
+        guard key != self.key else { return }
+        self.palette = palette
+        self.key = key
+        NotificationCenter.default.post(name: didChange, object: nil)
     }
 
-    static let iniKey = NSColor.systemBlue
-    static let iniSeparator = NSColor.tertiaryLabelColor
-    static let iniComment = NSColor.systemGray
-    static let iniSection = NSColor.systemPink
+    static func color(forToken token: String) -> NSColor? {
+        palette.color(forToken: token)
+    }
 }

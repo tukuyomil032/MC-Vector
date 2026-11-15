@@ -12,13 +12,20 @@ struct FileEditorView: View {
 
     @Environment(AppState.self) private var app
     @Environment(FeedbackCenter.self) private var feedback
+    @Environment(\.colorScheme) private var colorScheme
+    private let editorSettings = EditorSettings.shared
     @State private var document: EditorDocument
 
-    init(serverID: String, file: OpenedFile, close: @escaping () -> Void) {
+    init(
+        serverID: String, file: OpenedFile, software: String? = nil, version: String? = nil,
+        close: @escaping () -> Void
+    ) {
         self.close = close
-        _document = State(initialValue: EditorDocument(
-            serverID: serverID, relativePath: file.relative, fileName: file.name, size: file.size
-        ))
+        _document = State(
+            initialValue: EditorDocument(
+                serverID: serverID, relativePath: file.relative, fileName: file.name, size: file.size,
+                software: software, version: version
+            ))
     }
 
     var body: some View {
@@ -32,11 +39,17 @@ struct FileEditorView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(document.fileName)
+        .focusedSceneValue(\.isEditorActive, document.isEditable)
         .task {
             await document.load()
             #if DEBUG
-            await runCaptureScript()
+                await runCaptureScript()
             #endif
+        }
+        .onChange(of: document.isGoToLineRequested) { _, requested in
+            guard requested else { return }
+            document.isGoToLineRequested = false
+            Task { await promptGoToLine() }
         }
         .onChange(of: document.isDirty) { _, dirty in app.hasUnsavedEditor = dirty }
         .onChange(of: document.isSaving) { _, saving in app.isEditorSaving = saving }
@@ -129,14 +142,14 @@ struct FileEditorView: View {
             case .loading:
                 ProgressView(L10n.t("files.loading"))
                     .transition(.motionFade)
-            case let .unsupported(reason):
+            case .unsupported(let reason):
                 ContentUnavailableView {
                     Label(L10n.t("files.editor.unsupportedTitle"), systemImage: "doc.questionmark")
                 } description: {
                     Text(reason)
                 }
                 .transition(.motionFade)
-            case let .failed(error):
+            case .failed(let error):
                 ContentUnavailableView {
                     Label(L10n.t("files.toast.readFailed"), systemImage: "exclamationmark.triangle")
                 } description: {
@@ -147,8 +160,17 @@ struct FileEditorView: View {
                 .transition(.motionFade)
             case .ready:
                 // No SwiftUI animation reaches the AppKit text view itself.
-                CodeTextView(document: document)
-                    .transition(.motionFade)
+                CodeTextView(
+                    document: document,
+                    style: .init(
+                        themeID: editorSettings.themeID,
+                        isDark: colorScheme == .dark,
+                        fontSize: editorSettings.fontSize,
+                        wrapLines: editorSettings.wrapLines,
+                        showInvisibles: editorSettings.showInvisibles
+                    )
+                )
+                .transition(.motionFade)
             }
         }
         .animation(Motion.standard, value: document.phase)
@@ -166,12 +188,20 @@ struct FileEditorView: View {
                     if document.mixedLineEndings {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
-                            .help(L10n.t("native.files.editor.mixedLineEndings", [
-                                "ending": document.lineEnding == .crlf ? "CRLF" : "LF",
-                            ]))
-                            .accessibilityLabel(Text(L10n.t("native.files.editor.mixedLineEndings", [
-                                "ending": document.lineEnding == .crlf ? "CRLF" : "LF",
-                            ])))
+                            .help(
+                                L10n.t(
+                                    "native.files.editor.mixedLineEndings",
+                                    [
+                                        "ending": document.lineEnding == .crlf ? "CRLF" : "LF"
+                                    ])
+                            )
+                            .accessibilityLabel(
+                                Text(
+                                    L10n.t(
+                                        "native.files.editor.mixedLineEndings",
+                                        [
+                                            "ending": document.lineEnding == .crlf ? "CRLF" : "LF"
+                                        ])))
                     }
                 }
                 Text(L10n.t("files.editor.lineColumn", ["line": document.line, "column": document.column]))
@@ -181,12 +211,20 @@ struct FileEditorView: View {
                     .animation(Motion.snappy, value: document.column)
             }
             Spacer()
+            if !document.diagnostics.isEmpty {
+                Label("\(document.diagnostics.count)", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .contentTransition(.numericText())
+                    .help(L10n.t("native.editor.diagnostic.count", ["count": document.diagnostics.count]))
+                    .transition(.motionFade)
+            }
             saveState
         }
         .font(.callout)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
+        .animation(Motion.snappy, value: document.diagnostics.count)
         .accessibilityElement(children: .combine)
     }
 
@@ -208,6 +246,26 @@ struct FileEditorView: View {
         .animation(Motion.snappy, value: document.isSaving)
     }
 
+    // MARK: Go to line
+
+    private func promptGoToLine() async {
+        guard
+            let text = await feedback.prompt(
+                title: L10n.t("native.editor.goToLine.title"),
+                label: L10n.t("native.editor.goToLine.label"),
+                defaultValue: String(document.line),
+                confirmLabel: L10n.t("native.editor.goToLine.confirm"),
+                validate: { value in
+                    guard let line = Int(value.trimmingCharacters(in: .whitespaces)), line >= 1 else {
+                        return L10n.t("native.editor.goToLine.invalid")
+                    }
+                    return nil
+                }
+            ), let line = Int(text.trimmingCharacters(in: .whitespaces))
+        else { return }
+        document.goTo(line: line)
+    }
+
     // MARK: Leaving
 
     private func requestClose() {
@@ -220,24 +278,30 @@ struct FileEditorView: View {
     }
 
     #if DEBUG
-    /// Capture tooling: what to do once the file has loaded.
-    struct CaptureScript {
-        var type: String?
-        var save = false
-        var confirmClose = false
-    }
+        /// Capture tooling: what to do once the file has loaded.
+        struct CaptureScript {
+            var type: String?
+            var save = false
+            var confirmClose = false
+            /// Opens the suggestion list after typing.
+            var showSuggestions = false
+            /// Shows the hover card for the first occurrence of this text.
+            var hover: String?
+        }
 
-    static var captureScript: CaptureScript?
+        static var captureScript: CaptureScript?
 
-    private func runCaptureScript() async {
-        guard let script = Self.captureScript, document.isEditable else { return }
-        Self.captureScript = nil
-        try? await Task.sleep(for: .milliseconds(900))
-        if let text = script.type { await document.typeForCapture(text) }
-        try? await Task.sleep(for: .milliseconds(500))
-        if script.save { await document.save(feedback: feedback) }
-        if script.confirmClose { requestClose() }
-    }
+        private func runCaptureScript() async {
+            guard let script = Self.captureScript, document.isEditable else { return }
+            Self.captureScript = nil
+            try? await Task.sleep(for: .milliseconds(900))
+            if let text = script.type { await document.typeForCapture(text) }
+            try? await Task.sleep(for: .milliseconds(500))
+            if script.showSuggestions { EditorAssistController.current?.textViewForCapture?.complete(nil) }
+            if let hover = script.hover { EditorAssistController.current?.showHoverForCapture(on: hover) }
+            if script.save { await document.save(feedback: feedback) }
+            if script.confirmClose { requestClose() }
+        }
     #endif
 
     private func finish(_ leave: AppState.PendingLeave) {

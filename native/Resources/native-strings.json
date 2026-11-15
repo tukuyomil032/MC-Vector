@@ -159,6 +159,10 @@
     "en": "Stop",
     "ja": "中止"
   },
+  "native.addServer.clickToType": {
+    "en": "Click to type a number",
+    "ja": "クリックすると数字を入力できます"
+  },
   "native.addServer.createdManualJar": {
     "en": "Server \"{name}\" created. Place its server jar in the server folder before starting it.",
     "ja": "サーバー「{name}」を作成しました。起動する前に、サーバーのフォルダーに JAR を置いてください。"
@@ -186,6 +190,106 @@
   "native.console.sendFailed": {
     "en": "The command could not be sent",
     "ja": "コマンドを送信できませんでした"
+  },
+  "native.editor.diagnostic.count": {
+    "en": "{count} problems in this file",
+    "ja": "このファイルに {count} 件の問題があります"
+  },
+  "native.editor.diagnostic.duplicate": {
+    "en": "This key appears more than once at this level.",
+    "ja": "同じ階層に、このキーが2回以上あります。"
+  },
+  "native.editor.diagnostic.range": {
+    "en": "Must be between {min} and {max}.",
+    "ja": "{min} から {max} の範囲で入れてください。"
+  },
+  "native.editor.diagnostic.type": {
+    "en": "Expected a value of type {type}.",
+    "ja": "{type} 型の値を入れてください。"
+  },
+  "native.editor.diagnostic.values": {
+    "en": "Must be one of: {values}",
+    "ja": "次のどれかにしてください：{values}"
+  },
+  "native.editor.doc.default": {
+    "en": "Default",
+    "ja": "既定値"
+  },
+  "native.editor.doc.range": {
+    "en": "Range",
+    "ja": "範囲"
+  },
+  "native.editor.doc.since": {
+    "en": "Since",
+    "ja": "追加された版"
+  },
+  "native.editor.doc.until": {
+    "en": "Until",
+    "ja": "使える最後の版"
+  },
+  "native.editor.doc.values": {
+    "en": "Values",
+    "ja": "値"
+  },
+  "native.editor.goToLine.confirm": {
+    "en": "Go",
+    "ja": "移動"
+  },
+  "native.editor.goToLine.invalid": {
+    "en": "Enter a line number of 1 or more.",
+    "ja": "1 以上の行番号を入れてください。"
+  },
+  "native.editor.goToLine.label": {
+    "en": "Line number",
+    "ja": "行番号"
+  },
+  "native.editor.goToLine.title": {
+    "en": "Go to Line",
+    "ja": "行へ移動"
+  },
+  "native.editor.menu": {
+    "en": "Editor",
+    "ja": "エディター"
+  },
+  "native.editor.menu.actualSize": {
+    "en": "Actual Size",
+    "ja": "実際のサイズ"
+  },
+  "native.editor.menu.comment": {
+    "en": "Toggle Comment",
+    "ja": "コメントの切り替え"
+  },
+  "native.editor.menu.find": {
+    "en": "Find…",
+    "ja": "検索…"
+  },
+  "native.editor.menu.findNext": {
+    "en": "Find Next",
+    "ja": "次を検索"
+  },
+  "native.editor.menu.findPrevious": {
+    "en": "Find Previous",
+    "ja": "前を検索"
+  },
+  "native.editor.menu.goToLine": {
+    "en": "Go to Line…",
+    "ja": "行へ移動…"
+  },
+  "native.editor.menu.replace": {
+    "en": "Find and Replace…",
+    "ja": "検索と置換…"
+  },
+  "native.editor.menu.suggestions": {
+    "en": "Show Suggestions",
+    "ja": "候補を表示"
+  },
+  "native.editor.menu.zoomIn": {
+    "en": "Zoom In",
+    "ja": "拡大"
+  },
+  "native.editor.menu.zoomOut": {
+    "en": "Zoom Out",
+    "ja": "縮小"
   },
   "native.files.archiveLater": {
     "en": "Compress and Extract arrive with the Backups screen.",
@@ -290,6 +394,54 @@
   "native.settings.author": {
     "en": "Author",
     "ja": "作成者"
+  },
+  "native.settings.editor": {
+    "en": "Editor",
+    "ja": "エディター"
+  },
+  "native.settings.editor.automatic": {
+    "en": "Automatic",
+    "ja": "自動"
+  },
+  "native.settings.editor.fontSize": {
+    "en": "Font size",
+    "ja": "文字の大きさ"
+  },
+  "native.settings.editor.inlineSuggestions": {
+    "en": "Show the top suggestion as dimmed text (Tab accepts it)",
+    "ja": "一番上の候補を薄い文字で表示する（Tab で確定）"
+  },
+  "native.settings.editor.showInvisibles": {
+    "en": "Show spaces and tabs",
+    "ja": "スペースとタブを表示する"
+  },
+  "native.settings.editor.suggestWhileTyping": {
+    "en": "Show suggestions while typing",
+    "ja": "入力中に候補を表示する"
+  },
+  "native.settings.editor.suggestions": {
+    "en": "Suggestions",
+    "ja": "入力候補"
+  },
+  "native.settings.editor.suggestionsFooter": {
+    "en": "Press ⌃Space to show suggestions at any time. Config files that the server software creates are completed from their documented settings.",
+    "ja": "⌃Space で、いつでも候補を表示できます。サーバーソフトが作る設定ファイルでは、公式の設定項目から候補を出します。"
+  },
+  "native.settings.editor.text": {
+    "en": "Text",
+    "ja": "テキスト"
+  },
+  "native.settings.editor.theme": {
+    "en": "Theme",
+    "ja": "テーマ"
+  },
+  "native.settings.editor.themeFooter": {
+    "en": "Themes marked Automatic follow the system's Light and Dark appearance.",
+    "ja": "「自動」の付いたテーマは、システムのライトとダークに合わせて切り替わります。"
+  },
+  "native.settings.editor.wrapLines": {
+    "en": "Wrap long lines",
+    "ja": "長い行を折り返す"
   },
   "native.settings.general": {
     "en": "General",

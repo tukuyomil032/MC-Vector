@@ -2,6 +2,7 @@
 
 import AppKit
 import MCVectorCore
+import MCVectorEditorKit
 import STTextView
 
 /// One file open in the editor: loading (FILE-001, FILE-003), the unsaved state,
@@ -27,6 +28,11 @@ final class EditorDocument {
     let fileName: String
     let size: UInt64
     let language: EditorLanguage
+    /// Set for config formats the editor understands (completion, validation).
+    let format: ConfigFormat?
+    /// The documented settings of this file for the server's software and version.
+    let schema: ConfigSchema?
+    let entries: [SchemaEntry]
 
     private(set) var phase: Phase = .loading
     private(set) var isDirty = false
@@ -36,6 +42,10 @@ final class EditorDocument {
     private(set) var hasBOM = false
     private(set) var lineEnding: LineEnding = .lf
     private(set) var mixedLineEndings = false
+    /// Validation problems, refreshed shortly after each edit.
+    var diagnostics: [Diagnostic] = []
+    /// ⌘L asked for the Go to Line prompt.
+    var isGoToLineRequested = false
 
     /// The text the view starts with.
     @ObservationIgnored private(set) var initialText = ""
@@ -45,12 +55,23 @@ final class EditorDocument {
     /// Last computed cursor line, so moving the cursor counts only the lines in between.
     @ObservationIgnored private var lineCache: (location: Int, line: Int, lineStart: Int)?
 
-    init(serverID: String, relativePath: String, fileName: String, size: UInt64) {
+    init(
+        serverID: String, relativePath: String, fileName: String, size: UInt64,
+        software: String? = nil, version: String? = nil
+    ) {
         self.serverID = serverID
         self.relativePath = relativePath
         self.fileName = fileName
         self.size = size
         language = EditorLanguage.detect(fileName: fileName)
+        format = language.format
+        let schema = software.flatMap { software in
+            ConfigSchemas.store?.schema(
+                forRelativePath: relativePath, software: ServerSoftware.id(for: software), version: version
+            )
+        }
+        self.schema = schema
+        entries = schema.flatMap { ConfigSchemas.store?.entries(of: $0, version: version) } ?? []
     }
 
     var isEditable: Bool { phase == .ready }
@@ -76,9 +97,9 @@ final class EditorDocument {
             baseline = document.text as NSString
             isDirty = false
             phase = .ready
-        } catch where error.code == "files.not_text" {
+        } catch  where error.code == "files.not_text" {
             phase = .unsupported(L10n.t("native.files.editor.notUtf8"))
-        } catch where error.code == "files.too_large" {
+        } catch  where error.code == "files.too_large" {
             phase = .unsupported(L10n.t("files.editor.largeDescription", ["megabytes": 5]))
         } catch {
             phase = .failed(error)
@@ -94,7 +115,7 @@ final class EditorDocument {
     }
 
     /// The view's text without a copy.
-    private var currentText: NSString? {
+    var currentText: NSString? {
         (textView?.textContentManager as? NSTextContentStorage)?.textStorage?.mutableString
     }
 
@@ -133,17 +154,34 @@ final class EditorDocument {
     }
 
     #if DEBUG
-    /// Capture tooling: types `text` at the end of the document, one character
-    /// at a time like a person would, through the same path as the keyboard.
-    func typeForCapture(_ text: String) async {
-        guard let textView, let length = currentText?.length else { return }
-        textView.textSelection = NSRange(location: length, length: 0)
-        for character in text {
-            textView.insertText(String(character), replacementRange: NSRange(location: NSNotFound, length: 0))
-            try? await Task.sleep(for: .milliseconds(45))
+        /// Capture tooling: types `text` at the end of the document, one character
+        /// at a time like a person would, through the same path as the keyboard.
+        func typeForCapture(_ text: String) async {
+            guard let textView, let length = currentText?.length else { return }
+            textView.textSelection = NSRange(location: length, length: 0)
+            for character in text {
+                textView.insertText(String(character), replacementRange: NSRange(location: NSNotFound, length: 0))
+                try? await Task.sleep(for: .milliseconds(45))
+            }
         }
-    }
     #endif
+
+    /// Moves the cursor to the start of a 1-based line and scrolls it into view.
+    func goTo(line target: Int) {
+        guard let textView, let text = currentText else { return }
+        var location = 0
+        var current = 1
+        while current < target, location < text.length {
+            let found = text.range(
+                of: "\n", options: .literal, range: NSRange(location: location, length: text.length - location))
+            guard found.location != NSNotFound else { break }
+            location = found.location + 1
+            current += 1
+        }
+        textView.textSelection = NSRange(location: location, length: 0)
+        textView.scrollRangeToVisible(NSRange(location: location, length: 0))
+        textView.window?.makeFirstResponder(textView)
+    }
 
     // MARK: Saving
 

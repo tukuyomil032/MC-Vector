@@ -14,11 +14,12 @@ struct SettingsView: View {
 
     private static var initialPane: SettingsPane {
         #if DEBUG
-        // capture.sh opens a pane directly with `--capture-state SETTINGS-<pane>`.
-        if let id = CaptureState.requestedID, id.hasPrefix("SETTINGS-"),
-           let pane = SettingsPane(rawValue: String(id.dropFirst("SETTINGS-".count))) {
-            return pane
-        }
+            // capture.sh opens a pane directly with `--capture-state SETTINGS-<pane>`.
+            if let id = CaptureState.requestedID, id.hasPrefix("SETTINGS-"),
+                let pane = SettingsPane(rawValue: String(id.dropFirst("SETTINGS-".count)))
+            {
+                return pane
+            }
         #endif
         return .general
     }
@@ -47,6 +48,7 @@ struct SettingsView: View {
             Group {
                 switch selection ?? .general {
                 case .general: GeneralPane()
+                case .editor: EditorSettingsPane()
                 case .updates: UpdatesPane()
                 case .security: SecurityPane()
                 case .about: AboutPane()
@@ -59,22 +61,23 @@ struct SettingsView: View {
         }
         .frame(minWidth: 680, idealWidth: 720, minHeight: 460, idealHeight: 480)
         #if DEBUG
-        .onAppear { selection = Self.initialPane }
+            .onAppear { selection = Self.initialPane }
         #endif
     }
 }
 
 enum SettingsPane: String, Identifiable, Hashable {
-    case general, updates, security, about
+    case general, editor, updates, security, about
 
     var id: String { rawValue }
 
     /// Sidebar groups, separated like System Settings.
-    static let groups: [[SettingsPane]] = [[.general, .updates, .security], [.about]]
+    static let groups: [[SettingsPane]] = [[.general, .editor, .updates, .security], [.about]]
 
     var title: String {
         switch self {
         case .general: L10n.t("native.settings.general")
+        case .editor: L10n.t("native.settings.editor")
         case .updates: L10n.t("settings.update.title")
         case .security: L10n.t("settings.security.title")
         case .about: L10n.t("native.settings.about")
@@ -84,6 +87,7 @@ enum SettingsPane: String, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .general: "gearshape.fill"
+        case .editor: "chevron.left.forwardslash.chevron.right"
         case .updates: "arrow.down.circle.fill"
         case .security: "lock.shield.fill"
         case .about: "info.circle.fill"
@@ -93,6 +97,7 @@ enum SettingsPane: String, Identifiable, Hashable {
     var tint: Color {
         switch self {
         case .general: .gray
+        case .editor: .purple
         case .updates: .blue
         case .security: .red
         case .about: .indigo
@@ -103,12 +108,14 @@ enum SettingsPane: String, Identifiable, Hashable {
     func matches(_ query: String) -> Bool {
         let query = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !query.isEmpty else { return true }
-        let words: [String] = switch self {
-        case .general: [L10n.t("settings.language.label"), "language"]
-        case .updates: [L10n.t("settings.update.channelLabel"), "update", "beta"]
-        case .security: [L10n.t("settings.security.label"), "plugin", "security"]
-        case .about: ["version", "github", "license"]
-        }
+        let words: [String] =
+            switch self {
+            case .general: [L10n.t("settings.language.label"), "language"]
+            case .editor: ["theme", "font", "editor", L10n.t("native.settings.editor.theme")]
+            case .updates: [L10n.t("settings.update.channelLabel"), "update", "beta"]
+            case .security: [L10n.t("settings.security.label"), "plugin", "security"]
+            case .about: ["version", "github", "license"]
+            }
         return ([title] + words).contains { $0.lowercased().contains(query) }
     }
 }
@@ -148,18 +155,21 @@ private struct GeneralPane: View {
     var body: some View {
         Form {
             Section {
-                Picker(L10n.t("settings.language.label"), selection: Binding<String>(
-                    get: { model.settings.locale ?? L10n.language },
-                    set: { newValue in
-                        do throws(CoreError) {
-                            try CoreClient.setLocale(newValue)
-                            model.settings.locale = newValue
-                            L10n.configure(locale: newValue)
-                        } catch {
-                            model.error = error
+                Picker(
+                    L10n.t("settings.language.label"),
+                    selection: Binding<String>(
+                        get: { model.settings.locale ?? L10n.language },
+                        set: { newValue in
+                            do throws(CoreError) {
+                                try CoreClient.setLocale(newValue)
+                                model.settings.locale = newValue
+                                L10n.configure(locale: newValue)
+                            } catch {
+                                model.error = error
+                            }
                         }
-                    }
-                )) {
+                    )
+                ) {
                     Text(L10n.t("settings.language.options.en")).tag("en")
                     Text(L10n.t("settings.language.options.ja")).tag("ja")
                 }
@@ -187,25 +197,29 @@ private struct UpdatesPane: View {
                 LabeledContent(L10n.t("native.settings.status"), value: L10n.t("settings.update.idle"))
             }
             Section {
-                Picker(L10n.t("settings.update.channelLabel"), selection: Binding(
-                    get: { model.settings.updateChannel },
-                    set: { newValue in
-                        do throws(CoreError) {
-                            try CoreClient.setUpdateChannel(newValue)
-                            model.settings.updateChannel = newValue
-                        } catch {
-                            model.error = error
+                Picker(
+                    L10n.t("settings.update.channelLabel"),
+                    selection: Binding(
+                        get: { model.settings.updateChannel },
+                        set: { newValue in
+                            do throws(CoreError) {
+                                try CoreClient.setUpdateChannel(newValue)
+                                model.settings.updateChannel = newValue
+                            } catch {
+                                model.error = error
+                            }
                         }
-                    }
-                )) {
+                    )
+                ) {
                     Text(L10n.t("settings.update.channels.stable")).tag("stable")
                     Text(L10n.t("settings.update.channels.beta")).tag("beta")
                 }
             } footer: {
-                Text(L10n.t(
-                    model.settings.updateChannel == "beta"
-                        ? "settings.update.betaDescription" : "settings.update.stableDescription"
-                ))
+                Text(
+                    L10n.t(
+                        model.settings.updateChannel == "beta"
+                            ? "settings.update.betaDescription" : "settings.update.stableDescription"
+                    ))
             }
         }
         .formStyle(.grouped)
@@ -219,17 +233,19 @@ private struct SecurityPane: View {
     var body: some View {
         Form {
             Section {
-                Toggle(L10n.t("settings.security.label"), isOn: Binding(
-                    get: { model.settings.allowUnverifiedPluginDownloads },
-                    set: { newValue in
-                        do throws(CoreError) {
-                            try CoreClient.setAllowUnverifiedPluginDownloads(newValue)
-                            model.settings.allowUnverifiedPluginDownloads = newValue
-                        } catch {
-                            model.error = error
+                Toggle(
+                    L10n.t("settings.security.label"),
+                    isOn: Binding(
+                        get: { model.settings.allowUnverifiedPluginDownloads },
+                        set: { newValue in
+                            do throws(CoreError) {
+                                try CoreClient.setAllowUnverifiedPluginDownloads(newValue)
+                                model.settings.allowUnverifiedPluginDownloads = newValue
+                            } catch {
+                                model.error = error
+                            }
                         }
-                    }
-                ))
+                    ))
             } header: {
                 Text(L10n.t("settings.security.description"))
             } footer: {
@@ -294,9 +310,9 @@ private struct AboutPane: View {
     }
 }
 
-private extension View {
+extension View {
     /// A failed save is shown as an alert; the control keeps the stored value.
-    func settingsErrorAlert(_ error: Binding<CoreError?>) -> some View {
+    fileprivate func settingsErrorAlert(_ error: Binding<CoreError?>) -> some View {
         alert(
             L10n.t("native.settings.saveFailed"),
             isPresented: Binding(get: { error.wrappedValue != nil }, set: { if !$0 { error.wrappedValue = nil } }),

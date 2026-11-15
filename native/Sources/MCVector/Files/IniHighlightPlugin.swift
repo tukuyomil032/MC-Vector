@@ -17,15 +17,38 @@ struct IniHighlightPlugin: STPlugin {
         }
     }
 
-    func makeCoordinator(context: CoordinatorContext) {
+    func makeCoordinator(context: CoordinatorContext) -> IniHighlightCoordinator {
+        IniHighlightCoordinator(textView: context.textView)
+    }
+}
+
+/// Colors the whole text once the view is on screen, and again when the
+/// editor theme changes.
+@MainActor
+final class IniHighlightCoordinator {
+    private weak var textView: STTextView?
+    private var styleObserver: (any NSObjectProtocol)?
+
+    init(textView: STTextView) {
+        self.textView = textView
         // STTextView makes coordinators when it moves into the window, which
         // happens inside a layout pass; coloring then would ask for layout
         // during layout and AppKit throws. Color on the next turn instead.
-        let textView = context.textView
-        DispatchQueue.main.async { [weak textView] in
-            guard let textView else { return }
-            IniHighlighter.highlight(textView, around: nil)
+        DispatchQueue.main.async { [weak self] in self?.highlightAll() }
+        styleObserver = NotificationCenter.default.addObserver(
+            forName: EditorStyle.didChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.highlightAll() }
         }
+    }
+
+    isolated deinit {
+        if let styleObserver { NotificationCenter.default.removeObserver(styleObserver) }
+    }
+
+    private func highlightAll() {
+        guard let textView else { return }
+        IniHighlighter.highlight(textView, around: nil)
     }
 }
 
@@ -37,8 +60,9 @@ enum IniHighlighter {
         let text = storage.mutableString
         let target: NSRange
         if let range {
-            let clamped = NSRange(location: min(range.location, text.length),
-                                  length: min(range.length, text.length - min(range.location, text.length)))
+            let clamped = NSRange(
+                location: min(range.location, text.length),
+                length: min(range.length, text.length - min(range.location, text.length)))
             target = text.lineRange(for: clamped)
         } else {
             target = NSRange(location: 0, length: text.length)
@@ -53,6 +77,13 @@ enum IniHighlighter {
                 layout.addRenderingAttribute(.foregroundColor, value: color, for: partRange)
             }
         }
+        // The layout manager alone does not redraw the changed colors.
+        textView.needsLayout = true
+        textView.needsDisplay = true
+    }
+
+    private static func color(_ token: String) -> NSColor {
+        EditorStyle.color(forToken: token) ?? .textColor
     }
 
     /// The colored pieces of one line.
@@ -67,16 +98,16 @@ enum IniHighlighter {
         let first = text.character(at: start)
         let rest = NSRange(location: start, length: end - start)
         switch first {
-        case 0x23, 0x21, 0x3B: // # ! ;
-            return [(SyntaxColors.iniComment, rest)]
-        case 0x5B: // [
-            return [(SyntaxColors.iniSection, rest)]
+        case 0x23, 0x21, 0x3B:  // # ! ;
+            return [(color("comment"), rest)]
+        case 0x5B:  // [
+            return [(color("ini.section"), rest)]
         default:
             let separator = text.rangeOfCharacter(from: CharacterSet(charactersIn: "=:"), range: rest)
-            guard separator.location != NSNotFound else { return [(SyntaxColors.iniKey, rest)] }
+            guard separator.location != NSNotFound else { return [(color("ini.key"), rest)] }
             return [
-                (SyntaxColors.iniKey, NSRange(location: start, length: separator.location - start)),
-                (SyntaxColors.iniSeparator, separator),
+                (color("ini.key"), NSRange(location: start, length: separator.location - start)),
+                (color("ini.separator"), separator),
             ]
         }
     }

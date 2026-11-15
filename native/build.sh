@@ -329,6 +329,14 @@ assemble_app() {
   cp "$versions" "$staged_app/Contents/Resources/minecraft-versions.json" || return 1
   cp "$NATIVE_DIR/Resources/ThirdPartyNotices.txt" "$staged_app/Contents/Resources/" || return 1
   copy_highlight_queries "$staged_app/Contents/Resources/TreeSitterQueries" || return 1
+  # Editor themes and server config schemas (completion, hover docs, validation).
+  local folder
+  for folder in EditorThemes ConfigSchemas; do
+    mkdir -p "$staged_app/Contents/Resources/$folder" || return 1
+    if compgen -G "$NATIVE_DIR/Resources/$folder/*.json" >/dev/null; then
+      cp "$NATIVE_DIR/Resources/$folder/"*.json "$staged_app/Contents/Resources/$folder/" || return 1
+    fi
+  done
   run_logged "codesign" codesign --force --deep --sign - "$staged_app" || return 1
 
   ensure_inside_build "$app"

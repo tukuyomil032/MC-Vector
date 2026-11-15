@@ -29,7 +29,7 @@ enum Preflight {
                     CoreClient.setAppVersion(version)
                 }
                 return
-            case let .heldByOther(owner):
+            case .heldByOther(let owner):
                 // The other edition holds the data folder: never read config.json here.
                 L10n.configure(locale: nil)
                 prepareForAlert()
@@ -74,7 +74,10 @@ struct MCVectorApp: App {
                 .onAppear { appDelegate.attach(app: app, feedback: feedback, runtime: runtime) }
         }
         .defaultSize(width: 1200, height: 800)
-        .commands { ShellCommands(app: app) }
+        .commands {
+            ShellCommands(app: app)
+            EditorCommands()
+        }
 
         // The standard Settings window: ⌘, and "Settings…" in the app menu.
         Settings {
