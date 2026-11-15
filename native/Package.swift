@@ -21,6 +21,8 @@ let package = Package(
     // (this is its 0.8.1 tag).
     dependencies: [
         .package(url: "https://github.com/krzyzanowskim/STTextView", from: "2.4.1"),
+        .package(url: "https://github.com/krzyzanowskim/STTextView-Plugin-TextFormation", from: "0.7.0"),
+        .package(url: "https://github.com/krzyzanowskim/STTextView-Plugin-Annotations", from: "1.3.0"),
         .package(
             url: "https://github.com/krzyzanowskim/STTextView-Plugin-Neon",
             revision: "5a30db4ce7908a5414e7b499e2379bdc49991cd1"
@@ -59,6 +61,8 @@ let package = Package(
                 "MCVectorEditorKit",
                 .product(name: "STTextView", package: "STTextView"),
                 .product(name: "STTextView-Plugin-Neon", package: "STTextView-Plugin-Neon"),
+                .product(name: "TextFormationPlugin", package: "STTextView-Plugin-TextFormation"),
+                .product(name: "STTextViewAnnotationsPlugin", package: "STTextView-Plugin-Annotations"),
             ],
             path: "Sources/MCVector"
         ),
