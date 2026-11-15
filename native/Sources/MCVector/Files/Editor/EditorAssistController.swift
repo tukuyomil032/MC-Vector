@@ -122,6 +122,7 @@ final class EditorAssistController: EditorTextViewAssist {
                 let result = self.computeResult(),
                 result.candidates.contains(where: { $0.kind == .value || $0.kind == .enumValue })
             else { return }
+            self.hideHover()
             textView.complete(nil)
         }
     }
@@ -174,7 +175,14 @@ final class EditorAssistController: EditorTextViewAssist {
         let controller = SuggestionViewController()
         controller.onSelectionChange = { [weak self] candidate in
             guard let self else { return }
-            if let candidate { self.showInline(for: candidate, in: self.lastResult) } else { self.hideInline() }
+            if let candidate {
+                // The list shows the same documentation: one card is enough.
+                self.hoverTask?.cancel()
+                self.hideHover()
+                self.showInline(for: candidate, in: self.lastResult)
+            } else {
+                self.hideInline()
+            }
         }
         return controller
     }
@@ -341,6 +349,10 @@ final class EditorAssistController: EditorTextViewAssist {
 
     func mouseMoved(in textView: EditorTextView, event: NSEvent) {
         hoverTask?.cancel()
+        guard !textView.isCompletionActive else {
+            hideHover()
+            return
+        }
         guard let window = textView.window else { return }
         let screenPoint = window.convertPoint(toScreen: event.locationInWindow)
         let index = textView.characterIndex(for: screenPoint)
