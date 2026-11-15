@@ -20,7 +20,9 @@ struct FilesView: View {
     @State private var isLoading = false
     @State private var folderSizes: [String: FolderSize] = [:]
     @State private var isDropTargeted = false
-    @State private var openedFile: String?
+    @State private var openedFile: OpenedFile?
+    /// A file to open once the folder is listed (capture presets).
+    @State private var pendingOpen: String?
 
     private var currentPath: String { path.joined(separator: "/") }
     private var server: ServerProfile? { app.servers.first { $0.id == serverID } }
@@ -28,11 +30,13 @@ struct FilesView: View {
     var body: some View {
         ZStack {
             if let openedFile {
-                FileEditorView(serverID: serverID, relativePath: openedFile) {
+                FileEditorView(serverID: serverID, file: openedFile) {
                     withAnimation(Motion.standard) { self.openedFile = nil }
                     Task { await reload() }
                 }
-                .transition(.motionSlide(edge: .trailing))
+                // Fade only: moving the AppKit text view each frame makes the
+                // window's constraint passes loop, like the table.
+                .transition(.motionFade)
             } else {
                 // The table only fades: moving it re-enters NSTableView's row measuring.
                 browser
@@ -304,7 +308,7 @@ struct FilesView: View {
         if row.isDirectory {
             navigate(to: path + [name])
         } else {
-            openedFile = relative(name)
+            openedFile = OpenedFile(relative: relative(name), name: name, size: row.size)
         }
     }
 
@@ -318,6 +322,10 @@ struct FilesView: View {
             // Trim the selection on the next turn, not inside the table's update.
             let names = Set(rows.map(\.name))
             Task { @MainActor in selection = selection.filter(names.contains) }
+            if let name = pendingOpen, rows.contains(where: { $0.name == name }) {
+                pendingOpen = nil
+                open(name)
+            }
         } catch {
             items = []
             feedback.toast(.error, L10n.t("files.toast.loadFailed"))
@@ -484,6 +492,7 @@ struct FilesView: View {
     struct CapturePreset {
         var path: [String] = []
         var selection: Set<String> = []
+        /// A file name inside `path` to open in the editor.
         var openFile: String?
     }
 
@@ -493,7 +502,7 @@ struct FilesView: View {
         guard let preset = Self.capturePreset else { return }
         Self.capturePreset = nil
         path = preset.path
-        openedFile = preset.openFile
+        pendingOpen = preset.openFile
         Task {
             try? await Task.sleep(for: .milliseconds(400))
             selection = preset.selection
@@ -534,9 +543,11 @@ enum FileDrag {
 
 /// What a file name says about its contents.
 enum FileKind {
-    /// React's binary list plus Minecraft data files, which are not text.
+    /// The extensions the editor refuses without reading (FILE-001, React's list).
+    /// Other non-text files, such as .nbt or .dat, are refused when they turn out
+    /// not to be UTF-8.
     static let binaryExtensions: Set<String> = [
-        "jar", "zip", "png", "jpg", "jpeg", "gif", "ico", "exe", "dll", "class", "nbt", "dat", "mca", "gz",
+        "jar", "zip", "png", "jpg", "jpeg", "gif", "ico", "exe", "dll", "class",
     ]
 
     static func isBinary(_ name: String) -> Bool {
@@ -550,6 +561,7 @@ enum FileKind {
         case "log": "doc.text.magnifyingglass"
         case "json", "yml", "yaml", "toml", "properties", "conf", "cfg", "xml": "doc.badge.gearshape"
         case "sh", "bat", "command": "terminal"
+        case "nbt", "dat", "mca": "doc"
         default: isBinary(name) ? "doc" : "doc.text"
         }
     }

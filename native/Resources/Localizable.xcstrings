@@ -7313,6 +7313,92 @@
         }
       }
     },
+    "native.files.editor.discardAndQuit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard and Quit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "破棄して終了"
+          }
+        }
+      }
+    },
+    "native.files.editor.mixedLineEndings": {
+      "comment": "Placeholders: {ending}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file mixed LF and CRLF line endings. Saving writes every line with {ending}."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルには LF と CRLF の改行が混ざっていました。保存すると、すべての改行を {ending} にそろえます。"
+          }
+        }
+      }
+    },
+    "native.files.editor.notUtf8": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is not UTF-8 text, so it cannot be opened in the editor."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 のテキストとして読めないため、エディターでは開けません。"
+          }
+        }
+      }
+    },
+    "native.files.editor.quitDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file open in the editor has changes that are not saved. Quitting now discards them."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エディターで開いているファイルに、保存していない変更があります。このまま終了すると、変更は失われます。"
+          }
+        }
+      }
+    },
+    "native.files.editor.utf8Bom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 with BOM"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8（BOM 付き）"
+          }
+        }
+      }
+    },
     "native.files.modified": {
       "extractionState": "manual",
       "localizations": {
@@ -7770,6 +7856,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "macOS 向けの Minecraft サーバー管理アプリ"
+          }
+        }
+      }
+    },
+    "native.settings.thirdPartyNotices": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Third-Party Notices"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サードパーティの表記"
           }
         }
       }

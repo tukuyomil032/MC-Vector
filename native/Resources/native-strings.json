@@ -191,6 +191,26 @@
     "en": "Compress and Extract arrive with the Backups screen.",
     "ja": "圧縮と展開は、バックアップの画面と一緒に使えるようになります。"
   },
+  "native.files.editor.discardAndQuit": {
+    "en": "Discard and Quit",
+    "ja": "破棄して終了"
+  },
+  "native.files.editor.mixedLineEndings": {
+    "en": "The file mixed LF and CRLF line endings. Saving writes every line with {ending}.",
+    "ja": "このファイルには LF と CRLF の改行が混ざっていました。保存すると、すべての改行を {ending} にそろえます。"
+  },
+  "native.files.editor.notUtf8": {
+    "en": "The file is not UTF-8 text, so it cannot be opened in the editor.",
+    "ja": "UTF-8 のテキストとして読めないため、エディターでは開けません。"
+  },
+  "native.files.editor.quitDescription": {
+    "en": "The file open in the editor has changes that are not saved. Quitting now discards them.",
+    "ja": "エディターで開いているファイルに、保存していない変更があります。このまま終了すると、変更は失われます。"
+  },
+  "native.files.editor.utf8Bom": {
+    "en": "UTF-8 with BOM",
+    "ja": "UTF-8（BOM 付き）"
+  },
   "native.files.modified": {
     "en": "Modified",
     "ja": "更新日時"
@@ -298,6 +318,10 @@
   "native.settings.tagline": {
     "en": "Minecraft server manager for macOS",
     "ja": "macOS 向けの Minecraft サーバー管理アプリ"
+  },
+  "native.settings.thirdPartyNotices": {
+    "en": "Third-Party Notices",
+    "ja": "サードパーティの表記"
   },
   "startup.failed": {
     "en": "MC-Vector could not start",
