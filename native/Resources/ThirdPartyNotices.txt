@@ -1042,3 +1042,49 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+========================================================================
+Editor theme palettes
+========================================================================
+
+github
+Author: GitHub / Primer contributors
+Source: https://github.com/primer/github-vscode-theme
+License: MIT
+Assets: GitHub Light Default and GitHub Dark Default palettes
+
+one
+Author: Atom team
+Source: https://github.com/atom/one-light-syntax and https://github.com/atom/one-dark-syntax
+License: MIT
+Assets: Atom One Light and One Dark palettes
+
+solarized
+Author: Ethan Schoonover
+Source: https://github.com/altercation/solarized; VS Code theme sources: https://github.com/microsoft/vscode/tree/main/extensions/theme-solarized-light and https://github.com/microsoft/vscode/tree/main/extensions/theme-solarized-dark
+License: MIT
+Assets: Solarized Light and Solarized Dark palettes
+
+dracula
+Author: Zeno Rocha; maintained by Derek P. Sifford and contributors
+Source: https://github.com/dracula/visual-studio-code
+License: MIT
+Assets: Dracula palette
+
+monokai
+Author: Wimer Hazenberg (original palette); Microsoft VS Code theme contributors (VS Code theme source)
+Source: https://github.com/microsoft/vscode/blob/main/extensions/theme-monokai/themes/monokai-color-theme.json
+License: MIT
+Assets: Classic Monokai palette
+
+nord
+Author: Sven Greb and Nord contributors
+Source: https://github.com/nordtheme/visual-studio-code
+License: MIT
+Assets: Nord palette
+
+tokyo-night
+Author: Enkia and contributors
+Source: https://github.com/tokyo-night/tokyo-night-vscode-theme
+License: MIT
+Assets: Tokyo Night palette
