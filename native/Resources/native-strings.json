@@ -75,6 +75,46 @@
     "en": "The application data folder could not be found.",
     "ja": "アプリのデータフォルダーが見つかりませんでした。"
   },
+  "error.player.invalid_file": {
+    "en": "The player list file is not in the expected place.",
+    "ja": "プレイヤー一覧のファイルが、想定した場所にありません。"
+  },
+  "error.player.invalid_ip": {
+    "en": "Enter a valid IPv4 or IPv6 address.",
+    "ja": "正しい IPv4 か IPv6 のアドレスを入力してください。"
+  },
+  "error.player.invalid_name": {
+    "en": "Enter a Minecraft player name: 1 to 16 letters, numbers or underscores.",
+    "ja": "Minecraft のプレイヤー名を入力してください。英数字とアンダースコアで 1〜16 文字です。"
+  },
+  "error.player.io": {
+    "en": "The player list could not be read or written. Check the folder's permissions and try again.",
+    "ja": "プレイヤー一覧を読み書きできませんでした。フォルダーの権限を確認して、もう一度試してください。"
+  },
+  "error.player.list_too_large": {
+    "en": "The player list file is too large to open. It was left unchanged.",
+    "ja": "プレイヤー一覧のファイルが大きすぎて開けません。ファイルは変更していません。"
+  },
+  "error.player.malformed_list": {
+    "en": "A player list file is not valid JSON. It was left unchanged.",
+    "ja": "プレイヤー一覧のファイルが正しい JSON ではありません。ファイルは変更していません。"
+  },
+  "error.properties.invalid": {
+    "en": "A property name or value is not valid.",
+    "ja": "プロパティの名前か値が正しくありません。"
+  },
+  "error.properties.io": {
+    "en": "server.properties could not be read or written. Check the folder's permissions and try again.",
+    "ja": "server.properties を読み書きできませんでした。フォルダーの権限を確認して、もう一度試してください。"
+  },
+  "error.properties.malformed": {
+    "en": "server.properties could not be read because part of it is not in key=value form.",
+    "ja": "server.properties の一部が key=value の形になっていないため、読み込めませんでした。"
+  },
+  "error.properties.missing": {
+    "en": "server.properties does not exist yet. Start the server once to create it.",
+    "ja": "server.properties がまだありません。サーバーを一度起動すると作られます。"
+  },
   "error.registry.open_failed": {
     "en": "The server list could not be opened. Your data has not been changed.",
     "ja": "サーバー一覧を開けませんでした。データは変更されていません。"
@@ -115,6 +155,10 @@
     "en": "Up to 8 servers can run at once. Stop another server first.",
     "ja": "同時に起動できるサーバーは 8 台までです。先にほかのサーバーを停止してください。"
   },
+  "error.server.not_found": {
+    "en": "The server could not be found. It may have been removed.",
+    "ja": "サーバーが見つかりませんでした。削除された可能性があります。"
+  },
   "error.server.not_running": {
     "en": "The server is not running.",
     "ja": "サーバーは起動していません。"
@@ -126,6 +170,10 @@
   "error.server.running": {
     "en": "Stop the server first.",
     "ja": "先にサーバーを停止してください。"
+  },
+  "error.server.unmanaged": {
+    "en": "This server's folder is outside MC-Vector's managed folders, so it cannot be changed here.",
+    "ja": "このサーバーのフォルダーは MC-Vector の管理フォルダーの外にあるため、ここでは変更できません。"
   },
   "error.unknown": {
     "en": "Something went wrong. Try again.",

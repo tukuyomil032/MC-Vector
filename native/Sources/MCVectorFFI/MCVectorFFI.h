@@ -421,6 +421,16 @@ RustBuffer uniffi_mcvector_ffi_fn_func_get_app_settings(RustCallStatus *_Nonnull
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_PLAYER_LISTS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_PLAYER_LISTS
+uint64_t uniffi_mcvector_ffi_fn_func_get_player_lists(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVER_PROPERTIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVER_PROPERTIES
+uint64_t uniffi_mcvector_ffi_fn_func_get_server_properties(RustBuffer server_id
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_GET_SERVERS
 RustBuffer uniffi_mcvector_ffi_fn_func_get_servers(RustCallStatus *_Nonnull out_status
@@ -447,6 +457,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_list_files(RustBuffer server_id, RustBuffer
 uint64_t uniffi_mcvector_ffi_fn_func_move_file_entries(RustBuffer server_id, RustBuffer entries, RustBuffer destination
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_MUTATE_PLAYER_LIST
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_MUTATE_PLAYER_LIST
+uint64_t uniffi_mcvector_ffi_fn_func_mutate_player_list(RustBuffer server_id, RustBuffer list, RustBuffer action, RustBuffer value
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_TEXT_DOCUMENT
 uint64_t uniffi_mcvector_ffi_fn_func_read_text_document(RustBuffer server_id, RustBuffer relative
@@ -466,6 +481,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_restart_server(RustBuffer server_id
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RUNNING_SERVER_IDS
 uint64_t uniffi_mcvector_ffi_fn_func_running_server_ids(void
     
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_PROPERTIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_PROPERTIES
+uint64_t uniffi_mcvector_ffi_fn_func_save_server_properties(RustBuffer server_id, RustBuffer updates
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SAVE_SERVER_TEMPLATE_FROM_SERVER
@@ -889,6 +909,18 @@ uint16_t uniffi_mcvector_ffi_checksum_func_get_app_settings(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_PLAYER_LISTS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_PLAYER_LISTS
+uint16_t uniffi_mcvector_ffi_checksum_func_get_player_lists(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVER_PROPERTIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVER_PROPERTIES
+uint16_t uniffi_mcvector_ffi_checksum_func_get_server_properties(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_GET_SERVERS
 uint16_t uniffi_mcvector_ffi_checksum_func_get_servers(void
@@ -919,6 +951,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_move_file_entries(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_MUTATE_PLAYER_LIST
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_MUTATE_PLAYER_LIST
+uint16_t uniffi_mcvector_ffi_checksum_func_mutate_player_list(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_TEXT_DOCUMENT
 uint16_t uniffi_mcvector_ffi_checksum_func_read_text_document(void
@@ -940,6 +978,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_restart_server(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RUNNING_SERVER_IDS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RUNNING_SERVER_IDS
 uint16_t uniffi_mcvector_ffi_checksum_func_running_server_ids(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SAVE_SERVER_PROPERTIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SAVE_SERVER_PROPERTIES
+uint16_t uniffi_mcvector_ffi_checksum_func_save_server_properties(void
     
 );
 #endif

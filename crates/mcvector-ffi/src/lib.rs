@@ -24,6 +24,17 @@ use mcvector_core::metric_history::MetricHistorySnapshot;
 use mcvector_core::operations::OperationKind;
 use mcvector_core::operations::ServerOperationManager;
 use mcvector_core::paths;
+use mcvector_core::players::{
+    PlayerEntry as CorePlayerEntry, PlayerListAction as CorePlayerListAction, PlayerListError,
+    PlayerListErrorKind, PlayerListMutation,
+    PlayerListMutationResult as CorePlayerListMutationResult,
+    PlayerListSnapshot as CorePlayerListSnapshot, PlayerListType as CorePlayerListType,
+};
+use mcvector_core::properties::{
+    PropertiesError, PropertiesErrorKind, PropertyEntry as CorePropertyEntry,
+    PropertyLineEnding as CorePropertyLineEnding,
+    ServerPropertiesSnapshot as CoreServerPropertiesSnapshot,
+};
 use mcvector_core::registry::{
     template_from_server, MinecraftServer, ServerRegistry, ServerTemplate,
 };
@@ -271,13 +282,13 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
         Ok(LockOutcome::HeldByOther(other)) => {
             return Ok(StartOutcome::HeldByOther {
                 owner: other.map(Into::into),
-            })
+            });
         }
         Err(error) => {
             return Err(core_error(
                 CoreErrorCode::LockUnavailable,
                 format!("The instance lock could not be taken: {}.", error.kind()),
-            ))
+            ));
         }
     };
 
@@ -1080,6 +1091,277 @@ pub fn accept_server_eula(server_id: String) -> Result<(), FfiError> {
 }
 
 // ---------------------------------------------------------------------------
+// Server properties and player lists (OP-SRV-021, OP-SRV-022, OP-SRV-024, OP-SRV-025)
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PropertyEntry {
+    pub key: String,
+    pub value: String,
+}
+
+impl From<CorePropertyEntry> for PropertyEntry {
+    fn from(entry: CorePropertyEntry) -> Self {
+        Self {
+            key: entry.key,
+            value: entry.value,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum PropertyLineEnding {
+    Lf,
+    CrLf,
+    Mixed,
+    None,
+}
+
+impl From<CorePropertyLineEnding> for PropertyLineEnding {
+    fn from(value: CorePropertyLineEnding) -> Self {
+        match value {
+            CorePropertyLineEnding::Lf => Self::Lf,
+            CorePropertyLineEnding::CrLf => Self::CrLf,
+            CorePropertyLineEnding::Mixed => Self::Mixed,
+            CorePropertyLineEnding::None => Self::None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ServerPropertiesSnapshot {
+    pub entries: Vec<PropertyEntry>,
+    pub line_ending: PropertyLineEnding,
+    pub has_bom: bool,
+}
+
+impl From<CoreServerPropertiesSnapshot> for ServerPropertiesSnapshot {
+    fn from(snapshot: CoreServerPropertiesSnapshot) -> Self {
+        Self {
+            entries: snapshot.entries.into_iter().map(Into::into).collect(),
+            line_ending: snapshot.line_ending.into(),
+            has_bom: snapshot.has_bom,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PropertyUpdate {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct SavePropertiesResult {
+    pub port_changed_to: Option<u16>,
+}
+
+fn properties_error(error: PropertiesError, data_dir: &std::path::Path) -> FfiError {
+    let code = match &error.kind {
+        PropertiesErrorKind::Missing => CoreErrorCode::PropertiesMissing,
+        PropertiesErrorKind::Malformed => CoreErrorCode::PropertiesMalformed,
+        PropertiesErrorKind::Invalid => CoreErrorCode::PropertiesInvalid,
+        PropertiesErrorKind::NotRegistered => CoreErrorCode::ServerNotFound,
+        PropertiesErrorKind::Io => CoreErrorCode::PropertiesIo,
+    };
+    core_error(code, redact(&error.message, data_dir))
+}
+
+/// Reads the registered server's server.properties file without normalizing
+/// line endings or a UTF-8 BOM (OP-SRV-021).
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn get_server_properties(
+    server_id: String,
+) -> Result<ServerPropertiesSnapshot, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let error_data_dir = data_dir.clone();
+    mcvector_core::properties::get_server_properties(&operations, data_dir, registry, server_id)
+        .await
+        .map(Into::into)
+        .map_err(|error| properties_error(error, &error_data_dir))
+}
+
+/// Applies typed updates while retaining comments, ordering and untouched lines
+/// in server.properties. Returns the server port when it was updated.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn save_server_properties(
+    server_id: String,
+    updates: Vec<PropertyUpdate>,
+) -> Result<SavePropertiesResult, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let error_data_dir = data_dir.clone();
+    let updates = updates
+        .into_iter()
+        .map(|update| (update.key, update.value))
+        .collect();
+    mcvector_core::properties::save_server_properties(
+        &operations,
+        data_dir,
+        registry,
+        server_id,
+        updates,
+    )
+    .await
+    .map(|port_changed_to| SavePropertiesResult { port_changed_to })
+    .map_err(|error| properties_error(error, &error_data_dir))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PlayerEntry {
+    pub uuid: Option<String>,
+    pub name: String,
+    pub level: Option<u8>,
+    pub created: Option<String>,
+    pub source: Option<String>,
+    pub expires: Option<String>,
+    pub reason: Option<String>,
+    pub ip: Option<String>,
+    pub bypasses_player_limit: Option<bool>,
+}
+
+impl From<CorePlayerEntry> for PlayerEntry {
+    fn from(entry: CorePlayerEntry) -> Self {
+        Self {
+            uuid: entry.uuid,
+            name: entry.name,
+            level: entry.level,
+            created: entry.created,
+            source: entry.source,
+            expires: entry.expires,
+            reason: entry.reason,
+            ip: entry.ip,
+            bypasses_player_limit: entry.bypasses_player_limit,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
+pub struct PlayerListSnapshot {
+    pub whitelist: Vec<PlayerEntry>,
+    pub ops: Vec<PlayerEntry>,
+    pub banned_players: Vec<PlayerEntry>,
+    pub banned_ips: Vec<PlayerEntry>,
+}
+
+impl From<CorePlayerListSnapshot> for PlayerListSnapshot {
+    fn from(snapshot: CorePlayerListSnapshot) -> Self {
+        Self {
+            whitelist: snapshot.whitelist.into_iter().map(Into::into).collect(),
+            ops: snapshot.ops.into_iter().map(Into::into).collect(),
+            banned_players: snapshot
+                .banned_players
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            banned_ips: snapshot.banned_ips.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum PlayerListKind {
+    Whitelist,
+    Ops,
+    BannedPlayers,
+    BannedIps,
+}
+
+impl From<PlayerListKind> for CorePlayerListType {
+    fn from(value: PlayerListKind) -> Self {
+        match value {
+            PlayerListKind::Whitelist => Self::Whitelist,
+            PlayerListKind::Ops => Self::Ops,
+            PlayerListKind::BannedPlayers => Self::BannedPlayers,
+            PlayerListKind::BannedIps => Self::BannedIps,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum PlayerListAction {
+    Add,
+    Remove,
+}
+
+impl From<PlayerListAction> for CorePlayerListAction {
+    fn from(value: PlayerListAction) -> Self {
+        match value {
+            PlayerListAction::Add => Self::Add,
+            PlayerListAction::Remove => Self::Remove,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PlayerListMutationResult {
+    pub lists: PlayerListSnapshot,
+    pub changed: bool,
+    pub canonical_target: String,
+}
+
+impl From<CorePlayerListMutationResult> for PlayerListMutationResult {
+    fn from(result: CorePlayerListMutationResult) -> Self {
+        Self {
+            lists: result.lists.into(),
+            changed: result.changed,
+            canonical_target: result.canonical_target,
+        }
+    }
+}
+
+fn player_list_error(error: PlayerListError, data_dir: &std::path::Path) -> FfiError {
+    let code = match &error.kind {
+        PlayerListErrorKind::InvalidServerId => CoreErrorCode::ServerInvalidRequest,
+        PlayerListErrorKind::ServerNotRegistered => CoreErrorCode::ServerNotFound,
+        PlayerListErrorKind::UnmanagedServer => CoreErrorCode::ServerUnmanaged,
+        PlayerListErrorKind::InvalidPlayerName => CoreErrorCode::PlayerInvalidName,
+        PlayerListErrorKind::InvalidIpAddress => CoreErrorCode::PlayerInvalidIp,
+        PlayerListErrorKind::InvalidListFile => CoreErrorCode::PlayerInvalidFile,
+        PlayerListErrorKind::ListTooLarge => CoreErrorCode::PlayerListTooLarge,
+        PlayerListErrorKind::MalformedList => CoreErrorCode::PlayerMalformedList,
+        PlayerListErrorKind::Io => CoreErrorCode::PlayerIo,
+        PlayerListErrorKind::Operation => CoreErrorCode::ServerOperationFailed,
+    };
+    core_error(code, redact(&error.message, data_dir))
+}
+
+/// Reads all four JSON player lists for the registered, managed server.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn get_player_lists(server_id: String) -> Result<PlayerListSnapshot, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    mcvector_core::players::get_player_lists(&data_dir, &registry, &operations, &server_id)
+        .await
+        .map(Into::into)
+        .map_err(|error| player_list_error(error, &data_dir))
+}
+
+/// Adds or removes a player/IP and returns the persisted lists and canonical
+/// console target. Command dispatch remains a separate Swift call.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn mutate_player_list(
+    server_id: String,
+    list: PlayerListKind,
+    action: PlayerListAction,
+    value: String,
+) -> Result<PlayerListMutationResult, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let mutation = PlayerListMutation {
+        list_type: list.into(),
+        action: action.into(),
+        value,
+    };
+    mcvector_core::players::mutate_player_list(
+        &data_dir,
+        &registry,
+        &operations,
+        &server_id,
+        &mutation,
+    )
+    .await
+    .map(Into::into)
+    .map_err(|error| player_list_error(error, &data_dir))
+}
+
+// ---------------------------------------------------------------------------
 // Files (OP-FILE-001..009)
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -1449,7 +1731,19 @@ mod tests {
         // One registered server with its managed folder, imported from the legacy JSON.
         let server_dir = data_dir.join("servers").join("server-1");
         std::fs::create_dir_all(&server_dir).unwrap();
-        std::fs::write(server_dir.join("server.properties"), "motd=E2E\n").unwrap();
+        std::fs::write(
+            server_dir.join("server.properties"),
+            "# managed properties\r\nmotd=E2E\r\nserver-port=25565\r\n",
+        )
+        .unwrap();
+        std::fs::write(
+            server_dir.join("whitelist.json"),
+            r#"[{"uuid":"8667ba71b85a4004af54457a9734eed7","name":"Alex"}]"#,
+        )
+        .unwrap();
+        for name in ["ops.json", "banned-players.json", "banned-ips.json"] {
+            std::fs::write(server_dir.join(name), "[]").unwrap();
+        }
         std::fs::write(
             data_dir.join("servers.json"),
             format!(
@@ -1467,6 +1761,47 @@ mod tests {
         let servers = get_servers().unwrap();
         assert_eq!(servers.len(), 1);
         assert_eq!(servers[0].path, server_dir.display().to_string());
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+
+        let properties = runtime
+            .block_on(get_server_properties("server-1".into()))
+            .unwrap();
+        assert_eq!(properties.line_ending, PropertyLineEnding::CrLf);
+        assert_eq!(properties.entries[0].key, "motd");
+        let saved = runtime
+            .block_on(save_server_properties(
+                "server-1".into(),
+                vec![PropertyUpdate {
+                    key: "motd".into(),
+                    value: "Native E2E".into(),
+                }],
+            ))
+            .unwrap();
+        assert_eq!(saved.port_changed_to, None);
+        let saved_text = std::fs::read_to_string(server_dir.join("server.properties")).unwrap();
+        assert!(saved_text.starts_with("# managed properties\r\n"));
+        assert!(saved_text.contains("motd=Native E2E\r\n"));
+
+        let player_lists = runtime
+            .block_on(get_player_lists("server-1".into()))
+            .unwrap();
+        assert_eq!(player_lists.whitelist.len(), 1);
+        assert_eq!(player_lists.whitelist[0].name, "Alex");
+        let removed = runtime
+            .block_on(mutate_player_list(
+                "server-1".into(),
+                PlayerListKind::Whitelist,
+                PlayerListAction::Remove,
+                "Alex".into(),
+            ))
+            .unwrap();
+        assert!(removed.changed);
+        assert_eq!(removed.canonical_target, "Alex");
+        assert!(removed.lists.whitelist.is_empty());
+
         // Idempotent.
         assert!(matches!(
             start_in(data_dir.clone(), "/app".into()).unwrap(),
@@ -1474,10 +1809,6 @@ mod tests {
         ));
 
         // Server management through the same async exports the Swift app calls.
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
         let copy = runtime
             .block_on(clone_server("server-1".into(), "E2E Server Copy".into()))
             .unwrap();
@@ -1517,5 +1848,59 @@ mod tests {
             redact("failed at /Users/me/Library/Application Support/x/db", dir),
             "failed at <data>/db"
         );
+    }
+
+    #[test]
+    fn properties_missing_and_malformed_errors_remain_distinct() {
+        let data_dir = std::path::Path::new("/private/data");
+        let missing = properties_error(
+            PropertiesError {
+                kind: PropertiesErrorKind::Missing,
+                message: "server.properties is missing".into(),
+            },
+            data_dir,
+        );
+        let malformed = properties_error(
+            PropertiesError {
+                kind: PropertiesErrorKind::Malformed,
+                message: "server.properties is malformed".into(),
+            },
+            data_dir,
+        );
+        assert!(matches!(
+            missing,
+            FfiError::Core { ref code, .. } if code == "properties.missing"
+        ));
+        assert!(matches!(
+            malformed,
+            FfiError::Core { ref code, .. } if code == "properties.malformed"
+        ));
+    }
+
+    #[test]
+    fn player_input_errors_have_distinct_stable_codes() {
+        let data_dir = std::path::Path::new("/private/data");
+        let invalid_name = player_list_error(
+            PlayerListError {
+                kind: PlayerListErrorKind::InvalidPlayerName,
+                message: "invalid name".into(),
+            },
+            data_dir,
+        );
+        let invalid_ip = player_list_error(
+            PlayerListError {
+                kind: PlayerListErrorKind::InvalidIpAddress,
+                message: "invalid IP".into(),
+            },
+            data_dir,
+        );
+        assert!(matches!(
+            invalid_name,
+            FfiError::Core { ref code, .. } if code == "player.invalid_name"
+        ));
+        assert!(matches!(
+            invalid_ip,
+            FfiError::Core { ref code, .. } if code == "player.invalid_ip"
+        ));
     }
 }

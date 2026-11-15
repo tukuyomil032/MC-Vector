@@ -4302,6 +4302,176 @@
         }
       }
     },
+    "error.player.invalid_file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The player list file is not in the expected place."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイヤー一覧のファイルが、想定した場所にありません。"
+          }
+        }
+      }
+    },
+    "error.player.invalid_ip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid IPv4 or IPv6 address."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正しい IPv4 か IPv6 のアドレスを入力してください。"
+          }
+        }
+      }
+    },
+    "error.player.invalid_name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a Minecraft player name: 1 to 16 letters, numbers or underscores."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minecraft のプレイヤー名を入力してください。英数字とアンダースコアで 1〜16 文字です。"
+          }
+        }
+      }
+    },
+    "error.player.io": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The player list could not be read or written. Check the folder's permissions and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイヤー一覧を読み書きできませんでした。フォルダーの権限を確認して、もう一度試してください。"
+          }
+        }
+      }
+    },
+    "error.player.list_too_large": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The player list file is too large to open. It was left unchanged."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイヤー一覧のファイルが大きすぎて開けません。ファイルは変更していません。"
+          }
+        }
+      }
+    },
+    "error.player.malformed_list": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A player list file is not valid JSON. It was left unchanged."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイヤー一覧のファイルが正しい JSON ではありません。ファイルは変更していません。"
+          }
+        }
+      }
+    },
+    "error.properties.invalid": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A property name or value is not valid."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロパティの名前か値が正しくありません。"
+          }
+        }
+      }
+    },
+    "error.properties.io": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server.properties could not be read or written. Check the folder's permissions and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server.properties を読み書きできませんでした。フォルダーの権限を確認して、もう一度試してください。"
+          }
+        }
+      }
+    },
+    "error.properties.malformed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server.properties could not be read because part of it is not in key=value form."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server.properties の一部が key=value の形になっていないため、読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "error.properties.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server.properties does not exist yet. Start the server once to create it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server.properties がまだありません。サーバーを一度起動すると作られます。"
+          }
+        }
+      }
+    },
     "error.registry.open_failed": {
       "extractionState": "manual",
       "localizations": {
@@ -4472,6 +4642,23 @@
         }
       }
     },
+    "error.server.not_found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server could not be found. It may have been removed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーが見つかりませんでした。削除された可能性があります。"
+          }
+        }
+      }
+    },
     "error.server.not_running": {
       "extractionState": "manual",
       "localizations": {
@@ -4519,6 +4706,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "先にサーバーを停止してください。"
+          }
+        }
+      }
+    },
+    "error.server.unmanaged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This server's folder is outside MC-Vector's managed folders, so it cannot be changed here."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーのフォルダーは MC-Vector の管理フォルダーの外にあるため、ここでは変更できません。"
           }
         }
       }

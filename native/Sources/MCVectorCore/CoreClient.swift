@@ -164,6 +164,21 @@ public enum CoreClient {
         do { return try await work() } catch { throw CoreError.unexpected(error) }
     }
 
+    /// UniFFI work is kept away from the caller's executor, including async
+    /// bindings whose synchronous entry work can access files or locks.
+    private static func detachedCall<T: Sendable>(
+        _ work: @escaping @Sendable () async throws -> T
+    ) async throws(CoreError) -> T {
+        let result: Result<T, CoreError> = await Task.detached(priority: .userInitiated) {
+            do {
+                return .success(try await work())
+            } catch {
+                return .failure(CoreError.unexpected(error))
+            }
+        }.value
+        return try result.get()
+    }
+
     public static func listFiles(serverID: String, relative: String) async throws(CoreError) -> [FileItem] {
         try await call { try await MCVectorCore.listFiles(serverId: serverID, relative: relative) }
     }
@@ -286,6 +301,40 @@ public enum CoreClient {
 
     public static func acceptServerEula(id: String) throws(CoreError) {
         do { try MCVectorCore.acceptServerEula(serverId: id) } catch { throw CoreError.unexpected(error) }
+    }
+
+    // MARK: Server properties (OP-SRV-021, OP-SRV-022)
+
+    /// Reads server.properties while preserving its line-ending and BOM metadata.
+    public static func serverProperties(serverID: String) async throws(CoreError) -> ServerPropertiesSnapshot {
+        try await detachedCall { try await MCVectorCore.getServerProperties(serverId: serverID) }
+    }
+
+    /// Saves property updates and returns the port when it changed.
+    public static func saveServerProperties(
+        serverID: String, updates: [PropertyUpdate]
+    ) async throws(CoreError) -> SavePropertiesResult {
+        try await detachedCall {
+            try await MCVectorCore.saveServerProperties(serverId: serverID, updates: updates)
+        }
+    }
+
+    // MARK: Player lists (OP-SRV-024, OP-SRV-025)
+
+    /// Reads whitelist, operators, banned players, and banned IPs.
+    public static func playerLists(serverID: String) async throws(CoreError) -> PlayerListSnapshot {
+        try await detachedCall { try await MCVectorCore.getPlayerLists(serverId: serverID) }
+    }
+
+    /// Mutates a managed list and returns its canonical target for a live command.
+    public static func mutatePlayerList(
+        serverID: String, list: PlayerListKind, action: PlayerListAction, value: String
+    ) async throws(CoreError) -> PlayerListMutationResult {
+        try await detachedCall {
+            try await MCVectorCore.mutatePlayerList(
+                serverId: serverID, list: list, action: action, value: value
+            )
+        }
     }
 
     /// Asks a running creation to stop. False when it already finished.

@@ -471,6 +471,38 @@ private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
+    typealias FfiType = UInt8
+    typealias SwiftType = UInt8
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -1872,6 +1904,316 @@ public func FfiConverterTypeNewServerInput_lower(_ value: NewServerInput) -> Rus
 }
 
 
+public struct PlayerEntry: Equatable, Hashable {
+    public var uuid: String?
+    public var name: String
+    public var level: UInt8?
+    public var created: String?
+    public var source: String?
+    public var expires: String?
+    public var reason: String?
+    public var ip: String?
+    public var bypassesPlayerLimit: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(uuid: String?, name: String, level: UInt8?, created: String?, source: String?, expires: String?, reason: String?, ip: String?, bypassesPlayerLimit: Bool?) {
+        self.uuid = uuid
+        self.name = name
+        self.level = level
+        self.created = created
+        self.source = source
+        self.expires = expires
+        self.reason = reason
+        self.ip = ip
+        self.bypassesPlayerLimit = bypassesPlayerLimit
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlayerEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlayerEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlayerEntry {
+        return
+            try PlayerEntry(
+                uuid: FfiConverterOptionString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                level: FfiConverterOptionUInt8.read(from: &buf), 
+                created: FfiConverterOptionString.read(from: &buf), 
+                source: FfiConverterOptionString.read(from: &buf), 
+                expires: FfiConverterOptionString.read(from: &buf), 
+                reason: FfiConverterOptionString.read(from: &buf), 
+                ip: FfiConverterOptionString.read(from: &buf), 
+                bypassesPlayerLimit: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlayerEntry, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.uuid, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionUInt8.write(value.level, into: &buf)
+        FfiConverterOptionString.write(value.created, into: &buf)
+        FfiConverterOptionString.write(value.source, into: &buf)
+        FfiConverterOptionString.write(value.expires, into: &buf)
+        FfiConverterOptionString.write(value.reason, into: &buf)
+        FfiConverterOptionString.write(value.ip, into: &buf)
+        FfiConverterOptionBool.write(value.bypassesPlayerLimit, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerEntry_lift(_ buf: RustBuffer) throws -> PlayerEntry {
+    return try FfiConverterTypePlayerEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerEntry_lower(_ value: PlayerEntry) -> RustBuffer {
+    return FfiConverterTypePlayerEntry.lower(value)
+}
+
+
+public struct PlayerListMutationResult: Equatable, Hashable {
+    public var lists: PlayerListSnapshot
+    public var changed: Bool
+    public var canonicalTarget: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(lists: PlayerListSnapshot, changed: Bool, canonicalTarget: String) {
+        self.lists = lists
+        self.changed = changed
+        self.canonicalTarget = canonicalTarget
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlayerListMutationResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlayerListMutationResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlayerListMutationResult {
+        return
+            try PlayerListMutationResult(
+                lists: FfiConverterTypePlayerListSnapshot.read(from: &buf), 
+                changed: FfiConverterBool.read(from: &buf), 
+                canonicalTarget: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlayerListMutationResult, into buf: inout [UInt8]) {
+        FfiConverterTypePlayerListSnapshot.write(value.lists, into: &buf)
+        FfiConverterBool.write(value.changed, into: &buf)
+        FfiConverterString.write(value.canonicalTarget, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListMutationResult_lift(_ buf: RustBuffer) throws -> PlayerListMutationResult {
+    return try FfiConverterTypePlayerListMutationResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListMutationResult_lower(_ value: PlayerListMutationResult) -> RustBuffer {
+    return FfiConverterTypePlayerListMutationResult.lower(value)
+}
+
+
+public struct PlayerListSnapshot: Equatable, Hashable {
+    public var whitelist: [PlayerEntry]
+    public var ops: [PlayerEntry]
+    public var bannedPlayers: [PlayerEntry]
+    public var bannedIps: [PlayerEntry]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(whitelist: [PlayerEntry], ops: [PlayerEntry], bannedPlayers: [PlayerEntry], bannedIps: [PlayerEntry]) {
+        self.whitelist = whitelist
+        self.ops = ops
+        self.bannedPlayers = bannedPlayers
+        self.bannedIps = bannedIps
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PlayerListSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlayerListSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlayerListSnapshot {
+        return
+            try PlayerListSnapshot(
+                whitelist: FfiConverterSequenceTypePlayerEntry.read(from: &buf), 
+                ops: FfiConverterSequenceTypePlayerEntry.read(from: &buf), 
+                bannedPlayers: FfiConverterSequenceTypePlayerEntry.read(from: &buf), 
+                bannedIps: FfiConverterSequenceTypePlayerEntry.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PlayerListSnapshot, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypePlayerEntry.write(value.whitelist, into: &buf)
+        FfiConverterSequenceTypePlayerEntry.write(value.ops, into: &buf)
+        FfiConverterSequenceTypePlayerEntry.write(value.bannedPlayers, into: &buf)
+        FfiConverterSequenceTypePlayerEntry.write(value.bannedIps, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListSnapshot_lift(_ buf: RustBuffer) throws -> PlayerListSnapshot {
+    return try FfiConverterTypePlayerListSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListSnapshot_lower(_ value: PlayerListSnapshot) -> RustBuffer {
+    return FfiConverterTypePlayerListSnapshot.lower(value)
+}
+
+
+public struct PropertyEntry: Equatable, Hashable {
+    public var key: String
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, value: String) {
+        self.key = key
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PropertyEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePropertyEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PropertyEntry {
+        return
+            try PropertyEntry(
+                key: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PropertyEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyEntry_lift(_ buf: RustBuffer) throws -> PropertyEntry {
+    return try FfiConverterTypePropertyEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyEntry_lower(_ value: PropertyEntry) -> RustBuffer {
+    return FfiConverterTypePropertyEntry.lower(value)
+}
+
+
+public struct PropertyUpdate: Equatable, Hashable {
+    public var key: String
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, value: String) {
+        self.key = key
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PropertyUpdate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePropertyUpdate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PropertyUpdate {
+        return
+            try PropertyUpdate(
+                key: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PropertyUpdate, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyUpdate_lift(_ buf: RustBuffer) throws -> PropertyUpdate {
+    return try FfiConverterTypePropertyUpdate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyUpdate_lower(_ value: PropertyUpdate) -> RustBuffer {
+    return FfiConverterTypePropertyUpdate.lower(value)
+}
+
+
 public struct ResourcePoint: Equatable, Hashable {
     /**
      * Milliseconds since the server process started.
@@ -1939,6 +2281,56 @@ public func FfiConverterTypeResourcePoint_lift(_ buf: RustBuffer) throws -> Reso
 #endif
 public func FfiConverterTypeResourcePoint_lower(_ value: ResourcePoint) -> RustBuffer {
     return FfiConverterTypeResourcePoint.lower(value)
+}
+
+
+public struct SavePropertiesResult: Equatable, Hashable {
+    public var portChangedTo: UInt16?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(portChangedTo: UInt16?) {
+        self.portChangedTo = portChangedTo
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SavePropertiesResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSavePropertiesResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SavePropertiesResult {
+        return
+            try SavePropertiesResult(
+                portChangedTo: FfiConverterOptionUInt16.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SavePropertiesResult, into buf: inout [UInt8]) {
+        FfiConverterOptionUInt16.write(value.portChangedTo, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSavePropertiesResult_lift(_ buf: RustBuffer) throws -> SavePropertiesResult {
+    return try FfiConverterTypeSavePropertiesResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSavePropertiesResult_lower(_ value: SavePropertiesResult) -> RustBuffer {
+    return FfiConverterTypeSavePropertiesResult.lower(value)
 }
 
 
@@ -2069,6 +2461,64 @@ public func FfiConverterTypeServerProfile_lift(_ buf: RustBuffer) throws -> Serv
 #endif
 public func FfiConverterTypeServerProfile_lower(_ value: ServerProfile) -> RustBuffer {
     return FfiConverterTypeServerProfile.lower(value)
+}
+
+
+public struct ServerPropertiesSnapshot: Equatable, Hashable {
+    public var entries: [PropertyEntry]
+    public var lineEnding: PropertyLineEnding
+    public var hasBom: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(entries: [PropertyEntry], lineEnding: PropertyLineEnding, hasBom: Bool) {
+        self.entries = entries
+        self.lineEnding = lineEnding
+        self.hasBom = hasBom
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerPropertiesSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerPropertiesSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerPropertiesSnapshot {
+        return
+            try ServerPropertiesSnapshot(
+                entries: FfiConverterSequenceTypePropertyEntry.read(from: &buf), 
+                lineEnding: FfiConverterTypePropertyLineEnding.read(from: &buf), 
+                hasBom: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerPropertiesSnapshot, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypePropertyEntry.write(value.entries, into: &buf)
+        FfiConverterTypePropertyLineEnding.write(value.lineEnding, into: &buf)
+        FfiConverterBool.write(value.hasBom, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerPropertiesSnapshot_lift(_ buf: RustBuffer) throws -> ServerPropertiesSnapshot {
+    return try FfiConverterTypeServerPropertiesSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerPropertiesSnapshot_lower(_ value: ServerPropertiesSnapshot) -> RustBuffer {
+    return FfiConverterTypeServerPropertiesSnapshot.lower(value)
 }
 
 
@@ -2857,6 +3307,232 @@ public func FfiConverterTypeLogLevel_lower(_ value: LogLevel) -> RustBuffer {
 
 
 
+public enum PlayerListAction: Equatable, Hashable {
+    
+    case add
+    case remove
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PlayerListAction: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlayerListAction: FfiConverterRustBuffer {
+    typealias SwiftType = PlayerListAction
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlayerListAction {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .add
+        
+        case 2: return .remove
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PlayerListAction, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .add:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .remove:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListAction_lift(_ buf: RustBuffer) throws -> PlayerListAction {
+    return try FfiConverterTypePlayerListAction.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListAction_lower(_ value: PlayerListAction) -> RustBuffer {
+    return FfiConverterTypePlayerListAction.lower(value)
+}
+
+
+
+
+public enum PlayerListKind: Equatable, Hashable {
+    
+    case whitelist
+    case ops
+    case bannedPlayers
+    case bannedIps
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PlayerListKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlayerListKind: FfiConverterRustBuffer {
+    typealias SwiftType = PlayerListKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlayerListKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .whitelist
+        
+        case 2: return .ops
+        
+        case 3: return .bannedPlayers
+        
+        case 4: return .bannedIps
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PlayerListKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .whitelist:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .ops:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .bannedPlayers:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .bannedIps:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListKind_lift(_ buf: RustBuffer) throws -> PlayerListKind {
+    return try FfiConverterTypePlayerListKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlayerListKind_lower(_ value: PlayerListKind) -> RustBuffer {
+    return FfiConverterTypePlayerListKind.lower(value)
+}
+
+
+
+
+public enum PropertyLineEnding: Equatable, Hashable {
+    
+    case lf
+    case crLf
+    case mixed
+    case none
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PropertyLineEnding: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePropertyLineEnding: FfiConverterRustBuffer {
+    typealias SwiftType = PropertyLineEnding
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PropertyLineEnding {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .lf
+        
+        case 2: return .crLf
+        
+        case 3: return .mixed
+        
+        case 4: return .none
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PropertyLineEnding, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .lf:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .crLf:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .mixed:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .none:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyLineEnding_lift(_ buf: RustBuffer) throws -> PropertyLineEnding {
+    return try FfiConverterTypePropertyLineEnding.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyLineEnding_lower(_ value: PropertyLineEnding) -> RustBuffer {
+    return FfiConverterTypePropertyLineEnding.lower(value)
+}
+
+
+
+
 public enum ServerRunStatus: Equatable, Hashable {
     
     case online
@@ -3083,6 +3759,54 @@ public func FfiConverterTypeStartOutcome_lower(_ value: StartOutcome) -> RustBuf
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionUInt8: FfiConverterRustBuffer {
+    typealias SwiftType = UInt8?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt8.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt8.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionUInt16: FfiConverterRustBuffer {
+    typealias SwiftType = UInt16?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt16.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt16.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
     typealias SwiftType = UInt32?
 
@@ -3171,6 +3895,30 @@ fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterDouble.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionBool: FfiConverterRustBuffer {
+    typealias SwiftType = Bool?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterBool.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterBool.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -3293,6 +4041,81 @@ fileprivate struct FfiConverterSequenceTypeFileItem: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeFileItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePlayerEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [PlayerEntry]
+
+    public static func write(_ value: [PlayerEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePlayerEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PlayerEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PlayerEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePlayerEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePropertyEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [PropertyEntry]
+
+    public static func write(_ value: [PropertyEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePropertyEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PropertyEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PropertyEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePropertyEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePropertyUpdate: FfiConverterRustBuffer {
+    typealias SwiftType = [PropertyUpdate]
+
+    public static func write(_ value: [PropertyUpdate], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePropertyUpdate.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PropertyUpdate] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PropertyUpdate]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePropertyUpdate.read(from: &buf))
         }
         return seq
     }
@@ -3656,6 +4479,41 @@ public func getAppSettings()throws  -> AppSettings  {
 })
 }
 /**
+ * Reads all four JSON player lists for the registered, managed server.
+ */
+public func getPlayerLists(serverId: String)async throws  -> PlayerListSnapshot  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_get_player_lists(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePlayerListSnapshot_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Reads the registered server's server.properties file without normalizing
+ * line endings or a UTF-8 BOM (OP-SRV-021).
+ */
+public func getServerProperties(serverId: String)async throws  -> ServerPropertiesSnapshot  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_get_server_properties(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerPropertiesSnapshot_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Lists registered servers. Requires a successful `start`.
  */
 public func getServers()throws  -> [ServerProfile]  {
@@ -3731,6 +4589,24 @@ public func moveFileEntries(serverId: String, entries: [String], destination: St
         )
 }
 /**
+ * Adds or removes a player/IP and returns the persisted lists and canonical
+ * console target. Command dispatch remains a separate Swift call.
+ */
+public func mutatePlayerList(serverId: String, list: PlayerListKind, action: PlayerListAction, value: String)async throws  -> PlayerListMutationResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_mutate_player_list(FfiConverterString.lower(serverId),FfiConverterTypePlayerListKind_lower(list),FfiConverterTypePlayerListAction_lower(action),FfiConverterString.lower(value)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePlayerListMutationResult_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Reads a text file for the editor (at most 16 MiB of UTF-8).
  */
 public func readTextDocument(serverId: String, relative: String)async throws  -> TextDocumentInfo  {
@@ -3797,6 +4673,24 @@ public func runningServerIds()async  -> [String]  {
             liftFunc: FfiConverterSequenceString.lift,
             errorHandler: nil
             
+        )
+}
+/**
+ * Applies typed updates while retaining comments, ordering and untouched lines
+ * in server.properties. Returns the server port when it was updated.
+ */
+public func saveServerProperties(serverId: String, updates: [PropertyUpdate])async throws  -> SavePropertiesResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_save_server_properties(FfiConverterString.lower(serverId),FfiConverterSequenceTypePropertyUpdate.lower(updates)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeSavePropertiesResult_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
         )
 }
 /**
@@ -4070,6 +4964,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_get_app_settings() != 23799) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_get_player_lists() != 45297) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_get_server_properties() != 25106) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_get_servers() != 58684) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4085,6 +4985,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_move_file_entries() != 10227) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_mutate_player_list() != 17415) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_read_text_document() != 44919) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4095,6 +4998,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_running_server_ids() != 55894) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_save_server_properties() != 2829) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_save_server_template_from_server() != 13376) {
