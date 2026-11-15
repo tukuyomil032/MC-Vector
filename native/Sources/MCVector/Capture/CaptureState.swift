@@ -371,6 +371,83 @@ enum CaptureState {
         case "FILES-empty":
             FilesView.capturePreset = .init(path: ["empty"])
             app.navigate(to: .files)
+        case "FILES-editor-clean":
+            FilesView.capturePreset = .init(openFile: "server.properties")
+            app.navigate(to: .files)
+        case "FILES-editor-dirty":
+            FilesView.capturePreset = .init(openFile: "server.properties")
+            FileEditorView.captureScript = .init(type: "max-players=20\n")
+            app.navigate(to: .files)
+        case "FILES-editor-unsaved-confirm":
+            FilesView.capturePreset = .init(openFile: "server.properties")
+            FileEditorView.captureScript = .init(type: "max-players=20\n", confirmClose: true)
+            app.navigate(to: .files)
+        case "FILES-editor-yaml":
+            FilesView.capturePreset = .init(path: ["config"], openFile: "paper.yml")
+            app.navigate(to: .files)
+        case "FILES-editor-json":
+            FilesView.capturePreset = .init(path: ["editor"], openFile: "sample.json")
+            app.navigate(to: .files)
+        case "FILES-editor-mixed":
+            FilesView.capturePreset = .init(path: ["editor"], openFile: "mixed.txt")
+            app.navigate(to: .files)
+        case "FILES-editor-bom":
+            FilesView.capturePreset = .init(openFile: "bom-crlf.properties")
+            app.navigate(to: .files)
+        case "FILES-editor-binary":
+            FilesView.capturePreset = .init(openFile: "server.jar")
+            app.navigate(to: .files)
+        case "FILES-editor-large":
+            FilesView.capturePreset = .init(path: ["editor"], openFile: "size-over.txt")
+            app.navigate(to: .files)
+        case "FILES-editor-notutf8":
+            FilesView.capturePreset = .init(path: ["editor"], openFile: "not-utf8.txt")
+            app.navigate(to: .files)
+        case "MOTION-editor":
+            FilesView.capturePreset = .init(openFile: "server.properties")
+            FileEditorView.captureScript = .init(type: "max-players=20\n", save: true)
+            app.navigate(to: .files)
+        case "VERIFY-editor":
+            // Editor saving rules through the FFI, logged for capture.sh.
+            let server = "server-1"
+            func bytes(_ relative: String) -> [UInt8] {
+                guard let url = try? CoreClient.fileEntryURL(serverID: server, relative: relative),
+                      let data = try? Data(contentsOf: url) else { return [] }
+                return Array(data)
+            }
+            do {
+                var document = try await CoreClient.readTextDocument(serverID: server, relative: "bom-crlf.properties")
+                document.text = "motd=Edited\nserver-port=25565\n"
+                try await CoreClient.writeTextDocument(serverID: server, relative: "bom-crlf.properties", document: document)
+                let expected = Array("\u{FEFF}motd=Edited\r\nserver-port=25565\r\n".utf8)
+                signal("[capture] bom+crlf edit kept: \(bytes("bom-crlf.properties") == expected)")
+
+                let mixed = try await CoreClient.readTextDocument(serverID: server, relative: "editor/mixed.txt")
+                signal("[capture] mixed read: ending=\(mixed.lineEnding) mixed=\(mixed.mixedLineEndings)")
+                try await CoreClient.writeTextDocument(serverID: server, relative: "editor/mixed.txt", document: mixed)
+                signal("[capture] mixed saved as crlf: \(bytes("editor/mixed.txt") == Array("a\r\nb\r\nc\r\n".utf8))")
+            } catch {
+                signal("[capture] editor round trip failed: \(error.code)")
+            }
+            let listing = (try? await CoreClient.listFiles(serverID: server, relative: "editor")) ?? []
+            for name in ["size-under.txt", "size-limit.txt", "size-over.txt", "not-utf8.txt"] {
+                guard let item = listing.first(where: { $0.name == name }) else {
+                    signal("[capture] \(name): missing")
+                    continue
+                }
+                let document = EditorDocument(
+                    serverID: server, relativePath: "editor/\(name)", fileName: name, size: item.size
+                )
+                await document.load()
+                let phase = switch document.phase {
+                case .ready: "ready"
+                case .unsupported: "unsupported"
+                case .failed: "failed"
+                case .loading: "loading"
+                }
+                signal("[capture] \(name) (\(item.size) bytes): \(phase)")
+            }
+            app.navigate(to: .files)
         case "CONFIRM-delete-files":
             app.navigate(to: .files)
             Task {

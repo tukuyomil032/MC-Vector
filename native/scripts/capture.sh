@@ -114,6 +114,19 @@ prepare_fixture() {
       printf '\357\273\277motd=BOM and CRLF\r\nserver-port=25565\r\n' > "$tree/bom-crlf.properties"
       printf 'region\n' > "$tree/world/region/r.0.0.mca"
     done
+    # Editor files (FILES-editor-*, VERIFY-editor) for the first server only.
+    local editor="$dir/servers/server-1/editor"
+    if [ -d "$dir/servers/server-1" ]; then
+      mkdir -p "$editor"
+      printf '{\n  "pack": {\n    "pack_format": 48,\n    "description": "MC-Vector sample",\n    "enabled": true\n  },\n  "max": 20\n}\n' \
+        > "$editor/sample.json"
+      printf 'a\r\nb\r\nc\n' > "$editor/mixed.txt"
+      printf '\377\376not text' > "$editor/not-utf8.txt"
+      # FILE-001: 5 MiB is the last size that opens.
+      head -c 5242879 /dev/zero | tr '\0' 'a' > "$editor/size-under.txt"
+      head -c 5242880 /dev/zero | tr '\0' 'a' > "$editor/size-limit.txt"
+      head -c 5242881 /dev/zero | tr '\0' 'a' > "$editor/size-over.txt"
+    fi
   fi
   printf '{"locale":"%s"}\n' "$LOCALE" > "$dir/config.json"
   prepare_import_sources "$(dirname "$dir")/import-source"
