@@ -570,6 +570,7 @@ extension EditorKitTests {
             _ = CompletionEngine.complete(
                 text: text, cursor: cursor, format: .yaml, schema: schema, entries: schema.entries)
         }
+        print("5 MiB YAML completion elapsed: \(elapsed)")
         #expect(elapsed < .milliseconds(50))
     }
 }

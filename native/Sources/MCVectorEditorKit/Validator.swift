@@ -42,6 +42,7 @@ public enum Validator: Sendable {
             // The JSON scanner may emit a key-only duplicate marker before
             // scanning its value. Validate the actual scalar occurrence once.
             if format == .json, occurrence.isDuplicate, occurrence.valueRange.length == 0 { continue }
+            if isEmptyValue(occurrence.rawValue) { continue }
             if let issue = valueIssue(occurrence.rawValue, format: format, entry: entry) {
                 output.append(diagnostic(issue, occurrence: occurrence, path: path, key: false))
             }
@@ -69,6 +70,10 @@ public enum Validator: Sendable {
             if let max = entry.max, number > max { return .outOfRange(min: entry.min, max: entry.max) }
             return nil
         }
+    }
+
+    private static func isEmptyValue(_ rawValue: String) -> Bool {
+        rawValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private static func numericValue(_ raw: String, integer: Bool, format: ConfigFormat) -> Double? {
