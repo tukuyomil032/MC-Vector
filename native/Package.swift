@@ -15,6 +15,16 @@ let package = Package(
     products: [
         .executable(name: "MCVector", targets: ["MCVector"]),
     ],
+    // Approved packages only (requirements DEP-001, DEP-002). The Neon plugin pins
+    // Neon by revision, so SwiftPM only accepts the plugin itself by revision too
+    // (this is its 0.8.1 tag).
+    dependencies: [
+        .package(url: "https://github.com/krzyzanowskim/STTextView", from: "2.4.1"),
+        .package(
+            url: "https://github.com/krzyzanowskim/STTextView-Plugin-Neon",
+            revision: "5a30db4ce7908a5414e7b499e2379bdc49991cd1"
+        ),
+    ],
     targets: [
         // UniFFI-generated C header + hand-written module map for the Rust static library.
         .systemLibrary(
@@ -38,7 +48,11 @@ let package = Package(
         // it into the .app's Contents/Resources (en.lproj, ja.lproj), so the app uses Bundle.main.
         .executableTarget(
             name: "MCVector",
-            dependencies: ["MCVectorCore"],
+            dependencies: [
+                "MCVectorCore",
+                .product(name: "STTextView", package: "STTextView"),
+                .product(name: "STTextView-Plugin-Neon", package: "STTextView-Plugin-Neon"),
+            ],
             path: "Sources/MCVector"
         ),
         .testTarget(

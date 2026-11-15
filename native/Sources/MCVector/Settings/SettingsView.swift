@@ -280,6 +280,14 @@ private struct AboutPane: View {
                 Link(destination: URL(string: "https://github.com/tukuyomil032/MC-Vector/issues")!) {
                     Label(L10n.t("native.settings.reportIssue"), systemImage: "arrow.up.right.square")
                 }
+                if let notices = Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt") {
+                    Button {
+                        NSWorkspace.shared.open(notices)
+                    } label: {
+                        Label(L10n.t("native.settings.thirdPartyNotices"), systemImage: "doc.text")
+                    }
+                    .buttonStyle(.link)
+                }
             }
         }
         .formStyle(.grouped)
