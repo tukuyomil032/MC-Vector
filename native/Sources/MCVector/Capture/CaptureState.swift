@@ -40,6 +40,8 @@
                 app.navigate(to: .dashboard)
             case "CONTENT-noserver-empty", "CONTENT-noserver-select":
                 app.selectedServerID = nil
+            case let id where id.hasPrefix("SERVERSETTINGS-"):
+                await showServerSettings(id, app: app)
             case "SETTINGS-root", "SETTINGS-general", "SETTINGS-editor", "SETTINGS-updates", "SETTINGS-security",
                 "SETTINGS-about":
                 // SettingsView picks the pane from the ID. capture.sh takes the first
@@ -673,6 +675,41 @@
             try? await Task.sleep(for: .milliseconds(300))
         }
 
+        /// Opens the Server Settings window in the state the ID names and hides
+        /// the main window, so capture.sh photographs the settings window.
+        private static func showServerSettings(_ id: String, app: AppState) async {
+            let name = String(id.dropFirst("SERVERSETTINGS-".count))
+            var page: ServerSettingsPage?
+            var section = ServerSettingsSection.properties
+            switch name {
+            case "general": section = .general
+            case "properties": break
+            case "search": ServerSettingsWindow.captureScript = .init(search: "port")
+            case "dirty":
+                page = .category(.properties, "network")
+                ServerSettingsWindow.captureScript = .init(values: ["server-port": "70000", "max-players": "40"])
+            case "secret":
+                page = .category(.properties, "remote")
+                ServerSettingsWindow.captureScript = .init(reveal: "rcon.password")
+            case let general where general.hasPrefix("general-"):
+                section = .general
+                page = .category(.general, String(general.dropFirst("general-".count)))
+            default: page = .category(.properties, name)
+            }
+            let main = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
+            app.openServerSettings(section: section)
+            if let page { app.serverSettingsRequest?.page = page }
+            try? await Task.sleep(for: .milliseconds(1200))
+            if let settings = NSApp.windows.first(where: { $0.isVisible && $0 !== main && $0.frame.width > 500 }) {
+                main?.orderOut(nil)
+                NSApp.activate()
+                settings.makeKeyAndOrderFront(nil)
+            } else {
+                signal("[capture] Server Settings window did not open")
+            }
+            try? await Task.sleep(for: .milliseconds(1000))
+        }
+
         /// Sample whitelist, ops and bans for USERS-* states.
         private static func writePlayerLists(serverID: String) {
             guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else { return }
@@ -719,24 +756,24 @@
             let url = URL(fileURLWithPath: dataDir)
                 .appendingPathComponent("servers/\(serverID)/server.properties")
             let contents = """
-            # E2E fixture for Native Properties captures
-            # Comments and representative values are retained in the source file.
-            motd=Welcome to E2E Survival
-            gamemode=survival
-            difficulty=normal
-            server-port=25565
-            query.port=25570
-            rcon.port=25575
-            rcon.password=CaptureSecret42
-            enable-query=true
-            enable-rcon=true
-            online-mode=true
-            white-list=false
-            pvp=true
-            allow-flight=false
-            enable-command-block=false
-            max-players=20
-            """
+                # E2E fixture for Native Properties captures
+                # Comments and representative values are retained in the source file.
+                motd=Welcome to E2E Survival
+                gamemode=survival
+                difficulty=normal
+                server-port=25565
+                query.port=25570
+                rcon.port=25575
+                rcon.password=CaptureSecret42
+                enable-query=true
+                enable-rcon=true
+                online-mode=true
+                white-list=false
+                pvp=true
+                allow-flight=false
+                enable-command-block=false
+                max-players=20
+                """
             try? contents.write(to: url, atomically: true, encoding: .utf8)
         }
 
