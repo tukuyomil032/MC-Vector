@@ -79,6 +79,15 @@ struct MCVectorApp: App {
             EditorCommands()
         }
 
+        // Properties and General Settings of one server (opened from the toolbar gear, ⌘;).
+        Window(L10n.t("native.serverSettings.title"), id: ServerSettingsWindow.windowID) {
+            ServerSettingsWindow()
+                .environment(app)
+                .environment(runtime)
+        }
+        .defaultSize(width: 980, height: 700)
+        .windowToolbarStyle(.unified)
+
         // The standard Settings window: ⌘, and "Settings…" in the app menu.
         Settings {
             SettingsView()
@@ -100,6 +109,10 @@ struct ShellCommands: Commands {
                 .keyboardShortcut(.tab, modifiers: .control)
             Button(L10n.t("native.menu.previousView")) { app.cycleServerView(forward: false) }
                 .keyboardShortcut(.tab, modifiers: [.control, .shift])
+            Divider()
+            Button(L10n.t("native.serverSettings.menu")) { app.openServerSettings() }
+                .keyboardShortcut(";", modifiers: .command)
+                .disabled(app.servers.isEmpty)
         }
     }
 }

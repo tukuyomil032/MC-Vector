@@ -51,11 +51,14 @@ private struct ServerToolbar: ViewModifier {
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    // Opens the Settings window, the same one as ⌘, and the app menu.
-                    SettingsLink {
-                        Label(L10n.t("nav.settings"), systemImage: "gearshape")
+                    // Server Settings for the selected server (⌘;). The app's own
+                    // settings stay in the app menu (⌘,), as on macOS.
+                    Button {
+                        app.openServerSettings()
+                    } label: {
+                        Label(L10n.t("native.serverSettings.title"), systemImage: "gearshape")
                     }
-                    .help(L10n.t("nav.openSettings"))
+                    .help(L10n.t("native.serverSettings.open"))
                 }
             }
     }

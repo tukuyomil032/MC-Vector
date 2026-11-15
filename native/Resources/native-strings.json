@@ -1,4 +1,8 @@
 {
+  "common.discard": {
+    "en": "Discard",
+    "ja": "破棄"
+  },
   "error.config.write_failed": {
     "en": "The setting could not be saved. Check that the data folder can be written.",
     "ja": "設定を保存できませんでした。データフォルダーに書き込めるか確認してください。"
@@ -451,6 +455,30 @@
     "en": "This screen is not available in the Native edition yet.",
     "ja": "この画面は Native 版ではまだ使えません。"
   },
+  "native.properties.hide": {
+    "en": "Hide",
+    "ja": "隠す"
+  },
+  "native.properties.max": {
+    "en": "Max {value}",
+    "ja": "最大 {value}"
+  },
+  "native.properties.min": {
+    "en": "Min {value}",
+    "ja": "最小 {value}"
+  },
+  "native.properties.saved": {
+    "en": "Saved",
+    "ja": "保存しました"
+  },
+  "native.properties.savedRestart": {
+    "en": "Properties saved. Restart the server to apply them.",
+    "ja": "プロパティを保存しました。反映するにはサーバーを再起動してください。"
+  },
+  "native.properties.show": {
+    "en": "Show",
+    "ja": "表示"
+  },
   "native.server.crashed": {
     "en": "{name} stopped unexpectedly",
     "ja": "{name} が予期せず停止しました"
@@ -466,6 +494,122 @@
   "native.server.stopFailed": {
     "en": "The server could not be stopped",
     "ja": "サーバーを停止できませんでした"
+  },
+  "native.serverSettings.back": {
+    "en": "Back",
+    "ja": "戻る"
+  },
+  "native.serverSettings.chooseJava": {
+    "en": "Choose…",
+    "ja": "選ぶ…"
+  },
+  "native.serverSettings.chooseJavaMessage": {
+    "en": "Choose the java executable to run this server with.",
+    "ja": "このサーバーを動かす java の実行ファイルを選んでください。"
+  },
+  "native.serverSettings.forward": {
+    "en": "Forward",
+    "ja": "進む"
+  },
+  "native.serverSettings.general.autoBackup": {
+    "en": "Automatic Backup",
+    "ja": "自動バックアップ"
+  },
+  "native.serverSettings.general.autoRestart": {
+    "en": "Automatic Restart",
+    "ja": "自動再起動"
+  },
+  "native.serverSettings.general.basic": {
+    "en": "Basic",
+    "ja": "基本"
+  },
+  "native.serverSettings.general.jvm": {
+    "en": "JVM Arguments",
+    "ja": "JVM 引数"
+  },
+  "native.serverSettings.general.notifications": {
+    "en": "Notifications",
+    "ja": "通知"
+  },
+  "native.serverSettings.general.runtime": {
+    "en": "Java and Memory",
+    "ja": "Java とメモリ"
+  },
+  "native.serverSettings.generalComing": {
+    "en": "General Settings are being moved here.",
+    "ja": "全般設定は、ここに移している途中です。"
+  },
+  "native.serverSettings.generalSubtitle": {
+    "en": "Name, software, Java and memory, automatic restarts and backups, and notifications for this server.",
+    "ja": "このサーバーの名前、ソフトウェア、Java とメモリ、自動再起動と自動バックアップ、通知を設定します。"
+  },
+  "native.serverSettings.jvmCustom": {
+    "en": "Custom",
+    "ja": "カスタム"
+  },
+  "native.serverSettings.later": {
+    "en": "Coming in a later version of the Native edition.",
+    "ja": "Native 版の後のバージョンで使えるようになります。"
+  },
+  "native.serverSettings.loadFailed": {
+    "en": "The settings could not be read",
+    "ja": "設定を読み込めませんでした"
+  },
+  "native.serverSettings.menu": {
+    "en": "Server Settings…",
+    "ja": "サーバー設定…"
+  },
+  "native.serverSettings.noServer": {
+    "en": "No server selected",
+    "ja": "サーバーが選ばれていません"
+  },
+  "native.serverSettings.open": {
+    "en": "Open the selected server's settings (⌘;)",
+    "ja": "選んでいるサーバーの設定を開きます（⌘;）"
+  },
+  "native.serverSettings.propertiesSubtitle": {
+    "en": "The values in server.properties. Saved changes apply the next time the server starts.",
+    "ja": "server.properties の値を設定します。保存した変更は、次にサーバーを起動したときに反映されます。"
+  },
+  "native.serverSettings.restartFooter": {
+    "en": "Java, memory and port take effect the next time the server starts.",
+    "ja": "Java、メモリ、ポートは、次にサーバーを起動したときに反映されます。"
+  },
+  "native.serverSettings.retainFooter": {
+    "en": "0 keeps every backup.",
+    "ja": "0 にすると、すべてのバックアップを残します。"
+  },
+  "native.serverSettings.saveFailed": {
+    "en": "The settings could not be saved",
+    "ja": "設定を保存できませんでした"
+  },
+  "native.serverSettings.saved": {
+    "en": "Settings saved",
+    "ja": "設定を保存しました"
+  },
+  "native.serverSettings.savedRestart": {
+    "en": "Settings saved. Restart the server to apply them.",
+    "ja": "設定を保存しました。反映するにはサーバーを再起動してください。"
+  },
+  "native.serverSettings.search": {
+    "en": "Search Settings",
+    "ja": "設定を検索"
+  },
+  "native.serverSettings.showInFinder": {
+    "en": "Show in Finder",
+    "ja": "Finder で表示"
+  },
+  "native.serverSettings.softwareFooter": {
+    "en": "Changing the software or version here only updates the record. Use Upgrade Version to download a new server jar.",
+    "ja": "ここでソフトウェアやバージョンを変えても、記録が変わるだけです。新しいサーバーの jar を取得するには、「バージョンを更新」を使ってください。"
+  },
+  "native.serverSettings.tile.general": {
+    "en": "General",
+    "ja": "全般"
+  },
+  "native.serverSettings.title": {
+    "en": "Server Settings",
+    "ja": "サーバー設定"
   },
   "native.settings.about": {
     "en": "About",
@@ -554,6 +698,18 @@
   "native.settings.thirdPartyNotices": {
     "en": "Third-Party Notices",
     "ja": "サードパーティの表記"
+  },
+  "native.unit.days": {
+    "en": "days",
+    "ja": "日"
+  },
+  "native.unit.minutes": {
+    "en": "min",
+    "ja": "分"
+  },
+  "native.unit.seconds": {
+    "en": "s",
+    "ja": "秒"
   },
   "startup.failed": {
     "en": "MC-Vector could not start",

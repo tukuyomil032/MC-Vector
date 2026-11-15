@@ -32,6 +32,12 @@ final class AppState {
 
     /// Same rule as React `setCurrentView`: remember the previous view on change.
     func navigate(to newRoute: AppRoute) {
+        // Properties and General Settings live in the Server Settings window.
+        switch newRoute {
+        case .properties: return openServerSettings(section: .properties)
+        case .generalSettings: return openServerSettings(section: .general)
+        default: break
+        }
         guard newRoute != route, !holdForUnsavedEditor(.route(newRoute)) else { return }
         previousRoute = route
         route = newRoute
@@ -90,8 +96,8 @@ final class AppState {
         hasUnsavedEditor = false
         pendingLeave = nil
         switch leave {
-        case let .route(route): navigate(to: route)
-        case let .server(id): selectServer(id)
+        case .route(let route): navigate(to: route)
+        case .server(let id): selectServer(id)
         case .previousView: returnToPreviousView()
         case .closeEditor: break
         }
@@ -104,6 +110,13 @@ final class AppState {
     var searchText = ""
     /// Set by ⌘K to move keyboard focus into the toolbar search field.
     var isSearchFocused = false
+
+    /// Set to open (or bring forward) the Server Settings window; the window clears it.
+    var serverSettingsRequest: ServerSettingsRequest?
+
+    func openServerSettings(serverID: String? = nil, section: ServerSettingsSection = .general) {
+        serverSettingsRequest = ServerSettingsRequest(serverID: serverID ?? selectedServerID, section: section)
+    }
 
     /// The one sheet shown at a time.
     var activeSheet: ActiveSheet?
@@ -149,10 +162,10 @@ enum ActiveSheet: Identifiable, Equatable {
         case .addServerChoice: "addServerChoice"
         case .addServer: "addServer"
         case .importServer: "importServer"
-        case let .serverEula(serverID): "serverEula-\(serverID)"
+        case .serverEula(let serverID): "serverEula-\(serverID)"
         case .appUpdate: "appUpdate"
         case .javaManager: "javaManager"
-        case let .versionUpgrade(serverID): "versionUpgrade-\(serverID)"
+        case .versionUpgrade(let serverID): "versionUpgrade-\(serverID)"
         }
     }
 }

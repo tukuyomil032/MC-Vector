@@ -9,6 +9,7 @@ struct RootView: View {
     @Environment(FeedbackCenter.self) private var feedback
     @Environment(ServerRuntime.self) private var runtime
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @FocusState private var isSearchFieldFocused: Bool
     /// Starts with the sidebar shown; the system sidebar button toggles it.
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -27,6 +28,10 @@ struct RootView: View {
         .searchable(text: $app.searchText, placement: .toolbar, prompt: Text(L10n.t("commandPalette.placeholder")))
         .searchFocused($isSearchFieldFocused)
         .searchSuggestions { SearchSuggestions() }
+        // The Server Settings window takes the request itself once it is open.
+        .onChange(of: app.serverSettingsRequest) { _, request in
+            if request != nil { openWindow(id: ServerSettingsWindow.windowID) }
+        }
         .onChange(of: app.isSearchFocused) { _, focus in
             if focus {
                 isSearchFieldFocused = true
@@ -40,17 +45,17 @@ struct RootView: View {
                 AddServerChoiceSheet()
             case .addServer:
                 #if DEBUG
-                CreateServerSheet(model: CaptureState.takeCreateServerModel() ?? CreateServerModel())
+                    CreateServerSheet(model: CaptureState.takeCreateServerModel() ?? CreateServerModel())
                 #else
-                CreateServerSheet()
+                    CreateServerSheet()
                 #endif
-            case let .serverEula(serverID):
+            case .serverEula(let serverID):
                 ServerEulaSheet(serverID: serverID)
             case .importServer:
                 #if DEBUG
-                ImportServerSheet(model: CaptureState.takeImportServerModel() ?? ImportServerModel())
+                    ImportServerSheet(model: CaptureState.takeImportServerModel() ?? ImportServerModel())
                 #else
-                ImportServerSheet()
+                    ImportServerSheet()
                 #endif
             default:
                 ShellSheetPlaceholder(sheet: sheet)
@@ -63,11 +68,11 @@ struct RootView: View {
             runtime.serverProfile = { [app] id in app.servers.first { $0.id == id } }
             await app.reloadServers()
             #if DEBUG
-            if let id = CaptureState.requestedID {
-                await CaptureState.apply(
-                    id, app: app, feedback: feedback, runtime: runtime, openSettings: openSettings
-                )
-            }
+                if let id = CaptureState.requestedID {
+                    await CaptureState.apply(
+                        id, app: app, feedback: feedback, runtime: runtime, openSettings: openSettings
+                    )
+                }
             #endif
         }
     }

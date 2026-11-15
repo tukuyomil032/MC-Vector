@@ -13,10 +13,12 @@ struct SidebarView: View {
     @Environment(AppState.self) private var app
 
     var body: some View {
-        List(selection: Binding(
-            get: { app.route },
-            set: { if let route = $0 { app.navigate(to: route) } }
-        )) {
+        List(
+            selection: Binding(
+                get: { app.route },
+                set: { if let route = $0 { app.navigate(to: route) } }
+            )
+        ) {
             Section {
                 ForEach(AppRoute.serverViews, id: \.self) { route in
                     Label(L10n.t(route.labelKey), systemImage: route.symbol)
@@ -87,7 +89,10 @@ private struct ServerRow: View {
                     .font(.system(size: 7))
                     .foregroundStyle(ServerStatusStyle.color(runtime.status(of: server.id)))
                     .animation(Motion.standard, value: runtime.status(of: server.id))
-                    .symbolEffect(.pulse, isActive: ["starting", "stopping", "restarting"].contains(runtime.status(of: server.id)))
+                    .symbolEffect(
+                        .pulse,
+                        isActive: ["starting", "stopping", "restarting"].contains(runtime.status(of: server.id))
+                    )
                     .frame(width: 16)
                     .accessibilityLabel(Text(L10n.t(ServerStatusStyle.labelKey(runtime.status(of: server.id)))))
                 VStack(alignment: .leading, spacing: 1) {
@@ -122,6 +127,10 @@ private struct ServerContextMenu: View {
 
     var body: some View {
         let actions = ServerActions(app: app, feedback: feedback)
+        Button(L10n.t("native.serverSettings.menu"), systemImage: "gearshape") {
+            app.openServerSettings(serverID: server.id)
+        }
+        Divider()
         Button(L10n.t("server.actions.clone"), systemImage: "doc.on.doc") {
             Task { await actions.clone(server) }
         }

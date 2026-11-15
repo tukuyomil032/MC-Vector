@@ -1,0 +1,664 @@
+{
+  "categories": [
+    {
+      "id": "basic",
+      "title": {
+        "en": "Basic Settings",
+        "ja": "基本設定"
+      },
+      "symbol": "slider.horizontal.3",
+      "column": 0,
+      "keys": [
+        {
+          "key": "motd",
+          "control": "text",
+          "label": {
+            "en": "MOTD",
+            "ja": "MOTD"
+          }
+        },
+        {
+          "key": "gamemode",
+          "control": "choice",
+          "choices": [
+            "survival",
+            "creative",
+            "adventure",
+            "spectator"
+          ],
+          "label": {
+            "en": "Game Mode",
+            "ja": "ゲームモード"
+          }
+        },
+        {
+          "key": "difficulty",
+          "control": "choice",
+          "choices": [
+            "peaceful",
+            "easy",
+            "normal",
+            "hard"
+          ],
+          "label": {
+            "en": "Difficulty",
+            "ja": "難易度"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gameplay",
+      "title": {
+        "en": "Gameplay",
+        "ja": "ゲームプレイ"
+      },
+      "symbol": "gamecontroller",
+      "column": 1,
+      "keys": [
+        {
+          "key": "pvp",
+          "control": "toggle",
+          "label": {
+            "en": "PvP",
+            "ja": "PvP"
+          }
+        },
+        {
+          "key": "allow-flight",
+          "control": "toggle",
+          "label": {
+            "en": "Allow Flight",
+            "ja": "飛行を許可"
+          }
+        },
+        {
+          "key": "enable-command-block",
+          "control": "toggle",
+          "label": {
+            "en": "Command Blocks",
+            "ja": "コマンドブロック"
+          }
+        },
+        {
+          "key": "force-gamemode",
+          "control": "toggle",
+          "label": {
+            "en": "Force game mode",
+            "ja": "ゲームモード固定"
+          }
+        },
+        {
+          "key": "hardcore",
+          "control": "toggle",
+          "label": {
+            "en": "Hardcore",
+            "ja": "ハードコア"
+          }
+        }
+      ]
+    },
+    {
+      "id": "remote",
+      "title": {
+        "en": "RCON & Query",
+        "ja": "RCON・Query"
+      },
+      "symbol": "terminal",
+      "column": 0,
+      "keys": [
+        {
+          "key": "query.port",
+          "control": "number",
+          "min": 1,
+          "max": 65535,
+          "step": 1,
+          "label": {
+            "en": "Query port",
+            "ja": "Queryポート"
+          }
+        },
+        {
+          "key": "rcon.port",
+          "control": "number",
+          "min": 1,
+          "max": 65535,
+          "step": 1,
+          "label": {
+            "en": "RCON port",
+            "ja": "RCONポート"
+          }
+        },
+        {
+          "key": "rcon.password",
+          "control": "secret",
+          "label": {
+            "en": "RCON password",
+            "ja": "RCONパスワード"
+          }
+        },
+        {
+          "key": "enable-query",
+          "control": "toggle",
+          "label": {
+            "en": "Enable query",
+            "ja": "Query有効化"
+          }
+        },
+        {
+          "key": "enable-rcon",
+          "control": "toggle",
+          "label": {
+            "en": "Enable RCON",
+            "ja": "RCON有効化"
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": {
+        "en": "Connection / Network",
+        "ja": "接続・ネットワーク"
+      },
+      "symbol": "network",
+      "column": 1,
+      "keys": [
+        {
+          "key": "max-players",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Max Players",
+            "ja": "最大プレイヤー数"
+          }
+        },
+        {
+          "key": "server-port",
+          "control": "number",
+          "min": 1,
+          "max": 65535,
+          "step": 1,
+          "label": {
+            "en": "Server Port",
+            "ja": "サーバーポート"
+          }
+        },
+        {
+          "key": "online-mode",
+          "control": "toggle",
+          "label": {
+            "en": "Online Mode",
+            "ja": "オンラインモード"
+          }
+        },
+        {
+          "key": "white-list",
+          "control": "toggle",
+          "label": {
+            "en": "Whitelist",
+            "ja": "ホワイトリスト"
+          }
+        },
+        {
+          "key": "server-ip",
+          "control": "text",
+          "label": {
+            "en": "Server IP",
+            "ja": "サーバーIP"
+          }
+        },
+        {
+          "key": "network-compression-threshold",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Compression threshold",
+            "ja": "圧縮しきい値"
+          }
+        },
+        {
+          "key": "rate-limit",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Connection rate limit",
+            "ja": "接続レート制限"
+          }
+        },
+        {
+          "key": "status-heartbeat-interval",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Status heartbeat interval",
+            "ja": "ステータス送信間隔"
+          }
+        },
+        {
+          "key": "entity-broadcast-range-percentage",
+          "control": "number",
+          "min": 10,
+          "max": 1000,
+          "step": 1,
+          "label": {
+            "en": "Entity broadcast range (%)",
+            "ja": "エンティティ送信範囲%"
+          }
+        },
+        {
+          "key": "use-native-transport",
+          "control": "toggle",
+          "label": {
+            "en": "Native transport",
+            "ja": "Native Transport"
+          }
+        },
+        {
+          "key": "prevent-proxy-connections",
+          "control": "toggle",
+          "label": {
+            "en": "Prevent proxy connections",
+            "ja": "プロキシ接続防止"
+          }
+        },
+        {
+          "key": "enable-status",
+          "control": "toggle",
+          "label": {
+            "en": "Server list status",
+            "ja": "ステータス応答"
+          }
+        }
+      ]
+    },
+    {
+      "id": "world",
+      "title": {
+        "en": "World",
+        "ja": "ワールド"
+      },
+      "symbol": "globe.americas",
+      "column": 1,
+      "keys": [
+        {
+          "key": "level-name",
+          "control": "text",
+          "label": {
+            "en": "World name",
+            "ja": "ワールド名"
+          }
+        },
+        {
+          "key": "level-seed",
+          "control": "text",
+          "label": {
+            "en": "World seed",
+            "ja": "シード値"
+          }
+        },
+        {
+          "key": "level-type",
+          "control": "text",
+          "label": {
+            "en": "World type",
+            "ja": "ワールドタイプ"
+          }
+        },
+        {
+          "key": "generator-settings",
+          "control": "text",
+          "label": {
+            "en": "Generator settings",
+            "ja": "ジェネレータ設定"
+          }
+        },
+        {
+          "key": "initial-disabled-packs",
+          "control": "text",
+          "label": {
+            "en": "Disabled data packs",
+            "ja": "無効化リソースパック"
+          }
+        },
+        {
+          "key": "initial-enabled-packs",
+          "control": "text",
+          "label": {
+            "en": "Enabled data packs",
+            "ja": "有効化リソースパック"
+          }
+        },
+        {
+          "key": "simulation-distance",
+          "control": "number",
+          "min": 3,
+          "max": 32,
+          "step": 1,
+          "label": {
+            "en": "Simulation distance",
+            "ja": "シミュレーション距離"
+          }
+        },
+        {
+          "key": "view-distance",
+          "control": "number",
+          "min": 3,
+          "max": 32,
+          "step": 1,
+          "label": {
+            "en": "View distance",
+            "ja": "視野距離"
+          }
+        },
+        {
+          "key": "max-world-size",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Max world size",
+            "ja": "ワールドサイズ上限"
+          }
+        },
+        {
+          "key": "text-filtering-config",
+          "control": "text",
+          "label": {
+            "en": "Text filter config URL",
+            "ja": "テキストフィルタ設定URL"
+          }
+        },
+        {
+          "key": "text-filtering-version",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Text filter version",
+            "ja": "テキストフィルタバージョン"
+          }
+        },
+        {
+          "key": "generate-structures",
+          "control": "toggle",
+          "label": {
+            "en": "Generate structures",
+            "ja": "構造物生成"
+          }
+        },
+        {
+          "key": "sync-chunk-writes",
+          "control": "toggle",
+          "label": {
+            "en": "Synchronous chunk writes",
+            "ja": "チャンク同期書き込み"
+          }
+        }
+      ]
+    },
+    {
+      "id": "general",
+      "title": {
+        "en": "General",
+        "ja": "一般"
+      },
+      "symbol": "gearshape",
+      "column": 0,
+      "keys": [
+        {
+          "key": "bug-report-link",
+          "control": "text",
+          "label": {
+            "en": "Bug report link",
+            "ja": "バグ報告リンク"
+          }
+        },
+        {
+          "key": "op-permission-level",
+          "control": "number",
+          "min": 1,
+          "max": 4,
+          "step": 1,
+          "label": {
+            "en": "Op permission level",
+            "ja": "OP権限レベル"
+          }
+        },
+        {
+          "key": "spawn-protection",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Spawn protection radius",
+            "ja": "スポーン保護範囲"
+          }
+        },
+        {
+          "key": "function-permission-level",
+          "control": "number",
+          "min": 1,
+          "max": 4,
+          "step": 1,
+          "label": {
+            "en": "Function permission level",
+            "ja": "関数実行権限"
+          }
+        },
+        {
+          "key": "pause-when-empty-seconds",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Pause when empty (seconds)",
+            "ja": "空時停止までの秒数"
+          }
+        },
+        {
+          "key": "player-idle-timeout",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Idle kick time (minutes)",
+            "ja": "放置キック時間(分)"
+          }
+        },
+        {
+          "key": "broadcast-console-to-ops",
+          "control": "toggle",
+          "label": {
+            "en": "Send console messages to ops",
+            "ja": "コンソールメッセージをOPに送信"
+          }
+        },
+        {
+          "key": "broadcast-rcon-to-ops",
+          "control": "toggle",
+          "label": {
+            "en": "Send RCON messages to ops",
+            "ja": "RCONメッセージをOPに送信"
+          }
+        },
+        {
+          "key": "debug",
+          "control": "toggle",
+          "label": {
+            "en": "Debug mode",
+            "ja": "デバッグモード"
+          }
+        },
+        {
+          "key": "accepts-transfers",
+          "control": "toggle",
+          "label": {
+            "en": "Accept transfers",
+            "ja": "転送を受け入れ"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": {
+        "en": "Security",
+        "ja": "セキュリティ"
+      },
+      "symbol": "checkmark.shield",
+      "column": 1,
+      "keys": [
+        {
+          "key": "enforce-secure-profile",
+          "control": "toggle",
+          "label": {
+            "en": "Enforce secure profile",
+            "ja": "Secure Profile強制"
+          }
+        },
+        {
+          "key": "enforce-whitelist",
+          "control": "toggle",
+          "label": {
+            "en": "Enforce whitelist",
+            "ja": "ホワイトリスト強制"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resourcePack",
+      "title": {
+        "en": "Resource Pack",
+        "ja": "リソースパック"
+      },
+      "symbol": "shippingbox",
+      "column": 0,
+      "keys": [
+        {
+          "key": "resource-pack",
+          "control": "text",
+          "label": {
+            "en": "Resource pack URL",
+            "ja": "リソースパックURL"
+          }
+        },
+        {
+          "key": "resource-pack-id",
+          "control": "text",
+          "label": {
+            "en": "Resource pack ID",
+            "ja": "リソースパックID"
+          }
+        },
+        {
+          "key": "resource-pack-sha1",
+          "control": "text",
+          "label": {
+            "en": "Resource pack SHA-1",
+            "ja": "リソースパックSHA1"
+          }
+        },
+        {
+          "key": "resource-pack-prompt",
+          "control": "text",
+          "label": {
+            "en": "Resource pack prompt",
+            "ja": "リソースパック同意メッセージ"
+          }
+        },
+        {
+          "key": "require-resource-pack",
+          "control": "toggle",
+          "label": {
+            "en": "Require resource pack",
+            "ja": "リソースパック強制"
+          }
+        }
+      ]
+    },
+    {
+      "id": "management",
+      "title": {
+        "en": "Management Server",
+        "ja": "管理サーバー"
+      },
+      "symbol": "server.rack",
+      "column": 0,
+      "keys": [
+        {
+          "key": "management-server-host",
+          "control": "text",
+          "label": {
+            "en": "Management server host",
+            "ja": "管理サーバーホスト"
+          }
+        },
+        {
+          "key": "management-server-port",
+          "control": "number",
+          "min": 0,
+          "step": 1,
+          "label": {
+            "en": "Management server port",
+            "ja": "管理サーバーポート"
+          }
+        },
+        {
+          "key": "management-server-secret",
+          "control": "secret",
+          "label": {
+            "en": "Management server secret",
+            "ja": "管理サーバーシークレット"
+          }
+        },
+        {
+          "key": "management-server-tls-keystore",
+          "control": "text",
+          "label": {
+            "en": "Management server keystore",
+            "ja": "管理サーバーKeystore"
+          }
+        },
+        {
+          "key": "management-server-tls-keystore-password",
+          "control": "secret",
+          "label": {
+            "en": "Management server keystore password",
+            "ja": "管理サーバーKeystoreパスワード"
+          }
+        },
+        {
+          "key": "management-server-enabled",
+          "control": "toggle",
+          "label": {
+            "en": "Enable management server",
+            "ja": "管理サーバー有効"
+          }
+        },
+        {
+          "key": "management-server-tls-enabled",
+          "control": "toggle",
+          "label": {
+            "en": "Management server TLS",
+            "ja": "管理サーバーTLS"
+          }
+        }
+      ]
+    }
+  ],
+  "hidden": [
+    "log-ips",
+    "max-tick-time",
+    "max-chained-neighbor-updates",
+    "enable-jmx-monitoring",
+    "enable-code-of-conduct",
+    "hide-online-players",
+    "region-file-compression"
+  ]
+}

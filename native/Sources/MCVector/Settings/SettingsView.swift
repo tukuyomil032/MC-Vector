@@ -120,20 +120,6 @@ enum SettingsPane: String, Identifiable, Hashable {
     }
 }
 
-/// System Settings style icon: a white symbol on a colored rounded square.
-private struct SettingsIconTile: View {
-    let symbol: String
-    let color: Color
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 22, height: 22)
-            .background(color.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-    }
-}
-
 // MARK: Panes
 
 /// Loads the shared settings once per pane and saves each change immediately,

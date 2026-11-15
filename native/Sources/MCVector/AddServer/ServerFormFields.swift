@@ -157,6 +157,7 @@ struct RollingNumberField: View {
     @Binding var text: String
     let range: ClosedRange<Int>
     var unit: String?
+    var step: Int = 1
 
     @State private var isEditing = false
     @FocusState private var focused: Bool
@@ -202,7 +203,8 @@ struct RollingNumberField: View {
                         }
                     }
                 ),
-                in: range
+                in: range,
+                step: step
             )
             .labelsHidden()
         }

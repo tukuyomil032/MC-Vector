@@ -17,13 +17,12 @@ enum AppRoute: String, CaseIterable, Hashable, Sendable {
     case ngrokGuide = "ngrok-guide"
     // React's in-window "app-settings" view is the Settings window (⌘,) here.
 
-    /// Sidebar order (React `NAV_ITEMS`): the eight per-server views, then Proxy Network after a divider.
-    static let serverViews: [AppRoute] = [
-        .dashboard, .console, .users, .files, .plugins, .backups, .properties, .generalSettings,
-    ]
+    /// Sidebar order (React `NAV_ITEMS`), then Proxy Network after a divider. React's
+    /// Properties and General Settings views are the Server Settings window here.
+    static let serverViews: [AppRoute] = [.dashboard, .console, .users, .files, .plugins, .backups]
 
     /// Views that need a selected server. The others are app-wide ("static" in AppContentRouter).
-    var isServerView: Bool { Self.serverViews.contains(self) }
+    var isServerView: Bool { Self.serverViews.contains(self) || self == .properties || self == .generalSettings }
 
     /// Translation key of the sidebar label / header title.
     var labelKey: String {
