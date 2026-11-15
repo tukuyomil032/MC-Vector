@@ -1,0 +1,458 @@
+{
+  "id": "bukkit",
+  "title": "Bukkit configuration",
+  "format": "yaml",
+  "files": [
+    "bukkit.yml"
+  ],
+  "software": [
+    "spigot",
+    "paper",
+    "leaf"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/bukkit-configuration/"
+  ],
+  "entries": [
+    {
+      "path": "settings.allow-end",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether End-type dimensions are loaded.",
+        "ja": "エンド系ディメンションを読み込むかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.warn-on-overload",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the server prints the “Can’t keep up!” warning.",
+        "ja": "サーバーが「Can’t keep up!」警告を出すかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.permissions-file",
+      "type": "string",
+      "default": "permissions.yml",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the file used to load server permissions; permission plugins have mostly replaced this feature.",
+        "ja": "サーバー権限を読み込むファイルを指定します。この機能の多くは権限プラグインに置き換わっています。"
+      }
+    },
+    {
+      "path": "settings.update-folder",
+      "type": "string",
+      "default": "update",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the folder where replacement plugin versions are placed during updates.",
+        "ja": "更新時に新しいプラグインを配置するフォルダーを指定します。"
+      }
+    },
+    {
+      "path": "settings.plugin-profiling",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+      "en": "A Paper patch disables this option, so it has no effect on Paper.",
+      "ja": "Paperではパッチによりこの設定が無効化され、効果がありません。"
+      }
+    },
+    {
+      "path": "settings.connection-throttle",
+      "type": "int",
+      "default": 4000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the delay, in milliseconds, between connection attempts from the same IP address.",
+        "ja": "同じIPアドレスからの接続試行の間隔をミリ秒で設定します。"
+      }
+    },
+    {
+      "path": "settings.query-plugins",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the GS4 Query response includes the server’s plugins.",
+        "ja": "GS4 Queryの応答にサーバーのプラグイン一覧を含めるかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.deprecated-verbose",
+      "type": "enum",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": [
+        "true",
+        "false",
+        "default"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls warnings for deprecated events. The value default follows each event’s @Warning(true) annotation; the paper.alwaysPrintWarningState system property overrides this behavior.",
+        "ja": "非推奨イベントの警告を制御します。defaultは各イベントの@Warning(true)指定に従い、paper.alwaysPrintWarningStateシステムプロパティがこの動作を上書きします。"
+      }
+    },
+    {
+      "path": "settings.shutdown-message",
+      "type": "string",
+      "default": "Server closed",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message sent to players when the server shuts down. It uses legacy § formatting.",
+        "ja": "サーバー停止時にプレイヤーへ送るキックメッセージを指定します。書式には従来の§形式を使います。"
+      }
+    },
+    {
+      "path": "settings.minimum-api",
+      "type": "string",
+      "default": "none",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the minimum plugin api-version, from 1.13 through 26.3. Plugins below this version or without api-version are not loaded.",
+        "ja": "プラグインの最小api-versionを1.13から26.3の範囲で指定します。この値より古いかapi-versionが未指定のプラグインは読み込まれません。"
+      }
+    },
+    {
+      "path": "settings.use-map-color-cache",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the server builds and saves a lookup from RGB colors to the closest map-palette color.",
+        "ja": "RGB色から最も近い地図パレット色への対応表を作成して保存するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.world-container",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the folder used for world files. By default, it is the server JAR folder; worlds must be moved there manually for the server to find them.",
+        "ja": "ワールドファイルを保存するフォルダーを指定します。既定ではサーバーJARのフォルダーで、認識させるワールドは手動で移動する必要があります。"
+      }
+    },
+    {
+      "path": "spawn-limits.monsters",
+      "type": "int",
+      "default": 70,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the monster spawn limit; Paper world configuration can override it.",
+        "ja": "モンスターのスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "spawn-limits.animals",
+      "type": "int",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the animal spawn limit; Paper world configuration can override it.",
+        "ja": "動物のスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "spawn-limits.water-animals",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the water-animal spawn limit; Paper world configuration can override it.",
+        "ja": "水生動物のスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "spawn-limits.water-ambient",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the water-ambient spawn limit; Paper world configuration can override it.",
+        "ja": "水中の環境生物のスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "spawn-limits.water-underground-creature",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the underground-water-creature spawn limit; Paper world configuration can override it.",
+        "ja": "水中の地下生物のスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "spawn-limits.axolotls",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the axolotl spawn limit; Paper world configuration can override it.",
+        "ja": "ウーパールーパーのスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "spawn-limits.ambient",
+      "type": "int",
+      "default": 15,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the ambient-mob spawn limit; Paper world configuration can override it.",
+        "ja": "環境生物のスポーン上限を設定します。Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "chunk-gc.period-in-ticks",
+      "type": "int",
+      "default": 600,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how long plugin-loaded chunks remain loaded, in ticks. Paper caps this at 20 ticks, or one second.",
+        "ja": "プラグインが読み込んだチャンクを保持する時間をtick単位で設定します。Paperは20tick、つまり1秒を上限にします。"
+      }
+    },
+    {
+      "path": "ticks-per.animal-spawns",
+      "type": "int",
+      "default": 400,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+      "en": "Sets the number of ticks between animal spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+      "ja": "動物のスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.monster-spawns",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between hostile-mob spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+        "ja": "敵対的なモブのスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.water-spawns",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between water-creature spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+        "ja": "水生生物のスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.water-ambient-spawns",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between water-ambient spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+        "ja": "水中の環境生物のスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.water-underground-creature-spawns",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between underground-water-creature spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+        "ja": "水中の地下生物のスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.axolotl-spawns",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between axolotl spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+        "ja": "ウーパールーパーのスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.ambient-spawns",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between ambient-mob spawn attempts. Use -1 for the Vanilla default; Paper world configuration can override it.",
+        "ja": "環境生物のスポーン試行間隔をtick数で設定します。-1でVanillaの既定値を使い、Paperのワールド設定で上書きできます。"
+      }
+    },
+    {
+      "path": "ticks-per.autosave",
+      "type": "int",
+      "default": 6000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of ticks between full automatic saves. Set -1 to disable automatic saving.",
+        "ja": "全体の自動保存間隔をtick数で設定します。-1にすると自動保存を無効にします。"
+      }
+    },
+    {
+      "path": "aliases",
+      "type": "string",
+      "default": "now-in-commands.yml",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "This is a fixed value retained when older configurations are converted to the commands.yml format.",
+        "ja": "古い設定をcommands.yml形式へ変換するときに使う固定値です。"
+      }
+    },
+    {
+      "path": "worlds.*.biome-provider",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the biome provider for a world. A plugin must register a BiomeProvider; use plugin-name:extra-parameters or plugin-name when no extra parameters are needed.",
+        "ja": "ワールドで使うバイオームプロバイダーを指定します。プラグインがBiomeProviderを登録し、追加パラメーターがあればplugin-name:extra-parameters、なければplugin-nameの形式で指定します。"
+      }
+    },
+    {
+      "path": "worlds.*.generator",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the chunk generator for a world. A plugin must register a ChunkGenerator; use plugin-name:extra-parameters or plugin-name when no extra parameters are needed.",
+        "ja": "ワールドで使うチャンクジェネレーターを指定します。プラグインがChunkGeneratorを登録し、追加パラメーターがあればplugin-name:extra-parameters、なければplugin-nameの形式で指定します。"
+      }
+    }
+  ]
+}

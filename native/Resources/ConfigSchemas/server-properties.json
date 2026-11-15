@@ -1,0 +1,1157 @@
+{
+  "id": "server-properties",
+  "title": "Minecraft server properties",
+  "format": "properties",
+  "files": [
+    "server.properties"
+  ],
+  "software": [
+    "vanilla",
+    "paper",
+    "spigot",
+    "leaf",
+    "forge",
+    "fabric"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://minecraft.wiki/w/Server.properties",
+    "https://minecraft.wiki/w/Java_Edition_removed_features",
+    "https://minecraft.wiki/w/Minecraft_Server_Management_Protocol",
+    "https://www.minecraft.net/en-us/article/minecraft-java-edition-26-3",
+    "https://feedback.minecraft.net/hc/en-us/articles/46153634280333-Minecraft-Java-Edition-26-2-Pre-release-1"
+  ],
+  "entries": [
+    {
+      "path": "accepts-transfers",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.20.5",
+      "until": null,
+      "doc": {
+        "en": "Controls whether the server accepts incoming player transfers; rejected transfers disconnect the player.",
+        "ja": "サーバーがプレイヤーの転送を受け入れるかを設定します。拒否すると、転送中のプレイヤーは切断されます。"
+      }
+    },
+    {
+      "path": "allow-flight",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows players to fly in Survival mode without being kicked for flying.",
+        "ja": "有効にすると、サバイバルモードで飛行してもプレイヤーはキックされません。"
+      }
+    },
+    {
+      "path": "broadcast-console-to-ops",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sends console command output to all online operators.",
+        "ja": "コンソールのコマンド出力を、オンライン中のすべてのオペレーターに送信します。"
+      }
+    },
+    {
+      "path": "broadcast-rcon-to-ops",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sends RCON command output to all online operators.",
+        "ja": "RCONのコマンド出力を、オンライン中のすべてのオペレーターに送信します。"
+      }
+    },
+    {
+      "path": "bug-report-link",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21",
+      "until": null,
+      "doc": {
+        "en": "Sets the URL used by the Report Server Bugs link in the client server menu.",
+        "ja": "クライアントのサーバーメニューにあるバグ報告リンクのURLを設定します。"
+      }
+    },
+    {
+      "path": "chat-spam-threshold-seconds",
+      "type": "int",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "26.2",
+      "until": null,
+      "doc": {
+        "en": "Sets the chat spam threshold in seconds; reaching it can kick a player, while 0 disables kicks for chat spam.",
+        "ja": "チャットのスパム判定値を秒数で設定します。値に達するとプレイヤーがキックされ、0ではチャットスパムによるキックを無効にします。"
+      }
+    },
+    {
+      "path": "command-spam-threshold-seconds",
+      "type": "int",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "26.2",
+      "until": null,
+      "doc": {
+        "en": "Sets the command spam threshold in seconds; reaching it can kick a player, while 0 disables kicks for command spam.",
+        "ja": "コマンドのスパム判定値を秒数で設定します。値に達するとプレイヤーがキックされ、0ではコマンドスパムによるキックを無効にします。"
+      }
+    },
+    {
+      "path": "difficulty",
+      "type": "enum",
+      "default": "easy",
+      "min": null,
+      "max": null,
+      "values": [
+        "peaceful",
+        "easy",
+        "normal",
+        "hard",
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the world difficulty. Legacy values 0, 1, 2 and 3 are also accepted and converted to peaceful, easy, normal and hard.",
+        "ja": "ワールドの難易度を設定します。旧形式の0・1・2・3も受け付け、それぞれpeaceful・easy・normal・hardに変換します。"
+      }
+    },
+    {
+      "path": "enable-code-of-conduct",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Enables code of conduct files in the server's codeofconduct folder for players to view.",
+        "ja": "サーバーのcodeofconductフォルダーにある行動規範ファイルをプレイヤーに表示します。"
+      }
+    },
+    {
+      "path": "enable-jmx-monitoring",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.16",
+      "until": null,
+      "doc": {
+        "en": "Exposes server tick timing metrics through a JMX MBean.",
+        "ja": "JMX MBeanを通じて、サーバーのtick時間を公開します。"
+      }
+    },
+    {
+      "path": "enable-query",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.0.0",
+      "until": null,
+      "doc": {
+        "en": "Enables the GameSpy4 query listener for retrieving server information.",
+        "ja": "サーバー情報の取得に使うGameSpy4 queryリスナーを有効にします。"
+      }
+    },
+    {
+      "path": "enable-rcon",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.0.0",
+      "until": null,
+      "doc": {
+        "en": "Enables remote access to the server console through RCON.",
+        "ja": "RCONを通じたサーバーコンソールへのリモートアクセスを有効にします。"
+      }
+    },
+    {
+      "path": "enable-status",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.16",
+      "until": null,
+      "doc": {
+        "en": "Controls whether the server responds as online in server-list status requests; players can still connect when disabled.",
+        "ja": "サーバー一覧からの状態問い合わせに、稼働中として応答するかを設定します。無効にしてもプレイヤーは接続できます。"
+      }
+    },
+    {
+      "path": "enforce-secure-profile",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.19",
+      "until": null,
+      "doc": {
+        "en": "Requires connecting players to have a Mojang-signed public key.",
+        "ja": "接続するプレイヤーにMojang署名付きの公開鍵を要求します。"
+      }
+    },
+    {
+      "path": "enforce-whitelist",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Kicks online players who are not on the whitelist when whitelist changes are enforced.",
+        "ja": "ホワイトリストを適用するとき、登録されていないオンラインプレイヤーをキックします。"
+      }
+    },
+    {
+      "path": "entity-broadcast-range-percentage",
+      "type": "int",
+      "default": 100,
+      "min": 10,
+      "max": 1000,
+      "values": null,
+      "since": "1.16",
+      "until": null,
+      "doc": {
+        "en": "Sets how close entities must be to a player before the server sends them, as a percentage of the default range.",
+        "ja": "エンティティをプレイヤーへ送信する距離を、既定範囲に対する割合で設定します。"
+      }
+    },
+    {
+      "path": "force-gamemode",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Makes players use the server's default game mode when they join.",
+        "ja": "プレイヤーが参加するとき、サーバーの既定ゲームモードに切り替えます。"
+      }
+    },
+    {
+      "path": "function-permission-level",
+      "type": "int",
+      "default": 2,
+      "min": 1,
+      "max": 4,
+      "values": null,
+      "since": "1.14.4",
+      "until": null,
+      "doc": {
+        "en": "Sets the default permission level for functions.",
+        "ja": "functionの既定権限レベルを設定します。"
+      }
+    },
+    {
+      "path": "gamemode",
+      "type": "enum",
+      "default": "survival",
+      "min": null,
+      "max": null,
+      "values": [
+        "survival",
+        "creative",
+        "adventure",
+        "spectator"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the default game mode for the server.",
+        "ja": "サーバーの既定ゲームモードを設定します。"
+      }
+    },
+    {
+      "path": "generate-structures",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.0.0",
+      "until": null,
+      "doc": {
+        "en": "Controls whether structures such as villages generate in new chunks.",
+        "ja": "新しいチャンクに村などの構造物を生成するかを設定します。"
+      }
+    },
+    {
+      "path": "generator-settings",
+      "type": "string",
+      "default": "{}",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.8",
+      "until": null,
+      "doc": {
+        "en": "Provides JSON settings for customizing world generation according to the selected level type.",
+        "ja": "選択したlevel-typeに合わせて、ワールド生成を調整するJSON設定を指定します。"
+      }
+    },
+    {
+      "path": "hardcore",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.3.1",
+      "until": null,
+      "doc": {
+        "en": "Enables hardcore mode for worlds created by the server.",
+        "ja": "サーバーが作成するワールドでハードコアモードを有効にします。"
+      }
+    },
+    {
+      "path": "hide-online-players",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.18",
+      "until": null,
+      "doc": {
+        "en": "Hides the player list in status responses.",
+        "ja": "状態応答にプレイヤー一覧を含めないようにします。"
+      }
+    },
+    {
+      "path": "initial-disabled-packs",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.19.3",
+      "until": null,
+      "doc": {
+        "en": "Lists datapacks that are not automatically enabled when the world is created, separated by commas.",
+        "ja": "ワールド作成時に自動で有効化しないデータパックを、カンマ区切りで指定します。"
+      }
+    },
+    {
+      "path": "initial-enabled-packs",
+      "type": "string",
+      "default": "vanilla",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.19.3",
+      "until": null,
+      "doc": {
+        "en": "Lists datapacks to enable when the world is created, separated by commas; feature packs must be enabled explicitly.",
+        "ja": "ワールド作成時に有効化するデータパックをカンマ区切りで指定します。feature packは明示的に有効化する必要があります。"
+      }
+    },
+    {
+      "path": "level-name",
+      "type": "string",
+      "default": "world",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the world name and the directory where the server loads or creates it.",
+        "ja": "ワールド名と、サーバーが読み込むか作成するワールドのフォルダー名を設定します。"
+      }
+    },
+    {
+      "path": "level-seed",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the seed used to generate the world; an empty value selects a random seed.",
+        "ja": "ワールド生成に使うシードを設定します。空欄の場合はランダムなシードを使います。"
+      }
+    },
+    {
+      "path": "level-type",
+      "type": "string",
+      "default": "minecraft:normal",
+      "min": null,
+      "max": null,
+      "values": [
+        "minecraft:normal",
+        "minecraft:flat",
+        "minecraft:large_biomes",
+        "minecraft:amplified",
+        "minecraft:single_biome_surface"
+      ],
+      "since": "1.1",
+      "until": null,
+      "doc": {
+        "en": "Selects the world-generation preset; the minecraft: namespace may be omitted.",
+        "ja": "ワールド生成のプリセットを選択します。minecraft:名前空間は省略できます。"
+      }
+    },
+    {
+      "path": "log-ips",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.20.2",
+      "until": null,
+      "doc": {
+        "en": "Controls whether player IP addresses appear in server console and log messages.",
+        "ja": "サーバーコンソールやログのメッセージに、プレイヤーのIPアドレスを表示するかを設定します。"
+      }
+    },
+    {
+      "path": "management-server-allowed-origins",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.11",
+      "until": null,
+      "doc": {
+        "en": "Lists comma-separated origins allowed to connect to the management protocol; an empty value allows no clients.",
+        "ja": "管理プロトコルへの接続を許可するオリジンをカンマ区切りで指定します。空欄の場合、クライアントの接続を許可しません。"
+      }
+    },
+    {
+      "path": "management-server-enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Enables the Minecraft Server Management Protocol.",
+        "ja": "Minecraft Server Management Protocolを有効にします。"
+      }
+    },
+    {
+      "path": "management-server-host",
+      "type": "string",
+      "default": "localhost",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Sets the host used by the management protocol endpoint.",
+        "ja": "管理プロトコルの接続先ホストを設定します。"
+      }
+    },
+    {
+      "path": "management-server-port",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Sets the port used by the management protocol; 0 selects a random port at startup.",
+        "ja": "管理プロトコルの接続先portを設定します。0の場合、起動時に空いているportを選びます。"
+      }
+    },
+    {
+      "path": "management-server-secret",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Authenticates management protocol clients with a 40-character alphanumeric secret that is generated when this value is blank.",
+        "ja": "40文字の英数字からなる秘密文字列で管理プロトコルのクライアントを認証します。空欄の場合は自動生成します。"
+      }
+    },
+    {
+      "path": "management-server-tls-enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Controls whether the management protocol uses TLS.",
+        "ja": "管理プロトコルでTLSを使うかを設定します。"
+      }
+    },
+    {
+      "path": "management-server-tls-keystore",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Sets the path to the PKCS12 keystore used by TLS; the server will not start if TLS is enabled without a keystore.",
+        "ja": "TLSに使うPKCS12形式のkeystoreのパスを指定します。TLSが有効でkeystoreがない場合、サーバーは起動しません。"
+      }
+    },
+    {
+      "path": "management-server-tls-keystore-password",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Sets the TLS keystore password, which can also be provided through the documented environment variable or JVM argument.",
+        "ja": "TLS keystoreのパスワードを設定します。資料に記載された環境変数またはJVM引数でも指定できます。"
+      }
+    },
+    {
+      "path": "max-chained-neighbor-updates",
+      "type": "int",
+      "default": 1000000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.19",
+      "until": null,
+      "doc": {
+        "en": "Limits consecutive neighbor updates before later updates are skipped; negative values disable the limit.",
+        "ja": "連続する隣接ブロックの更新回数の上限を設定し、超過した分の更新を省略します。負の値では上限を無効にします。"
+      }
+    },
+    {
+      "path": "max-players",
+      "type": "int",
+      "default": 20,
+      "min": 0,
+      "max": 2147483647,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of players that can play on the server at once.",
+        "ja": "サーバーで同時にプレイできる最大人数を設定します。"
+      }
+    },
+    {
+      "path": "max-tick-time",
+      "type": "int",
+      "default": 60000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum duration in milliseconds for one tick before the watchdog stops the server; -1 disables the watchdog.",
+        "ja": "watchdogがサーバーを停止するまでの1tickの最大時間をミリ秒で設定します。-1ではwatchdogを無効にします。"
+      }
+    },
+    {
+      "path": "max-world-size",
+      "type": "int",
+      "default": 29999984,
+      "min": null,
+      "max": 29999984,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum world radius in blocks; the server limits this value to 29999984.",
+        "ja": "ワールドの最大半径をブロック数で設定します。サーバーは値を29999984以下に制限します。"
+      }
+    },
+    {
+      "path": "motd",
+      "type": "string",
+      "default": "A Minecraft Server",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the message of the day shown in the server list.",
+        "ja": "サーバー一覧に表示するメッセージを設定します。"
+      }
+    },
+    {
+      "path": "network-compression-threshold",
+      "type": "int",
+      "default": 256,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.8",
+      "until": null,
+      "doc": {
+        "en": "Sets the packet size in bytes above which compression is used; a negative value disables compression and 0 compresses all packets.",
+        "ja": "パケット圧縮を始めるサイズをバイト数で設定します。負の値では圧縮を無効にし、0ではすべてのパケットを圧縮します。"
+      }
+    },
+    {
+      "path": "online-mode",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Checks connecting players against the Minecraft account database when enabled.",
+        "ja": "有効にすると、接続するプレイヤーをMinecraftアカウントデータベースで確認します。"
+      }
+    },
+    {
+      "path": "op-permission-level",
+      "type": "int",
+      "default": 4,
+      "min": 0,
+      "max": 4,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the default permission level assigned to operators through /op.",
+        "ja": "/opでオペレーターに割り当てる既定の権限レベルを設定します。"
+      }
+    },
+    {
+      "path": "pause-when-empty-seconds",
+      "type": "int",
+      "default": 60,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.2",
+      "until": null,
+      "doc": {
+        "en": "Sets how many seconds the server waits with no players online before pausing.",
+        "ja": "オンラインのプレイヤーがいない状態で、サーバーが一時停止するまで待つ秒数を設定します。"
+      }
+    },
+    {
+      "path": "player-idle-timeout",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how many minutes a player may remain idle before being kicked; 0 disables idle kicks.",
+        "ja": "プレイヤーがキックされるまでの放置時間を分単位で設定します。0では放置によるキックを無効にします。"
+      }
+    },
+    {
+      "path": "prevent-proxy-connections",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.11",
+      "until": null,
+      "doc": {
+        "en": "Kicks players when their server ISP or AS differs from the one reported by Mojang's authentication server.",
+        "ja": "サーバー側のISPまたはASがMojangの認証サーバーから報告されたものと異なる場合、プレイヤーをキックします。"
+      }
+    },
+    {
+      "path": "query.port",
+      "type": "int",
+      "default": 25565,
+      "min": 1,
+      "max": 65534,
+      "values": null,
+      "since": "1.0.0",
+      "until": null,
+      "doc": {
+        "en": "Sets the UDP port used by the query listener.",
+        "ja": "queryリスナーが使うUDPポートを設定します。"
+      }
+    },
+    {
+      "path": "rate-limit",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": null,
+      "values": null,
+      "since": "1.16.2",
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of packets a player may send before being kicked; 0 disables the limit.",
+        "ja": "プレイヤーがキックされるまでに送信できるパケット数の上限を設定します。0では上限を無効にします。"
+      }
+    },
+    {
+      "path": "rcon.password",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.0.0",
+      "until": null,
+      "doc": {
+        "en": "Sets the password for the RCON server.",
+        "ja": "RCONサーバーのパスワードを設定します。"
+      }
+    },
+    {
+      "path": "rcon.port",
+      "type": "int",
+      "default": 25575,
+      "min": 1,
+      "max": 65534,
+      "values": null,
+      "since": "1.0.0",
+      "until": null,
+      "doc": {
+        "en": "Sets the TCP port used by the RCON server.",
+        "ja": "RCONサーバーが使うTCPポートを設定します。"
+      }
+    },
+    {
+      "path": "region-file-compression",
+      "type": "string",
+      "default": "deflate",
+      "min": null,
+      "max": null,
+      "values": [
+        "deflate",
+        "lz4",
+        "none"
+      ],
+      "since": "1.20.5",
+      "until": null,
+      "doc": {
+        "en": "Selects the algorithm used to compress chunks in region files; supported vanilla values are deflate, lz4, and none.",
+        "ja": "リージョンファイル内のチャンクを圧縮する方式を選択します。vanillaで使える値はdeflate、lz4、noneです。"
+      }
+    },
+    {
+      "path": "require-resource-pack",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.17",
+      "until": null,
+      "doc": {
+        "en": "Disconnects players who decline the server resource pack when enabled.",
+        "ja": "有効にすると、サーバーのリソースパックを拒否したプレイヤーを切断します。"
+      }
+    },
+    {
+      "path": "resource-pack",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the URL from which clients can download the server resource pack.",
+        "ja": "クライアントがサーバーのリソースパックをダウンロードするURLを設定します。"
+      }
+    },
+    {
+      "path": "resource-pack-id",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.20.3",
+      "until": null,
+      "doc": {
+        "en": "Sets the optional UUID used to identify the resource pack configured by resource-pack.",
+        "ja": "resource-packで指定したリソースパックを識別する任意のUUIDを設定します。"
+      }
+    },
+    {
+      "path": "resource-pack-prompt",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.17",
+      "until": null,
+      "doc": {
+        "en": "Sets a custom message shown when clients are prompted to download the resource pack.",
+        "ja": "クライアントにリソースパックのダウンロードを促すときに表示するメッセージを設定します。"
+      }
+    },
+    {
+      "path": "resource-pack-sha1",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the optional lowercase SHA-1 digest used to verify the resource pack's integrity.",
+        "ja": "リソースパックの整合性確認に使う任意の小文字SHA-1ハッシュを設定します。"
+      }
+    },
+    {
+      "path": "server-ip",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the IP address to bind to; an empty value binds to all available addresses.",
+        "ja": "サーバーが接続を待ち受けるIPアドレスを設定します。空欄の場合は、利用可能なすべてのアドレスで待ち受けます。"
+      }
+    },
+    {
+      "path": "server-port",
+      "type": "int",
+      "default": 25565,
+      "min": 1,
+      "max": 65534,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the TCP port on which the server listens for player connections.",
+        "ja": "プレイヤー接続を待ち受けるTCPポートを設定します。"
+      }
+    },
+    {
+      "path": "simulation-distance",
+      "type": "int",
+      "default": 10,
+      "min": 3,
+      "max": 32,
+      "values": null,
+      "since": "1.18",
+      "until": null,
+      "doc": {
+        "en": "Sets the chunk radius around players in which living entities are updated by the server.",
+        "ja": "サーバーが生きているエンティティを更新する、プレイヤー周辺のチャンク半径を設定します。"
+      }
+    },
+    {
+      "path": "spawn-protection",
+      "type": "int",
+      "default": 16,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.4.2",
+      "until": null,
+      "doc": {
+        "en": "Sets the half-size parameter for the square spawn protection area; 0 disables it.",
+        "ja": "スポーン地点を保護する正方形の半分の長さを設定します。0では保護を無効にします。"
+      }
+    },
+    {
+      "path": "status-heartbeat-interval",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.21.9",
+      "until": null,
+      "doc": {
+        "en": "Sets the interval at which the management server sends heartbeat notifications to connected clients; 0 disables them.",
+        "ja": "管理サーバーが接続中のクライアントへ稼働確認通知を送る間隔を設定します。0では通知を無効にします。"
+      }
+    },
+    {
+      "path": "sync-chunk-writes",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.16",
+      "until": null,
+      "doc": {
+        "en": "Enables synchronous writing of chunk data.",
+        "ja": "チャンクデータの同期書き込みを有効にします。"
+      }
+    },
+    {
+      "path": "text-filtering-config",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.16.4",
+      "until": null,
+      "doc": {
+        "en": "Sets the configuration used by the server's text filtering mechanism.",
+        "ja": "サーバーのテキストフィルタリング機能で使う設定を指定します。"
+      }
+    },
+    {
+      "path": "text-filtering-version",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the text-filtering configuration format version; valid values are 0 and 1.",
+        "ja": "テキストフィルタリング設定の形式versionを指定します。有効な値は0と1です。"
+      }
+    },
+    {
+      "path": "use-native-transport",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables optimized packet transport on Linux.",
+        "ja": "Linuxで最適化されたパケット転送を有効にします。"
+      }
+    },
+    {
+      "path": "view-distance",
+      "type": "int",
+      "default": 10,
+      "min": 3,
+      "max": 32,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the chunk radius of world data sent to each player.",
+        "ja": "各プレイヤーへ送信するワールドデータのチャンク半径を設定します。"
+      }
+    },
+    {
+      "path": "white-list",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Restricts connections to selected players; the default is true starting in 26.3.",
+        "ja": "ホワイトリストを有効にし、登録されたプレイヤーだけが接続できるようにします。既定値は26.3からtrueです。"
+      }
+    },
+    {
+      "path": "spawn-monsters",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": "1.21.8",
+      "doc": {
+        "en": "Controlled natural monster spawning and was removed in 1.21.9 when the spawnMonsters game rule replaced it.",
+        "ja": "モンスターの自然スポーンを設定し、1.21.9でspawnMonstersゲームルールに置き換えられて削除されました。"
+      }
+    },
+    {
+      "path": "spawn-animals",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": "1.21.1",
+      "doc": {
+        "en": "Controlled whether animals could spawn and was removed in 1.21.2.",
+        "ja": "動物をスポーンさせるかを設定し、1.21.2で削除されました。"
+      }
+    },
+    {
+      "path": "pvp",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": "1.21.8",
+      "doc": {
+        "en": "Controlled player-versus-player combat and was removed in 1.21.9 when the pvp game rule replaced it.",
+        "ja": "プレイヤー同士の戦闘を設定し、1.21.9でpvpゲームルールに置き換えられて削除されました。"
+      }
+    },
+    {
+      "path": "allow-nether",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": "1.21.8",
+      "doc": {
+        "en": "Controlled travel to the Nether and was removed in 1.21.9 when allowEnteringNetherUsingPortals replaced it.",
+        "ja": "ネザーへの移動を設定し、1.21.9でallowEnteringNetherUsingPortalsゲームルールに置き換えられて削除されました。"
+      }
+    },
+    {
+      "path": "spawn-npcs",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.1",
+      "until": "1.21.1",
+      "doc": {
+        "en": "Controlled villager spawning and was removed in 1.21.2.",
+        "ja": "村人のスポーンを設定し、1.21.2で削除されました。"
+      }
+    },
+    {
+      "path": "max-build-height",
+      "type": "int",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.2.1",
+      "until": "1.16.5",
+      "doc": {
+        "en": "Set the maximum build height and was removed in 1.17.",
+        "ja": "建築できる最大の高さを設定し、1.17で削除されました。"
+      }
+    },
+    {
+      "path": "snooper-enabled",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.3.1",
+      "until": "1.17.1",
+      "doc": {
+        "en": "Controlled whether the server regularly sent snooper data and was removed in 1.18.",
+        "ja": "サーバーがスヌーパーデータを定期送信するかを設定し、1.18で削除されました。"
+      }
+    },
+    {
+      "path": "enable-command-block",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": "1.21.8",
+      "doc": {
+        "en": "Controlled command blocks and was removed in 1.21.9 when the enableCommandBlocks game rule replaced it.",
+        "ja": "コマンドブロックを設定し、1.21.9でenableCommandBlocksゲームルールに置き換えられて削除されました。"
+      }
+    },
+    {
+      "path": "announce-player-achievements",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.7.2",
+      "until": "1.11.2",
+      "doc": {
+        "en": "Controlled achievement announcements and was removed in 1.12 when the announceAdvancements game rule replaced it.",
+        "ja": "実績の通知を設定し、1.12でannounceAdvancementsゲームルールに置き換えられて削除されました。"
+      }
+    },
+    {
+      "path": "previews-chat",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.19",
+      "until": "1.19.2",
+      "doc": {
+        "en": "Enabled chat previews and was removed in 1.19.3 when chat previews were removed.",
+        "ja": "チャットプレビューを有効にし、機能の削除に伴い1.19.3で削除されました。"
+      }
+    }
+  ]
+}

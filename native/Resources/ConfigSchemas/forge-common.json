@@ -1,0 +1,67 @@
+{
+  "id": "forge-common",
+  "title": "Forge common configuration",
+  "format": "toml",
+  "files": [
+    "config/forge-common.toml"
+  ],
+  "software": [
+    "forge"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.minecraftforge.net/en/1.21.x/misc/config/",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/1.21.11/src/main/java/net/minecraftforge/common/ForgeConfig.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/src/main/java/net/minecraftforge/common/ForgeConfig.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/src/main/java/net/minecraftforge/common/ForgeMod.java"
+  ],
+  "entries": [
+    {
+      "path": "general",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Contains Forge settings shared by the client and server.",
+        "ja": "クライアントとサーバーで共有するForge設定をまとめます。"
+      }
+    },
+    {
+      "path": "general.logLegacyTagWarnings",
+      "type": "enum",
+      "default": "OFF",
+      "min": null,
+      "max": null,
+      "values": [
+        "OFF",
+        "ONLY_IN_DEV_ENV",
+        "ALWAYS"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls when Forge warns about legacy modded tags that have common convention equivalents. OFF disables warnings, ONLY_IN_DEV_ENV limits them to development, and ALWAYS enables them in all environments.",
+        "ja": "一般的な規約に置き換えられる旧式のModタグについて、Forgeが警告するタイミングを指定します。OFFは無効、ONLY_IN_DEV_ENVは開発環境のみ、ALWAYSは常に警告します。"
+      }
+    },
+    {
+      "path": "general.channelListLimit",
+      "type": "int",
+      "default": 1024,
+      "min": 1,
+      "max": 9223372036854775807,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of bytes Forge stores for a connection's channel list. Forge may adjust this value when mods register channels through its channel manager.",
+        "ja": "接続先のチャンネル一覧をForgeが保存するときの最大バイト数を指定します。ModがForgeのチャンネルマネージャー経由でチャンネルを登録すると、Forgeがこの値を調整することがあります。"
+      }
+    }
+  ]
+}

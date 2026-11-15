@@ -1,0 +1,78 @@
+{
+  "id": "commands",
+  "title": "Commands configuration",
+  "format": "yaml",
+  "files": [
+    "commands.yml"
+  ],
+  "software": [
+    "spigot",
+    "paper",
+    "leaf"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/bukkit-commands-configuration/"
+  ],
+  "entries": [
+    {
+      "path": "command-block-overrides",
+      "type": "list",
+      "default": [],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists Vanilla commands that take priority over Bukkit or plugin commands in command blocks. Use * for all commands; the default list is empty.",
+        "ja": "コマンドブロックでBukkitやプラグインのコマンドより優先するVanillaコマンドを並べます。*ですべてのコマンドを対象にし、既定のリストは空です。"
+      }
+    },
+    {
+      "path": "ignore-vanilla-permissions",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether command execution uses Vanilla permission levels.",
+        "ja": "コマンドの実行時にVanillaの権限レベルを使うかどうかを設定します。"
+      }
+    },
+    {
+      "path": "aliases.icanhasbukkit",
+      "type": "list",
+      "default": [
+        "version $1-"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Defines a built-in alias. Setting the aliases list to empty removes it persistently.",
+        "ja": "組み込みエイリアスを定義します。aliasesのリストを空にすると、このエイリアスを永続的に削除します。"
+      }
+    },
+    {
+      "path": "aliases.*",
+      "type": "list",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Defines an alias as one target command or a list of target commands. Replacements include $sender, positional arguments, and the remaining arguments; registered aliases are difficult for plugins to override.",
+        "ja": "エイリアスを実行するコマンドを1つ、またはリストで指定します。$sender、位置指定引数、残りの引数を置換でき、登録済みのエイリアスはプラグインから上書きしにくくなります。"
+      }
+    }
+  ]
+}

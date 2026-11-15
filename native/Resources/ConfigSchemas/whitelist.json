@@ -1,0 +1,52 @@
+{
+  "id": "whitelist",
+  "title": "Whitelist",
+  "format": "json",
+  "files": [
+    "whitelist.json"
+  ],
+  "software": [
+    "vanilla",
+    "paper",
+    "spigot",
+    "leaf",
+    "forge",
+    "fabric"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/vanilla-data-files/",
+    "https://minecraft.wiki/w/Whitelist.json"
+  ],
+  "entries": [
+    {
+      "path": "[].uuid",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The UUID identifying the whitelisted player.",
+        "ja": "ホワイトリストに登録されたプレイヤーを識別するUUIDです。"
+      }
+    },
+    {
+      "path": "[].name",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The whitelisted player's name.",
+        "ja": "ホワイトリストに登録されたプレイヤーの名前です。"
+      }
+    }
+  ]
+}

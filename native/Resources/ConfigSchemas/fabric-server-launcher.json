@@ -1,0 +1,33 @@
+{
+  "id": "fabric-server-launcher",
+  "title": "Fabric server launcher configuration",
+  "format": "properties",
+  "files": [
+    "fabric-server-launcher.properties"
+  ],
+  "software": [
+    "fabric"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://github.com/FabricMC/fabric-loader/blob/cb9523bc29ef775c50b6aef5e43bc56927cd8e67/src/main/java/net/fabricmc/loader/impl/launch/server/FabricServerLauncher.java",
+    "https://github.com/FabricMC/fabric-loader/blob/cb9523bc29ef775c50b6aef5e43bc56927cd8e67/src/main/java/net/fabricmc/loader/impl/util/SystemProperties.java"
+  ],
+  "entries": [
+    {
+      "path": "serverJar",
+      "type": "string",
+      "default": "server.jar",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the path to the Minecraft server JAR used by the Fabric server launcher. The launcher creates this setting when fabric.gameJarPath is not supplied and serverJar is absent.",
+        "ja": "Fabricのサーバーランチャーが使用するMinecraftサーバーJARのパスを指定します。fabric.gameJarPathが指定されておらず、serverJarも存在しない場合、ランチャーがこの設定を作成します。"
+      }
+    }
+  ]
+}

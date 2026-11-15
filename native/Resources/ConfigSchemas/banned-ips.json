@@ -1,0 +1,95 @@
+{
+  "id": "banned-ips",
+  "title": "Banned IP addresses",
+  "format": "json",
+  "files": [
+    "banned-ips.json"
+  ],
+  "software": [
+    "vanilla",
+    "paper",
+    "spigot",
+    "leaf",
+    "forge",
+    "fabric"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/vanilla-data-files/"
+  ],
+  "entries": [
+    {
+      "path": "[].ip",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The banned IPv4 or IPv6 address; IPv6 addresses use RFC 5952 section 4 format.",
+        "ja": "BAN対象のIPv4またはIPv6アドレスです。IPv6アドレスにはRFC 5952 section 4形式を使います。"
+      }
+    },
+    {
+      "path": "[].created",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The ban creation timestamp in yyyy-MM-dd HH:mm:ss Z format.",
+        "ja": "BANを作成した日時をyyyy-MM-dd HH:mm:ss Z形式で指定します。"
+      }
+    },
+    {
+      "path": "[].source",
+      "type": "string",
+      "default": "(Unknown)",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Identifies the source of the ban.",
+        "ja": "BANを実行した元を示します。"
+      }
+    },
+    {
+      "path": "[].expires",
+      "type": "string",
+      "default": "forever",
+      "min": null,
+      "max": null,
+      "values": [
+        "forever"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the ban expiry timestamp in yyyy-MM-dd HH:mm:ss Z format, or forever for a permanent ban.",
+        "ja": "BANの有効期限をyyyy-MM-dd HH:mm:ss Z形式で指定し、永久BANにはforeverを使います。"
+      }
+    },
+    {
+      "path": "[].reason",
+      "type": "string",
+      "default": "Banned by an operator.",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "States the reason for the ban.",
+        "ja": "BANの理由を記載します。"
+      }
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "id": "fml",
+  "title": "Forge Mod Loader configuration",
+  "format": "toml",
+  "files": [
+    "config/fml.toml"
+  ],
+  "software": [
+    "forge"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://github.com/MinecraftForge/MinecraftForge/blob/1.21.11/fmlloader/src/main/java/net/minecraftforge/fml/loading/FMLConfig.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/fmlloader/src/main/java/net/minecraftforge/fml/loading/FMLConfig.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/fmlloader/src/main/java/net/minecraftforge/fml/loading/FMLPaths.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/fmlloader/src/main/resources/META-INF/defaultfmlconfig.toml"
+  ],
+  "entries": [
+    {
+      "path": "earlyWindowControl",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls the early window. Disabling it also disables newer OpenGL features and may affect mods that depend on them.",
+        "ja": "起動時ウィンドウを制御します。無効にすると新しいOpenGL機能も無効になり、それらに依存するModに影響することがあります。"
+      }
+    },
+    {
+      "path": "maxThreads",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the maximum number of threads for parallel early initialization. A value of -1 uses the available processor count.",
+        "ja": "起動初期化を並列処理するときの最大スレッド数を指定します。-1の場合は利用可能なプロセッサ数を使います。"
+      }
+    },
+    {
+      "path": "versionCheck",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables Forge's global version check.",
+        "ja": "Forge全体のバージョン確認を有効にします。"
+      }
+    },
+    {
+      "path": "defaultConfigPath",
+      "type": "string",
+      "default": "defaultconfigs",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the server directory from which Forge copies default mod configuration files.",
+        "ja": "ForgeがModの初期設定ファイルをコピーする元のサーバーディレクトリを指定します。"
+      }
+    },
+    {
+      "path": "disableOptimizedDFU",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables Optimized DataFixerUpper on the client; Forge already disables it on servers.",
+        "ja": "クライアントでOptimized DataFixerUpperを無効にします。サーバーではForgeがすでに無効にしています。"
+      }
+    },
+    {
+      "path": "earlyWindowProvider",
+      "type": "string",
+      "default": "fmlearlywindow",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Names the provider used for the early window.",
+        "ja": "起動時ウィンドウで使うプロバイダーを指定します。"
+      }
+    },
+    {
+      "path": "earlyWindowWidth",
+      "type": "int",
+      "default": 854,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the width of the early window in pixels.",
+        "ja": "起動時ウィンドウの幅をピクセル単位で指定します。"
+      }
+    },
+    {
+      "path": "earlyWindowHeight",
+      "type": "int",
+      "default": 480,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the height of the early window in pixels.",
+        "ja": "起動時ウィンドウの高さをピクセル単位で指定します。"
+      }
+    },
+    {
+      "path": "earlyWindowFBScale",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the early window's framebuffer scale.",
+        "ja": "起動時ウィンドウのフレームバッファ倍率を指定します。"
+      }
+    },
+    {
+      "path": "earlyWindowMaximized",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Starts the early window maximized.",
+        "ja": "起動時ウィンドウを最大化して開きます。"
+      }
+    },
+    {
+      "path": "earlyWindowSkipGLVersions",
+      "type": "list",
+      "default": [],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists OpenGL versions to skip, which may help with graphics card driver problems.",
+        "ja": "問題のあるグラフィックスドライバーへの対処として、使用しないOpenGLバージョンを列挙します。"
+      }
+    },
+    {
+      "path": "earlyWindowSquir",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The Forge source labels this early window setting Squir? but does not explain its behavior.",
+        "ja": "Forgeのソースでは起動時ウィンドウの設定名をSquir?としていますが、動作の説明はありません。"
+      }
+    },
+    {
+      "path": "earlyWindowShowCPU",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Shows CPU usage statistics in the early window.",
+        "ja": "起動時ウィンドウにCPU使用率を表示します。"
+      }
+    },
+    {
+      "path": "earlyWindowLogHelpMessage",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Logs a troubleshooting message on the first attempt and is intended to disable itself after a successful launch.",
+        "ja": "初回の起動時にトラブルシューティング用のメッセージをログへ出します。起動に成功すると自動で無効になる設定です。"
+      }
+    }
+  ]
+}

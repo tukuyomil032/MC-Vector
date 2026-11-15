@@ -1,0 +1,80 @@
+{
+  "id": "ops",
+  "title": "Operator list",
+  "format": "json",
+  "files": [
+    "ops.json"
+  ],
+  "software": [
+    "vanilla",
+    "paper",
+    "spigot",
+    "leaf",
+    "forge",
+    "fabric"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/vanilla-data-files/",
+    "https://minecraft.wiki/w/Operator"
+  ],
+  "entries": [
+    {
+      "path": "[].uuid",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The UUID identifying the operator.",
+        "ja": "オペレーターを識別するUUIDです。"
+      }
+    },
+    {
+      "path": "[].name",
+      "type": "string",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The operator's player name.",
+        "ja": "オペレーターのプレイヤー名です。"
+      }
+    },
+    {
+      "path": "[].level",
+      "type": "int",
+      "default": null,
+      "min": 0,
+      "max": 4,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The operator's permission level, from 0 through 4; /op uses the op-permission-level server property by default.",
+        "ja": "オペレーターの権限レベルを0から4で指定します。/opで権限を付与するときは、server.propertiesのop-permission-levelの値が使われます。"
+      }
+    },
+    {
+      "path": "[].bypassesPlayerLimit",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether the operator can join when the server has reached its player limit.",
+        "ja": "サーバーのプレイヤー数が上限に達していても、このオペレーターが参加できるかを設定します。"
+      }
+    }
+  ]
+}

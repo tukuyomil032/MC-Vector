@@ -1,0 +1,1422 @@
+{
+  "id": "paper-global",
+  "title": "Paper global configuration",
+  "format": "yaml",
+  "files": [
+    "config/paper-global.yml"
+  ],
+  "software": [
+    "paper",
+    "leaf"
+  ],
+  "since": "1.19",
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/global-configuration/",
+    "https://github.com/PaperMC/docs/blob/68ac55d8d679f92bb0b6052fe2e4f205295982b7/src/config/paper/paper-global.yml",
+    "https://github.com/PaperMC/Paper/blob/5184e9c08009ddedc23f0dabfe144139bfb871ce/paper-server/src/main/java/io/papermc/paper/configuration/GlobalConfiguration.java",
+    "https://github.com/PaperMC/Paper/blob/5184e9c08009ddedc23f0dabfe144139bfb871ce/paper-server/src/main/java/io/papermc/paper/configuration/Configuration.java",
+    "https://github.com/PaperMC/Paper/blob/5184e9c08009ddedc23f0dabfe144139bfb871ce/paper-server/src/main/java/io/papermc/paper/configuration/type/number/IntOr.java"
+  ],
+  "entries": [
+    {
+      "path": "_version",
+      "type": "int",
+      "default": 31,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": "1.19",
+      "until": null,
+      "doc": {
+        "en": "Records the global configuration format version used for migration.",
+        "ja": "移行処理に使うグローバル設定の形式バージョンを記録します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.all-models.also-obfuscate",
+      "type": "list",
+      "default": [],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Hides additional item components from other players for all item models.",
+        "ja": "すべてのアイテムモデルで、指定した追加コンポーネントを他のプレイヤーから隠します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.all-models.dont-obfuscate",
+      "type": "list",
+      "default": [
+        "minecraft:lodestone_tracker"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Keeps the listed components visible to other players for all item models.",
+        "ja": "すべてのアイテムモデルで、指定したコンポーネントを他のプレイヤーに見せます。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.all-models.sanitize-count",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Hides item counts from other players for all item models.",
+        "ja": "すべてのアイテムモデルで、アイテム数を他のプレイヤーから隠します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.enable-item-obfuscation",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Hides item information that could give modified clients an advantage. This may affect resource packs that depend on that information.",
+        "ja": "改造クライアントを有利にする可能性があるアイテム情報を隠します。その情報を使うリソースパックに影響することがあります。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.model-overrides.minecraft:elytra.also-obfuscate",
+      "type": "list",
+      "default": [],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Hides additional components for items using the minecraft:elytra model.",
+        "ja": "minecraft:elytraモデルのアイテムで、指定した追加コンポーネントを隠します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.model-overrides.minecraft:elytra.dont-obfuscate",
+      "type": "list",
+      "default": [
+        "minecraft:damage"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Keeps the listed components visible for items using the minecraft:elytra model.",
+        "ja": "minecraft:elytraモデルのアイテムで、指定したコンポーネントを見せます。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.model-overrides.minecraft:elytra.sanitize-count",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Hides item counts for items using the minecraft:elytra model.",
+        "ja": "minecraft:elytraモデルのアイテムで、アイテム数を隠します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.model-overrides.*.also-obfuscate",
+      "type": "list",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists additional components to hide for a custom item model.",
+        "ja": "任意のアイテムモデルで追加で隠すコンポーネントを列挙します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.model-overrides.*.dont-obfuscate",
+      "type": "list",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists components to keep visible for a custom item model.",
+        "ja": "任意のアイテムモデルで表示を維持するコンポーネントを列挙します。"
+      }
+    },
+    {
+      "path": "anticheat.obfuscation.items.model-overrides.*.sanitize-count",
+      "type": "bool",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether to hide item counts for a custom item model.",
+        "ja": "任意のアイテムモデルでアイテム数を隠すかどうかを設定します。"
+      }
+    },
+    {
+      "path": "block-updates.disable-chorus-plant-updates",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables chorus plant block updates, allowing otherwise invalid block states to persist.",
+        "ja": "コーラスプラントのブロック更新を無効にし、通常は維持できないブロック状態を残します。"
+      }
+    },
+    {
+      "path": "block-updates.disable-mushroom-block-updates",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables mushroom block updates, allowing otherwise invalid block states to persist.",
+        "ja": "キノコブロックの更新を無効にし、通常は維持できないブロック状態を残します。"
+      }
+    },
+    {
+      "path": "block-updates.disable-noteblock-updates",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables note block updates, allowing otherwise invalid block states to persist.",
+        "ja": "音符ブロックの更新を無効にし、通常は維持できないブロック状態を残します。"
+      }
+    },
+    {
+      "path": "block-updates.disable-tripwire-updates",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disables tripwire block updates, allowing otherwise invalid block states to persist.",
+        "ja": "トリップワイヤーの更新を無効にし、通常は維持できないブロック状態を残します。"
+      }
+    },
+    {
+      "path": "chunk-loading-advanced.auto-config-send-distance",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Uses a client's view distance as its chunk send radius when that distance is smaller than the server's send distance.",
+        "ja": "クライアントの描画距離がサーバーの送信距離より短い場合、その描画距離をチャンクの送信半径に使います。"
+      }
+    },
+    {
+      "path": "chunk-loading-advanced.player-max-concurrent-chunk-generates",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits concurrent chunk generations for each player. Set 0 for automatic configuration or -1 for no limit.",
+        "ja": "プレイヤーごとの同時チャンク生成数を制限します。0で自動設定、-1で無制限になります。"
+      }
+    },
+    {
+      "path": "chunk-loading-advanced.player-max-concurrent-chunk-loads",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits concurrent chunk loads for each player. Set 0 for automatic configuration or -1 for no limit.",
+        "ja": "プレイヤーごとの同時チャンク読み込み数を制限します。0で自動設定、-1で無制限になります。"
+      }
+    },
+    {
+      "path": "chunk-loading-basic.player-max-chunk-generate-rate",
+      "type": "float",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits each player's chunk generation rate. Set -1 to disable the limit.",
+        "ja": "プレイヤーごとのチャンク生成速度を制限します。-1で制限を無効にします。"
+      }
+    },
+    {
+      "path": "chunk-loading-basic.player-max-chunk-load-rate",
+      "type": "float",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits each player's chunk loading rate, including load attempts before generation. Set -1 to disable the limit.",
+        "ja": "生成前の読み込み試行も含め、プレイヤーごとのチャンク読み込み速度を制限します。-1で制限を無効にします。"
+      }
+    },
+    {
+      "path": "chunk-loading-basic.player-max-chunk-send-rate",
+      "type": "float",
+      "default": 75,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits how many chunks are sent to each player per second. Set -1 to disable the limit.",
+        "ja": "プレイヤーごとに1秒間に送信するチャンク数を制限します。-1で制限を無効にします。"
+      }
+    },
+    {
+      "path": "chunk-system.io-threads",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of chunk I/O threads. Negative values use one thread.",
+        "ja": "チャンクの読み書きに使うスレッド数を設定します。負の値では1スレッドを使います。"
+      }
+    },
+    {
+      "path": "chunk-system.worker-threads",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of parallel chunk generation threads. Negative values select a count based on physical CPU cores, using one thread for at most three cores and at most half the cores otherwise.",
+        "ja": "チャンクの並列生成に使うスレッド数を設定します。負の値では物理CPUコア数に応じて決定し、3コア以下では1スレッド、それ以外では最大でコア数の半分を使います。"
+      }
+    },
+    {
+      "path": "collisions.enable-player-collisions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables collisions between players. Plugins that use scoreboards can interfere with this setting.",
+        "ja": "プレイヤー同士の衝突を有効にします。スコアボードを使うプラグインがこの設定に影響することがあります。"
+      }
+    },
+    {
+      "path": "collisions.send-full-pos-for-hard-colliding-entities",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sends precise positions for entities involved in hard collisions to reduce client and server disagreement. This uses additional bandwidth.",
+        "ja": "強い衝突判定を持つエンティティの正確な位置を送信し、クライアントとサーバーの位置のずれを減らします。通信量が増加します。"
+      }
+    },
+    {
+      "path": "commands.ride-command-allow-player-as-vehicle",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows entities to ride players through the vanilla /ride command.",
+        "ja": "バニラの/rideコマンドで、プレイヤーの上にエンティティを乗せられるようにします。"
+      }
+    },
+    {
+      "path": "commands.server-side-dimension-suggestions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Requests dimension suggestions from the server so worlds loaded after a player joins are included. After changing this setting, players must reconnect or have their commands resent.",
+        "ja": "参加後に読み込まれたワールドも候補に含めるため、ディメンションの補完候補をサーバーに問い合わせます。変更後はプレイヤーの再接続かコマンド情報の再送が必要です。"
+      }
+    },
+    {
+      "path": "commands.suggest-player-names-when-null-tab-completions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Suggests player names when tab completion has no other results.",
+        "ja": "Tab補完でほかの候補がない場合、プレイヤー名を候補として表示します。"
+      }
+    },
+    {
+      "path": "console.enable-brigadier-completions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables Brigadier command completion in the server console.",
+        "ja": "サーバーコンソールでBrigadierのコマンド補完を有効にします。"
+      }
+    },
+    {
+      "path": "console.enable-brigadier-highlighting",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables Brigadier syntax highlighting in the server console.",
+        "ja": "サーバーコンソールでBrigadierの構文強調表示を有効にします。"
+      }
+    },
+    {
+      "path": "console.has-all-permissions",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Grants all permissions to the console command sender.",
+        "ja": "コンソールからのコマンド実行にすべての権限を与えます。"
+      }
+    },
+    {
+      "path": "item-validation.book.author",
+      "type": "int",
+      "default": 8192,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits a book author's name length in characters.",
+        "ja": "本の著者名の最大文字数を設定します。"
+      }
+    },
+    {
+      "path": "item-validation.book.page",
+      "type": "int",
+      "default": 16384,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits each book page's length in characters.",
+        "ja": "本の各ページの最大文字数を設定します。"
+      }
+    },
+    {
+      "path": "item-validation.book.title",
+      "type": "int",
+      "default": 8192,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits a book title's length in characters.",
+        "ja": "本のタイトルの最大文字数を設定します。"
+      }
+    },
+    {
+      "path": "item-validation.book-size.page-max",
+      "type": "int",
+      "default": 2560,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the bytes each page contributes to a book's allowed total. The value disabled removes this additional restriction.",
+        "ja": "本の許容合計サイズに各ページが加算できる最大バイト数を設定します。disabledでこの追加制限を無効にします。"
+      }
+    },
+    {
+      "path": "item-validation.book-size.total-multiplier",
+      "type": "float",
+      "default": 0.98,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Multiplies each book page's byte contribution relative to the preceding page; the first page uses a multiplier of 1.0.",
+        "ja": "本の各ページが合計サイズに加算するバイト数を、前のページに対する倍率で設定します。最初のページの倍率は1.0です。"
+      }
+    },
+    {
+      "path": "item-validation.display-name",
+      "type": "int",
+      "default": 8192,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the length of an item's display name in characters.",
+        "ja": "アイテムの表示名の最大文字数を設定します。"
+      }
+    },
+    {
+      "path": "item-validation.lore-line",
+      "type": "int",
+      "default": 8192,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the length of each lore line in characters.",
+        "ja": "アイテムの説明の各行の最大文字数を設定します。"
+      }
+    },
+    {
+      "path": "item-validation.resolve-selectors-in-books",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Resolves selectors in books. The documentation warns that enabling this gives creative players another way to crash the server.",
+        "ja": "本のセレクターを解決します。資料では、有効にするとクリエイティブのプレイヤーがサーバーをクラッシュさせる手段が増えると警告しています。"
+      }
+    },
+    {
+      "path": "messages.kick.authentication-servers-down",
+      "type": "string",
+      "default": "<lang:multiplayer.disconnect.authservers_down>",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the MiniMessage message shown when Mojang authentication servers cannot be reached.",
+        "ja": "Mojangの認証サーバーに接続できない場合に表示するMiniMessage形式のメッセージを設定します。"
+      }
+    },
+    {
+      "path": "messages.kick.connection-throttle",
+      "type": "string",
+      "default": "Connection throttled! Please wait before reconnecting.",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the MiniMessage message shown when connections are throttled.",
+        "ja": "接続頻度の制限が適用された場合に表示するMiniMessage形式のメッセージを設定します。"
+      }
+    },
+    {
+      "path": "messages.kick.flying-player",
+      "type": "string",
+      "default": "<lang:multiplayer.disconnect.flying>",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the MiniMessage kick message for a player detected flying.",
+        "ja": "飛行を検出したプレイヤーの切断時に表示するMiniMessage形式のメッセージを設定します。"
+      }
+    },
+    {
+      "path": "messages.kick.flying-vehicle",
+      "type": "string",
+      "default": "<lang:multiplayer.disconnect.flying>",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the MiniMessage kick message for a player riding a flying vehicle.",
+        "ja": "飛行している乗り物に乗ったプレイヤーの切断時に表示するMiniMessage形式のメッセージを設定します。"
+      }
+    },
+    {
+      "path": "messages.no-permission",
+      "type": "string",
+      "default": "<red>I'm sorry, but you do not have permission to perform this command. Please contact the server administrators if you believe that this is in error.",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the default MiniMessage message for insufficient permissions. Plugins can supply their own command messages.",
+        "ja": "権限が足りない場合の既定メッセージをMiniMessage形式で設定します。プラグインが独自のコマンドメッセージを使う場合があります。"
+      }
+    },
+    {
+      "path": "messages.use-display-name-in-quit-message",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Uses the player's plugin-defined display name instead of their account name in quit messages.",
+        "ja": "退出メッセージにアカウント名の代わりに、プラグインが設定した表示名を使います。"
+      }
+    },
+    {
+      "path": "misc.catchup-ticks",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits accelerated catch-up ticks after a lag spike. The value default means 5, and 0 disables catch-up.",
+        "ja": "遅延後に追いつくため加速するtick数を制限します。defaultは5を表し、0で追いつく処理を無効にします。"
+      }
+    },
+    {
+      "path": "misc.chat-threads.chat-executor-core-size",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the core thread count of the chat executor. Negative values act as 0.",
+        "ja": "チャット処理用スレッドプールの基本スレッド数を設定します。負の値は0として扱います。"
+      }
+    },
+    {
+      "path": "misc.chat-threads.chat-executor-max-size",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the chat executor thread count. Values at or below 0 remove the limit.",
+        "ja": "チャット処理用スレッドプールの最大スレッド数を設定します。0以下では無制限になります。"
+      }
+    },
+    {
+      "path": "misc.client-interaction-leniency-distance",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the extra distance allowed when the server validates a player's interaction range.",
+        "ja": "サーバーがプレイヤーの操作範囲を検証するときに加える許容距離を設定します。"
+      }
+    },
+    {
+      "path": "misc.compression-level",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the compression level. The default value resolves to -1.",
+        "ja": "圧縮レベルを設定します。defaultは-1として扱います。"
+      }
+    },
+    {
+      "path": "misc.enable-nether",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables loading of the Nether dimension.",
+        "ja": "ネザーディメンションの読み込みを有効にします。"
+      }
+    },
+    {
+      "path": "misc.load-permissions-yml-before-plugins",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Loads Bukkit permissions before plugins so plugins can inspect them during enable.",
+        "ja": "プラグインより先にBukkitの権限定義を読み込み、プラグインの有効化時に参照できるようにします。"
+      }
+    },
+    {
+      "path": "misc.max-joins-per-tick",
+      "type": "int",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits how many players join per tick. Excess joins are delayed rather than rejected.",
+        "ja": "1tickあたりの参加プレイヤー数を制限します。上限を超えた接続は拒否せず、後のtickまで待機させます。"
+      }
+    },
+    {
+      "path": "misc.max-tracking-combat-entries",
+      "type": "int",
+      "default": 10240,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits stored combat tracking entries, discarding the oldest entries first. The value disabled removes the limit.",
+        "ja": "保存する戦闘履歴の件数を制限し、古い履歴から削除します。disabledで制限を無効にします。"
+      }
+    },
+    {
+      "path": "misc.prevent-negative-villager-demand",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents villager demand from becoming negative, fixing MC-163962 but potentially changing vanilla behavior.",
+        "ja": "村人の需要が負の値になることを防ぎ、MC-163962を修正します。バニラの挙動と異なる場合があります。"
+      }
+    },
+    {
+      "path": "misc.region-file-cache-size",
+      "type": "int",
+      "default": 256,
+      "min": 4,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the region file cache size.",
+        "ja": "リージョンファイルのキャッシュサイズを制限します。"
+      }
+    },
+    {
+      "path": "misc.strict-advancement-dimension-check",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Requires the world's specific dimension key instead of translating worlds with vanilla generation into general dimensions.",
+        "ja": "バニラと同じ生成方式のワールドを一般的なディメンションに置き換えず、そのワールド固有のディメンションキーを使います。"
+      }
+    },
+    {
+      "path": "misc.use-alternative-luck-formula",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Uses an alternative luck formula that affects items without quality values and substantially changes fishing calculations.",
+        "ja": "品質値のないアイテムにも適用する別の幸運計算式を使い、釣りの計算を大きく変更します。"
+      }
+    },
+    {
+      "path": "misc.use-dimension-type-for-custom-spawners",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows special spawners, such as those for phantoms and wandering traders, in custom Overworlds.",
+        "ja": "ファントムや行商人などの特殊なスポーン処理を、独自のオーバーワールドでも許可します。"
+      }
+    },
+    {
+      "path": "misc.xp-orb-groups-per-area",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits groups of equal-value experience orbs in an area. The value default means 40; orbs with different values are not merged by vanilla.",
+        "ja": "一定範囲内に存在できる、同じ値の経験値オーブのグループ数を制限します。defaultは40を表し、異なる値のオーブはバニラの処理では結合されません。"
+      }
+    },
+    {
+      "path": "packet-limiter.all-packets.action",
+      "type": "enum",
+      "default": "KICK",
+      "min": null,
+      "max": null,
+      "values": [
+        "DROP",
+        "KICK"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Chooses whether exceeding the packet limit drops packets with DROP or disconnects the player with KICK.",
+        "ja": "パケット制限を超えた場合、DROPでパケットを破棄するか、KICKでプレイヤーを切断するかを選択します。"
+      }
+    },
+    {
+      "path": "packet-limiter.all-packets.interval",
+      "type": "float",
+      "default": 7,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the time window in seconds for max-packet-rate.",
+        "ja": "max-packet-rateの判定に使う時間枠を秒単位で設定します。"
+      }
+    },
+    {
+      "path": "packet-limiter.all-packets.max-packet-rate",
+      "type": "float",
+      "default": 500,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the packets a player may send within the configured interval.",
+        "ja": "指定した時間枠内にプレイヤーが送信できるパケット数を制限します。"
+      }
+    },
+    {
+      "path": "packet-limiter.kick-message",
+      "type": "string",
+      "default": "<red><lang:disconnect.exceeded_packet_rate>",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the MiniMessage kick message for exceeding a packet limit.",
+        "ja": "パケット制限を超えた場合の切断メッセージをMiniMessage形式で設定します。"
+      }
+    },
+    {
+      "path": "packet-limiter.overrides.minecraft:place_recipe.action",
+      "type": "enum",
+      "default": "DROP",
+      "min": null,
+      "max": null,
+      "values": [
+        "DROP",
+        "KICK"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Chooses DROP or KICK when recipe placement packets exceed their limit.",
+        "ja": "レシピ配置パケットが制限を超えた場合の動作をDROPまたはKICKから選択します。"
+      }
+    },
+    {
+      "path": "packet-limiter.overrides.minecraft:place_recipe.interval",
+      "type": "float",
+      "default": 4,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the recipe placement packet rate window in seconds.",
+        "ja": "レシピ配置パケットの送信頻度を判定する時間枠を秒単位で設定します。"
+      }
+    },
+    {
+      "path": "packet-limiter.overrides.minecraft:place_recipe.max-packet-rate",
+      "type": "float",
+      "default": 5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits recipe placement packets per player within the configured interval.",
+        "ja": "指定した時間枠内にプレイヤーが送信できるレシピ配置パケット数を制限します。"
+      }
+    },
+    {
+      "path": "packet-limiter.overrides.*.action",
+      "type": "enum",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": [
+        "DROP",
+        "KICK"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Chooses DROP or KICK when the named serverbound packet exceeds its limit.",
+        "ja": "指定したサーバー向けパケットが制限を超えた場合の動作をDROPまたはKICKから選択します。"
+      }
+    },
+    {
+      "path": "packet-limiter.overrides.*.interval",
+      "type": "float",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the rate window in seconds for the named serverbound packet.",
+        "ja": "指定したサーバー向けパケットの送信頻度を判定する時間枠を秒単位で設定します。"
+      }
+    },
+    {
+      "path": "packet-limiter.overrides.*.max-packet-rate",
+      "type": "float",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits the named serverbound packets per player within the configured interval.",
+        "ja": "指定した時間枠内にプレイヤーが送信できる指定のサーバー向けパケット数を制限します。"
+      }
+    },
+    {
+      "path": "player-auto-save.max-per-tick",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Limits players saved per tick. The value -1 chooses a recommended limit of 10 or 20 based on player-auto-save.rate.",
+        "ja": "1tickあたりに保存するプレイヤー数を制限します。-1ではplayer-auto-save.rateに応じて推奨値の10または20を使います。"
+      }
+    },
+    {
+      "path": "player-auto-save.rate",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the player data save interval in ticks. The value -1 uses ticks-per.autosave from bukkit.yml.",
+        "ja": "プレイヤーデータの保存間隔をtick単位で設定します。-1ではbukkit.ymlのticks-per.autosaveを使います。"
+      }
+    },
+    {
+      "path": "proxies.bungee-cord.online-mode",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets UUID and player data handling behind BungeeCord. Match the proxy's online-mode value.",
+        "ja": "BungeeCord経由の接続でUUIDとプレイヤーデータの扱いを設定します。プロキシのonline-modeに合わせます。"
+      }
+    },
+    {
+      "path": "proxies.proxy-protocol",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Accepts PROXY Protocol messages for HAProxy or similar software. This is independent of BungeeCord and Velocity forwarding.",
+        "ja": "HAProxyなどからのPROXY Protocolメッセージを受け付けます。BungeeCordやVelocityの転送設定とは独立しています。"
+      }
+    },
+    {
+      "path": "proxies.velocity.enabled",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Accepts Velocity Modern Forwarding connections.",
+        "ja": "Velocity Modern Forwardingによる接続を受け付けます。"
+      }
+    },
+    {
+      "path": "proxies.velocity.online-mode",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets UUID and player data handling behind Velocity. Match the proxy's online-mode value.",
+        "ja": "Velocity経由の接続でUUIDとプレイヤーデータの扱いを設定します。プロキシのonline-modeに合わせます。"
+      }
+    },
+    {
+      "path": "proxies.velocity.secret",
+      "type": "string",
+      "default": "",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the shared secret used for Velocity forwarding. Match the proxy's forwarding.secret value.",
+        "ja": "Velocityの転送に使う共有秘密値を設定します。プロキシのforwarding.secretの値に合わせます。"
+      }
+    },
+    {
+      "path": "scoreboards.save-empty-scoreboard-teams",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Keeps empty scoreboard teams when saving instead of removing them automatically.",
+        "ja": "空のスコアボードチームを自動削除せずに保存します。"
+      }
+    },
+    {
+      "path": "scoreboards.track-plugin-scoreboards",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Tracks plugin scoreboards that contain only dummy objectives. Many tracked scoreboards can reduce performance.",
+        "ja": "dummy目標だけを持つプラグインのスコアボードも追跡します。追跡対象が多いと性能が低下することがあります。"
+      }
+    },
+    {
+      "path": "spam-limiter.incoming-packet-threshold",
+      "type": "int",
+      "default": 300,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the threshold above which incoming packets are treated as spam and ignored. The value disabled disables this check.",
+        "ja": "受信パケットをスパムと判定して無視するしきい値を設定します。disabledでこの判定を無効にします。"
+      }
+    },
+    {
+      "path": "spam-limiter.recipe-spam-increment",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the increase in the recipe spam counter for each recipe click.",
+        "ja": "レシピをクリックするたびにスパムカウンターへ加算する値を設定します。"
+      }
+    },
+    {
+      "path": "spam-limiter.recipe-spam-limit",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the recipe spam counter threshold for kicking a player.",
+        "ja": "レシピのスパムカウンターによってプレイヤーを切断するしきい値を設定します。"
+      }
+    },
+    {
+      "path": "spam-limiter.tab-spam-increment",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the increase in the tab completion spam counter for each tab press.",
+        "ja": "チャットでTabを押すたびに補完のスパムカウンターへ加算する値を設定します。"
+      }
+    },
+    {
+      "path": "spam-limiter.tab-spam-limit",
+      "type": "int",
+      "default": 500,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the tab completion spam counter threshold for kicking a player.",
+        "ja": "Tab補完のスパムカウンターによってプレイヤーを切断するしきい値を設定します。"
+      }
+    },
+    {
+      "path": "spark.enable-immediately",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Starts the bundled spark profiler early enough to profile startup. Otherwise it starts after server startup finishes.",
+        "ja": "同梱のsparkプロファイラーを早い段階で有効にし、起動処理を計測できるようにします。無効の場合はサーバーの起動完了後に有効になります。"
+      }
+    },
+    {
+      "path": "spark.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables the bundled spark profiler.",
+        "ja": "同梱のsparkプロファイラーを有効にします。"
+      }
+    },
+    {
+      "path": "time.affects-all-worlds",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Shares clocks between worlds of the same dimension type instead of keeping independent clocks. This affects time commands and the World time API.",
+        "ja": "同じディメンションタイプのワールドで時刻を共有します。timeコマンドとWorldの時刻APIに影響します。"
+      }
+    },
+    {
+      "path": "unsupported-settings.allow-headless-pistons",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows creating headless pistons, which can be used to break permanent blocks. This setting is unsupported.",
+        "ja": "破壊できないブロックの破壊にも使われる、ヘッドのないピストンの作成を許可します。この設定はサポート対象外です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.allow-permanent-block-break-exploits",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows vanilla exploits to break normally unbreakable blocks. This setting is unsupported.",
+        "ja": "バニラの不具合を利用して、通常は破壊できないブロックを破壊できるようにします。この設定はサポート対象外です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.allow-piston-duplication",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows TNT, carpet and rail duplication exploits, excluding sand duplication. This setting is unsupported.",
+        "ja": "砂を除き、TNT・カーペット・レールの複製を許可します。この設定はサポート対象外です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.allow-unsafe-end-portal-teleportation",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows End portal teleportation exploits such as sand duplication. This setting is unsupported.",
+        "ja": "砂の複製など、エンドポータルの転送処理を利用する不具合を許可します。この設定はサポート対象外です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.oversized-item-component-sanitizer.dont-sanitize",
+      "type": "list",
+      "default": [],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Exempts the listed item components from oversized-item sanitization. Changing this unsupported setting may restore exploits but can be needed by resource packs.",
+        "ja": "指定したアイテムコンポーネントを、サイズが大きすぎるアイテムの無害化処理から除外します。このサポート対象外の設定は、不具合を再び利用可能にしますが、リソースパックによっては必要です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.perform-username-validation",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Validates usernames; disabling validation can admit special characters but may affect commands and plugins. This setting is unsupported.",
+        "ja": "ユーザー名を検証します。無効にすると特殊文字を許可できますが、コマンドやプラグインに影響する場合があるサポート対象外の設定です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.skip-tripwire-hook-placement-validation",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Allows tripwire hook duplication by skipping placement validation. This setting is unsupported.",
+        "ja": "設置時の検証を省略し、トリップワイヤーフックの複製を許可します。この設定はサポート対象外です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.skip-vanilla-damage-tick-when-shield-blocked",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Skips vanilla damage ticks when a shield blocks damage, preserving an old Paper behavior that can damage shields rapidly. This setting is unsupported.",
+        "ja": "盾でダメージを防いだ際のバニラのダメージtickを省略し、盾が短時間に連続して損傷することがある旧Paperの挙動を使います。この設定はサポート対象外です。"
+      }
+    },
+    {
+      "path": "unsupported-settings.update-equipment-on-player-actions",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Updates equipment during player actions. Disabling this unsupported setting allows attribute exploits involving equipment changes.",
+        "ja": "プレイヤーの操作時に装備を更新します。このサポート対象外の設定を無効にすると、装備変更による属性の不正利用が可能になります。"
+      }
+    },
+    {
+      "path": "update-checker.enabled",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Checks for Paper updates automatically on startup.",
+        "ja": "起動時にPaperの更新を自動確認します。"
+      }
+    },
+    {
+      "path": "watchdog.early-warning-delay",
+      "type": "int",
+      "default": 10000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the delay in milliseconds before the watchdog prints thread dumps for a hanging server.",
+        "ja": "サーバーが応答しなくなってからwatchdogがスレッドダンプを出力し始めるまでの待ち時間をミリ秒で設定します。"
+      }
+    },
+    {
+      "path": "watchdog.early-warning-every",
+      "type": "int",
+      "default": 5000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the interval in milliseconds between watchdog thread dumps while the server hangs.",
+        "ja": "サーバーが応答しない間にwatchdogがスレッドダンプを出力する間隔をミリ秒で設定します。"
+      }
+    }
+  ]
+}

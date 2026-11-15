@@ -1,0 +1,106 @@
+{
+  "id": "forge-server",
+  "title": "Forge server configuration",
+  "format": "toml",
+  "files": [
+    "world/serverconfig/forge-server.toml"
+  ],
+  "software": [
+    "forge"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.minecraftforge.net/en/1.21.x/misc/config/",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/1.21.11/src/main/java/net/minecraftforge/common/ForgeConfig.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/src/main/java/net/minecraftforge/common/ForgeConfig.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/src/main/java/net/minecraftforge/common/ForgeMod.java",
+    "https://github.com/MinecraftForge/MinecraftForge/blob/26.3/fmlcore/src/main/java/net/minecraftforge/fml/config/ConfigFileTypeHandler.java"
+  ],
+  "entries": [
+    {
+      "path": "server",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Contains Forge settings for a dedicated server world.",
+        "ja": "専用サーバーのワールドで使うForge設定をまとめます。"
+      }
+    },
+    {
+      "path": "server.removeErroringBlockEntities",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Removes a block entity that throws during its update instead of stopping the server with a crash report. Forge warns that this can cause serious damage to a world.",
+        "ja": "更新処理で例外を投げたブロックエンティティを削除し、クラッシュレポートを出してサーバーを停止する動作を避けます。Forgeはワールドに深刻な問題が起きる可能性があると警告しています。"
+      }
+    },
+    {
+      "path": "server.removeErroringEntities",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Removes an entity, excluding block entities, that throws during its tick instead of stopping the server with a crash report. Forge warns that this can cause serious damage to a world.",
+        "ja": "ブロックエンティティ以外のエンティティがtick中に例外を投げた場合、そのエンティティを削除してサーバー停止を避けます。Forgeはワールドに深刻な問題が起きる可能性があると警告しています。"
+      }
+    },
+    {
+      "path": "server.fullBoundingBoxLadders",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Checks the entity's full collision box for ladders instead of checking only its current block. Enabling it changes gameplay mechanics from the vanilla behavior.",
+        "ja": "現在のブロックだけでなく、エンティティの衝突範囲全体でハシゴを判定します。有効にすると、バニラの挙動からゲームの仕組みが変わります。"
+      }
+    },
+    {
+      "path": "server.permissionHandler",
+      "type": "string",
+      "default": "forge:default_handler",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Names the permission handler used by the server. Forge falls back to forge:default_handler if the named handler is not registered.",
+        "ja": "サーバーで使う権限ハンドラーを指定します。指定した名前のハンドラーが登録されていない場合、Forgeはforge:default_handlerを使います。"
+      }
+    },
+    {
+      "path": "server.advertiseDedicatedServerToLan",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Advertises the dedicated server to local LAN clients so it appears automatically on their Multiplayer screen.",
+        "ja": "専用サーバーをLAN内のクライアントに公開し、マルチプレイ画面に自動表示します。"
+      }
+    }
+  ]
+}

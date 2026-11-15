@@ -1,0 +1,2052 @@
+{
+  "id": "spigot",
+  "title": "Spigot configuration",
+  "format": "yaml",
+  "files": [
+    "spigot.yml"
+  ],
+  "software": [
+    "spigot",
+    "paper",
+    "leaf"
+  ],
+  "since": null,
+  "until": null,
+  "sources": [
+    "https://docs.papermc.io/paper/reference/spigot-configuration/",
+    "https://www.spigotmc.org/wiki/spigot-configuration/"
+  ],
+  "entries": [
+    {
+      "path": "settings.debug",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables debug logging, by setting the log level to ALL.",
+        "ja": "デバッグログを有効にします。ログレベルはALLになります。"
+      }
+    },
+    {
+      "path": "settings.save-user-cache-on-stop-only",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "If false, the server saves the user-cache on every update.",
+        "ja": "falseではユーザーキャッシュを更新ごとに保存し、trueではサーバー停止時だけ保存します。"
+      }
+    },
+    {
+      "path": "settings.sample-count",
+      "type": "int",
+      "default": 12,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How many players to display the names of in the player-count hover. The selected players, and their positions in the list, are randomized.",
+        "ja": "プレイヤー数のホバー表示に載せる名前の数を指定します。選ぶプレイヤーと表示順はランダムです。"
+      }
+    },
+    {
+      "path": "settings.timeout-time",
+      "type": "int",
+      "default": 60,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Time in seconds since the last server-tick that the server is deemed not-responding by the server, and is stopped/restarted by the watchdog.",
+        "ja": "サーバーのtickが止まってから応答なしと判断するまでの秒数を指定します。watchdogはこの時間を過ぎるとサーバーを停止または再起動します。"
+      }
+    },
+    {
+      "path": "settings.restart-on-crash",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to call restart-script when the server is killed by the watchdog. Note: this setting doesn't restart the server if it gets killed externally, like by the OS.",
+        "ja": "watchdogがサーバーを終了させたときにrestart-scriptを実行するかどうかを設定します。OSなど外部から終了された場合は再起動しません。"
+      }
+    },
+    {
+      "path": "settings.restart-script",
+      "type": "string",
+      "default": "./start.sh",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the script run when the server restarts. Windows starts it through cmd; other platforms run it through sh.",
+        "ja": "サーバー再起動時に実行するスクリプトのパスを指定します。Windowsではcmd /c start、ほかの環境ではshから実行します。"
+      }
+    },
+    {
+      "path": "settings.log-villager-deaths",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to log villager deaths and witch transformations to console and latest.log",
+        "ja": "村人の死亡と魔女への変身をコンソールとlatest.logに記録するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.log-named-deaths",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to log deaths of entities with custom names to console and latest.log",
+        "ja": "カスタム名が付いたエンティティの死亡をコンソールとlatest.logに記録するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "settings.bungeecord",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Enables BungeeCord support for forwarded player data and source IP addresses, and for Unix domain sockets.",
+        "ja": "BungeeCord対応を有効にします。プロキシから転送されたプレイヤー情報や接続元IPの受信と、Unixドメインソケットに対応します。"
+      }
+    },
+    {
+      "path": "settings.attribute.maxAbsorption.max",
+      "type": "float",
+      "default": 2048,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the maximum for the maxAbsorption attribute.",
+        "ja": "maxAbsorption属性の最大値を上書きします。"
+      }
+    },
+    {
+      "path": "settings.attribute.maxHealth.max",
+      "type": "float",
+      "default": 1024,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the maximum for the maxHealth attribute.",
+        "ja": "maxHealth属性の最大値を上書きします。"
+      }
+    },
+    {
+      "path": "settings.attribute.movementSpeed.max",
+      "type": "float",
+      "default": 1024,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the maximum for the movementSpeed attribute.",
+        "ja": "movementSpeed属性の最大値を上書きします。"
+      }
+    },
+    {
+      "path": "settings.attribute.attackDamage.max",
+      "type": "float",
+      "default": 2048,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the maximum for the attackDamage attribute.",
+        "ja": "attackDamage属性の最大値を上書きします。"
+      }
+    },
+    {
+      "path": "settings.netty-threads",
+      "type": "int",
+      "default": 4,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets number of netty threads.",
+        "ja": "Nettyで使うスレッド数を指定します。"
+      }
+    },
+    {
+      "path": "settings.player-shuffle",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often to shuffle the list of player connections, in ticks, 0 or less to disable. This prevents players from strategically re-logging to increase their position in the tick order. This can have a performance impact if enabled with low values.",
+        "ja": "接続プレイヤーのtick順を入れ替える間隔をtick数で指定します。0以下で無効になり、低い値では負荷が増えることがあります。"
+      }
+    },
+    {
+      "path": "settings.user-cache-size",
+      "type": "int",
+      "default": 1000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How many players to keep in the user cache.",
+        "ja": "ユーザーキャッシュに保持するプレイヤー数を指定します。"
+      }
+    },
+    {
+      "path": "settings.moved-too-quickly-multiplier",
+      "type": "float",
+      "default": 10,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how fast a client can move in one packet. If triggered, the server logs to console and prevents the move.",
+        "ja": "1回の移動パケットで許可する移動速度を調整します。超過すると移動を拒否し、コンソールに記録します。"
+      }
+    },
+    {
+      "path": "settings.moved-wrongly-threshold",
+      "type": "float",
+      "default": 0.0625,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far the client can move per move-packet, defined as the distance in blocks squared. If triggered, the server logs to console and prevents the move.",
+        "ja": "移動パケットごとに許可する移動距離の二乗をブロック単位で設定します。超過すると移動を拒否し、コンソールに記録します。"
+      }
+    },
+    {
+      "path": "advancements.disable-saving",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents saving of Advancements.",
+        "ja": "実績の保存を無効にします。"
+      }
+    },
+    {
+      "path": "advancements.disabled",
+      "type": "list",
+      "default": [
+        "minecraft:story/disabled"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Lists advancement identifiers to disable. Use a namespaced identifier, * for all advancements, or a namespace to disable everything in it.",
+        "ja": "無効にする実績をリストで指定します。名前空間付きの実績ID、*（すべて）、または名前空間名を指定できます。"
+      }
+    },
+    {
+      "path": "messages.whitelist",
+      "type": "string",
+      "default": "You are not whitelisted on this server!",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message for players blocked by the whitelist or removed by enforce-whitelist. It uses legacy & formatting and \\n for newlines.",
+        "ja": "ホワイトリストが有効で参加できない場合や、enforce-whitelistによって退室させる場合に表示するキックメッセージです。従来の&書式と\\n改行を使います。"
+      }
+    },
+    {
+      "path": "messages.unknown-command",
+      "type": "string",
+      "default": "Unknown command. Type \"/help\" for help.",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The current Paper documentation says this setting no longer has an effect; use a plugin for this behavior.",
+        "ja": "現在のPaper資料では、この設定は効果がないとされています。この機能にはプラグインを使います。"
+      }
+    },
+    {
+      "path": "messages.server-full",
+      "type": "string",
+      "default": "The server is full!",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message for players who cannot join because no slots are available. It uses legacy & formatting and \\n for newlines.",
+        "ja": "空きスロットがなく参加できないプレイヤーに送るキックメッセージです。従来の&書式と\\n改行を使います。"
+      }
+    },
+    {
+      "path": "messages.outdated-client",
+      "type": "string",
+      "default": "Outdated client! Please use {0}",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message when the server is newer than the client. {0} is replaced with the current server version.",
+        "ja": "サーバーより古いクライアントが参加できない場合のキックメッセージです。{0}は現在のサーバーバージョンに置き換わります。"
+      }
+    },
+    {
+      "path": "messages.outdated-server",
+      "type": "string",
+      "default": "Outdated server! I'm still on {0}",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message when the server is older than the client. {0} is replaced with the current server version.",
+        "ja": "クライアントより古いサーバーへ参加できない場合のキックメッセージです。{0}は現在のサーバーバージョンに置き換わります。"
+      }
+    },
+    {
+      "path": "messages.restart",
+      "type": "string",
+      "default": "Server is restarting",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kick message for players during a restart. It uses legacy & formatting and \\n for newlines.",
+        "ja": "再起動中にサーバーにいる、または参加しようとしたプレイヤーへ送るキックメッセージです。従来の&書式と\\n改行を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.below-zero-generation-in-existing-chunks",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to allow conversion of existing chunks to full (post 1.18) height.",
+        "ja": "既存チャンクを1.18以降の高さに変換するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.merge-radius.exp",
+      "type": "int",
+      "default": -1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the block range for merging experience orbs when they first spawn. This is not Vanilla behavior and does not change later merging; set 0 or less to disable it.",
+        "ja": "スポーン直後に経験値オーブを統合する範囲をブロック単位で設定します。0以下にすると無効になり、通常の統合範囲には影響しません。"
+      }
+    },
+    {
+      "path": "world-settings.*.merge-radius.item",
+      "type": "float",
+      "default": 0.5,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The range, in blocks, that items will combine within.",
+        "ja": "アイテムを統合する範囲をブロック単位で設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.ticks-per.hopper-check",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The ticks between checks to pull items.",
+        "ja": "ホッパーがアイテムを取り込むか確認する間隔をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.ticks-per.hopper-transfer",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The ticks between hopper item movements.",
+        "ja": "ホッパーがアイテムを移動する間隔をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hopper-amount",
+      "type": "int",
+      "default": 1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How many items a hopper should move at a time, limited to stack size.",
+        "ja": "ホッパーが1回に移動するアイテム数を指定します。スタック上限が適用されます。"
+      }
+    },
+    {
+      "path": "world-settings.*.hopper-can-load-chunks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to prevent hoppers from loading chunks.",
+        "ja": "ホッパーがチャンクを読み込むことを許可するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.combat-exhaustion",
+      "type": "float",
+      "default": 0.1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How much exhaustion to give from attacking.",
+        "ja": "攻撃時に加える消耗量を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.jump-sprint-exhaustion",
+      "type": "float",
+      "default": 0.2,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How much exhaustion to give from sprint jumping.",
+        "ja": "走りながらジャンプしたときに加える消耗量を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.jump-walk-exhaustion",
+      "type": "float",
+      "default": 0.05,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How much exhaustion to give from jump walking.",
+        "ja": "歩きながらジャンプしたときに加える消耗量を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.other-multiplier",
+      "type": "float",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The exhaustion multiplier for normal walking and crouching.",
+        "ja": "通常の歩行としゃがみ歩きに適用する消耗倍率を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.regen-exhaustion",
+      "type": "float",
+      "default": 6,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How much exhaustion to give from regenerating health.",
+        "ja": "体力回復時に加える消耗量を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.sprint-multiplier",
+      "type": "float",
+      "default": 0.1,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The exhaustion multiplier for sprinting on the ground.",
+        "ja": "地上を走るときに適用する消耗倍率を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.hunger.swim-multiplier",
+      "type": "float",
+      "default": 0.01,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the exhaustion multiplier for swimming. It also applies when walking underwater with the eyes below the surface or walking on water with the eyes above it.",
+        "ja": "泳いでいるときに適用する消耗倍率を指定します。目が水面下にある水中歩行と、目が水面上にある水上歩行も対象です。"
+      }
+    },
+    {
+      "path": "world-settings.*.enable-zombie-pigmen-portal-spawns",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to allow zombified piglins to spawn inside nether portals. This setting does not affect portal travel for any mobs.",
+        "ja": "ゾンビ化したピグリンがネザーポータル内にスポーンすることを許可するかどうかを設定します。モブのポータル移動には影響しません。"
+      }
+    },
+    {
+      "path": "world-settings.*.zombie-aggressive-towards-villager",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether zombies try to seek out and attack villagers.",
+        "ja": "ゾンビが村人を探して攻撃するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.dragon-death-sound-radius",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how far the dragon-death sound can be heard in blocks. A value of 0 uses the Vanilla default of 64, and the setting has no effect when globalSoundEvents is enabled.",
+        "ja": "エンダードラゴン死亡音が聞こえる距離をブロック単位で指定します。0でVanillaの既定値64を使いますが、globalSoundEventsが有効な場合は効果がありません。"
+      }
+    },
+    {
+      "path": "world-settings.*.end-portal-sound-radius",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how far the End portal-opening sound can be heard in blocks. A value of 0 uses the Vanilla default of 64, and the setting has no effect when globalSoundEvents is enabled.",
+        "ja": "エンドポータル生成音が聞こえる距離をブロック単位で指定します。0でVanillaの既定値64を使いますが、globalSoundEventsが有効な場合は効果がありません。"
+      }
+    },
+    {
+      "path": "world-settings.*.hanging-tick-frequency",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often to tick hanging entities, in ticks.",
+        "ja": "額縁などの吊り下げエンティティをtickする間隔を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.wither-spawn-sound-radius",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how far the Wither-spawn sound can be heard in blocks. A value of 0 uses the Vanilla default of 64, and the setting has no effect when globalSoundEvents is enabled.",
+        "ja": "ウィザー出現音が聞こえる距離をブロック単位で指定します。0でVanillaの既定値64を使いますが、globalSoundEventsが有効な場合は効果がありません。"
+      }
+    },
+    {
+      "path": "world-settings.*.item-despawn-rate",
+      "type": "int",
+      "default": 6000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The default time in ticks it takes an item to despawn. Per-item rates are found in Paper's per-world config.",
+        "ja": "アイテムが消えるまでの既定時間をtick数で指定します。アイテムごとの時間はPaperのワールド設定にあります。"
+      }
+    },
+    {
+      "path": "world-settings.*.mob-spawn-range",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The range, in chunks, from the player, that mobs can spawn.",
+        "ja": "プレイヤーから何チャンク離れた範囲までモブがスポーンできるかを指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.arrow-despawn-rate",
+      "type": "int",
+      "default": 1200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The number of ticks before an arrow despawns.",
+        "ja": "矢が消えるまでのtick数を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.trident-despawn-rate",
+      "type": "int",
+      "default": 1200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The number of ticks before a trident despawns.",
+        "ja": "トライデントが消えるまでのtick数を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-village",
+      "type": "int",
+      "default": 10387312,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for villages.",
+        "ja": "村の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-desert",
+      "type": "int",
+      "default": 14357617,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for desert structures.",
+        "ja": "砂漠の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-igloo",
+      "type": "int",
+      "default": 14357618,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for igloos.",
+        "ja": "イグルーの構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-jungle",
+      "type": "int",
+      "default": 14357619,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for jungle structures.",
+        "ja": "ジャングルの構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-swamp",
+      "type": "int",
+      "default": 14357620,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for swamp structures.",
+        "ja": "沼地の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-monument",
+      "type": "int",
+      "default": 10387313,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for monuments.",
+        "ja": "海底神殿の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-shipwreck",
+      "type": "int",
+      "default": 165745295,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for shipwrecks.",
+        "ja": "難破船の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-ocean",
+      "type": "int",
+      "default": 14357621,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for the ocean structures.",
+        "ja": "海洋の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-outpost",
+      "type": "int",
+      "default": 165745296,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for outposts.",
+        "ja": "前哨基地の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-endcity",
+      "type": "int",
+      "default": 10387313,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for end cities.",
+        "ja": "エンドシティの構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-slime",
+      "type": "int",
+      "default": 987234911,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for slime chunks.",
+        "ja": "スライムチャンクの判定に使うシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-nether",
+      "type": "int",
+      "default": 30084232,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for the nether structures.",
+        "ja": "ネザー構造物の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-mansion",
+      "type": "int",
+      "default": 10387319,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for mansions.",
+        "ja": "森の洋館の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-fossil",
+      "type": "int",
+      "default": 14357921,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for fossils.",
+        "ja": "化石の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-portal",
+      "type": "int",
+      "default": 34222645,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for portals.",
+        "ja": "ポータルの構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-ancientcity",
+      "type": "int",
+      "default": 20083232,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for ancient cities.",
+        "ja": "古代都市の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-trailruins",
+      "type": "int",
+      "default": 83469867,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for trail ruins.",
+        "ja": "旅路の遺跡の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-trialchambers",
+      "type": "int",
+      "default": 94251327,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for trial chambers.",
+        "ja": "トライアルチャンバーの構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-buriedtreasure",
+      "type": "int",
+      "default": 10387320,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for buried treasure.",
+        "ja": "埋もれた宝の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-mineshaft",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for mineshafts.",
+        "ja": "廃坑の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.seed-stronghold",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The per-structure seed for strongholds.",
+        "ja": "要塞の構造物生成に使う個別のシード値を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.thunder-chance",
+      "type": "int",
+      "default": 100000,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The chance of lightning occurring during a thunderstorm, as a probability of 1/<thunder-chance> per chunk, every tick.",
+        "ja": "雷雨中、各チャンクで毎tickに雷が発生する確率の分母を指定します。値がnなら確率は1/nです。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range",
+      "type": "section",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the distance from a player where entities tick normally. Outside it they tick less often; a value of 0 or less disables throttling for that category.",
+        "ja": "プレイヤーの近くではエンティティが通常どおりtickされ、範囲外では頻度が下がります。0以下にすると分類ごとの制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.animals",
+      "type": "int",
+      "default": 32,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for animals.",
+        "ja": "動物の有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.monsters",
+      "type": "int",
+      "default": 32,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for monsters.",
+        "ja": "モンスターの有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.raiders",
+      "type": "int",
+      "default": 64,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for raiders.",
+        "ja": "襲撃者の有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.misc",
+      "type": "int",
+      "default": 16,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for miscellaneous entities, including dropped items. Outside of this range, items moving through water streams may appear to visually lag, rubber-band, or move backward.",
+        "ja": "その他のエンティティの有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.water",
+      "type": "int",
+      "default": 16,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for water mobs.",
+        "ja": "水生モブの有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.villagers",
+      "type": "int",
+      "default": 32,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for villagers.",
+        "ja": "村人の有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.flying-monsters",
+      "type": "int",
+      "default": 32,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The entity activation range for flying monsters.",
+        "ja": "飛行モンスターの有効範囲をブロック単位で設定します。範囲外ではtick頻度が下がり、0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.animals-every",
+      "type": "int",
+      "default": 1200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often an inactive animal outside of range will be woken up, in ticks. This is a minimum due to being limited to animals-max-per-tick.",
+        "ja": "範囲外で停止している動物を起こす間隔をtick数で指定します。実際の間隔は同tickで起こせる数の上限にも左右されます。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.animals-for",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How long to wake an inactive animal up for, in ticks.",
+        "ja": "起こした動物を動作させる時間をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.animals-max-per-tick",
+      "type": "int",
+      "default": 4,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A limit of how many inactive animals can be woken up on the same tick.",
+        "ja": "同じtickに起こせる動物の最大数を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.flying-monsters-every",
+      "type": "int",
+      "default": 200,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often an inactive flying monster outside of range will be woken up, in ticks. This is a minimum due to being limited to flying-monsters-max-per-tick.",
+        "ja": "範囲外で停止している飛行モンスターを起こす間隔をtick数で指定します。実際の間隔は同tickで起こせる数の上限にも左右されます。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.flying-monsters-for",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How long to wake an inactive flying monster up for, in ticks.",
+        "ja": "起こした飛行モンスターを動作させる時間をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.flying-monsters-max-per-tick",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A limit of how many inactive flying monsters can be woken up on the same tick.",
+        "ja": "同じtickに起こせる飛行モンスターの最大数を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.monsters-every",
+      "type": "int",
+      "default": 400,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often an inactive monster outside of range will be woken up, in ticks. This is a minimum due to being limited to monsters-max-per-tick.",
+        "ja": "範囲外で停止しているモンスターを起こす間隔をtick数で指定します。実際の間隔は同tickで起こせる数の上限にも左右されます。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.monsters-for",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How long to wake an inactive monster up for, in ticks.",
+        "ja": "起こしたモンスターを動作させる時間をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.monsters-max-per-tick",
+      "type": "int",
+      "default": 8,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A limit of how many inactive monsters can be woken up on the same tick.",
+        "ja": "同じtickに起こせるモンスターの最大数を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.villagers-every",
+      "type": "int",
+      "default": 600,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How often an inactive villager outside of range will be woken up, in ticks. This is a minimum due to being limited to villagers-max-per-tick",
+        "ja": "範囲外で停止している村人を起こす間隔をtick数で指定します。実際の間隔は同tickで起こせる数の上限にも左右されます。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.villagers-for",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How long to wake an inactive villager up for, in ticks.",
+        "ja": "起こした村人を動作させる時間をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.wake-up-inactive.villagers-max-per-tick",
+      "type": "int",
+      "default": 4,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "A limit of how many inactive villagers can be woken up on the same tick.",
+        "ja": "同じtickに起こせる村人の最大数を指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.villagers-work-immunity-after",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "The time in ticks a villager has to be inactive and working to be woken up.",
+        "ja": "村人が非アクティブな状態で作業を続けてから起こされるまでの時間をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.villagers-work-immunity-for",
+      "type": "int",
+      "default": 20,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "How long a villager should be woken up for, in ticks, after villagers-work-immunity-after.",
+        "ja": "villagers-work-immunity-afterの経過後に村人を動作させる時間をtick数で指定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.villagers-active-for-panic",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to activate villagers when they want to panic.",
+        "ja": "村人がパニック状態になったときにアクティブ化するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.tick-inactive-villagers",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to keep ticking villagers that are outside of their activation range.",
+        "ja": "有効範囲外にいる村人のtickを続けるかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-activation-range.ignore-spectators",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether spectators activate entities within range.",
+        "ja": "観戦者が範囲内のエンティティをアクティブ化するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.nerf-spawner-mobs",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Disable most AI for spawner spawned mobs.",
+        "ja": "スポナーから出現したモブのAIの大半を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.unload-frozen-chunks",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Experimental option that controls whether chunks can unload whilst ticks are frozen via /tick freeze.",
+        "ja": "実験的な設定です。/tick freezeでtickを停止したときにチャンクをアンロードするかどうかを設定します。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-tracking-range.players",
+      "type": "int",
+      "default": 128,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far in blocks players are tracked (sent to) the player. This is scaled by the entity-broadcast-range-percentage.",
+        "ja": "プレイヤーをプレイヤーへ送信する距離をブロック単位で設定します。entity-broadcast-range-percentageの値に応じて倍率がかかります。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-tracking-range.animals",
+      "type": "int",
+      "default": 96,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far in blocks animals are tracked (sent to) the player. This is scaled by the entity-broadcast-range-percentage.",
+        "ja": "動物をプレイヤーへ送信する距離をブロック単位で設定します。entity-broadcast-range-percentageの値に応じて倍率がかかります。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-tracking-range.monsters",
+      "type": "int",
+      "default": 96,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far in blocks monsters are tracked (sent to) the player. This is scaled by the entity-broadcast-range-percentage.",
+        "ja": "モンスターをプレイヤーへ送信する距離をブロック単位で設定します。entity-broadcast-range-percentageの値に応じて倍率がかかります。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-tracking-range.misc",
+      "type": "int",
+      "default": 96,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far in blocks misc entities are tracked (sent to) the player. This is scaled by the entity-broadcast-range-percentage.",
+        "ja": "その他のエンティティをプレイヤーへ送信する距離をブロック単位で設定します。entity-broadcast-range-percentageの値に応じて倍率がかかります。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-tracking-range.display",
+      "type": "int",
+      "default": 128,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far in blocks display entities are tracked (sent to) the player. This is scaled by the entity-broadcast-range-percentage.",
+        "ja": "ディスプレイエンティティをプレイヤーへ送信する距離をブロック単位で設定します。entity-broadcast-range-percentageの値に応じて倍率がかかります。"
+      }
+    },
+    {
+      "path": "world-settings.*.entity-tracking-range.other",
+      "type": "int",
+      "default": 64,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls how far in blocks other entities are tracked (sent to) the player. This is scaled by the entity-broadcast-range-percentage.",
+        "ja": "その他のエンティティをプレイヤーへ送信する距離をブロック単位で設定します。entity-broadcast-range-percentageの値に応じて倍率がかかります。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.cactus-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the cactus growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 1600%.",
+        "ja": "サボテンの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は1600%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.cane-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the cane growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 1600%.",
+        "ja": "サトウキビの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は1600%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.melon-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the melon growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "スイカの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.mushroom-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the mushroom growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 2500%.",
+        "ja": "キノコの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は2500%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.pumpkin-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the pumpkin growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "カボチャの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.sapling-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the sapling growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 700%.",
+        "ja": "苗木の成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は700%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.beetroot-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the beetroot growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "ビートルートの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.carrot-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the carrot growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "ニンジンの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.potato-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the potato growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "ジャガイモの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.torchflower-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the torchflower growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "トーチフラワーの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.wheat-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the wheat growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "小麦の成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.netherwart-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the netherwart growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 1000%.",
+        "ja": "ネザーウォートの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は1000%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.vine-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the vine growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 400%.",
+        "ja": "ツタの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は400%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.cocoa-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the cocoa growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 500%.",
+        "ja": "カカオ豆の成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は500%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.bamboo-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the bamboo growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 300%.",
+        "ja": "竹の成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は300%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.sweetberry-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the sweetberry growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 500%.",
+        "ja": "スイートベリーの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は500%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.kelp-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the kelp growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 715%.",
+        "ja": "コンブの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は715%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.twistingvines-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the twistingvines growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 1000%.",
+        "ja": "ねじれツタの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は1000%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.weepingvines-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the weepingvines growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 1000%.",
+        "ja": "しだれツタの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は1000%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.cavevines-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the cavevines growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 1000%.",
+        "ja": "洞窟のツタの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は1000%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.glowberry-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the glowberry growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 910%.",
+        "ja": "グロウベリーの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は910%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.growth.pitcherplant-modifier",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the pitcherplant growth modifier as a percentage of Vanilla speed (100%). This setting cannot stop growth at 0; its maximum effective speed is 5100%.",
+        "ja": "ウツボカズラの成長速度を調整する割合を%で指定します。0でも成長は止まらず100%になり、有効な最大速度は5100%です。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-tick-time.tile",
+      "type": "int",
+      "default": 50,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "This setting is inactive because a Paper patch disables it.",
+        "ja": "Paperのパッチで無効化されているため、この項目は動作しません。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-tick-time.entity",
+      "type": "int",
+      "default": 50,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "This setting is non-functional in the upstream implementation.",
+        "ja": "上流実装でも機能しないため、この項目は動作しません。"
+      }
+    },
+    {
+      "path": "world-settings.*.max-tnt-per-tick",
+      "type": "int",
+      "default": 100,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets the number of TNT entities processed per server tick. Set 0 or less to disable the limit.",
+        "ja": "1tickに処理するTNT数の上限を指定します。0以下で制限を無効にします。"
+      }
+    },
+    {
+      "path": "world-settings.*.view-distance",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": [
+        "-1",
+        "default"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the view distance in server.properties. Set -1 or default to use the server.properties value.",
+        "ja": "server.propertiesの表示距離を上書きします。-1またはdefaultでserver.propertiesの値を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.simulation-distance",
+      "type": "string",
+      "default": "default",
+      "min": null,
+      "max": null,
+      "values": [
+        "-1",
+        "default"
+      ],
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Overrides the simulation distance in server.properties. Set -1 or default to use the server.properties value.",
+        "ja": "server.propertiesのシミュレーション距離を上書きします。-1またはdefaultでserver.propertiesの値を使います。"
+      }
+    },
+    {
+      "path": "world-settings.*.verbose",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Controls whether world settings are logged when the configuration loads. This normally happens on startup, /spigot reload, and /reload.",
+        "ja": "設定ファイルの読み込み時にワールド設定をログへ出すかどうかを設定します。起動時や/spigot reload、/reloadの際に記録します。"
+      }
+    },
+    {
+      "path": "players.disable-saving",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Prevents saving player data.",
+        "ja": "プレイヤーデータの保存を無効にします。"
+      }
+    },
+    {
+      "path": "config-version",
+      "type": "int",
+      "default": null,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Internal constant for upgrading configuration: Do Not Touch.",
+        "ja": "設定ファイルを更新するための内部バージョンです。変更しないでください。"
+      }
+    },
+    {
+      "path": "stats.disable-saving",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to prevent saving stats.",
+        "ja": "統計情報の保存を無効にします。"
+      }
+    },
+    {
+      "path": "stats.forced-stats",
+      "type": "map",
+      "default": {},
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Maps resource-location statistic identifiers to integer values that should be forced.",
+        "ja": "統計IDをキー、固定する値を整数とするマップです。キーにはリソースロケーションを指定します。"
+      }
+    },
+    {
+      "path": "commands.tab-complete",
+      "type": "int",
+      "default": 0,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Sets how many characters must be typed before tab completion. Values below 0 disable it, 0 enables it immediately, and positive values behave like 0 because of client changes.",
+        "ja": "コマンド補完を始める入力文字数を設定します。0は常に補完し、0未満は無効ですが、正の値もクライアントの変更により0と同じ動作になります。"
+      }
+    },
+    {
+      "path": "commands.send-namespaced",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to send commands with a namespace (like minecraft:give) to the client.",
+        "ja": "minecraft:giveのような名前空間付きコマンドをクライアントへ送るかどうかを設定します。"
+      }
+    },
+    {
+      "path": "commands.log",
+      "type": "bool",
+      "default": true,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to log commands executed by players, in chat or on signs. This currently logs in the format \"<playername> issued server command: <command>\".",
+        "ja": "プレイヤーがチャットや看板で実行したコマンドをログに記録するかどうかを設定します。"
+      }
+    },
+    {
+      "path": "commands.replace-commands",
+      "type": "list",
+      "default": [
+        "setblock",
+        "summon",
+        "testforblock",
+        "tellraw"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "List of Vanilla commands that should override any plugin commands.",
+        "ja": "プラグインのコマンドより優先するVanillaコマンドを並べます。"
+      }
+    },
+    {
+      "path": "commands.spam-exclusions",
+      "type": "list",
+      "default": [
+        "/skill"
+      ],
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Any chat message or command that prefix matches an entry in this list will be excluded from the built-in spam filter. Commands need a \"/\" to be counted as commands.",
+        "ja": "内蔵スパムフィルターから除外するメッセージやコマンドの接頭辞を並べます。コマンドは先頭に/を付けます。"
+      }
+    },
+    {
+      "path": "commands.silent-commandblock-console",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to log Vanilla command feedback to the Console.",
+        "ja": "Vanillaコマンドブロックの実行結果をコンソールに記録しないようにするかどうかを設定します。"
+      }
+    },
+    {
+      "path": "commands.enable-spam-exclusions",
+      "type": "bool",
+      "default": false,
+      "min": null,
+      "max": null,
+      "values": null,
+      "since": null,
+      "until": null,
+      "doc": {
+        "en": "Whether to apply spam exclusions from commands.spam-exclusions.",
+        "ja": "commands.spam-exclusionsの除外ルールを適用するかどうかを設定します。"
+      }
+    }
+  ]
+}
