@@ -1102,7 +1102,6 @@ pub struct FolderSize {
 pub enum LineEnding {
     Lf,
     Crlf,
-    Mixed,
 }
 
 /// A text file for the editor: no BOM, `\n` line breaks, and what it takes to
@@ -1112,6 +1111,8 @@ pub struct TextDocumentInfo {
     pub text: String,
     pub has_bom: bool,
     pub line_ending: LineEnding,
+    /// Both endings appeared; saving uses `line_ending` for every line.
+    pub mixed_line_endings: bool,
 }
 
 fn files_error(error: managed_files::FilesError, data_dir: &std::path::Path) -> FfiError {
@@ -1372,8 +1373,8 @@ pub async fn read_text_document(
             line_ending: match document.line_ending {
                 managed_files::LineEnding::Lf => LineEnding::Lf,
                 managed_files::LineEnding::Crlf => LineEnding::Crlf,
-                managed_files::LineEnding::Mixed => LineEnding::Mixed,
             },
+            mixed_line_endings: document.mixed_line_endings,
         })
     })
     .await
@@ -1399,8 +1400,8 @@ pub async fn write_text_document(
             line_ending: match document.line_ending {
                 LineEnding::Lf => managed_files::LineEnding::Lf,
                 LineEnding::Crlf => managed_files::LineEnding::Crlf,
-                LineEnding::Mixed => managed_files::LineEnding::Mixed,
             },
+            mixed_line_endings: document.mixed_line_endings,
         };
         managed_files::write_text_document(&path, &document)
             .map_err(|error| files_error(error, &data_dir))

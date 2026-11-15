@@ -427,13 +427,11 @@ pub fn directory_size_within(root: &Path, budget: Duration) -> Result<DirectoryS
 // ---------------------------------------------------------------------------
 // Text documents (the editor)
 
-/// The line endings a document uses.
+/// The line endings a document is saved with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LineEnding {
     Lf,
     Crlf,
-    /// Both appear; the document is saved with LF where the editor joined lines.
-    Mixed,
 }
 
 /// A text file as the editor shows it: without a BOM, with `\n` line breaks,
@@ -443,6 +441,9 @@ pub struct TextDocument {
     pub text: String,
     pub has_bom: bool,
     pub line_ending: LineEnding,
+    /// Both endings appeared when the file was read; saving writes every line
+    /// with `line_ending`, the more frequent one (LF on a tie).
+    pub mixed_line_endings: bool,
 }
 
 const UTF8_BOM: &[u8] = b"\xEF\xBB\xBF";
@@ -471,11 +472,12 @@ pub fn read_text_document(path: &Path) -> Result<TextDocument, FilesError> {
         .map_err(|_| FilesError::new(FilesErrorKind::NotText, "The file is not UTF-8 text"))?;
     let crlf = raw.matches("\r\n").count();
     let lf = raw.matches('\n').count() - crlf;
-    let line_ending = match (crlf, lf) {
-        (0, _) => LineEnding::Lf,
-        (_, 0) => LineEnding::Crlf,
-        _ => LineEnding::Mixed,
+    let line_ending = if crlf > lf {
+        LineEnding::Crlf
+    } else {
+        LineEnding::Lf
     };
+    let mixed_line_endings = crlf > 0 && lf > 0;
     let text = if crlf > 0 {
         raw.replace("\r\n", "\n")
     } else {
@@ -485,6 +487,7 @@ pub fn read_text_document(path: &Path) -> Result<TextDocument, FilesError> {
         text,
         has_bom,
         line_ending,
+        mixed_line_endings,
     })
 }
 
@@ -492,7 +495,7 @@ pub fn read_text_document(path: &Path) -> Result<TextDocument, FilesError> {
 pub fn write_text_document(path: &Path, document: &TextDocument) -> Result<(), FilesError> {
     let body = match document.line_ending {
         LineEnding::Crlf => document.text.replace("\r\n", "\n").replace('\n', "\r\n"),
-        LineEnding::Lf | LineEnding::Mixed => document.text.clone(),
+        LineEnding::Lf => document.text.clone(),
     };
     let mut bytes = Vec::with_capacity(body.len() + 3);
     if document.has_bom {
@@ -705,7 +708,7 @@ mod tests {
     }
 
     #[test]
-    fn documents_refuse_binary_and_mixed_endings_are_reported() {
+    fn documents_refuse_binary() {
         let (_d, root) = dir();
         std::fs::write(root.join("level.dat"), [0xff_u8, 0xfe, 0x00]).unwrap();
         assert_eq!(
@@ -714,13 +717,46 @@ mod tests {
                 .kind,
             FilesErrorKind::NotText
         );
-        std::fs::write(root.join("mixed.txt"), "a\r\nb\n").unwrap();
-        assert_eq!(
-            read_text_document(&root.join("mixed.txt"))
-                .unwrap()
-                .line_ending,
-            LineEnding::Mixed
-        );
+    }
+
+    #[test]
+    fn mixed_endings_are_saved_as_the_more_frequent_one() {
+        let (_d, root) = dir();
+        // (file, original, detected ending, mixed, saved bytes)
+        type Case<'a> = (&'a str, &'a [u8], LineEnding, bool, &'a [u8]);
+        let cases: [Case; 4] = [
+            (
+                "crlf-more",
+                b"a\r\nb\r\nc\n",
+                LineEnding::Crlf,
+                true,
+                b"a\r\nb\r\nc\r\n",
+            ),
+            (
+                "lf-more",
+                b"a\nb\nc\r\n",
+                LineEnding::Lf,
+                true,
+                b"a\nb\nc\n",
+            ),
+            ("tie", b"a\r\nb\n", LineEnding::Lf, true, b"a\nb\n"),
+            (
+                "none",
+                b"single line",
+                LineEnding::Lf,
+                false,
+                b"single line",
+            ),
+        ];
+        for (name, original, ending, mixed, saved) in cases {
+            let path = root.join(name);
+            std::fs::write(&path, original).unwrap();
+            let document = read_text_document(&path).unwrap();
+            assert_eq!(document.line_ending, ending, "{name}");
+            assert_eq!(document.mixed_line_endings, mixed, "{name}");
+            write_text_document(&path, &document).unwrap();
+            assert_eq!(std::fs::read(&path).unwrap(), saved, "{name}");
+        }
     }
 
     #[test]

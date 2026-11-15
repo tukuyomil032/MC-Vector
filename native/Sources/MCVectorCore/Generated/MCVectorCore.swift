@@ -2358,13 +2358,21 @@ public struct TextDocumentInfo: Equatable, Hashable {
     public var text: String
     public var hasBom: Bool
     public var lineEnding: LineEnding
+    /**
+     * Both endings appeared; saving uses `line_ending` for every line.
+     */
+    public var mixedLineEndings: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(text: String, hasBom: Bool, lineEnding: LineEnding) {
+    public init(text: String, hasBom: Bool, lineEnding: LineEnding, 
+        /**
+         * Both endings appeared; saving uses `line_ending` for every line.
+         */mixedLineEndings: Bool) {
         self.text = text
         self.hasBom = hasBom
         self.lineEnding = lineEnding
+        self.mixedLineEndings = mixedLineEndings
     }
 
     
@@ -2385,7 +2393,8 @@ public struct FfiConverterTypeTextDocumentInfo: FfiConverterRustBuffer {
             try TextDocumentInfo(
                 text: FfiConverterString.read(from: &buf), 
                 hasBom: FfiConverterBool.read(from: &buf), 
-                lineEnding: FfiConverterTypeLineEnding.read(from: &buf)
+                lineEnding: FfiConverterTypeLineEnding.read(from: &buf), 
+                mixedLineEndings: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -2393,6 +2402,7 @@ public struct FfiConverterTypeTextDocumentInfo: FfiConverterRustBuffer {
         FfiConverterString.write(value.text, into: &buf)
         FfiConverterBool.write(value.hasBom, into: &buf)
         FfiConverterTypeLineEnding.write(value.lineEnding, into: &buf)
+        FfiConverterBool.write(value.mixedLineEndings, into: &buf)
     }
 }
 
@@ -2705,7 +2715,6 @@ public enum LineEnding: Equatable, Hashable {
     
     case lf
     case crlf
-    case mixed
 
 
 
@@ -2731,8 +2740,6 @@ public struct FfiConverterTypeLineEnding: FfiConverterRustBuffer {
         
         case 2: return .crlf
         
-        case 3: return .mixed
-        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -2747,10 +2754,6 @@ public struct FfiConverterTypeLineEnding: FfiConverterRustBuffer {
         
         case .crlf:
             writeInt(&buf, Int32(2))
-        
-        
-        case .mixed:
-            writeInt(&buf, Int32(3))
         
         }
     }
