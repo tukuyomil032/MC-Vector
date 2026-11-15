@@ -11,25 +11,25 @@ struct UsersView: View {
     @State private var model: UsersModel
     /// The row waiting for the Remove confirmation.
     @State private var pendingRemove: PendingRemove?
-#if DEBUG
-    struct CaptureScript {
-        enum Action {
-            case none
-            case holdLoading
-            case submitEmpty
-            case pendingAdd(String)
-            case confirmRemove(String)
-            case add(String)
-            case remove(String)
-            case addAndShowConsole(String)
+    #if DEBUG
+        struct CaptureScript {
+            enum Action {
+                case none
+                case holdLoading
+                case submitEmpty
+                case pendingAdd(String)
+                case confirmRemove(String)
+                case add(String)
+                case remove(String)
+                case addAndShowConsole(String)
+            }
+
+            let id: String
+            let action: Action
         }
 
-        let id: String
-        let action: Action
-    }
-
-    static var captureScript: CaptureScript?
-#endif
+        static var captureScript: CaptureScript?
+    #endif
 
     struct PendingRemove: Identifiable {
         let list: PlayerListKind
@@ -43,7 +43,7 @@ struct UsersView: View {
 
     var body: some View {
         Group {
-            if case let .failed(error) = model.load, !model.hasLoaded {
+            if case .failed(let error) = model.load, !model.hasLoaded {
                 ContentUnavailableView {
                     Label(L10n.t("users.loadFailed"), systemImage: "exclamationmark.triangle")
                 } description: {
@@ -72,36 +72,36 @@ struct UsersView: View {
         }
         .animation(Motion.standard, value: model.hasLoaded)
         .task {
-#if DEBUG
-            let script = Self.captureScript
-            if let script, case .holdLoading = script.action {
-                try? await Task.sleep(for: .milliseconds(400))
-                CaptureState.markViewReady(for: script.id)
-                // Keep the first-load placeholders on screen for this capture.
-                try? await Task.sleep(for: .seconds(30))
-                return
-            }
-#endif
-            await model.reload()
-#if DEBUG
-            if let script {
-                switch script.action {
-                case let .confirmRemove(name):
-                    if model.hasLoaded {
-                        pendingRemove = PendingRemove(list: .whitelist, identifier: name)
-                    }
-                    try? await Task.sleep(for: .milliseconds(350))
+            #if DEBUG
+                let script = Self.captureScript
+                if let script, case .holdLoading = script.action {
+                    try? await Task.sleep(for: .milliseconds(400))
                     CaptureState.markViewReady(for: script.id)
-                case .none:
-                    try? await Task.sleep(for: .milliseconds(350))
-                    CaptureState.markViewReady(for: script.id)
-                case .holdLoading:
-                    break
-                case .submitEmpty, .pendingAdd, .add, .remove, .addAndShowConsole:
-                    break
+                    // Keep the first-load placeholders on screen for this capture.
+                    try? await Task.sleep(for: .seconds(30))
+                    return
                 }
-            }
-#endif
+            #endif
+            await model.reload()
+            #if DEBUG
+                if let script {
+                    switch script.action {
+                    case .confirmRemove(let name):
+                        if model.hasLoaded {
+                            pendingRemove = PendingRemove(list: .whitelist, identifier: name)
+                        }
+                        try? await Task.sleep(for: .milliseconds(350))
+                        CaptureState.markViewReady(for: script.id)
+                    case .none:
+                        try? await Task.sleep(for: .milliseconds(350))
+                        CaptureState.markViewReady(for: script.id)
+                    case .holdLoading:
+                        break
+                    case .submitEmpty, .pendingAdd, .add, .remove, .addAndShowConsole:
+                        break
+                    }
+                }
+            #endif
         }
         .confirmationDialog(
             L10n.t("users.removeTitle"),
@@ -109,7 +109,9 @@ struct UsersView: View {
             presenting: pendingRemove
         ) { pending in
             Button(L10n.t("users.actions.remove"), role: .destructive) {
-                Task { await model.remove(pending.identifier, from: pending.list, runtime: runtime, feedback: feedback) }
+                Task {
+                    await model.remove(pending.identifier, from: pending.list, runtime: runtime, feedback: feedback)
+                }
             }
         } message: { pending in
             Text(L10n.t("users.confirmRemove", ["name": pending.identifier]))
@@ -151,9 +153,9 @@ private struct UsersCard: View {
 
     @Environment(ServerRuntime.self) private var runtime
     @Environment(FeedbackCenter.self) private var feedback
-#if DEBUG
-    @Environment(AppState.self) private var app
-#endif
+    #if DEBUG
+        @Environment(AppState.self) private var app
+    #endif
     @State private var text = ""
     @State private var fieldError: String?
     @FocusState private var focused: Bool
@@ -172,12 +174,12 @@ private struct UsersCard: View {
                 addField
             }
         }
-#if DEBUG
-        .task(id: model.hasLoaded) {
-            guard model.hasLoaded, let captureScript = UsersView.captureScript else { return }
-            await runCaptureScript(captureScript)
-        }
-#endif
+        #if DEBUG
+            .task(id: model.hasLoaded) {
+                guard model.hasLoaded, let captureScript = UsersView.captureScript else { return }
+                await runCaptureScript(captureScript)
+            }
+        #endif
     }
 
     private func count(_ value: Int) -> some View {
@@ -261,7 +263,7 @@ private struct UsersCard: View {
         switch await model.add(text, to: list.kind, runtime: runtime, feedback: feedback) {
         case .done:
             text = ""
-        case let .invalid(message):
+        case .invalid(let message):
             withAnimation(Motion.snappy) { fieldError = message }
             focused = true
         case .failed:
@@ -269,44 +271,44 @@ private struct UsersCard: View {
         }
     }
 
-#if DEBUG
-    private func runCaptureScript(_ script: UsersView.CaptureScript) async {
-        guard list.kind == .whitelist else { return }
-        switch script.action {
-        case .none, .holdLoading, .confirmRemove:
-            return
-        case .submitEmpty:
-            text = ""
-            await performSubmit()
-            try? await Task.sleep(for: .milliseconds(250))
-            CaptureState.markViewReady(for: script.id)
-        case let .pendingAdd(value):
-            text = value
-            model.capturePendingAddDelay = .seconds(8)
-            Task { await performSubmit() }
-            for _ in 0..<100 where !model.pendingAdds.contains(list.kind) {
-                try? await Task.sleep(for: .milliseconds(20))
+    #if DEBUG
+        private func runCaptureScript(_ script: UsersView.CaptureScript) async {
+            guard list.kind == .whitelist else { return }
+            switch script.action {
+            case .none, .holdLoading, .confirmRemove:
+                return
+            case .submitEmpty:
+                text = ""
+                await performSubmit()
+                try? await Task.sleep(for: .milliseconds(250))
+                CaptureState.markViewReady(for: script.id)
+            case .pendingAdd(let value):
+                text = value
+                model.capturePendingAddDelay = .seconds(8)
+                Task { await performSubmit() }
+                for _ in 0..<100 where !model.pendingAdds.contains(list.kind) {
+                    try? await Task.sleep(for: .milliseconds(20))
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+                CaptureState.markViewReady(for: script.id)
+            case .add(let value):
+                text = value
+                await performSubmit()
+                try? await Task.sleep(for: .milliseconds(250))
+                CaptureState.markViewReady(for: script.id)
+            case .remove(let value):
+                await model.remove(value, from: .whitelist, runtime: runtime, feedback: feedback)
+                try? await Task.sleep(for: .milliseconds(250))
+                CaptureState.markViewReady(for: script.id)
+            case .addAndShowConsole(let value):
+                text = value
+                await performSubmit()
+                app.navigate(to: .console)
+                try? await Task.sleep(for: .milliseconds(400))
+                CaptureState.markViewReady(for: script.id)
             }
-            try? await Task.sleep(for: .milliseconds(250))
-            CaptureState.markViewReady(for: script.id)
-        case let .add(value):
-            text = value
-            await performSubmit()
-            try? await Task.sleep(for: .milliseconds(250))
-            CaptureState.markViewReady(for: script.id)
-        case let .remove(value):
-            await model.remove(value, from: .whitelist, runtime: runtime, feedback: feedback)
-            try? await Task.sleep(for: .milliseconds(250))
-            CaptureState.markViewReady(for: script.id)
-        case let .addAndShowConsole(value):
-            text = value
-            await performSubmit()
-            app.navigate(to: .console)
-            try? await Task.sleep(for: .milliseconds(400))
-            CaptureState.markViewReady(for: script.id)
         }
-    }
-#endif
+    #endif
 }
 
 private struct UserRow: View {
@@ -365,7 +367,7 @@ private struct UserAvatar: View {
             } else if stage < 2 {
                 AsyncImage(url: url) { phase in
                     switch phase {
-                    case let .success(image):
+                    case .success(let image):
                         image.resizable().interpolation(.none)
                     case .failure:
                         Color.clear.onAppear { stage += 1 }

@@ -21,10 +21,10 @@ final class UsersModel {
     private(set) var pendingAdds: Set<PlayerListKind> = []
     /// True once a load succeeded; a later failure keeps the lists on screen.
     private(set) var hasLoaded = false
-#if DEBUG
-    /// Holds an add after the spinner appears so capture.sh can photograph it.
-    var capturePendingAddDelay: Duration?
-#endif
+    #if DEBUG
+        /// Holds an add after the spinner appears so capture.sh can photograph it.
+        var capturePendingAddDelay: Duration?
+    #endif
 
     @ObservationIgnored private var reloadTask: Task<Void, Never>?
 
@@ -67,16 +67,17 @@ final class UsersModel {
     ) async -> AddOutcome {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else {
-            return .invalid(L10n.t(list == .bannedIps ? "users.validation.ipRequired" : "users.validation.playerRequired"))
+            return .invalid(
+                L10n.t(list == .bannedIps ? "users.validation.ipRequired" : "users.validation.playerRequired"))
         }
         pendingAdds.insert(list)
         defer { pendingAdds.remove(list) }
-#if DEBUG
-        if let delay = capturePendingAddDelay {
-            capturePendingAddDelay = nil
-            try? await Task.sleep(for: delay)
-        }
-#endif
+        #if DEBUG
+            if let delay = capturePendingAddDelay {
+                capturePendingAddDelay = nil
+                try? await Task.sleep(for: delay)
+            }
+        #endif
         do {
             let result = try await CoreClient.mutatePlayerList(
                 serverID: serverID, list: list, action: .add, value: value)
@@ -85,7 +86,8 @@ final class UsersModel {
                 feedback.toast(.info, L10n.t("users.toast.alreadyExists"))
                 return .done
             }
-            await applyLive(list: list, action: .add, target: result.canonicalTarget, runtime: runtime,
+            await applyLive(
+                list: list, action: .add, target: result.canonicalTarget, runtime: runtime,
                 done: L10n.t("users.toast.listUpdated"), feedback: feedback)
             return .done
         } catch {
@@ -104,7 +106,8 @@ final class UsersModel {
             let result = try await CoreClient.mutatePlayerList(
                 serverID: serverID, list: list, action: .remove, value: identifier)
             withAnimation(Motion.standard) { lists = result.lists }
-            await applyLive(list: list, action: .remove, target: result.canonicalTarget, runtime: runtime,
+            await applyLive(
+                list: list, action: .remove, target: result.canonicalTarget, runtime: runtime,
                 done: L10n.t("users.toast.removed"), feedback: feedback)
         } catch {
             feedback.showError(L10n.t("users.toast.removeFailed"), message: error.uiText)
