@@ -8,12 +8,15 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
+use mcvector_core::properties::{
+    get_server_properties_compat as core_get_server_properties, patch_properties,
+    save_server_properties_compat as core_save_server_properties, MAX_PROPERTIES_BYTES,
+};
+
 use super::file_utils::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
 use super::server_registry::{JsonNumber, MinecraftServer, ServerRegistry};
 use crate::state::operation_manager::{OperationKind, ServerOperationManager};
 
-const MAX_PROPERTIES_BYTES: u64 = 1024 * 1024;
-const MAX_PROPERTIES_VALUE_BYTES: usize = 16 * 1024;
 const BACKEND_PORT_START: u16 = 25_566;
 
 #[derive(Clone, Debug)]
@@ -51,187 +54,6 @@ pub struct ProxyNetworkRequest {
 pub struct ProxyBackendPort {
     pub server_id: String,
     pub port: u16,
-}
-
-pub fn parse_properties(content: &str) -> Result<BTreeMap<String, Value>, String> {
-    if content.len() as u64 > MAX_PROPERTIES_BYTES {
-        return Err("server.properties exceeds the read size limit".to_string());
-    }
-
-    let mut properties = BTreeMap::new();
-    for (line_number, line) in content.lines().enumerate() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('!') {
-            continue;
-        }
-        let (raw_key, raw_value) = line.split_once('=').ok_or_else(|| {
-            format!(
-                "Malformed server.properties entry on line {}",
-                line_number + 1
-            )
-        })?;
-        let key = raw_key.trim();
-        if key.is_empty() {
-            return Err(format!(
-                "Empty server.properties key on line {}",
-                line_number + 1
-            ));
-        }
-        validate_property_key(key)?;
-        let value = raw_value.trim();
-        if value.len() > MAX_PROPERTIES_VALUE_BYTES {
-            return Err(format!(
-                "server.properties value exceeds the limit on line {}",
-                line_number + 1
-            ));
-        }
-        properties.insert(key.to_string(), parse_property_value(value));
-    }
-    Ok(properties)
-}
-
-fn parse_property_value(value: &str) -> Value {
-    match value {
-        "true" => Value::Bool(true),
-        "false" => Value::Bool(false),
-        _ => value
-            .parse::<i64>()
-            .map(Value::from)
-            .or_else(|_| {
-                value
-                    .parse::<f64>()
-                    .ok()
-                    .and_then(serde_json::Number::from_f64)
-                    .map(Value::Number)
-                    .ok_or(())
-            })
-            .unwrap_or_else(|_| Value::String(value.to_string())),
-    }
-}
-
-pub fn patch_properties(content: &str, updates: &HashMap<String, Value>) -> Result<String, String> {
-    if content.len() as u64 > MAX_PROPERTIES_BYTES {
-        return Err("server.properties exceeds the read size limit".to_string());
-    }
-
-    for (key, value) in updates {
-        validate_property_key(key)?;
-        validate_property_value(value)?;
-    }
-
-    let newline = if content.contains("\r\n") {
-        "\r\n"
-    } else {
-        "\n"
-    };
-    let mut output = String::with_capacity(content.len() + updates.len() * 32);
-    let mut found = HashSet::new();
-
-    for line in content.split_inclusive('\n') {
-        let (body, ending) = split_line_ending(line);
-        let trimmed = body.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('!') {
-            output.push_str(line);
-            continue;
-        }
-
-        let delimiter = body.find('=').ok_or_else(|| {
-            "Cannot update malformed server.properties entry without overwriting the file"
-                .to_string()
-        })?;
-        let key = body[..delimiter].trim();
-        if key.is_empty() {
-            return Err(
-                "Cannot update server.properties with an empty key without overwriting the file"
-                    .to_string(),
-            );
-        }
-        validate_property_key(key)?;
-
-        if let Some(value) = updates.get(key) {
-            found.insert(key.to_string());
-            let original_value = &body[delimiter + 1..];
-            let leading = original_value.len() - original_value.trim_start().len();
-            let trailing = original_value.len() - original_value.trim_end().len();
-            let trailing_start = original_value.len().saturating_sub(trailing);
-            output.push_str(&body[..=delimiter]);
-            output.push_str(&original_value[..leading.min(trailing_start)]);
-            output.push_str(&serialize_property_value(value)?);
-            output.push_str(&original_value[trailing_start..]);
-            output.push_str(ending);
-        } else {
-            output.push_str(line);
-        }
-    }
-
-    let mut missing = updates
-        .iter()
-        .filter(|(key, _)| !found.contains(*key))
-        .collect::<Vec<_>>();
-    missing.sort_by(|(left, _), (right, _)| left.cmp(right));
-    for (key, value) in missing {
-        if !output.is_empty() && !output.ends_with('\n') {
-            output.push_str(newline);
-        }
-        output.push_str(key);
-        output.push('=');
-        output.push_str(&serialize_property_value(value)?);
-        output.push_str(newline);
-    }
-
-    if output.len() as u64 > MAX_PROPERTIES_BYTES {
-        return Err("Updated server.properties exceeds the write size limit".to_string());
-    }
-    Ok(output)
-}
-
-fn validate_property_key(key: &str) -> Result<(), String> {
-    if key.trim().is_empty()
-        || key.len() > 256
-        || key
-            .chars()
-            .any(|character| character.is_control() || matches!(character, '=' | '\n' | '\r'))
-    {
-        return Err("Invalid server.properties key".to_string());
-    }
-    Ok(())
-}
-
-fn validate_property_value(value: &Value) -> Result<(), String> {
-    let serialized = match value {
-        Value::String(value) => value.clone(),
-        Value::Bool(value) => value.to_string(),
-        Value::Number(value) => value.to_string(),
-        _ => return Err("Property values must be strings, numbers, or booleans".to_string()),
-    };
-    if serialized.len() > MAX_PROPERTIES_VALUE_BYTES
-        || serialized
-            .chars()
-            .any(|character| matches!(character, '\n' | '\r'))
-    {
-        return Err("Invalid server.properties value".to_string());
-    }
-    Ok(())
-}
-
-fn serialize_property_value(value: &Value) -> Result<String, String> {
-    validate_property_value(value)?;
-    match value {
-        Value::String(value) => Ok(value.clone()),
-        Value::Bool(value) => Ok(value.to_string()),
-        Value::Number(value) => Ok(value.to_string()),
-        _ => Err("Property values must be strings, numbers, or booleans".to_string()),
-    }
-}
-
-fn split_line_ending(line: &str) -> (&str, &str) {
-    if let Some(body) = line.strip_suffix("\r\n") {
-        (body, "\r\n")
-    } else if let Some(body) = line.strip_suffix('\n') {
-        (body, "\n")
-    } else {
-        (line, "")
-    }
 }
 
 fn server_properties_path(app_data_dir: &Path, server_id: &str) -> Result<PathBuf, String> {
@@ -285,7 +107,7 @@ fn read_properties_file(path: &Path) -> Result<String, String> {
     if is_link_or_reparse_point(&metadata) || !metadata.is_file() {
         return Err("server.properties is not a regular file".to_string());
     }
-    if metadata.len() > MAX_PROPERTIES_BYTES {
+    if metadata.len() > MAX_PROPERTIES_BYTES as u64 {
         return Err("server.properties exceeds the read size limit".to_string());
     }
     fs::read_to_string(path).map_err(|error| format!("Failed to read server.properties: {error}"))
@@ -425,17 +247,6 @@ fn commit_replacements(
     Ok(())
 }
 
-fn validate_registered_server(
-    registry: &ServerRegistry,
-    server_id: &str,
-) -> Result<MinecraftServer, String> {
-    registry
-        .get_servers()?
-        .into_iter()
-        .find(|server| server.id == server_id)
-        .ok_or_else(|| "Server is not registered".to_string())
-}
-
 #[tauri::command]
 pub async fn get_server_properties(
     app: AppHandle,
@@ -444,22 +255,20 @@ pub async fn get_server_properties(
     server_id: String,
 ) -> Result<BTreeMap<String, Value>, String> {
     let server_id = server_id.trim().to_string();
-    let _guard = operations
-        .acquire(&server_id, OperationKind::FileMutation)
-        .await?;
     let app_data_dir = app
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?;
     let registry = registry.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        validate_registered_server(&registry, &server_id)?;
-        let path = server_properties_path(&app_data_dir, &server_id)?;
-        let content = read_properties_file(&path)?;
-        parse_properties(&content)
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    let snapshot =
+        core_get_server_properties(operations.inner(), app_data_dir, registry, server_id)
+            .await
+            .map_err(|error| error.to_string())?;
+    Ok(snapshot
+        .entries
+        .into_iter()
+        .map(|entry| (entry.key, tauri_property_value(&entry.value)))
+        .collect())
 }
 
 #[tauri::command]
@@ -471,52 +280,62 @@ pub async fn save_server_properties(
     updates: HashMap<String, Value>,
 ) -> Result<Option<u16>, String> {
     let server_id = server_id.trim().to_string();
-    let _guard = operations
-        .acquire(&server_id, OperationKind::FileMutation)
-        .await?;
     let app_data_dir = app
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?;
     let registry = registry.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let mut server = validate_registered_server(&registry, &server_id)?;
-        let path = server_properties_path(&app_data_dir, &server_id)?;
-        let original = read_properties_file(&path)?;
-        let patched = patch_properties(&original, &updates)?;
-        let port = updates
-            .get("server-port")
-            .map(parse_server_port)
-            .transpose()?;
-        if let Some(port) = port {
-            server.port = JsonNumber::from(port);
-        }
-        let replacement = stage_replacement(FileReplacement {
-            destination: path,
-            content: patched,
-        })?;
-        let mut replacements = vec![replacement];
-        commit_replacements(&mut replacements, &registry, &[server])?;
-        Ok(port)
-    })
+    let updates = updates
+        .into_iter()
+        .map(|(key, value)| property_value_to_string(value).map(|value| (key, value)))
+        .collect::<Result<HashMap<_, _>, _>>()?;
+    core_save_server_properties(
+        operations.inner(),
+        app_data_dir,
+        registry,
+        server_id,
+        updates,
+    )
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())
 }
 
-fn parse_server_port(value: &Value) -> Result<u16, String> {
-    let port = match value {
-        Value::Number(number) => number
-            .as_u64()
-            .ok_or_else(|| "Server port must be an integer".to_string())?,
-        Value::String(text) => text
-            .parse::<u64>()
-            .map_err(|_| "Server port must be an integer".to_string())?,
-        _ => return Err("Server port must be an integer".to_string()),
-    };
-    u16::try_from(port)
-        .ok()
-        .filter(|port| *port > 0)
-        .ok_or_else(|| "Server port must be between 1 and 65535".to_string())
+fn property_value_to_string(value: Value) -> Result<String, String> {
+    match value {
+        Value::String(value) => Ok(value),
+        Value::Bool(value) => Ok(value.to_string()),
+        Value::Number(value) => Ok(value.to_string()),
+        _ => Err("Property values must be strings, numbers, or booleans".to_string()),
+    }
+}
+
+fn tauri_property_value(value: &str) -> Value {
+    match value {
+        "true" => return Value::Bool(true),
+        "false" => return Value::Bool(false),
+        _ => {}
+    }
+
+    if let Ok(integer) = value.parse::<i64>() {
+        let number = serde_json::Number::from(integer);
+        if number.to_string() == value {
+            return Value::Number(number);
+        }
+    }
+    if let Ok(integer) = value.parse::<u64>() {
+        let number = serde_json::Number::from(integer);
+        if number.to_string() == value {
+            return Value::Number(number);
+        }
+    }
+    if let Ok(float) = value.parse::<f64>() {
+        if let Some(number) = serde_json::Number::from_f64(float) {
+            if number.to_string() == value {
+                return Value::Number(number);
+            }
+        }
+    }
+    Value::String(value.to_string())
 }
 
 #[tauri::command]
@@ -594,13 +413,11 @@ pub async fn configure_proxy_network(
             let path = server_properties_path(&app_data_dir, server_id)?;
             let original = read_properties_file(&path)?;
             let updates = HashMap::from([
-                ("online-mode".to_string(), Value::Bool(false)),
-                (
-                    "server-port".to_string(),
-                    Value::Number(serde_json::Number::from(port)),
-                ),
+                ("online-mode".to_string(), "false".to_string()),
+                ("server-port".to_string(), port.to_string()),
             ]);
-            let patched = patch_properties(&original, &updates)?;
+            let patched =
+                patch_properties(&original, &updates).map_err(|error| error.to_string())?;
             replacements.push(stage_replacement(FileReplacement {
                 destination: path,
                 content: patched,
@@ -622,10 +439,7 @@ pub async fn configure_proxy_network(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        commit_replacements, parse_properties, patch_properties, stage_replacement,
-        FileReplacement, MAX_PROPERTIES_BYTES,
-    };
+    use super::{commit_replacements, stage_replacement, tauri_property_value, FileReplacement};
     use crate::commands::server_registry::{JsonNumber, MinecraftServer, ServerRegistry};
     use crate::test_support::test_temp_dir;
     use serde_json::Value;
@@ -690,57 +504,22 @@ mod tests {
     }
 
     #[test]
-    fn parses_values_without_losing_values_that_contain_equals() {
-        let properties = parse_properties(
-            "# keep\nserver-port=25565\nmotd=Name=a server\npvp=true\nmax-players=20\n",
-        )
-        .unwrap();
-        assert_eq!(properties["server-port"], Value::from(25565));
+    fn tauri_value_conversion_preserves_false_and_noncanonical_numeric_text() {
+        assert_eq!(tauri_property_value("false"), Value::Bool(false));
+        assert_eq!(tauri_property_value("true"), Value::Bool(true));
+        assert_eq!(tauri_property_value("25565"), Value::from(25565));
         assert_eq!(
-            properties["motd"],
-            Value::String("Name=a server".to_string())
+            tauri_property_value("0042"),
+            Value::String("0042".to_string())
         );
-        assert_eq!(properties["pvp"], Value::Bool(true));
-        assert_eq!(properties["max-players"], Value::from(20));
-    }
-
-    #[test]
-    fn malformed_active_lines_and_oversized_files_fail_closed() {
-        assert!(parse_properties("online-mode=true\nnot-an-assignment\n").is_err());
-        assert!(parse_properties(&"x".repeat(MAX_PROPERTIES_BYTES as usize + 1)).is_err());
-    }
-
-    #[test]
-    fn updates_preserve_comments_order_duplicates_and_line_endings() {
-        let original = "# header\r\nserver-port = 25565\r\npvp=true\r\nserver-port=25566\r\ncustom=value=with=equals\r\n";
-        let updates = HashMap::from([
-            ("server-port".to_string(), Value::from(26000)),
-            ("motd".to_string(), Value::String("New server".to_string())),
-        ]);
-
-        let updated = patch_properties(original, &updates).unwrap();
-
         assert_eq!(
-            updated,
-            "# header\r\nserver-port = 26000\r\npvp=true\r\nserver-port=26000\r\ncustom=value=with=equals\r\nmotd=New server\r\n"
+            tauri_property_value("1.50"),
+            Value::String("1.50".to_string())
         );
-    }
-
-    #[test]
-    fn unsafe_property_keys_and_multiline_values_are_rejected() {
-        assert!(patch_properties(
-            "",
-            &HashMap::from([("motd\nmalicious".to_string(), Value::String("x".into()))])
-        )
-        .is_err());
-        assert!(patch_properties(
-            "",
-            &HashMap::from([(
-                "motd".to_string(),
-                Value::String("safe\nserver-port=1".into())
-            )])
-        )
-        .is_err());
+        assert_eq!(
+            tauri_property_value("1.5"),
+            Value::Number(serde_json::Number::from_f64(1.5).unwrap())
+        );
     }
 
     #[test]

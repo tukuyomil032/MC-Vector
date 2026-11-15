@@ -84,6 +84,30 @@ pub enum CoreErrorCode {
     FilesNotText,
     /// The name is empty or uses unsupported characters.
     FilesInvalidName,
+    /// A registered server profile could not be found.
+    ServerNotFound,
+    /// A server's stored path does not point to its managed directory.
+    ServerUnmanaged,
+    /// The server.properties file does not exist.
+    PropertiesMissing,
+    /// The server.properties file contains malformed entries.
+    PropertiesMalformed,
+    /// A server.properties key or value is invalid.
+    PropertiesInvalid,
+    /// The server.properties file could not be read or written.
+    PropertiesIo,
+    /// A player name is invalid.
+    PlayerInvalidName,
+    /// A banned IP address is invalid.
+    PlayerInvalidIp,
+    /// A player list path is not a regular file.
+    PlayerInvalidFile,
+    /// A player list file exceeds the supported size.
+    PlayerListTooLarge,
+    /// A player list file contains malformed JSON.
+    PlayerMalformedList,
+    /// A player list file could not be read or written.
+    PlayerIo,
 }
 
 impl CoreErrorCode {
@@ -121,6 +145,18 @@ impl CoreErrorCode {
         CoreErrorCode::FilesTooLarge,
         CoreErrorCode::FilesNotText,
         CoreErrorCode::FilesInvalidName,
+        CoreErrorCode::ServerNotFound,
+        CoreErrorCode::ServerUnmanaged,
+        CoreErrorCode::PropertiesMissing,
+        CoreErrorCode::PropertiesMalformed,
+        CoreErrorCode::PropertiesInvalid,
+        CoreErrorCode::PropertiesIo,
+        CoreErrorCode::PlayerInvalidName,
+        CoreErrorCode::PlayerInvalidIp,
+        CoreErrorCode::PlayerInvalidFile,
+        CoreErrorCode::PlayerListTooLarge,
+        CoreErrorCode::PlayerMalformedList,
+        CoreErrorCode::PlayerIo,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -158,6 +194,18 @@ impl CoreErrorCode {
             Self::FilesTooLarge => "files.too_large",
             Self::FilesNotText => "files.not_text",
             Self::FilesInvalidName => "files.invalid_name",
+            Self::ServerNotFound => "server.not_found",
+            Self::ServerUnmanaged => "server.unmanaged",
+            Self::PropertiesMissing => "properties.missing",
+            Self::PropertiesMalformed => "properties.malformed",
+            Self::PropertiesInvalid => "properties.invalid",
+            Self::PropertiesIo => "properties.io",
+            Self::PlayerInvalidName => "player.invalid_name",
+            Self::PlayerInvalidIp => "player.invalid_ip",
+            Self::PlayerInvalidFile => "player.invalid_file",
+            Self::PlayerListTooLarge => "player.list_too_large",
+            Self::PlayerMalformedList => "player.malformed_list",
+            Self::PlayerIo => "player.io",
         }
     }
 
@@ -203,7 +251,18 @@ impl CoreErrorCode {
             | Self::FilesAlreadyExists
             | Self::FilesTooLarge
             | Self::FilesNotText
-            | Self::FilesInvalidName => false,
+            | Self::FilesInvalidName
+            | Self::ServerNotFound
+            | Self::ServerUnmanaged
+            | Self::PropertiesMissing
+            | Self::PropertiesMalformed
+            | Self::PropertiesInvalid
+            | Self::PlayerInvalidName
+            | Self::PlayerInvalidIp
+            | Self::PlayerInvalidFile
+            | Self::PlayerListTooLarge
+            | Self::PlayerMalformedList => false,
+            Self::PropertiesIo | Self::PlayerIo => true,
         }
     }
 
@@ -302,10 +361,22 @@ mod tests {
             CoreErrorCode::FilesTooLarge => 29,
             CoreErrorCode::FilesNotText => 30,
             CoreErrorCode::FilesInvalidName => 31,
+            CoreErrorCode::ServerNotFound => 32,
+            CoreErrorCode::ServerUnmanaged => 33,
+            CoreErrorCode::PropertiesMissing => 34,
+            CoreErrorCode::PropertiesMalformed => 35,
+            CoreErrorCode::PropertiesInvalid => 36,
+            CoreErrorCode::PropertiesIo => 37,
+            CoreErrorCode::PlayerInvalidName => 38,
+            CoreErrorCode::PlayerInvalidIp => 39,
+            CoreErrorCode::PlayerInvalidFile => 40,
+            CoreErrorCode::PlayerListTooLarge => 41,
+            CoreErrorCode::PlayerMalformedList => 42,
+            CoreErrorCode::PlayerIo => 43,
         }
     }
 
-    const VARIANT_COUNT: usize = 32;
+    const VARIANT_COUNT: usize = 44;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -449,6 +520,46 @@ mod tests {
             (CoreErrorCode::FilesTooLarge, "files.too_large", false),
             (CoreErrorCode::FilesNotText, "files.not_text", false),
             (CoreErrorCode::FilesInvalidName, "files.invalid_name", false),
+            (CoreErrorCode::ServerNotFound, "server.not_found", false),
+            (CoreErrorCode::ServerUnmanaged, "server.unmanaged", false),
+            (
+                CoreErrorCode::PropertiesMissing,
+                "properties.missing",
+                false,
+            ),
+            (
+                CoreErrorCode::PropertiesMalformed,
+                "properties.malformed",
+                false,
+            ),
+            (
+                CoreErrorCode::PropertiesInvalid,
+                "properties.invalid",
+                false,
+            ),
+            (CoreErrorCode::PropertiesIo, "properties.io", true),
+            (
+                CoreErrorCode::PlayerInvalidName,
+                "player.invalid_name",
+                false,
+            ),
+            (CoreErrorCode::PlayerInvalidIp, "player.invalid_ip", false),
+            (
+                CoreErrorCode::PlayerInvalidFile,
+                "player.invalid_file",
+                false,
+            ),
+            (
+                CoreErrorCode::PlayerListTooLarge,
+                "player.list_too_large",
+                false,
+            ),
+            (
+                CoreErrorCode::PlayerMalformedList,
+                "player.malformed_list",
+                false,
+            ),
+            (CoreErrorCode::PlayerIo, "player.io", true),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);

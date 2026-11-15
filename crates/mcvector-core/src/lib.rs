@@ -18,6 +18,8 @@ pub mod managed_path;
 pub mod metric_history;
 pub mod operations;
 pub mod paths;
+pub mod players;
+pub mod properties;
 pub mod recovery_record;
 pub mod registry;
 pub mod server_creation;
