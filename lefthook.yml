@@ -20,3 +20,9 @@ pre-commit:
         - 'src-tauri/src/**/*.rs'
         - 'crates/**/*.rs'
       run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+    swift-format:
+      glob: "native/**/*.swift"
+      run: swift-format format --in-place {staged_files}
+    swiftlint:
+      glob: "native/**/*.swift"
+      run: swiftlint lint --quiet {staged_files}

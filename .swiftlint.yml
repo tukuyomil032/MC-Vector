@@ -1,0 +1,10 @@
+included:
+  - Native
+  - Tests
+
+excluded:
+  - .build
+
+line_length:
+  warning: 120
+  error: 200
