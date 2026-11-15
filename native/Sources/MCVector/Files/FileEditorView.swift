@@ -287,6 +287,8 @@ struct FileEditorView: View {
             var showSuggestions = false
             /// Shows the hover card for the first occurrence of this text.
             var hover: String?
+            /// Opens the suggestion list after the hover card is up.
+            var suggestAfterHover = false
         }
 
         static var captureScript: CaptureScript?
@@ -299,6 +301,10 @@ struct FileEditorView: View {
             try? await Task.sleep(for: .milliseconds(500))
             if script.showSuggestions { EditorAssistController.current?.textViewForCapture?.complete(nil) }
             if let hover = script.hover { EditorAssistController.current?.showHoverForCapture(on: hover) }
+            if script.suggestAfterHover {
+                try? await Task.sleep(for: .milliseconds(1500))
+                EditorAssistController.current?.textViewForCapture?.complete(nil)
+            }
             if script.save { await document.save(feedback: feedback) }
             if script.confirmClose { requestClose() }
         }

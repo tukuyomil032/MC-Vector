@@ -38,7 +38,8 @@
                 app.navigate(to: .dashboard)
             case "CONTENT-noserver-empty", "CONTENT-noserver-select":
                 app.selectedServerID = nil
-            case "SETTINGS-root", "SETTINGS-general", "SETTINGS-updates", "SETTINGS-security", "SETTINGS-about":
+            case "SETTINGS-root", "SETTINGS-general", "SETTINGS-editor", "SETTINGS-updates", "SETTINGS-security",
+                "SETTINGS-about":
                 // SettingsView picks the pane from the ID. capture.sh takes the first
                 // window of the app, so hide the main window once Settings is open.
                 let main = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
@@ -415,9 +416,26 @@
                 FilesView.capturePreset = .init(openFile: "server.properties")
                 FileEditorView.captureScript = .init(hover: "server-port")
                 app.navigate(to: .files)
+            case "FILES-editor-hover-then-suggest":
+                FilesView.capturePreset = .init(openFile: "server.properties")
+                FileEditorView.captureScript = .init(hover: "25565", suggestAfterHover: true)
+                app.navigate(to: .files)
             case "FILES-editor-diagnostic":
                 FilesView.capturePreset = .init(openFile: "server.properties")
                 FileEditorView.captureScript = .init(type: "difficulty=hardest\nmax-players=lots\n", hover: "hardest")
+                app.navigate(to: .files)
+            case "FILES-editor-value-empty":
+                // No showSuggestions: the list must open by itself after "=".
+                FilesView.capturePreset = .init(openFile: "server.properties")
+                FileEditorView.captureScript = .init(type: "difficulty=")
+                app.navigate(to: .files)
+            case "FILES-editor-value-t":
+                FilesView.capturePreset = .init(openFile: "server.properties")
+                FileEditorView.captureScript = .init(type: "online-mode=t")
+                app.navigate(to: .files)
+            case let theme where theme.hasPrefix("FILES-editor-theme-"):
+                EditorSettings.shared.themeID = String(theme.dropFirst("FILES-editor-theme-".count))
+                FilesView.capturePreset = .init(path: ["config"], openFile: "paper.yml")
                 app.navigate(to: .files)
             case "FILES-editor-yaml":
                 FilesView.capturePreset = .init(path: ["config"], openFile: "paper.yml")
